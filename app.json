@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Inventaire",
+    "slug": "inventaire",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "inventaire",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.inventaire.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "L'accès à la caméra est nécessaire pour scanner les codes-barres des articles.",
+        "NSPhotoLibraryUsageDescription": "Accès aux photos pour importer des fichiers."
+      }
+    },
+    "android": {
+      "package": "com.inventaire.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1A73E8",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "L'accès à la caméra est nécessaire pour scanner les codes-barres des articles."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1A73E8",
+          "android": {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 76
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
