@@ -25,6 +25,8 @@ export default function SupervisorLayout() {
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Session', headerStyle: { backgroundColor: Colors.primary }, headerTintColor: '#fff' }} />
       <Stack.Screen name="[sessionId]/import" options={{ title: 'Importer les données', headerStyle: { backgroundColor: Colors.primary }, headerTintColor: '#fff' }} />
       <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', headerStyle: { backgroundColor: Colors.primary }, headerTintColor: '#fff' }} />
+      <Stack.Screen name="[sessionId]/audits" options={{ title: 'Audits & écarts', headerStyle: { backgroundColor: Colors.primary }, headerTintColor: '#fff' }} />
+      <Stack.Screen name="[sessionId]/results" options={{ title: 'Résultats', headerStyle: { backgroundColor: Colors.primary }, headerTintColor: '#fff' }} />
     </Stack>
   )
 }

@@ -4,6 +4,20 @@ import type { Tables, TablesInsert } from '@/types/database.types'
 export type Session = Tables<'inventory_sessions'>
 export type Article = Tables<'articles'>
 export type Count = Tables<'counts'>
+export type ArticleAudit = Tables<'article_audit'>
+
+export type SessionResultRow = {
+  sku: string
+  ean: string | null
+  brand: string
+  label: string
+  unit_purchase_price: number
+  theoretical_qty: number
+  counted_qty: number
+  status: string
+  variance_units: number
+  variance_value: number
+}
 
 export async function getSessions() {
   const { data, error } = await supabase
@@ -128,4 +142,49 @@ export async function getTheoreticalStock(sessionId: string) {
     .eq('session_id', sessionId)
   if (error) throw error
   return data
+}
+
+export async function recomputeAudit(sessionId: string) {
+  const { data, error } = await supabase.rpc('recompute_session_audit', { p_session_id: sessionId })
+  if (error) throw error
+  return data as { success: boolean; failed?: number; pending?: number; total?: number }
+}
+
+export async function getAudits(sessionId: string) {
+  const { data, error } = await supabase
+    .from('article_audit')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('status', { ascending: true })
+    .order('sku', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function resolveAudit(sessionId: string, sku: string, finalQty: number) {
+  const { data, error } = await supabase.rpc('resolve_audit', {
+    p_session_id: sessionId,
+    p_sku: sku,
+    p_final_qty: finalQty,
+  })
+  if (error) throw error
+  return data as { success: boolean; error?: string }
+}
+
+export async function getSessionResults(sessionId: string): Promise<SessionResultRow[]> {
+  const { data, error } = await supabase.rpc('get_session_results', { p_session_id: sessionId })
+  if (error) throw error
+  return (data ?? []) as SessionResultRow[]
+}
+
+export async function getArticleLabels(skus: string[]) {
+  if (skus.length === 0) return {}
+  const { data, error } = await supabase
+    .from('articles')
+    .select('sku, label, brand, ean')
+    .in('sku', skus)
+  if (error) throw error
+  const map: Record<string, { label: string; brand: string; ean: string | null }> = {}
+  for (const a of data ?? []) map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean }
+  return map
 }

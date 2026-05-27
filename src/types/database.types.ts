@@ -282,8 +282,28 @@ export type Database = {
         Returns: Json
       }
       get_my_role: { Args: Record<PropertyKey, never>; Returns: string }
+      get_session_results: {
+        Args: { p_session_id: string }
+        Returns: {
+          brand: string
+          counted_qty: number
+          ean: string
+          label: string
+          sku: string
+          status: string
+          theoretical_qty: number
+          unit_purchase_price: number
+          variance_units: number
+          variance_value: number
+        }[]
+      }
       join_session: {
         Args: { p_inventory_number: string; p_security_code: string }
+        Returns: Json
+      }
+      recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
+      resolve_audit: {
+        Args: { p_final_qty: number; p_session_id: string; p_sku: string }
         Returns: Json
       }
     }

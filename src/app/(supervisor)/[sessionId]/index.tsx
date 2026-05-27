@@ -104,6 +104,22 @@ export default function SessionDetailScreen() {
           </View>
         ))}
 
+        <View style={styles.actions}>
+          <Pressable
+            style={[styles.actionBtn, { backgroundColor: Colors.warning }]}
+            onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)}
+          >
+            <Text style={styles.actionBtnText}>Audits & écarts de comptage</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.actionBtn, { backgroundColor: Colors.secondary }]}
+            onPress={() => router.push(`/(supervisor)/${sessionId}/results`)}
+          >
+            <Text style={styles.actionBtnText}>Résultats & rapport Excel</Text>
+          </Pressable>
+        </View>
+
         {session.status !== 'closed' && (
           <View style={styles.actions}>
             <Pressable
