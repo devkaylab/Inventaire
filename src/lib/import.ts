@@ -1,5 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker'
-import * as FileSystem from 'expo-file-system'
+import { File } from 'expo-file-system'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
@@ -37,11 +37,11 @@ export async function pickFile(): Promise<{ uri: string; name: string } | null> 
 }
 
 async function readFileAsString(uri: string): Promise<string> {
-  return FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 })
+  return new File(uri).text()
 }
 
 async function readFileAsBase64(uri: string): Promise<string> {
-  return FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 })
+  return new File(uri).base64()
 }
 
 function isXlsx(name: string) {
