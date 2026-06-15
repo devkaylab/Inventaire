@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventaire — Design « Ink » (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN SYSTEM « INK » — tokens
+   ============================================================ */
+:root, .theme-light {
+  --bg: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --header-bg: #0B0F19;
+  --header-text: #FFFFFF;
+  --hairline: #EEF0F4;
+  --border-strong: #E2E5EA;
+  --text-primary: #0B0F19;
+  --text-secondary: #5A6172;
+  --text-muted: #9AA0AE;
+  --accent: #4F46E5;
+  --accent-dark: #4338CA;
+  --accent-soft: #EEF0FF;
+  --accent-on: #FFFFFF;
+  --success: #059669;
+  --success-soft: #ECFDF5;
+  --warning: #D97706;
+  --warning-soft: #FFFBEB;
+  --danger: #DC2626;
+  --danger-soft: #FEF2F2;
+  --shadow-card: 0 1px 2px rgba(11,15,25,.04), 0 4px 12px rgba(11,15,25,.06);
+  --shadow-elev: 0 8px 24px rgba(11,15,25,.10);
+  --shadow-btn: 0 1px 2px rgba(79,70,229,.20), 0 4px 12px rgba(79,70,229,.22);
+  --header-btn-bg: rgba(255,255,255,0.12);
+  --header-btn-border: rgba(255,255,255,0.18);
+  --camera-bg: linear-gradient(160deg,#11151F,#1B2233);
+}
+.theme-dark {
+  --bg: #0B0F19;
+  --surface: #151A27;
+  --surface-2: #1B2130;
+  --header-bg: #060910;
+  --header-text: #FFFFFF;
+  --hairline: #232A39;
+  --border-strong: #2D3548;
+  --text-primary: #F3F5F9;
+  --text-secondary: #9BA3B4;
+  --text-muted: #646C7E;
+  --accent: #6366F1;
+  --accent-dark: #4F46E5;
+  --accent-soft: rgba(99,102,241,0.15);
+  --accent-on: #FFFFFF;
+  --success: #10B981;
+  --success-soft: rgba(16,185,129,0.14);
+  --warning: #F59E0B;
+  --warning-soft: rgba(245,158,11,0.14);
+  --danger: #EF4444;
+  --danger-soft: rgba(239,68,68,0.14);
+  --shadow-card: 0 2px 8px rgba(0,0,0,.40);
+  --shadow-elev: 0 10px 30px rgba(0,0,0,.55);
+  --shadow-btn: 0 2px 10px rgba(99,102,241,.40);
+  --header-btn-bg: rgba(255,255,255,0.10);
+  --header-btn-border: rgba(255,255,255,0.14);
+  --camera-bg: linear-gradient(160deg,#05070D,#10141F);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+body {
+  font-family:'Inter',system-ui,sans-serif;
+  background:#1c1d22;
+  color:#fff;
+  padding:32px 16px 64px;
+  transition:background .3s;
+}
+body.page-dark { background:#000; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings:"tnum"; }
+
+/* ── Page chrome ── */
+.toolbar {
+  max-width:1180px; margin:0 auto 28px; display:flex; align-items:center;
+  justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.toolbar h1 { font-size:18px; font-weight:700; letter-spacing:-0.02em; color:#fff; }
+.toolbar h1 span { color:#8a8f9c; font-weight:500; }
+.switch {
+  display:inline-flex; background:#2a2c33; border:1px solid #3a3d46; border-radius:999px;
+  padding:4px; gap:2px;
+}
+.switch button {
+  border:0; background:transparent; color:#b9bdc7; font-family:inherit; font-weight:600;
+  font-size:13px; padding:7px 16px; border-radius:999px; cursor:pointer; transition:.2s;
+  display:flex; align-items:center; gap:6px;
+}
+.switch button.active { background:#4F46E5; color:#fff; }
+.switch button.active.light-btn { background:#fff; color:#0B0F19; }
+
+.legend { max-width:1180px; margin:0 auto 30px; color:#8a8f9c; font-size:13px; line-height:1.6; }
+.legend b { color:#c7cad3; font-weight:600; }
+
+/* ── Phones grid ── */
+.grid {
+  max-width:1180px; margin:0 auto; display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:36px 28px; justify-items:center;
+}
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.phone-name { font-size:13px; font-weight:600; color:#9398a4; letter-spacing:.01em; }
+
+/* ── iPhone frame ── */
+.phone {
+  width:320px; height:680px; border-radius:46px; background:#000;
+  padding:11px; box-shadow:0 30px 60px rgba(0,0,0,.5), 0 0 0 2px #2a2c33;
+  position:relative;
+}
+.screen {
+  width:100%; height:100%; border-radius:36px; overflow:hidden; position:relative;
+  background:var(--bg); display:flex; flex-direction:column; transition:background .3s;
+}
+.notch {
+  position:absolute; top:11px; left:50%; transform:translateX(-50%);
+  width:104px; height:26px; background:#000; border-radius:0 0 16px 16px; z-index:50;
+}
+.dyn {
+  position:absolute; top:15px; left:50%; transform:translateX(-50%);
+  width:88px; height:26px; background:#000; border-radius:999px; z-index:60;
+}
+
+/* ── Status bar ── */
+.statusbar {
+  height:44px; display:flex; align-items:flex-end; justify-content:space-between;
+  padding:0 22px 4px; font-size:13px; font-weight:600; color:var(--header-text);
+  position:relative; z-index:40;
+}
+.statusbar .right { display:flex; gap:5px; align-items:center; }
+
+/* ── App header (near-black Ink bar) ── */
+.header {
+  background:var(--header-bg); padding:6px 16px 14px; display:flex; align-items:center;
+  justify-content:space-between; gap:10px; transition:background .3s;
+}
+.header.with-status { padding-top:0; }
+.header-titles .eyebrow {
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
+  color:rgba(255,255,255,.45);
+}
+.header-titles h2 { font-size:19px; font-weight:700; color:#fff; letter-spacing:-0.02em; }
+.header-btns { display:flex; gap:8px; }
+.hbtn {
+  width:34px; height:34px; border-radius:999px; background:var(--header-btn-bg);
+  border:1px solid var(--header-btn-border); color:#fff; display:flex; align-items:center;
+  justify-content:center; font-size:15px; font-weight:600;
+}
+.back-row { display:flex; align-items:center; gap:6px; color:#fff; }
+.back-row .chev { font-size:18px; opacity:.9; }
+.back-row .btxt { font-size:15px; font-weight:500; }
+
+/* ── Scrollable body ── */
+.body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
+.body::-webkit-scrollbar { width:0; }
+.greet-row { display:flex; align-items:center; justify-content:space-between; padding:2px 2px 0; }
+.greet { font-size:13px; color:var(--text-secondary); }
+.signout { font-size:13px; color:var(--danger); font-weight:500; }
+
+/* ── Card ── */
+.card {
+  background:var(--surface); border-radius:16px; padding:18px;
+  border:1px solid var(--hairline); box-shadow:var(--shadow-card);
+}
+.card.tap { cursor:pointer; }
+
+/* Session card */
+.session-card { display:flex; flex-direction:column; gap:6px; }
+.sc-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.inv-no { font-size:15px; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em; }
+.store { font-size:15px; color:var(--text-primary); font-weight:500; }
+.meta { font-size:12px; color:var(--text-muted); }
+
+/* Status pill */
+.pill {
+  display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 8px;
+  border-radius:999px; font-size:11px; font-weight:600; line-height:1;
+}
+.dot { width:7px; height:7px; border-radius:999px; }
+.pill.open { background:var(--success-soft); color:var(--success); }
+.pill.open .dot { background:var(--success); }
+.pill.progress { background:var(--warning-soft); color:var(--warning); }
+.pill.progress .dot { background:var(--warning); }
+.pill.closed { background:var(--accent-soft); color:var(--text-muted); }
+.pill.closed .dot { background:var(--text-muted); }
+
+/* Section label */
+.sec-label {
+  font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--text-muted); margin:6px 2px 0;
+}
+
+/* Buttons */
+.btn {
+  border:0; width:100%; border-radius:13px; padding:14px; font-family:inherit;
+  font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; gap:8px; transition:.15s;
+}
+.btn-primary { background:var(--accent); color:var(--accent-on); box-shadow:var(--shadow-btn); }
+.btn-success { background:var(--success); color:#fff; }
+.btn-secondary { background:var(--surface); color:var(--text-primary); border:1px solid var(--border-strong); box-shadow:var(--shadow-card); }
+.btn-danger { background:var(--danger-soft); color:var(--danger); }
+.btn-warning { background:var(--warning); color:#fff; }
+
+/* FAB */
+.fab {
+  position:absolute; left:16px; right:16px; bottom:18px; z-index:30;
+  background:var(--accent); color:#fff; border-radius:15px; padding:15px;
+  text-align:center; font-weight:700; font-size:15px; box-shadow:var(--shadow-elev);
+}
+
+/* Credentials card */
+.cred-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.cred-store { font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:-0.02em; }
+.cred-row {
+  display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--hairline);
+  border-radius:12px; padding:12px; margin-bottom:10px;
+}
+.cred-left { flex:1; }
+.cred-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:3px; }
+.cred-val { font-size:18px; font-weight:700; color:var(--text-primary); letter-spacing:.04em; }
+.cred-val.secret { color:var(--accent); letter-spacing:.12em; }
+.copy-btn { background:var(--accent); color:#fff; border:0; border-radius:9px; padding:8px 13px; font-family:inherit; font-size:13px; font-weight:600; }
+.share-btn {
+  width:100%; background:var(--accent-soft); color:var(--accent); border:1px solid transparent;
+  border-radius:12px; padding:12px; font-family:inherit; font-weight:600; font-size:14px; margin-top:2px;
+}
+
+/* Pass progress rows */
+.pass-row {
+  display:flex; align-items:center; gap:11px; background:var(--surface);
+  border:1px solid var(--hairline); border-radius:12px; padding:13px; box-shadow:var(--shadow-card);
+}
+.pass-dot { width:10px; height:10px; border-radius:999px; }
+.pass-name { flex:1; font-size:14px; font-weight:600; color:var(--text-primary); }
+.pass-count { font-size:14px; font-weight:600; color:var(--text-secondary); }
+.pass-current {
+  font-size:11px; font-weight:600; color:var(--accent); background:var(--accent-soft);
+  padding:3px 9px; border-radius:999px;
+}
+
+/* Results summary */
+.summary { background:var(--surface); border:1px solid var(--hairline); border-radius:16px; padding:18px; box-shadow:var(--shadow-card); }
+.summary-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:14px; }
+.metric-row { display:flex; align-items:baseline; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--hairline); }
+.metric-row:last-child { border-bottom:0; padding-bottom:0; }
+.metric-label { font-size:13px; color:var(--text-secondary); }
+.metric-val { font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em; }
+.metric-val.pos { color:var(--success); }
+.metric-val.neg { color:var(--danger); }
+.metric-hero { font-size:30px; font-weight:800; letter-spacing:-0.03em; }
+
+/* Result item card */
+.res-card { background:var(--surface); border:1px solid var(--hairline); border-radius:14px; padding:14px; box-shadow:var(--shadow-card); }
+.brand { font-size:10px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; }
+.res-label { font-size:15px; font-weight:700; color:var(--text-primary); margin:2px 0; letter-spacing:-0.01em; }
+.res-sku { font-size:12px; color:var(--text-muted); margin-bottom:10px; }
+.cells { display:flex; gap:8px; }
+.cell { flex:1; background:var(--bg); border:1px solid var(--hairline); border-radius:10px; padding:9px 6px; text-align:center; }
+.cell-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+.cell-val { font-size:15px; font-weight:700; color:var(--text-primary); margin-top:3px; }
+.cell-val.pos { color:var(--success); }
+.cell-val.neg { color:var(--danger); }
+
+/* Scanner */
+.pass-banner {
+  display:flex; align-items:center; gap:9px; background:var(--surface);
+  border:1px solid var(--hairline); border-radius:12px; padding:11px 14px; box-shadow:var(--shadow-card);
+}
+.pass-banner .pass-name { flex:0; white-space:nowrap; }
+.mode-toggle {
+  display:flex; background:var(--surface); border:1px solid var(--hairline); border-radius:12px;
+  overflow:hidden; box-shadow:var(--shadow-card);
+}
+.mode-btn { flex:1; text-align:center; padding:10px; font-size:13px; font-weight:600; color:var(--text-secondary); }
+.mode-btn.active { background:var(--accent); color:#fff; }
+.auto-row {
+  display:flex; align-items:center; justify-content:space-between; background:var(--surface);
+  border:1px solid var(--hairline); border-radius:12px; padding:11px 14px; box-shadow:var(--shadow-card);
+}
+.auto-label { font-size:13px; font-weight:600; color:var(--text-secondary); }
+.auto-pill { padding:4px 12px; border-radius:999px; font-size:12px; font-weight:700; background:var(--accent); color:#fff; }
+.camera {
+  height:150px; border-radius:14px; background:var(--camera-bg); position:relative; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.scan-frame { width:62%; height:56%; border:2.5px solid var(--success); border-radius:10px; box-shadow:0 0 0 100vmax rgba(0,0,0,.25); }
+.cam-hint { position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:11px; color:var(--success); font-weight:600; }
+.trigger { background:var(--success); color:#fff; border-radius:13px; padding:14px; text-align:center; font-weight:700; font-size:15px; }
+
+/* Scan row */
+.scan-row {
+  display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--hairline);
+  border-radius:12px; padding:10px 12px; box-shadow:var(--shadow-card);
+}
+.scan-row.unknown { border-color:var(--warning); border-style:dashed; }
+.scan-left { flex:1; }
+.scan-brand { font-size:10px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; }
+.scan-name { font-size:14px; font-weight:600; color:var(--text-primary); }
+.scan-meta { font-size:11px; color:var(--text-muted); }
+.stepper { display:flex; align-items:center; background:var(--bg); border:1px solid var(--hairline); border-radius:9px; overflow:hidden; }
+.step-btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--text-primary); background:var(--surface); }
+.step-qty { min-width:30px; text-align:center; font-size:14px; font-weight:700; color:var(--text-primary); }
+.del-btn { width:30px; height:30px; border-radius:999px; background:var(--danger-soft); color:var(--danger); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+
+.list-header { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:4px 2px 0; }
+</style>
+</head>
+<body class="page-dark">
+
+<div class="toolbar">
+  <h1>Inventaire — Design « Ink » <span>· prototype</span></h1>
+  <div class="switch" id="switch">
+    <button id="btn-light" class="light-btn" onclick="setTheme('light')">☀︎ Clair</button>
+    <button id="btn-dark" class="active" onclick="setTheme('dark')">☾ Sombre</button>
+  </div>
+</div>
+
+<div class="legend">
+  Aperçu de la direction <b>Ink — minimal & data-pro</b> (vibe Linear / Stripe / Vercel). Header presque noir,
+  accent indigo, cartes flottantes à ombres douces, typo <b>Inter</b> avec chiffres tabulaires alignés.
+  Bascule <b>Clair / Sombre</b> en haut à droite. Ceci est une maquette HTML — aucune ligne de l'app n'a été modifiée.
+</div>
+
+<div class="grid" id="grid">
+
+  <!-- ============ SCREEN 1 — SESSIONS ============ -->
+  <div class="phone-wrap">
+    <div class="phone-name">1 · Sessions (superviseur)</div>
+    <div class="phone theme-dark">
+      <div class="dyn"></div>
+      <div class="screen">
+        <div class="header with-status">
+          <div class="statusbar" style="width:100%;padding-bottom:0;background:transparent">
+            <span class="num">9:41</span>
+            <span class="right">●●● ⌃ <span class="num">100</span>▮</span>
+          </div>
+        </div>
+        <div class="header" style="padding-top:2px">
+          <div class="header-titles">
+            <div class="eyebrow">Espace superviseur</div>
+            <h2>Sessions</h2>
+          </div>
+          <div class="header-btns">
+            <div class="hbtn">?</div>
+          </div>
+        </div>
+        <div class="body" style="padding-bottom:80px">
+          <div class="greet-row">
+            <span class="greet">Bonjour, <b style="color:var(--text-primary)">Jean Sup</b></span>
+            <span class="signout">Déconnexion</span>
+          </div>
+
+          <div class="card tap session-card">
+            <div class="sc-top">
+              <span class="inv-no num">INV-20260529-03DC</span>
+              <span class="pill open"><span class="dot"></span>Ouverte</span>
+            </div>
+            <span class="store">Magasin Paris Centre</span>
+            <span class="meta num">Compte · 29/05/2026</span>
+          </div>
+
+          <div class="card tap session-card">
+            <div class="sc-top">
+              <span class="inv-no num">INV-20260529-4BC1</span>
+              <span class="pill progress"><span class="dot"></span>En cours</span>
+            </div>
+            <span class="store">Hermès — Faubourg</span>
+            <span class="meta num">Audit · 29/05/2026</span>
+          </div>
+
+          <div class="card tap session-card">
+            <div class="sc-top">
+              <span class="inv-no num">INV-20260514-7A20</span>
+              <span class="pill closed"><span class="dot"></span>Clôturée</span>
+            </div>
+            <span class="store">Le Bon Marché</span>
+            <span class="meta num">Arbitrage · 14/05/2026</span>
+          </div>
+        </div>
+        <div class="fab">+ Nouvelle session</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2 — SESSION DETAIL ============ -->
+  <div class="phone-wrap">
+    <div class="phone-name">2 · Détail session</div>
+    <div class="phone theme-dark">
+      <div class="dyn"></div>
+      <div class="screen">
+        <div class="header with-status">
+          <div class="statusbar" style="width:100%;padding-bottom:0;background:transparent">
+            <span class="num">9:41</span>
+            <span class="right">●●● ⌃ <span class="num">100</span>▮</span>
+          </div>
+        </div>
+        <div class="header" style="padding-top:2px">
+          <div class="back-row"><span class="chev">‹</span><span class="btxt">Sessions</span></div>
+          <div class="header-titles" style="text-align:center;flex:1"><h2 style="font-size:16px">Session</h2></div>
+          <div class="hbtn">?</div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="cred-head">
+              <span class="cred-store">Magasin Paris Centre</span>
+              <span class="pill open"><span class="dot"></span>Ouverte</span>
+            </div>
+            <div class="cred-row">
+              <div class="cred-left">
+                <div class="cred-label">N° d'inventaire</div>
+                <div class="cred-val num">INV-20260529-03DC</div>
+              </div>
+              <button class="copy-btn">Copier</button>
+            </div>
+            <div class="cred-row">
+              <div class="cred-left">
+                <div class="cred-label">Code de sécurité</div>
+                <div class="cred-val secret num">I8WEQQ</div>
+              </div>
+              <button class="copy-btn">Copier</button>
+            </div>
+            <button class="share-btn">Partager les identifiants</button>
+          </div>
+
+          <div class="sec-label">Comptages par étape</div>
+          <div class="pass-row">
+            <span class="pass-dot" style="background:var(--accent)"></span>
+            <span class="pass-name">Compte</span>
+            <span class="pass-current">En cours</span>
+            <span class="pass-count num">128 scans</span>
+          </div>
+          <div class="pass-row">
+            <span class="pass-dot" style="background:var(--success)"></span>
+            <span class="pass-name">Audit</span>
+            <span class="pass-count num">0 scan</span>
+          </div>
+          <div class="pass-row">
+            <span class="pass-dot" style="background:var(--danger)"></span>
+            <span class="pass-name">Arbitrage</span>
+            <span class="pass-count num">0 scan</span>
+          </div>
+
+          <div class="sec-label">Actions</div>
+          <button class="btn btn-primary">Scanner des articles</button>
+          <button class="btn btn-success">Passer en Audit</button>
+          <button class="btn btn-secondary">Résultats & rapport Excel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 3 — RESULTS ============ -->
+  <div class="phone-wrap">
+    <div class="phone-name">3 · Résultats</div>
+    <div class="phone theme-dark">
+      <div class="dyn"></div>
+      <div class="screen">
+        <div class="header with-status">
+          <div class="statusbar" style="width:100%;padding-bottom:0;background:transparent">
+            <span class="num">9:41</span>
+            <span class="right">●●● ⌃ <span class="num">100</span>▮</span>
+          </div>
+        </div>
+        <div class="header" style="padding-top:2px">
+          <div class="back-row"><span class="chev">‹</span><span class="btxt">Session</span></div>
+          <div class="header-titles" style="text-align:center;flex:1"><h2 style="font-size:16px">Résultats</h2></div>
+          <div class="hbtn">?</div>
+        </div>
+        <div class="body">
+          <div class="summary">
+            <div class="summary-title">Synthèse des écarts</div>
+            <div class="metric-row">
+              <span class="metric-label">Articles comptés</span>
+              <span class="metric-val num">342</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Écart total (unités)</span>
+              <span class="metric-val neg num">−17</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Écart valeur (achat)</span>
+              <span class="metric-val neg num">−1 284,50 €</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Démarque</span>
+              <span class="metric-val neg metric-hero num">−1 284,50 €</span>
+            </div>
+          </div>
+
+          <button class="btn btn-success">Exporter le rapport Excel</button>
+
+          <div class="list-header">Détail par article</div>
+
+          <div class="res-card">
+            <div class="brand">Nike</div>
+            <div class="res-label">Air Max 90 — Blanc 42</div>
+            <div class="res-sku num">SKU : NK-AM90-42 · EAN : 3701234567890</div>
+            <div class="cells">
+              <div class="cell"><div class="cell-label">Théo.</div><div class="cell-val num">24</div></div>
+              <div class="cell"><div class="cell-label">Compté</div><div class="cell-val num">21</div></div>
+              <div class="cell"><div class="cell-label">Écart</div><div class="cell-val neg num">−3</div></div>
+              <div class="cell"><div class="cell-label">Valeur</div><div class="cell-val neg num">−189 €</div></div>
+            </div>
+          </div>
+
+          <div class="res-card">
+            <div class="brand">Adidas</div>
+            <div class="res-label">Samba OG — Noir 41</div>
+            <div class="res-sku num">SKU : AD-SMB-41 · EAN : 3709876543210</div>
+            <div class="cells">
+              <div class="cell"><div class="cell-label">Théo.</div><div class="cell-val num">16</div></div>
+              <div class="cell"><div class="cell-label">Compté</div><div class="cell-val num">16</div></div>
+              <div class="cell"><div class="cell-label">Écart</div><div class="cell-val num">0</div></div>
+              <div class="cell"><div class="cell-label">Valeur</div><div class="cell-val num">0 €</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 4 — SCANNER ============ -->
+  <div class="phone-wrap">
+    <div class="phone-name">4 · Comptage (scanner)</div>
+    <div class="phone theme-dark">
+      <div class="dyn"></div>
+      <div class="screen">
+        <div class="header with-status">
+          <div class="statusbar" style="width:100%;padding-bottom:0;background:transparent">
+            <span class="num">9:41</span>
+            <span class="right">●●● ⌃ <span class="num">100</span>▮</span>
+          </div>
+        </div>
+        <div class="header" style="padding-top:2px">
+          <div class="back-row"><span class="chev">‹</span><span class="btxt">Session</span></div>
+          <div class="header-titles" style="text-align:center;flex:1"><h2 style="font-size:16px">Comptage</h2></div>
+          <div class="hbtn">?</div>
+        </div>
+        <div class="body" style="gap:10px">
+          <div class="pass-banner">
+            <span class="pass-dot" style="background:var(--accent)"></span>
+            <span class="pass-name">Compte en cours</span>
+          </div>
+          <div class="mode-toggle">
+            <div class="mode-btn active">📷 Caméra</div>
+            <div class="mode-btn">⌨︎ Manuel</div>
+          </div>
+          <div class="auto-row">
+            <span class="auto-label">⚡ Scan automatique</span>
+            <span class="auto-pill">ON</span>
+          </div>
+          <div class="camera">
+            <div class="scan-frame"></div>
+            <div class="cam-hint">Scan automatique — Vol − ou bouton pour forcer</div>
+          </div>
+          <div class="trigger">📷 Scanner maintenant</div>
+
+          <div class="list-header">Scans récents — 34 unités</div>
+
+          <div class="scan-row">
+            <div class="scan-left">
+              <div class="scan-brand">Nike</div>
+              <div class="scan-name">Air Max 90 — Blanc 42</div>
+              <div class="scan-meta num">NK-AM90-42</div>
+            </div>
+            <div class="stepper">
+              <div class="step-btn">−</div>
+              <div class="step-qty num">12</div>
+              <div class="step-btn">+</div>
+            </div>
+            <div class="del-btn">✕</div>
+          </div>
+
+          <div class="scan-row unknown">
+            <div class="scan-left">
+              <div class="scan-name">INCONNU</div>
+              <div class="scan-meta num">3701119988776</div>
+            </div>
+            <div class="stepper">
+              <div class="step-btn">−</div>
+              <div class="step-qty num">1</div>
+              <div class="step-btn">+</div>
+            </div>
+            <div class="del-btn">✕</div>
+          </div>
+
+          <div class="scan-row">
+            <div class="scan-left">
+              <div class="scan-brand">Adidas</div>
+              <div class="scan-name">Samba OG — Noir 41</div>
+              <div class="scan-meta num">AD-SMB-41</div>
+            </div>
+            <div class="stepper">
+              <div class="step-btn">−</div>
+              <div class="step-qty num">8</div>
+              <div class="step-btn">+</div>
+            </div>
+            <div class="del-btn">✕</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function setTheme(mode){
+  document.body.className = mode === 'dark' ? 'page-dark' : 'page-light';
+  document.querySelectorAll('.phone').forEach(p=>{
+    p.classList.remove('theme-dark','theme-light');
+    p.classList.add(mode === 'dark' ? 'theme-dark' : 'theme-light');
+  });
+  document.getElementById('btn-light').classList.toggle('active', mode==='light');
+  document.getElementById('btn-dark').classList.toggle('active', mode==='dark');
+}
+</script>
+</body>
+</html>
