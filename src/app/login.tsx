@@ -14,6 +14,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
+import { AppLogo } from '@/components/AppLogo'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function LoginScreen() {
@@ -51,7 +52,7 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <View style={styles.header}>
           <View style={styles.logoMark}>
-            <Text style={styles.logoMarkText}>I</Text>
+            <AppLogo size={84} />
           </View>
           <Text style={styles.title}>Inventaire</Text>
           <Text style={styles.subtitle}>Application de comptage</Text>
@@ -104,11 +105,12 @@ function makeStyles(t: Theme) {
     container: { flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.xxl },
     header: { alignItems: 'center', marginBottom: 40 },
     logoMark: {
-      width: 60, height: 60, borderRadius: Radius.lg, backgroundColor: t.accent,
-      alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg,
-      ...t.shadowButton,
+      marginBottom: Spacing.lg,
+      shadowColor: '#6C5CE7',
+      shadowOpacity: 0.45,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 12 },
     },
-    logoMarkText: { color: t.onAccent, fontSize: 30, fontFamily: Font.extrabold },
     title: { fontSize: 30, fontFamily: Font.extrabold, color: t.textPrimary, letterSpacing: -0.5 },
     subtitle: { fontSize: 14, color: t.textSecondary, marginTop: Spacing.xs, fontFamily: Font.regular },
     form: { gap: Spacing.md },

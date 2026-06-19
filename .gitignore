@@ -45,3 +45,7 @@ example
 ios/Pods/
 ios/DerivedData/
 ios/build/
+
+# Claude Design handoff bundles (design scratch — not app code)
+*-handoff.zip
+logo-d-application-inventaire/

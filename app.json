@@ -18,7 +18,7 @@
     "android": {
       "package": "com.inventaire.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1A73E8",
+        "backgroundColor": "#0A0912",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "permissions": [
@@ -40,10 +40,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1A73E8",
+          "backgroundColor": "#0A0912",
           "android": {
             "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "imageWidth": 160
           }
         }
       ],

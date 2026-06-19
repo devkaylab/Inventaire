@@ -139,22 +139,27 @@ export default function ImportScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.info}>
-          Importez les deux fichiers avant de lancer le comptage.{'\n'}
           CSV ou Excel (.xlsx) acceptés. Les fichiers volumineux peuvent prendre quelques secondes.
         </Text>
+
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningText}>
+            ⚠️  Chaque SKU doit être unique dans chaque fichier.
+          </Text>
+        </View>
 
         {renderStep(
           'catalog',
           catalog,
           '1. Référentiel articles',
-          'Colonnes : sku, ean (optionnel), brand, label, unit_purchase_price',
+          'Colonnes obligatoires : SKU (code article), EAN (code-barres), Marque, Libellé article',
         )}
 
         {renderStep(
           'stock',
           stock,
           '2. Stock théorique',
-          'Colonnes : sku, theoretical_qty (ou quantite / stock)',
+          'Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes : SKU (code article), EAN (code-barres), Quantité théorique',
         )}
       </ScrollView>
     </SafeAreaView>
@@ -166,6 +171,8 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     container: { padding: Spacing.lg, gap: Spacing.lg },
     info: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
+    warningBanner: { backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, borderLeftWidth: 3, borderLeftColor: t.warning },
+    warningText: { fontSize: 13, color: t.warning, fontFamily: Font.semibold, lineHeight: 19 },
 
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.sm, ...t.shadowCard },
     cardTitle: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
