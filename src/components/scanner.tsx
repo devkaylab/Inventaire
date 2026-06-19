@@ -51,15 +51,21 @@ interface IllisibleModalProps {
 function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: IllisibleModalProps) {
   const theme = useTheme()
   const styles = makeStyles(theme)
-  const [sku, setSku] = useState(scannedCode)
+  // The triggering code is usually a scanned barcode → pre-fill EAN.
+  const [ean, setEan] = useState(scannedCode)
+  const [sku, setSku] = useState('')
   const [brand, setBrand] = useState('')
   const [label, setLabel] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
-    const trimmedSku = sku.trim()
+    const trimmedEan = ean.trim()
+    // Internal fallback: counts.sku must point to a non-empty SKU, so when the
+    // user only provides an EAN we reuse it as the linkage key. The export
+    // (report.ts) blanks the SKU column when sku === ean, so it stays invisible.
+    const trimmedSku = sku.trim() || trimmedEan
     if (!trimmedSku) {
-      Alert.alert('Erreur', 'Le code article (SKU / EAN) est obligatoire.')
+      Alert.alert('Erreur', 'Saisissez au moins un code (SKU ou EAN).')
       return
     }
     setSaving(true)
@@ -67,7 +73,7 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
       const article = await insertArticle({
         session_id: sessionId,
         sku: trimmedSku,
-        ean: null,
+        ean: trimmedEan || null,
         brand: brand.trim(),
         label: label.trim() || 'INCONNU',
         unit_purchase_price: 0,
@@ -100,18 +106,32 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {/* SKU / EAN */}
-            <Text style={styles.fieldLabel}>Code article (SKU / EAN) *</Text>
+            {/* EAN / barcode — pre-filled with the scanned code */}
+            <Text style={styles.fieldLabel}>EAN / code-barres</Text>
             <TextInput
               style={styles.fieldInput}
-              value={sku}
-              onChangeText={setSku}
-              placeholder="Ex: 3701234567890 ou REF-001"
+              value={ean}
+              onChangeText={setEan}
+              placeholder="Ex: 3701234567890"
               placeholderTextColor={theme.textMuted}
               autoCapitalize="characters"
               autoCorrect={false}
               returnKeyType="next"
             />
+
+            {/* SKU / code article — optional */}
+            <Text style={styles.fieldLabel}>Code article (SKU)</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={sku}
+              onChangeText={setSku}
+              placeholder="Ex: REF-001 (optionnel)"
+              placeholderTextColor={theme.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="next"
+            />
+            <Text style={styles.fieldHint}>Renseignez au moins un des deux codes.</Text>
 
             {/* Brand */}
             <Text style={styles.fieldLabel}>Marque</Text>
@@ -721,6 +741,7 @@ function makeStyles(t: Theme) {
     illTitle: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary },
     illSub: { fontSize: 13, color: t.textSecondary, fontFamily: Font.regular },
     fieldLabel: { fontSize: 13, fontFamily: Font.semibold, color: t.textPrimary, marginBottom: 4 },
+    fieldHint: { fontSize: 12, color: t.textMuted, marginTop: -Spacing.sm + 2, marginBottom: Spacing.sm, fontFamily: Font.regular },
     fieldInput: {
       borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
       paddingHorizontal: Spacing.lg, paddingVertical: 11, fontSize: 15,

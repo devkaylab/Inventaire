@@ -17,7 +17,9 @@ export async function exportResultsToExcel(
   rows: SessionResultRow[]
 ): Promise<ExportResult> {
   const data = rows.map((r) => ({
-    SKU: r.sku,
+    // When sku === ean the SKU was an internal fallback for an EAN-only unknown
+    // article → leave the SKU column empty (the code shows in EAN only).
+    SKU: r.sku === r.ean ? '' : r.sku,
     EAN: r.ean ?? '',
     Marque: r.brand,
     Désignation: r.label,
@@ -49,6 +51,21 @@ export async function exportResultsToExcel(
     { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 30 }, { wch: 16 },
     { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
   ]
+
+  // Force the SKU (col 0) and EAN (col 1) columns to TEXT so codes never render
+  // as numbers (no scientific notation, leading zeros kept, uniform format).
+  const range = XLSX.utils.decode_range(ws['!ref']!)
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    for (const C of [0, 1]) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]
+      if (cell && cell.v != null && cell.v !== '') {
+        cell.t = 's'
+        cell.v = String(cell.v)
+        cell.z = '@'
+        delete cell.w
+      }
+    }
+  }
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Écarts')
 
