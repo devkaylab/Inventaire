@@ -72,6 +72,7 @@ export type Database = {
         Row: {
           brand: string
           ean: string | null
+          ean_norm: string | null
           id: string
           label: string
           session_id: string
@@ -82,6 +83,7 @@ export type Database = {
         Insert: {
           brand?: string
           ean?: string | null
+          ean_norm?: string | null
           id?: string
           label?: string
           session_id: string
@@ -92,6 +94,7 @@ export type Database = {
         Update: {
           brand?: string
           ean?: string | null
+          ean_norm?: string | null
           id?: string
           label?: string
           session_id?: string
@@ -108,6 +111,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          join_code: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          join_code?: string
+          name?: string
+        }
+        Relationships: []
       }
       counts: {
         Row: {
@@ -160,6 +184,7 @@ export type Database = {
       inventory_sessions: {
         Row: {
           closed_at: string | null
+          company_id: string
           created_at: string
           created_by: string
           current_pass: number
@@ -173,6 +198,7 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          company_id: string
           created_at?: string
           created_by: string
           current_pass?: number
@@ -186,6 +212,7 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          company_id?: string
           created_at?: string
           created_by?: string
           current_pass?: number
@@ -199,6 +226,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "inventory_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inventory_sessions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -209,24 +243,35 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_id: string | null
           created_at: string
           full_name: string
           id: string
           role: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           full_name?: string
           id: string
           role?: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
           role?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       session_members: {
         Row: {
@@ -328,6 +373,7 @@ export type Database = {
     }
     Functions: {
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      create_company: { Args: { p_name: string }; Returns: Json }
       create_session: {
         Args: {
           p_security_code: string
@@ -336,15 +382,21 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_audit_line: {
+        Args: { p_session_id: string; p_sku: string }
+        Returns: Json
+      }
       delete_session: { Args: { p_session_id: string }; Returns: Json }
       ensure_zone: {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
       }
+      gen_company_code: { Args: never; Returns: string }
       generate_zones: {
         Args: { p_count: number; p_session_id: string }
         Returns: Json
       }
+      get_my_company: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_session_results: {
         Args: { p_session_id: string }
@@ -372,6 +424,7 @@ export type Database = {
           units: number
         }[]
       }
+      join_company: { Args: { p_code: string }; Returns: Json }
       join_session: {
         Args: { p_inventory_number: string; p_security_code: string }
         Returns: Json
@@ -379,6 +432,10 @@ export type Database = {
       recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
       resolve_audit: {
         Args: { p_final_qty: number; p_session_id: string; p_sku: string }
+        Returns: Json
+      }
+      revert_pass: {
+        Args: { p_delete_counts?: boolean; p_session_id: string }
         Returns: Json
       }
       set_zone_status: {

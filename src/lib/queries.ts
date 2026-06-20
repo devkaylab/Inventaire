@@ -76,11 +76,18 @@ export async function getSessionCounts(sessionId: string) {
 
 export async function resolveArticle(sessionId: string, value: string): Promise<Article | null> {
   const trimmed = value.trim()
+  // Match leading-zero variants: Excel drops leading zeros from numeric EAN cells,
+  // so the stored EAN can differ from the scanned barcode by leading zeros.
+  // ean_norm (generated column) holds the EAN without leading zeros; compare it to
+  // the scanned code stripped the same way. Covers both directions.
+  const norm = trimmed.replace(/^0+/, '')
+  const filters = [`sku.eq.${trimmed}`, `ean.eq.${trimmed}`]
+  if (norm) filters.push(`ean_norm.eq.${norm}`)
   const { data, error } = await supabase
     .from('articles')
     .select('*')
     .eq('session_id', sessionId)
-    .or(`sku.eq.${trimmed},ean.eq.${trimmed}`)
+    .or(filters.join(','))
     .limit(1)
     .maybeSingle()
   if (error) throwSupabase('resolveArticle', error)
@@ -108,6 +115,18 @@ export async function createSession(storeName: string, securityCode: string) {
   return data as { success: boolean; session_id?: string; inventory_number?: string; store_name?: string; security_code?: string; error?: string }
 }
 
+export async function createCompany(name: string) {
+  const { data, error } = await supabase.rpc('create_company', { p_name: name })
+  if (error) throwSupabase('createCompany', error)
+  return data as { success: boolean; company_id?: string; name?: string; join_code?: string; error?: string }
+}
+
+export async function joinCompany(code: string) {
+  const { data, error } = await supabase.rpc('join_company', { p_code: code })
+  if (error) throwSupabase('joinCompany', error)
+  return data as { success: boolean; company_id?: string; name?: string; error?: string }
+}
+
 export async function joinSession(inventoryNumber: string, securityCode: string) {
   const { data, error } = await supabase.rpc('join_session', {
     p_inventory_number: inventoryNumber,
@@ -120,6 +139,18 @@ export async function joinSession(inventoryNumber: string, securityCode: string)
 export async function advancePass(sessionId: string) {
   const { data, error } = await supabase.rpc('advance_pass', { p_session_id: sessionId })
   if (error) throwSupabase('advancePass', error)
+  return data as { success: boolean; current_pass?: number; error?: string }
+}
+
+// Step the session back one pass (e.g. Audit -> Compte) so the team can resume
+// counting. Allowed for the supervisor-owner and for any session member.
+// deleteCounts wipes everything counted in the pass being left.
+export async function revertPass(sessionId: string, deleteCounts: boolean) {
+  const { data, error } = await supabase.rpc('revert_pass', {
+    p_session_id: sessionId,
+    p_delete_counts: deleteCounts,
+  })
+  if (error) throwSupabase('revertPass', error)
   return data as { success: boolean; current_pass?: number; error?: string }
 }
 
@@ -169,10 +200,75 @@ export async function resolveAudit(sessionId: string, sku: string, finalQty: num
   return data as { success: boolean; error?: string }
 }
 
+export async function deleteAuditLine(sessionId: string, sku: string) {
+  const { data, error } = await supabase.rpc('delete_audit_line', {
+    p_session_id: sessionId,
+    p_sku: sku,
+  })
+  if (error) throwSupabase('deleteAuditLine', error)
+  return data as { success: boolean; error?: string }
+}
+
 export async function getSessionResults(sessionId: string): Promise<SessionResultRow[]> {
   const { data, error } = await supabase.rpc('get_session_results', { p_session_id: sessionId })
   if (error) throwSupabase('getSessionResults', error)
   return (data ?? []) as SessionResultRow[]
+}
+
+export type ScanEntrySeed = { article: Article; qty: number; timestamp: number }
+
+// Rebuild a counter's scan list from persisted counts so it survives navigation
+// (and app restarts) until the inventory is closed. Aggregates net qty per SKU
+// for the given session + pass + counter, drops SKUs that net to zero, and
+// joins the article details needed to render each row.
+export async function getMyScanEntries(
+  sessionId: string,
+  passNumber: number,
+  countedBy: string,
+): Promise<ScanEntrySeed[]> {
+  const { data, error } = await supabase
+    .from('counts')
+    .select('sku, qty, created_at')
+    .eq('session_id', sessionId)
+    .eq('pass_number', passNumber)
+    .eq('counted_by', countedBy)
+  if (error) throwSupabase('getMyScanEntries', error)
+
+  const agg = new Map<string, { qty: number; ts: number }>()
+  for (const row of data ?? []) {
+    const cur = agg.get(row.sku) ?? { qty: 0, ts: 0 }
+    cur.qty += Number(row.qty)
+    const t = new Date(row.created_at as string).getTime()
+    if (t > cur.ts) cur.ts = t
+    agg.set(row.sku, cur)
+  }
+
+  const skus = [...agg.entries()].filter(([, v]) => v.qty > 0).map(([sku]) => sku)
+  if (skus.length === 0) return []
+
+  // Fetch article details in chunks — a counter may have scanned thousands of
+  // distinct SKUs, and a single huge `.in(...)` can blow the URL length limit.
+  const bySku = new Map<string, Article>()
+  const CHUNK = 300
+  for (let i = 0; i < skus.length; i += CHUNK) {
+    const slice = skus.slice(i, i + CHUNK)
+    const { data: articles, error: aErr } = await supabase
+      .from('articles')
+      .select('*')
+      .eq('session_id', sessionId)
+      .in('sku', slice)
+    if (aErr) throwSupabase('getMyScanEntries.articles', aErr)
+    for (const a of articles ?? []) bySku.set(a.sku, a)
+  }
+
+  const entries: ScanEntrySeed[] = []
+  for (const sku of skus) {
+    const article = bySku.get(sku)
+    if (!article) continue // article no longer exists (e.g. catalog re-import)
+    entries.push({ article, qty: agg.get(sku)!.qty, timestamp: agg.get(sku)!.ts })
+  }
+  entries.sort((a, b) => b.timestamp - a.timestamp)
+  return entries
 }
 
 export async function getArticleLabels(sessionId: string, skus: string[]) {

@@ -12,6 +12,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string, role: 'employee' | 'supervisor') => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -70,8 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  // Reload the profile from the DB (e.g. after creating/joining a company so
+  // company_id is reflected in context and the routing gate lets the user in).
+  async function refreshProfile() {
+    if (session) await fetchProfile(session.user.id)
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

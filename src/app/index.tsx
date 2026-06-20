@@ -18,6 +18,11 @@ export default function Index() {
   if (!session) return <Redirect href="/login" />
   if (!profile) return <Redirect href="/login" />
 
-  if (profile.role === 'supervisor') return <Redirect href="/(supervisor)/" />
+  if (profile.role === 'supervisor') {
+    // Un superviseur doit appartenir à une entreprise avant d'accéder à ses
+    // inventaires (cloisonnement multi-entreprises).
+    if (!profile.company_id) return <Redirect href="/company-setup" />
+    return <Redirect href="/(supervisor)/" />
+  }
   return <Redirect href="/(employee)/" />
 }
