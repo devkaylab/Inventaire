@@ -22,10 +22,10 @@ export default function SupervisorScanScreen() {
     queryFn: () => getSession(sessionId),
   })
 
-  // En mode zones, la passe découle du mode choisi par le participant
-  // (Comptage→1, Audit→2) ; sinon elle suit la passe globale de la session.
+  // La passe découle du mode choisi avant d'entrer sur l'écran de scan
+  // (Comptage→1, Audit→2), en mode zones comme sans balise.
   const usesZones = !!session?.uses_zones
-  const passNumber = usesZones ? (baliseMode === 'audit' ? 2 : 1) : session?.current_pass ?? 1
+  const passNumber = baliseMode === 'audit' ? 2 : 1
 
   // Persisted scans for this counter/pass — rebuilds the list after navigation.
   const { data: initialScans } = useQuery({

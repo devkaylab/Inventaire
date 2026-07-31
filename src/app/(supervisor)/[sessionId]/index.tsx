@@ -4,10 +4,8 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { advancePass, closeSession, getSession, getSessionCounts, getSessionMembers, getZoneDashboard, revertPass } from '@/lib/queries'
+import { closeSession, getSession, getSessionCounts, getSessionMembers, getZoneDashboard } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
-import { passLabel } from '@/constants/colors'
-import { promptRevertPass } from '@/lib/passControls'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -56,31 +54,6 @@ export default function SessionDetailScreen() {
     enabled: !!session?.uses_zones,
   })
 
-  const advanceMutation = useMutation({
-    mutationFn: () => advancePass(sessionId),
-    onSuccess: async (result) => {
-      if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Impossible d\'avancer la passe.')
-        return
-      }
-      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      Alert.alert('Étape avancée', `La session est maintenant en ${passLabel(result.current_pass ?? 1)}.`)
-    },
-  })
-
-  const revertMutation = useMutation({
-    mutationFn: (deleteCounts: boolean) => revertPass(sessionId, deleteCounts),
-    onSuccess: async (result) => {
-      if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Impossible de revenir en arrière.')
-        return
-      }
-      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      await queryClient.invalidateQueries({ queryKey: ['session-counts', sessionId] })
-      Alert.alert('Étape modifiée', `La session est de nouveau en ${passLabel(result.current_pass ?? 1)}.`)
-    },
-  })
-
   const closeMutation = useMutation({
     mutationFn: () => closeSession(sessionId),
     onSuccess: async () => {
@@ -94,14 +67,6 @@ export default function SessionDetailScreen() {
   })
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
-
-  function confirmAdvance() {
-    Alert.alert(
-      'Avancer l\'étape',
-      `Démarrer le ${passLabel((session?.current_pass ?? 0) + 1).toLowerCase()} ? Les membres de l'équipe devront recompter.`,
-      [{ text: 'Annuler', style: 'cancel' }, { text: 'Confirmer', onPress: () => advanceMutation.mutate() }]
-    )
-  }
 
   function confirmClose() {
     Alert.alert(
@@ -146,9 +111,12 @@ export default function SessionDetailScreen() {
     return <View style={styles.center}><ActivityIndicator color={theme.accent} /></View>
   }
 
-  const passCountMap: Record<number, number> = {}
+  // Pièces (unités) scannées par étape — pass 1 = comptage, pass 2 = audit.
+  let countedPieces = 0
+  let auditedPieces = 0
   for (const c of counts ?? []) {
-    passCountMap[c.pass_number] = (passCountMap[c.pass_number] ?? 0) + 1
+    if (c.pass_number === 2) auditedPieces += c.qty
+    else if (c.pass_number === 1) countedPieces += c.qty
   }
 
   const zones = zoneRows ?? []
@@ -207,31 +175,21 @@ export default function SessionDetailScreen() {
           </View>
         ) : (
           <View style={styles.progressBlock}>
-            <Text style={styles.sectionLabel}>Comptages par étape</Text>
-            {[1, 2, 3].map(p => (
-              <View key={p} style={styles.passRow}>
-                <View style={[styles.passDot, { backgroundColor: theme.passColors[p as 1 | 2 | 3] }]} />
-                <Text style={styles.passLabel}>{passLabel(p)}</Text>
-                {session.current_pass === p && (
-                  <View style={styles.passCurrentBadge}><Text style={styles.passCurrentText}>En cours</Text></View>
-                )}
-                <Text style={styles.passCount}>{passCountMap[p] ?? 0} scan{(passCountMap[p] ?? 0) > 1 ? 's' : ''}</Text>
-              </View>
-            ))}
+            <Text style={styles.sectionLabel}>Progression</Text>
+            <Text style={styles.progressBig}>{countedPieces}</Text>
+            <Text style={styles.progressSub}>pièce{countedPieces > 1 ? 's' : ''} scannée{countedPieces > 1 ? 's' : ''}</Text>
+            <Text style={styles.progressSub}>{auditedPieces} pièce{auditedPieces > 1 ? 's' : ''} auditée{auditedPieces > 1 ? 's' : ''}</Text>
           </View>
         )}
 
         {/* Menu d'actions */}
         <Text style={styles.sectionLabel}>Actions</Text>
         <View style={styles.menuCard}>
-          {!closed && usesZones && (
+          {!closed && (
             <>
               <ActionRow styles={styles} theme={theme} label="Compter des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=count`)} />
               <ActionRow styles={styles} theme={theme} label="Auditer des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=audit`)} />
             </>
-          )}
-          {!closed && !usesZones && (
-            <ActionRow styles={styles} theme={theme} label="Scanner des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan`)} />
           )}
           <ActionRow styles={styles} theme={theme} label="Audit et écart de comptage" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
           <ActionRow styles={styles} theme={theme} label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} last={closed} />
@@ -254,10 +212,6 @@ export default function SessionDetailScreen() {
         onShare={shareCredentials}
         onImport={() => { setInfoOpen(false); router.push(`/(supervisor)/${sessionId}/import`) }}
         onZones={() => { setInfoOpen(false); router.push(`/(supervisor)/${sessionId}/zones`) }}
-        onAdvance={() => { setInfoOpen(false); confirmAdvance() }}
-        onRevert={() => { setInfoOpen(false); promptRevertPass(session.current_pass, (del) => revertMutation.mutate(del)) }}
-        advancePending={advanceMutation.isPending}
-        revertPending={revertMutation.isPending}
       />
     </SafeAreaView>
   )
@@ -277,7 +231,7 @@ type MemberData = Awaited<ReturnType<typeof getSessionMembers>>
 
 function InfoPanel({
   visible, onClose, styles, theme, session, members, usesZones, closed,
-  onCopy, onShare, onImport, onZones, onAdvance, onRevert, advancePending, revertPending,
+  onCopy, onShare, onImport, onZones,
 }: {
   visible: boolean
   onClose: () => void
@@ -291,10 +245,6 @@ function InfoPanel({
   onShare: () => void
   onImport: () => void
   onZones: () => void
-  onAdvance: () => void
-  onRevert: () => void
-  advancePending: boolean
-  revertPending: boolean
 }) {
   const memberList = members ?? []
   return (
@@ -347,20 +297,11 @@ function InfoPanel({
             <>
               <Text style={styles.sectionLabel}>Configuration</Text>
               <View style={styles.menuCard}>
-                <ActionRow styles={styles} theme={theme} label="Importer les données" onPress={onImport} />
+                <ActionRow styles={styles} theme={theme} label="Importer les données" onPress={onImport} last={!usesZones} />
                 {usesZones && (
                   <ActionRow styles={styles} theme={theme} label="Zones & balises" onPress={onZones} last />
                 )}
-                {!usesZones && session.current_pass < 3 && (
-                  <ActionRow styles={styles} theme={theme} label={`Passer en ${passLabel(session.current_pass + 1)}`} onPress={onAdvance} />
-                )}
-                {!usesZones && session.current_pass > 1 && (
-                  <ActionRow styles={styles} theme={theme} label={`Revenir en ${passLabel(session.current_pass - 1)}`} onPress={onRevert} last />
-                )}
               </View>
-              {(advancePending || revertPending) && (
-                <ActivityIndicator color={theme.accent} style={{ marginTop: Spacing.sm }} />
-              )}
             </>
           )}
         </ScrollView>
@@ -417,14 +358,6 @@ function makeStyles(t: Theme) {
     missingDoneRow: { backgroundColor: t.successSoft, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.md },
     missingDone: { fontSize: 14, fontFamily: Font.semibold, color: t.success },
     zoneEmpty: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },
-
-    // Pass rows (non-zones fallback)
-    passRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: t.surface, borderRadius: Radius.md, padding: 13, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md, marginTop: Spacing.xs, ...t.shadowCard },
-    passDot: { width: 10, height: 10, borderRadius: 5 },
-    passLabel: { flex: 1, fontSize: 14, color: t.textPrimary, fontFamily: Font.semibold },
-    passCurrentBadge: { backgroundColor: t.accentSoft, borderRadius: Radius.pill, paddingHorizontal: 9, paddingVertical: 3 },
-    passCurrentText: { fontSize: 11, fontFamily: Font.semibold, color: t.accent },
-    passCount: { fontSize: 14, color: t.textSecondary, fontFamily: Font.medium, ...tabular },
 
     // Menu (grouped list)
     menuCard: { backgroundColor: t.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline, overflow: 'hidden', ...t.shadowCard },

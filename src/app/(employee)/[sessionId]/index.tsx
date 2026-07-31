@@ -1,78 +1,44 @@
 import { useCallback } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { advancePass, getArticleLabels, getMyCounts, getSession, revertPass } from '@/lib/queries'
-import { passLabel } from '@/constants/colors'
-import { promptRevertPass } from '@/lib/passControls'
-import { useAuth } from '@/lib/auth'
+import { useQuery } from '@tanstack/react-query'
+import { getArticleLabels, getMyCounts, getSession } from '@/lib/queries'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
 export default function EmployeeProgressScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
-  const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
-  const queryClient = useQueryClient()
 
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => getSession(sessionId),
   })
 
-  const revertMutation = useMutation({
-    mutationFn: (deleteCounts: boolean) => revertPass(sessionId, deleteCounts),
-    onSuccess: async (result) => {
-      if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Impossible de revenir en arrière.')
-        return
-      }
-      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      await queryClient.invalidateQueries({ queryKey: ['my-counts', sessionId] })
-      Alert.alert('Étape modifiée', `La session est de nouveau en ${passLabel(result.current_pass ?? 1)}.`)
-    },
+  // Comptage (étape 1) — liste détaillée + total des pièces comptées.
+  const { data: countRows, isLoading: countsLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['my-counts', sessionId, 1],
+    queryFn: () => getMyCounts(sessionId, 1),
+    enabled: !!session,
   })
-
-  const advanceMutation = useMutation({
-    mutationFn: () => advancePass(sessionId),
-    onSuccess: async (result) => {
-      if (!result.success) {
-        Alert.alert('Erreur', result.error ?? "Impossible d'avancer l'étape.")
-        return
-      }
-      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      await queryClient.invalidateQueries({ queryKey: ['my-counts', sessionId] })
-      Alert.alert('Étape suivante', `La session est maintenant en ${passLabel(result.current_pass ?? 2)}.`)
-    },
-  })
-
-  function confirmAdvance(current: number) {
-    Alert.alert(
-      `Passer en ${passLabel(current + 1)} ?`,
-      `Toute l'équipe passera en ${passLabel(current + 1)} et devra recompter. Continuer ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Confirmer', onPress: () => advanceMutation.mutate() },
-      ]
-    )
-  }
-
-  const { data: counts, isLoading: countsLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['my-counts', sessionId, session?.current_pass],
-    queryFn: () => getMyCounts(sessionId, session?.current_pass ?? 1),
+  // Audit (étape 2) — total des pièces auditées.
+  const { data: auditRows } = useQuery({
+    queryKey: ['my-counts', sessionId, 2],
+    queryFn: () => getMyCounts(sessionId, 2),
     enabled: !!session,
   })
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
 
   const skuTotals = new Map<string, number>()
-  for (const c of counts ?? []) {
+  for (const c of countRows ?? []) {
     skuTotals.set(c.sku, (skuTotals.get(c.sku) ?? 0) + c.qty)
   }
   const summaryRows = [...skuTotals.entries()].map(([sku, qty]) => ({ sku, qty }))
-  const totalPieces = summaryRows.reduce((sum, r) => sum + r.qty, 0)
+  const countedPieces = summaryRows.reduce((sum, r) => sum + r.qty, 0)
+  const auditedPieces = (auditRows ?? []).reduce((sum, c) => sum + c.qty, 0)
 
   // Article details (libellé / marque / EAN) to enrich each scanned line.
   const { data: labels } = useQuery({
@@ -94,21 +60,9 @@ export default function EmployeeProgressScreen() {
               <>
                 <Text style={styles.inventoryNumber}>{session.inventory_number}</Text>
                 <Text style={styles.storeName}>{session.store_name}</Text>
-                <View style={styles.passRow}>
-                  <View style={[styles.passDot, { backgroundColor: theme.passColors[session.current_pass as 1 | 2 | 3] }]} />
-                  <Text style={styles.passLabel}>
-                    {passLabel(session.current_pass)} · {summaryRows.length} référence(s) · {totalPieces} pièce(s)
-                  </Text>
-                </View>
-                {!session.uses_zones && session.status !== 'closed' && session.current_pass > 1 && (
-                  <Pressable
-                    style={styles.revertBtn}
-                    onPress={() => promptRevertPass(session.current_pass, (del) => revertMutation.mutate(del))}
-                    disabled={revertMutation.isPending}
-                  >
-                    <Text style={styles.revertBtnText}>↩  Revenir en {passLabel(session.current_pass - 1)}</Text>
-                  </Pressable>
-                )}
+                <Text style={styles.summaryLine}>
+                  {countedPieces} pièce{countedPieces > 1 ? 's' : ''} comptée{countedPieces > 1 ? 's' : ''} · {auditedPieces} auditée{auditedPieces > 1 ? 's' : ''}
+                </Text>
               </>
             )}
           </View>
@@ -144,25 +98,19 @@ export default function EmployeeProgressScreen() {
             refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
             ListEmptyComponent={
               <View style={styles.center}>
-                <Text style={styles.emptyText}>Aucun comptage pour ce {session ? passLabel(session.current_pass).toLowerCase() : 'comptage'}</Text>
+                <Text style={styles.emptyText}>Aucune pièce comptée pour l'instant</Text>
               </View>
             }
           />
 
           {session && session.status !== 'closed' && (
             <View style={styles.footer}>
-              <Pressable style={styles.scanBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan`)}>
-                <Text style={styles.scanBtnText}>Scanner des articles</Text>
+              <Pressable style={styles.countBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=count`)}>
+                <Text style={styles.countBtnText}>Compter des articles</Text>
               </Pressable>
-              {!session.uses_zones && session.current_pass < 3 && (
-                <Pressable
-                  style={styles.advanceBtn}
-                  onPress={() => confirmAdvance(session.current_pass)}
-                  disabled={advanceMutation.isPending}
-                >
-                  <Text style={styles.advanceBtnText}>Passer en {passLabel(session.current_pass + 1)}</Text>
-                </Pressable>
-              )}
+              <Pressable style={styles.auditBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=audit`)}>
+                <Text style={styles.auditBtnText}>Auditer des articles</Text>
+              </Pressable>
             </View>
           )}
         </>
@@ -178,11 +126,7 @@ function makeStyles(t: Theme) {
     header: { backgroundColor: t.surface, padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: t.hairline, gap: 4 },
     inventoryNumber: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, ...tabular },
     storeName: { fontSize: 14, color: t.textSecondary, fontFamily: Font.medium },
-    passRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.xs },
-    passDot: { width: 8, height: 8, borderRadius: 4 },
-    passLabel: { fontSize: 13, color: t.textMuted, fontFamily: Font.medium },
-    revertBtn: { marginTop: Spacing.sm, alignSelf: 'flex-start', backgroundColor: t.background, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 8, borderWidth: 1, borderColor: t.hairline },
-    revertBtnText: { fontSize: 13, color: t.textSecondary, fontFamily: Font.semibold },
+    summaryLine: { fontSize: 13, color: t.textMuted, fontFamily: Font.medium, marginTop: Spacing.xs, ...tabular },
     list: { padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.lg },
     row: { backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md, borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
     rowLeft: { flex: 1, gap: 3 },
@@ -193,9 +137,9 @@ function makeStyles(t: Theme) {
     qtyUnit: { fontSize: 11, color: t.textMuted, fontFamily: Font.medium },
     emptyText: { color: t.textMuted, fontSize: 15, fontFamily: Font.regular },
     footer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.lg, gap: Spacing.sm, borderTopWidth: 1, borderTopColor: t.hairline, backgroundColor: t.background },
-    scanBtn: { backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowElevated },
-    scanBtnText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
-    advanceBtn: { backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
-    advanceBtnText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
+    countBtn: { backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowElevated },
+    countBtnText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
+    auditBtn: { backgroundColor: t.surface, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: t.borderStrong },
+    auditBtnText: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },
   })
 }
