@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -17,6 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { checkInvitation } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
+import { PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 type Kind = 'supervisor' | 'employee'
@@ -137,6 +139,14 @@ export default function SignupScreen() {
               )}
             </Pressable>
 
+            <Text style={styles.consent}>
+              En vous inscrivant, vous acceptez notre{' '}
+              <Text style={styles.consentLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+                politique de confidentialité
+              </Text>
+              .
+            </Text>
+
             <Pressable style={styles.link} onPress={() => router.back()}>
               <Text style={styles.linkText}>Déjà un compte ? Se connecter</Text>
             </Pressable>
@@ -188,5 +198,7 @@ function makeStyles(t: Theme) {
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
     link: { alignItems: 'center', paddingVertical: Spacing.sm },
     linkText: { color: t.accent, fontSize: 14, fontFamily: Font.medium },
+    consent: { fontSize: 12, color: t.textMuted, textAlign: 'center', lineHeight: 17, marginTop: Spacing.xs, fontFamily: Font.regular },
+    consentLink: { color: t.accent, textDecorationLine: 'underline' },
   })
 }

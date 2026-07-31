@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { AppLogo } from '@/components/AppLogo'
+import { PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function LoginScreen() {
@@ -93,6 +95,10 @@ export default function LoginScreen() {
           <Pressable style={styles.link} onPress={() => router.push('/signup')}>
             <Text style={styles.linkText}>Pas encore de compte ? S'inscrire</Text>
           </Pressable>
+
+          <Pressable style={styles.privacyLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+            <Text style={styles.privacyLinkText}>Politique de confidentialité</Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -138,5 +144,7 @@ function makeStyles(t: Theme) {
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
     link: { alignItems: 'center', paddingVertical: Spacing.sm },
     linkText: { color: t.accent, fontSize: 14, fontFamily: Font.medium },
+    privacyLink: { alignItems: 'center', paddingVertical: Spacing.xs },
+    privacyLinkText: { color: t.textMuted, fontSize: 12, fontFamily: Font.regular, textDecorationLine: 'underline' },
   })
 }
