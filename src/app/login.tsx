@@ -55,7 +55,7 @@ export default function LoginScreen() {
             <AppLogo size={84} />
           </View>
           <Text style={styles.title}>Quantinvo</Text>
-          <Text style={styles.subtitle}>Application de comptage</Text>
+          <Text style={styles.subtitle}>Outil d'inventaire</Text>
         </View>
 
         <View style={styles.form}>
