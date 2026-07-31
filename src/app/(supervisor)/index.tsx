@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { getSessions } from '@/lib/queries'
-import { passLabel } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import type { Tables } from '@/types/database.types'
@@ -44,7 +43,7 @@ function SessionCard({ session, theme, styles }: { session: Session; theme: Them
       </View>
       <Text style={styles.storeName}>{session.store_name}</Text>
       <Text style={styles.meta}>
-        {passLabel(session.current_pass)} · {new Date(session.created_at).toLocaleDateString('fr-FR')}
+        {new Date(session.created_at).toLocaleDateString('fr-FR')}
       </Text>
     </Pressable>
   )
