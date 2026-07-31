@@ -12,7 +12,7 @@
       "bundleIdentifier": "com.quantinvo.app",
       "infoPlist": {
         "NSCameraUsageDescription": "L'accès à la caméra est nécessaire pour scanner les codes-barres des articles.",
-        "NSPhotoLibraryUsageDescription": "Accès aux photos pour importer des fichiers."
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -47,7 +47,12 @@
           }
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false
+        }
+      ],
       "expo-image",
       "expo-sharing"
     ],
