@@ -73,7 +73,7 @@ export function SplashAnimation({ onFinish }: SplashAnimationProps) {
         <AppLogo size={logoSize} />
       </Animated.View>
 
-      <Animated.Text style={[styles.wordmark, wordStyle]}>INVENTAIRE</Animated.Text>
+      <Animated.Text style={[styles.wordmark, wordStyle]}>QUANTINVO</Animated.Text>
     </Animated.View>
   )
 }
