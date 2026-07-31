@@ -24,7 +24,7 @@ export function WelcomeScreen({ isFirstTime, onPickRole, onSkip, onClose }: Prop
 
       {isFirstTime ? (
         <Text style={styles.subtitleFirst}>
-          👋 Bienvenue dans Inventaire ! Voici un rapide tour des fonctionnalités. Vous pourrez le retrouver à tout moment via le bouton ❓ en haut à droite.
+          👋 Bienvenue dans Quantinvo ! Voici un rapide tour des fonctionnalités. Vous pourrez le retrouver à tout moment via le bouton ❓ en haut à droite.
         </Text>
       ) : (
         <Text style={styles.subtitle}>

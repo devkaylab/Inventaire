@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Inventaire",
-    "slug": "inventaire",
+    "name": "Quantinvo",
+    "slug": "quantinvo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "inventaire",
+    "scheme": "quantinvo",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.inventaire.app",
+      "bundleIdentifier": "com.quantinvo.app",
       "infoPlist": {
         "NSCameraUsageDescription": "L'accès à la caméra est nécessaire pour scanner les codes-barres des articles.",
         "NSPhotoLibraryUsageDescription": "Accès aux photos pour importer des fichiers."
       }
     },
     "android": {
-      "package": "com.inventaire.app",
+      "package": "com.quantinvo.app",
       "adaptiveIcon": {
         "backgroundColor": "#0A0912",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
