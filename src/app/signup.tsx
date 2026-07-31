@@ -14,17 +14,21 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
+import { checkInvitation } from '@/lib/queries'
+import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+
+type Kind = 'supervisor' | 'employee'
 
 export default function SignupScreen() {
   const { signUp } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const [kind, setKind] = useState<Kind>('supervisor')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'employee' | 'supervisor'>('employee')
   const [loading, setLoading] = useState(false)
 
   async function handleSignup() {
@@ -36,15 +40,32 @@ export default function SignupScreen() {
       Alert.alert('Erreur', 'Le mot de passe doit comporter au moins 6 caractères.')
       return
     }
+    const mail = email.trim().toLowerCase()
     setLoading(true)
-    const { error } = await signUp(email.trim(), password, fullName.trim(), role)
-    setLoading(false)
-    if (error) {
-      Alert.alert('Inscription échouée', error)
-    } else {
+    try {
+      // Un employé ne peut s'inscrire que si son superviseur l'a pré-inscrit.
+      if (kind === 'employee') {
+        const invited = await checkInvitation(mail)
+        if (!invited) {
+          Alert.alert(
+            'Invitation requise',
+            "Aucune invitation trouvée pour cet e-mail. Demandez à votre superviseur de vous ajouter à son équipe, puis réessayez.",
+          )
+          return
+        }
+      }
+      const { error } = await signUp(mail, password, fullName.trim(), kind)
+      if (error) {
+        Alert.alert('Inscription échouée', error)
+        return
+      }
       Alert.alert('Compte créé', 'Vous pouvez maintenant vous connecter.', [
         { text: 'OK', onPress: () => router.replace('/login') },
       ])
+    } catch (e) {
+      Alert.alert('Erreur', errorMessage(e))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -54,9 +75,29 @@ export default function SignupScreen() {
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Text style={styles.title}>Créer un compte</Text>
+            <Text style={styles.subtitle}>
+              {kind === 'supervisor'
+                ? 'Créez votre compte et ouvrez votre entreprise.'
+                : 'Votre superviseur doit vous avoir ajouté à son équipe.'}
+            </Text>
           </View>
 
           <View style={styles.form}>
+            <View style={styles.kindRow}>
+              {([
+                ['supervisor', 'Je crée mon entreprise'],
+                ['employee', 'Je rejoins mon équipe'],
+              ] as const).map(([k, label]) => (
+                <Pressable
+                  key={k}
+                  style={[styles.kindButton, kind === k && styles.kindButtonActive]}
+                  onPress={() => setKind(k)}
+                >
+                  <Text style={[styles.kindText, kind === k && styles.kindTextActive]}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
             <Text style={styles.label}>Nom complet</Text>
             <TextInput
               style={styles.input}
@@ -88,21 +129,6 @@ export default function SignupScreen() {
               placeholderTextColor={theme.textMuted}
             />
 
-            <Text style={styles.label}>Rôle</Text>
-            <View style={styles.roleRow}>
-              {(['employee', 'supervisor'] as const).map(r => (
-                <Pressable
-                  key={r}
-                  style={[styles.roleButton, role === r && styles.roleButtonActive]}
-                  onPress={() => setRole(r)}
-                >
-                  <Text style={[styles.roleText, role === r && styles.roleTextActive]}>
-                    {r === 'employee' ? 'Employé' : 'Superviseur'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
             <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSignup} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color={theme.onAccent} />
@@ -125,9 +151,19 @@ function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
     container: { paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.xxxl },
-    header: { alignItems: 'center', marginBottom: Spacing.xxxl },
+    header: { alignItems: 'center', marginBottom: Spacing.xxxl, gap: Spacing.sm },
     title: { fontSize: 28, fontFamily: Font.extrabold, color: t.textPrimary, letterSpacing: -0.5 },
+    subtitle: { fontSize: 14, fontFamily: Font.regular, color: t.textSecondary, textAlign: 'center', lineHeight: 20 },
     form: { gap: Spacing.md },
+    kindRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.sm },
+    kindButton: {
+      flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
+      paddingVertical: 12, paddingHorizontal: Spacing.sm, alignItems: 'center',
+      backgroundColor: t.surface,
+    },
+    kindButtonActive: { borderColor: t.accent, backgroundColor: t.accentSoft },
+    kindText: { color: t.textSecondary, fontFamily: Font.medium, fontSize: 13, textAlign: 'center' },
+    kindTextActive: { color: t.accent, fontFamily: Font.bold },
     label: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary },
     input: {
       borderWidth: 1,
@@ -140,19 +176,6 @@ function makeStyles(t: Theme) {
       backgroundColor: t.surface,
       color: t.textPrimary,
     },
-    roleRow: { flexDirection: 'row', gap: Spacing.md },
-    roleButton: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: t.hairline,
-      borderRadius: Radius.md,
-      paddingVertical: 13,
-      alignItems: 'center',
-      backgroundColor: t.surface,
-    },
-    roleButtonActive: { borderColor: t.accent, backgroundColor: t.accentSoft },
-    roleText: { color: t.textSecondary, fontFamily: Font.medium },
-    roleTextActive: { color: t.accent, fontFamily: Font.bold },
     button: {
       backgroundColor: t.accent,
       borderRadius: Radius.md,

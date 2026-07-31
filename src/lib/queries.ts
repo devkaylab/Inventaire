@@ -106,10 +106,11 @@ export async function insertCount(count: TablesInsert<'counts'>) {
   return data
 }
 
-export async function createSession(storeName: string, securityCode: string) {
+export async function createSession(storeName: string, securityCode: string, usesZones = false) {
   const { data, error } = await supabase.rpc('create_session', {
     p_store_name: storeName,
     p_security_code: securityCode,
+    p_uses_zones: usesZones,
   })
   if (error) throwSupabase('createSession', error)
   return data as { success: boolean; session_id?: string; inventory_number?: string; store_name?: string; security_code?: string; error?: string }
@@ -125,6 +126,67 @@ export async function joinCompany(code: string) {
   const { data, error } = await supabase.rpc('join_company', { p_code: code })
   if (error) throwSupabase('joinCompany', error)
   return data as { success: boolean; company_id?: string; name?: string; error?: string }
+}
+
+export type Profile = Tables<'profiles'>
+export type Company = Tables<'companies'>
+
+/** L'entreprise du superviseur courant. RLS (companies_member_select) ne
+ *  renvoie que sa propre entreprise → une seule ligne au plus. */
+export async function getMyCompany(): Promise<Company | null> {
+  const { data, error } = await supabase.from('companies').select('*').limit(1).maybeSingle()
+  if (error) throwSupabase('getMyCompany', error)
+  return data
+}
+
+/** Tous les profils visibles par le superviseur = les membres de son
+ *  entreprise (employés + co-superviseurs), lui compris. */
+export async function getTeamMembers(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('role', { ascending: true })
+    .order('full_name', { ascending: true })
+  if (error) throwSupabase('getTeamMembers', error)
+  return data ?? []
+}
+
+export type Invitation = Tables<'team_invitations'>
+
+/** Invitations en attente (membres pré-inscrits pas encore connectés). */
+export async function getTeamInvitations(): Promise<Invitation[]> {
+  const { data, error } = await supabase
+    .from('team_invitations')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throwSupabase('getTeamInvitations', error)
+  return data ?? []
+}
+
+/** Pré-inscrit un membre : le superviseur ajoute son e-mail à l'équipe.
+ *  L'employé pourra ensuite créer son compte lui-même. RLS restreint
+ *  l'insertion à l'entreprise du superviseur. */
+export async function createInvitation(input: { fullName: string; email: string; companyId: string }) {
+  const { error } = await supabase.from('team_invitations').insert({
+    company_id: input.companyId,
+    email: input.email.trim().toLowerCase(),
+    full_name: input.fullName.trim(),
+    created_by: (await supabase.auth.getUser()).data.user!.id,
+  })
+  if (error) throwSupabase('createInvitation', error)
+}
+
+/** Annule une invitation en attente. */
+export async function deleteInvitation(id: string) {
+  const { error } = await supabase.from('team_invitations').delete().eq('id', id)
+  if (error) throwSupabase('deleteInvitation', error)
+}
+
+/** Avant inscription : cet e-mail a-t-il été invité par un superviseur ? */
+export async function checkInvitation(email: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_invitation', { p_email: email.trim().toLowerCase() })
+  if (error) throwSupabase('checkInvitation', error)
+  return data === true
 }
 
 export async function joinSession(inventoryNumber: string, securityCode: string) {
@@ -190,20 +252,22 @@ export async function getAudits(sessionId: string) {
   return data
 }
 
-export async function resolveAudit(sessionId: string, sku: string, finalQty: number) {
+export async function resolveAudit(sessionId: string, sku: string, finalQty: number, zone = '') {
   const { data, error } = await supabase.rpc('resolve_audit', {
     p_session_id: sessionId,
     p_sku: sku,
     p_final_qty: finalQty,
+    p_zone: zone,
   })
   if (error) throwSupabase('resolveAudit', error)
   return data as { success: boolean; error?: string }
 }
 
-export async function deleteAuditLine(sessionId: string, sku: string) {
+export async function deleteAuditLine(sessionId: string, sku: string, zone = '') {
   const { data, error } = await supabase.rpc('delete_audit_line', {
     p_session_id: sessionId,
     p_sku: sku,
+    p_zone: zone,
   })
   if (error) throwSupabase('deleteAuditLine', error)
   return data as { success: boolean; error?: string }
@@ -213,6 +277,28 @@ export async function getSessionResults(sessionId: string): Promise<SessionResul
   const { data, error } = await supabase.rpc('get_session_results', { p_session_id: sessionId })
   if (error) throwSupabase('getSessionResults', error)
   return (data ?? []) as SessionResultRow[]
+}
+
+/** Détail par (article, balise) — non sommé entre zones — pour l'onglet « Détail par zone ».
+ *  Compté par / Audité par = identités des scanneurs (passe 1 / passe 2). */
+export type SessionDetailRow = {
+  sku: string
+  ean: string | null
+  brand: string | null
+  label: string | null
+  zone: string | null
+  zone_name: string | null
+  counted_qty: number
+  counted_by: string | null
+  audited: boolean
+  audited_qty: number
+  audited_by: string | null
+}
+
+export async function getSessionDetail(sessionId: string): Promise<SessionDetailRow[]> {
+  const { data, error } = await supabase.rpc('get_session_detail', { p_session_id: sessionId })
+  if (error) throwSupabase('getSessionDetail', error)
+  return (data ?? []) as SessionDetailRow[]
 }
 
 export type ScanEntrySeed = { article: Article; qty: number; timestamp: number }
@@ -225,13 +311,17 @@ export async function getMyScanEntries(
   sessionId: string,
   passNumber: number,
   countedBy: string,
+  zone?: string | null,
 ): Promise<ScanEntrySeed[]> {
-  const { data, error } = await supabase
+  // En mode zones, on reconstruit la liste de la BALISE (tous compteurs confondus)
+  // pour permettre la correction ; sinon la liste du compteur (mode classique).
+  let q = supabase
     .from('counts')
     .select('sku, qty, created_at')
     .eq('session_id', sessionId)
     .eq('pass_number', passNumber)
-    .eq('counted_by', countedBy)
+  q = zone != null ? q.eq('zone', zone) : q.eq('counted_by', countedBy)
+  const { data, error } = await q
   if (error) throwSupabase('getMyScanEntries', error)
 
   const agg = new Map<string, { qty: number; ts: number }>()
@@ -282,5 +372,93 @@ export async function getArticleLabels(sessionId: string, skus: string[]) {
   const map: Record<string, { label: string; brand: string; ean: string | null }> = {}
   for (const a of data ?? []) map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean }
   return map
+}
+
+// ── Zones & balises ────────────────────────────────────────────────────────
+
+export type Zone = Tables<'zones'>
+export type BaliseMode = 'count' | 'audit'
+
+/** Une balise du dashboard : statut compte/audit + volumes comptés/audités. */
+export type ZoneDashboardRow = {
+  id: string
+  code: string
+  name: string | null
+  count_status: string
+  audit_status: string
+  count_units: number
+  count_lines: number
+  audit_units: number
+  audit_lines: number
+}
+
+/** Toutes les balises d'une session (RLS : superviseur de la compagnie ou membre). */
+export async function getZones(sessionId: string): Promise<Zone[]> {
+  const { data, error } = await supabase
+    .from('zones')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('code', { ascending: true })
+  if (error) throwSupabase('getZones', error)
+  return data ?? []
+}
+
+/** Définit une plage de balises rattachées à une zone nommée (ex. « réserve Beauté » 12341→12349). */
+export async function defineZoneRange(sessionId: string, name: string, start: number, end: number) {
+  const { data, error } = await supabase.rpc('define_zone', {
+    p_session_id: sessionId,
+    p_name: name,
+    p_code_start: start,
+    p_code_end: end,
+  })
+  if (error) throwSupabase('defineZoneRange', error)
+  return data as { success: boolean; created?: number; name?: string; error?: string }
+}
+
+/** Supprime toutes les balises d'une zone nommée. */
+export async function deleteZone(sessionId: string, name: string) {
+  const { data, error } = await supabase.rpc('delete_zone', {
+    p_session_id: sessionId,
+    p_name: name,
+  })
+  if (error) throwSupabase('deleteZone', error)
+  return data as { success: boolean; deleted?: number; error?: string }
+}
+
+/** Génère N balises supplémentaires au stock de l'entreprise (numérotation continue). */
+export async function generateCompanyBalises(count: number) {
+  const { data, error } = await supabase.rpc('generate_company_balises', { p_count: count })
+  if (error) throwSupabase('generateCompanyBalises', error)
+  return data as { success: boolean; from?: number; to?: number; total?: number; error?: string }
+}
+
+/** Scan d'une balise : ouvre (open=true) ou clôture (open=false) pour le mode donné.
+ *  allowCreate : crée la balise si elle est inconnue lors de l'ouverture. */
+export async function setBalise(
+  sessionId: string, code: string, mode: BaliseMode, open: boolean, allowCreate = false
+) {
+  const { data, error } = await supabase.rpc('set_balise', {
+    p_session_id: sessionId,
+    p_code: code,
+    p_mode: mode,
+    p_open: open,
+    p_allow_create: allowCreate,
+  })
+  if (error) throwSupabase('setBalise', error)
+  return data as {
+    success: boolean
+    code?: string
+    name?: string | null
+    mode?: BaliseMode
+    status?: 'open' | 'done'
+    error?: string
+  }
+}
+
+/** Avancement par balise (compte & audit) pour le dashboard superviseur. */
+export async function getZoneDashboard(sessionId: string): Promise<ZoneDashboardRow[]> {
+  const { data, error } = await supabase.rpc('get_zone_dashboard', { p_session_id: sessionId })
+  if (error) throwSupabase('getZoneDashboard', error)
+  return (data ?? []) as ZoneDashboardRow[]
 }
 

@@ -1,21 +1,14 @@
-import { useState } from 'react'
 import {
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
-  type LayoutChangeEvent,
 } from 'react-native'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
-import { Annotation } from './Annotation'
 import type { Step } from './tutorialData'
-
-// All tutorial screenshots come from the iPhone 17 Pro simulator → 1179×2556 px
-const IMG_W = 1179
-const IMG_H = 2556
-const IMG_RATIO = IMG_W / IMG_H   // ≈ 0.461
 
 interface Props {
   step: Step
@@ -25,48 +18,21 @@ interface Props {
 export function StepPage({ step, roleColor }: Props) {
   const theme = useTheme()
   const styles = makeStyles(theme)
-  const { width } = useWindowDimensions()
-  const [imgBox, setImgBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
+  const { width, height } = useWindowDimensions()
 
-  function onImgLayout(e: LayoutChangeEvent) {
-    const { width: w, height: h } = e.nativeEvent.layout
-    setImgBox({ w, h })
-  }
-
-  // ── Calculate where the image actually renders inside heroWrap (resizeMode="contain")
-  // If IMG_RATIO < container_ratio → pillarboxed (padding left/right, image fills full height)
-  // If IMG_RATIO > container_ratio → letterboxed (padding top/bottom, image fills full width)
-  const containerRatio = imgBox.h > 0 ? imgBox.w / imgBox.h : IMG_RATIO
-  let imgDisplayW: number, imgDisplayH: number, imgOffsetX: number, imgOffsetY: number
-
-  if (IMG_RATIO < containerRatio) {
-    // Pillarboxed — image fills full height
-    imgDisplayH = imgBox.h
-    imgDisplayW = imgBox.h * IMG_RATIO
-    imgOffsetX  = (imgBox.w - imgDisplayW) / 2
-    imgOffsetY  = 0
-  } else {
-    // Letterboxed — image fills full width
-    imgDisplayW = imgBox.w
-    imgDisplayH = imgBox.w / IMG_RATIO
-    imgOffsetX  = 0
-    imgOffsetY  = (imgBox.h - imgDisplayH) / 2
-  }
+  // Cap the hero so image + text always fit / scroll nicely on shorter screens
+  // (iPhone 16 is shorter than the 16 Pro Max the layout was first tuned on).
+  const heroMaxH = Math.min(380, height * 0.42)
 
   return (
-    <View style={[styles.page, { width }]}>
+    <ScrollView
+      style={{ width }}
+      contentContainerStyle={styles.page}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Hero image area */}
-      <View style={styles.heroWrap} onLayout={onImgLayout}>
+      <View style={[styles.heroWrap, { maxHeight: heroMaxH }]}>
         <Image source={step.image} style={styles.hero} resizeMode="contain" />
-
-        {/* Annotations — positioned relative to actual image content area */}
-        {imgBox.w > 0 && step.annotations?.map((a, i) => (
-          <Annotation
-            key={i}
-            data={a}
-            imageRect={{ x: imgOffsetX, y: imgOffsetY, w: imgDisplayW, h: imgDisplayH }}
-          />
-        ))}
       </View>
 
       {/* Title */}
@@ -86,19 +52,19 @@ export function StepPage({ step, roleColor }: Props) {
           <Text style={styles.tipText}>💡 {step.tip}</Text>
         </View>
       )}
-    </View>
+    </ScrollView>
   )
 }
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
-    page: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm, gap: Spacing.lg },
+    page: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm, paddingBottom: Spacing.xl, gap: Spacing.lg },
     heroWrap: {
       width: '100%', aspectRatio: 9 / 14,
       backgroundColor: t.background, borderRadius: Radius.lg,
       borderWidth: 1, borderColor: t.hairline,
       overflow: 'hidden', position: 'relative',
-      alignSelf: 'center', maxHeight: 380,
+      alignSelf: 'center',
     },
     hero: { width: '100%', height: '100%' },
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: 6 },

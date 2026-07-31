@@ -26,6 +26,7 @@ export type Database = {
           sku: string
           status: string
           updated_at: string
+          zone: string
         }
         Insert: {
           final_qty?: number | null
@@ -38,6 +39,7 @@ export type Database = {
           sku: string
           status?: string
           updated_at?: string
+          zone?: string
         }
         Update: {
           final_qty?: number | null
@@ -50,6 +52,7 @@ export type Database = {
           sku?: string
           status?: string
           updated_at?: string
+          zone?: string
         }
         Relationships: [
           {
@@ -114,18 +117,21 @@ export type Database = {
       }
       companies: {
         Row: {
+          balise_count: number
           created_at: string
           id: string
           join_code: string
           name: string
         }
         Insert: {
+          balise_count?: number
           created_at?: string
           id?: string
           join_code: string
           name: string
         }
         Update: {
+          balise_count?: number
           created_at?: string
           id?: string
           join_code?: string
@@ -306,6 +312,48 @@ export type Database = {
           },
         ]
       }
+      team_invitations: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          email: string
+          full_name: string
+          id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          email: string
+          full_name?: string
+          id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          email?: string
+          full_name?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       theoretical_stock: {
         Row: {
           id: string
@@ -337,23 +385,38 @@ export type Database = {
       }
       zones: {
         Row: {
+          audit_done_at: string | null
+          audit_status: string
           code: string
+          count_done_at: string | null
+          count_status: string
           created_at: string
           id: string
+          name: string | null
           session_id: string
           status: string
         }
         Insert: {
+          audit_done_at?: string | null
+          audit_status?: string
           code: string
+          count_done_at?: string | null
+          count_status?: string
           created_at?: string
           id?: string
+          name?: string | null
           session_id: string
           status?: string
         }
         Update: {
+          audit_done_at?: string | null
+          audit_status?: string
           code?: string
+          count_done_at?: string | null
+          count_status?: string
           created_at?: string
           id?: string
+          name?: string | null
           session_id?: string
           status?: string
         }
@@ -373,6 +436,7 @@ export type Database = {
     }
     Functions: {
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      check_invitation: { Args: { p_email: string }; Returns: boolean }
       create_company: { Args: { p_name: string }; Returns: Json }
       create_session: {
         Args: {
@@ -382,11 +446,24 @@ export type Database = {
         }
         Returns: Json
       }
+      define_zone: {
+        Args: {
+          p_code_end: number
+          p_code_start: number
+          p_name: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       delete_audit_line: {
-        Args: { p_session_id: string; p_sku: string }
+        Args: { p_session_id: string; p_sku: string; p_zone?: string }
         Returns: Json
       }
       delete_session: { Args: { p_session_id: string }; Returns: Json }
+      delete_zone: {
+        Args: { p_name: string; p_session_id: string }
+        Returns: Json
+      }
       ensure_zone: {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
@@ -398,6 +475,22 @@ export type Database = {
       }
       get_my_company: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
+      get_session_detail: {
+        Args: { p_session_id: string }
+        Returns: {
+          audited: boolean
+          audited_by: string
+          audited_qty: number
+          brand: string
+          counted_by: string
+          counted_qty: number
+          ean: string
+          label: string
+          sku: string
+          zone: string
+          zone_name: string
+        }[]
+      }
       get_session_results: {
         Args: { p_session_id: string }
         Returns: {
@@ -411,6 +504,20 @@ export type Database = {
           unit_purchase_price: number
           variance_units: number
           variance_value: number
+        }[]
+      }
+      get_zone_dashboard: {
+        Args: { p_session_id: string }
+        Returns: {
+          audit_lines: number
+          audit_status: string
+          audit_units: number
+          code: string
+          count_lines: number
+          count_status: string
+          count_units: number
+          id: string
+          name: string
         }[]
       }
       get_zone_progress: {
@@ -431,7 +538,7 @@ export type Database = {
       }
       recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
       resolve_audit: {
-        Args: { p_final_qty: number; p_session_id: string; p_sku: string }
+        Args: { p_final_qty: number; p_session_id: string; p_sku: string; p_zone?: string }
         Returns: Json
       }
       revert_pass: {
@@ -440,6 +547,25 @@ export type Database = {
       }
       set_zone_status: {
         Args: { p_status: string; p_zone_id: string }
+        Returns: Json
+      }
+      generate_company_balises: {
+        Args: { p_count: number }
+        Returns: Json
+      }
+      norm_balise: { Args: { p: string }; Returns: string }
+      register_balise: {
+        Args: { p_code: string; p_name: string; p_session_id: string }
+        Returns: Json
+      }
+      set_balise: {
+        Args: {
+          p_allow_create?: boolean
+          p_code: string
+          p_mode: string
+          p_open: boolean
+          p_session_id: string
+        }
         Returns: Json
       }
     }

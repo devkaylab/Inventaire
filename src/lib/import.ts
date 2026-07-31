@@ -92,17 +92,53 @@ async function uploadBatches<T>(
   )
 }
 
+// Normalize a header so matching ignores case, accents, and any separators
+// (spaces, hyphens, underscores, apostrophes, dots): "Prix d'achat",
+// "PRIX D'ACHAT" and "prix d achat" all become "prixdachat"; "Code-barres",
+// "Code barres" and "code_barres" all become "codebarres".
+function normalizeHeader(h: string): string {
+  return h
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')        // keep only letters & digits (drops spaces, -, _, ', dots…)
+}
+
+// Turn a spreadsheet cell into a clean code string. Numeric cells (Excel often
+// stores SKUs/EANs as numbers) become plain integer digits — no scientific
+// notation, no trailing ".0". Leading zeros lost to a numeric cell can't be
+// recovered here; format the column as Text in the source file to keep them.
+function cellToCode(v: unknown): string {
+  if (v == null) return ''
+  if (typeof v === 'number') {
+    return Number.isInteger(v) ? v.toFixed(0) : String(v)
+  }
+  return String(v).trim()
+}
+
+// Header aliases (already normalized) for the catalog's identifying columns.
+const SKU_KEYS = ['sku', 'codearticle', 'reference', 'ref', 'codeart']
+const EAN_KEYS = ['ean', 'ean13', 'gtin', 'gtin13', 'codebarre', 'codebarres', 'gencod', 'gencode', 'barcode']
+
+function pickCode(r: Record<string, unknown>, keys: string[]): string {
+  for (const k of keys) {
+    const code = cellToCode(r[k])
+    if (code) return code
+  }
+  return ''
+}
+
 // ─── XLSX → raw rows ──────────────────────────────────────────────────────────
 async function xlsxToRawRows(uri: string): Promise<Record<string, unknown>[]> {
   const bytes = await new File(uri).bytes()
   const workbook = XLSX.read(bytes, XLSX_READ_OPTS)
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true }) as Record<string, unknown>[]
-  // Normalize all header keys to lowercase+trim, same as PapaParse does for CSV
+  // Normalize all header keys, same as PapaParse does for CSV
   return rows.map(row => {
     const normalized: Record<string, unknown> = {}
     for (const key of Object.keys(row)) {
-      normalized[key.trim().toLowerCase()] = row[key]
+      normalized[normalizeHeader(key)] = row[key]
     }
     return normalized
   })
@@ -114,7 +150,7 @@ function csvToRawRows(content: string): Promise<Record<string, unknown>[]> {
     Papa.parse<Record<string, unknown>>(content, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase(),
+      transformHeader: normalizeHeader,
       complete: (r) => resolve(r.data),
       error: reject,
     })
@@ -139,19 +175,20 @@ export async function importCatalogFile(
   let skipped = 0
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
-    const sku = String(r['sku'] ?? r['SKU'] ?? r['Sku'] ?? '').trim()
+    const sku = pickCode(r, SKU_KEYS)
     if (!sku) {
       skipped++
       if (errors.length < 10) errors.push(`Ligne ${i + 2}: SKU manquant — ignorée`)
       continue
     }
-    const price = parseFloat(String(r['unit_purchase_price'] ?? r['prix'] ?? r['price'] ?? r['prix_achat'] ?? r['pa'] ?? r['cout'] ?? r['coût'] ?? '0'))
+    // Colonne prix d'achat optionnelle — en-têtes normalisés (sans séparateurs).
+    const price = parseFloat(String(r['prixdachat'] ?? r['cost'] ?? r['cogs'] ?? r['cout'] ?? r['pa'] ?? '0'))
     articleMap.set(sku, {
       session_id: sessionId,
       sku,
-      ean: String(r['ean'] ?? '').trim() || null,
+      ean: pickCode(r, EAN_KEYS) || null,
       brand: String(r['brand'] ?? r['marque'] ?? r['fournisseur'] ?? '').trim() || '',
-      label: String(r['label'] ?? r['libelle'] ?? r['designation'] ?? r['description'] ?? r['désignation'] ?? r['nom'] ?? '').trim() || '',
+      label: String(r['label'] ?? r['libelle'] ?? r['designation'] ?? r['description'] ?? r['nom'] ?? '').trim() || '',
       unit_purchase_price: isNaN(price) ? 0 : price,
     })
   }
@@ -207,13 +244,13 @@ export async function importStockFile(
   let skipped = 0
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
-    const sku = String(r['sku'] ?? r['SKU'] ?? r['Sku'] ?? '').trim()
+    const sku = pickCode(r, SKU_KEYS)
     if (!sku) {
       skipped++
       if (errors.length < 10) errors.push(`Ligne ${i + 2}: SKU manquant — ignorée`)
       continue
     }
-    const qty = parseFloat(String(r['theoretical_qty'] ?? r['qte_theorique'] ?? r['qté_théorique'] ?? r['quantite'] ?? r['quantité'] ?? r['qty'] ?? r['qte'] ?? r['qté'] ?? r['stock'] ?? r['quantity'] ?? '0'))
+    const qty = parseFloat(String(r['theoreticalqty'] ?? r['qtetheorique'] ?? r['quantitetheorique'] ?? r['quantite'] ?? r['qty'] ?? r['qte'] ?? r['stock'] ?? r['quantity'] ?? '0'))
     stockMap.set(sku, (stockMap.get(sku) ?? 0) + (isNaN(qty) ? 0 : qty))
   }
   const payload: TablesInsert<'theoretical_stock'>[] = Array.from(stockMap.entries()).map(

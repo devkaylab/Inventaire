@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Redirect, Stack } from 'expo-router'
+import { Redirect, router, Stack } from 'expo-router'
 import { useAuth } from '@/lib/auth'
 import { ActivityIndicator, View } from 'react-native'
 import { useTheme } from '@/lib/theme'
@@ -44,17 +44,24 @@ export default function SupervisorLayout() {
   }
 
   const helpRight = () => <HeaderActions onHelp={help.open} />
+  const helpProfileRight = () => (
+    <HeaderActions onHelp={help.open} onProfile={() => router.push('/(supervisor)/profile')} />
+  )
 
   return (
     <>
       <Stack>
-        <Stack.Screen name="index" options={{ title: 'Sessions', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="index" options={{ title: 'Sessions', ...headerBase, headerRight: helpProfileRight }} />
+        <Stack.Screen name="profile" options={{ title: 'Mon profil', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="new-session" options={{ title: 'Nouvelle session', ...headerBase, headerRight: helpRight }} />
-        <Stack.Screen name="[sessionId]/index" options={{ title: 'Session', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="[sessionId]/index" options={{ title: 'Session', ...headerBase, headerRight: helpProfileRight }} />
         <Stack.Screen name="[sessionId]/import" options={{ title: 'Importer les données', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="[sessionId]/zones" options={{ title: 'Zones & balises', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/audits" options={{ title: 'Audits & écarts', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/results" options={{ title: 'Résultats', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="[sessionId]/missing" options={{ title: 'Balises manquantes', ...headerBase, headerRight: helpRight }} />
       </Stack>
       <HelpModal visible={help.visible} onClose={help.close} isFirstTime={help.isFirstTime} />
     </>

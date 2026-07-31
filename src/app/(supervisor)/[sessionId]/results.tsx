@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { getSession, getSessionResults, recomputeAudit, type SessionResultRow } from '@/lib/queries'
+import { getSession, getSessionDetail, getSessionResults, recomputeAudit, type SessionResultRow } from '@/lib/queries'
 import { exportResultsToExcel } from '@/lib/report'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -53,7 +53,11 @@ export default function ResultsScreen() {
   }, [rows])
 
   const exportMutation = useMutation({
-    mutationFn: () => exportResultsToExcel(session?.inventory_number ?? 'inventaire', rows ?? []),
+    mutationFn: async () => {
+      // Le détail par zone n'est chargé qu'au moment de l'export.
+      const detail = await getSessionDetail(sessionId)
+      return exportResultsToExcel(session?.inventory_number ?? 'inventaire', rows ?? [], detail)
+    },
     onSuccess: (result) => {
       if (!result.shared) {
         Alert.alert('Rapport généré', `Le fichier ${result.filename} a été créé mais le partage n'est pas disponible sur cette plateforme.`)

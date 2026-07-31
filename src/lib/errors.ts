@@ -24,3 +24,18 @@ export function errorMessage(e: unknown): string {
 
   return String(e)
 }
+
+/**
+ * Message clair pour un échec d'enregistrement de comptage. Traduit les erreurs
+ * techniques (notamment RLS / 42501) en explication compréhensible par l'inventoriste.
+ */
+export function friendlyInsertCountError(e: unknown): string {
+  const msg = errorMessage(e)
+  if (/row-level security|42501|permission denied/i.test(msg)) {
+    return "Enregistrement refusé. Vous n'êtes peut-être plus inscrit à cette session, ou l'inventaire vient d'être clôturé. Rejoignez la session à nouveau (numéro + code) ou contactez le superviseur."
+  }
+  if (/network|fetch|timeout|Failed to fetch/i.test(msg)) {
+    return 'Connexion perdue. Vérifiez votre réseau : le comptage sera enregistrable dès le retour de la connexion.'
+  }
+  return `Impossible d'enregistrer le comptage : ${msg}`
+}

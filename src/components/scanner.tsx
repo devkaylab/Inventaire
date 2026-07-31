@@ -16,9 +16,10 @@ import {
   View,
 } from 'react-native'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
-import { VolumeManager } from 'react-native-volume-manager'
-import { insertArticle, resolveArticle } from '@/lib/queries'
-import type { Article } from '@/lib/queries'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getMyScanEntries, getZoneDashboard, insertArticle, resolveArticle, setBalise } from '@/lib/queries'
+import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
+import { parseBalise } from '@/lib/balises'
 import { passLabel } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -28,10 +29,31 @@ import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@
 interface ScannerProps {
   sessionId: string
   passNumber: number
-  onArticleResolved: (article: Article, qty: number) => Promise<void>
+  onArticleResolved: (article: Article, qty: number, zoneCode?: string | null) => Promise<void>
+  /** Scans already persisted for this counter/pass — seeds the list on mount
+   *  so it survives navigation (undefined while still loading). */
+  initialScans?: ScanEntrySeed[]
+  /** Zone mode : on scanne une balise pour ouvrir une zone, on compte/audite,
+   *  puis on rescanne (ou « Clôturer ») pour la fermer. */
+  zoneMode?: boolean
+  mode?: BaliseMode
+  onModeChange?: (mode: BaliseMode) => void
+  /** Masque le sélecteur Comptage/Audit : le mode est alors imposé par l'écran
+   *  précédent (entrées « Compter »/« Auditer »). Le mode reste visible dans les
+   *  bandeaux de zone. */
+  lockMode?: boolean
+  /** Identité du compteur (mode classique) — sert au réamorçage de la liste. */
+  countedBy?: string
 }
 
-type Mode = 'camera' | 'manual'
+type Mode = 'camera' | 'manual' | 'hardware'
+
+// Symbologies lues par la caméra. Les balises de l'app sont des QR ('qr') ;
+// le reste couvre les codes-barres articles (EAN/UPC/Code128, etc.).
+const BARCODE_TYPES = [
+  'qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'code93',
+  'itf14', 'codabar', 'datamatrix', 'pdf417', 'aztec',
+] as const
 
 interface ScanEntry {
   id: string
@@ -185,36 +207,104 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
 }
 
 // ─── Scanner ──────────────────────────────────────────────────────────────────
-export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerProps) {
+export function Scanner({
+  sessionId, passNumber, onArticleResolved, initialScans,
+  zoneMode = false, mode: baliseMode = 'count', onModeChange, lockMode = false, countedBy,
+}: ScannerProps) {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const queryClient = useQueryClient()
   const [permission, requestPermission] = useCameraPermissions()
   const [mode, setMode] = useState<Mode>('camera')
   const [manualInput, setManualInput] = useState('')
+  // Douchette (Zebra/Honeywell/BT HID) — capture keyboard-wedge en mode dédié.
+  const [hwInput, setHwInput] = useState('')
+  const hwInputRef = useRef<TextInput>(null)
+  const [baliseInput, setBaliseInput] = useState('')
   const [resolving, setResolving] = useState(false)
   const [recentScans, setRecentScans] = useState<ScanEntry[]>([])
   const [barcodeReady, setBarcodeReady] = useState(false)
   const [illisibleCode, setIllisibleCode] = useState<string | null>(null)
   const [autoScan, setAutoScan] = useState(true)
+  const [torch, setTorch] = useState(false)
+  const seededRef = useRef(false)
+
+  // ── Zone mode : balise actuellement ouverte ────────────────────────────────
+  const [activeBalise, setActiveBaliseState] = useState<{ code: string; name: string | null } | null>(null)
+  // Refs miroir : resolveAndRecord est capturé par un callback mémoïsé et doit
+  // lire les valeurs courantes (mode, balise active) sans closure périmée.
+  const activeBaliseRef = useRef<{ code: string; name: string | null } | null>(null)
+  const zoneModeRef = useRef(zoneMode)
+  const baliseModeRef = useRef<BaliseMode>(baliseMode)
+  // Code de la balise venant d'être ouverte/fermée : ignoré tant qu'il reste
+  // dans le champ (évite de re-fermer/ré-ouvrir aussitôt le même sticker).
+  const ignoreBaliseRef = useRef<string | null>(null)
+  useEffect(() => { zoneModeRef.current = zoneMode }, [zoneMode])
+  useEffect(() => { baliseModeRef.current = baliseMode }, [baliseMode])
+
+  function setActiveBalise(v: { code: string; name: string | null } | null) {
+    activeBaliseRef.current = v
+    setActiveBaliseState(v)
+  }
+
+  // Mode classique : amorce la liste une fois depuis les comptages persistés.
+  // En mode zones, la liste est amorcée par balise (voir plus bas).
+  useEffect(() => {
+    if (zoneMode || seededRef.current || !initialScans) return
+    seededRef.current = true
+    if (initialScans.length === 0) return
+    setRecentScans(prev => {
+      if (prev.length > 0) return prev // user already started scanning — don't clobber
+      return initialScans.map(e => ({
+        id: `${e.article.sku}-${e.timestamp}`,
+        article: e.article,
+        qty: e.qty,
+        timestamp: e.timestamp,
+      }))
+    })
+  }, [initialScans, zoneMode])
+
+  // ── Deux phases (mode zones) ────────────────────────────────────────────────
+  // Phase « balise » = aucune zone ouverte → on ouvre une balise (délibérément).
+  // Phase « articles » = une zone est ouverte → on scanne les articles.
+  const balisePhase = zoneMode && !activeBalise
+  const autoScanEnabledRef = useRef(true)
+  useEffect(() => { autoScanEnabledRef.current = !balisePhase && autoScan }, [balisePhase, autoScan])
+
+  // Balises déjà terminées (mode courant) — pour revenir corriger une erreur.
+  const { data: zoneRows } = useQuery({
+    queryKey: ['zone-dashboard', sessionId],
+    queryFn: () => getZoneDashboard(sessionId),
+    enabled: zoneMode,
+  })
+  const doneBalises = (zoneRows ?? []).filter(
+    (z) => (baliseMode === 'count' ? z.count_status : z.audit_status) === 'done',
+  )
+
+  // Réamorce la liste avec le contenu de la balise ouverte (tous compteurs),
+  // pour voir et corriger ce qui a déjà été compté/audité dans cette zone.
+  useEffect(() => {
+    if (!zoneMode) return
+    const code = activeBalise?.code
+    if (!code) { setRecentScans([]); return }
+    let cancelled = false
+    getMyScanEntries(sessionId, passNumber, countedBy ?? '', code)
+      .then((entries) => {
+        if (cancelled) return
+        setRecentScans(entries.map((e) => ({ id: `${e.article.sku}-${e.timestamp}`, article: e.article, qty: e.qty, timestamp: e.timestamp })))
+      })
+      .catch(() => { /* liste vide si erreur */ })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBalise?.code, zoneMode, passNumber])
 
   const lastDetectedRef = useRef<string | null>(null)
   const detectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const processingRef = useRef(false)          // sync lock — no React render cycle
   const cooldownRef = useRef(false)            // blocks auto-scan between triggers
-  const volumeDebounceRef = useRef(false)      // prevents double-fire on one press
-  const handleVolumeDownRef = useRef<() => void>(() => {})
   const manualInputRef = useRef<TextInput>(null)
   const cooldownAnim = useRef(new Animated.Value(0)).current
   const COOLDOWN_MS = 1500
-
-  // Always up-to-date, no resolving state check — processingRef handles concurrency
-  handleVolumeDownRef.current = function handleVolumeDown() {
-    if (mode === 'manual') {
-      handleManualSubmit()
-    } else if (lastDetectedRef.current) {
-      resolveAndRecord(lastDetectedRef.current)
-    }
-  }
 
   useEffect(() => {
     if (permission && !permission.granted) requestPermission()
@@ -228,31 +318,13 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
     }
   }, [])
 
-  // ── Volume-down: park at 0.5 so it's always detectable ────────────────────
-  const SENTINEL = 0.5
+  // ── Mode douchette : maintient le focus sur le champ de capture pour recevoir
+  // les frappes de la douchette, sauf pendant la saisie « article inconnu ». ──
   useEffect(() => {
-    // NOTE: we intentionally do NOT call showNativeVolumeUI({ enabled: false })
-    // because on some iOS versions it also suppresses the volume change events.
-    VolumeManager.setVolume(SENTINEL, { showUI: false }).catch(() => {})
-
-    const sub = VolumeManager.addVolumeListener((result) => {
-      if (result.volume < SENTINEL - 0.05) {
-        // Debounce: one physical press fires several events in quick succession.
-        // We restore the sentinel only once, at the end of the debounce window,
-        // to avoid rapid-fire setVolume calls confusing the listener.
-        if (!volumeDebounceRef.current) {
-          volumeDebounceRef.current = true
-          handleVolumeDownRef.current()
-          setTimeout(() => {
-            volumeDebounceRef.current = false
-            VolumeManager.setVolume(SENTINEL, { showUI: false }).catch(() => {})
-          }, 350)
-        }
-      }
-    })
-
-    return () => { sub.remove() }
-  }, [])
+    if (mode !== 'hardware' || balisePhase || illisibleCode !== null) return
+    const id = setTimeout(() => hwInputRef.current?.focus(), 60)
+    return () => clearTimeout(id)
+  }, [mode, balisePhase, illisibleCode])
 
   // ── Cooldown: animated bar drains over COOLDOWN_MS after each auto-scan ────
   function startCooldown() {
@@ -276,11 +348,12 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
     if (detectionTimer.current) clearTimeout(detectionTimer.current)
     detectionTimer.current = setTimeout(() => {
       lastDetectedRef.current = null
+      ignoreBaliseRef.current = null // le sticker a quitté le champ
       setBarcodeReady(false)
     }, 600)
 
-    // Auto-scan: only if enabled, not in cooldown and not already processing
-    if (autoScan && !cooldownRef.current && !processingRef.current) {
+    // Auto-scan : jamais en phase balise (ouverture délibérée uniquement).
+    if (autoScanEnabledRef.current && !cooldownRef.current && !processingRef.current) {
       startCooldown()
       resolveAndRecord(result.data)
     }
@@ -302,21 +375,100 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
     setResolving(true)
 
     try {
+      // ── Zone mode : une balise est un QR préfixé (généré par l'app) ───────
+      if (zoneModeRef.current) {
+        const parsed = parseBalise(value)
+        if (parsed) {
+          const code = parsed.code
+          if (code === ignoreBaliseRef.current) return // encore dans le champ
+          const active = activeBaliseRef.current
+          if (active && code === active.code) {
+            await closeBalise()               // rescan → clôture
+          } else if (active) {
+            await openBaliseCode(code, true)  // autre balise → clôture puis ouvre
+          } else {
+            await openBaliseCode(code, false) // ouvre la zone
+          }
+          return
+        }
+        // Pas une balise → article : il faut d'abord une zone ouverte.
+        if (!activeBaliseRef.current) {
+          playErrorSound()
+          Alert.alert('Zone fermée', 'Scannez d’abord une balise pour ouvrir une zone.')
+          return
+        }
+      }
+
       const article = await resolveArticle(sessionId, value)
       if (!article) {
         playErrorSound()
         setIllisibleCode(value)
         return
       }
-      await recordArticle(article)
+      await recordArticle(article, activeBaliseRef.current?.code ?? null)
     } finally {
       processingRef.current = false
       setResolving(false)
     }
   }
 
-  async function recordArticle(article: Article) {
-    await onArticleResolved(article, 1)
+  // ── Ouvre une balise (par son code). closePrev clôture la zone en cours. ──
+  async function openBaliseCode(code: string, closePrev: boolean) {
+    try {
+      if (closePrev && activeBaliseRef.current) {
+        await setBalise(sessionId, activeBaliseRef.current.code, baliseModeRef.current, false)
+      }
+      const result = await setBalise(sessionId, code, baliseModeRef.current, true)
+      if (!result.success) {
+        playErrorSound()
+        Alert.alert('Balise', result.error ?? 'Balise inconnue.')
+        return
+      }
+      ignoreBaliseRef.current = result.code ?? code
+      setActiveBalise({ code: result.code ?? code, name: result.name ?? null })
+      queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      playScanSound()
+    } catch (e) {
+      playErrorSound()
+      Alert.alert('Erreur', errorMessage(e))
+    }
+  }
+
+  // ── Clôture la zone ouverte ──────────────────────────────────────────────
+  async function closeBalise() {
+    const active = activeBaliseRef.current
+    if (!active) return
+    try {
+      const result = await setBalise(sessionId, active.code, baliseModeRef.current, false)
+      if (!result.success) {
+        Alert.alert('Balise', result.error ?? 'Clôture impossible.')
+        return
+      }
+      ignoreBaliseRef.current = active.code
+      setActiveBalise(null)
+      queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      playScanSound()
+    } catch (e) {
+      Alert.alert('Erreur', errorMessage(e))
+    }
+  }
+
+  // ── Ouverture délibérée d'une balise par saisie de son numéro ─────────────
+  async function openBaliseManual() {
+    const code = baliseInput.trim()
+    if (!code) return
+    Keyboard.dismiss()
+    setResolving(true)
+    try {
+      await openBaliseCode(code, false)
+    } finally {
+      setResolving(false)
+    }
+    setBaliseInput('')
+  }
+
+  async function recordArticle(article: Article, zoneCode: string | null = null) {
+    await onArticleResolved(article, 1, zoneCode)
     playScanSound()
     setRecentScans(prev => {
       const idx = prev.findIndex(e => e.article.sku === article.sku)
@@ -326,9 +478,10 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
         updated.sort((a, b) => b.timestamp - a.timestamp)
         return updated
       }
+      // No cap — the full list must persist until the inventory is closed.
       return [
         { id: `${article.sku}-${Date.now()}`, article, qty: 1, timestamp: Date.now() },
-        ...prev.slice(0, 49),
+        ...prev,
       ]
     })
   }
@@ -340,12 +493,22 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
     setManualInput('')
   }
 
+  // ── Douchette : une frappe-clavier terminée par Entrée (suffixe DataWedge) ──
+  async function handleHardwareSubmit() {
+    const value = hwInput
+    setHwInput('')
+    if (!value.trim()) return
+    await resolveAndRecord(value)
+    // Garde le champ à l'écoute pour le scan suivant (scan continu).
+    hwInputRef.current?.focus()
+  }
+
   // ── Illisible confirmed ────────────────────────────────────────────────────
   async function handleIllisibleConfirm(article: Article) {
     setIllisibleCode(null)
     setResolving(true)
     try {
-      await recordArticle(article)
+      await recordArticle(article, activeBaliseRef.current?.code ?? null)
     } finally {
       setResolving(false)
     }
@@ -354,7 +517,7 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
   // ── List actions ───────────────────────────────────────────────────────────
   async function handleIncrement(entry: ScanEntry) {
     try {
-      await onArticleResolved(entry.article, 1)
+      await onArticleResolved(entry.article, 1, activeBaliseRef.current?.code ?? null)
       setRecentScans(prev =>
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty + 1, timestamp: Date.now() } : e)
       )
@@ -366,7 +529,7 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
   async function handleDecrement(entry: ScanEntry) {
     if (entry.qty <= 1) { handleDelete(entry); return }
     try {
-      await onArticleResolved(entry.article, -1)
+      await onArticleResolved(entry.article, -1, activeBaliseRef.current?.code ?? null)
       setRecentScans(prev =>
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty - 1 } : e)
       )
@@ -386,7 +549,7 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
           style: 'destructive',
           onPress: async () => {
             try {
-              await onArticleResolved(entry.article, -entry.qty)
+              await onArticleResolved(entry.article, -entry.qty, activeBaliseRef.current?.code ?? null)
               setRecentScans(prev => prev.filter(e => e.id !== entry.id))
             } catch {
               Alert.alert('Erreur', "Impossible de supprimer la ligne.")
@@ -402,32 +565,110 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
   }
 
   const totalScanned = recentScans.reduce((s, e) => s + e.qty, 0)
+  const triggerLabel = balisePhase
+    ? (barcodeReady ? '📷  Scanner la balise' : 'Visez une balise…')
+    : (barcodeReady ? '📷  Scanner maintenant' : 'En attente d\'un code…')
+  const camHint = resolving
+    ? 'Enregistrement…'
+    : barcodeReady
+      ? (balisePhase ? 'Balise détectée — appuyez pour ouvrir' : 'Scan automatique — Vol − ou bouton pour forcer')
+      : (balisePhase ? 'Visez la balise de la zone' : 'Pointez la caméra vers un code-barres')
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Pass banner */}
-      <View style={styles.passBanner}>
-        <View style={[styles.passDot, { backgroundColor: theme.passColors[passNumber as 1 | 2 | 3] ?? theme.accent }]} />
-        <Text style={styles.passLabel}>{passLabel(passNumber)} en cours</Text>
-        {resolving && <ActivityIndicator size="small" color={theme.accent} style={{ marginLeft: 'auto' }} />}
-      </View>
+      {/* Bandeau : passe (mode classique) ou zone/balise (mode zones) */}
+      {zoneMode ? (
+        <View>
+          {/* Sélecteur Comptage / Audit — verrouillé tant qu'une zone est ouverte.
+              Masqué (lockMode) quand le mode est imposé par l'écran précédent. */}
+          {!lockMode && (
+            <View style={styles.zoneModeToggle}>
+              {(['count', 'audit'] as const).map((m) => {
+                const active = baliseMode === m
+                const color = theme.passColors[m === 'count' ? 1 : 2]
+                return (
+                  <Pressable
+                    key={m}
+                    style={[styles.zoneModeBtn, active && { backgroundColor: color }]}
+                    onPress={() => { if (!activeBalise) onModeChange?.(m) }}
+                    disabled={!!activeBalise}
+                  >
+                    <Text style={[styles.zoneModeText, active && styles.zoneModeTextActive, !!activeBalise && !active && { opacity: 0.4 }]}>
+                      {m === 'count' ? '🔢 Comptage' : '🔍 Audit'}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          )}
+          {/* Bandeau de la zone ouverte */}
+          {activeBalise ? (
+            <View style={[styles.zoneBanner, { borderColor: theme.passColors[baliseMode === 'count' ? 1 : 2] }]}>
+              <View style={[styles.passDot, { backgroundColor: theme.passColors[baliseMode === 'count' ? 1 : 2] }]} />
+              <Text style={styles.zoneBannerText} numberOfLines={1}>
+                Zone ouverte · {activeBalise.name ?? 'Sans nom'} · balise {activeBalise.code}
+              </Text>
+              <Pressable style={styles.zoneCloseBtn} onPress={closeBalise} disabled={resolving}>
+                <Text style={styles.zoneCloseText}>Clôturer</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.zoneBannerIdle}>
+              <Text style={styles.zoneBannerIdleText}>
+                Scannez une balise pour ouvrir une zone ({baliseMode === 'count' ? 'Comptage' : 'Audit'})
+              </Text>
+              {resolving && <ActivityIndicator size="small" color={theme.accent} />}
+            </View>
+          )}
+        </View>
+      ) : (
+        <View style={styles.passBanner}>
+          <View style={[styles.passDot, { backgroundColor: theme.passColors[passNumber as 1 | 2 | 3] ?? theme.accent }]} />
+          <Text style={styles.passLabel}>{passLabel(passNumber)} en cours</Text>
+          {resolving && <ActivityIndicator size="small" color={theme.accent} style={{ marginLeft: 'auto' }} />}
+        </View>
+      )}
 
-      {/* Mode toggle */}
-      <View style={styles.modeToggle}>
-        {(['camera', 'manual'] as const).map(m => (
-          <Pressable key={m} style={[styles.modeBtn, mode === m && styles.modeBtnActive]} onPress={() => setMode(m)}>
-            <Text style={[styles.modeBtnText, mode === m && styles.modeBtnTextActive]}>
-              {m === 'camera' ? '📷 Caméra' : '⌨️ Manuel'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* Phase balise : ouverture délibérée par saisie du numéro (ou scan manuel) */}
+      {balisePhase && (
+        <View style={styles.baliseField}>
+          <Text style={styles.baliseFieldLabel}>Ouvrir une balise — saisissez son numéro ou scannez-la</Text>
+          <View style={styles.manualRow}>
+            <TextInput
+              style={[styles.manualInput, { flex: 1 }, tabular]}
+              value={baliseInput}
+              onChangeText={setBaliseInput}
+              keyboardType="number-pad"
+              placeholder="N° de balise"
+              placeholderTextColor={theme.textMuted}
+              returnKeyType="go"
+              onSubmitEditing={openBaliseManual}
+            />
+            <Pressable style={[styles.manualBtn, resolving && { opacity: 0.6 }]} onPress={openBaliseManual} disabled={resolving}>
+              {resolving ? <ActivityIndicator color="#fff" /> : <Text style={styles.manualBtnText}>Ouvrir</Text>}
+            </Pressable>
+          </View>
+        </View>
+      )}
 
-      {/* Auto-scan toggle — camera mode only */}
-      {mode === 'camera' && (
+      {/* Bascule Caméra / Manuel — articles uniquement */}
+      {!balisePhase && (
+        <View style={styles.modeToggle}>
+          {(['camera', 'manual', 'hardware'] as const).map(m => (
+            <Pressable key={m} style={[styles.modeBtn, mode === m && styles.modeBtnActive]} onPress={() => setMode(m)}>
+              <Text style={[styles.modeBtnText, mode === m && styles.modeBtnTextActive]}>
+                {m === 'camera' ? '📷 Caméra' : m === 'manual' ? '⌨️ Manuel' : '🔫 Douchette'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {/* Auto-scan toggle — articles, caméra */}
+      {!balisePhase && mode === 'camera' && (
         <Pressable style={styles.autoScanRow} onPress={() => setAutoScan(v => !v)}>
           <Text style={styles.autoScanLabel}>⚡ Scan automatique</Text>
           <View style={[styles.autoScanPill, autoScan && styles.autoScanPillOn]}>
@@ -438,17 +679,26 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
         </Pressable>
       )}
 
-      {/* Camera or manual input */}
-      {mode === 'camera' ? (
+      {/* Camera or manual input (en phase balise : toujours la caméra) */}
+      {(balisePhase || mode === 'camera') ? (
         permission.granted ? (
           <>
             <View style={styles.cameraWrapper}>
               <CameraView
                 style={styles.camera}
                 facing="back"
-                barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'qr'] }}
+                enableTorch={torch}
+                barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] as never }}
                 onBarcodeScanned={resolving ? undefined : handleBarcodeDetected}
               />
+              {/* Torch toggle — helps scanning in low light */}
+              <Pressable
+                style={[styles.torchBtn, torch && styles.torchBtnOn]}
+                onPress={() => setTorch(v => !v)}
+                hitSlop={8}
+              >
+                <Text style={styles.torchIcon}>🔦</Text>
+              </Pressable>
               {resolving && (
                 <View style={styles.overlay}>
                   <ActivityIndicator color="#fff" size="small" />
@@ -463,11 +713,7 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
               />
               <View style={styles.hintBar} pointerEvents="none">
                 <Text style={[styles.hintText, barcodeReady && styles.hintTextReady]}>
-                  {resolving
-                    ? 'Enregistrement…'
-                    : barcodeReady
-                      ? 'Scan automatique — Vol − ou bouton pour forcer'
-                      : 'Pointez la caméra vers un code-barres'}
+                  {camHint}
                 </Text>
               </View>
             </View>
@@ -493,7 +739,7 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
                 </>
               ) : (
                 <Text style={[styles.triggerBtnText, barcodeReady && { color: '#fff' }]}>
-                  {barcodeReady ? '📷  Scanner maintenant' : 'En attente d\'un code…'}
+                  {triggerLabel}
                 </Text>
               )}
             </Pressable>
@@ -506,9 +752,39 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
             </Pressable>
           </View>
         )
+      ) : mode === 'hardware' ? (
+        <View style={styles.manualContainer}>
+          <View style={styles.hwHeader}>
+            <View style={styles.hwDot} />
+            <Text style={styles.hwTitle}>Douchette prête</Text>
+            {resolving && <ActivityIndicator size="small" color={theme.accent} style={{ marginLeft: 'auto' }} />}
+          </View>
+          <Text style={styles.manualLabel}>
+            Scannez avec la douchette (Zebra, Honeywell ou Bluetooth). La saisie au clavier fonctionne aussi.
+          </Text>
+          <TextInput
+            ref={hwInputRef}
+            style={[styles.manualInput, tabular]}
+            value={hwInput}
+            onChangeText={setHwInput}
+            onSubmitEditing={handleHardwareSubmit}
+            blurOnSubmit={false}
+            showSoftInputOnFocus={false}
+            autoFocus
+            autoCapitalize="characters"
+            autoCorrect={false}
+            placeholder="En attente d'un scan…"
+            placeholderTextColor={theme.textMuted}
+            onBlur={() => {
+              if (mode === 'hardware' && illisibleCode === null) {
+                setTimeout(() => hwInputRef.current?.focus(), 60)
+              }
+            }}
+          />
+        </View>
       ) : (
         <View style={styles.manualContainer}>
-          <Text style={styles.manualLabel}>SKU ou EAN — appuyez sur le bouton Volume − pour valider</Text>
+          <Text style={styles.manualLabel}>SKU ou EAN — appuyez sur OK pour valider</Text>
           <View style={styles.manualRow}>
             <TextInput
               ref={manualInputRef}
@@ -529,32 +805,63 @@ export function Scanner({ sessionId, passNumber, onArticleResolved }: ScannerPro
         </View>
       )}
 
-      {/* List header */}
-      <View style={styles.listHeader}>
-        <Text style={styles.listHeaderText}>
-          {recentScans.length === 0
-            ? 'En attente de scan…'
-            : `Scans récents — ${totalScanned} unité${totalScanned > 1 ? 's' : ''}`}
-        </Text>
-      </View>
-
-      {/* Recent scans */}
-      <FlatList
-        data={recentScans}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <ScanRow
-            entry={item}
-            onIncrement={() => handleIncrement(item)}
-            onDecrement={() => handleDecrement(item)}
-            onDelete={() => handleDelete(item)}
+      {balisePhase ? (
+        /* Phase balise : revenir sur une balise déjà terminée pour corriger */
+        <>
+          <View style={styles.listHeader}>
+            <Text style={styles.listHeaderText}>
+              {doneBalises.length === 0 ? 'Aucune balise terminée' : `Revenir sur une balise — ${doneBalises.length}`}
+            </Text>
+          </View>
+          <FlatList
+            data={doneBalises}
+            keyExtractor={(z) => z.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <Pressable style={styles.reopenRow} onPress={() => openBaliseCode(item.code, false)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reopenName} numberOfLines={1}>{item.name ?? 'Sans zone'}</Text>
+                  <Text style={styles.reopenMeta}>
+                    Balise {item.code} · {baliseMode === 'count' ? item.count_units : item.audit_units} u.
+                  </Text>
+                </View>
+                <Text style={styles.reopenAction}>Rouvrir</Text>
+              </Pressable>
+            )}
+            ListEmptyComponent={<Text style={styles.emptyHint}>Terminez une balise pour pouvoir y revenir.</Text>}
           />
-        )}
-        ListEmptyComponent={
-          <Text style={styles.emptyHint}>Scannez un article pour commencer</Text>
-        }
-      />
+        </>
+      ) : (
+        /* Phase articles : liste des scans + bouton clôturer la balise */
+        <>
+          <View style={styles.listHeader}>
+            <Text style={styles.listHeaderText}>
+              {recentScans.length === 0
+                ? 'En attente de scan…'
+                : `Scans récents — ${totalScanned} unité${totalScanned > 1 ? 's' : ''}`}
+            </Text>
+          </View>
+          <FlatList
+            data={recentScans}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <ScanRow
+                entry={item}
+                onIncrement={() => handleIncrement(item)}
+                onDecrement={() => handleDecrement(item)}
+                onDelete={() => handleDelete(item)}
+              />
+            )}
+            ListEmptyComponent={<Text style={styles.emptyHint}>Scannez un article pour commencer</Text>}
+          />
+          {activeBalise && (
+            <Pressable style={styles.closeFooterBtn} onPress={closeBalise} disabled={resolving}>
+              <Text style={styles.closeFooterText}>Clôturer la balise {activeBalise.code}</Text>
+            </Pressable>
+          )}
+        </>
+      )}
 
       {/* Illisible modal */}
       {illisibleCode !== null && (
@@ -621,6 +928,40 @@ function makeStyles(t: Theme) {
     passDot: { width: 10, height: 10, borderRadius: 5 },
     passLabel: { fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
 
+    // ── Zone / balise ──────────────────────────────────────────────────────────
+    zoneModeToggle: {
+      flexDirection: 'row', marginHorizontal: Spacing.md, marginTop: Spacing.md,
+      borderRadius: Radius.md, borderWidth: 1, borderColor: t.hairline,
+      overflow: 'hidden', backgroundColor: t.surface, ...t.shadowCard,
+    },
+    zoneModeBtn: { flex: 1, paddingVertical: 11, alignItems: 'center' },
+    zoneModeText: { fontSize: 14, color: t.textSecondary, fontFamily: Font.semibold },
+    zoneModeTextActive: { color: '#fff', fontFamily: Font.bold },
+    zoneBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+      marginHorizontal: Spacing.md, marginTop: Spacing.sm,
+      backgroundColor: t.surface, borderRadius: Radius.md, borderWidth: 1.5,
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, ...t.shadowCard,
+    },
+    zoneBannerText: { flex: 1, fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
+    zoneCloseBtn: { backgroundColor: t.danger, borderRadius: Radius.sm, paddingHorizontal: Spacing.md, paddingVertical: 7 },
+    zoneCloseText: { color: '#fff', fontSize: 13, fontFamily: Font.bold },
+    zoneBannerIdle: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm,
+      marginHorizontal: Spacing.md, marginTop: Spacing.sm,
+      backgroundColor: t.warningSoft, borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
+    },
+    zoneBannerIdleText: { flex: 1, fontSize: 13, fontFamily: Font.semibold, color: t.warning },
+    baliseField: { marginHorizontal: Spacing.md, marginTop: Spacing.md, gap: 6 },
+    baliseFieldLabel: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular },
+    reopenRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: t.surface, borderRadius: Radius.md, paddingVertical: Spacing.md - 2, paddingHorizontal: Spacing.md, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md, ...t.shadowCard },
+    reopenName: { fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
+    reopenMeta: { fontSize: 12, color: t.textMuted, ...tabular },
+    reopenAction: { fontSize: 13, fontFamily: Font.bold, color: t.accent },
+    closeFooterBtn: { marginHorizontal: Spacing.md, marginBottom: Spacing.md, backgroundColor: t.danger, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
+    closeFooterText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
+
     modeToggle: {
       flexDirection: 'row', marginHorizontal: Spacing.md, marginTop: Spacing.md, marginBottom: 6,
       borderRadius: Radius.md, borderWidth: 1, borderColor: t.hairline,
@@ -658,6 +999,14 @@ function makeStyles(t: Theme) {
       borderWidth: 2, borderColor: FRAME_COLOR_IDLE, borderRadius: Radius.sm,
     },
     scanFrameReady: { borderColor: FRAME_COLOR_READY, borderWidth: 3 },
+    torchBtn: {
+      position: 'absolute', top: Spacing.sm, right: Spacing.sm,
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    },
+    torchBtnOn: { backgroundColor: '#F5C518', borderColor: '#F5C518' },
+    torchIcon: { fontSize: 18 },
     cooldownBar: {
       position: 'absolute', bottom: 28, left: 0, height: 3,
       backgroundColor: FRAME_COLOR_READY, borderRadius: 2,
@@ -685,6 +1034,9 @@ function makeStyles(t: Theme) {
 
     manualContainer: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: 6 },
     manualLabel: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular },
+    hwHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 2 },
+    hwDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#34C759' },
+    hwTitle: { fontSize: 14, fontFamily: Font.bold, color: t.textPrimary },
     manualRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
     manualInput: {
       borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,

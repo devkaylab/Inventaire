@@ -51,7 +51,7 @@ function SessionCard({ session, theme, styles }: { session: Session; theme: Them
 }
 
 export default function SupervisorHomeScreen() {
-  const { signOut, profile } = useAuth()
+  const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const { data: sessions, isLoading, refetch, isRefetching } = useQuery({
@@ -63,13 +63,6 @@ export default function SupervisorHomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <View style={styles.topBar}>
-        <Text style={styles.welcome}>Bonjour, <Text style={styles.welcomeName}>{profile?.full_name}</Text></Text>
-        <Pressable onPress={signOut}>
-          <Text style={styles.signOut}>Déconnexion</Text>
-        </Pressable>
-      </View>
-
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color={theme.accent} />
@@ -81,6 +74,12 @@ export default function SupervisorHomeScreen() {
           renderItem={({ item }) => <SessionCard session={item} theme={theme} styles={styles} />}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
+              <Text style={styles.sectionLabel}>Sessions</Text>
+            </View>
+          }
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>Aucune session d'inventaire</Text>
@@ -99,14 +98,10 @@ export default function SupervisorHomeScreen() {
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
-    topBar: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-      backgroundColor: t.surface, borderBottomWidth: 1, borderBottomColor: t.hairline,
-    },
-    welcome: { fontSize: 14, color: t.textSecondary, fontFamily: Font.regular },
-    welcomeName: { color: t.textPrimary, fontFamily: Font.semibold },
-    signOut: { fontSize: 14, color: t.danger, fontFamily: Font.medium },
+    listHeader: { gap: Spacing.sm },
+    greeting: { fontSize: 26, color: t.textSecondary, fontFamily: Font.regular, letterSpacing: -0.4 },
+    greetingName: { color: t.textPrimary, fontFamily: Font.bold },
+    sectionLabel: { fontSize: 12, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6 },
     list: { padding: Spacing.lg, paddingBottom: 90, gap: Spacing.md },
     card: {
       backgroundColor: t.surface, borderRadius: Radius.lg, padding: 18,

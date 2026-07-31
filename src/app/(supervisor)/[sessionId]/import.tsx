@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocalSearchParams } from 'expo-router'
+import { Stack, router, useLocalSearchParams } from 'expo-router'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -41,7 +41,11 @@ function ProgressBar({ progress, styles }: { progress: ImportProgress; styles: R
 }
 
 export default function ImportScreen() {
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
+  const { sessionId, from } = useLocalSearchParams<{ sessionId: string; from?: string }>()
+  // When we arrive straight from session creation the session page isn't in the
+  // back stack (new-session did a `replace`), so a back arrow would land on the
+  // sessions list. Hide it and offer a "Commencer l'inventaire" CTA instead.
+  const fromNew = from === 'new'
   const theme = useTheme()
   const styles = makeStyles(theme)
   const [catalog, setCatalog] = useState<StepState>(initialState)
@@ -137,6 +141,9 @@ export default function ImportScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {fromNew && (
+        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
+      )}
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.info}>
           CSV ou Excel (.xlsx) acceptés. Les fichiers volumineux peuvent prendre quelques secondes.
@@ -148,18 +155,36 @@ export default function ImportScreen() {
           </Text>
         </View>
 
+        <View style={styles.infoBanner}>
+          <Text style={styles.infoBannerText}>
+            💡 Le scan reconnaît vos articles dans tous les cas, même si un code commence par un zéro.
+          </Text>
+          <Text style={styles.infoBannerSub}>
+            Astuce : pour que ces codes apparaissent à l'identique dans le rapport, gardez le format « Texte » sur les colonnes des codes.
+          </Text>
+        </View>
+
         {renderStep(
           'catalog',
           catalog,
           '1. Référentiel articles',
-          'Colonnes obligatoires : SKU (code article), EAN (code-barres), Marque, Libellé article',
+          'Colonnes obligatoires : SKU (code article), EAN (code-barres), Marque, Libellé article\nColonne optionnelle : Prix d’achat (variantes acceptées : « Prix d’achat », « PA », « coût », « cost », « cogs »). Sans elle, l’écart en valeur sera de 0.',
         )}
 
         {renderStep(
           'stock',
           stock,
           '2. Stock théorique',
-          'Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes : SKU (code article), EAN (code-barres), Quantité théorique',
+          'Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes : SKU (code article), Quantité théorique. Le rapprochement se fait par SKU ; les EAN proviennent du référentiel (étape 1).',
+        )}
+
+        {fromNew && (
+          <Pressable
+            style={styles.startBtn}
+            onPress={() => router.replace(`/(supervisor)/${sessionId}`)}
+          >
+            <Text style={styles.startBtnText}>Commencer l'inventaire</Text>
+          </Pressable>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -173,6 +198,10 @@ function makeStyles(t: Theme) {
     info: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
     warningBanner: { backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, borderLeftWidth: 3, borderLeftColor: t.warning },
     warningText: { fontSize: 13, color: t.warning, fontFamily: Font.semibold, lineHeight: 19 },
+
+    infoBanner: { backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline, gap: 4 },
+    infoBannerText: { fontSize: 13, color: t.textPrimary, fontFamily: Font.semibold, lineHeight: 19 },
+    infoBannerSub: { fontSize: 12, color: t.textSecondary, fontFamily: Font.regular, lineHeight: 17 },
 
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.sm, ...t.shadowCard },
     cardTitle: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
@@ -196,5 +225,8 @@ function makeStyles(t: Theme) {
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
     buttonDisabled: { opacity: 0.5 },
     buttonText: { color: t.onAccent, fontFamily: Font.semibold, fontSize: 15 },
+
+    startBtn: { backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    startBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },
   })
 }

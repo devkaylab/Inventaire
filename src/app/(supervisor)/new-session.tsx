@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
@@ -18,6 +18,7 @@ export default function NewSessionScreen() {
   const styles = makeStyles(theme)
   const [storeName, setStoreName] = useState('')
   const [securityCode, setSecurityCode] = useState(generateCode())
+  const [usesZones, setUsesZones] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleCreate() {
@@ -31,7 +32,7 @@ export default function NewSessionScreen() {
     }
     setLoading(true)
     try {
-      const result = await createSession(storeName.trim(), securityCode.trim())
+      const result = await createSession(storeName.trim(), securityCode.trim(), usesZones)
       if (!result.success) {
         Alert.alert('Erreur', result.error ?? 'Impossible de créer la session.')
         return
@@ -39,15 +40,23 @@ export default function NewSessionScreen() {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       Alert.alert(
         '✅ Session créée',
-        `N° d'inventaire : ${result.inventory_number}\nCode de sécurité : ${result.security_code ?? securityCode}\n\nImportez maintenant le catalogue articles et le stock théorique pour préparer le comptage.`,
+        `N° d'inventaire : ${result.inventory_number}\nCode de sécurité : ${result.security_code ?? securityCode}\n\nImportez maintenant le catalogue articles et le stock théorique${usesZones ? ', puis définissez vos zones/balises' : ''} pour préparer le comptage.`,
         [
           {
             text: 'Importer les fichiers',
-            onPress: () => router.replace(`/(supervisor)/${result.session_id}/import`),
+            onPress: () => router.replace(`/(supervisor)/${result.session_id}/import?from=new`),
           },
+          ...(usesZones
+            ? [
+                {
+                  text: 'Définir les zones',
+                  onPress: () => router.replace(`/(supervisor)/${result.session_id}/zones`),
+                },
+              ]
+            : []),
           {
             text: 'Plus tard',
-            style: 'cancel',
+            style: 'cancel' as const,
             onPress: () => router.replace(`/(supervisor)/${result.session_id}`),
           },
         ]
@@ -94,6 +103,22 @@ export default function NewSessionScreen() {
             Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cette session.
           </Text>
 
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchLabel}>Utiliser des zones / balises</Text>
+              <Text style={styles.hint}>
+                Le comptage s'organise par zones ouvertes en scannant une balise (sticker). Vous
+                définirez les plages de balises après la création.
+              </Text>
+            </View>
+            <Switch
+              value={usesZones}
+              onValueChange={setUsesZones}
+              trackColor={{ false: theme.borderStrong, true: theme.accent }}
+              thumbColor={theme.onAccent}
+            />
+          </View>
+
           <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleCreate} disabled={loading}>
             {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Créer la session</Text>}
           </Pressable>
@@ -114,6 +139,8 @@ function makeStyles(t: Theme) {
     regenBtn: { backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
     regenText: { color: t.accent, fontFamily: Font.semibold, fontSize: 14 },
     hint: { fontSize: 13, color: t.textSecondary, lineHeight: 18, fontFamily: Font.regular },
+    switchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.xs },
+    switchLabel: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary, marginBottom: 2 },
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.lg, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
