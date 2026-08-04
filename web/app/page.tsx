@@ -34,7 +34,7 @@ export default function Home() {
               <Logo size={84} />
             </div>
             <div><span className="eyebrow">Application d'inventaire</span></div>
-            <h1>L'inventaire,<br /><span className="grad">simple et fiable.</span></h1>
+            <h1>La simplicité<br /><span className="grad">en main.</span></h1>
             <p className="lead">
               Quantinvo aide vos équipes à compter, auditer et fiabiliser les stocks en magasin —
               du scan à l'écart de comptage, jusqu'au rapport.
