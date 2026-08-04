@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
+import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
 const FEATURES = [
-  { icon: '📷', title: 'Scan rapide', desc: 'Comptez au code-barres avec la caméra, un bouton virtuel et le scan automatique. Fluide, sans friction.' },
-  { icon: '🎯', title: 'Zones & balises', desc: 'Organisez le comptage par emplacement : on scanne une balise pour ouvrir une zone, on compte, on clôture.' },
-  { icon: '🏬', title: 'Multi-magasins', desc: 'Gérez plusieurs magasins par entreprise et lancez un inventaire pour chacun en quelques secondes.' },
-  { icon: '🔍', title: 'Audit & écarts', desc: 'Double comptage, audit et arbitrage : repérez les écarts avant de valider votre stock.' },
-  { icon: '📊', title: 'Rapports', desc: 'Export Excel des résultats, des écarts en valeur et du détail par zone. Prêt pour votre compta.' },
-  { icon: '👥', title: 'Équipes', desc: 'Un superviseur, plusieurs compteurs. Chacun rejoint la session avec un numéro et un code de sécurité.' },
+  { icon: <IconScan />, title: 'Scan rapide', desc: 'Comptez au code-barres avec la caméra, un bouton virtuel et le scan automatique. Fluide, sans friction.' },
+  { icon: <IconZones />, title: 'Zones & balises', desc: 'Organisez le comptage par emplacement : on scanne une balise pour ouvrir une zone, on compte, on clôture.' },
+  { icon: <IconStore />, title: 'Multi-magasins', desc: 'Gérez plusieurs magasins par entreprise et lancez un inventaire pour chacun en quelques secondes.' },
+  { icon: <IconAudit />, title: 'Audit & écarts', desc: 'Double comptage, audit et arbitrage : repérez les écarts avant de valider votre stock.' },
+  { icon: <IconReport />, title: 'Rapports', desc: 'Export Excel des résultats, des écarts en valeur et du détail par zone. Prêt pour votre compta.' },
+  { icon: <IconTeam />, title: 'Équipes', desc: 'Un superviseur, plusieurs compteurs. Chacun rejoint la session avec un numéro et un code de sécurité.' },
 ]
 
 export default function Home() {

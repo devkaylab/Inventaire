@@ -20,9 +20,13 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .brand, .eyebrow {
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -96,7 +100,7 @@ a { color: inherit; text-decoration: none; }
 .card:hover { border-color: #384156; transform: translateY(-3px); }
 .card .ico {
   width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
-  background: rgba(99,102,241,0.15); font-size: 22px; margin-bottom: 16px;
+  background: rgba(99,102,241,0.15); color: #a99cfa; margin-bottom: 16px;
 }
 .card h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
 .card p { margin-top: 8px; color: var(--text-2); font-size: 15px; }
