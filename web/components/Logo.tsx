@@ -1,0 +1,18 @@
+export function Logo({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-label="Quantinvo">
+      <defs>
+        <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#7466F4" />
+          <stop offset="0.52" stopColor="#4636B0" />
+          <stop offset="1" stopColor="#1C153F" />
+        </linearGradient>
+      </defs>
+      <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)" />
+      <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA" />
+      <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC" />
+      <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8" />
+      <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF" />
+    </svg>
+  )
+}

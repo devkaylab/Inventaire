@@ -1,0 +1,90 @@
+import Link from 'next/link'
+import { Logo } from '@/components/Logo'
+
+const FEATURES = [
+  { icon: '📷', title: 'Scan rapide', desc: 'Comptez au code-barres avec la caméra, un bouton virtuel et le scan automatique. Fluide, sans friction.' },
+  { icon: '🎯', title: 'Zones & balises', desc: 'Organisez le comptage par emplacement : on scanne une balise pour ouvrir une zone, on compte, on clôture.' },
+  { icon: '🏬', title: 'Multi-magasins', desc: 'Gérez plusieurs magasins par entreprise et lancez un inventaire pour chacun en quelques secondes.' },
+  { icon: '🔍', title: 'Audit & écarts', desc: 'Double comptage, audit et arbitrage : repérez les écarts avant de valider votre stock.' },
+  { icon: '📊', title: 'Rapports', desc: 'Export Excel des résultats, des écarts en valeur et du détail par zone. Prêt pour votre compta.' },
+  { icon: '👥', title: 'Équipes', desc: 'Un superviseur, plusieurs compteurs. Chacun rejoint la session avec un numéro et un code de sécurité.' },
+]
+
+export default function Home() {
+  return (
+    <>
+      <header className="site-header">
+        <div className="container inner">
+          <Link href="/" className="brand">
+            <Logo size={30} />
+            <span>Quantinvo</span>
+          </Link>
+          <nav className="nav-links">
+            <a href="#fonctionnalites">Fonctionnalités</a>
+            <Link href="/login" className="btn btn-ghost" style={{ padding: '8px 16px' }}>Se connecter</Link>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section className="hero">
+          <div className="container">
+            <div className="logo-glow" style={{ display: 'inline-block' }}>
+              <Logo size={84} />
+            </div>
+            <div><span className="eyebrow">Application d'inventaire</span></div>
+            <h1>L'inventaire,<br /><span className="grad">simple et fiable.</span></h1>
+            <p className="lead">
+              Quantinvo aide vos équipes à compter, auditer et fiabiliser les stocks en magasin —
+              du scan à l'écart de comptage, jusqu'au rapport.
+            </p>
+            <div className="cta">
+              <Link href="/login" className="btn btn-primary">Se connecter</Link>
+              <a href="#fonctionnalites" className="btn btn-ghost">Découvrir</a>
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="fonctionnalites">
+          <div className="container">
+            <div className="section-head">
+              <h2>Tout pour un inventaire maîtrisé</h2>
+              <p>Du terrain au rapport final, Quantinvo couvre chaque étape du comptage.</p>
+            </div>
+            <div className="grid">
+              {FEATURES.map((f) => (
+                <div className="card" key={f.title}>
+                  <div className="ico">{f.icon}</div>
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="container">
+            <div className="cta-band">
+              <h2>Prêt à fiabiliser vos inventaires ?</h2>
+              <p>Connectez-vous à votre espace pour gérer vos entreprises, magasins et inventaires.</p>
+              <Link href="/login" className="btn btn-primary">Accéder à mon espace</Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="site-footer">
+        <div className="container inner">
+          <div className="brand"><Logo size={24} /><span>Quantinvo</span></div>
+          <div className="links">
+            <a href="#fonctionnalites">Fonctionnalités</a>
+            <Link href="/login">Se connecter</Link>
+            <a href="https://devkaylab.github.io/Inventaire/privacy.html" target="_blank" rel="noreferrer">Confidentialité</a>
+          </div>
+          <span className="muted">© 2026 Devkaylab · Quantinvo</span>
+        </div>
+      </footer>
+    </>
+  )
+}
