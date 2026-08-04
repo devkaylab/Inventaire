@@ -106,14 +106,15 @@ export async function insertCount(count: TablesInsert<'counts'>) {
   return data
 }
 
-export async function createSession(storeName: string, securityCode: string, usesZones = false) {
+export async function createSession(name: string, storeId: string, securityCode: string, usesZones = false) {
   const { data, error } = await supabase.rpc('create_session', {
-    p_store_name: storeName,
+    p_name: name,
+    p_store_id: storeId,
     p_security_code: securityCode,
     p_uses_zones: usesZones,
   })
   if (error) throwSupabase('createSession', error)
-  return data as { success: boolean; session_id?: string; inventory_number?: string; store_name?: string; security_code?: string; error?: string }
+  return data as { success: boolean; session_id?: string; inventory_number?: string; name?: string; store_name?: string; security_code?: string; error?: string }
 }
 
 export async function createCompany(name: string) {
@@ -137,6 +138,19 @@ export async function getMyCompany(): Promise<Company | null> {
   const { data, error } = await supabase.from('companies').select('*').limit(1).maybeSingle()
   if (error) throwSupabase('getMyCompany', error)
   return data
+}
+
+export type Store = Tables<'stores'>
+
+/** Les magasins de l'entreprise courante (créés par l'admin). RLS ne renvoie
+ *  que les magasins de l'entreprise du membre. */
+export async function getStores(): Promise<Store[]> {
+  const { data, error } = await supabase
+    .from('stores')
+    .select('*')
+    .order('name', { ascending: true })
+  if (error) throwSupabase('getStores', error)
+  return data ?? []
 }
 
 /** Tous les profils visibles par le superviseur = les membres de son

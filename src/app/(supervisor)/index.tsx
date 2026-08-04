@@ -33,7 +33,7 @@ function SessionCard({ session, theme, styles }: { session: Session; theme: Them
       onPress={() => router.push(`/(supervisor)/${session.id}`)}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.inventoryNumber}>{session.inventory_number}</Text>
+        <Text style={styles.sessionName} numberOfLines={1}>{session.name || session.store_name}</Text>
         <View style={[styles.badge, { backgroundColor: sc.bg }]}>
           <View style={[styles.badgeDot, { backgroundColor: sc.fg }]} />
           <Text style={[styles.badgeText, { color: sc.fg }]}>
@@ -43,7 +43,7 @@ function SessionCard({ session, theme, styles }: { session: Session; theme: Them
       </View>
       <Text style={styles.storeName}>{session.store_name}</Text>
       <Text style={styles.meta}>
-        {new Date(session.created_at).toLocaleDateString('fr-FR')}
+        {session.inventory_number} · {new Date(session.created_at).toLocaleDateString('fr-FR')}
       </Text>
     </Pressable>
   )
@@ -107,7 +107,7 @@ function makeStyles(t: Theme) {
       borderWidth: 1, borderColor: t.hairline, gap: Spacing.xs, ...t.shadowCard,
     },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    inventoryNumber: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, ...tabular },
+    sessionName: { flex: 1, fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2, marginRight: Spacing.sm },
     badge: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4,

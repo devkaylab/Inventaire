@@ -79,7 +79,7 @@ export default function SignupScreen() {
             <Text style={styles.title}>Créer un compte</Text>
             <Text style={styles.subtitle}>
               {kind === 'supervisor'
-                ? 'Créez votre compte et ouvrez votre entreprise.'
+                ? 'Créez votre compte, puis rejoignez votre entreprise avec le code fourni par votre administrateur.'
                 : 'Votre superviseur doit vous avoir ajouté à son équipe.'}
             </Text>
           </View>
@@ -87,7 +87,7 @@ export default function SignupScreen() {
           <View style={styles.form}>
             <View style={styles.kindRow}>
               {([
-                ['supervisor', 'Je crée mon entreprise'],
+                ['supervisor', 'Je rejoins mon entreprise'],
                 ['employee', 'Je rejoins mon équipe'],
               ] as const).map(([k, label]) => (
                 <Pressable

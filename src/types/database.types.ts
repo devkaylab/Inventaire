@@ -196,6 +196,7 @@ export type Database = {
           current_pass: number
           id: string
           inventory_number: string
+          name: string
           security_code: string | null
           security_code_hash: string
           status: string
@@ -210,6 +211,7 @@ export type Database = {
           current_pass?: number
           id?: string
           inventory_number: string
+          name?: string
           security_code?: string | null
           security_code_hash: string
           status?: string
@@ -224,6 +226,7 @@ export type Database = {
           current_pass?: number
           id?: string
           inventory_number?: string
+          name?: string
           security_code?: string | null
           security_code_hash?: string
           status?: string
@@ -253,6 +256,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_admin: boolean
           role: string
         }
         Insert: {
@@ -260,6 +264,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id: string
+          is_admin?: boolean
           role?: string
         }
         Update: {
@@ -267,6 +272,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_admin?: boolean
           role?: string
         }
         Relationships: [
@@ -308,6 +314,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -435,13 +470,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_add_store: {
+        Args: { p_company_id: string; p_name: string }
+        Returns: Json
+      }
+      admin_create_company: { Args: { p_name: string }; Returns: Json }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
       create_company: { Args: { p_name: string }; Returns: Json }
       create_session: {
         Args: {
+          p_name: string
           p_security_code: string
-          p_store_name: string
+          p_store_id: string
           p_uses_zones?: boolean
         }
         Returns: Json
@@ -531,6 +572,7 @@ export type Database = {
           units: number
         }[]
       }
+      is_admin: { Args: never; Returns: boolean }
       join_company: { Args: { p_code: string }; Returns: Json }
       join_session: {
         Args: { p_inventory_number: string; p_security_code: string }

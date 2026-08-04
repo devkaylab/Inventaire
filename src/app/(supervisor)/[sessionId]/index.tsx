@@ -139,8 +139,8 @@ export default function SessionDetailScreen() {
         {/* Slim info card — opens the info panel (identifiers, members, config) */}
         <Pressable style={styles.infoCard} onPress={() => setInfoOpen(true)}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.infoStore}>{session.store_name}</Text>
-            <Text style={styles.infoHint}>Identifiants · membres · configuration</Text>
+            <Text style={styles.infoStore}>{session.name || session.store_name}</Text>
+            <Text style={styles.infoHint}>{session.store_name} · infos & configuration</Text>
           </View>
           <View style={styles.statusBadge}>
             <View style={styles.statusBadgeDot} />
@@ -253,7 +253,7 @@ function InfoPanel({
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>{session.store_name}</Text>
+          <Text style={styles.sheetTitle}>{session.name || session.store_name}</Text>
           <View style={styles.statusBadge}>
             <View style={styles.statusBadgeDot} />
             <Text style={styles.statusBadgeText}>{STATUS_LABELS[session.status]}</Text>
