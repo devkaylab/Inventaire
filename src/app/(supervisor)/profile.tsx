@@ -24,6 +24,7 @@ import {
 } from '@/lib/queries'
 import { exportBaliseSheet, type BaliseInfo } from '@/lib/balises'
 import { GeneratingOverlay } from '@/components/GeneratingOverlay'
+import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -228,9 +229,12 @@ export default function SupervisorProfileScreen() {
           )
         }
         ListFooterComponent={
-          <Pressable style={styles.logoutBtn} onPress={signOut}>
-            <Text style={styles.logoutBtnText}>Déconnexion</Text>
-          </Pressable>
+          <>
+            <Pressable style={styles.logoutBtn} onPress={signOut}>
+              <Text style={styles.logoutBtnText}>Déconnexion</Text>
+            </Pressable>
+            <DeleteAccountButton />
+          </>
         }
       />
     </SafeAreaView>

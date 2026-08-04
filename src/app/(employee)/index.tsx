@@ -14,6 +14,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
 import { joinSession } from '@/lib/queries'
+import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -88,6 +89,10 @@ export default function EmployeeHomeScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <View style={styles.footer}>
+        <DeleteAccountButton />
+      </View>
     </SafeAreaView>
   )
 }
@@ -108,5 +113,6 @@ function makeStyles(t: Theme) {
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
+    footer: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg },
   })
 }

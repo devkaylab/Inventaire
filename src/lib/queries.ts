@@ -153,6 +153,28 @@ export async function getStores(): Promise<Store[]> {
   return data ?? []
 }
 
+export type DeletionRequest = Tables<'account_deletion_requests'>
+
+/** Demande de suppression de compte en attente pour l'utilisateur courant (ou null). */
+export async function getMyDeletionRequest(): Promise<DeletionRequest | null> {
+  const { data, error } = await supabase
+    .from('account_deletion_requests')
+    .select('*')
+    .eq('status', 'pending')
+    .limit(1)
+    .maybeSingle()
+  if (error) throwSupabase('getMyDeletionRequest', error)
+  return data
+}
+
+/** L'utilisateur courant demande la suppression de son compte. La demande est
+ *  transmise à l'administrateur, qui la traite. */
+export async function requestAccountDeletion() {
+  const { data, error } = await supabase.rpc('request_account_deletion')
+  if (error) throwSupabase('requestAccountDeletion', error)
+  return data as { success: boolean; already?: boolean; error?: string }
+}
+
 /** Tous les profils visibles par le superviseur = les membres de son
  *  entreprise (employés + co-superviseurs), lui compris. */
 export async function getTeamMembers(): Promise<Profile[]> {

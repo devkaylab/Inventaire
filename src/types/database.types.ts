@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       article_audit: {
         Row: {
           final_qty: number | null
@@ -475,6 +508,7 @@ export type Database = {
         Returns: Json
       }
       admin_create_company: { Args: { p_name: string }; Returns: Json }
+      admin_delete_user: { Args: { p_user_id: string }; Returns: Json }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
       create_company: { Args: { p_name: string }; Returns: Json }
@@ -600,6 +634,7 @@ export type Database = {
         Args: { p_code: string; p_name: string; p_session_id: string }
         Returns: Json
       }
+      request_account_deletion: { Args: never; Returns: Json }
       set_balise: {
         Args: {
           p_allow_create?: boolean
