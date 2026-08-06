@@ -73,6 +73,20 @@ export default function AdminPage() {
     load()
   }
 
+  async function deleteCompany(c: Company) {
+    if (!confirm(`Supprimer définitivement « ${c.name} » ?\n\nTous ses inventaires et données seront supprimés, et ses membres détachés de l'entreprise. Cette action est irréversible.`)) return
+    const { data, error } = await supabase.rpc('admin_delete_company', { p_company_id: c.id })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    load()
+  }
+
+  async function deleteStore(s: Store) {
+    if (!confirm(`Supprimer le magasin « ${s.name} » ?`)) return
+    const { data, error } = await supabase.rpc('admin_delete_store', { p_store_id: s.id })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    load()
+  }
+
   async function processRequest(r: DeletionRequest) {
     const who = r.full_name || r.email || 'cet utilisateur'
     if (!confirm(`Supprimer définitivement le compte de ${who} ?\n\nSes contributions seront anonymisées et son compte supprimé. Cette action est irréversible.`)) return
@@ -118,7 +132,15 @@ export default function AdminPage() {
           <p className="muted">Aucune entreprise. Créez-en une ci-dessus.</p>
         ) : (
           companies.map((c) => (
-            <CompanyCard key={c.id} company={c} stores={storesByCompany[c.id] ?? []} onAddStore={addStore} onCopy={copy} />
+            <CompanyCard
+              key={c.id}
+              company={c}
+              stores={storesByCompany[c.id] ?? []}
+              onAddStore={addStore}
+              onCopy={copy}
+              onDeleteCompany={deleteCompany}
+              onDeleteStore={deleteStore}
+            />
           ))
         )}
       </section>
@@ -146,12 +168,14 @@ export default function AdminPage() {
 }
 
 function CompanyCard({
-  company, stores, onAddStore, onCopy,
+  company, stores, onAddStore, onCopy, onDeleteCompany, onDeleteStore,
 }: {
   company: Company
   stores: Store[]
   onAddStore: (companyId: string, name: string) => void
   onCopy: (code: string) => void
+  onDeleteCompany: (c: Company) => void
+  onDeleteStore: (s: Store) => void
 }) {
   const [name, setName] = useState('')
 
@@ -173,7 +197,10 @@ function CompanyCard({
             <button className="link-btn" onClick={() => onCopy(company.join_code)}>Copier</button>
           </div>
         </div>
-        <span className="muted small">{frDate(company.created_at)}</span>
+        <div className="company-head-right">
+          <span className="muted small">{frDate(company.created_at)}</span>
+          <button className="link-btn danger-link" onClick={() => onDeleteCompany(company)}>Supprimer</button>
+        </div>
       </div>
 
       <div className="stores">
@@ -182,7 +209,12 @@ function CompanyCard({
           <p className="muted small">Aucun magasin pour l'instant.</p>
         ) : (
           <div className="chips">
-            {stores.map((s) => <span className="chip" key={s.id}>{s.name}</span>)}
+            {stores.map((s) => (
+              <span className="chip" key={s.id}>
+                {s.name}
+                <button className="chip-x" onClick={() => onDeleteStore(s)} aria-label={`Supprimer ${s.name}`}>×</button>
+              </span>
+            ))}
           </div>
         )}
         <form className="inline-form" onSubmit={submit}>

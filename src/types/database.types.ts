@@ -508,6 +508,8 @@ export type Database = {
         Returns: Json
       }
       admin_create_company: { Args: { p_name: string }; Returns: Json }
+      admin_delete_company: { Args: { p_company_id: string }; Returns: Json }
+      admin_delete_store: { Args: { p_store_id: string }; Returns: Json }
       admin_delete_user: { Args: { p_user_id: string }; Returns: Json }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
