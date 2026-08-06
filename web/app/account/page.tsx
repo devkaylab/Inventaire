@@ -63,9 +63,10 @@ export default function AccountPage() {
       {isAdmin ? (
         <div className="panel">
           <h3>Espace administrateur</h3>
-          <p>
-            La gestion des entreprises, des magasins et des demandes de suppression arrive ici très bientôt.
-          </p>
+          <p>Gérez vos entreprises, vos magasins et les demandes de suppression de compte.</p>
+          <Link href="/admin" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex' }}>
+            Ouvrir le tableau de bord
+          </Link>
         </div>
       ) : (
         <div className="panel">
