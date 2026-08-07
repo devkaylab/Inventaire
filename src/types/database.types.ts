@@ -736,6 +736,15 @@ export type Database = {
         Args: { p_count: number; p_session_id: string }
         Returns: Json
       }
+      get_company_directory: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_my_company: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_my_stores: {
@@ -813,10 +822,15 @@ export type Database = {
         Returns: Json
       }
       join_store: { Args: { p_code: string }; Returns: Json }
+      leave_session: { Args: { p_session_id: string }; Returns: Json }
       norm_balise: { Args: { p: string }; Returns: string }
       recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
       register_balise: {
         Args: { p_code: string; p_name: string; p_session_id: string }
+        Returns: Json
+      }
+      remove_session_member: {
+        Args: { p_session_id: string; p_user_id: string }
         Returns: Json
       }
       request_account_deletion: { Args: never; Returns: Json }

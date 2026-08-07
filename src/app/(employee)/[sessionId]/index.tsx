@@ -1,9 +1,10 @@
 import { useCallback } from 'react'
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useQuery } from '@tanstack/react-query'
-import { getArticleLabels, getMyCounts, getSession } from '@/lib/queries'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getArticleLabels, getMyCounts, getSession, leaveSession } from '@/lib/queries'
+import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -29,6 +30,28 @@ export default function EmployeeProgressScreen() {
     queryFn: () => getMyCounts(sessionId, 2),
     enabled: !!session,
   })
+
+  const queryClient = useQueryClient()
+  const leaveMutation = useMutation({
+    mutationFn: () => leaveSession(sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      Alert.alert('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
+      router.replace('/(employee)/')
+    },
+    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+  })
+
+  function confirmLeave() {
+    Alert.alert(
+      'Quitter l\'inventaire',
+      'Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l\'équipe.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Quitter', style: 'destructive', onPress: () => leaveMutation.mutate() },
+      ],
+    )
+  }
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
 
@@ -98,7 +121,7 @@ export default function EmployeeProgressScreen() {
             refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
             ListEmptyComponent={
               <View style={styles.center}>
-                <Text style={styles.emptyText}>Aucune pièce comptée pour l'instant</Text>
+                <Text style={styles.emptyText}>{"Aucune pièce comptée pour l'instant"}</Text>
               </View>
             }
           />
@@ -110,6 +133,9 @@ export default function EmployeeProgressScreen() {
               </Pressable>
               <Pressable style={styles.auditBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=audit`)}>
                 <Text style={styles.auditBtnText}>Auditer des articles</Text>
+              </Pressable>
+              <Pressable style={styles.leaveBtn} onPress={confirmLeave}>
+                <Text style={styles.leaveBtnText}>{"Quitter l'inventaire"}</Text>
               </Pressable>
             </View>
           )}
@@ -141,5 +167,7 @@ function makeStyles(t: Theme) {
     countBtnText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
     auditBtn: { backgroundColor: t.surface, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: t.borderStrong },
     auditBtnText: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },
+    leaveBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
+    leaveBtnText: { color: t.danger, fontSize: 14, fontFamily: Font.semibold },
   })
 }

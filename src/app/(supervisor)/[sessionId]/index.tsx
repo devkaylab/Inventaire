@@ -4,7 +4,8 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { closeSession, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard } from '@/lib/queries'
+import { closeSession, deleteSessionInvitation, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard, leaveSession, removeSessionMember } from '@/lib/queries'
+import { useAuth } from '@/lib/auth'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -31,6 +32,7 @@ function ChevronIcon({ color }: { color: string }) {
 
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
+  const { profile } = useAuth()
   const queryClient = useQueryClient()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -70,7 +72,58 @@ export default function SessionDetailScreen() {
     },
   })
 
+  const leaveMutation = useMutation({
+    mutationFn: () => leaveSession(sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      Alert.alert('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
+      router.replace('/(supervisor)/')
+    },
+    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+  })
+
   const onRefresh = useCallback(() => { refetch() }, [refetch])
+
+  const isCreator = !!profile?.id && session?.created_by === profile.id
+
+  async function handleRemoveMember(userId: string, name: string) {
+    Alert.alert('Retirer ce membre', `Retirer ${name} de l'inventaire ? Ses comptages déjà saisis sont conservés.`, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Retirer', style: 'destructive', onPress: async () => {
+          try {
+            await removeSessionMember(sessionId, userId)
+            await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
+          } catch (e) { Alert.alert('Erreur', errorMessage(e)) }
+        },
+      },
+    ])
+  }
+
+  async function handleDeleteInvite(id: string, label: string) {
+    Alert.alert('Annuler l\'invitation', `Annuler l'invitation de ${label} ?`, [
+      { text: 'Retour', style: 'cancel' },
+      {
+        text: 'Annuler l\'invitation', style: 'destructive', onPress: async () => {
+          try {
+            await deleteSessionInvitation(id)
+            await queryClient.invalidateQueries({ queryKey: ['session-invitations', sessionId] })
+          } catch (e) { Alert.alert('Erreur', errorMessage(e)) }
+        },
+      },
+    ])
+  }
+
+  function confirmLeave() {
+    Alert.alert(
+      'Quitter l\'inventaire',
+      'Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l\'équipe.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Quitter', style: 'destructive', onPress: () => leaveMutation.mutate() },
+      ],
+    )
+  }
 
   function confirmClose() {
     Alert.alert(
@@ -198,8 +251,11 @@ export default function SessionDetailScreen() {
           )}
           <ActionRow styles={styles} theme={theme} label="Audit et écart de comptage" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
           <ActionRow styles={styles} theme={theme} label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} last={closed} />
-          {!closed && (
+          {!closed && isCreator && (
             <ActionRow styles={styles} theme={theme} label="Clôturer l'inventaire" onPress={confirmClose} danger last />
+          )}
+          {!closed && !isCreator && (
+            <ActionRow styles={styles} theme={theme} label="Quitter l'inventaire" onPress={confirmLeave} danger last />
           )}
         </View>
       </ScrollView>
@@ -214,6 +270,8 @@ export default function SessionDetailScreen() {
         invitations={invitations}
         usesZones={usesZones}
         closed={closed}
+        onRemoveMember={handleRemoveMember}
+        onDeleteInvite={handleDeleteInvite}
         onCopy={copyField}
         onShare={shareCredentials}
         onImport={() => { setInfoOpen(false); router.push(`/(supervisor)/${sessionId}/import`) }}
@@ -238,7 +296,7 @@ type InvitationData = Awaited<ReturnType<typeof getSessionInvitations>>
 
 function InfoPanel({
   visible, onClose, styles, theme, session, members, invitations, usesZones, closed,
-  onCopy, onShare, onImport, onZones,
+  onRemoveMember, onDeleteInvite, onCopy, onShare, onImport, onZones,
 }: {
   visible: boolean
   onClose: () => void
@@ -249,6 +307,8 @@ function InfoPanel({
   invitations: InvitationData | undefined
   usesZones: boolean
   closed: boolean
+  onRemoveMember: (userId: string, name: string) => void
+  onDeleteInvite: (id: string, label: string) => void
   onCopy: (label: string, value: string) => void
   onShare: () => void
   onImport: () => void
@@ -294,13 +354,23 @@ function InfoPanel({
           ) : memberList.map(m => {
             const mm = m as unknown as { profiles: { full_name: string } | null; role?: string }
             const name = mm.profiles?.full_name ?? 'Inconnu'
+            const isOwner = m.user_id === session.created_by
             return (
               <View key={m.user_id} style={styles.memberRow}>
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>{name.charAt(0).toUpperCase()}</Text>
                 </View>
                 <Text style={styles.memberName}>{name}</Text>
-                {mm.role === 'supervisor' && <Text style={styles.memberTag}>Co-superviseur</Text>}
+                {isOwner ? (
+                  <Text style={styles.memberTag}>Créateur</Text>
+                ) : mm.role === 'supervisor' ? (
+                  <Text style={styles.memberTag}>Co-superviseur</Text>
+                ) : null}
+                {!closed && !isOwner && (
+                  <Pressable style={styles.removeBtn} onPress={() => onRemoveMember(m.user_id, name)} hitSlop={8}>
+                    <Text style={styles.removeBtnText}>Retirer</Text>
+                  </Pressable>
+                )}
               </View>
             )
           })}
@@ -318,6 +388,11 @@ function InfoPanel({
                     <Text style={styles.invitePendingHint}>{inv.email}{" · en attente d'inscription"}</Text>
                   </View>
                   {inv.role === 'supervisor' && <Text style={styles.memberTag}>Co-superviseur</Text>}
+                  {!closed && (
+                    <Pressable style={styles.removeBtn} onPress={() => onDeleteInvite(inv.id, inv.full_name || inv.email)} hitSlop={8}>
+                      <Text style={styles.removeBtnText}>Annuler</Text>
+                    </Pressable>
+                  )}
                 </View>
               ))}
             </>
@@ -421,6 +496,8 @@ function makeStyles(t: Theme) {
     memberName: { fontSize: 14, color: t.textPrimary, fontFamily: Font.medium },
     memberTag: { fontSize: 10, fontFamily: Font.semibold, color: t.accent, backgroundColor: t.accentSoft, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden' },
     invitePendingHint: { fontSize: 11, color: t.textMuted, fontFamily: Font.regular, marginTop: 1 },
+    removeBtn: { backgroundColor: t.dangerSoft, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
+    removeBtnText: { fontSize: 11, fontFamily: Font.semibold, color: t.danger },
     inviteBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
     inviteBtnText: { color: t.onAccent, fontSize: 14, fontFamily: Font.bold },
 

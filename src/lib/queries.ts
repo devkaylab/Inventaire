@@ -317,6 +317,41 @@ export async function getSessionInvitations(sessionId: string): Promise<SessionI
   return data ?? []
 }
 
+/** Annule une invitation en attente sur un inventaire. */
+export async function deleteSessionInvitation(id: string) {
+  const { error } = await supabase.from('session_invitations').delete().eq('id', id)
+  if (error) throwSupabase('deleteSessionInvitation', error)
+}
+
+/** Retire un membre déjà présent d'un inventaire (réservé au superviseur ;
+ *  impossible de retirer le créateur). Les comptages/audits sont conservés. */
+export async function removeSessionMember(sessionId: string, userId: string) {
+  const { data, error } = await supabase.rpc('remove_session_member', {
+    p_session_id: sessionId,
+    p_user_id: userId,
+  })
+  if (error) throwSupabase('removeSessionMember', error)
+  const res = data as { success: boolean; error?: string }
+  if (!res.success) throwSupabase('removeSessionMember', new Error(res.error ?? 'Échec du retrait'))
+}
+
+/** L'utilisateur courant quitte un inventaire (sans supprimer ses comptages/audits). */
+export async function leaveSession(sessionId: string) {
+  const { data, error } = await supabase.rpc('leave_session', { p_session_id: sessionId })
+  if (error) throwSupabase('leaveSession', error)
+  const res = data as { success: boolean; error?: string }
+  if (!res.success) throwSupabase('leaveSession', new Error(res.error ?? 'Échec'))
+}
+
+export type DirectoryEntry = { user_id: string; full_name: string; email: string; role: string }
+
+/** Annuaire des membres de l'entreprise (nom + e-mail) pour la recherche à l'invitation. */
+export async function getCompanyDirectory(): Promise<DirectoryEntry[]> {
+  const { data, error } = await supabase.rpc('get_company_directory')
+  if (error) throwSupabase('getCompanyDirectory', error)
+  return (data ?? []) as DirectoryEntry[]
+}
+
 export async function joinSession(inventoryNumber: string, securityCode: string) {
   const { data, error } = await supabase.rpc('join_session', {
     p_inventory_number: inventoryNumber,

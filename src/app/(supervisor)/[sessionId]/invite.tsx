@@ -14,38 +14,90 @@ import {
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getSession, inviteToSession, type SessionRole } from '@/lib/queries'
+import { useAuth } from '@/lib/auth'
+import {
+  getCompanyDirectory,
+  getSession,
+  getSessionInvitations,
+  getSessionMembers,
+  inviteToSession,
+  type DirectoryEntry,
+  type SessionRole,
+} from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
+const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+
 export default function InviteToSessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
+  const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
+
   const { data: session } = useQuery({ queryKey: ['session', sessionId], queryFn: () => getSession(sessionId) })
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
+  const { data: directory } = useQuery({ queryKey: ['company-directory'], queryFn: getCompanyDirectory })
+  const { data: members } = useQuery({ queryKey: ['session-members', sessionId], queryFn: () => getSessionMembers(sessionId) })
+  const { data: invitations } = useQuery({ queryKey: ['session-invitations', sessionId], queryFn: () => getSessionInvitations(sessionId) })
+
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<DirectoryEntry | null>(null)
   const [role, setRole] = useState<SessionRole>('counter')
   const [loading, setLoading] = useState(false)
 
+  // Personnes déjà dans l'inventaire (à exclure des suggestions).
+  const excludedIds = new Set<string>()
+  if (profile?.id) excludedIds.add(profile.id)
+  for (const m of members ?? []) excludedIds.add((m as { user_id: string }).user_id)
+  const excludedEmails = new Set((invitations ?? []).map(i => i.email.toLowerCase()))
+
+  const q = query.trim().toLowerCase()
+  const suggestions = (!q || selected)
+    ? []
+    : (directory ?? [])
+        .filter(d => !excludedIds.has(d.user_id) && !excludedEmails.has((d.email ?? '').toLowerCase()))
+        .filter(d => (d.full_name ?? '').toLowerCase().includes(q) || (d.email ?? '').toLowerCase().includes(q))
+        .slice(0, 8)
+
+  // Proposer d'inviter une adresse inconnue si le texte est un e-mail non trouvé.
+  const emailMatchesDirectory = (directory ?? []).some(d => (d.email ?? '').toLowerCase() === q)
+  const showNewEmailOption = !selected && isEmail(q) && !emailMatchesDirectory && !excludedEmails.has(q)
+
+  function pick(entry: DirectoryEntry) {
+    setSelected(entry)
+    setQuery(entry.full_name || entry.email)
+  }
+
+  function clearSelection() {
+    setSelected(null)
+    setQuery('')
+  }
+
   async function handleSubmit() {
-    const name = fullName.trim()
-    const mail = email.trim().toLowerCase()
-    if (!name) return Alert.alert('Erreur', 'Saisissez le nom de la personne.')
-    if (!mail || !mail.includes('@')) return Alert.alert('Erreur', 'Saisissez une adresse e-mail valide.')
+    let fullName = ''
+    let email = ''
+    if (selected) {
+      fullName = selected.full_name || ''
+      email = selected.email
+    } else if (isEmail(q)) {
+      email = q
+    } else {
+      return Alert.alert('Erreur', 'Choisissez une personne dans la liste ou saisissez une adresse e-mail complète.')
+    }
 
     setLoading(true)
     try {
-      const res = await inviteToSession({ sessionId, fullName: name, email: mail, role })
+      const res = await inviteToSession({ sessionId, fullName, email, role })
       const added = res.outcome === 'added'
+      const who = fullName || email
       const roleLabel = role === 'supervisor' ? 'co-superviseur' : 'compteur'
       Alert.alert(
         added ? 'Personne ajoutée' : 'Invitation envoyée',
         added
-          ? `${name} a été ajouté à l'inventaire en tant que ${roleLabel}.`
-          : `${name} recevra un e-mail l'invitant à créer son compte avec l'adresse ${mail}. Elle rejoindra l'inventaire dès son inscription.`,
+          ? `${who} a été ajouté à l'inventaire en tant que ${roleLabel}.`
+          : `${who} recevra un e-mail l'invitant à créer son compte avec l'adresse ${email}. Elle rejoindra l'inventaire dès son inscription.`,
         [{ text: 'Terminé', onPress: () => router.back() }],
       )
       await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
@@ -57,60 +109,73 @@ export default function InviteToSessionScreen() {
     }
   }
 
+  const canSend = !!selected || isEmail(q)
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
-            {"Invitez une personne à participer à l'inventaire"}
-            {session ? ` « ${session.name || session.store_name} »` : ''}
-            {". Si elle a déjà un compte, elle est ajoutée immédiatement ; sinon, elle reçoit un e-mail pour créer le sien."}
+            {"Recherchez une personne de votre équipe par nom ou e-mail, ou saisissez une adresse pour inviter quelqu'un de nouveau"}
+            {session ? ` à « ${session.name || session.store_name} »` : ''}.
           </Text>
 
-          <Text style={styles.label}>Nom complet</Text>
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Ex: Marie Dupont"
-            placeholderTextColor={theme.textMuted}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="next"
-          />
+          <Text style={styles.label}>Recherche</Text>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.input}
+              value={query}
+              onChangeText={(v) => { setQuery(v); if (selected) setSelected(null) }}
+              placeholder="Nom ou adresse e-mail"
+              placeholderTextColor={theme.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+            {selected && (
+              <Pressable style={styles.clearBtn} onPress={clearSelection}>
+                <Text style={styles.clearBtnText}>Effacer</Text>
+              </Pressable>
+            )}
+          </View>
 
-          <Text style={styles.label}>Adresse e-mail</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="marie.dupont@exemple.fr"
-            placeholderTextColor={theme.textMuted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            returnKeyType="done"
-          />
+          {selected && (
+            <View style={styles.selectedCard}>
+              <View style={styles.avatar}><Text style={styles.avatarText}>{(selected.full_name || selected.email).charAt(0).toUpperCase()}</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.selName}>{selected.full_name || selected.email}</Text>
+                <Text style={styles.selMeta}>{selected.email}</Text>
+              </View>
+            </View>
+          )}
+
+          {suggestions.map(s => (
+            <Pressable key={s.user_id} style={styles.suggRow} onPress={() => pick(s)}>
+              <View style={styles.avatar}><Text style={styles.avatarText}>{(s.full_name || s.email).charAt(0).toUpperCase()}</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.suggName}>{s.full_name || s.email}</Text>
+                <Text style={styles.suggMeta}>{s.email}{s.role === 'supervisor' ? ' · superviseur' : ''}</Text>
+              </View>
+            </Pressable>
+          ))}
+
+          {showNewEmailOption && (
+            <Pressable style={styles.suggRow} onPress={handleSubmit}>
+              <View style={[styles.avatar, styles.avatarNew]}><Text style={styles.avatarText}>+</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.suggName}>Inviter {q}</Text>
+                <Text style={styles.suggMeta}>Nouvelle personne (non inscrite)</Text>
+              </View>
+            </Pressable>
+          )}
 
           <Text style={styles.label}>Rôle sur cet inventaire</Text>
           <View style={styles.roleRow}>
-            <RolePill
-              styles={styles}
-              active={role === 'counter'}
-              title="Compteur"
-              desc="Scanne et compte les articles"
-              onPress={() => setRole('counter')}
-            />
-            <RolePill
-              styles={styles}
-              active={role === 'supervisor'}
-              title="Co-superviseur"
-              desc="Mêmes droits que vous"
-              onPress={() => setRole('supervisor')}
-            />
+            <RolePill styles={styles} active={role === 'counter'} title="Compteur" desc="Scanne et compte les articles" onPress={() => setRole('counter')} />
+            <RolePill styles={styles} active={role === 'supervisor'} title="Co-superviseur" desc="Mêmes droits que vous" onPress={() => setRole('supervisor')} />
           </View>
 
-          <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
+          <Pressable style={[styles.button, (!canSend || loading) && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSend || loading}>
             {loading ? (
               <ActivityIndicator color={theme.onAccent} />
             ) : (
@@ -146,11 +211,31 @@ function makeStyles(t: Theme) {
     container: { padding: Spacing.xl, gap: Spacing.sm },
     intro: { fontSize: 14, color: t.textSecondary, fontFamily: Font.regular, lineHeight: 20, marginBottom: Spacing.md },
     label: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary, marginTop: Spacing.sm },
+    searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     input: {
-      borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
+      flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
       paddingHorizontal: Spacing.lg, paddingVertical: 13, fontSize: 16,
       backgroundColor: t.surface, color: t.textPrimary, fontFamily: Font.regular,
     },
+    clearBtn: { paddingHorizontal: Spacing.md, paddingVertical: 10 },
+    clearBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.semibold },
+    selectedCard: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+      backgroundColor: t.accentSoft, borderRadius: Radius.md, padding: Spacing.md,
+      borderWidth: 1, borderColor: t.accent,
+    },
+    selName: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary },
+    selMeta: { fontSize: 12, fontFamily: Font.regular, color: t.textSecondary, marginTop: 1 },
+    suggRow: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+      backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md,
+      borderWidth: 1, borderColor: t.hairline,
+    },
+    suggName: { fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
+    suggMeta: { fontSize: 12, fontFamily: Font.regular, color: t.textMuted, marginTop: 1 },
+    avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
+    avatarNew: { backgroundColor: t.successSoft },
+    avatarText: { fontSize: 15, fontFamily: Font.bold, color: t.accent },
     roleRow: { flexDirection: 'row', gap: Spacing.md, marginTop: 4 },
     pill: {
       flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
