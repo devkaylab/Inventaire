@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
+import { AuthLink } from '@/components/AuthLink'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
 const FEATURES = [
@@ -22,7 +23,7 @@ export default function Home() {
           </Link>
           <nav className="nav-links">
             <a href="#fonctionnalites">Fonctionnalités</a>
-            <Link href="/login" className="btn btn-ghost" style={{ padding: '8px 16px' }}>Se connecter</Link>
+            <AuthLink className="btn btn-ghost" style={{ padding: '8px 16px' }} loggedOutLabel="Se connecter" loggedInLabel="Mon espace" />
           </nav>
         </div>
       </header>
@@ -40,7 +41,7 @@ export default function Home() {
               du scan à l'écart de comptage, jusqu'au rapport.
             </p>
             <div className="cta">
-              <Link href="/login" className="btn btn-primary">Se connecter</Link>
+              <AuthLink className="btn btn-primary" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
               <a href="#fonctionnalites" className="btn btn-ghost">Découvrir</a>
             </div>
           </div>
@@ -69,7 +70,7 @@ export default function Home() {
             <div className="cta-band">
               <h2>Prêt à fiabiliser vos inventaires ?</h2>
               <p>Connectez-vous à votre espace pour gérer vos entreprises, magasins et inventaires.</p>
-              <Link href="/login" className="btn btn-primary">Accéder à mon espace</Link>
+              <AuthLink className="btn btn-primary" loggedOutLabel="Accéder à mon espace" loggedInLabel="Accéder à mon espace" />
             </div>
           </div>
         </section>

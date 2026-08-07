@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
+import { getMySpacePath, homePathForRole } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,6 +13,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Déjà connecté : rediriger vers l'espace au lieu de redemander le mot de passe.
+  useEffect(() => {
+    getMySpacePath().then((path) => { if (path) router.replace(path) })
+  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,13 +39,7 @@ export default function LoginPage() {
       .eq('id', data.user.id)
       .maybeSingle()
     setLoading(false)
-    if (prof?.is_admin) {
-      router.replace('/admin')
-    } else if (prof?.role === 'supervisor') {
-      router.replace('/dashboard')
-    } else {
-      router.replace('/account')
-    }
+    router.replace(homePathForRole(prof as { role: string | null; is_admin: boolean | null } | null))
   }
 
   return (
