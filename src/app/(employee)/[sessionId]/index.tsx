@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getArticleLabels, getMyCounts, getSession, leaveSession } from '@/lib/queries'
+import { getArticleLabels, getMyCounts, getSession, getZones, leaveSession } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -59,6 +59,17 @@ export default function EmployeeProgressScreen() {
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
 
+  const usesZones = !!session?.uses_zones
+
+  // Noms des balises (pour afficher « Balise 12341 · Réserve ») en mode zones.
+  const { data: zones } = useQuery({
+    queryKey: ['zones', sessionId],
+    queryFn: () => getZones(sessionId),
+    enabled: usesZones,
+  })
+  const zoneName = new Map<string, string>()
+  for (const z of zones ?? []) if (z.name) zoneName.set(z.code, z.name)
+
   const skuTotals = new Map<string, number>()
   for (const c of countRows ?? []) {
     skuTotals.set(c.sku, (skuTotals.get(c.sku) ?? 0) + c.qty)
@@ -66,6 +77,26 @@ export default function EmployeeProgressScreen() {
   const summaryRows = [...skuTotals.entries()].map(([sku, qty]) => ({ sku, qty }))
   const countedPieces = summaryRows.reduce((sum, r) => sum + r.qty, 0)
   const auditedPieces = (auditRows ?? []).reduce((sum, c) => sum + c.qty, 0)
+
+  // Comptes regroupés par balise (mode zones) : total + articles par balise.
+  const baliseMap = new Map<string, { total: number; skus: Map<string, number> }>()
+  for (const c of countRows ?? []) {
+    const code = (c.zone ?? '').trim() || '—'
+    const g = baliseMap.get(code) ?? { total: 0, skus: new Map<string, number>() }
+    g.total += c.qty
+    g.skus.set(c.sku, (g.skus.get(c.sku) ?? 0) + c.qty)
+    baliseMap.set(code, g)
+  }
+  const sections = [...baliseMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
+    .map(([code, g]) => ({
+      code,
+      title: zoneName.get(code) ? `Balise ${code} · ${zoneName.get(code)}` : `Balise ${code}`,
+      total: g.total,
+      data: [...g.skus.entries()]
+        .map(([sku, qty]) => ({ sku, qty }))
+        .sort((a, b) => b.qty - a.qty),
+    }))
 
   // Article details (libellé / marque / EAN) to enrich each scanned line.
   const { data: labels } = useQuery({
@@ -75,6 +106,31 @@ export default function EmployeeProgressScreen() {
   })
 
   const isLoading = sessionLoading || countsLoading
+
+  function renderArticle(item: { sku: string; qty: number }) {
+    const info = labels?.[item.sku]
+    const title = info?.label || item.sku
+    const meta: string[] = []
+    if (info?.ean && info.ean === item.sku) {
+      meta.push(`EAN ${info.ean}`)
+    } else {
+      meta.push(`SKU ${item.sku}`)
+      if (info?.ean) meta.push(`EAN ${info.ean}`)
+    }
+    if (info?.brand) meta.push(info.brand)
+    return (
+      <View style={styles.row}>
+        <View style={styles.rowLeft}>
+          <Text style={styles.rowTitle} numberOfLines={2}>{title}</Text>
+          <Text style={styles.rowMeta} numberOfLines={2}>{meta.join('  ·  ')}</Text>
+        </View>
+        <View style={styles.qtyWrap}>
+          <Text style={styles.qty}>{item.qty}</Text>
+          <Text style={styles.qtyUnit}>pièce{item.qty > 1 ? 's' : ''}</Text>
+        </View>
+      </View>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -94,41 +150,40 @@ export default function EmployeeProgressScreen() {
             )}
           </View>
 
-          <FlatList
-            data={summaryRows}
-            keyExtractor={r => r.sku}
-            renderItem={({ item }) => {
-              const info = labels?.[item.sku]
-              const title = info?.label || item.sku
-              const meta: string[] = []
-              if (info?.ean && info.ean === item.sku) {
-                meta.push(`EAN ${info.ean}`)
-              } else {
-                meta.push(`SKU ${item.sku}`)
-                if (info?.ean) meta.push(`EAN ${info.ean}`)
-              }
-              if (info?.brand) meta.push(info.brand)
-              return (
-                <View style={styles.row}>
-                  <View style={styles.rowLeft}>
-                    <Text style={styles.rowTitle} numberOfLines={2}>{title}</Text>
-                    <Text style={styles.rowMeta} numberOfLines={2}>{meta.join('  ·  ')}</Text>
-                  </View>
-                  <View style={styles.qtyWrap}>
-                    <Text style={styles.qty}>{item.qty}</Text>
-                    <Text style={styles.qtyUnit}>pièce{item.qty > 1 ? 's' : ''}</Text>
-                  </View>
+          {usesZones ? (
+            <SectionList
+              sections={sections}
+              keyExtractor={(item, index) => `${item.sku}-${index}`}
+              renderItem={({ item }) => renderArticle(item)}
+              renderSectionHeader={({ section }) => (
+                <View style={styles.baliseHeader}>
+                  <Text style={styles.baliseTitle} numberOfLines={1}>{section.title}</Text>
+                  <Text style={styles.baliseTotal}>{section.total} pièce{section.total > 1 ? 's' : ''}</Text>
                 </View>
-              )
-            }}
-            contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
-            ListEmptyComponent={
-              <View style={styles.center}>
-                <Text style={styles.emptyText}>{"Aucune pièce comptée pour l'instant"}</Text>
-              </View>
-            }
-          />
+              )}
+              stickySectionHeadersEnabled={false}
+              contentContainerStyle={styles.list}
+              refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
+              ListEmptyComponent={
+                <View style={styles.center}>
+                  <Text style={styles.emptyText}>{"Aucune pièce comptée pour l'instant"}</Text>
+                </View>
+              }
+            />
+          ) : (
+            <FlatList
+              data={summaryRows}
+              keyExtractor={r => r.sku}
+              renderItem={({ item }) => renderArticle(item)}
+              contentContainerStyle={styles.list}
+              refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
+              ListEmptyComponent={
+                <View style={styles.center}>
+                  <Text style={styles.emptyText}>{"Aucune pièce comptée pour l'instant"}</Text>
+                </View>
+              }
+            />
+          )}
 
           {session && session.status !== 'closed' && (
             <View style={styles.footer}>
@@ -158,6 +213,9 @@ function makeStyles(t: Theme) {
     storeName: { fontSize: 14, color: t.textSecondary, fontFamily: Font.medium },
     summaryLine: { fontSize: 13, color: t.textMuted, fontFamily: Font.medium, marginTop: Spacing.xs, ...tabular },
     list: { padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.lg },
+    baliseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm, backgroundColor: t.background, paddingTop: Spacing.md, paddingBottom: Spacing.xs },
+    baliseTitle: { flex: 1, fontSize: 13, fontFamily: Font.bold, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
+    baliseTotal: { fontSize: 13, fontFamily: Font.bold, color: t.accent, ...tabular },
     row: { backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md, borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
     rowLeft: { flex: 1, gap: 3 },
     rowTitle: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },
