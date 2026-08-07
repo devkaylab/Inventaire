@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, Alert, Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native'
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -31,14 +31,29 @@ function ChevronIcon({ color }: { color: string }) {
   )
 }
 
-// Symbole « actualisé » : discret, passe en accent le temps d'un rafraîchissement.
-function RefreshGlyph({ active, theme }: { active: boolean; theme: Theme }) {
-  const color = active ? theme.accent : theme.textMuted
+// Bouton de rafraîchissement manuel : tourne pendant l'actualisation.
+function RefreshGlyph({ spinning, onPress, theme }: { spinning: boolean; onPress: () => void; theme: Theme }) {
+  const [spin] = useState(() => new Animated.Value(0))
+  useEffect(() => {
+    if (!spinning) return
+    spin.setValue(0)
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 800, easing: Easing.linear, useNativeDriver: true }),
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [spinning, spin])
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  const color = spinning ? theme.accent : theme.textMuted
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24">
-      <Path d="M20 11a8 8 0 1 0-2.3 5.6" stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
-      <Path d="M20 5v5h-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </Svg>
+    <Pressable onPress={onPress} hitSlop={12} disabled={spinning}>
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        <Svg width={22} height={22} viewBox="0 0 24 24">
+          <Path d="M20 11a8 8 0 1 0-2.3 5.6" stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
+          <Path d="M20 5v5h-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </Svg>
+      </Animated.View>
+    </Pressable>
   )
 }
 
@@ -51,14 +66,11 @@ export default function SessionDetailScreen() {
   const [infoOpen, setInfoOpen] = useState(false)
   const [pulling, setPulling] = useState(false)
 
-  // Rafraîchissement automatique des données de comptage remontées par les
-  // compteurs (le superviseur voit l'avancement en quasi temps réel).
-  const LIVE_MS = 4000
-
+  // Rafraîchissement MANUEL : le superviseur tape la flèche pour actualiser
+  // (pas de sondage automatique → économe en batterie).
   const { data: session, isLoading, refetch } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => getSession(sessionId),
-    refetchInterval: (q) => (q.state.data?.status === 'closed' ? false : LIVE_MS),
   })
   const live = !!session && session.status !== 'closed'
   const { data: members } = useQuery({
@@ -72,13 +84,11 @@ export default function SessionDetailScreen() {
   const { data: counts, isFetching: countsFetching } = useQuery({
     queryKey: ['session-counts', sessionId],
     queryFn: () => getSessionCounts(sessionId),
-    refetchInterval: live ? LIVE_MS : false,
   })
-  const { data: zoneRows } = useQuery({
+  const { data: zoneRows, isFetching: zonesFetching } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
     queryFn: () => getZoneDashboard(sessionId),
     enabled: !!session?.uses_zones,
-    refetchInterval: live && session?.uses_zones ? LIVE_MS : false,
   })
 
   const closeMutation = useMutation({
@@ -105,12 +115,22 @@ export default function SessionDetailScreen() {
     onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
   })
 
-  // Rafraîchissement manuel (pull) — décorrélé du rafraîchissement automatique
-  // silencieux, pour ne pas faire clignoter le spinner toutes les 4 s.
+  const refreshing = countsFetching || zonesFetching
+
+  // Rafraîchit les données de progression (comptages + zones + session).
+  const manualRefresh = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['session-counts', sessionId] }),
+      queryClient.invalidateQueries({ queryKey: ['session', sessionId] }),
+      queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] }),
+    ])
+  }, [queryClient, sessionId])
+
+  // Rafraîchissement par « tirer » (pull) — même action que la flèche.
   const onRefresh = useCallback(async () => {
     setPulling(true)
-    try { await refetch() } finally { setPulling(false) }
-  }, [refetch])
+    try { await Promise.all([refetch(), manualRefresh()]) } finally { setPulling(false) }
+  }, [refetch, manualRefresh])
 
   const isCreator = !!profile?.id && session?.created_by === profile.id
 
@@ -240,7 +260,7 @@ export default function SessionDetailScreen() {
             <Text style={styles.sectionLabel}>Progression</Text>
             <View style={styles.progressBigRow}>
               <Text style={styles.progressBig}>{countPct}%</Text>
-              {live && <RefreshGlyph active={countsFetching} theme={theme} />}
+              {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
             </View>
             <Text style={styles.progressSub}>{countPct}% des balises comptées</Text>
             <Text style={styles.progressSub}>{auditPct}% des balises auditées</Text>
@@ -266,7 +286,7 @@ export default function SessionDetailScreen() {
             <Text style={styles.sectionLabel}>Progression</Text>
             <View style={styles.progressBigRow}>
               <Text style={styles.progressBig}>{countedPieces}</Text>
-              {live && <RefreshGlyph active={countsFetching} theme={theme} />}
+              {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
             </View>
             <Text style={styles.progressSub}>pièce{countedPieces > 1 ? 's' : ''} scannée{countedPieces > 1 ? 's' : ''}</Text>
             <Text style={styles.progressSub}>{auditedPieces} pièce{auditedPieces > 1 ? 's' : ''} auditée{auditedPieces > 1 ? 's' : ''}</Text>
