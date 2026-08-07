@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useState } from 'react'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -19,20 +20,17 @@ export default function EmployeeProgressScreen() {
     queryFn: () => getSession(sessionId),
   })
 
-  const liveMs = session && session.status !== 'closed' ? 4000 : false
   // Comptage (étape 1) — liste détaillée + total des pièces comptées.
   const { data: countRows, isLoading: countsLoading, refetch, isRefetching } = useQuery({
     queryKey: ['my-counts', sessionId, 1],
     queryFn: () => getMyCounts(sessionId, 1),
     enabled: !!session,
-    refetchInterval: liveMs,
   })
   // Audit (étape 2) — total des pièces auditées.
   const { data: auditRows } = useQuery({
     queryKey: ['my-counts', sessionId, 2],
     queryFn: () => getMyCounts(sessionId, 2),
     enabled: !!session,
-    refetchInterval: liveMs,
   })
 
   const queryClient = useQueryClient()
@@ -59,6 +57,15 @@ export default function EmployeeProgressScreen() {
   }
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  function toggle(code: string) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code); else next.add(code)
+      return next
+    })
+  }
 
   const usesZones = !!session?.uses_zones
 
@@ -152,17 +159,28 @@ export default function EmployeeProgressScreen() {
           </View>
 
           {usesZones ? (
-            <SectionList
-              sections={sections}
-              keyExtractor={(item, index) => `${item.sku}-${index}`}
-              renderItem={({ item }) => renderArticle(item)}
-              renderSectionHeader={({ section }) => (
-                <View style={styles.baliseHeader}>
-                  <Text style={styles.baliseTitle} numberOfLines={1}>{section.title}</Text>
-                  <Text style={styles.baliseTotal}>{section.total} pièce{section.total > 1 ? 's' : ''}</Text>
-                </View>
-              )}
-              stickySectionHeadersEnabled={false}
+            <FlatList
+              data={sections}
+              keyExtractor={s => s.code}
+              renderItem={({ item }) => {
+                const open = expanded.has(item.code)
+                return (
+                  <View>
+                    <Pressable style={styles.baliseRow} onPress={() => toggle(item.code)}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.baliseRowTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={styles.baliseRowMeta}>
+                          {item.data.length} article{item.data.length > 1 ? 's' : ''} · {item.total} pièce{item.total > 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      <Chevron open={open} color={theme.textMuted} />
+                    </Pressable>
+                    {open && item.data.map(a => (
+                      <View key={a.sku} style={styles.articleUnderBalise}>{renderArticle(a)}</View>
+                    ))}
+                  </View>
+                )
+              }}
               contentContainerStyle={styles.list}
               refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
               ListEmptyComponent={
@@ -205,6 +223,14 @@ export default function EmployeeProgressScreen() {
   )
 }
 
+function Chevron({ open, color }: { open: boolean; color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}>
+      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </Svg>
+  )
+}
+
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
@@ -214,9 +240,10 @@ function makeStyles(t: Theme) {
     storeName: { fontSize: 14, color: t.textSecondary, fontFamily: Font.medium },
     summaryLine: { fontSize: 13, color: t.textMuted, fontFamily: Font.medium, marginTop: Spacing.xs, ...tabular },
     list: { padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.lg },
-    baliseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm, backgroundColor: t.background, paddingTop: Spacing.md, paddingBottom: Spacing.xs },
-    baliseTitle: { flex: 1, fontSize: 13, fontFamily: Font.bold, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
-    baliseTotal: { fontSize: 13, fontFamily: Font.bold, color: t.accent, ...tabular },
+    baliseRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
+    baliseRowTitle: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
+    baliseRowMeta: { fontSize: 13, color: t.textSecondary, fontFamily: Font.medium, marginTop: 2, ...tabular },
+    articleUnderBalise: { marginTop: Spacing.sm, marginLeft: Spacing.md },
     row: { backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md, borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
     rowLeft: { flex: 1, gap: 3 },
     rowTitle: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },

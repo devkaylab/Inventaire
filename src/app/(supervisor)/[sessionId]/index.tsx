@@ -31,6 +31,17 @@ function ChevronIcon({ color }: { color: string }) {
   )
 }
 
+// Symbole « actualisé » : discret, passe en accent le temps d'un rafraîchissement.
+function RefreshGlyph({ active, theme }: { active: boolean; theme: Theme }) {
+  const color = active ? theme.accent : theme.textMuted
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24">
+      <Path d="M20 11a8 8 0 1 0-2.3 5.6" stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
+      <Path d="M20 5v5h-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </Svg>
+  )
+}
+
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const { profile } = useAuth()
@@ -38,12 +49,13 @@ export default function SessionDetailScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [pulling, setPulling] = useState(false)
 
   // Rafraîchissement automatique des données de comptage remontées par les
   // compteurs (le superviseur voit l'avancement en quasi temps réel).
   const LIVE_MS = 4000
 
-  const { data: session, isLoading, refetch, isRefetching } = useQuery({
+  const { data: session, isLoading, refetch } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => getSession(sessionId),
     refetchInterval: (q) => (q.state.data?.status === 'closed' ? false : LIVE_MS),
@@ -93,7 +105,12 @@ export default function SessionDetailScreen() {
     onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
   })
 
-  const onRefresh = useCallback(() => { refetch() }, [refetch])
+  // Rafraîchissement manuel (pull) — décorrélé du rafraîchissement automatique
+  // silencieux, pour ne pas faire clignoter le spinner toutes les 4 s.
+  const onRefresh = useCallback(async () => {
+    setPulling(true)
+    try { await refetch() } finally { setPulling(false) }
+  }, [refetch])
 
   const isCreator = !!profile?.id && session?.created_by === profile.id
 
@@ -202,7 +219,7 @@ export default function SessionDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={theme.textMuted} />}
       >
         {/* Slim info card — opens the info panel (identifiers, members, config) */}
         <Pressable style={styles.infoCard} onPress={() => setInfoOpen(true)}>
@@ -218,18 +235,13 @@ export default function SessionDetailScreen() {
         </Pressable>
 
         {/* Progression */}
-        {live && (
-          <View style={styles.liveRow}>
-            {countsFetching
-              ? <ActivityIndicator size="small" color={theme.textMuted} />
-              : <View style={styles.liveDot} />}
-            <Text style={styles.liveHint}>{countsFetching ? 'Mise à jour…' : 'Mise à jour automatique · toutes les 4 s'}</Text>
-          </View>
-        )}
         {usesZones ? (
           <View style={styles.progressBlock}>
             <Text style={styles.sectionLabel}>Progression</Text>
-            <Text style={styles.progressBig}>{countPct}%</Text>
+            <View style={styles.progressBigRow}>
+              <Text style={styles.progressBig}>{countPct}%</Text>
+              {live && <RefreshGlyph active={countsFetching} theme={theme} />}
+            </View>
             <Text style={styles.progressSub}>{countPct}% des balises comptées</Text>
             <Text style={styles.progressSub}>{auditPct}% des balises auditées</Text>
 
@@ -252,7 +264,10 @@ export default function SessionDetailScreen() {
         ) : (
           <View style={styles.progressBlock}>
             <Text style={styles.sectionLabel}>Progression</Text>
-            <Text style={styles.progressBig}>{countedPieces}</Text>
+            <View style={styles.progressBigRow}>
+              <Text style={styles.progressBig}>{countedPieces}</Text>
+              {live && <RefreshGlyph active={countsFetching} theme={theme} />}
+            </View>
             <Text style={styles.progressSub}>pièce{countedPieces > 1 ? 's' : ''} scannée{countedPieces > 1 ? 's' : ''}</Text>
             <Text style={styles.progressSub}>{auditedPieces} pièce{auditedPieces > 1 ? 's' : ''} auditée{auditedPieces > 1 ? 's' : ''}</Text>
           </View>
@@ -489,9 +504,7 @@ function makeStyles(t: Theme) {
     statusBadgeText: { fontSize: 11, fontFamily: Font.semibold, color: t.success },
 
     // Progression
-    liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 18 },
-    liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.success },
-    liveHint: { fontSize: 12, color: t.textMuted, fontFamily: Font.medium },
+    progressBigRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     progressBlock: { gap: Spacing.xs },
     sectionLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs, marginLeft: 2 },
     progressBig: { fontSize: 56, fontFamily: Font.extrabold, color: t.textPrimary, letterSpacing: -1.5, ...tabular },
