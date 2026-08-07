@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,12 +14,15 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { joinSession } from '@/lib/queries'
+import { getSessions, joinSession } from '@/lib/queries'
 import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+
+const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
 export default function EmployeeHomeScreen() {
   const { signOut, profile } = useAuth()
@@ -26,6 +31,16 @@ export default function EmployeeHomeScreen() {
   const [inventoryNumber, setInventoryNumber] = useState('')
   const [securityCode, setSecurityCode] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Inventaires auxquels le compteur est déjà rattaché (invitation ou code déjà saisi).
+  // RLS employé : ne renvoie que les sessions dont il est membre.
+  const { data: sessions, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: getSessions,
+  })
+  const mySessions = (sessions ?? []).filter(s => s.status !== 'closed')
+
+  const onRefresh = useCallback(() => { refetch() }, [refetch])
 
   async function handleJoin() {
     if (!inventoryNumber.trim() || !securityCode.trim()) {
@@ -39,6 +54,9 @@ export default function EmployeeHomeScreen() {
         Alert.alert('Erreur', result.error ?? 'Impossible de rejoindre la session.')
         return
       }
+      setInventoryNumber('')
+      setSecurityCode('')
+      await refetch()
       router.push(`/(employee)/${result.session_id}`)
     } catch (e: unknown) {
       console.error('[employee] joinSession', e)
@@ -57,42 +75,71 @@ export default function EmployeeHomeScreen() {
         </Pressable>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.body}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Rejoindre une session</Text>
-          <Text style={styles.cardDesc}>
-            Demandez le numéro d'inventaire et le code inventaire à votre superviseur.
-          </Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={theme.accent} style={{ marginTop: Spacing.xxl }} />
+          ) : mySessions.length > 0 ? (
+            <>
+              <Text style={styles.sectionLabel}>Mes inventaires</Text>
+              {mySessions.map(s => (
+                <Pressable key={s.id} style={styles.sessionCard} onPress={() => router.push(`/(employee)/${s.id}`)}>
+                  <View style={styles.sessionHeader}>
+                    <Text style={styles.sessionName} numberOfLines={1}>{s.name || s.store_name}</Text>
+                    <View style={styles.badge}>
+                      <View style={styles.badgeDot} />
+                      <Text style={styles.badgeText}>{STATUS_LABELS[s.status] ?? s.status}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.sessionStore}>{s.store_name}</Text>
+                  <Text style={styles.sessionMeta}>{s.inventory_number}</Text>
+                </Pressable>
+              ))}
+            </>
+          ) : null}
 
-          <Text style={styles.label}>N° d'inventaire</Text>
-          <TextInput
-            style={styles.input}
-            value={inventoryNumber}
-            onChangeText={v => setInventoryNumber(v.toUpperCase())}
-            autoCapitalize="characters"
-            placeholder="INV-20260526-XXXX"
-            placeholderTextColor={theme.textMuted}
-          />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
+              {mySessions.length > 0 ? 'Rejoindre un autre inventaire' : 'Rejoindre un inventaire'}
+            </Text>
+            <Text style={styles.cardDesc}>
+              {"Avec le numéro d'inventaire et le code fournis par votre superviseur."}
+            </Text>
 
-          <Text style={styles.label}>Code inventaire</Text>
-          <TextInput
-            style={styles.input}
-            value={securityCode}
-            onChangeText={v => setSecurityCode(v.toUpperCase())}
-            autoCapitalize="characters"
-            placeholder="XXXXXX"
-            placeholderTextColor={theme.textMuted}
-          />
+            <Text style={styles.label}>{"N° d'inventaire"}</Text>
+            <TextInput
+              style={styles.input}
+              value={inventoryNumber}
+              onChangeText={v => setInventoryNumber(v.toUpperCase())}
+              autoCapitalize="characters"
+              placeholder="INV-20260526-XXXX"
+              placeholderTextColor={theme.textMuted}
+            />
 
-          <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleJoin} disabled={loading}>
-            {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Rejoindre</Text>}
-          </Pressable>
-        </View>
+            <Text style={styles.label}>Code inventaire</Text>
+            <TextInput
+              style={styles.input}
+              value={securityCode}
+              onChangeText={v => setSecurityCode(v.toUpperCase())}
+              autoCapitalize="characters"
+              placeholder="XXXXXX"
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleJoin} disabled={loading}>
+              {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Rejoindre</Text>}
+            </Pressable>
+          </View>
+
+          <View style={styles.footer}>
+            <DeleteAccountButton />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-
-      <View style={styles.footer}>
-        <DeleteAccountButton />
-      </View>
     </SafeAreaView>
   )
 }
@@ -104,7 +151,16 @@ function makeStyles(t: Theme) {
     welcome: { fontSize: 14, color: t.textSecondary, fontFamily: Font.regular },
     welcomeName: { color: t.textPrimary, fontFamily: Font.semibold },
     signOut: { fontSize: 14, color: t.danger, fontFamily: Font.medium },
-    body: { flex: 1, justifyContent: 'center', padding: Spacing.xxl },
+    body: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxl },
+    sectionLabel: { fontSize: 12, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs },
+    sessionCard: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.xs, ...t.shadowCard },
+    sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
+    sessionName: { flex: 1, fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
+    sessionStore: { fontSize: 14, color: t.textPrimary, fontFamily: Font.medium },
+    sessionMeta: { fontSize: 12, color: t.textMuted, ...tabular },
+    badge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.successSoft, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+    badgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: t.success },
+    badgeText: { fontSize: 11, fontFamily: Font.semibold, color: t.success },
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.xl, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md, ...t.shadowCard },
     cardTitle: { fontSize: 18, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
     cardDesc: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
@@ -113,6 +169,6 @@ function makeStyles(t: Theme) {
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
-    footer: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg },
+    footer: { paddingTop: Spacing.sm },
   })
 }
