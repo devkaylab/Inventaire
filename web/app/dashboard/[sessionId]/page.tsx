@@ -113,7 +113,7 @@ export default function SessionDetailPage() {
         <div className="dash-main">
           <div className="dash-tabs">
             <button className={`dash-tab${tab === 'report' ? ' active' : ''}`} onClick={() => setTab('report')}>Rapport</button>
-            <button className={`dash-tab${tab === 'audit' ? ' active' : ''}`} onClick={() => setTab('audit')}>Arbitrage des écarts</button>
+            <button className={`dash-tab${tab === 'audit' ? ' active' : ''}`} onClick={() => setTab('audit')}>Audit &amp; écart</button>
             <button className={`dash-tab${tab === 'info' ? ' active' : ''}`} onClick={() => setTab('info')}>Infos</button>
           </div>
 
@@ -248,7 +248,9 @@ function AuditTab({ sessionId, readOnly }: { sessionId: string; readOnly: boolea
   useEffect(() => { load() }, [load])
 
   const keyOf = (a: ArticleAudit) => `${a.zone} ${a.sku}`
-  const pending = audits.filter(a => a.status === 'failed' || a.status === 'pending')
+  // On n'affiche QUE les écarts : comptage ≠ audit (status 'failed').
+  // Pas d'audit ou comptage = audit → non listé (même logique que l'app).
+  const discrepancies = audits.filter(a => a.status === 'failed')
 
   async function onResolve(a: ArticleAudit) {
     const fallback = effectiveQty(a)
@@ -272,20 +274,24 @@ function AuditTab({ sessionId, readOnly }: { sessionId: string; readOnly: boolea
   }
 
   if (loading) return <p className="muted">Calcul des écarts…</p>
-  if (audits.length === 0) return <p className="muted">Aucun article à arbitrer.</p>
+  if (discrepancies.length === 0) return (
+    <p className="muted">
+      {audits.length === 0
+        ? 'Les articles apparaîtront après le comptage.'
+        : "Aucun écart : le comptage et l'audit concordent, ou l'audit n'a pas encore été réalisé."}
+    </p>
+  )
 
   return (
     <div>
-      {pending.length === 0 ? (
-        <div className="dash-ok">Aucun écart en attente d'arbitrage.</div>
-      ) : (
-        <p className="muted small" style={{ marginBottom: 12 }}>{pending.length} ligne{pending.length > 1 ? 's' : ''} à arbitrer.</p>
-      )}
+      <p className="muted small" style={{ marginBottom: 12 }}>
+        {discrepancies.length} écart{discrepancies.length > 1 ? 's' : ''} entre le comptage et l&apos;audit.
+      </p>
       <div className="dash-audit-list">
-        {audits.map(a => {
+        {discrepancies.map(a => {
           const lbl = labels[a.sku]
           const eff = effectiveQty(a)
-          const editable = !readOnly && (a.status === 'failed' || a.status === 'pending')
+          const editable = !readOnly && a.status === 'failed'
           return (
             <div className={`dash-audit-row dash-audit-${a.status}`} key={a.id}>
               <div className="dash-audit-info">
