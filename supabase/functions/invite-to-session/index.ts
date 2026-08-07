@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
         <p>${greeting}</p>
         <p>${action}</p>
         <p style="margin-top:24px">
-          <a href="${appUrl}" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Ouvrir Quantinvo</a>
+          <a href="${appUrl}/open" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Ouvrir Quantinvo</a>
         </p>
         <p style="color:#666;font-size:13px;margin-top:24px">Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.</p>
       </div>`
