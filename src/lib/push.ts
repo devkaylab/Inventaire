@@ -10,7 +10,7 @@ import { registerPushToken } from '@/lib/queries'
 const EAS_PROJECT_ID = 'a362e9eb-3972-47d4-8761-b10c93388c58'
 
 // Mettre à true pour afficher les erreurs de configuration push à l'écran (debug).
-const PUSH_DEBUG = true
+const PUSH_DEBUG = false
 
 // Afficher les notifications même quand l'app est au premier plan.
 Notifications.setNotificationHandler({
