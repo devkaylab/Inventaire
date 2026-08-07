@@ -1,5 +1,7 @@
 PODS:
-  - EXConstants (56.0.18):
+  - EXApplication (56.0.3):
+    - ExpoModulesCore
+  - EXConstants (56.0.23):
     - ExpoModulesCore
   - Expo (56.0.11):
     - ExpoModulesCore
@@ -92,6 +94,8 @@ PODS:
     - ExpoModulesJSI
     - ExpoModulesWorklets
     - RNWorklets
+  - ExpoNotifications (56.0.23):
+    - ExpoModulesCore
   - ExpoRouter (56.2.10):
     - ExpoModulesCore
     - RNScreens
@@ -2276,6 +2280,7 @@ PODS:
   - Yoga (0.0.0)
 
 DEPENDENCIES:
+  - EXApplication (from `../node_modules/expo-application/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
@@ -2297,6 +2302,7 @@ DEPENDENCIES:
   - ExpoModulesJSI (from `../node_modules/expo-modules-jsi/apple`)
   - ExpoModulesWorklets (from `../node_modules/expo-modules-core/ExpoModulesWorklets.podspec`)
   - ExpoModulesWorkletsAdapter (from `../node_modules/expo-modules-core`)
+  - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
@@ -2394,6 +2400,8 @@ SPEC REPOS:
     - Mute
 
 EXTERNAL SOURCES:
+  EXApplication:
+    :path: "../node_modules/expo-application/ios"
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
   Expo:
@@ -2436,6 +2444,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/expo-modules-core/ExpoModulesWorklets.podspec"
   ExpoModulesWorkletsAdapter:
     :path: "../node_modules/expo-modules-core"
+  ExpoNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../node_modules/expo-router/ios"
   ExpoSharing:
@@ -2619,7 +2629,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  EXConstants: e836b478e4f5c835f3c77921d8162e1918e2c06e
+  EXApplication: e6040c92edc5522accd62852342e6b14742d42c0
+  EXConstants: 6bcea1db4d1215969dc3409dfe33d94a5bfe50ca
   Expo: 50a23d901aeb3a7681809bad2f9ada021442aaa4
   ExpoAsset: 1e436e9aee7015d5c6d203c1ddfe1adbb521a623
   ExpoAudio: 8c4882515dee2f71d519ee64bb05c14945a5e1a2
@@ -2640,6 +2651,7 @@ SPEC CHECKSUMS:
   ExpoModulesJSI: 49e5d86ad1a81cd696f07ca9d583b7848baa75cb
   ExpoModulesWorklets: 111c11b9ab7fe23ce3e52bba7bbfcf5ef730139f
   ExpoModulesWorkletsAdapter: 59a69740bd200ff5f983cd97d49c086d47b802f4
+  ExpoNotifications: 0b1d20c332a90db507a3e50076e7e756a56f2951
   ExpoRouter: abac86e050a6cb4f7f11dd9e79e11f7986d2be03
   ExpoSharing: 6209517626cce7f02b3bb31ccd92b9d4087c3bee
   ExpoSplashScreen: 3fe3a57d56d7242a9109d9714a6f9fa1e256538b
