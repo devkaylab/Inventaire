@@ -328,6 +328,90 @@ export type Database = {
           },
         ]
       }
+      push_tokens: {
+        Row: {
+          platform: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          platform?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          platform?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_invitations: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          email: string
+          full_name: string
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          email: string
+          full_name?: string
+          id?: string
+          role?: string
+          session_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_invitations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_invitations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_members: {
         Row: {
           joined_at: string
@@ -635,6 +719,15 @@ export type Database = {
       ensure_zone: {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
+      }
+      find_user_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          company_id: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
       }
       gen_company_code: { Args: never; Returns: string }
       gen_store_code: { Args: never; Returns: string }

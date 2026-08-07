@@ -269,6 +269,54 @@ export async function checkInvitation(email: string): Promise<boolean> {
   return data === true
 }
 
+export type SessionInvitation = Tables<'session_invitations'>
+export type SessionRole = 'supervisor' | 'counter'
+
+/** Enregistre (ou met à jour) un jeton de notification push pour l'utilisateur courant. */
+export async function registerPushToken(token: string, platform: string) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const { error } = await supabase
+    .from('push_tokens')
+    .upsert({ user_id: user.id, token, platform, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,token' })
+  if (error) console.error('[queries] registerPushToken', error)
+}
+
+/** Invite une personne (par nom + e-mail) à un inventaire précis, avec un rôle.
+ *  Passe par l'edge function invite-to-session (ajout membre ou invitation en
+ *  attente + e-mail + push). */
+export async function inviteToSession(input: {
+  sessionId: string
+  fullName: string
+  email: string
+  role: SessionRole
+}) {
+  const { data, error } = await supabase.functions.invoke('invite-to-session', {
+    body: {
+      sessionId: input.sessionId,
+      fullName: input.fullName.trim(),
+      email: input.email.trim().toLowerCase(),
+      role: input.role,
+    },
+  })
+  if (error) throwSupabase('inviteToSession', error)
+  const result = data as { success: boolean; outcome?: 'added' | 'invited'; emailSent?: boolean; pushSent?: boolean; error?: string }
+  if (!result.success) throwSupabase('inviteToSession', new Error(result.error ?? "Échec de l'invitation"))
+  return result
+}
+
+/** Invitations en attente pour un inventaire (personnes pas encore inscrites). */
+export async function getSessionInvitations(sessionId: string): Promise<SessionInvitation[]> {
+  const { data, error } = await supabase
+    .from('session_invitations')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+  if (error) throwSupabase('getSessionInvitations', error)
+  return data ?? []
+}
+
 export async function joinSession(inventoryNumber: string, securityCode: string) {
   const { data, error } = await supabase.rpc('join_session', {
     p_inventory_number: inventoryNumber,

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { registerForPushNotifications } from '@/lib/push'
 import type { Tables } from '@/types/database.types'
 
 type Profile = Tables<'profiles'>
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single()
     setProfile(data)
     setLoading(false)
+    if (data) void registerForPushNotifications()
   }
 
   async function signIn(email: string, password: string) {

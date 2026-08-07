@@ -56,6 +56,7 @@ export default function SupervisorLayout() {
         <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="new-session" options={{ title: 'Nouvelle session', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/index" options={{ title: 'Session', ...headerBase, headerRight: helpProfileRight }} />
+        <Stack.Screen name="[sessionId]/invite" options={{ title: 'Inviter une personne', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/import" options={{ title: 'Importer les données', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/zones" options={{ title: 'Zones & balises', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: helpRight }} />

@@ -4,7 +4,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { closeSession, getSession, getSessionCounts, getSessionMembers, getZoneDashboard } from '@/lib/queries'
+import { closeSession, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -43,6 +43,10 @@ export default function SessionDetailScreen() {
   const { data: members } = useQuery({
     queryKey: ['session-members', sessionId],
     queryFn: () => getSessionMembers(sessionId),
+  })
+  const { data: invitations } = useQuery({
+    queryKey: ['session-invitations', sessionId],
+    queryFn: () => getSessionInvitations(sessionId),
   })
   const { data: counts } = useQuery({
     queryKey: ['session-counts', sessionId],
@@ -189,6 +193,7 @@ export default function SessionDetailScreen() {
             <>
               <ActionRow styles={styles} theme={theme} label="Compter des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=count`)} />
               <ActionRow styles={styles} theme={theme} label="Auditer des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=audit`)} />
+              <ActionRow styles={styles} theme={theme} label="Inviter une personne" onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
             </>
           )}
           <ActionRow styles={styles} theme={theme} label="Audit et écart de comptage" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
@@ -206,6 +211,7 @@ export default function SessionDetailScreen() {
         theme={theme}
         session={session}
         members={members}
+        invitations={invitations}
         usesZones={usesZones}
         closed={closed}
         onCopy={copyField}
@@ -228,9 +234,10 @@ function ActionRow({ label, onPress, danger, last, styles, theme }: { label: str
 
 type SessionData = NonNullable<Awaited<ReturnType<typeof getSession>>>
 type MemberData = Awaited<ReturnType<typeof getSessionMembers>>
+type InvitationData = Awaited<ReturnType<typeof getSessionInvitations>>
 
 function InfoPanel({
-  visible, onClose, styles, theme, session, members, usesZones, closed,
+  visible, onClose, styles, theme, session, members, invitations, usesZones, closed,
   onCopy, onShare, onImport, onZones,
 }: {
   visible: boolean
@@ -239,6 +246,7 @@ function InfoPanel({
   theme: Theme
   session: SessionData
   members: MemberData | undefined
+  invitations: InvitationData | undefined
   usesZones: boolean
   closed: boolean
   onCopy: (label: string, value: string) => void
@@ -247,6 +255,7 @@ function InfoPanel({
   onZones: () => void
 }) {
   const memberList = members ?? []
+  const pendingInvites = invitations ?? []
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
@@ -281,17 +290,44 @@ function InfoPanel({
 
           <Text style={styles.sectionLabel}>Membres ({memberList.length})</Text>
           {memberList.length === 0 ? (
-            <Text style={styles.zoneEmpty}>Aucun membre pour l'instant.</Text>
-          ) : memberList.map(m => (
-            <View key={m.user_id} style={styles.memberRow}>
-              <View style={styles.memberAvatar}>
-                <Text style={styles.memberAvatarText}>
-                  {((m as unknown as { profiles: { full_name: string } }).profiles?.full_name ?? '?').charAt(0).toUpperCase()}
-                </Text>
+            <Text style={styles.zoneEmpty}>{"Aucun membre pour l'instant."}</Text>
+          ) : memberList.map(m => {
+            const mm = m as unknown as { profiles: { full_name: string } | null; role?: string }
+            const name = mm.profiles?.full_name ?? 'Inconnu'
+            return (
+              <View key={m.user_id} style={styles.memberRow}>
+                <View style={styles.memberAvatar}>
+                  <Text style={styles.memberAvatarText}>{name.charAt(0).toUpperCase()}</Text>
+                </View>
+                <Text style={styles.memberName}>{name}</Text>
+                {mm.role === 'supervisor' && <Text style={styles.memberTag}>Co-superviseur</Text>}
               </View>
-              <Text style={styles.memberName}>{(m as unknown as { profiles: { full_name: string } }).profiles?.full_name ?? 'Inconnu'}</Text>
-            </View>
-          ))}
+            )
+          })}
+
+          {pendingInvites.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>Invitations en attente ({pendingInvites.length})</Text>
+              {pendingInvites.map(inv => (
+                <View key={inv.id} style={styles.memberRow}>
+                  <View style={[styles.memberAvatar, styles.memberAvatarPending]}>
+                    <Text style={styles.memberAvatarText}>{(inv.full_name || inv.email).charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.memberName}>{inv.full_name || inv.email}</Text>
+                    <Text style={styles.invitePendingHint}>{inv.email}{" · en attente d'inscription"}</Text>
+                  </View>
+                  {inv.role === 'supervisor' && <Text style={styles.memberTag}>Co-superviseur</Text>}
+                </View>
+              ))}
+            </>
+          )}
+
+          {!closed && (
+            <Pressable style={styles.inviteBtn} onPress={() => { onClose(); router.push(`/(supervisor)/${session.id}/invite`) }}>
+              <Text style={styles.inviteBtnText}>Inviter une personne</Text>
+            </Pressable>
+          )}
 
           {!closed && (
             <>
@@ -380,8 +416,13 @@ function makeStyles(t: Theme) {
     // Members
     memberRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.background, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline },
     memberAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
+    memberAvatarPending: { backgroundColor: t.warningSoft },
     memberAvatarText: { fontSize: 13, fontFamily: Font.bold, color: t.accent },
     memberName: { fontSize: 14, color: t.textPrimary, fontFamily: Font.medium },
+    memberTag: { fontSize: 10, fontFamily: Font.semibold, color: t.accent, backgroundColor: t.accentSoft, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden' },
+    invitePendingHint: { fontSize: 11, color: t.textMuted, fontFamily: Font.regular, marginTop: 1 },
+    inviteBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
+    inviteBtnText: { color: t.onAccent, fontSize: 14, fontFamily: Font.bold },
 
     // Info panel sheet
     sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
