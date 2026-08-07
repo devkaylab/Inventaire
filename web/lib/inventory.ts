@@ -51,7 +51,7 @@ export type ArticleAudit = {
   status: 'pending' | 'validated' | 'failed' | 'resolved'
 }
 
-export type ArticleLabel = { label: string; brand: string; ean: string | null }
+export type ArticleLabel = { label: string; brand: string; ean: string | null; price: number }
 
 function fail(context: string, error: unknown): never {
   console.error(`[inventory] ${context}`, error)
@@ -132,13 +132,13 @@ export async function getArticleLabels(id: string, skus: string[]): Promise<Reco
   if (skus.length === 0) return {}
   const { data, error } = await supabase
     .from('articles')
-    .select('sku,label,brand,ean')
+    .select('sku,label,brand,ean,unit_purchase_price')
     .eq('session_id', id)
     .in('sku', skus)
   if (error) fail('getArticleLabels', error)
   const map: Record<string, ArticleLabel> = {}
-  for (const a of (data ?? []) as { sku: string; label: string; brand: string; ean: string | null }[]) {
-    map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean }
+  for (const a of (data ?? []) as { sku: string; label: string; brand: string; ean: string | null; unit_purchase_price: number | null }[]) {
+    map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean, price: Number(a.unit_purchase_price ?? 0) }
   }
   return map
 }

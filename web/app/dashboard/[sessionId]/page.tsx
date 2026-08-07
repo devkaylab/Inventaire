@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import {
-  deleteAuditLine, deleteSession, effectiveQty, fmtQty, getArticleLabels, getAudits,
+  deleteAuditLine, deleteSession, fmtQty, getArticleLabels, getAudits,
   getCountTotals, getSession, getSessionMembers, getSessionResults, getZoneDashboard,
   money, recomputeAudit, resolveAudit, STATUS_LABELS,
   type ArticleAudit, type ArticleLabel, type Member, type Session,
@@ -227,12 +227,23 @@ function ReportTab({ sessionId }: { sessionId: string }) {
   )
 }
 
-const AUDIT_STATUS: Record<string, string> = { validated: 'Validé', resolved: 'Corrigé', failed: 'Écart', pending: 'En attente' }
+type Discrepancy = { a: ArticleAudit; counted: number; audited: number; ecart: number; ecartValue: number }
+
+function Fig({ label, value, tone }: { label: string; value: string; tone?: 'neg' | 'pos' }) {
+  const color = tone === 'neg' ? '#dc2626' : tone === 'pos' ? '#059669' : undefined
+  return (
+    <div style={{ minWidth: 78 }}>
+      <div className="muted" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color }}>{value}</div>
+    </div>
+  )
+}
 
 function AuditTab({ sessionId, readOnly }: { sessionId: string; readOnly: boolean }) {
   const [loading, setLoading] = useState(true)
   const [audits, setAudits] = useState<ArticleAudit[]>([])
   const [labels, setLabels] = useState<Record<string, ArticleLabel>>({})
+  const [zones, setZones] = useState<ZoneDashboardRow[]>([])
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -241,22 +252,55 @@ function AuditTab({ sessionId, readOnly }: { sessionId: string; readOnly: boolea
     await recomputeAudit(sessionId)
     const a = await getAudits(sessionId)
     const skus = [...new Set(a.map(x => x.sku))]
-    const l = await getArticleLabels(sessionId, skus)
-    setAudits(a); setLabels(l); setLoading(false)
+    const [l, z] = await Promise.all([getArticleLabels(sessionId, skus), getZoneDashboard(sessionId)])
+    setAudits(a); setLabels(l); setZones(z); setLoading(false)
   }, [sessionId])
 
   useEffect(() => { load() }, [load])
 
   const keyOf = (a: ArticleAudit) => `${a.zone} ${a.sku}`
-  // On n'affiche QUE les écarts : comptage ≠ audit (status 'failed').
-  // Pas d'audit ou comptage = audit → non listé (même logique que l'app).
-  const discrepancies = audits.filter(a => a.status === 'failed')
+  const zoneName = useMemo(() => {
+    const m: Record<string, string | null> = {}
+    for (const z of zones) m[z.code] = z.name
+    return m
+  }, [zones])
+  const auditedZones = useMemo(() => new Set(zones.filter(z => z.audit_status === 'done').map(z => z.code)), [zones])
 
-  async function onResolve(a: ArticleAudit) {
-    const fallback = effectiveQty(a)
-    const raw = inputs[keyOf(a)] ?? (fallback != null ? String(fallback) : '')
+  // Écart = Auditeur (P2) − Compteur (P1). On ne compare que dans une balise
+  // AUDITÉE : un article compté mais non audité ressort avec −compté. En mode
+  // classique (sans balise), on compare quand l'audit existe. Corrigés exclus.
+  const groups = useMemo(() => {
+    const rows: Discrepancy[] = []
+    for (const a of audits) {
+      if (a.status === 'resolved') continue
+      const counted = Number(a.qty_pass1 ?? 0)
+      const audited = Number(a.qty_pass2 ?? 0)
+      const ecart = audited - counted
+      if (ecart === 0) continue
+      const zoned = a.zone && a.zone !== ''
+      if (zoned ? !auditedZones.has(a.zone) : a.qty_pass2 == null) continue
+      rows.push({ a, counted, audited, ecart, ecartValue: ecart * (labels[a.sku]?.price ?? 0) })
+    }
+    const map = new Map<string, Discrepancy[]>()
+    for (const r of rows) {
+      const list = map.get(r.a.zone) ?? []
+      list.push(r); map.set(r.a.zone, list)
+    }
+    return [...map.entries()]
+      .map(([zone, list]) => ({ zone, name: zoneName[zone] ?? null, list: list.sort((x, y) => x.a.sku.localeCompare(y.a.sku)) }))
+      .sort((x, y) => {
+        const nx = parseInt(x.zone, 10), ny = parseInt(y.zone, 10)
+        if (!isNaN(nx) && !isNaN(ny)) return nx - ny
+        return x.zone.localeCompare(y.zone)
+      })
+  }, [audits, labels, auditedZones, zoneName])
+
+  const total = groups.reduce((s, g) => s + g.list.length, 0)
+
+  async function onResolve(a: ArticleAudit, fallback: number) {
+    const raw = inputs[keyOf(a)] ?? String(fallback)
     const qty = parseFloat(raw)
-    if (isNaN(qty) || qty < 0) { alert('Entrez une quantité comptée valide (nombre positif).'); return }
+    if (isNaN(qty) || qty < 0) { alert('Entrez une quantité retenue valide (nombre positif).'); return }
     setBusy(keyOf(a))
     const r = await resolveAudit(sessionId, a.sku, qty, a.zone)
     setBusy(null)
@@ -274,7 +318,7 @@ function AuditTab({ sessionId, readOnly }: { sessionId: string; readOnly: boolea
   }
 
   if (loading) return <p className="muted">Calcul des écarts…</p>
-  if (discrepancies.length === 0) return (
+  if (total === 0) return (
     <p className="muted">
       {audits.length === 0
         ? 'Les articles apparaîtront après le comptage.'
@@ -285,41 +329,49 @@ function AuditTab({ sessionId, readOnly }: { sessionId: string; readOnly: boolea
   return (
     <div>
       <p className="muted small" style={{ marginBottom: 12 }}>
-        {discrepancies.length} écart{discrepancies.length > 1 ? 's' : ''} entre le comptage et l&apos;audit.
+        {total} écart{total > 1 ? 's' : ''} entre le comptage et l&apos;audit (l&apos;écart est calculé par rapport à l&apos;auditeur).
       </p>
-      <div className="dash-audit-list">
-        {discrepancies.map(a => {
-          const lbl = labels[a.sku]
-          const eff = effectiveQty(a)
-          const editable = !readOnly && a.status === 'failed'
-          return (
-            <div className={`dash-audit-row dash-audit-${a.status}`} key={a.id}>
-              <div className="dash-audit-info">
-                <div className="dash-art-label">{lbl?.label || a.sku}</div>
-                <div className="muted small">
-                  {lbl?.brand ?? ''}{a.zone ? ` · balise ${a.zone}` : ''} · P1 {fmtQty(Number(a.qty_pass1 ?? 0))} / P2 {fmtQty(Number(a.qty_pass2 ?? 0))}
-                </div>
-              </div>
-              <span className={`dash-audit-badge dash-audit-badge-${a.status}`}>{AUDIT_STATUS[a.status] ?? a.status}</span>
-              {editable ? (
-                <div className="dash-audit-actions">
-                  <input
-                    className="dash-audit-input"
-                    inputMode="decimal"
-                    placeholder={eff != null ? String(eff) : 'Qté'}
-                    value={inputs[keyOf(a)] ?? ''}
-                    onChange={e => setInputs(p => ({ ...p, [keyOf(a)]: e.target.value }))}
-                  />
-                  <button className="btn btn-primary" disabled={busy === keyOf(a)} onClick={() => onResolve(a)}>Corriger</button>
-                  <button className="link-btn danger-link" disabled={busy === keyOf(a)} onClick={() => onDelete(a)}>Supprimer</button>
-                </div>
-              ) : (
-                <div className="dash-audit-final num">{eff != null ? fmtQty(Number(eff)) : '—'}</div>
-              )}
+      {groups.map(g => (
+        <div key={g.zone || '_'} style={{ marginBottom: 20 }}>
+          {g.zone !== '' && (
+            <div className="dash-section-label" style={{ marginBottom: 8 }}>
+              Balise {g.zone}{g.name ? ` · ${g.name}` : ''} — {g.list.length} écart{g.list.length > 1 ? 's' : ''}
             </div>
-          )
-        })}
-      </div>
+          )}
+          <div className="dash-audit-list">
+            {g.list.map(({ a, counted, audited, ecart, ecartValue }) => {
+              const lbl = labels[a.sku]
+              return (
+                <div className="dash-audit-row" key={a.id} style={{ flexWrap: 'wrap', gap: 12 }}>
+                  <div className="dash-audit-info" style={{ minWidth: 160 }}>
+                    <div className="dash-art-label">{lbl?.label || a.sku}</div>
+                    <div className="muted small">SKU {a.sku}{lbl?.brand ? ` · ${lbl.brand}` : ''}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                    <Fig label="Compteur" value={fmtQty(counted)} />
+                    <Fig label="Auditeur" value={fmtQty(audited)} />
+                    <Fig label="Écart" value={`${fmtQty(ecart)} u`} tone={ecart < 0 ? 'neg' : 'pos'} />
+                    <Fig label="Écart valeur" value={`${money(ecartValue)} €`} tone={ecartValue < 0 ? 'neg' : undefined} />
+                  </div>
+                  {!readOnly && (
+                    <div className="dash-audit-actions">
+                      <input
+                        className="dash-audit-input"
+                        inputMode="decimal"
+                        placeholder={`Retenu (${fmtQty(audited)})`}
+                        value={inputs[keyOf(a)] ?? ''}
+                        onChange={e => setInputs(p => ({ ...p, [keyOf(a)]: e.target.value }))}
+                      />
+                      <button className="btn btn-primary" disabled={busy === keyOf(a)} onClick={() => onResolve(a, audited)}>Corriger</button>
+                      <button className="link-btn danger-link" disabled={busy === keyOf(a)} onClick={() => onDelete(a)}>Supprimer</button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
