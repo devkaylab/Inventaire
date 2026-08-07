@@ -18,17 +18,20 @@ export default function EmployeeProgressScreen() {
     queryFn: () => getSession(sessionId),
   })
 
+  const liveMs = session && session.status !== 'closed' ? 4000 : false
   // Comptage (étape 1) — liste détaillée + total des pièces comptées.
   const { data: countRows, isLoading: countsLoading, refetch, isRefetching } = useQuery({
     queryKey: ['my-counts', sessionId, 1],
     queryFn: () => getMyCounts(sessionId, 1),
     enabled: !!session,
+    refetchInterval: liveMs,
   })
   // Audit (étape 2) — total des pièces auditées.
   const { data: auditRows } = useQuery({
     queryKey: ['my-counts', sessionId, 2],
     queryFn: () => getMyCounts(sessionId, 2),
     enabled: !!session,
+    refetchInterval: liveMs,
   })
 
   const queryClient = useQueryClient()

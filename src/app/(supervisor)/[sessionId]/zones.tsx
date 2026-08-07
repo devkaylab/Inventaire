@@ -60,6 +60,7 @@ export default function ZonesScreen() {
   const { data: rows, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
     queryFn: () => getZoneDashboard(sessionId),
+    refetchInterval: closed ? false : 4000,
   })
 
   const groups = useMemo(() => groupByName(rows ?? []), [rows])

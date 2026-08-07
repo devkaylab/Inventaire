@@ -38,10 +38,16 @@ export default function SessionDetailScreen() {
   const styles = makeStyles(theme)
   const [infoOpen, setInfoOpen] = useState(false)
 
+  // Rafraîchissement automatique des données de comptage remontées par les
+  // compteurs (le superviseur voit l'avancement en quasi temps réel).
+  const LIVE_MS = 4000
+
   const { data: session, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => getSession(sessionId),
+    refetchInterval: (q) => (q.state.data?.status === 'closed' ? false : LIVE_MS),
   })
+  const live = !!session && session.status !== 'closed'
   const { data: members } = useQuery({
     queryKey: ['session-members', sessionId],
     queryFn: () => getSessionMembers(sessionId),
@@ -50,14 +56,16 @@ export default function SessionDetailScreen() {
     queryKey: ['session-invitations', sessionId],
     queryFn: () => getSessionInvitations(sessionId),
   })
-  const { data: counts } = useQuery({
+  const { data: counts, isFetching: countsFetching } = useQuery({
     queryKey: ['session-counts', sessionId],
     queryFn: () => getSessionCounts(sessionId),
+    refetchInterval: live ? LIVE_MS : false,
   })
   const { data: zoneRows } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
     queryFn: () => getZoneDashboard(sessionId),
     enabled: !!session?.uses_zones,
+    refetchInterval: live && session?.uses_zones ? LIVE_MS : false,
   })
 
   const closeMutation = useMutation({
@@ -209,6 +217,14 @@ export default function SessionDetailScreen() {
         </Pressable>
 
         {/* Progression */}
+        {live && (
+          <View style={styles.liveRow}>
+            {countsFetching
+              ? <ActivityIndicator size="small" color={theme.textMuted} />
+              : <View style={styles.liveDot} />}
+            <Text style={styles.liveHint}>{countsFetching ? 'Mise à jour…' : 'Mise à jour automatique · toutes les 4 s'}</Text>
+          </View>
+        )}
         {usesZones ? (
           <View style={styles.progressBlock}>
             <Text style={styles.sectionLabel}>Progression</Text>
@@ -462,6 +478,9 @@ function makeStyles(t: Theme) {
     statusBadgeText: { fontSize: 11, fontFamily: Font.semibold, color: t.success },
 
     // Progression
+    liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 18 },
+    liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.success },
+    liveHint: { fontSize: 12, color: t.textMuted, fontFamily: Font.medium },
     progressBlock: { gap: Spacing.xs },
     sectionLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs, marginLeft: 2 },
     progressBig: { fontSize: 56, fontFamily: Font.extrabold, color: t.textPrimary, letterSpacing: -1.5, ...tabular },
