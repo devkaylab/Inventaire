@@ -37,7 +37,8 @@ export default function EmployeeProgressScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       Alert.alert('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
-      router.replace('/(employee)/')
+      if (router.canGoBack()) router.back()
+      else router.replace('/(employee)/')
     },
     onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
   })

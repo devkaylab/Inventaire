@@ -65,7 +65,8 @@ export default function SessionDetailScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       Alert.alert('Session supprimée', 'L\'inventaire et toutes ses données ont été supprimés.')
-      router.replace('/(supervisor)/')
+      if (router.canGoBack()) router.back()
+      else router.replace('/(supervisor)/')
     },
     onError: (e) => {
       Alert.alert('Erreur', errorMessage(e))
@@ -77,7 +78,8 @@ export default function SessionDetailScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       Alert.alert('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
-      router.replace('/(supervisor)/')
+      if (router.canGoBack()) router.back()
+      else router.replace('/(supervisor)/')
     },
     onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
   })
