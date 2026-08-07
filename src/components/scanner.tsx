@@ -216,6 +216,7 @@ export function Scanner({
   const queryClient = useQueryClient()
   // Couleur du mode : Compter = accent, Auditer = or.
   const modeColor = baliseMode === 'audit' ? AUDIT_COLOR : theme.accent
+  const modeOn = baliseMode === 'audit' ? AUDIT_ON : theme.onAccent
   const [permission, requestPermission] = useCameraPermissions()
   const [mode, setMode] = useState<Mode>('camera')
   const [manualInput, setManualInput] = useState('')
@@ -649,8 +650,8 @@ export function Scanner({
               returnKeyType="go"
               onSubmitEditing={openBaliseManual}
             />
-            <Pressable style={[styles.manualBtn, resolving && { opacity: 0.6 }]} onPress={openBaliseManual} disabled={resolving}>
-              {resolving ? <ActivityIndicator color="#fff" /> : <Text style={styles.manualBtnText}>Ouvrir</Text>}
+            <Pressable style={[styles.manualBtn, { backgroundColor: modeColor }, resolving && { opacity: 0.6 }]} onPress={openBaliseManual} disabled={resolving}>
+              {resolving ? <ActivityIndicator color={modeOn} /> : <Text style={[styles.manualBtnText, { color: modeOn }]}>Ouvrir</Text>}
             </Pressable>
           </View>
         </View>
@@ -800,8 +801,8 @@ export function Scanner({
               returnKeyType="search"
               onSubmitEditing={handleManualSubmit}
             />
-            <Pressable style={[styles.manualBtn, resolving && { opacity: 0.6 }]} onPress={handleManualSubmit} disabled={resolving}>
-              {resolving ? <ActivityIndicator color="#fff" /> : <Text style={styles.manualBtnText}>OK</Text>}
+            <Pressable style={[styles.manualBtn, { backgroundColor: modeColor }, resolving && { opacity: 0.6 }]} onPress={handleManualSubmit} disabled={resolving}>
+              {resolving ? <ActivityIndicator color={modeOn} /> : <Text style={[styles.manualBtnText, { color: modeOn }]}>OK</Text>}
             </Pressable>
           </View>
         </View>

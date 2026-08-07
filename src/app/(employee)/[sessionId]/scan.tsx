@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Alert, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocalSearchParams } from 'expo-router'
+import { Stack, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSession, getMyScanEntries, insertCount } from '@/lib/queries'
 import type { Article, BaliseMode } from '@/lib/queries'
@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth'
 import { Scanner } from '@/components/scanner'
 import { friendlyInsertCountError } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
+import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 
 export default function EmployeeScanScreen() {
   const { sessionId, mode } = useLocalSearchParams<{ sessionId: string; mode?: string }>()
@@ -56,8 +57,13 @@ export default function EmployeeScanScreen() {
 
   if (!session) return null
 
+  const audit = baliseMode === 'audit'
+  const modeColor = audit ? AUDIT_COLOR : theme.accent
+  const onColor = audit ? AUDIT_ON : theme.onAccent
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
+      <Stack.Screen options={{ title: audit ? 'Audit des articles' : 'Comptage des articles', headerStyle: { backgroundColor: modeColor }, headerTintColor: onColor }} />
       <Scanner
         sessionId={sessionId}
         passNumber={passNumber}
