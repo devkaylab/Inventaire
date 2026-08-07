@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Svg, { Path } from 'react-native-svg'
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg'
 import { useThemeControls } from '@/lib/theme'
 import { Font } from '@/constants/ink'
 
@@ -15,12 +15,49 @@ function ProfileIcon() {
   )
 }
 
+// Icônes de thème (SVG, pas d'emoji) : clair = soleil, sombre = lune,
+// système = écran (suit l'appareil).
+function ThemeIcon({ preference }: { preference: 'light' | 'dark' | 'system' }) {
+  if (preference === 'light') {
+    return (
+      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round">
+        <Circle cx={12} cy={12} r={4} />
+        <Line x1={12} y1={2.5} x2={12} y2={5} />
+        <Line x1={12} y1={19} x2={12} y2={21.5} />
+        <Line x1={2.5} y1={12} x2={5} y2={12} />
+        <Line x1={19} y1={12} x2={21.5} y2={12} />
+        <Line x1={5.2} y1={5.2} x2={7} y2={7} />
+        <Line x1={17} y1={17} x2={18.8} y2={18.8} />
+        <Line x1={18.8} y1={5.2} x2={17} y2={7} />
+        <Line x1={7} y1={17} x2={5.2} y2={18.8} />
+      </Svg>
+    )
+  }
+  if (preference === 'dark') {
+    return (
+      <Svg width={16} height={16} viewBox="0 0 24 24">
+        <Path fill="#fff" d="M20 14.4A8.2 8.2 0 1 1 9.6 4a6.6 6.6 0 0 0 10.4 10.4z" />
+      </Svg>
+    )
+  }
+  // système = écran / moniteur
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Rect x={3} y={4} width={18} height={12.5} rx={2} />
+      <Line x1={8.5} y1={20.5} x2={15.5} y2={20.5} />
+      <Line x1={12} y1={16.5} x2={12} y2={20.5} />
+    </Svg>
+  )
+}
+
+const NEXT_PREF = { system: 'light', light: 'dark', dark: 'system' } as const
+
 // Circular translucent buttons that sit on the near-black Ink header.
-// Optional profile (leftmost) + theme toggle (sun/moon) + help (?),
+// Optional profile (leftmost) + theme cycle (système/clair/sombre) + help (?),
 // shared by both navigation layouts. `onProfile` is only passed on the
 // supervisor's main screens, so the employee header stays unchanged.
 export function HeaderActions({ onProfile, onHelp }: { onProfile?: () => void; onHelp: () => void }) {
-  const { name, toggle } = useThemeControls()
+  const { preference, setPreference } = useThemeControls()
   return (
     <View style={styles.row}>
       {onProfile && (
@@ -28,8 +65,13 @@ export function HeaderActions({ onProfile, onHelp }: { onProfile?: () => void; o
           <ProfileIcon />
         </Pressable>
       )}
-      <Pressable onPress={toggle} hitSlop={8} style={styles.btn}>
-        <Text style={styles.glyph}>{name === 'dark' ? '☀' : '☾'}</Text>
+      <Pressable
+        onPress={() => setPreference(NEXT_PREF[preference])}
+        hitSlop={8}
+        style={styles.btn}
+        accessibilityLabel={`Thème : ${preference === 'system' ? 'système' : preference === 'light' ? 'clair' : 'sombre'}`}
+      >
+        <ThemeIcon preference={preference} />
       </Pressable>
       <Pressable onPress={onHelp} hitSlop={8} style={styles.btn}>
         <Text style={styles.glyphBold}>?</Text>
@@ -46,6 +88,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
-  glyph: { color: '#fff', fontSize: 15, fontFamily: Font.semibold },
   glyphBold: { color: '#fff', fontSize: 16, fontFamily: Font.bold },
 })
