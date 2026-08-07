@@ -160,7 +160,7 @@ export default function ImportScreen() {
             💡 Le scan reconnaît vos articles dans tous les cas, même si un code commence par un zéro.
           </Text>
           <Text style={styles.infoBannerSub}>
-            Astuce : pour que ces codes apparaissent à l'identique dans le rapport, gardez le format « Texte » sur les colonnes des codes.
+            {"Astuce : pour que ces codes apparaissent à l'identique dans le rapport, gardez le format « Texte » sur les colonnes des codes."}
           </Text>
         </View>
 
@@ -168,14 +168,14 @@ export default function ImportScreen() {
           'catalog',
           catalog,
           '1. Référentiel articles',
-          'Colonnes obligatoires : SKU (code article), EAN (code-barres), Marque, Libellé article\nColonne optionnelle : Prix d’achat (variantes acceptées : « Prix d’achat », « PA », « coût », « cost », « cogs »). Sans elle, l’écart en valeur sera de 0.',
+          'Colonnes obligatoires (variantes acceptées) :\n• SKU — ou Code article, Référence, Réf\n• EAN — ou Code-barres, GTIN, Gencod\n• Marque — ou Fournisseur\n• Libellé — ou Désignation, Description, Nom\nColonne optionnelle : Prix d’achat — ou PA, Coût, Cost, COGS. Sans elle, l’écart en valeur sera de 0.',
         )}
 
         {renderStep(
           'stock',
           stock,
           '2. Stock théorique',
-          'Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes : SKU (code article), Quantité théorique. Le rapprochement se fait par SKU ; les EAN proviennent du référentiel (étape 1).',
+          'Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes obligatoires (variantes acceptées) :\n• SKU — ou Code article, Référence, Réf\n• Quantité théorique — ou Quantité, Qté, Stock, Qty\nLe rapprochement se fait par SKU ; les EAN proviennent du référentiel (étape 1).',
         )}
 
         {fromNew && (
@@ -183,7 +183,7 @@ export default function ImportScreen() {
             style={styles.startBtn}
             onPress={() => router.replace(`/(supervisor)/${sessionId}`)}
           >
-            <Text style={styles.startBtnText}>Commencer l'inventaire</Text>
+            <Text style={styles.startBtnText}>{"Commencer l'inventaire"}</Text>
           </Pressable>
         )}
       </ScrollView>
