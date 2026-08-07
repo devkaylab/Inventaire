@@ -548,12 +548,12 @@ export async function getArticleLabels(sessionId: string, skus: string[]) {
   if (skus.length === 0) return {}
   const { data, error } = await supabase
     .from('articles')
-    .select('sku, label, brand, ean')
+    .select('sku, label, brand, ean, unit_purchase_price')
     .eq('session_id', sessionId)
     .in('sku', skus)
   if (error) throwSupabase('getArticleLabels', error)
-  const map: Record<string, { label: string; brand: string; ean: string | null }> = {}
-  for (const a of data ?? []) map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean }
+  const map: Record<string, { label: string; brand: string; ean: string | null; price: number }> = {}
+  for (const a of data ?? []) map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean, price: Number(a.unit_purchase_price ?? 0) }
   return map
 }
 
