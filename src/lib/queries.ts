@@ -34,6 +34,18 @@ export async function getSessions() {
   return data
 }
 
+/** Les inventaires créés par le superviseur courant (« Mes inventaires »). */
+export async function getMySessions() {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('inventory_sessions')
+    .select('*')
+    .eq('created_by', user?.id ?? '')
+    .order('created_at', { ascending: false })
+  if (error) throwSupabase('getMySessions', error)
+  return data
+}
+
 export async function getSession(sessionId: string) {
   const { data, error } = await supabase
     .from('inventory_sessions')
@@ -133,24 +145,56 @@ export type Profile = Tables<'profiles'>
 export type Company = Tables<'companies'>
 
 /** L'entreprise du superviseur courant. RLS (companies_member_select) ne
- *  renvoie que sa propre entreprise → une seule ligne au plus. */
+ *  renvoie que sa propre entreprise → une seule ligne au plus.
+ *  Colonnes explicites : le code entreprise (join_code) est confidentiel (admin only)
+ *  et n'est pas lisible avec la clé publique. */
 export async function getMyCompany(): Promise<Company | null> {
-  const { data, error } = await supabase.from('companies').select('*').limit(1).maybeSingle()
+  const { data, error } = await supabase
+    .from('companies')
+    .select('id, name, balise_count, created_at')
+    .limit(1)
+    .maybeSingle()
   if (error) throwSupabase('getMyCompany', error)
-  return data
+  return (data as unknown as Company) ?? null
 }
 
 export type Store = Tables<'stores'>
 
-/** Les magasins de l'entreprise courante (créés par l'admin). RLS ne renvoie
- *  que les magasins de l'entreprise du membre. */
+/** Les magasins de l'entreprise courante. RLS ne renvoie que ceux du membre ;
+ *  le code magasin (join_code) est confidentiel (admin only) et exclu. */
 export async function getStores(): Promise<Store[]> {
   const { data, error } = await supabase
     .from('stores')
-    .select('*')
+    .select('id, company_id, name, created_at')
     .order('name', { ascending: true })
   if (error) throwSupabase('getStores', error)
-  return data ?? []
+  return (data ?? []) as unknown as Store[]
+}
+
+/** Rejoindre un magasin via son code (fourni par l'administrateur) : rattache le
+ *  superviseur à l'entreprise du magasin et l'y affecte. */
+export async function joinStore(code: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)('join_store', { p_code: code.trim() })
+  if (error) throwSupabase('joinStore', error)
+  return data as {
+    success: boolean
+    store_id?: string
+    store_name?: string
+    company_id?: string
+    company_name?: string
+    error?: string
+  }
+}
+
+/** Les magasins auxquels le superviseur courant est affecté (RPC get_my_stores).
+ *  Repli sur getStores() si la migration « magasin assigné » n'est pas encore
+ *  appliquée (fonction absente) — la création reste bloquée côté serveur. */
+export async function getMyAssignedStores(): Promise<Store[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)('get_my_stores')
+  if (error) return getStores()
+  return (data ?? []) as Store[]
 }
 
 export type DeletionRequest = Tables<'account_deletion_requests'>

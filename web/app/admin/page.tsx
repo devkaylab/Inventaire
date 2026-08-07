@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
-type Store = { id: string; company_id: string; name: string }
+type Store = { id: string; company_id: string; name: string; join_code: string }
 type DeletionRequest = {
   id: string; user_id: string; email: string | null; full_name: string | null; role: string | null; created_at: string
 }
@@ -26,9 +26,11 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false)
 
   async function load() {
+    // Codes entreprise/magasin confidentiels : lecture via RPC admin (SECURITY DEFINER),
+    // la clé publique ne peut plus lire la colonne join_code directement.
     const [c, s, r] = await Promise.all([
-      supabase.from('companies').select('id,name,join_code,created_at').order('created_at', { ascending: false }),
-      supabase.from('stores').select('id,company_id,name').order('name', { ascending: true }),
+      supabase.rpc('admin_list_companies'),
+      supabase.rpc('admin_list_stores'),
       supabase.from('account_deletion_requests').select('id,user_id,email,full_name,role,created_at').eq('status', 'pending').order('created_at', { ascending: true }),
     ])
     setCompanies((c.data as Company[]) ?? [])
@@ -167,6 +169,8 @@ export default function AdminPage() {
   )
 }
 
+type Supervisor = { id: string; full_name: string | null; role: string | null }
+
 function CompanyCard({
   company, stores, onAddStore, onCopy, onDeleteCompany, onDeleteStore,
 }: {
@@ -178,6 +182,41 @@ function CompanyCard({
   onDeleteStore: (s: Store) => void
 }) {
   const [name, setName] = useState('')
+  const [supervisors, setSupervisors] = useState<Supervisor[]>([])
+  // store_id -> user_ids affectés
+  const [assignments, setAssignments] = useState<Record<string, string[]>>({})
+
+  const loadAssign = useCallback(async () => {
+    const [m, a] = await Promise.all([
+      supabase.rpc('admin_list_company_members', { p_company_id: company.id }),
+      supabase.rpc('admin_list_store_supervisors', { p_company_id: company.id }),
+    ])
+    setSupervisors((m.data as Supervisor[]) ?? [])
+    const map: Record<string, string[]> = {}
+    for (const row of ((a.data as { store_id: string; user_id: string }[]) ?? [])) {
+      (map[row.store_id] ||= []).push(row.user_id)
+    }
+    setAssignments(map)
+  }, [company.id])
+
+  useEffect(() => { loadAssign() }, [loadAssign])
+
+  const supById = useMemo(() => {
+    const m: Record<string, Supervisor> = {}
+    for (const s of supervisors) m[s.id] = s
+    return m
+  }, [supervisors])
+
+  async function assign(storeId: string, userId: string) {
+    const { data, error } = await supabase.rpc('admin_assign_supervisor', { p_store_id: storeId, p_user_id: userId })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    loadAssign()
+  }
+  async function unassign(storeId: string, userId: string) {
+    const { data, error } = await supabase.rpc('admin_unassign_supervisor', { p_store_id: storeId, p_user_id: userId })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    loadAssign()
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -208,16 +247,50 @@ function CompanyCard({
         {stores.length === 0 ? (
           <p className="muted small">Aucun magasin pour l'instant.</p>
         ) : (
-          <div className="chips">
-            {stores.map((s) => (
-              <span className="chip" key={s.id}>
-                {s.name}
-                <button className="chip-x" onClick={() => onDeleteStore(s)} aria-label={`Supprimer ${s.name}`}>×</button>
-              </span>
-            ))}
+          <div className="store-blocks">
+            {stores.map((s) => {
+              const assigned = assignments[s.id] ?? []
+              const assignedSet = new Set(assigned)
+              const available = supervisors.filter((m) => !assignedSet.has(m.id))
+              return (
+                <div className="store-block" key={s.id}>
+                  <div className="store-block-head">
+                    <div>
+                      <span className="store-block-name">{s.name}</span>
+                      <div className="code-row">
+                        Code magasin : <code>{s.join_code}</code>
+                        <button className="link-btn" onClick={() => onCopy(s.join_code)}>Copier</button>
+                      </div>
+                    </div>
+                    <button className="link-btn danger-link" onClick={() => onDeleteStore(s)}>Supprimer</button>
+                  </div>
+                  <div className="store-sup">
+                    {assigned.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
+                    {assigned.map((uid) => (
+                      <span className="chip" key={uid}>
+                        {supById[uid]?.full_name || 'Superviseur'}
+                        <button className="chip-x" onClick={() => unassign(s.id, uid)} aria-label="Retirer">×</button>
+                      </span>
+                    ))}
+                    {available.length > 0 && (
+                      <select
+                        className="store-sup-select"
+                        value=""
+                        onChange={(e) => { if (e.target.value) assign(s.id, e.target.value) }}
+                      >
+                        <option value="">+ Affecter un superviseur</option>
+                        {available.map((m) => (
+                          <option key={m.id} value={m.id}>{m.full_name || 'Sans nom'}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
-        <form className="inline-form" onSubmit={submit}>
+        <form className="inline-form" onSubmit={submit} style={{ marginTop: 12 }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouveau magasin" />
           <button className="btn btn-ghost">Ajouter</button>
         </form>

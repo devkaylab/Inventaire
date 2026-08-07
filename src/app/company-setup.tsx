@@ -15,7 +15,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
-import { joinCompany } from '@/lib/queries'
+import { joinStore } from '@/lib/queries'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function CompanySetupScreen() {
@@ -27,12 +27,12 @@ export default function CompanySetupScreen() {
 
   async function handleJoin() {
     if (!code.trim()) {
-      Alert.alert('Erreur', "Veuillez saisir le code de l'entreprise.")
+      Alert.alert('Erreur', 'Veuillez saisir le code du magasin.')
       return
     }
     setLoading(true)
     try {
-      const res = await joinCompany(code.trim())
+      const res = await joinStore(code.trim())
       if (!res.success) {
         Alert.alert('Erreur', res.error ?? 'Code introuvable.')
         return
@@ -49,14 +49,14 @@ export default function CompanySetupScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>Rejoindre votre entreprise</Text>
+            <Text style={styles.title}>Rejoindre votre magasin</Text>
             <Text style={styles.subtitle}>
-              Saisissez le code d'entreprise qui vous a été communiqué par votre administrateur.
+              Saisissez le code du magasin qui vous a été communiqué par votre administrateur.
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>Code de l'entreprise</Text>
+            <Text style={styles.label}>Code du magasin</Text>
             <TextInput
               style={[styles.input, styles.codeInput]}
               value={code}

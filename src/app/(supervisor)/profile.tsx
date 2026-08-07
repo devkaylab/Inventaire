@@ -17,8 +17,10 @@ import {
   deleteInvitation,
   generateCompanyBalises,
   getMyCompany,
+  getMySessions,
   getTeamInvitations,
   getTeamMembers,
+  joinStore,
   type Invitation,
   type Profile,
 } from '@/lib/queries'
@@ -46,6 +48,7 @@ export default function SupervisorProfileScreen() {
   const queryClient = useQueryClient()
 
   const { data: company } = useQuery({ queryKey: ['my-company'], queryFn: getMyCompany })
+  const { data: mySessions } = useQuery({ queryKey: ['my-sessions'], queryFn: getMySessions })
   const {
     data: members,
     isLoading,
@@ -110,6 +113,35 @@ export default function SupervisorProfileScreen() {
 
   const email = session?.user.email ?? '—'
 
+  function promptJoinStore() {
+    Alert.prompt(
+      'Rejoindre un magasin',
+      'Saisissez le code du magasin communiqué par votre administrateur.',
+      async (txt) => {
+        const code = (txt ?? '').trim()
+        if (!code) return
+        try {
+          const res = await joinStore(code)
+          if (!res.success) { Alert.alert('Erreur', res.error ?? 'Code introuvable.'); return }
+          await queryClient.invalidateQueries({ queryKey: ['my-company'] })
+          await queryClient.invalidateQueries({ queryKey: ['my-stores'] })
+          await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+          await queryClient.invalidateQueries({ queryKey: ['my-sessions'] })
+          Alert.alert('Magasin rejoint', `Vous êtes maintenant affecté à « ${res.store_name} ».`)
+        } catch (e) {
+          Alert.alert('Erreur', errorMessage(e))
+        }
+      },
+      'plain-text', '', 'default',
+    )
+  }
+
+  const INV_STATUS: Record<string, { label: string; fg: string; bg: string }> = {
+    open: { label: 'Ouverte', fg: theme.success, bg: theme.successSoft },
+    counting: { label: 'En cours', fg: theme.warning, bg: theme.warningSoft },
+    closed: { label: 'Clôturée', fg: theme.textMuted, bg: theme.accentSoft },
+  }
+
   const rows: Row[] = [
     ...(members ?? []).map((p): Row => ({ kind: 'member', profile: p })),
     ...(invitations ?? []).map((i): Row => ({ kind: 'invite', invitation: i })),
@@ -165,19 +197,20 @@ export default function SupervisorProfileScreen() {
               <Text style={styles.email}>{email}</Text>
             </View>
 
-            {/* Carte magasin / entreprise */}
-            <Text style={styles.sectionTitle}>Magasin</Text>
+            {/* Carte entreprise + rejoindre un magasin */}
+            <Text style={styles.sectionTitle}>Entreprise</Text>
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Entreprise</Text>
                 <Text style={styles.infoValue}>{company?.name ?? '—'}</Text>
               </View>
-              <View style={styles.infoDivider} />
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Code entreprise</Text>
-                <Text style={[styles.infoValue, styles.code]}>{company?.join_code ?? '—'}</Text>
-              </View>
             </View>
+            <Pressable style={styles.joinStoreBtn} onPress={promptJoinStore}>
+              <Text style={styles.joinStoreBtnText}>+ Rejoindre un magasin</Text>
+            </Pressable>
+            <Text style={styles.baliseHint}>
+              Saisissez un code magasin fourni par votre administrateur pour accéder à ses inventaires.
+            </Text>
 
             {/* Carte balises (stock d'entreprise) */}
             <Text style={styles.sectionTitle}>Balises</Text>
@@ -204,6 +237,29 @@ export default function SupervisorProfileScreen() {
               Imprimez les balises sur des planches autocollantes Avery L7160 (à 100 %), collez-les,
               puis affectez les plages aux emplacements dans chaque inventaire.
             </Text>
+
+            {/* Mes inventaires (créés par moi) */}
+            <Text style={styles.sectionTitle}>Mes inventaires</Text>
+            {(mySessions?.length ?? 0) === 0 ? (
+              <Text style={styles.emptyInv}>Vous n'avez pas encore créé d'inventaire.</Text>
+            ) : (
+              <View style={styles.invList}>
+                {mySessions!.map(s => {
+                  const sc = INV_STATUS[s.status] ?? { label: s.status, fg: theme.textMuted, bg: theme.accentSoft }
+                  return (
+                    <Pressable key={s.id} style={styles.invRow} onPress={() => router.push(`/(supervisor)/${s.id}`)}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.invName} numberOfLines={1}>{s.name || s.store_name}</Text>
+                        <Text style={styles.invMeta}>{s.store_name} · {s.inventory_number}</Text>
+                      </View>
+                      <View style={[styles.invBadge, { backgroundColor: sc.bg }]}>
+                        <Text style={[styles.invBadgeText, { color: sc.fg }]}>{sc.label}</Text>
+                      </View>
+                    </Pressable>
+                  )
+                })}
+              </View>
+            )}
 
             {/* En-tête équipe */}
             <View style={styles.teamHeader}>
@@ -335,6 +391,12 @@ function makeStyles(t: Theme) {
     infoValue: { fontSize: 15, color: t.textPrimary, fontFamily: Font.semibold, flexShrink: 1, textAlign: 'right' },
     code: { letterSpacing: 2, ...tabular },
 
+    joinStoreBtn: {
+      backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingVertical: 12,
+      alignItems: 'center', marginTop: Spacing.sm,
+    },
+    joinStoreBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.bold },
+
     baliseBtns: { flexDirection: 'row', gap: Spacing.sm },
     baliseBtn: { flex: 1, borderRadius: Radius.md, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
     baliseBtnPrimary: { backgroundColor: t.accent, ...t.shadowButton },
@@ -342,6 +404,18 @@ function makeStyles(t: Theme) {
     baliseBtnSecondary: { backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderStrong },
     baliseBtnSecondaryText: { color: t.textPrimary, fontSize: 14, fontFamily: Font.semibold },
     baliseHint: { fontSize: 12, color: t.textMuted, lineHeight: 17, fontFamily: Font.regular, marginTop: 2 },
+
+    emptyInv: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },
+    invList: { gap: Spacing.sm },
+    invRow: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+      backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md,
+      borderWidth: 1, borderColor: t.hairline, ...t.shadowCard,
+    },
+    invName: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },
+    invMeta: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular, ...tabular },
+    invBadge: { borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+    invBadgeText: { fontSize: 11, fontFamily: Font.semibold },
 
     teamHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
     addBtn: {

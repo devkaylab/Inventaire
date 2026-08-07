@@ -60,6 +60,10 @@ export default function SupervisorHomeScreen() {
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
 
+  // Inventaires en cours (partagés) regroupés par magasin — accessibles à tous les
+  // superviseurs affectés au magasin.
+  const active = (sessions ?? []).filter(s => s.status !== 'closed')
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {isLoading ? (
@@ -76,6 +80,25 @@ export default function SupervisorHomeScreen() {
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
+
+              {active.length > 0 && (
+                <View style={styles.liveBlock}>
+                  <Text style={styles.sectionLabel}>En cours</Text>
+                  {active.map(s => (
+                    <Pressable key={s.id} style={styles.liveCard} onPress={() => router.push(`/(supervisor)/${s.id}`)}>
+                      <View style={styles.liveHead}>
+                        <View style={styles.liveDot} />
+                        <Text style={styles.liveLabel}>Inventaire en cours</Text>
+                      </View>
+                      <Text style={styles.liveStore}>{s.name || s.inventory_number}</Text>
+                      <Text style={styles.liveMeta}>
+                        {s.store_name} · {STATUS_LABELS[s.status] ?? s.status}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
               <Text style={styles.sectionLabel}>Sessions</Text>
             </View>
           }
@@ -99,6 +122,16 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     listHeader: { gap: Spacing.sm },
     greeting: { fontSize: 26, color: t.textSecondary, fontFamily: Font.regular, letterSpacing: -0.4 },
+    liveBlock: { gap: Spacing.sm, marginTop: Spacing.sm },
+    liveCard: {
+      backgroundColor: t.accentSoft, borderRadius: Radius.lg, padding: 18,
+      borderWidth: 1, borderColor: t.accent, gap: 4,
+    },
+    liveHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.accent },
+    liveLabel: { fontSize: 11, fontFamily: Font.bold, color: t.accent, textTransform: 'uppercase', letterSpacing: 0.6 },
+    liveStore: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
+    liveMeta: { fontSize: 13, color: t.textSecondary, fontFamily: Font.medium, ...tabular },
     greetingName: { color: t.textPrimary, fontFamily: Font.bold },
     sectionLabel: { fontSize: 12, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6 },
     list: { padding: Spacing.lg, paddingBottom: 90, gap: Spacing.md },

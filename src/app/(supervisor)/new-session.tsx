@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Sc
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createSession, getStores } from '@/lib/queries'
+import { createSession, getMyAssignedStores } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
@@ -23,8 +23,8 @@ export default function NewSessionScreen() {
   const [loading, setLoading] = useState(false)
 
   const { data: stores, isLoading: storesLoading } = useQuery({
-    queryKey: ['stores'],
-    queryFn: getStores,
+    queryKey: ['my-stores'],
+    queryFn: getMyAssignedStores,
   })
 
   async function handleCreate() {
@@ -50,7 +50,7 @@ export default function NewSessionScreen() {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       Alert.alert(
         '✅ Session créée',
-        `N° d'inventaire : ${result.inventory_number}\nCode de sécurité : ${result.security_code ?? securityCode}\n\nImportez maintenant le catalogue articles et le stock théorique${usesZones ? ', puis définissez vos zones/balises' : ''} pour préparer le comptage.`,
+        `N° d'inventaire : ${result.inventory_number}\nCode inventaire : ${result.security_code ?? securityCode}\n\nImportez maintenant le catalogue articles et le stock théorique${usesZones ? ', puis définissez vos zones/balises' : ''} pour préparer le comptage.`,
         [
           {
             text: 'Importer les fichiers',
@@ -101,7 +101,7 @@ export default function NewSessionScreen() {
             <ActivityIndicator color={theme.accent} style={{ marginVertical: Spacing.md }} />
           ) : noStores ? (
             <Text style={styles.emptyStores}>
-              Aucun magasin n'est encore configuré pour votre entreprise. Contactez votre administrateur pour en ajouter.
+              Aucun magasin ne vous est affecté. Contactez votre administrateur pour être rattaché à un magasin.
             </Text>
           ) : (
             <View style={styles.storeList}>
@@ -121,7 +121,7 @@ export default function NewSessionScreen() {
             </View>
           )}
 
-          <Text style={styles.label}>Code de sécurité</Text>
+          <Text style={styles.label}>Code inventaire</Text>
           <View style={styles.codeRow}>
             <TextInput
               style={[styles.input, { flex: 1 }]}

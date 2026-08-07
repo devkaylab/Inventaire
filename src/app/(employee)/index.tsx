@@ -61,7 +61,7 @@ export default function EmployeeHomeScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Rejoindre une session</Text>
           <Text style={styles.cardDesc}>
-            Demandez le numéro d'inventaire et le code de sécurité à votre superviseur.
+            Demandez le numéro d'inventaire et le code inventaire à votre superviseur.
           </Text>
 
           <Text style={styles.label}>N° d'inventaire</Text>
@@ -74,7 +74,7 @@ export default function EmployeeHomeScreen() {
             placeholderTextColor={theme.textMuted}
           />
 
-          <Text style={styles.label}>Code de sécurité</Text>
+          <Text style={styles.label}>Code inventaire</Text>
           <TextInput
             style={styles.input}
             value={securityCode}

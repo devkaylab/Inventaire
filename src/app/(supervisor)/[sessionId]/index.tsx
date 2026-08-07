@@ -95,7 +95,7 @@ export default function SessionDetailScreen() {
   async function shareCredentials() {
     try {
       await Share.share({
-        message: `Inventaire : ${session?.inventory_number}\nCode de sécurité : ${session?.security_code ?? '—'}\nMagasin : ${session?.store_name}`,
+        message: `Inventaire : ${session?.inventory_number}\nCode inventaire : ${session?.security_code ?? '—'}\nMagasin : ${session?.store_name}`,
       })
     } catch { /* user dismissed */ }
   }
@@ -270,10 +270,10 @@ function InfoPanel({
           />
           <CredRow
             styles={styles}
-            label="Code de sécurité"
+            label="Code inventaire"
             value={session.security_code ?? '—'}
             secret
-            onCopy={() => onCopy('Code de sécurité', session.security_code ?? '')}
+            onCopy={() => onCopy('Code inventaire', session.security_code ?? '')}
           />
           <Pressable style={styles.shareBtn} onPress={onShare}>
             <Text style={styles.shareBtnText}>Partager les identifiants</Text>
