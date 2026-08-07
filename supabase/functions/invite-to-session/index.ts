@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
 
   // ── E-mail (Resend, si configuré) ──────────────────────────────────────────
   let emailSent = false
+  let emailError: string | null = null
   const resendKey = Deno.env.get('RESEND_API_KEY')
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
@@ -170,10 +171,21 @@ Deno.serve(async (req) => {
         }),
       })
       emailSent = resp.ok
-    } catch (_e) {
-      // e-mail best-effort
+      const bodyText = await resp.text()
+      if (!resp.ok) {
+        console.error('[invite] Resend error', resp.status, bodyText)
+        emailError = `${resp.status} ${bodyText}`
+      } else {
+        console.log('[invite] Resend ok', bodyText)
+      }
+    } catch (e) {
+      console.error('[invite] Resend fetch failed', e)
+      emailError = e instanceof Error ? e.message : String(e)
     }
+  } else {
+    console.log('[invite] RESEND_API_KEY absent — e-mail non envoyé')
+    emailError = 'RESEND_API_KEY absent'
   }
 
-  return json({ success: true, outcome, emailSent, pushSent })
+  return json({ success: true, outcome, emailSent, pushSent, emailError })
 })
