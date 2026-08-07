@@ -352,6 +352,14 @@ export async function getCompanyDirectory(): Promise<DirectoryEntry[]> {
   return (data ?? []) as DirectoryEntry[]
 }
 
+/** Annuaire d'un magasin : superviseurs affectés + compteurs de l'équipe du magasin.
+ *  Sert à l'invitation à un inventaire (membres existants, même magasin). */
+export async function getStoreDirectory(storeId: string): Promise<DirectoryEntry[]> {
+  const { data, error } = await supabase.rpc('get_store_directory', { p_store_id: storeId })
+  if (error) throwSupabase('getStoreDirectory', error)
+  return (data ?? []) as DirectoryEntry[]
+}
+
 export async function joinSession(inventoryNumber: string, securityCode: string) {
   const { data, error } = await supabase.rpc('join_session', {
     p_inventory_number: inventoryNumber,

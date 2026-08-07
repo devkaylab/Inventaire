@@ -16,10 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import {
-  getCompanyDirectory,
   getSession,
   getSessionInvitations,
   getSessionMembers,
+  getStoreDirectory,
   inviteToSession,
   type DirectoryEntry,
   type SessionRole,
@@ -27,8 +27,6 @@ import {
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
-
-const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
 export default function InviteToSessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
@@ -38,7 +36,12 @@ export default function InviteToSessionScreen() {
   const queryClient = useQueryClient()
 
   const { data: session } = useQuery({ queryKey: ['session', sessionId], queryFn: () => getSession(sessionId) })
-  const { data: directory } = useQuery({ queryKey: ['company-directory'], queryFn: getCompanyDirectory })
+  const storeId = session?.store_id
+  const { data: directory } = useQuery({
+    queryKey: ['store-directory', storeId],
+    queryFn: () => getStoreDirectory(storeId as string),
+    enabled: !!storeId,
+  })
   const { data: members } = useQuery({ queryKey: ['session-members', sessionId], queryFn: () => getSessionMembers(sessionId) })
   const { data: invitations } = useQuery({ queryKey: ['session-invitations', sessionId], queryFn: () => getSessionInvitations(sessionId) })
 
@@ -61,10 +64,6 @@ export default function InviteToSessionScreen() {
         .filter(d => (d.full_name ?? '').toLowerCase().includes(q) || (d.email ?? '').toLowerCase().includes(q))
         .slice(0, 8)
 
-  // Proposer d'inviter une adresse inconnue si le texte est un e-mail non trouvé.
-  const emailMatchesDirectory = (directory ?? []).some(d => (d.email ?? '').toLowerCase() === q)
-  const showNewEmailOption = !selected && isEmail(q) && !emailMatchesDirectory && !excludedEmails.has(q)
-
   function pick(entry: DirectoryEntry) {
     setSelected(entry)
     setQuery(entry.full_name || entry.email)
@@ -76,16 +75,11 @@ export default function InviteToSessionScreen() {
   }
 
   async function handleSubmit() {
-    let fullName = ''
-    let email = ''
-    if (selected) {
-      fullName = selected.full_name || ''
-      email = selected.email
-    } else if (isEmail(q)) {
-      email = q
-    } else {
-      return Alert.alert('Erreur', 'Choisissez une personne dans la liste ou saisissez une adresse e-mail complète.')
+    if (!selected) {
+      return Alert.alert('Erreur', 'Choisissez une personne dans la liste des suggestions.')
     }
+    const fullName = selected.full_name || ''
+    const email = selected.email
 
     setLoading(true)
     try {
@@ -109,15 +103,17 @@ export default function InviteToSessionScreen() {
     }
   }
 
-  const canSend = !!selected || isEmail(q)
+  const canSend = !!selected
+  const noMatch = q.length > 0 && !selected && suggestions.length === 0
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
-            {"Recherchez une personne de votre équipe par nom ou e-mail, ou saisissez une adresse pour inviter quelqu'un de nouveau"}
-            {session ? ` à « ${session.name || session.store_name} »` : ''}.
+            {'Recherchez une personne de l’équipe du magasin par nom ou e-mail'}
+            {session ? ` pour l'inventaire « ${session.name || session.store_name} »` : ''}
+            {". Seules les personnes ayant déjà un compte apparaissent. Pour ajouter un nouveau compteur, utilisez « Ajouter un membre » depuis votre profil."}
           </Text>
 
           <Text style={styles.label}>Recherche</Text>
@@ -159,14 +155,10 @@ export default function InviteToSessionScreen() {
             </Pressable>
           ))}
 
-          {showNewEmailOption && (
-            <Pressable style={styles.suggRow} onPress={handleSubmit}>
-              <View style={[styles.avatar, styles.avatarNew]}><Text style={styles.avatarText}>+</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.suggName}>Inviter {q}</Text>
-                <Text style={styles.suggMeta}>Nouvelle personne (non inscrite)</Text>
-              </View>
-            </Pressable>
+          {noMatch && (
+            <Text style={styles.noMatch}>
+              {"Aucune personne trouvée dans l'équipe de ce magasin. Un nouveau compteur doit d'abord être ajouté via « Ajouter un membre »."}
+            </Text>
           )}
 
           <Text style={styles.label}>Rôle sur cet inventaire</Text>
@@ -234,8 +226,8 @@ function makeStyles(t: Theme) {
     suggName: { fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
     suggMeta: { fontSize: 12, fontFamily: Font.regular, color: t.textMuted, marginTop: 1 },
     avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
-    avatarNew: { backgroundColor: t.successSoft },
     avatarText: { fontSize: 15, fontFamily: Font.bold, color: t.accent },
+    noMatch: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, lineHeight: 18, paddingVertical: Spacing.sm },
     roleRow: { flexDirection: 'row', gap: Spacing.md, marginTop: 4 },
     pill: {
       flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,

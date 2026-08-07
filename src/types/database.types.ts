@@ -745,6 +745,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_store_directory: {
+        Args: { p_store_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_my_company: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_my_stores: {
