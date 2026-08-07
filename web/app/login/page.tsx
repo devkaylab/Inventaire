@@ -21,13 +21,25 @@ export default function LoginPage() {
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    setLoading(false)
-    if (error) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    if (error || !data.user) {
+      setLoading(false)
       setError('E-mail ou mot de passe incorrect.')
       return
     }
-    router.replace('/account')
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('role, is_admin')
+      .eq('id', data.user.id)
+      .maybeSingle()
+    setLoading(false)
+    if (prof?.is_admin) {
+      router.replace('/admin')
+    } else if (prof?.role === 'supervisor') {
+      router.replace('/dashboard')
+    } else {
+      router.replace('/account')
+    }
   }
 
   return (
