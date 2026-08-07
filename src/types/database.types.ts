@@ -174,7 +174,7 @@ export type Database = {
       }
       counts: {
         Row: {
-          counted_by: string
+          counted_by: string | null
           created_at: string
           id: string
           pass_number: number
@@ -184,7 +184,7 @@ export type Database = {
           zone: string | null
         }
         Insert: {
-          counted_by: string
+          counted_by?: string | null
           created_at?: string
           id?: string
           pass_number: number
@@ -194,7 +194,7 @@ export type Database = {
           zone?: string | null
         }
         Update: {
-          counted_by?: string
+          counted_by?: string | null
           created_at?: string
           id?: string
           pass_number?: number
@@ -225,7 +225,7 @@ export type Database = {
           closed_at: string | null
           company_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           current_pass: number
           id: string
           inventory_number: string
@@ -233,6 +233,7 @@ export type Database = {
           security_code: string | null
           security_code_hash: string
           status: string
+          store_id: string
           store_name: string
           uses_zones: boolean
         }
@@ -240,7 +241,7 @@ export type Database = {
           closed_at?: string | null
           company_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           current_pass?: number
           id?: string
           inventory_number: string
@@ -248,6 +249,7 @@ export type Database = {
           security_code?: string | null
           security_code_hash: string
           status?: string
+          store_id: string
           store_name: string
           uses_zones?: boolean
         }
@@ -255,7 +257,7 @@ export type Database = {
           closed_at?: string | null
           company_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           current_pass?: number
           id?: string
           inventory_number?: string
@@ -263,6 +265,7 @@ export type Database = {
           security_code?: string | null
           security_code_hash?: string
           status?: string
+          store_id?: string
           store_name?: string
           uses_zones?: boolean
         }
@@ -279,6 +282,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_sessions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -321,16 +331,19 @@ export type Database = {
       session_members: {
         Row: {
           joined_at: string
+          role: string
           session_id: string
           user_id: string
         }
         Insert: {
           joined_at?: string
+          role?: string
           session_id: string
           user_id: string
         }
         Update: {
           joined_at?: string
+          role?: string
           session_id?: string
           user_id?: string
         }
@@ -351,23 +364,59 @@ export type Database = {
           },
         ]
       }
+      store_supervisors: {
+        Row: {
+          created_at: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_supervisors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_supervisors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           company_id: string
           created_at: string
           id: string
+          join_code: string
           name: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
+          join_code: string
           name: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
+          join_code?: string
           name?: string
         }
         Relationships: [
@@ -384,7 +433,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           email: string
           full_name: string
           id: string
@@ -392,7 +441,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           email: string
           full_name?: string
           id?: string
@@ -400,7 +449,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           email?: string
           full_name?: string
           id?: string
@@ -507,11 +556,53 @@ export type Database = {
         Args: { p_company_id: string; p_name: string }
         Returns: Json
       }
+      admin_assign_supervisor: {
+        Args: { p_store_id: string; p_user_id: string }
+        Returns: Json
+      }
       admin_create_company: { Args: { p_name: string }; Returns: Json }
       admin_delete_company: { Args: { p_company_id: string }; Returns: Json }
       admin_delete_store: { Args: { p_store_id: string }; Returns: Json }
       admin_delete_user: { Args: { p_user_id: string }; Returns: Json }
+      admin_list_companies: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+        }[]
+      }
+      admin_list_company_members: {
+        Args: { p_company_id: string }
+        Returns: {
+          full_name: string
+          id: string
+          role: string
+        }[]
+      }
+      admin_list_store_supervisors: {
+        Args: { p_company_id: string }
+        Returns: {
+          store_id: string
+          user_id: string
+        }[]
+      }
+      admin_list_stores: {
+        Args: never
+        Returns: {
+          company_id: string
+          id: string
+          join_code: string
+          name: string
+        }[]
+      }
+      admin_unassign_supervisor: {
+        Args: { p_store_id: string; p_user_id: string }
+        Returns: Json
+      }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      can_access_session: { Args: { p_session_id: string }; Returns: boolean }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
       create_company: { Args: { p_name: string }; Returns: Json }
       create_session: {
@@ -546,12 +637,21 @@ export type Database = {
         Returns: Json
       }
       gen_company_code: { Args: never; Returns: string }
+      gen_store_code: { Args: never; Returns: string }
+      generate_company_balises: { Args: { p_count: number }; Returns: Json }
       generate_zones: {
         Args: { p_count: number; p_session_id: string }
         Returns: Json
       }
       get_my_company: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
+      get_my_stores: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_session_detail: {
         Args: { p_session_id: string }
         Returns: {
@@ -609,34 +709,37 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      is_assigned_store: { Args: { p_store_id: string }; Returns: boolean }
+      is_session_participant: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
       join_company: { Args: { p_code: string }; Returns: Json }
       join_session: {
         Args: { p_inventory_number: string; p_security_code: string }
         Returns: Json
       }
+      join_store: { Args: { p_code: string }; Returns: Json }
+      norm_balise: { Args: { p: string }; Returns: string }
       recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
+      register_balise: {
+        Args: { p_code: string; p_name: string; p_session_id: string }
+        Returns: Json
+      }
+      request_account_deletion: { Args: never; Returns: Json }
       resolve_audit: {
-        Args: { p_final_qty: number; p_session_id: string; p_sku: string; p_zone?: string }
+        Args: {
+          p_final_qty: number
+          p_session_id: string
+          p_sku: string
+          p_zone?: string
+        }
         Returns: Json
       }
       revert_pass: {
         Args: { p_delete_counts?: boolean; p_session_id: string }
         Returns: Json
       }
-      set_zone_status: {
-        Args: { p_status: string; p_zone_id: string }
-        Returns: Json
-      }
-      generate_company_balises: {
-        Args: { p_count: number }
-        Returns: Json
-      }
-      norm_balise: { Args: { p: string }; Returns: string }
-      register_balise: {
-        Args: { p_code: string; p_name: string; p_session_id: string }
-        Returns: Json
-      }
-      request_account_deletion: { Args: never; Returns: Json }
       set_balise: {
         Args: {
           p_allow_create?: boolean
@@ -645,6 +748,10 @@ export type Database = {
           p_open: boolean
           p_session_id: string
         }
+        Returns: Json
+      }
+      set_zone_status: {
+        Args: { p_status: string; p_zone_id: string }
         Returns: Json
       }
     }
