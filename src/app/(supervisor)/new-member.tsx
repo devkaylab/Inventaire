@@ -13,7 +13,7 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createInvitation, getMyCompany } from '@/lib/queries'
+import { getMyCompany, inviteTeammate } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
@@ -36,11 +36,13 @@ export default function NewMemberScreen() {
 
     setLoading(true)
     try {
-      await createInvitation({ fullName: name, email: mail, companyId: company.id })
+      const res = await inviteTeammate({ fullName: name, email: mail })
       await queryClient.invalidateQueries({ queryKey: ['team-invitations'] })
       Alert.alert(
         'Membre ajouté',
-        `${name} peut désormais créer son compte avec l'adresse ${mail}.\n\nDemandez-lui d'ouvrir l'app, de choisir « Je rejoins mon équipe » et de définir son mot de passe.`,
+        res.emailSent
+          ? `Un e-mail a été envoyé à ${mail} pour finaliser son compte.`
+          : `${name} a été ajouté. Demandez-lui d'ouvrir l'app, de choisir « Je rejoins mon équipe » et de s'inscrire avec l'adresse ${mail}.\n\n(L'e-mail automatique n'a pas encore pu être envoyé — configuration Resend/domaine à finaliser.)`,
         [{ text: 'Terminé', onPress: () => router.back() }],
       )
     } catch (e) {
@@ -91,14 +93,14 @@ export default function NewMemberScreen() {
             onSubmitEditing={handleSubmit}
           />
           <Text style={styles.hint}>
-            💡 L'employé devra utiliser exactement cette adresse pour s'inscrire.
+            {"L'employé recevra un e-mail à cette adresse et devra l'utiliser exactement pour s'inscrire."}
           </Text>
 
           <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
             {loading ? (
               <ActivityIndicator color={theme.onAccent} />
             ) : (
-              <Text style={styles.buttonText}>Ajouter à l'équipe</Text>
+              <Text style={styles.buttonText}>{"Ajouter à l'équipe"}</Text>
             )}
           </Pressable>
         </ScrollView>

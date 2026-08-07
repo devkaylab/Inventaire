@@ -256,6 +256,18 @@ export async function createInvitation(input: { fullName: string; email: string;
   if (error) throwSupabase('createInvitation', error)
 }
 
+/** Ajoute un membre (compteur) à l'équipe : pré-inscrit l'e-mail et lui envoie
+ *  un e-mail pour finaliser son compte. Passe par l'edge function invite-teammate. */
+export async function inviteTeammate(input: { fullName: string; email: string }) {
+  const { data, error } = await supabase.functions.invoke('invite-teammate', {
+    body: { fullName: input.fullName.trim(), email: input.email.trim().toLowerCase() },
+  })
+  if (error) throwSupabase('inviteTeammate', error)
+  const res = data as { success: boolean; emailSent?: boolean; emailError?: string; error?: string }
+  if (!res.success) throwSupabase('inviteTeammate', new Error(res.error ?? "Échec de l'ajout"))
+  return res
+}
+
 /** Annule une invitation en attente. */
 export async function deleteInvitation(id: string) {
   const { error } = await supabase.from('team_invitations').delete().eq('id', id)
