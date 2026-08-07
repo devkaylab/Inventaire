@@ -48,28 +48,18 @@ export default function NewSessionScreen() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      // Enchaînement guidé : (zones si activées) → import des fichiers → suivi.
+      const sid = result.session_id
       Alert.alert(
-        '✅ Session créée',
-        `N° d'inventaire : ${result.inventory_number}\nCode inventaire : ${result.security_code ?? securityCode}\n\nImportez maintenant le catalogue articles et le stock théorique${usesZones ? ', puis définissez vos zones/balises' : ''} pour préparer le comptage.`,
-        [
-          {
-            text: 'Importer les fichiers',
-            onPress: () => router.replace(`/(supervisor)/${result.session_id}/import?from=new`),
+        'Session créée',
+        `N° d'inventaire : ${result.inventory_number}\nCode inventaire : ${result.security_code ?? securityCode}\n\n${usesZones ? 'Étape suivante : définissez vos zones, puis importez les fichiers.' : 'Étape suivante : importez le catalogue et le stock théorique.'}`,
+        [{
+          text: 'Continuer',
+          onPress: () => {
+            if (usesZones) router.replace(`/(supervisor)/${sid}/zones?from=new`)
+            else router.replace(`/(supervisor)/${sid}/import?from=new`)
           },
-          ...(usesZones
-            ? [
-                {
-                  text: 'Définir les zones',
-                  onPress: () => router.replace(`/(supervisor)/${result.session_id}/zones`),
-                },
-              ]
-            : []),
-          {
-            text: 'Plus tard',
-            style: 'cancel' as const,
-            onPress: () => router.replace(`/(supervisor)/${result.session_id}`),
-          },
-        ]
+        }],
       )
     } catch (e: unknown) {
       console.error('[new-session] createSession', e)
@@ -87,7 +77,7 @@ export default function NewSessionScreen() {
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.sectionTitle}>Informations de la session</Text>
 
-          <Text style={styles.label}>Nom de l'inventaire</Text>
+          <Text style={styles.label}>{"Nom de l'inventaire"}</Text>
           <TextInput
             style={styles.input}
             value={name}
@@ -137,15 +127,14 @@ export default function NewSessionScreen() {
             </Pressable>
           </View>
           <Text style={styles.hint}>
-            Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cette session.
+            {"Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cette session."}
           </Text>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.switchLabel}>Utiliser des zones / balises</Text>
               <Text style={styles.hint}>
-                Le comptage s'organise par zones ouvertes en scannant une balise (sticker). Vous
-                définirez les plages de balises après la création.
+                {"Le comptage s'organise par zones ouvertes en scannant une balise (sticker). Vous définirez les plages de balises après la création."}
               </Text>
             </View>
             <Switch

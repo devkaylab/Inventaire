@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { useLocalSearchParams } from 'expo-router'
+import { Stack, router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { defineZoneRange, deleteZone, getSession, getZoneDashboard } from '@/lib/queries'
@@ -44,7 +44,8 @@ function codeRange(codes: string[]): string {
 }
 
 export default function ZonesScreen() {
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
+  const { sessionId, from } = useLocalSearchParams<{ sessionId: string; from?: string }>()
+  const fromNew = from === 'new'
   const queryClient = useQueryClient()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -124,6 +125,9 @@ export default function ZonesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {fromNew && (
+        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
+      )}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.container}
@@ -204,6 +208,15 @@ export default function ZonesScreen() {
           {groups.length === 0 && (
             <Text style={styles.empty}>Aucun emplacement affecté. Indiquez une première plage de balises ci-dessus.</Text>
           )}
+
+          {fromNew && (
+            <Pressable
+              style={styles.nextBtn}
+              onPress={() => router.replace(`/(supervisor)/${sessionId}/import?from=new`)}
+            >
+              <Text style={styles.nextBtnText}>Suivant : importer les fichiers</Text>
+            </Pressable>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -239,5 +252,7 @@ function makeStyles(t: Theme) {
     deleteBtn: { width: 40, height: 40, borderRadius: Radius.md, backgroundColor: t.dangerSoft, alignItems: 'center', justifyContent: 'center' },
     deleteBtnText: { fontSize: 18 },
     empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
+    nextBtn: { backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    nextBtnText: { color: t.onAccent, fontFamily: Font.bold, fontSize: 16 },
   })
 }
