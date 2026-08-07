@@ -20,7 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyScanEntries, getZoneDashboard, insertArticle, resolveArticle, setBalise } from '@/lib/queries'
 import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
 import { parseBalise } from '@/lib/balises'
-import { passLabel } from '@/constants/colors'
+import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { errorMessage } from '@/lib/errors'
@@ -181,7 +181,7 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
             />
 
             <Text style={styles.illNote}>
-              💡 Cet article sera ajouté au référentiel de la session avec un prix d'achat à 0 €.
+              {"💡 Cet article sera ajouté au référentiel de la session avec un prix d'achat à 0 €."}
             </Text>
           </ScrollView>
 
@@ -214,6 +214,8 @@ export function Scanner({
   const theme = useTheme()
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
+  // Couleur du mode : Compter = accent, Auditer = or.
+  const modeColor = baliseMode === 'audit' ? AUDIT_COLOR : theme.accent
   const [permission, requestPermission] = useCameraPermissions()
   const [mode, setMode] = useState<Mode>('camera')
   const [manualInput, setManualInput] = useState('')
@@ -588,7 +590,7 @@ export function Scanner({
             <View style={styles.zoneModeToggle}>
               {(['count', 'audit'] as const).map((m) => {
                 const active = baliseMode === m
-                const color = theme.passColors[m === 'count' ? 1 : 2]
+                const color = m === 'count' ? theme.accent : AUDIT_COLOR
                 return (
                   <Pressable
                     key={m}
@@ -596,7 +598,7 @@ export function Scanner({
                     onPress={() => { if (!activeBalise) onModeChange?.(m) }}
                     disabled={!!activeBalise}
                   >
-                    <Text style={[styles.zoneModeText, active && styles.zoneModeTextActive, !!activeBalise && !active && { opacity: 0.4 }]}>
+                    <Text style={[styles.zoneModeText, active && { color: m === 'audit' ? AUDIT_ON : '#fff', fontFamily: Font.bold }, !!activeBalise && !active && { opacity: 0.4 }]}>
                       {m === 'count' ? '🔢 Comptage' : '🔍 Audit'}
                     </Text>
                   </Pressable>
@@ -606,8 +608,8 @@ export function Scanner({
           )}
           {/* Bandeau de la zone ouverte */}
           {activeBalise ? (
-            <View style={[styles.zoneBanner, { borderColor: theme.passColors[baliseMode === 'count' ? 1 : 2] }]}>
-              <View style={[styles.passDot, { backgroundColor: theme.passColors[baliseMode === 'count' ? 1 : 2] }]} />
+            <View style={[styles.zoneBanner, { borderColor: modeColor }]}>
+              <View style={[styles.passDot, { backgroundColor: modeColor }]} />
               <Text style={styles.zoneBannerText} numberOfLines={1}>
                 Zone ouverte · {activeBalise.name ?? 'Sans nom'} · balise {activeBalise.code}
               </Text>
@@ -625,10 +627,10 @@ export function Scanner({
           )}
         </View>
       ) : (
-        <View style={styles.passBanner}>
-          <View style={[styles.passDot, { backgroundColor: theme.passColors[passNumber as 1 | 2 | 3] ?? theme.accent }]} />
+        <View style={[styles.passBanner, { borderLeftWidth: 4, borderLeftColor: modeColor }]}>
+          <View style={[styles.passDot, { backgroundColor: modeColor }]} />
           <Text style={styles.passLabel}>{passLabel(passNumber)} en cours</Text>
-          {resolving && <ActivityIndicator size="small" color={theme.accent} style={{ marginLeft: 'auto' }} />}
+          {resolving && <ActivityIndicator size="small" color={modeColor} style={{ marginLeft: 'auto' }} />}
         </View>
       )}
 

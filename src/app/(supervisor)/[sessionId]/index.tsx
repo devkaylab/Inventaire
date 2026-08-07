@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { closeSession, deleteSessionInvitation, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard, leaveSession, removeSessionMember } from '@/lib/queries'
 import { useAuth } from '@/lib/auth'
+import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -257,13 +258,23 @@ export default function SessionDetailScreen() {
           </View>
         )}
 
+        {/* Comptage / Audit — boutons colorés (mêmes couleurs que côté compteur) */}
+        {!closed && (
+          <View style={styles.scanBtnRow}>
+            <Pressable style={styles.countBtn} onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=count`)}>
+              <Text style={styles.countBtnText}>Compter des articles</Text>
+            </Pressable>
+            <Pressable style={styles.auditBtn} onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=audit`)}>
+              <Text style={styles.auditBtnText}>Auditer des articles</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Menu d'actions */}
         <Text style={styles.sectionLabel}>Actions</Text>
         <View style={styles.menuCard}>
           {!closed && (
             <>
-              <ActionRow styles={styles} theme={theme} label="Compter des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=count`)} />
-              <ActionRow styles={styles} theme={theme} label="Auditer des articles" onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=audit`)} />
               <ActionRow styles={styles} theme={theme} label="Inviter une personne" onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
             </>
           )}
@@ -492,6 +503,13 @@ function makeStyles(t: Theme) {
     missingDoneRow: { backgroundColor: t.successSoft, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.md },
     missingDone: { fontSize: 14, fontFamily: Font.semibold, color: t.success },
     zoneEmpty: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },
+
+    // Boutons Compter / Auditer (couleurs de mode)
+    scanBtnRow: { flexDirection: 'row', gap: Spacing.md },
+    countBtn: { flex: 1, backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowButton },
+    countBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
+    auditBtn: { flex: 1, backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowButton },
+    auditBtnText: { color: AUDIT_ON, fontSize: 15, fontFamily: Font.bold },
 
     // Menu (grouped list)
     menuCard: { backgroundColor: t.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline, overflow: 'hidden', ...t.shadowCard },

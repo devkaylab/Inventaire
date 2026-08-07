@@ -16,3 +16,8 @@ export const PASS_LABELS: Record<number, string> = {
 export function passLabel(n: number): string {
   return PASS_LABELS[n] ?? `Passe ${n}`
 }
+
+// Couleurs de mode partagées : Compter utilise l'accent du thème ;
+// Auditer utilise cet or (texte foncé pour le contraste sur fond or).
+export const AUDIT_COLOR = '#FFC349'
+export const AUDIT_ON = '#1A1A1A'

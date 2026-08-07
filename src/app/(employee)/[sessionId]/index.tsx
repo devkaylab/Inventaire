@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getArticleLabels, getMyCounts, getSession, getZones, leaveSession } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
+import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
 export default function EmployeeProgressScreen() {
@@ -227,8 +228,8 @@ function makeStyles(t: Theme) {
     footer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.lg, gap: Spacing.sm, borderTopWidth: 1, borderTopColor: t.hairline, backgroundColor: t.background },
     countBtn: { backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowElevated },
     countBtnText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
-    auditBtn: { backgroundColor: t.surface, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: t.borderStrong },
-    auditBtnText: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },
+    auditBtn: { backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowElevated },
+    auditBtnText: { color: AUDIT_ON, fontSize: 16, fontFamily: Font.bold },
     leaveBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
     leaveBtnText: { color: t.danger, fontSize: 14, fontFamily: Font.semibold },
   })
