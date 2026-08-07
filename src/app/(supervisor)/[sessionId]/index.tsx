@@ -270,6 +270,7 @@ export default function SessionDetailScreen() {
         invitations={invitations}
         usesZones={usesZones}
         closed={closed}
+        canManage={isCreator}
         onRemoveMember={handleRemoveMember}
         onDeleteInvite={handleDeleteInvite}
         onCopy={copyField}
@@ -296,7 +297,7 @@ type InvitationData = Awaited<ReturnType<typeof getSessionInvitations>>
 
 function InfoPanel({
   visible, onClose, styles, theme, session, members, invitations, usesZones, closed,
-  onRemoveMember, onDeleteInvite, onCopy, onShare, onImport, onZones,
+  canManage, onRemoveMember, onDeleteInvite, onCopy, onShare, onImport, onZones,
 }: {
   visible: boolean
   onClose: () => void
@@ -307,6 +308,7 @@ function InfoPanel({
   invitations: InvitationData | undefined
   usesZones: boolean
   closed: boolean
+  canManage: boolean
   onRemoveMember: (userId: string, name: string) => void
   onDeleteInvite: (id: string, label: string) => void
   onCopy: (label: string, value: string) => void
@@ -366,7 +368,7 @@ function InfoPanel({
                 ) : mm.role === 'supervisor' ? (
                   <Text style={styles.memberTag}>Co-superviseur</Text>
                 ) : null}
-                {!closed && !isOwner && (
+                {canManage && !closed && !isOwner && (
                   <Pressable style={styles.removeBtn} onPress={() => onRemoveMember(m.user_id, name)} hitSlop={8}>
                     <Text style={styles.removeBtnText}>Retirer</Text>
                   </Pressable>
@@ -388,7 +390,7 @@ function InfoPanel({
                     <Text style={styles.invitePendingHint}>{inv.email}{" · en attente d'inscription"}</Text>
                   </View>
                   {inv.role === 'supervisor' && <Text style={styles.memberTag}>Co-superviseur</Text>}
-                  {!closed && (
+                  {canManage && !closed && (
                     <Pressable style={styles.removeBtn} onPress={() => onDeleteInvite(inv.id, inv.full_name || inv.email)} hitSlop={8}>
                       <Text style={styles.removeBtnText}>Annuler</Text>
                     </Pressable>
