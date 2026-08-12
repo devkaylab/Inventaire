@@ -7,6 +7,23 @@ import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { getMySpacePath, homePathForRole } from '@/lib/auth'
 
+/**
+ * Un échec réseau et un mauvais mot de passe ne doivent pas dire la même chose.
+ * Une coupure réseau échoue sur le `fetch`, et un message unique « e-mail ou mot
+ * de passe incorrect » envoie alors chercher du côté du compte, qui n'y est pour
+ * rien — c'est exactement ce qui s'est produit sur une preview déployée sans
+ * configuration Supabase (voir le repli dans `lib/supabaseClient.ts`).
+ */
+function isNetworkFailure(e: unknown): boolean {
+  const err = e as { name?: string; status?: number; message?: string } | null
+  if (!err) return false
+  if (err.name === 'AuthRetryableFetchError') return true
+  if (err.status === 0 || err.status === undefined) {
+    return /fetch|network|timeout/i.test(err.message ?? '')
+  }
+  return false
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -30,7 +47,11 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error || !data.user) {
       setLoading(false)
-      setError('E-mail ou mot de passe incorrect.')
+      setError(
+        isNetworkFailure(error)
+          ? 'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.'
+          : 'E-mail ou mot de passe incorrect.',
+      )
       return
     }
     const { data: prof } = await supabase
@@ -82,7 +103,7 @@ export default function LoginPage() {
         </form>
 
         <div className="center-link">
-          <Link href="/">← Retour à l'accueil</Link>
+          <Link href="/">← Retour à l&apos;accueil</Link>
         </div>
       </div>
     </div>

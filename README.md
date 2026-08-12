@@ -2,6 +2,12 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+## Documentation
+
+- [Tableau de bord superviseur](docs/tableau-de-bord-superviseur.md) — état des lieux du
+  chantier en cours : ce qui est fait, les décisions structurantes et leur raison, ce qui
+  reste à faire, et le protocole de test iPhone + site.
+
 ## Get started
 
 1. Install dependencies

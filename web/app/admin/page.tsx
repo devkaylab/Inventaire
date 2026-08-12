@@ -245,7 +245,7 @@ function CompanyCard({
       <div className="stores">
         <div className="stores-label">Magasins ({stores.length})</div>
         {stores.length === 0 ? (
-          <p className="muted small">Aucun magasin pour l'instant.</p>
+          <p className="muted small">Aucun magasin pour l&apos;instant.</p>
         ) : (
           <div className="store-blocks">
             {stores.map((s) => {

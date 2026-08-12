@@ -34,11 +34,11 @@ export default function Home() {
             <div className="logo-glow" style={{ display: 'inline-block' }}>
               <Logo size={84} />
             </div>
-            <div><span className="eyebrow">Application d'inventaire</span></div>
+            <div><span className="eyebrow">Application d&apos;inventaire</span></div>
             <h1>La simplicité<br /><span className="grad">en main.</span></h1>
             <p className="lead">
               Quantinvo aide vos équipes à compter, auditer et fiabiliser les stocks en magasin —
-              du scan à l'écart de comptage, jusqu'au rapport.
+              du scan à l&apos;écart de comptage, jusqu&apos;au rapport.
             </p>
             <div className="cta">
               <AuthLink className="btn btn-primary" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
