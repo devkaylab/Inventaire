@@ -9,19 +9,39 @@ import { useTheme } from '@/lib/theme'
 /**
  * Bandeau « hors ligne », en haut de toutes les pages.
  *
- * Monté dans le layout racine, au-dessus des en-têtes d'écran : l'information
- * ne doit pas dépendre de la page où se trouve le compteur. Quelqu'un qui perd
- * le réseau en consultant sa progression doit le voir aussi vite que s'il était
- * en train de scanner.
+ * Monté dans le layout racine, au-dessus des en-têtes d'écran : perdre le réseau
+ * doit se voir depuis n'importe quelle page, pas seulement pendant le scan.
  *
- * Le ton est celui d'un avertissement, pas d'une erreur : le comptage continue,
- * rien n'est perdu. Le dire explicitement évite le réflexe qui fausse un
- * inventaire — rescanner « au cas où » et créer des doublons.
+ * ── Ce qu'il ne doit surtout pas faire ──────────────────────────────────────
  *
- * L'apparition glisse vers le bas plutôt que d'apparaître d'un coup : un
- * élément qui pousse le contenu sans transition donne l'impression d'un défaut
- * d'affichage.
+ * **Ne pas toucher à la barre d'état.** Une première version peignait toute la
+ * zone haute, heure et batterie comprises : le texte finissait collé à l'horloge
+ * et passait sous la Dynamic Island. La zone sûre garde donc la couleur de
+ * l'en-tête, exactement comme sans bandeau, et l'alerte occupe une bande
+ * distincte en dessous. Visuellement, rien ne bouge tant qu'on est en ligne.
+ *
+ * **Ne pas dépendre d'un texte long.** Le message doit tenir sur une ligne au
+ * plus étroit des iPhone. D'où une phrase courte : le détail (« tout remonte au
+ * retour du réseau ») vit sur les écrans qui listent les balises en attente,
+ * là où quelqu'un cherche vraiment à savoir ce que devient son travail.
+ *
+ * Le glissement reprend le geste des navigateurs : une bande discrète qui
+ * pousse le contenu, apparaît sans brusquerie, et se replie de la même façon.
  */
+
+/** Hauteur de la bande d'alerte, hors zone sûre. */
+const BAR_H = 30
+
+/**
+ * Encre de la bande, volontairement fixe et non tirée du thème.
+ *
+ * L'orange d'alerte est clair dans les deux thèmes (`#D97706` en clair,
+ * `#F59E0B` en sombre). Utiliser `textPrimary` donnerait du blanc cassé sur
+ * orange vif en thème sombre — un contraste d'environ 1,9:1, illisible. Cette
+ * encre sombre tient au-dessus de 5:1 sur les deux fonds.
+ */
+const BAR_INK = '#0B0F19'
+
 export function OfflineTopBanner() {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
@@ -35,44 +55,57 @@ export function OfflineTopBanner() {
   useEffect(() => {
     Animated.timing(slide, {
       toValue: offline ? 1 : 0,
-      duration: offline ? 260 : 200,
+      duration: offline ? 280 : 220,
       easing: offline ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
       // La hauteur n'est pas animable par le pilote natif, et c'est elle qui
-      // fait le glissement : le bandeau pousse le contenu au lieu de le couvrir.
+      // fait le glissement : la bande pousse le contenu au lieu de le couvrir.
       useNativeDriver: false,
     }).start()
   }, [offline, slide])
 
-  // Toujours monté, replié à hauteur nulle quand tout va bien : ça évite
-  // d'écrire l'état React depuis un effet juste pour gérer le démontage, et le
-  // repli reste animé jusqu'au bout.
-  const height = slide.interpolate({ inputRange: [0, 1], outputRange: [0, 34 + insets.top] })
+  // Tout se replie à zéro, **zone sûre comprise**. C'est la condition pour que
+  // rien ne bouge quand on est en ligne : si la réserve de barre d'état restait
+  // là en permanence, elle décalerait l'en-tête de chaque écran en
+  // fonctionnement normal.
+  const total = insets.top + BAR_H
+  const height = slide.interpolate({ inputRange: [0, 1], outputRange: [0, total] })
+  const opacity = slide.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0, 1] })
 
   return (
     <Animated.View
       accessibilityLiveRegion="polite"
-      style={[styles.wrap, { height, backgroundColor: theme.warning, paddingTop: insets.top }]}
+      // Le fond reprend la couleur de l'en-tête : déplié, la barre d'état garde
+      // l'aspect qu'elle a sans bandeau, heure et batterie lisibles comme
+      // d'habitude. Seule la bande du bas passe en orange.
+      style={[styles.wrap, { height, backgroundColor: theme.headerBg }]}
     >
-      <View style={styles.row}>
-        <View style={[styles.dot, { backgroundColor: theme.textPrimary }]} />
-        <Text style={[styles.text, { color: theme.textPrimary }]} numberOfLines={1}>
-          Hors ligne — le comptage continue, tout remonte au retour du réseau
-        </Text>
+      <View style={[styles.bar, { height: BAR_H, backgroundColor: theme.warning }]}>
+        <Animated.View style={[styles.row, { opacity }]}>
+          <View style={styles.dot} />
+          <Text style={styles.text} numberOfLines={1}>
+            Hors ligne — le comptage continue
+          </Text>
+        </Animated.View>
       </View>
     </Animated.View>
   )
 }
 
 const styles = StyleSheet.create({
+  // `justifyContent: flex-end` fait glisser la bande depuis le haut : pendant
+  // l'animation elle est révélée par le bas du conteneur, jamais tronquée.
   wrap: { overflow: 'hidden', justifyContent: 'flex-end' },
+  // `flexShrink: 0` : pendant le glissement le conteneur est plus court que la
+  // bande, et sans ça flexbox la comprimerait au lieu de la révéler.
+  bar: { justifyContent: 'center', flexShrink: 0 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    height: 34,
+    height: BAR_H,
     paddingHorizontal: Spacing.lg,
   },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  text: { fontFamily: Font.semibold, fontSize: 13, flexShrink: 1 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: BAR_INK },
+  text: { fontFamily: Font.semibold, fontSize: 13, flexShrink: 1, color: BAR_INK },
 })
