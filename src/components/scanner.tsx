@@ -17,8 +17,12 @@ import {
 } from 'react-native'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMyScanEntries, getZoneDashboard, insertArticle, resolveArticle, setBalise } from '@/lib/queries'
+import { getMyScanEntries, getZoneDashboard, insertArticle } from '@/lib/queries'
 import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
+// Résolution d'article et ouverture/clôture de balise passent par la couche
+// hors ligne : mêmes signatures, avec repli sur le cache local et mise en
+// attente quand le réseau tombe. Voir `@/lib/offlineSync`.
+import { resolveArticle, setBalise } from '@/lib/offlineSync'
 import { parseBalise } from '@/lib/balises'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'

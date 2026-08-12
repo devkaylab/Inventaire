@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getSession, getMyScanEntries, insertCount } from '@/lib/queries'
+import { getSession, getMyScanEntries } from '@/lib/queries'
 import type { Article, BaliseMode } from '@/lib/queries'
+import { insertCount, primeOfflineCache } from '@/lib/offlineSync'
+import { useOfflineQueue } from '@/hooks/useOfflineQueue'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { useAuth } from '@/lib/auth'
 import { Scanner } from '@/components/scanner'
 import { friendlyInsertCountError } from '@/lib/errors'
@@ -36,10 +39,19 @@ export default function EmployeeScanScreen() {
     staleTime: 0,
   })
 
+  const queue = useOfflineQueue(sessionId)
+
+  // Le référentiel doit être en cache AVANT de descendre en réserve : c'est la
+  // seule chose qu'on ne peut pas rattraper une fois le réseau perdu. On le
+  // remplit à l'entrée sur l'écran de scan, là où il y a encore du signal.
+  useEffect(() => {
+    if (session) void primeOfflineCache(sessionId)
+  }, [session, sessionId])
+
   async function handleArticleResolved(article: Article, qty: number, zoneCode?: string | null) {
     if (!session || !profile) return
     try {
-      await insertCount({
+      const { queued } = await insertCount({
         session_id: sessionId,
         sku: article.sku,
         pass_number: passNumber,
@@ -47,6 +59,13 @@ export default function EmployeeScanScreen() {
         counted_by: profile.id,
         zone: zoneCode ?? null,
       })
+      if (queued) {
+        // Rien n'est parti : seul le compteur du bandeau doit bouger. Invalider
+        // les requêtes referait un aller-retour réseau voué à échouer, et
+        // ralentirait le scan suivant.
+        await queue.refresh()
+        return
+      }
       await queryClient.invalidateQueries({ queryKey: ['my-counts', sessionId] })
       if (usesZones) await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     } catch (e: unknown) {
@@ -64,6 +83,7 @@ export default function EmployeeScanScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
       <Stack.Screen options={{ title: audit ? 'Audit des articles' : 'Comptage des articles', headerStyle: { backgroundColor: modeColor }, headerTintColor: onColor }} />
+      <OfflineBanner pending={queue.pending} syncing={queue.syncing} onPress={() => void queue.sync()} />
       <Scanner
         sessionId={sessionId}
         passNumber={passNumber}

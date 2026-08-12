@@ -33,10 +33,12 @@ import type { Tables, TablesInsert } from '@/types/database.types'
 
 const V = 'offline:v1'
 const articlesKey = (sessionId: string) => `${V}:articles:${sessionId}`
+const zonesKey = (sessionId: string) => `${V}:zones:${sessionId}`
 const opPrefix = (sessionId: string) => `${V}:op:${sessionId}:`
 const failedPrefix = (sessionId: string) => `${V}:failed:${sessionId}:`
 
 export type Article = Tables<'articles'>
+export type Zone = Tables<'zones'>
 export type BaliseMode = 'count' | 'audit'
 
 export type PendingOp =
@@ -153,6 +155,33 @@ export async function resolveArticleOffline(
   value: string,
 ): Promise<Article | null> {
   return resolveArticleIn(await getCachedArticles(sessionId), value)
+}
+
+// ─── Balises en cache ────────────────────────────────────────────────────────
+
+/**
+ * Les balises servent uniquement à retrouver le **nom** de la zone hors ligne
+ * (« Réserve », « Surface de vente »). Sans ça, le compteur ne verrait qu'un
+ * numéro et perdrait le repère qui lui dit qu'il est au bon endroit.
+ */
+export async function cacheZones(sessionId: string, zones: Zone[]): Promise<void> {
+  await AsyncStorage.setItem(zonesKey(sessionId), JSON.stringify(zones))
+}
+
+export async function getCachedZones(sessionId: string): Promise<Zone[]> {
+  const raw = await AsyncStorage.getItem(zonesKey(sessionId))
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as Zone[]) : []
+  } catch {
+    return []
+  }
+}
+
+export async function zoneNameFor(sessionId: string, code: string): Promise<string | null> {
+  const zones = await getCachedZones(sessionId)
+  return zones.find((z) => z.code === code)?.name ?? null
 }
 
 // ─── File d'attente ──────────────────────────────────────────────────────────
@@ -333,6 +362,7 @@ export async function clearSession(sessionId: string): Promise<void> {
   const keys = (await AsyncStorage.getAllKeys()).filter(
     (k) =>
       k === articlesKey(sessionId) ||
+      k === zonesKey(sessionId) ||
       k.startsWith(opPrefix(sessionId)) ||
       k.startsWith(failedPrefix(sessionId)),
   )

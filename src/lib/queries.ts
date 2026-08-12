@@ -575,6 +575,31 @@ export async function getMyScanEntries(
   return entries
 }
 
+/**
+ * Tout le référentiel d'un inventaire, pour la mise en cache hors ligne.
+ *
+ * Pagination obligatoire : PostgREST plafonne une réponse à 1000 lignes, et un
+ * inventaire de magasin en compte couramment plusieurs milliers. Sans les
+ * `range`, le cache se remplirait silencieusement à moitié — et le compteur
+ * verrait « article inconnu » en réserve sur tout ce qui dépasse.
+ */
+export async function getSessionArticles(sessionId: string): Promise<Article[]> {
+  const PAGE = 1000
+  const out: Article[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('articles')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('sku', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) throwSupabase('getSessionArticles', error)
+    const page = data ?? []
+    out.push(...page)
+    if (page.length < PAGE) return out
+  }
+}
+
 export async function getArticleLabels(sessionId: string, skus: string[]) {
   if (skus.length === 0) return {}
   const { data, error } = await supabase
