@@ -1,55 +1,74 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { Font, Radius, Spacing, tabular } from '@/constants/ink'
+import { NO_BALISE, type PendingBalise } from '@/lib/offlineSync'
 import { useTheme } from '@/lib/theme'
 
 /**
- * Bandeau « scans en attente d'envoi ».
+ * Libellé d'une balise en attente. Le **numéro est obligatoire** : c'est la
+ * seule information sur laquelle une équipe peut agir. « 412 scans en attente »
+ * ne dit pas quoi faire ; « balise 5375 pas encore remontée » envoie quelqu'un
+ * au bon endroit.
+ */
+export function baliseLabel(b: PendingBalise): string {
+  if (b.code === NO_BALISE) return 'Sans balise'
+  return b.name ? `${b.code} · ${b.name}` : b.code
+}
+
+/** Résumé court : « 5375, 5376 et 2 autres ». */
+export function baliseSummary(balises: PendingBalise[], max = 3): string {
+  const codes = balises.map((b) => (b.code === NO_BALISE ? 'sans balise' : b.code))
+  if (codes.length <= max) return codes.join(', ')
+  return `${codes.slice(0, max).join(', ')} et ${codes.length - max} autre${codes.length - max > 1 ? 's' : ''}`
+}
+
+/**
+ * Bandeau « balises en attente d'envoi », sur l'écran de scan.
  *
  * Ce que le compteur doit savoir tient en une phrase : **son travail n'est pas
- * perdu**. Sans ce repère, quelqu'un qui voit le réseau tomber en réserve
- * rescanne par précaution, et fausse l'inventaire par des doublons — la panne
- * réseau se transforme alors en erreur de comptage.
+ * perdu**. Sans ce repère, quelqu'un qui voit le réseau tomber rescanne par
+ * précaution et fausse l'inventaire par des doublons — la panne réseau se
+ * transforme alors en erreur de comptage.
  *
- * D'où le parti pris : ton neutre plutôt qu'alarmant, chiffre précis, et un
- * appui pour forcer l'envoi. Rien ne s'affiche quand la file est vide.
+ * L'appui force l'envoi, mais ce n'est qu'un raccourci : la remontée est
+ * automatique, et le texte le dit pour que personne ne croie devoir y penser.
  */
 export function OfflineBanner({
-  pending,
+  balises,
   syncing,
   onPress,
 }: {
-  pending: number
+  balises: PendingBalise[]
   syncing: boolean
   onPress: () => void
 }) {
   const theme = useTheme()
-  if (pending === 0) return null
+  if (balises.length === 0) return null
 
+  const n = balises.length
   return (
     <Pressable
       onPress={onPress}
       disabled={syncing}
       accessibilityRole="button"
-      accessibilityLabel={`${pending} scan${pending > 1 ? 's' : ''} en attente d'envoi. Toucher pour envoyer maintenant.`}
+      accessibilityLabel={`${n} balise${n > 1 ? 's' : ''} en attente d'envoi : ${baliseSummary(balises, 10)}. Envoi automatique au retour du réseau.`}
       style={[styles.wrap, { backgroundColor: theme.warningSoft, borderColor: theme.warning }]}
     >
       <View style={styles.left}>
-        <Text style={[styles.count, tabular, { color: theme.textPrimary }]}>{pending}</Text>
+        <Text style={[styles.count, tabular, { color: theme.textPrimary }]}>{n}</Text>
         <View style={styles.labels}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>
-            {pending > 1 ? 'enregistrements en attente' : 'enregistrement en attente'}
+            {n > 1 ? 'balises en attente' : 'balise en attente'}
+          </Text>
+          <Text style={[styles.codes, tabular, { color: theme.textPrimary }]} numberOfLines={2}>
+            {baliseSummary(balises)}
           </Text>
           <Text style={[styles.sub, { color: theme.textSecondary }]}>
-            {syncing ? 'Envoi en cours…' : 'Conservés sur le téléphone. Envoi dès le retour du réseau.'}
+            {syncing ? 'Envoi en cours…' : 'Envoi automatique dès le retour du réseau'}
           </Text>
         </View>
       </View>
-      {syncing ? (
-        <ActivityIndicator color={theme.textSecondary} />
-      ) : (
-        <Text style={[styles.action, { color: theme.textSecondary }]}>Envoyer</Text>
-      )}
+      {syncing && <ActivityIndicator color={theme.textSecondary} />}
     </Pressable>
   )
 }
@@ -71,6 +90,6 @@ const styles = StyleSheet.create({
   labels: { flexShrink: 1 },
   count: { fontFamily: Font.extrabold, fontSize: 22 },
   title: { fontFamily: Font.semibold, fontSize: 14 },
+  codes: { fontFamily: Font.bold, fontSize: 13, marginTop: 1 },
   sub: { fontFamily: Font.regular, fontSize: 12, marginTop: 2 },
-  action: { fontFamily: Font.semibold, fontSize: 13 },
 })

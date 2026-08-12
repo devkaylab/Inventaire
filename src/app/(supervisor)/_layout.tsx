@@ -63,6 +63,7 @@ export default function SupervisorLayout() {
         <Stack.Screen name="[sessionId]/audits" options={{ title: 'Audits & écarts', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/results" options={{ title: 'Résultats', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/missing" options={{ title: 'Balises manquantes', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="[sessionId]/pending" options={{ title: "Balises en attente", ...headerBase, headerRight: helpRight }} />
       </Stack>
       <HelpModal visible={help.visible} onClose={help.close} isFirstTime={help.isFirstTime} />
     </>

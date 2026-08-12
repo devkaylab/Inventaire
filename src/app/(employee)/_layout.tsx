@@ -49,6 +49,8 @@ export default function EmployeeLayout() {
         <Stack.Screen name="index" options={{ title: 'Rejoindre une session', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/index" options={{ title: 'Ma progression', ...headerBase, headerRight: helpRight }} />
         <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="[sessionId]/counted" options={{ title: "Balises comptées", ...headerBase, headerRight: helpRight }} />
+        <Stack.Screen name="[sessionId]/pending" options={{ title: "Balises en attente", ...headerBase, headerRight: helpRight }} />
       </Stack>
       <HelpModal visible={help.visible} onClose={help.close} isFirstTime={help.isFirstTime} />
     </>

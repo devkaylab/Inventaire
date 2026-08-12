@@ -100,9 +100,9 @@ export function BaliseGrid({ zones, onSelect }: {
       ))}
 
       <div className="balise-legend">
+        <span><span className="balise-dot balise-dot-count balise-dot-open" /> en cours (pas encore clôturée)</span>
         <span><span className="balise-dot balise-dot-count balise-dot-done" /> comptage terminé</span>
         <span><span className="balise-dot balise-dot-audit balise-dot-done" /> audit terminé</span>
-        <span><span className="balise-dot balise-dot-count balise-dot-open" /> en cours</span>
         <span><span className="balise-dot" /> pas commencé</span>
       </div>
     </div>

@@ -79,7 +79,7 @@ export default function SupervisorScanScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
       <Stack.Screen options={{ title: audit ? 'Audit des articles' : 'Comptage des articles', headerStyle: { backgroundColor: modeColor }, headerTintColor: onColor }} />
-      <OfflineBanner pending={queue.pending} syncing={queue.syncing} onPress={() => void queue.sync()} />
+      <OfflineBanner balises={queue.balises} syncing={queue.syncing} onPress={() => void queue.sync()} />
       <Scanner
         sessionId={sessionId}
         passNumber={passNumber}

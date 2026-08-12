@@ -11,6 +11,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
+import { PendingBalisesRow } from '@/components/PendingBalisesRow'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -330,6 +331,8 @@ export default function SessionDetailScreen() {
                 <Text style={styles.missingDone}>✓ Toutes les balises ont été comptées</Text>
               </View>
             )}
+
+            <PendingBalisesRow sessionId={sessionId} target={`/(supervisor)/${sessionId}/pending`} />
           </View>
         ) : (
           <View style={styles.progressBlock}>

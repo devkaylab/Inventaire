@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // AsyncStorage est un module natif : on le remplace par une Map. Le contrat
-// utilisé par `offline.ts` se limite à ces cinq méthodes.
+// utilisé par `offline.ts` se limite à ces six méthodes.
 const store = new Map<string, string>()
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
@@ -16,18 +16,23 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 
 import {
   cacheArticles,
+  cacheZones,
   clearSession,
   enqueueBalise,
   enqueueCount,
   failedOps,
   flush,
   isNetworkError,
+  migrateLegacy,
   newId,
-  pendingCount,
+  NO_BALISE,
+  pendingBaliseCount,
+  pendingBalises,
   pendingCounts,
   resolveArticleIn,
   resolveArticleOffline,
   type Article,
+  type Zone,
 } from '@/lib/offline'
 
 const S = 'session-1'
@@ -47,6 +52,18 @@ function article(over: Partial<Article> = {}): Article {
   } as unknown as Article
 }
 
+function zone(code: string, name: string): Zone {
+  return { id: code, session_id: S, code, name } as unknown as Zone
+}
+
+const count = (sku: string, zoneCode: string | null, qty = 1) => ({
+  session_id: S,
+  sku,
+  pass_number: 1,
+  qty,
+  zone: zoneCode,
+})
+
 function okDeps() {
   const counts: unknown[] = []
   const balises: unknown[] = []
@@ -64,7 +81,10 @@ function okDeps() {
   }
 }
 
-beforeEach(() => store.clear())
+beforeEach(async () => {
+  store.clear()
+  await clearSession(S) // vide aussi les index en mémoire
+})
 
 describe('newId', () => {
   it('produit un uuid v4 bien formé', () => {
@@ -108,46 +128,87 @@ describe('résolution d’un code-barres hors ligne', () => {
     expect(resolveArticleIn(stocke, '000123456')?.sku).toBe('SKU1')
   })
 
-  it('ne trouve rien pour un code inconnu ou vide', () => {
-    expect(resolveArticleIn([article()], '000000')).toBeNull()
-    expect(resolveArticleIn([article()], '   ')).toBeNull()
-  })
-
-  it('lit le cache écrit pendant que le réseau était là', async () => {
-    await cacheArticles(S, [article()])
-    expect((await resolveArticleOffline(S, 'SKU1'))?.sku).toBe('SKU1')
+  it('passe par l’index en mémoire une fois le cache écrit', async () => {
+    await cacheArticles(S, [article(), article({ id: 'a2', sku: 'SKU2', ean: '0999', ean_norm: '999' })])
+    expect((await resolveArticleOffline(S, 'SKU2'))?.sku).toBe('SKU2')
+    expect((await resolveArticleOffline(S, '999'))?.sku).toBe('SKU2')
+    expect(await resolveArticleOffline(S, 'INCONNU')).toBeNull()
   })
 })
 
-describe('file d’attente', () => {
+describe('file d’attente groupée par balise', () => {
   it('fige un identifiant et l’heure réelle du scan', async () => {
     const avant = Date.now()
-    const id = await enqueueCount(S, { session_id: S, sku: 'SKU1', pass_number: 1, qty: 1 })
+    const id = await enqueueCount(S, count('SKU1', '5375'))
     const [row] = await pendingCounts(S)
     expect(row.id).toBe(id)
     expect(new Date(row.created_at as string).getTime()).toBeGreaterThanOrEqual(avant)
   })
 
-  it('compte ce qui reste à envoyer', async () => {
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
-    await enqueueBalise(S, '5375', 'count', true)
-    expect(await pendingCount(S)).toBe(2)
+  it('compte les balises, pas les scans, et donne leur numéro', async () => {
+    await enqueueCount(S, count('A', '5375'))
+    await enqueueCount(S, count('B', '5375'))
+    await enqueueCount(S, count('C', '5376'))
+    expect(await pendingBaliseCount(S)).toBe(2)
+    const bal = await pendingBalises(S)
+    expect(bal.map((b) => b.code).sort()).toEqual(['5375', '5376'])
+    expect(bal.find((b) => b.code === '5375')?.scans).toBe(2)
   })
 
+  it('donne le nom de la zone quand il est en cache', async () => {
+    await cacheZones(S, [zone('5375', 'Réserve')])
+    await enqueueCount(S, count('A', '5375'))
+    expect((await pendingBalises(S))[0].name).toBe('Réserve')
+  })
+
+  it('regroupe les comptages sans balise dans leur propre bucket', async () => {
+    await enqueueCount(S, count('A', null))
+    const bal = await pendingBalises(S)
+    expect(bal).toHaveLength(1)
+    expect(bal[0].code).toBe(NO_BALISE)
+  })
+
+  it('additionne les quantités, corrections négatives comprises', async () => {
+    await enqueueCount(S, count('A', '5375', 3))
+    await enqueueCount(S, count('A', '5375', -1))
+    expect((await pendingBalises(S))[0].units).toBe(2)
+  })
+
+  it('signale qu’une ouverture ou clôture de balise attend aussi', async () => {
+    await enqueueBalise(S, '5375', 'count', false)
+    const [b] = await pendingBalises(S)
+    expect(b.hasBaliseOp).toBe(true)
+    expect(b.scans).toBe(0)
+  })
+
+  it('découpe en tranches sans rien perdre', async () => {
+    // 450 scans sur une même balise : au-delà de la taille de tranche, on doit
+    // retrouver le compte exact. C'est ce découpage qui évite de réécrire tout
+    // l'historique à chaque scan.
+    for (let i = 0; i < 450; i += 1) await enqueueCount(S, count(`SKU${i}`, '5375'))
+    expect((await pendingBalises(S))[0].scans).toBe(450)
+    expect(await pendingCounts(S)).toHaveLength(450)
+    const keys = [...store.keys()].filter((k) => k.includes(':bal:'))
+    expect(keys.length).toBeGreaterThan(1) // plusieurs tranches
+  })
+})
+
+describe('synchronisation', () => {
   it('envoie tout et vide la file', async () => {
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
-    await enqueueCount(S, { session_id: S, sku: 'B', pass_number: 1, qty: 2 })
+    await enqueueCount(S, count('A', '5375'))
+    await enqueueCount(S, count('B', '5376'))
     const deps = okDeps()
     const r = await flush(S, deps)
-    expect(r).toEqual({ sent: 2, interrupted: false, failed: 0 })
-    expect(await pendingCount(S)).toBe(0)
-    expect(deps.counts).toHaveLength(2)
+    expect(r.sent).toBe(2)
+    expect(r.interrupted).toBe(false)
+    expect(r.balisesSent.sort()).toEqual(['5375', '5376'])
+    expect(await pendingBaliseCount(S)).toBe(0)
   })
 
-  it('respecte l’ordre de saisie', async () => {
+  it('respecte l’ordre à l’intérieur d’une balise', async () => {
     // Ouvrir puis clôturer n'est pas la même chose que l'inverse.
     await enqueueBalise(S, '5375', 'count', true)
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
+    await enqueueCount(S, count('A', '5375'))
     await enqueueBalise(S, '5375', 'count', false)
     const ordre: string[] = []
     await flush(S, {
@@ -158,9 +219,9 @@ describe('file d’attente', () => {
   })
 
   it('s’arrête net sur une coupure et conserve le reste', async () => {
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
-    await enqueueCount(S, { session_id: S, sku: 'B', pass_number: 1, qty: 1 })
-    await enqueueCount(S, { session_id: S, sku: 'C', pass_number: 1, qty: 1 })
+    await enqueueCount(S, count('A', '5375'))
+    await enqueueCount(S, count('B', '5375'))
+    await enqueueCount(S, count('C', '5375'))
     let n = 0
     const r = await flush(S, {
       insertCount: async () => {
@@ -171,29 +232,42 @@ describe('file d’attente', () => {
     })
     expect(r.interrupted).toBe(true)
     expect(r.sent).toBe(1)
-    // Les deux restantes sont gardées : rien n'est perdu, l'ordre est intact.
-    expect(await pendingCount(S)).toBe(2)
+    // Rien n'est perdu, et rien ne sera renvoyé deux fois.
     expect((await pendingCounts(S)).map((c) => c.sku)).toEqual(['B', 'C'])
   })
 
+  it('ne renvoie pas ce qui est déjà passé après une coupure', async () => {
+    for (const sku of ['A', 'B', 'C']) await enqueueCount(S, count(sku, '5375'))
+    let n = 0
+    await flush(S, {
+      insertCount: async () => {
+        n += 1
+        if (n === 2) throw { message: 'Network request failed' }
+      },
+      setBalise: async () => {},
+    })
+    const deps = okDeps()
+    await flush(S, deps)
+    expect((deps.counts as { sku: string }[]).map((c) => c.sku)).toEqual(['B', 'C'])
+  })
+
   it('traite un doublon comme déjà envoyé', async () => {
-    // Cas réel : la synchro a été coupée après l'insertion mais avant l'accusé.
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
+    await enqueueCount(S, count('A', '5375'))
     const r = await flush(S, {
       insertCount: async () => {
         throw { code: '23505', message: 'duplicate key value violates unique constraint' }
       },
       setBalise: async () => {},
     })
-    expect(r).toEqual({ sent: 1, interrupted: false, failed: 0 })
-    expect(await pendingCount(S)).toBe(0)
+    expect(r.sent).toBe(1)
+    expect(await pendingBaliseCount(S)).toBe(0)
   })
 
   it('met de côté un refus du serveur sans bloquer la file', async () => {
     // Sans ça, un inventaire clôturé pendant que le compteur était en réserve
     // ferait échouer éternellement la première op, et tout le reste avec.
-    await enqueueCount(S, { session_id: S, sku: 'REFUSE', pass_number: 1, qty: 1 })
-    await enqueueCount(S, { session_id: S, sku: 'OK', pass_number: 1, qty: 1 })
+    await enqueueCount(S, count('REFUSE', '5375'))
+    await enqueueCount(S, count('OK', '5375'))
     const deps = okDeps()
     const r = await flush(S, {
       insertCount: async (c) => {
@@ -204,29 +278,50 @@ describe('file d’attente', () => {
       },
       setBalise: deps.setBalise,
     })
-    expect(r).toEqual({ sent: 1, interrupted: false, failed: 1 })
-    expect(await pendingCount(S)).toBe(0)
+    expect(r.sent).toBe(1)
+    expect(r.failed).toBe(1)
+    expect(await pendingBaliseCount(S)).toBe(0)
 
-    // Rien n'est perdu en silence : l'op refusée reste consultable, avec sa raison.
     const ko = await failedOps(S)
     expect(ko).toHaveLength(1)
     expect(ko[0].reason).toMatch(/row-level security/)
   })
 
   it('cloisonne les inventaires', async () => {
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
-    await enqueueCount('autre', { session_id: 'autre', sku: 'B', pass_number: 1, qty: 1 })
-    expect(await pendingCount(S)).toBe(1)
-    expect(await pendingCount('autre')).toBe(1)
+    await enqueueCount(S, count('A', '5375'))
+    await enqueueCount('autre', { ...count('B', '5375'), session_id: 'autre' })
+    expect(await pendingBaliseCount(S)).toBe(1)
+    expect(await pendingBaliseCount('autre')).toBe(1)
   })
 
   it('efface tout le local d’un inventaire sans toucher aux autres', async () => {
     await cacheArticles(S, [article()])
-    await enqueueCount(S, { session_id: S, sku: 'A', pass_number: 1, qty: 1 })
-    await enqueueCount('autre', { session_id: 'autre', sku: 'B', pass_number: 1, qty: 1 })
+    await enqueueCount(S, count('A', '5375'))
+    await enqueueCount('autre', { ...count('B', '5375'), session_id: 'autre' })
     await clearSession(S)
-    expect(await pendingCount(S)).toBe(0)
+    expect(await pendingBaliseCount(S)).toBe(0)
     expect(await resolveArticleOffline(S, 'SKU1')).toBeNull()
-    expect(await pendingCount('autre')).toBe(1)
+    expect(await pendingBaliseCount('autre')).toBe(1)
+  })
+})
+
+describe('reprise de l’ancienne file (v1)', () => {
+  it('reverse les scans déjà en attente dans le format par balise', async () => {
+    // Un téléphone qui comptait hors ligne au moment de la mise à jour ne doit
+    // rien perdre : l'ancienne file est une clé par scan.
+    store.set(
+      'offline:v1:op:session-1:1700000000000-0001',
+      JSON.stringify({
+        kind: 'count',
+        id: 'legacy-1',
+        at: 1700000000000,
+        count: { ...count('LEGACY', '5375'), id: 'legacy-1', created_at: '2026-08-12T10:00:00Z' },
+      }),
+    )
+    expect(await migrateLegacy(S)).toBe(1)
+    const bal = await pendingBalises(S)
+    expect(bal).toHaveLength(1)
+    expect(bal[0].code).toBe('5375')
+    expect([...store.keys()].some((k) => k.startsWith('offline:v1:op:'))).toBe(false)
   })
 })

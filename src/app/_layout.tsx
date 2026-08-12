@@ -15,6 +15,7 @@ import {
 import { AuthProvider } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
 import { SplashAnimation } from '@/components/SplashAnimation'
+import { OfflineTopBanner } from '@/components/OfflineTopBanner'
 
 // Hold the native splash until fonts are ready; our animated splash takes over from there.
 SplashScreen.preventAutoHideAsync()
@@ -48,6 +49,9 @@ export default function RootLayout() {
           <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
             {/* Header bar is near-black in both themes → light status bar text */}
             <StatusBar style="light" />
+            {/* Au-dessus de la pile : le bandeau doit coiffer l'en-tête de
+                chaque écran, et rester visible quelle que soit la page. */}
+            <OfflineTopBanner />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="login" />
