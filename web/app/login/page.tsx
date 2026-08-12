@@ -4,8 +4,26 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase, supabaseConfigured } from '@/lib/supabaseClient'
 import { getMySpacePath, homePathForRole } from '@/lib/auth'
+
+/**
+ * Un échec réseau et un mauvais mot de passe ne doivent pas dire la même chose.
+ * Quand les variables d'environnement Supabase manquent (cas vu sur une preview
+ * Vercel dont la portée « Preview » n'était pas cochée), le client tape sur une
+ * URL de repli qui n'existe pas : `signInWithPassword` échoue sur le `fetch`, et
+ * un message unique « e-mail ou mot de passe incorrect » envoie chercher pendant
+ * des heures du côté du compte, qui n'y est pour rien.
+ */
+function isNetworkFailure(e: unknown): boolean {
+  const err = e as { name?: string; status?: number; message?: string } | null
+  if (!err) return false
+  if (err.name === 'AuthRetryableFetchError') return true
+  if (err.status === 0 || err.status === undefined) {
+    return /fetch|network|timeout/i.test(err.message ?? '')
+  }
+  return false
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -30,7 +48,11 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error || !data.user) {
       setLoading(false)
-      setError('E-mail ou mot de passe incorrect.')
+      setError(
+        isNetworkFailure(error)
+          ? 'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.'
+          : 'E-mail ou mot de passe incorrect.',
+      )
       return
     }
     const { data: prof } = await supabase
@@ -50,6 +72,15 @@ export default function LoginPage() {
           <h1>Connexion</h1>
           <p className="sub">Accédez à votre espace Quantinvo.</p>
         </div>
+
+        {!supabaseConfigured && (
+          <div className="error">
+            Ce site n&apos;est pas relié à sa base de données : la connexion ne peut pas
+            fonctionner ici. Ce n&apos;est pas votre mot de passe. Si vous êtes sur une
+            adresse de test, ses variables d&apos;environnement Supabase ne sont pas
+            renseignées.
+          </div>
+        )}
 
         {error && <div className="error">{error}</div>}
 
@@ -76,7 +107,7 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
           </div>
-          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading || !supabaseConfigured}>
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
