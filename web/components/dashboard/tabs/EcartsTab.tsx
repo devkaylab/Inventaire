@@ -167,7 +167,11 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
       <div className="dash-stats">
         <Stat label="Écarts à traiter" value={String(stats.total)} tone={stats.total > 0 ? 'neg' : 'pos'} />
         <Stat label="Quantités différentes" value={String(stats.byKind.quantity)} />
-        <Stat label="Non retrouvés à l’audit" value={String(stats.byKind['missing-audit'])} tone="warn" />
+        <Stat
+          label="Non retrouvés à l’audit"
+          value={String(stats.byKind['missing-audit'])}
+          tone={stats.byKind['missing-audit'] > 0 ? 'warn' : 'neutral'}
+        />
         <Stat label="Arbitrés" value={String(resolved.length)} tone="pos" />
       </div>
 

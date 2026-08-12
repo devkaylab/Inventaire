@@ -10,7 +10,7 @@
 // Rien à configurer côté serveur : présence et broadcast passent par le service
 // Realtime et ne touchent pas à la réplication logique de Postgres.
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { AppState, Platform } from 'react-native'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -49,37 +49,50 @@ function signature(a: PresenceActivity): string {
  * Le superviseur voit alors, depuis le site et en direct, qui est connecté et
  * sur quelle balise chacun travaille. Sans effet si l'inventaire ou le profil
  * manquent — l'appel est donc sûr en tête de composant.
+ *
+ * Toutes les valeurs mutables passent par des refs mises à jour *dans* des
+ * effets, jamais pendant le rendu : la charge est construite au moment de
+ * l'émission (battement, changement d'état de l'application, changement
+ * d'activité), pas au moment du rendu.
  */
 export function useSessionPresence(sessionId: string | undefined, activity: PresenceActivity) {
   const { profile } = useAuth()
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const sinceRef = useRef(Date.now())
+  const sinceRef = useRef(0)
   const signatureRef = useRef('')
   const activityRef = useRef(activity)
   const foregroundRef = useRef(true)
-  activityRef.current = activity
+  const identityRef = useRef({ userId: '', fullName: 'Sans nom', role: 'employee' })
 
   const userId = profile?.id
   const fullName = profile?.full_name ?? 'Sans nom'
   const role = profile?.role ?? 'employee'
 
-  // Construit la charge à partir des refs : appelable depuis un timer ou un
-  // écouteur sans capturer de valeur périmée.
-  const buildRef = useRef(() => ({}) as Record<string, unknown>)
-  buildRef.current = () => ({
-    v: PRESENCE_V,
-    user_id: userId,
-    full_name: fullName,
-    role,
-    device: Platform.OS === 'ios' ? 'ios' : 'android',
-    screen: activityRef.current.screen,
-    mode: activityRef.current.mode,
-    balise: activityRef.current.balise,
-    balise_name: activityRef.current.baliseName,
-    foreground: foregroundRef.current,
-    since: sinceRef.current,
-    beat: Date.now(),
-  })
+  // Synchronisation des refs — déclarée avant les effets qui publient, donc
+  // exécutée avant eux : ceux-ci lisent toujours la valeur du rendu courant.
+  useEffect(() => { activityRef.current = activity }, [activity])
+  useEffect(() => {
+    identityRef.current = { userId: userId ?? '', fullName, role }
+  }, [userId, fullName, role])
+
+  const build = useCallback(() => {
+    const { userId: id, fullName: name, role: r } = identityRef.current
+    const a = activityRef.current
+    return {
+      v: PRESENCE_V,
+      user_id: id,
+      full_name: name,
+      role: r,
+      device: Platform.OS === 'ios' ? 'ios' : 'android',
+      screen: a.screen,
+      mode: a.mode,
+      balise: a.balise,
+      balise_name: a.baliseName,
+      foreground: foregroundRef.current,
+      since: sinceRef.current,
+      beat: Date.now(),
+    }
+  }, [])
 
   // ── Canal : reconstruit seulement si l'inventaire ou l'utilisateur change ──
   useEffect(() => {
@@ -91,15 +104,15 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
     channelRef.current = channel
 
     channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') void channel.track(buildRef.current())
+      if (status === 'SUBSCRIBED') void channel.track(build())
     })
 
-    const beat = setInterval(() => { void channelRef.current?.track(buildRef.current()) }, BEAT_MS)
+    const beat = setInterval(() => { void channelRef.current?.track(build()) }, BEAT_MS)
 
     // Un téléphone en poche n'est pas quelqu'un au travail : on le dit.
     const appState = AppState.addEventListener('change', (state) => {
       foregroundRef.current = state === 'active'
-      void channelRef.current?.track(buildRef.current())
+      void channelRef.current?.track(build())
     })
 
     return () => {
@@ -109,7 +122,7 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
       void supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [sessionId, userId])
+  }, [sessionId, userId, build])
 
   // ── Activité : republication immédiate, et remise à zéro de `since` ────────
   useEffect(() => {
@@ -120,8 +133,8 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
       signatureRef.current = sig
       sinceRef.current = Date.now()
     }
-    void channelRef.current?.track(buildRef.current())
-  }, [activity])
+    void channelRef.current?.track(build())
+  }, [activity, build])
 }
 
 /**

@@ -9,3 +9,8 @@ next-env.d.ts
 .DS_Store
 .vercel
 .env*
+
+# Playwright
+/test-results
+/playwright-report
+/screenshots

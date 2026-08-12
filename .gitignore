@@ -49,3 +49,6 @@ ios/build/
 # Claude Design handoff bundles (design scratch — not app code)
 *-handoff.zip
 logo-d-application-inventaire/
+
+# Playwright (exécution hors du dossier web)
+test-results/
