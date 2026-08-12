@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +25,7 @@ import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
+import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
 
 interface ScannerProps {
   sessionId: string
@@ -250,6 +251,22 @@ export function Scanner({
     setActiveBaliseState(v)
   }
 
+  // ── Présence temps réel ────────────────────────────────────────────────────
+  // Le hook vit ici, et pas dans les écrans qui montent ce composant, parce que
+  // c'est ici que se trouve `activeBalise`. La remonter au parent obligerait à
+  // dupliquer l'état dans les deux écrans de scan — pour une valeur qui a déjà
+  // un ref miroir justement parce qu'elle se périme facilement.
+  // Le mode est dérivé de `passNumber` (1 = comptage, 2 = audit), la valeur
+  // réellement écrite dans `counts.pass_number` : présence et activité déduite
+  // désignent ainsi toujours la même chose.
+  const presenceActivity = useMemo<PresenceActivity>(() => ({
+    screen: 'scan',
+    mode: passNumber === 2 ? 'audit' : 'count',
+    balise: activeBalise?.code ?? null,
+    baliseName: activeBalise?.name ?? null,
+  }), [passNumber, activeBalise?.code, activeBalise?.name])
+  useSessionPresence(sessionId, presenceActivity)
+
   // Mode classique : amorce la liste une fois depuis les comptages persistés.
   // En mode zones, la liste est amorcée par balise (voir plus bas).
   useEffect(() => {
@@ -430,6 +447,7 @@ export function Scanner({
       ignoreBaliseRef.current = result.code ?? code
       setActiveBalise({ code: result.code ?? code, name: result.name ?? null })
       queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      pingSession(sessionId, 'balise')
       playScanSound()
     } catch (e) {
       playErrorSound()
@@ -450,6 +468,7 @@ export function Scanner({
       ignoreBaliseRef.current = active.code
       setActiveBalise(null)
       queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      pingSession(sessionId, 'balise')
       playScanSound()
     } catch (e) {
       Alert.alert('Erreur', errorMessage(e))
@@ -472,6 +491,8 @@ export function Scanner({
 
   async function recordArticle(article: Article, zoneCode: string | null = null) {
     await onArticleResolved(article, 1, zoneCode)
+    // Réveille le tableau de bord du superviseur sans attendre son sondage.
+    pingSession(sessionId, 'count')
     playScanSound()
     setRecentScans(prev => {
       const idx = prev.findIndex(e => e.article.sku === article.sku)

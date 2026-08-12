@@ -64,8 +64,8 @@ const supervisor: Step[] = [
   {
     icon: '🏁',
     title: 'Clôturer la session',
-    body: "Une fois l'inventaire validé, appuyez sur « Clôturer l'inventaire ». Une fenêtre récapitule ce qui sera supprimé : confirmez pour valider. ⚠️ Cette action est définitive.",
-    tip: "Pensez à exporter les résultats avant de clôturer — vous n'y aurez plus accès après.",
+    body: "Une fois l'inventaire validé, appuyez sur « Clôturer l'inventaire ». Le comptage s'arrête pour tout le monde, y compris sur les téléphones encore ouverts sur la session. Toutes les données sont conservées et le rapport reste disponible.",
+    tip: "Vous pouvez rouvrir un inventaire clôturé si un comptage a été oublié. « Supprimer définitivement » est une action distincte, et celle-là est irréversible.",
     image: require('../../../assets/help/supervisor/08-close.png'),
   },
 ]

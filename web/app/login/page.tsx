@@ -82,7 +82,7 @@ export default function LoginPage() {
         </form>
 
         <div className="center-link">
-          <Link href="/">← Retour à l'accueil</Link>
+          <Link href="/">← Retour à l&apos;accueil</Link>
         </div>
       </div>
     </div>

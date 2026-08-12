@@ -4,12 +4,13 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { closeSession, deleteSessionInvitation, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard, leaveSession, removeSessionMember } from '@/lib/queries'
+import { closeSession, deleteSessionInvitation, deleteSessionPermanently, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard, leaveSession, removeSessionMember, reopenSession } from '@/lib/queries'
 import { useAuth } from '@/lib/auth'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -66,6 +67,10 @@ export default function SessionDetailScreen() {
   const [infoOpen, setInfoOpen] = useState(false)
   const [pulling, setPulling] = useState(false)
 
+  // Présence : le superviseur apparaît « en ligne » sur le tableau de bord web,
+  // sans balise puisqu'il ne scanne pas depuis cet écran.
+  useSessionPresence(sessionId, IDLE_ACTIVITY)
+
   // Rafraîchissement MANUEL : le superviseur tape la flèche pour actualiser
   // (pas de sondage automatique → économe en batterie).
   const { data: session, isLoading, refetch } = useQuery({
@@ -91,17 +96,40 @@ export default function SessionDetailScreen() {
     enabled: !!session?.uses_zones,
   })
 
+  // Clôturer ≠ supprimer. La clôture arrête le comptage et conserve tout ;
+  // la suppression efface définitivement.
   const closeMutation = useMutation({
     mutationFn: () => closeSession(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      Alert.alert('Session supprimée', 'L\'inventaire et toutes ses données ont été supprimés.')
+      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+      Alert.alert(
+        'Inventaire clôturé',
+        'Plus aucun comptage ne peut y être enregistré. Les données sont conservées et le rapport reste disponible.',
+      )
+    },
+    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+  })
+
+  const reopenMutation = useMutation({
+    mutationFn: () => reopenSession(sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+      Alert.alert('Inventaire rouvert', 'Le comptage peut reprendre.')
+    },
+    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteSessionPermanently(sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      Alert.alert('Inventaire supprimé', 'L\'inventaire et toutes ses données ont été supprimés.')
       if (router.canGoBack()) router.back()
       else router.replace('/(supervisor)/')
     },
-    onError: (e) => {
-      Alert.alert('Erreur', errorMessage(e))
-    },
+    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
   })
 
   const leaveMutation = useMutation({
@@ -175,12 +203,34 @@ export default function SessionDetailScreen() {
 
   function confirmClose() {
     Alert.alert(
-      '⚠️ Clôturer l\'inventaire',
-      'Cette action va supprimer définitivement :\n\n• Tous les comptages\n• Le stock théorique\n• Les audits & écarts\n• Les membres de la session\n\nLe référentiel articles (catalogue) est conservé.\n\nCette action est IRRÉVERSIBLE.',
+      "Clôturer l'inventaire",
+      "L'inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.\n\nToutes les données sont conservées et le rapport reste disponible. Vous pourrez le rouvrir si besoin.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Clôturer', onPress: () => closeMutation.mutate() },
+      ]
+    )
+  }
+
+  function confirmReopen() {
+    Alert.alert(
+      "Rouvrir l'inventaire",
+      'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Rouvrir', onPress: () => reopenMutation.mutate() },
+      ]
+    )
+  }
+
+  function confirmDelete() {
+    Alert.alert(
+      '⚠️ Supprimer définitivement',
+      'Cette action va supprimer :\n\n• Tous les comptages\n• Le stock théorique\n• Les audits & écarts\n• Les membres de la session\n• Le référentiel articles de cet inventaire\n\nPensez à exporter le rapport avant.\n\nCette action est IRRÉVERSIBLE.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
-          text: 'Supprimer définitivement',
+          text: 'Supprimer',
           style: 'destructive',
           onPress: () => {
             Alert.alert(
@@ -188,7 +238,7 @@ export default function SessionDetailScreen() {
               `Supprimer l'inventaire "${session?.inventory_number}" et toutes ses données ?`,
               [
                 { text: 'Annuler', style: 'cancel' },
-                { text: 'Oui, supprimer', style: 'destructive', onPress: () => closeMutation.mutate() },
+                { text: 'Oui, supprimer', style: 'destructive', onPress: () => deleteMutation.mutate() },
               ]
             )
           },
@@ -314,9 +364,15 @@ export default function SessionDetailScreen() {
             </>
           )}
           <ActionRow styles={styles} theme={theme} label="Audit et écart de comptage" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
-          <ActionRow styles={styles} theme={theme} label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} last={closed} />
+          <ActionRow styles={styles} theme={theme} label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} />
           {!closed && isCreator && (
-            <ActionRow styles={styles} theme={theme} label="Clôturer l'inventaire" onPress={confirmClose} danger last />
+            <ActionRow styles={styles} theme={theme} label="Clôturer l'inventaire" onPress={confirmClose} />
+          )}
+          {closed && isCreator && (
+            <ActionRow styles={styles} theme={theme} label="Rouvrir l'inventaire" onPress={confirmReopen} />
+          )}
+          {isCreator && (
+            <ActionRow styles={styles} theme={theme} label="Supprimer définitivement" onPress={confirmDelete} danger last />
           )}
           {!closed && !isCreator && (
             <ActionRow styles={styles} theme={theme} label="Quitter l'inventaire" onPress={confirmLeave} danger last />

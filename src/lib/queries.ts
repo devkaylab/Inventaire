@@ -399,14 +399,45 @@ export async function revertPass(sessionId: string, deleteCounts: boolean) {
   return data as { success: boolean; current_pass?: number; error?: string }
 }
 
+/**
+ * Clôture réelle : l'inventaire passe en lecture seule, **les données restent**.
+ *
+ * Auparavant « Clôturer » appelait `delete_session` et effaçait tout : le
+ * statut `closed` n'était donc jamais atteint, et il fallait exporter le rapport
+ * avant de clôturer sous peine de tout perdre. Depuis la migration
+ * 20260812000003, les policies d'insertion de `counts` refusent les scans sur un
+ * inventaire clôturé — un compteur resté sur son téléphone ne peut plus fausser
+ * un rapport déjà exporté.
+ */
 export async function closeSession(sessionId: string) {
-  // Deletion is handled server-side via a SECURITY DEFINER function that
-  // bypasses RLS — guarantees all rows (counts, stock, audit, members, session)
-  // are actually removed regardless of client-side policies.
-  const { data, error } = await supabase.rpc('delete_session', { p_session_id: sessionId })
+  const { error } = await supabase
+    .from('inventory_sessions')
+    .update({ status: 'closed', closed_at: new Date().toISOString() })
+    .eq('id', sessionId)
   if (error) throwSupabase('closeSession', error)
+}
+
+/** Réouvre un inventaire clôturé : le comptage peut reprendre. */
+export async function reopenSession(sessionId: string) {
+  const { error } = await supabase
+    .from('inventory_sessions')
+    .update({ status: 'counting', closed_at: null })
+    .eq('id', sessionId)
+  if (error) throwSupabase('reopenSession', error)
+}
+
+/**
+ * Suppression définitive de l'inventaire et de toutes ses données.
+ *
+ * Passe par une fonction SECURITY DEFINER côté serveur, qui contourne RLS :
+ * c'est ce qui garantit que toutes les lignes (comptages, stock théorique,
+ * audits, membres, référentiel, session) partent réellement.
+ */
+export async function deleteSessionPermanently(sessionId: string) {
+  const { data, error } = await supabase.rpc('delete_session', { p_session_id: sessionId })
+  if (error) throwSupabase('deleteSessionPermanently', error)
   const result = data as unknown as { success: boolean; error?: string }
-  if (!result.success) throwSupabase('closeSession', new Error(result.error ?? 'Échec de la suppression'))
+  if (!result.success) throwSupabase('deleteSessionPermanently', new Error(result.error ?? 'Échec de la suppression'))
 }
 
 export async function getTheoreticalStock(sessionId: string) {

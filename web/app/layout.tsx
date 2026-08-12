@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Inter, Sora } from 'next/font/google'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { ToastProvider } from '@/components/ui/Toast'
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import './globals.css'
 
 // Applique le thème (clair/sombre/système) AVANT le premier affichage,
@@ -23,7 +25,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="fr" className={`${inter.variable} ${sora.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
-        {children}
+        <ToastProvider>
+          <ConfirmProvider>
+            {children}
+          </ConfirmProvider>
+        </ToastProvider>
         <ThemeToggle />
       </body>
     </html>

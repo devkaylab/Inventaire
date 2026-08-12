@@ -9,11 +9,16 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 
 export default function EmployeeProgressScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const theme = useTheme()
   const styles = makeStyles(theme)
+
+  // Présence : le compteur apparaît « en ligne » sur le tableau de bord du
+  // superviseur dès qu'il ouvre l'inventaire, avant même son premier scan.
+  useSessionPresence(sessionId, IDLE_ACTIVITY)
 
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ['session', sessionId],

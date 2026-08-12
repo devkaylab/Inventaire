@@ -102,7 +102,13 @@ export default function AccountPage() {
               <Link href="/dashboard" className="btn btn-primary">Ouvrir le tableau de bord</Link>
             </div>
             {mySessions.length === 0 ? (
-              <p style={{ marginTop: 8 }}>Vous n'avez pas encore créé d'inventaire. Créez-en un depuis l'application mobile Quantinvo.</p>
+              <p style={{ marginTop: 8 }}>
+                Vous n&apos;avez pas encore créé d&apos;inventaire.{' '}
+                <Link href="/dashboard/new" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                  Créez-en un depuis le site
+                </Link>{' '}
+                ou depuis l&apos;application mobile Quantinvo.
+              </p>
             ) : (
               <div className="acc-inv-list" style={{ marginTop: 12 }}>
                 {mySessions.map(s => (
@@ -122,7 +128,7 @@ export default function AccountPage() {
         <div className="panel">
           <h3>Votre espace</h3>
           <p>
-            Le suivi de vos inventaires en ligne arrive bientôt. En attendant, utilisez l'application mobile Quantinvo.
+            Le suivi de vos inventaires en ligne arrive bientôt. En attendant, utilisez l&apos;application mobile Quantinvo.
           </p>
         </div>
       )}
