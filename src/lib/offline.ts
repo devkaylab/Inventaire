@@ -259,6 +259,50 @@ export async function zoneNameFor(sessionId: string, code: string): Promise<stri
   return (await zoneNameMap(sessionId)).get(code) ?? null
 }
 
+// ─── Reprise après redémarrage ───────────────────────────────────────────────
+
+/**
+ * Ce qu'il faut pour **rouvrir** un inventaire sans réseau.
+ *
+ * Les scans en attente survivent à un crash — ils sont sur le disque. Mais sans
+ * ce cache-ci, l'app ne pouvait pas les reprendre : au redémarrage elle allait
+ * chercher le profil, la liste des inventaires et la fiche de session sur le
+ * serveur, et sans réseau l'écran de comptage restait blanc. Le travail était à
+ * l'abri, et inaccessible — le pire des deux mondes en pleine réserve.
+ *
+ * Ces trois éléments sont donc écrits au passage, quand le réseau est là, et
+ * servis en repli quand il ne l'est plus.
+ */
+const profileKey = `${V}:profile`
+const sessionKey = (sessionId: string) => `${V}:session:${sessionId}`
+const sessionListKey = `${V}:sessions`
+
+async function putJson(key: string, value: unknown): Promise<void> {
+  await AsyncStorage.setItem(key, JSON.stringify(value))
+}
+
+async function getJson<T>(key: string): Promise<T | null> {
+  const raw = await AsyncStorage.getItem(key)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+/** Profil du compteur — son identifiant alimente `counted_by` à chaque scan. */
+export const cacheProfile = (p: unknown) => putJson(profileKey, p)
+export const getCachedProfile = <T,>() => getJson<T>(profileKey)
+
+/** Fiche d'un inventaire : mode zones, statut, numéro, magasin. */
+export const cacheSession = (sessionId: string, s: unknown) => putJson(sessionKey(sessionId), s)
+export const getCachedSession = <T,>(sessionId: string) => getJson<T>(sessionKey(sessionId))
+
+/** Liste des inventaires du compteur, pour retrouver le sien au redémarrage. */
+export const cacheSessionList = (list: unknown) => putJson(sessionListKey, list)
+export const getCachedSessionList = <T,>() => getJson<T[]>(sessionListKey)
+
 // ─── File d'attente, groupée par balise ──────────────────────────────────────
 
 const chunkKey = (sessionId: string, code: string, i: number) =>
@@ -288,20 +332,42 @@ async function readChunk(key: string): Promise<PendingOp[]> {
   }
 }
 
+/**
+ * Sérialise les écritures de la file.
+ *
+ * `append` lit une tranche, y ajoute une opération, puis réécrit. Si deux
+ * enregistrements se chevauchent — une clôture de balise déclenchée pendant
+ * qu'un scan est encore en cours d'écriture, une douchette qui envoie deux
+ * codes coup sur coup — les deux lisent la même tranche et le second écrase le
+ * premier. Un scan disparaît, sans la moindre trace. Cette file garantit qu'une
+ * écriture ne commence qu'une fois la précédente terminée.
+ */
+let writeChain: Promise<unknown> = Promise.resolve()
+
+function serialize<T>(task: () => Promise<T>): Promise<T> {
+  const next = writeChain.then(task, task)
+  // La chaîne ne doit jamais rester en échec, sinon toute écriture ultérieure
+  // serait rejetée d'office ; l'erreur est propagée à l'appelant, pas à la file.
+  writeChain = next.catch(() => undefined)
+  return next
+}
+
 /** Ajoute une opération à la dernière tranche de sa balise, ou en ouvre une nouvelle. */
 async function append(sessionId: string, code: string, op: PendingOp): Promise<void> {
-  const keys = await chunkKeysFor(sessionId, code)
-  const lastKey = keys[keys.length - 1]
-  if (lastKey) {
-    const ops = await readChunk(lastKey)
-    if (ops.length < CHUNK) {
-      ops.push(op)
-      await AsyncStorage.setItem(lastKey, JSON.stringify(ops))
-      return
+  return serialize(async () => {
+    const keys = await chunkKeysFor(sessionId, code)
+    const lastKey = keys[keys.length - 1]
+    if (lastKey) {
+      const ops = await readChunk(lastKey)
+      if (ops.length < CHUNK) {
+        ops.push(op)
+        await AsyncStorage.setItem(lastKey, JSON.stringify(ops))
+        return
+      }
     }
-  }
-  const nextIndex = lastKey ? (parseChunkKey(sessionId, lastKey)?.index ?? 0) + 1 : 0
-  await AsyncStorage.setItem(chunkKey(sessionId, code, nextIndex), JSON.stringify([op]))
+    const nextIndex = lastKey ? (parseChunkKey(sessionId, lastKey)?.index ?? 0) + 1 : 0
+    await AsyncStorage.setItem(chunkKey(sessionId, code, nextIndex), JSON.stringify([op]))
+  })
 }
 
 /**
@@ -567,6 +633,7 @@ export async function clearSession(sessionId: string): Promise<void> {
     (k) =>
       k === articlesKey(sessionId) ||
       k === zonesKey(sessionId) ||
+      k === sessionKey(sessionId) ||
       k.startsWith(balisePrefix(sessionId)) ||
       k.startsWith(failedPrefix(sessionId)) ||
       k.startsWith(`${V1_OP_PREFIX}${sessionId}:`),

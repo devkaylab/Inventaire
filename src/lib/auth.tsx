@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { registerForPushNotifications } from '@/lib/push'
+import { cacheProfile, getCachedProfile } from '@/lib/offline'
 import type { Tables } from '@/types/database.types'
 
 type Profile = Tables<'profiles'>
@@ -44,15 +45,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  /**
+   * Profil du compte connecté, avec repli sur le dernier connu.
+   *
+   * Le profil vient de la base. Au redémarrage sans réseau, la requête échoue
+   * et le profil restait `null` : l'écran de comptage n'enregistrait plus rien
+   * (l'identifiant du compteur alimente `counted_by`), sans le moindre message.
+   * Le compteur voyait sa caméra fonctionner et ses scans disparaître.
+   *
+   * La session Supabase, elle, est déjà persistée sur le disque : c'est donc
+   * bien le même compte qui reprend. Servir le profil mis en cache est sûr.
+   */
   async function fetchProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
-    setProfile(data)
+
+    if (data) {
+      setProfile(data)
+      void cacheProfile(data)
+      setLoading(false)
+      void registerForPushNotifications()
+      return
+    }
+
+    const cached = await getCachedProfile<Profile>()
+    // On ne sert le cache que s'il correspond au compte réellement connecté.
+    setProfile(cached && cached.id === userId ? cached : null)
     setLoading(false)
-    if (data) void registerForPushNotifications()
   }
 
   async function signIn(email: string, password: string) {

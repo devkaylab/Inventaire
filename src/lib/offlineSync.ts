@@ -74,12 +74,17 @@ function noteNetworkError(e: unknown): boolean {
  */
 export async function primeOfflineCache(sessionId: string): Promise<boolean> {
   try {
-    const [articles, zones] = await Promise.all([
+    const [articles, zones, session] = await Promise.all([
       q.getSessionArticles(sessionId),
       q.getZones(sessionId).catch(() => []),
+      q.getSession(sessionId).catch(() => null),
     ])
     await off.cacheArticles(sessionId, articles)
     await off.cacheZones(sessionId, zones)
+    // La fiche d'inventaire est ce qui permet de **rouvrir** l'écran de comptage
+    // après un redémarrage sans réseau. Sans elle, les scans en attente seraient
+    // à l'abri sur le disque mais inaccessibles.
+    if (session) await off.cacheSession(sessionId, session)
     setOffline(false)
     return true
   } catch (e) {
@@ -88,6 +93,39 @@ export async function primeOfflineCache(sessionId: string): Promise<boolean> {
     // Même sans réseau, l'index local (s'il existe déjà) doit être prêt.
     await off.warmArticleIndex(sessionId)
     return false
+  }
+}
+
+/**
+ * Fiche d'un inventaire : serveur si possible, cache local sinon.
+ *
+ * C'est la fonction que les écrans doivent appeler à la place de
+ * `queries.getSession`, sans quoi un redémarrage hors ligne laisse une page
+ * blanche là où le compteur attend son scanner.
+ */
+export async function getSession(sessionId: string): Promise<q.Session | null> {
+  const cached = () => off.getCachedSession<q.Session>(sessionId)
+  if (offline) return cached()
+  try {
+    const s = await q.getSession(sessionId)
+    if (s) await off.cacheSession(sessionId, s)
+    return s
+  } catch (e) {
+    if (!noteNetworkError(e)) throw e
+    return cached()
+  }
+}
+
+/** Inventaires du compteur : serveur si possible, dernière liste connue sinon. */
+export async function getSessions(): Promise<q.Session[]> {
+  if (offline) return (await off.getCachedSessionList<q.Session>()) ?? []
+  try {
+    const list = await q.getSessions()
+    await off.cacheSessionList(list)
+    return list
+  } catch (e) {
+    if (!noteNetworkError(e)) throw e
+    return (await off.getCachedSessionList<q.Session>()) ?? []
   }
 }
 

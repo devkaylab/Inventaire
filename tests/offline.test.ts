@@ -16,8 +16,14 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 
 import {
   cacheArticles,
+  cacheProfile,
+  cacheSession,
+  cacheSessionList,
   cacheZones,
   clearSession,
+  getCachedProfile,
+  getCachedSession,
+  getCachedSessionList,
   enqueueBalise,
   enqueueCount,
   failedOps,
@@ -302,6 +308,63 @@ describe('synchronisation', () => {
     expect(await pendingBaliseCount(S)).toBe(0)
     expect(await resolveArticleOffline(S, 'SKU1')).toBeNull()
     expect(await pendingBaliseCount('autre')).toBe(1)
+  })
+})
+
+describe('robustesse : crash et écritures simultanées', () => {
+  it('ne perd aucun scan quand plusieurs partent en même temps', async () => {
+    // Cas réel : une douchette qui envoie deux codes coup sur coup, ou une
+    // clôture de balise déclenchée pendant qu'un scan s'écrit encore. Sans
+    // sérialisation, les deux lisent la même tranche et le second écrase le
+    // premier — un scan disparaît sans laisser de trace.
+    await Promise.all(
+      Array.from({ length: 60 }, (_, i) => enqueueCount(S, count(`SKU${i}`, '5375'))),
+    )
+    expect((await pendingBalises(S))[0].scans).toBe(60)
+  })
+
+  it('mêle sans perte les scans et les opérations de balise concurrents', async () => {
+    await Promise.all([
+      enqueueCount(S, count('A', '5375')),
+      enqueueBalise(S, '5375', 'count', false),
+      enqueueCount(S, count('B', '5375')),
+      enqueueCount(S, count('C', '5376')),
+    ])
+    const bal = await pendingBalises(S)
+    expect(bal.find((b) => b.code === '5375')?.scans).toBe(2)
+    expect(bal.find((b) => b.code === '5375')?.hasBaliseOp).toBe(true)
+    expect(bal.find((b) => b.code === '5376')?.scans).toBe(1)
+  })
+
+  it('conserve tout ce qui est déjà écrit après un arrêt brutal', async () => {
+    // Un crash ne « défait » rien : ce qui est passé par enqueue est sur le
+    // disque. On le vérifie en repartant d'un état mémoire vierge, comme au
+    // redémarrage de l'app.
+    for (const sku of ['A', 'B', 'C']) await enqueueCount(S, count(sku, '5375'))
+    const snapshot = new Map(store)
+    store.clear()
+    for (const [k, v] of snapshot) store.set(k, v) // le disque a survécu
+    expect((await pendingCounts(S)).map((c) => c.sku)).toEqual(['A', 'B', 'C'])
+  })
+})
+
+describe('reprise après redémarrage hors ligne', () => {
+  it('restitue le profil, la fiche et la liste des inventaires', async () => {
+    // Sans ces trois éléments, l'app rouvre sur une page blanche et les scans
+    // en attente restent inaccessibles — à l'abri, mais bloqués.
+    await cacheProfile({ id: 'u1', full_name: 'Compteur' })
+    await cacheSession(S, { id: S, uses_zones: true, status: 'counting' })
+    await cacheSessionList([{ id: S }])
+
+    expect(await getCachedProfile<{ id: string }>()).toMatchObject({ id: 'u1' })
+    expect(await getCachedSession<{ uses_zones: boolean }>(S)).toMatchObject({ uses_zones: true })
+    expect(await getCachedSessionList<{ id: string }>()).toHaveLength(1)
+  })
+
+  it('efface la fiche de l’inventaire quand on le quitte', async () => {
+    await cacheSession(S, { id: S })
+    await clearSession(S)
+    expect(await getCachedSession(S)).toBeNull()
   })
 })
 

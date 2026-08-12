@@ -2,7 +2,7 @@ import { useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { CountedBalisesList } from '@/components/CountedBalisesList'
-import { getSession } from '@/lib/queries'
+import { getSession } from '@/lib/offlineSync'
 
 /**
  * Les balises que ce compteur a scannées **et qui sont arrivées sur le
