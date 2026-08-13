@@ -12,13 +12,15 @@ import type { Totals } from '@/hooks/useSessionData'
  * texte, ce qui le faisait passer pour un détail.
  */
 export function ProgressRail({
-  usesZones, zones, totals, articleCount, onSeeZones,
+  usesZones, zones, totals, theoreticalQty, onSeeDetail,
 }: {
   usesZones: boolean
   zones: ZoneDashboardRow[]
   totals: Totals
-  articleCount: number
-  onSeeZones: () => void
+  /** Somme des quantités attendues ; 0 quand aucun stock théorique n'est importé. */
+  theoreticalQty: number
+  /** Renvoie au détail : les zones en mode balises, les fichiers sinon. */
+  onSeeDetail: () => void
 }) {
   const stats = useMemo(() => {
     const total = zones.length
@@ -36,10 +38,14 @@ export function ProgressRail({
   const missing = useMemo(() => missingByZone(zones), [zones])
 
   if (!usesZones) {
-    // Mode classique : sans balise il n'existe aucun dénominateur de
-    // progression. On montre donc ce qui est mesurable — le volume scanné et sa
-    // couverture du référentiel — plutôt que deux nombres nus.
-    const coverage = articleCount > 0 ? Math.round((totals.countedSkus / articleCount) * 100) : 0
+    // Mode classique : sans balise, le seul dénominateur qui parle au terrain
+    // est le stock théorique attendu — un nombre de pièces, comparable à ce qui
+    // est scanné. L'ancienne version rapportait le comptage au *nombre de
+    // références* du référentiel, ce qui mélangeait deux unités : on pouvait
+    // afficher « 80 % » avec la moitié des pièces manquantes.
+    const pct = theoreticalQty > 0
+      ? Math.min(100, Math.round((totals.counted / theoreticalQty) * 100))
+      : 0
     return (
       <aside className="dash-progress panel">
         <div className="dash-section-label">Progression</div>
@@ -58,20 +64,32 @@ export function ProgressRail({
           </div>
         </div>
 
-        {articleCount > 0 && (
-          <div className="dash-bar-row">
-            <div className="dash-bar-legend">
-              <span>Couverture du référentiel</span>
-              <strong className="num">{coverage}%</strong>
-            </div>
-            <div className="dash-bar">
-              <div className="dash-bar-fill dash-bar-count" style={{ width: `${coverage}%` }} />
-            </div>
-            <div className="dash-progress-sub small">
-              {totals.countedSkus} / {articleCount} références vues au moins une fois
-            </div>
+        <div className="dash-bar-row">
+          <div className="dash-bar-legend">
+            <span>Stock théorique attendu</span>
+            <strong className="num">{fmtQty(theoreticalQty)}</strong>
           </div>
-        )}
+          {theoreticalQty > 0 ? (
+            <>
+              <div className="dash-bar">
+                <div className="dash-bar-fill dash-bar-count" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="dash-progress-sub small">
+                {fmtQty(totals.counted)} / {fmtQty(theoreticalQty)} pièces attendues — {pct}%
+              </div>
+            </>
+          ) : (
+            // Un 0 sans explication laisse croire à une panne. C'est presque
+            // toujours un fichier optionnel qu'on n'a pas chargé.
+            <div className="dash-progress-sub small">
+              Aucun stock théorique importé : l&apos;attendu vaut 0 et aucun écart ne peut être
+              calculé.{' '}
+              <button type="button" className="link-btn" onClick={onSeeDetail}>
+                Importer le fichier
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
     )
   }
@@ -113,7 +131,7 @@ export function ProgressRail({
           <p className="muted small">
             Aucune balise affectée. Renseignez les emplacements à inventorier pour suivre l&apos;avancement.
           </p>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onSeeZones}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onSeeDetail}>
             Renseigner les zones
           </button>
         </div>
@@ -128,7 +146,7 @@ export function ProgressRail({
               <span className="dash-missing-count num">{g.codes.length}</span>
             </div>
           ))}
-          <button type="button" className="link-btn" onClick={onSeeZones}>
+          <button type="button" className="link-btn" onClick={onSeeDetail}>
             Voir le détail des balises
           </button>
         </div>

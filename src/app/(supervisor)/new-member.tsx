@@ -63,8 +63,10 @@ export default function NewMemberScreen() {
       Alert.alert(
         'Compteur ajouté',
         res.emailSent
-          ? `Un e-mail a été envoyé à ${mail} pour finaliser son compte.`
-          : `${name} a été ajouté. Demandez-lui d'ouvrir l'app, de choisir « Je rejoins mon équipe » et de s'inscrire avec l'adresse ${mail}.\n\n(L'e-mail automatique n'a pas encore pu être envoyé — configuration Resend/domaine à finaliser.)`,
+          ? `${name} reçoit un e-mail à l'adresse ${mail}. Le lien lui permettra de vérifier ses informations et de choisir son mot de passe.`
+          : res.alreadyInvited
+            ? `${name} avait déjà été invité : le lien reçu précédemment reste valable.`
+            : `${name} a été ajouté, mais l'e-mail n'a pas pu partir (${res.emailError ?? 'raison inconnue'}). Relancez l'ajout pour réessayer.`,
         [{ text: 'Terminé', onPress: () => router.back() }],
       )
     } catch (e) {
@@ -128,7 +130,7 @@ export default function NewMemberScreen() {
             onSubmitEditing={handleSubmit}
           />
           <Text style={styles.hint}>
-            {"Le compteur recevra un e-mail à cette adresse et devra l'utiliser exactement pour s'inscrire."}
+            {"Le compteur recevra à cette adresse un lien personnel : il y vérifiera son prénom et son nom, puis choisira son mot de passe."}
           </Text>
 
           {multiStore && (

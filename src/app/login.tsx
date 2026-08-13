@@ -93,7 +93,7 @@ export default function LoginScreen() {
           </Pressable>
 
           <Pressable style={styles.link} onPress={() => router.push('/signup')}>
-            <Text style={styles.linkText}>Pas encore de compte ? S'inscrire</Text>
+            <Text style={styles.linkText}>Comment obtenir un compte ?</Text>
           </Pressable>
 
           <Pressable style={styles.privacyLink} onPress={() => Linking.openURL(PRIVACY_URL)}>

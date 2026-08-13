@@ -31,6 +31,22 @@ administrateur).
   + e-mail, rattaché aux magasins choisis (`team_invitations.store_ids`, vide =
   tous ceux du superviseur).
 
+**Personne ne s'inscrit** : les deux parcours créent l'utilisateur auth par
+invitation (`generateLink` type `invite`, envoi Resend, repli SMTP Supabase) et
+envoient un lien vers `/bienvenue`, où la personne **vérifie son prénom et son
+nom pré-remplis** puis choisit son mot de passe. L'écran d'inscription de l'app
+n'est plus qu'une explication.
+
+Conséquence à connaître : `handle_new_user` se déclenche sur l'INSERT dans
+`auth.users`, donc **le profil existe dès l'invitation**, avant le mot de passe.
+La personne ne peut simplement pas encore se connecter.
+
+`profiles` est modifiable par son porteur (prénom, nom), mais le trigger
+`profiles_pin_privileged` fige `role`, `company_id` et `is_admin` pour les rôles
+`authenticated`/`anon` — sans lui, un compteur se promouvait superviseur d'un
+simple UPDATE. Ce trigger doit rester en SECURITY INVOKER : en DEFINER,
+`current_user` vaudrait le propriétaire et le garde-fou ne s'appliquerait jamais.
+
 `create_company`, `join_company` et `join_store` ne sont plus exécutables par
 `authenticated` (migration `20260813000005`) : elles court-circuitaient ce
 parcours. Ne pas rendre les GRANT sans réintroduire la validation admin.

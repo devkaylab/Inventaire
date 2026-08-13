@@ -210,14 +210,46 @@ export async function getCountTotals(id: string): Promise<{
 }
 
 /** Ce qui est chargé pour cet inventaire : référentiel et stock théorique. */
-export async function getImportState(id: string): Promise<{ articles: number; stock: number }> {
-  const [a, s] = await Promise.all([
+export type ImportState = {
+  /** Lignes du référentiel articles. */
+  articles: number
+  /** Lignes de stock théorique (SKU portant une quantité attendue). */
+  stock: number
+  /** Somme des quantités attendues — 0 si aucun stock théorique importé. */
+  theoreticalQty: number
+}
+
+export async function getImportState(id: string): Promise<ImportState> {
+  const [a, s, t] = await Promise.all([
     supabase.from('articles').select('*', { count: 'exact', head: true }).eq('session_id', id),
     supabase.from('theoretical_stock').select('*', { count: 'exact', head: true }).eq('session_id', id),
+    supabase.rpc('get_session_theoretical_total', { p_session_id: id }),
   ])
   if (a.error) fail('getImportState/articles', a.error)
   if (s.error) fail('getImportState/stock', s.error)
-  return { articles: a.count ?? 0, stock: s.count ?? 0 }
+  // Le total n'est pas vital pour l'affichage des autres compteurs : une
+  // migration en retard ne doit pas vider l'onglet Fichiers.
+  if (t.error) console.error('[inventory] getImportState/theoretical', t.error)
+  return {
+    articles: a.count ?? 0,
+    stock: s.count ?? 0,
+    theoreticalQty: t.error ? 0 : Number(t.data ?? 0),
+  }
+}
+
+/**
+ * Démarre le comptage : l'inventaire passe de « Ouverte » à « En cours ».
+ *
+ * Purement déclaratif — rien n'empêche techniquement de scanner avant. Le
+ * statut sert de repère partagé : l'équipe sait que la préparation est finie
+ * et que les fichiers ne bougeront plus.
+ */
+export async function startSession(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('inventory_sessions')
+    .update({ status: 'counting' })
+    .eq('id', id)
+  if (error) fail('startSession', error)
 }
 
 // ── Résultats et audit ───────────────────────────────────────────────────────

@@ -289,7 +289,13 @@ export async function inviteTeammate(input: {
     },
   })
   if (error) throwSupabase('inviteTeammate', error)
-  const res = data as { success: boolean; emailSent?: boolean; emailError?: string; error?: string }
+  const res = data as {
+    success: boolean
+    emailSent?: boolean
+    alreadyInvited?: boolean
+    emailError?: string
+    error?: string
+  }
   if (!res.success) throwSupabase('inviteTeammate', new Error(res.error ?? "Échec de l'ajout"))
   return res
 }
@@ -300,7 +306,16 @@ export async function deleteInvitation(id: string) {
   if (error) throwSupabase('deleteInvitation', error)
 }
 
-/** Avant inscription : cet e-mail a-t-il été invité par un superviseur ? */
+/**
+ * ⚠️ Plus appelée : l'inscription depuis l'app a disparu.
+ *
+ * Elle servait de garde côté client avant `signUp` — le compteur devait
+ * prouver qu'il avait été pré-inscrit. Depuis le passage au lien magique, son
+ * compte auth est créé par `invite-teammate` et il ne s'inscrit plus : il
+ * vérifie ses informations et choisit son mot de passe sur `/bienvenue`.
+ *
+ * La RPC reste en base, sans danger (elle ne renvoie qu'un booléen).
+ */
 export async function checkInvitation(email: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('check_invitation', { p_email: email.trim().toLowerCase() })
   if (error) throwSupabase('checkInvitation', error)
