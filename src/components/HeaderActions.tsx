@@ -1,7 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg'
 import { useThemeControls } from '@/lib/theme'
-import { Font } from '@/constants/ink'
 
 // Icône profil (silhouette) — dessinée en SVG, pas d'emoji.
 function ProfileIcon() {
@@ -53,10 +52,10 @@ function ThemeIcon({ preference }: { preference: 'light' | 'dark' | 'system' }) 
 const NEXT_PREF = { system: 'light', light: 'dark', dark: 'system' } as const
 
 // Circular translucent buttons that sit on the near-black Ink header.
-// Optional profile (leftmost) + theme cycle (système/clair/sombre) + help (?),
-// shared by both navigation layouts. `onProfile` is only passed on the
-// supervisor's main screens, so the employee header stays unchanged.
-export function HeaderActions({ onProfile, onHelp }: { onProfile?: () => void; onHelp: () => void }) {
+// Optional profile (leftmost) + theme cycle (système/clair/sombre), shared by
+// both navigation layouts. `onProfile` is only passed on the supervisor's main
+// screens, so the employee header stays unchanged.
+export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
   const { preference, setPreference } = useThemeControls()
   return (
     <View style={styles.row}>
@@ -73,9 +72,6 @@ export function HeaderActions({ onProfile, onHelp }: { onProfile?: () => void; o
       >
         <ThemeIcon preference={preference} />
       </Pressable>
-      <Pressable onPress={onHelp} hitSlop={8} style={styles.btn}>
-        <Text style={styles.glyphBold}>?</Text>
-      </Pressable>
     </View>
   )
 }
@@ -88,5 +84,4 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
-  glyphBold: { color: '#fff', fontSize: 16, fontFamily: Font.bold },
 })
