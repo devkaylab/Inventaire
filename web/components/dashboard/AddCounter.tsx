@@ -44,11 +44,13 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
       toast.error(data?.error ?? error?.message ?? 'Ajout impossible.')
       return
     }
-    toast.success(
-      data.emailSent
-        ? `${first} ${last} a reçu un e-mail pour finaliser son compte.`
-        : `${first} ${last} a été ajouté. L’e-mail automatique n’a pas pu partir : communiquez-lui l’adresse ${mail} à utiliser pour s’inscrire.`,
-    )
+    if (data.emailSent) {
+      toast.success(`${first} ${last} reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.`)
+    } else if (data.alreadyInvited) {
+      toast.success(`${first} ${last} avait déjà été invité : le lien reçu précédemment reste valable.`)
+    } else {
+      toast.error(`${first} ${last} a été ajouté, mais l’e-mail n’a pas pu partir : ${data.emailError ?? 'raison inconnue'}.`)
+    }
     setFirstName(''); setLastName(''); setEmail(''); setOpen(false)
     await onAdded()
   }
@@ -75,7 +77,8 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
         <label htmlFor="counter-email">Adresse e-mail</label>
         <input id="counter-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.dupont@exemple.fr" />
         <p className="field-hint">
-          Elle recevra un e-mail et devra utiliser exactement cette adresse pour créer son mot de passe.
+          Elle recevra à cette adresse un lien personnel : elle y vérifiera son prénom et son nom,
+          puis choisira son mot de passe.
         </p>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>

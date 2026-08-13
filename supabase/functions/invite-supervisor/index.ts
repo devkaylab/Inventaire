@@ -2,11 +2,11 @@
 //
 // Réservée à l'administrateur Quantinvo. En cas de validation :
 //   1. `admin_review_supervisor_request` passe la demande en 'approved' ;
-//   2. l'utilisateur auth est créé par invitation Supabase — c'est lui qui
-//      choisira son mot de passe via le lien reçu, jamais nous ;
-//   3. à sa première connexion, `handle_new_user` lit la demande approuvée et
-//      crée le profil superviseur, rattaché à l'entreprise et affecté au
-//      magasin du code fourni dans la demande.
+//   2. l'utilisateur auth est créé et le lien de finalisation envoyé — c'est
+//      la personne qui choisira son mot de passe, jamais nous ;
+//   3. `handle_new_user`, déclenché par cet INSERT dans auth.users, crée le
+//      profil superviseur, rattaché à l'entreprise et affecté au magasin du
+//      code fourni dans la demande.
 //
 // Le mot de passe n'est donc défini nulle part côté serveur, et le magasin
 // n'est jamais choisi par la personne : il vient du code magasin remis par
@@ -61,27 +61,57 @@ Deno.serve(async (req) => {
 
   const admin = createClient(url, serviceKey)
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const redirectTo = `${appUrl}/bienvenue`
+  const fullName = `${review.first_name} ${review.last_name}`.trim()
+  const metadata = {
+    first_name: review.first_name,
+    last_name: review.last_name,
+    full_name: fullName,
+    role: 'supervisor',
+  }
+  const resendKey = Deno.env.get('RESEND_API_KEY')
 
-  // Invitation Supabase : envoie le lien de création de mot de passe et crée
-  // l'utilisateur auth. Le prénom / nom voyagent en métadonnées pour que
-  // `handle_new_user` les reprenne sans que la personne ait à les ressaisir.
-  const { error: iErr } = await admin.auth.admin.inviteUserByEmail(review.email, {
-    redirectTo: `${appUrl}/bienvenue`,
-    data: {
-      first_name: review.first_name,
-      last_name: review.last_name,
-      full_name: `${review.first_name} ${review.last_name}`.trim(),
-      role: 'supervisor',
-    },
-  })
-  if (iErr) {
-    // La demande est déjà passée en 'approved' : on le signale pour que
-    // l'administrateur puisse relancer l'envoi sans rejouer la validation.
-    return json(
-      { success: false, approved: true, error: `Demande validée, mais l'e-mail n'a pas pu partir : ${iErr.message}` },
-      500,
-    )
+  // La demande est déjà passée en 'approved' : tout échec d'envoi est signalé
+  // comme tel, pour que l'administrateur relance l'e-mail sans rejouer la
+  // validation (que `admin_review_supervisor_request` refuserait).
+  const sendFailed = (message: string) =>
+    json({ success: false, approved: true, error: `Demande validée, mais l'e-mail n'a pas pu partir : ${message}` }, 500)
+
+  // Sans Resend, on s'en remet au SMTP intégré de Supabase — fortement limité
+  // en débit, mais suffisant pour des validations à l'unité.
+  if (!resendKey) {
+    const { error: iErr } = await admin.auth.admin.inviteUserByEmail(review.email, {
+      redirectTo,
+      data: metadata,
+    })
+    if (iErr) return sendFailed(iErr.message)
+    return json({ success: true, approved: true, email: review.email, via: 'supabase' })
   }
 
-  return json({ success: true, approved: true, email: review.email })
+  // `generateLink` crée l'utilisateur auth et renvoie le lien sans envoyer :
+  // l'e-mail part par Resend, avec notre gabarit et notre domaine.
+  const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+    type: 'invite',
+    email: review.email,
+    options: { redirectTo, data: metadata },
+  })
+  if (linkErr) return sendFailed(linkErr.message)
+
+  const actionLink = link?.properties?.action_link
+  if (!actionLink) return sendFailed('lien absent de la réponse Supabase')
+
+  const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
+  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111"><h2 style="font-weight:800">Quantinvo</h2><p>Bonjour ${review.first_name},</p><p>Votre demande d'accès superviseur a été validée. Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.</p><p style="margin-top:24px"><a href="${actionLink}" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Finaliser mon compte</a></p><p style="color:#666;font-size:13px;margin-top:24px">Ce lien est personnel et à usage unique.</p></div>`
+
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromAddr, to: [review.email], subject: 'Votre accès Quantinvo est validé', html }),
+    })
+    if (!resp.ok) return sendFailed(`${resp.status} ${await resp.text()}`)
+    return json({ success: true, approved: true, email: review.email, via: 'resend' })
+  } catch (e) {
+    return sendFailed(e instanceof Error ? e.message : String(e))
+  }
 })

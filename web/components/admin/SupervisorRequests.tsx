@@ -30,9 +30,13 @@ const STATUS_LABEL: Record<SupervisorRequest['status'], string> = {
  *
  * Le code magasin ayant été résolu au dépôt, l'entreprise et le magasin sont
  * déjà affichés : rien à rechercher. La validation passe par l'edge function
- * `invite-supervisor`, qui envoie le lien de création de mot de passe. Le
- * profil n'existe qu'une fois ce mot de passe choisi — d'où l'état
- * intermédiaire « Mot de passe à créer ».
+ * `invite-supervisor`, qui envoie le lien de finalisation.
+ *
+ * À noter : le profil est créé dès l'invitation, pas à la création du mot de
+ * passe — `handle_new_user` se déclenche sur l'INSERT dans `auth.users`, que
+ * l'invitation provoque immédiatement. La personne ne peut simplement pas
+ * encore se connecter. D'où l'état « Mot de passe à créer », qui décrit ce qui
+ * manque et non l'absence de profil.
  */
 export function SupervisorRequests() {
   const [rows, setRows] = useState<SupervisorRequest[]>([])

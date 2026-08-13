@@ -1,7 +1,7 @@
 // Edge function : ajouter un membre (compteur) à son équipe.
 // - Vérifie que l'appelant est superviseur.
 // - Pré-inscrit l'e-mail (team_invitations) dans son entreprise.
-// - Envoie un e-mail (Resend) invitant la personne à finaliser son compte.
+// - Crée l'utilisateur auth et envoie le lien de finalisation.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const cors = {
@@ -11,6 +11,22 @@ const cors = {
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
+/**
+ * Une personne déjà invitée et pas encore activée n'est pas un échec d'ajout :
+ * la pré-inscription est enregistrée et son lien précédent reste valable.
+ */
+function inviteFailure(message: string) {
+  const already = /already been registered|already registered|already exists/i.test(message)
+  return {
+    success: true,
+    emailSent: false,
+    alreadyInvited: already,
+    emailError: already
+      ? 'Cette personne avait déjà été invitée : le lien reçu précédemment reste valable.'
+      : message,
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -98,37 +114,66 @@ Deno.serve(async (req) => {
     )
   if (iErr) return json({ success: false, error: iErr.message }, 500)
 
-  // E-mail d'onboarding (Resend, si configuré).
-  let emailSent = false
-  let emailError: string | null = null
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
+  // Invitation : crée l'utilisateur auth et produit le lien de finalisation.
+  // Le compteur n'a plus à ressaisir son identité — le prénom et le nom
+  // voyagent en métadonnées, et /bienvenue les lui présente pour vérification
+  // avant qu'il choisisse son mot de passe.
+  //
+  // L'ordre compte : la ligne `team_invitations` doit exister avant cet appel,
+  // car c'est l'INSERT dans `auth.users` qui déclenche `handle_new_user`, et
+  // c'est là que l'entreprise et les magasins sont lus.
+  //
+  // `generateLink` plutôt que `inviteUserByEmail` : il crée l'utilisateur et
+  // renvoie le lien **sans envoyer d'e-mail**, ce qui laisse l'envoi à Resend
+  // — déjà en place, avec notre gabarit et notre domaine. Le SMTP intégré de
+  // Supabase est fortement limité en débit et conviendrait mal à
+  // l'onboarding d'une équipe entière le jour d'un inventaire. Repli sur
+  // l'envoi Supabase si Resend n'est pas configuré.
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
-  if (resendKey) {
-    const greeting = fullName ? `Bonjour ${fullName},` : 'Bonjour,'
-    const inviterName = prof.full_name ? ` par ${prof.full_name}` : ''
-    const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111"><h2 style="font-weight:800">Quantinvo</h2><p>${greeting}</p><p>Vous avez été ajouté à une équipe d'inventaire${inviterName}. Pour finaliser votre compte, ouvrez l'application Quantinvo, choisissez « Je rejoins mon équipe » et inscrivez-vous avec cette adresse e-mail (${email}) en définissant votre mot de passe.</p><p style="margin-top:24px"><a href="${appUrl}/open" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Ouvrir Quantinvo</a></p><p style="color:#666;font-size:13px;margin-top:24px">Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.</p></div>`
-    try {
-      const resp = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: fromAddr, to: [email], subject: 'Rejoignez votre équipe sur Quantinvo', html }),
-      })
-      emailSent = resp.ok
-      const bodyText = await resp.text()
-      if (!resp.ok) {
-        console.error('[teammate] Resend error', resp.status, bodyText)
-        emailError = `${resp.status} ${bodyText}`
-      } else {
-        console.log('[teammate] Resend ok', bodyText)
-      }
-    } catch (e) {
-      console.error('[teammate] Resend fetch failed', e)
-      emailError = e instanceof Error ? e.message : String(e)
-    }
-  } else {
-    emailError = 'RESEND_API_KEY absent'
+  const redirectTo = `${appUrl}/bienvenue`
+  const metadata = { first_name: firstName, last_name: lastName, full_name: fullName, role: 'employee' }
+  const resendKey = Deno.env.get('RESEND_API_KEY')
+
+  if (!resendKey) {
+    const { error: invErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo,
+      data: metadata,
+    })
+    if (invErr) return json(inviteFailure(invErr.message))
+    return json({ success: true, emailSent: true, via: 'supabase', emailError: null })
   }
 
-  return json({ success: true, emailSent, emailError })
+  const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+    type: 'invite',
+    email,
+    options: { redirectTo, data: metadata },
+  })
+  if (linkErr) return json(inviteFailure(linkErr.message))
+
+  const actionLink = link?.properties?.action_link
+  if (!actionLink) {
+    return json({ success: true, emailSent: false, emailError: 'Lien d’invitation absent de la réponse Supabase.' })
+  }
+
+  const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
+  const greeting = firstName ? `Bonjour ${firstName},` : 'Bonjour,'
+  const inviterName = prof.full_name ? ` par ${prof.full_name}` : ''
+  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111"><h2 style="font-weight:800">Quantinvo</h2><p>${greeting}</p><p>Vous avez été ajouté à une équipe d'inventaire${inviterName}. Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.</p><p style="margin-top:24px"><a href="${actionLink}" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Finaliser mon compte</a></p><p style="color:#666;font-size:13px;margin-top:24px">Ce lien est personnel et à usage unique. Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.</p></div>`
+
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromAddr, to: [email], subject: 'Finalisez votre compte Quantinvo', html }),
+    })
+    const bodyText = await resp.text()
+    if (!resp.ok) {
+      console.error('[teammate] Resend error', resp.status, bodyText)
+      return json({ success: true, emailSent: false, emailError: `${resp.status} ${bodyText}` })
+    }
+    return json({ success: true, emailSent: true, via: 'resend', emailError: null })
+  } catch (e) {
+    console.error('[teammate] Resend fetch failed', e)
+    return json({ success: true, emailSent: false, emailError: e instanceof Error ? e.message : String(e) })
+  }
 })
