@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AUDIT_STATUS_LABELS, getSessionDetail, getSessionResults, recomputeAudit,
   type SessionResultRow,
@@ -10,35 +10,65 @@ import { fmtQty, fmtSigned, money } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Modal } from '@/components/ui/Modal'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Stat } from '@/components/ui/Stat'
 
 type SortKey = 'label' | 'theoretical_qty' | 'counted_qty' | 'variance_units' | 'variance_value' | 'status'
 
-export function RapportTab({ sessionId, inventoryNumber }: {
+/**
+ * Le rapport ne se recalcule pas à chaque battement du tableau de bord.
+ *
+ * `recomputeAudit` réécrit `article_audit` : le rejouer toutes les 8 secondes,
+ * pour chaque superviseur connecté, coûterait cher pour rien. Mais le laisser
+ * figé pendant que la progression avance sous les yeux est trompeur — le
+ * superviseur croit le rapport à jour alors qu'il date de son arrivée sur
+ * l'onglet. On le raccroche donc au même signal, mais bridé, et surtout on
+ * affiche l'heure du calcul : un chiffre daté ne ment pas.
+ */
+const REPORT_MIN_INTERVAL_MS = 20_000
+
+export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
   sessionId: string
   inventoryNumber: string
+  /** Horodatage du dernier rafraîchissement live, pour se recaler dessus. */
+  liveTick: number
 }) {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<SessionResultRow[]>([])
+  const [computedAt, setComputedAt] = useState<Date | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'variance_value', dir: 1 })
   const [exporting, setExporting] = useState<'xlsx' | 'csv' | null>(null)
+  const [askFormat, setAskFormat] = useState(false)
+  const lastRunRef = useRef(0)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (opts?.silent) setRefreshing(true)
+    else setLoading(true)
+    lastRunRef.current = Date.now()
     try {
       await recomputeAudit(sessionId)
       setRows(await getSessionResults(sessionId))
+      setComputedAt(new Date())
     } catch (err) {
       toast.error(friendlyError(err))
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [sessionId, toast])
 
   useEffect(() => { void load() }, [load])
+
+  // Se recale sur le battement live, sans descendre sous l'intervalle minimal.
+  useEffect(() => {
+    if (liveTick === 0) return
+    if (Date.now() - lastRunRef.current < REPORT_MIN_INTERVAL_MS) return
+    void load({ silent: true })
+  }, [liveTick, load])
 
   const totals = useMemo(() => ({
     lines: rows.length,
@@ -75,8 +105,16 @@ export function RapportTab({ sessionId, inventoryNumber }: {
     setExporting(format)
     try {
       if (format === 'csv') {
-        const name = downloadCsv(inventoryNumber, rows)
-        toast.success(`${name} téléchargé.`)
+        // Le détail par balise est la requête la plus lourde : elle n'est
+        // faite qu'à l'export, pour l'Excel comme pour le CSV — les deux
+        // doivent contenir la même chose.
+        const detail = await getSessionDetail(sessionId)
+        const names = downloadCsv(inventoryNumber, rows, detail)
+        toast.success(
+          names.length > 1
+            ? `${names.length} fichiers téléchargés : écarts et détail par zone.`
+            : `${names[0]} téléchargé.`,
+        )
       } else {
         // Le détail par balise n'est chargé qu'au moment de l'export : c'est la
         // requête la plus lourde et elle ne sert qu'au fichier.
@@ -124,18 +162,45 @@ export function RapportTab({ sessionId, inventoryNumber }: {
         <button
           type="button" className="btn btn-primary"
           disabled={rows.length === 0 || exporting !== null}
-          onClick={() => onExport('xlsx')}
+          onClick={() => setAskFormat(true)}
         >
-          {exporting === 'xlsx' ? 'Préparation…' : 'Télécharger Excel'}
-        </button>
-        <button
-          type="button" className="btn btn-ghost"
-          disabled={rows.length === 0 || exporting !== null}
-          onClick={() => onExport('csv')}
-        >
-          {exporting === 'csv' ? 'Préparation…' : 'CSV'}
+          {exporting ? 'Préparation…' : 'Télécharger'}
         </button>
       </div>
+
+      <div className="report-freshness">
+        <span className="muted small">
+          {refreshing
+            ? 'Recalcul en cours…'
+            : computedAt
+              ? `Chiffres calculés à ${computedAt.toLocaleTimeString('fr-FR')}`
+              : 'Chiffres non calculés'}
+        </span>
+        <button type="button" className="link-btn" disabled={refreshing} onClick={() => void load({ silent: true })}>
+          Actualiser
+        </button>
+      </div>
+
+      {askFormat && (
+        <Modal title="Format du téléchargement" onClose={() => setAskFormat(false)}>
+          <div className="format-choice">
+            <button type="button" className="format-option" onClick={() => { setAskFormat(false); void onExport('xlsx') }}>
+              <strong>Excel (.xlsx)</strong>
+              <span className="muted small">
+                Deux feuilles : « Écarts » (une ligne par article) et « Détail par zone »
+                (une ligne par balise, avec Compté par et Audité par).
+              </span>
+            </button>
+            <button type="button" className="format-option" onClick={() => { setAskFormat(false); void onExport('csv') }}>
+              <strong>CSV (2 fichiers)</strong>
+              <span className="muted small">
+                Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux en
+                deux fichiers, avec exactement les mêmes colonnes qu&apos;Excel.
+              </span>
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState

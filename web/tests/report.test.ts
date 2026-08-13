@@ -104,3 +104,31 @@ describe('reportFilename', () => {
       .toBe('inventaire_INV-20260807-C255_2026-08-12.xlsx')
   })
 })
+
+describe('parité CSV / Excel', () => {
+  // Le CSV n'exportait que les écarts : le détail par balise disparaissait
+  // silencieusement, et avec lui « Compté par » et « Audité par ». Les deux
+  // formats doivent porter les mêmes tableaux et les mêmes colonnes.
+  const detail: SessionDetailRow[] = [{
+    sku: 'A', ean: '3701', brand: 'Nike', label: 'Article',
+    zone: '5372', zone_name: 'Réserve',
+    counted_qty: 3, counted_by: 'Marie',
+    audited: true, audited_qty: 2, audited_by: 'Paul',
+  }]
+
+  it('le CSV du détail porte les colonnes d’identité, dans l’ordre de la feuille Excel', () => {
+    const [header] = toCsv(buildDetailRows(detail)).split('\r\n')
+    expect(header.split(';')).toEqual([
+      'SKU', 'EAN', 'Marque', 'Désignation', 'Zone', 'Zone assignée à',
+      'Qté comptée', 'Compté par', 'Audité ?', 'Qté auditée', 'Audité par',
+    ])
+  })
+
+  it('les deux tableaux sérialisés couvrent écarts et détail', () => {
+    const variance = toCsv(buildVarianceRows([result({ sku: 'A', ean: '3701' })]))
+    const perZone = toCsv(buildDetailRows(detail))
+    expect(variance).toContain('Écart (valeur achat)')
+    expect(perZone).toContain('Compté par')
+    expect(perZone).toContain('Marie')
+  })
+})

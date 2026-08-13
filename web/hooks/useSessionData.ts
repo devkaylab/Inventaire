@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getCountTotals, getImportState, getSession, getSessionInvitations, getSessionMembers,
-  type Member, type Session, type SessionInvitation,
+  type ImportState, type Member, type Session, type SessionInvitation,
 } from '@/lib/inventory'
 import { getZoneDashboard, type ZoneDashboardRow } from '@/lib/zones'
 import { getRecentCounts, getSessionActivity, type ActivityRow, type CountEvent } from '@/lib/activity'
@@ -29,7 +29,7 @@ export type SessionData = {
   invitations: SessionInvitation[]
   activity: ActivityRow[]
   recent: CountEvent[]
-  importState: { articles: number; stock: number }
+  importState: ImportState
   refreshLive: () => Promise<void>
   refreshMeta: () => Promise<void>
   refreshAll: () => Promise<void>
@@ -48,7 +48,7 @@ export function useSessionData(sessionId: string): SessionData {
   const [invitations, setInvitations] = useState<SessionInvitation[]>([])
   const [activity, setActivity] = useState<ActivityRow[]>([])
   const [recent, setRecent] = useState<CountEvent[]>([])
-  const [importState, setImportState] = useState({ articles: 0, stock: 0 })
+  const [importState, setImportState] = useState<ImportState>({ articles: 0, stock: 0, theoreticalQty: 0 })
 
   // Le mode (avec ou sans balises) décide de ce qu'il faut recharger ; on le
   // garde dans une référence pour que `refreshLive` reste stable.

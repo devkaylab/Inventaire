@@ -155,8 +155,8 @@ export default function SessionDashboardPage() {
           usesZones={session.uses_zones}
           zones={data.zones}
           totals={data.totals}
-          articleCount={data.importState.articles}
-          onSeeZones={() => selectTab(session.uses_zones ? 'zones' : 'fichiers')}
+          theoreticalQty={data.importState.theoreticalQty}
+          onSeeDetail={() => selectTab(session.uses_zones ? 'zones' : 'fichiers')}
         />
 
         <div className="dash-main">
@@ -207,6 +207,7 @@ export default function SessionDashboardPage() {
             {tab === 'fichiers' && (
               <FichiersTab
                 sessionId={sessionId}
+                status={session.status}
                 readOnly={closed}
                 importState={data.importState}
                 onChanged={data.refreshMeta}
@@ -223,7 +224,11 @@ export default function SessionDashboardPage() {
             )}
 
             {tab === 'rapport' && (
-              <RapportTab sessionId={sessionId} inventoryNumber={session.inventory_number} />
+              <RapportTab
+                sessionId={sessionId}
+                inventoryNumber={session.inventory_number}
+                liveTick={live.lastRefreshAt}
+              />
             )}
 
             {tab === 'equipe' && (

@@ -4,6 +4,8 @@ import { useState } from 'react'
 import {
   ACCEPTED_EXTENSIONS, importCatalogFile, importStockFile, type ImportProgress,
 } from '@/lib/import'
+import { startSession, type ImportState, type SessionStatus } from '@/lib/inventory'
+import { fmtQty } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { useToast } from '@/components/ui/Toast'
@@ -26,16 +28,35 @@ const EMPTY: StepState = {
   uploaded: 0, errors: [], message: null,
 }
 
-export function FichiersTab({ sessionId, readOnly, importState, onChanged }: {
+export function FichiersTab({ sessionId, status, readOnly, importState, onChanged }: {
   sessionId: string
+  status: SessionStatus
   readOnly: boolean
-  importState: { articles: number; stock: number }
+  importState: ImportState
   onChanged: () => Promise<void> | void
 }) {
   const toast = useToast()
   const confirm = useConfirm()
   const [catalog, setCatalog] = useState<StepState>(EMPTY)
   const [stock, setStock] = useState<StepState>(EMPTY)
+  const [starting, setStarting] = useState(false)
+
+  // Le démarrage n'a de sens qu'une fois le référentiel chargé, et une seule
+  // fois : passé en « En cours », l'inventaire ne revient pas à « Ouverte ».
+  const canStart = !readOnly && status === 'open' && importState.articles > 0
+
+  async function start() {
+    setStarting(true)
+    try {
+      await startSession(sessionId)
+      toast.success('Inventaire démarré : l’équipe peut compter.')
+      await onChanged()
+    } catch (err) {
+      toast.error(friendlyError(err))
+    } finally {
+      setStarting(false)
+    }
+  }
 
   async function run(
     file: File,
@@ -87,12 +108,28 @@ export function FichiersTab({ sessionId, readOnly, importState, onChanged }: {
           sub={importState.articles > 0 ? 'références chargées' : 'aucun fichier chargé'}
         />
         <Stat
-          label="Stock théorique"
-          value={String(importState.stock)}
-          tone={importState.stock > 0 ? 'pos' : 'neutral'}
-          sub={importState.stock > 0 ? 'SKU avec quantité attendue' : 'optionnel — sans lui, pas d’écart théorique'}
+          label="Stock théorique attendu"
+          value={fmtQty(importState.theoreticalQty)}
+          tone={importState.theoreticalQty > 0 ? 'pos' : 'neutral'}
+          sub={
+            importState.theoreticalQty > 0
+              ? `pièces attendues sur ${importState.stock} SKU`
+              : 'aucun stock théorique importé — fichier optionnel, sans lui aucun écart'
+          }
         />
       </div>
+
+      {canStart && (
+        <div className="banner banner-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <span>
+            Le référentiel est chargé. Démarrez l&apos;inventaire pour signaler à
+            l&apos;équipe que la préparation est terminée.
+          </span>
+          <button type="button" className="btn btn-primary btn-sm" disabled={starting} onClick={start}>
+            {starting ? 'Démarrage…' : 'Commencer l’inventaire'}
+          </button>
+        </div>
+      )}
 
       <div className="banner banner-info">
         CSV ou Excel (.xlsx, .xls). Les en-têtes sont reconnus quelle que soit la casse, les accents

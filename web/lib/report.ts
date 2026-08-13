@@ -139,10 +139,43 @@ export function toCsv(rows: Record<string, string | number>[]): string {
   return lines.join('\r\n')
 }
 
-export function downloadCsv(inventoryNumber: string, rows: SessionResultRow[]): string {
-  const csv = toCsv(buildVarianceRows(rows))
-  const filename = reportFilename(inventoryNumber, 'csv')
+function downloadCsvBlob(csv: string, filename: string): void {
   // Le BOM évite qu'Excel massacre les accents et empile tout en colonne A.
   triggerDownload(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), filename)
-  return filename
+}
+
+/**
+ * Export CSV, aligné sur l'Excel.
+ *
+ * L'Excel porte deux feuilles ; le CSV n'a pas de feuilles. La version
+ * précédente n'exportait donc que les écarts, et le détail par balise
+ * disparaissait silencieusement — avec lui « Compté par » et « Audité par »,
+ * précisément ce qu'on vient chercher dans un CSV pour retrouver qui a compté
+ * quoi.
+ *
+ * On sort les deux tableaux en deux fichiers, avec exactement les colonnes de
+ * l'Excel. Un suffixe explicite dans le nom, pour qu'ils ne se confondent pas
+ * dans le dossier de téléchargement.
+ *
+ * Deux téléchargements enchaînés : les navigateurs demandent parfois
+ * confirmation pour le second. C'est visible, contrairement à une donnée
+ * manquante — et l'écran de choix du format annonce les deux fichiers.
+ */
+export function downloadCsv(
+  inventoryNumber: string, rows: SessionResultRow[], detailRows: SessionDetailRow[] = [],
+): string[] {
+  const base = reportFilename(inventoryNumber, 'csv').replace(/\.csv$/, '')
+  const names: string[] = []
+
+  const variance = `${base}_ecarts.csv`
+  downloadCsvBlob(toCsv(buildVarianceRows(rows)), variance)
+  names.push(variance)
+
+  if (detailRows.length > 0) {
+    const detail = `${base}_detail_par_zone.csv`
+    // Laisser le premier téléchargement démarrer avant de lancer le second.
+    setTimeout(() => downloadCsvBlob(toCsv(buildDetailRows(detailRows)), detail), 600)
+    names.push(detail)
+  }
+  return names
 }
