@@ -42,6 +42,38 @@ le voir.
 Un inventaire ne se peuple que de profils existants — `invite-to-session`
 refuse les e-mails sans compte.
 
+## Paiement : Stripe à terme
+
+L'encaissement est aujourd'hui déclaré à la main par l'administrateur. **Le
+paiement passera vraisemblablement par Stripe** : le modèle a été conçu pour
+que la bascule tienne en un seul point.
+
+Le seul point d'accroche est la transition `accepted → paid` de
+`admin_set_company_request_status`. Un webhook Stripe
+(`checkout.session.completed`) appellera cette même RPC en `service_role` : ni
+la séquence des statuts, ni `admin_fulfil_company_request`, ni la génération
+des codes ne changent.
+
+Quand ce sera au programme :
+
+- Ajouter les colonnes de corrélation sur `company_requests`
+  (`stripe_checkout_session_id`, `stripe_customer_id`, référence de facture) —
+  volontairement absentes tant que le fournisseur n'est pas arrêté.
+- Écrire l'edge function du webhook **avec vérification de la signature**
+  Stripe, et la déployer en `verify_jwt: false` (Stripe n'envoie pas de JWT) —
+  c'est la seule fonction du projet dans ce cas, d'où l'importance de la
+  signature.
+- Garder la création d'entreprise **derrière** le paiement, jamais déclenchée
+  par le client : le webhook écrit `paid`, l'administrateur (ou un
+  enchaînement serveur) crée ensuite. Ne pas exposer
+  `admin_fulfil_company_request` au rôle `anon`.
+- Traiter la ré-émission : Stripe rejoue ses webhooks. La garde de transition
+  empêche déjà le double effet (`paid` n'est accepté que depuis `accepted`),
+  mais elle **répond en erreur**, pas en succès. Le webhook doit donc traiter
+  « transition impossible alors que la demande est déjà `paid` ou au-delà »
+  comme un cas normal, sous peine de faire échouer la livraison et de
+  déclencher des relances Stripe en boucle.
+
 # Passes de comptage
 
 `advance_pass` / `revert_pass` ne sont plus exécutables par le rôle
