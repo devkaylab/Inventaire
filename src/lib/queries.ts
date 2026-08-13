@@ -381,15 +381,32 @@ export async function joinSession(inventoryNumber: string, securityCode: string)
   return data as { success: boolean; session_id?: string; store_name?: string; status?: string; current_pass?: number; error?: string }
 }
 
+/**
+ * ⚠️ Hors service côté client depuis la migration 20260813000002.
+ *
+ * `advance_pass` et `revert_pass` viennent du modèle « la passe est un état
+ * global de la session ». Ce modèle n'existe plus : chaque participant choisit
+ * son mode (Comptage→1, Audit→2) et `current_pass` n'est plus lu nulle part.
+ * Aucun écran n'appelle ces deux fonctions.
+ *
+ * L'exécution a été retirée au rôle `authenticated` : elles sont SECURITY
+ * DEFINER et forçaient `status = 'counting'`, ce qui permettait à un simple
+ * compteur de rouvrir un inventaire clôturé — contournant la RLS qui réserve
+ * cet UPDATE aux superviseurs participants.
+ *
+ * Les appeler remonte donc désormais un 42501. Si les passes globales
+ * reviennent, il faudra rendre le GRANT **et** ajouter la garde
+ * `status <> 'closed'` dans les deux fonctions.
+ */
 export async function advancePass(sessionId: string) {
   const { data, error } = await supabase.rpc('advance_pass', { p_session_id: sessionId })
   if (error) throwSupabase('advancePass', error)
   return data as { success: boolean; current_pass?: number; error?: string }
 }
 
-// Step the session back one pass (e.g. Audit -> Compte) so the team can resume
-// counting. Allowed for the supervisor-owner and for any session member.
-// deleteCounts wipes everything counted in the pass being left.
+// Voir l'avertissement sur advancePass : hors service côté client (42501).
+// Reculait d'une passe (ex. Audit -> Compte) ; deleteCounts effaçait les
+// comptages de la passe quittée.
 export async function revertPass(sessionId: string, deleteCounts: boolean) {
   const { data, error } = await supabase.rpc('revert_pass', {
     p_session_id: sessionId,

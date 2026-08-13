@@ -1,0 +1,37 @@
+-- ─────────────────────────────────────────────────────────────────────────
+-- `advance_pass` / `revert_pass` : retrait de l'accès client.
+--
+-- Ces deux RPC datent du modèle « la passe est un état global de la session »,
+-- où le superviseur faisait basculer tout le monde de Compte (1) vers Audit (2).
+-- Ce modèle a disparu : depuis 20260731000002 chaque participant choisit son
+-- mode, et 20260813000001 a retiré `current_pass` des policies d'insertion.
+-- Plus rien ne les appelle (`advancePass`/`revertPass` dans src/lib/queries.ts
+-- ne sont référencés par aucun écran), plus rien ne lit `current_pass`, et
+-- `revert_pass` ne peut même plus aboutir — il refuse si `current_pass <= 1`,
+-- or plus rien ne l'incrémente.
+--
+-- Le problème n'est pas qu'elles soient inutiles, c'est qu'elles restent
+-- exposées à tout utilisateur authentifié via PostgREST alors qu'elles sont
+-- SECURITY DEFINER et forcent `status = 'counting'`. Depuis 20260812000003,
+-- `status` est le verrou de clôture. Vérifié en base, avec un compte au profil
+-- `employee` simplement membre de l'inventaire, sur un inventaire clôturé :
+--
+--   update inventory_sessions set status='counting'  ->  0 ligne (RLS refuse)
+--   select advance_pass(<session>)                   ->  success, status='counting'
+--
+-- Autrement dit : un compteur ne peut pas rouvrir un inventaire clôturé par la
+-- voie normale (`sessions_supervisor_update` réserve l'UPDATE aux superviseurs
+-- participants), mais il le pouvait via `advance_pass` — et les scans
+-- redevenaient alors acceptés. C'est exactement ce que 20260812000003 voulait
+-- empêcher : un rapport déjà exporté ne doit plus pouvoir bouger.
+--
+-- On retire donc l'exécution à `authenticated`. Les fonctions sont conservées
+-- telles quelles : si les passes globales reviennent un jour, il suffira de
+-- rendre le GRANT — après leur avoir ajouté la garde `status <> 'closed'`.
+-- `service_role` et `postgres` gardent l'accès (back-office / maintenance).
+--
+-- Appliquée en base live via l'outil MCP.
+-- ─────────────────────────────────────────────────────────────────────────
+
+revoke execute on function public.advance_pass(uuid) from authenticated, anon;
+revoke execute on function public.revert_pass(uuid, boolean) from authenticated, anon;
