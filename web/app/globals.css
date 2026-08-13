@@ -377,6 +377,14 @@ a { color: inherit; text-decoration: none; }
 .dash-badge-closed { color: var(--text-3); background: color-mix(in srgb, var(--text) 6%, transparent); }
 
 /* ── Mes inventaires (page compte) ──────────────────────── */
+/* Ligne libellé / valeur des blocs d'information du compte (entreprise, balises). */
+.acc-kv {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 8px 0; border-bottom: 1px solid var(--hairline);
+}
+.acc-kv:last-of-type { border-bottom: none; }
+.acc-kv > span { color: var(--text-2); font-size: 14px; }
+
 .acc-inv-list { display: flex; flex-direction: column; gap: 10px; }
 .acc-inv-row {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;

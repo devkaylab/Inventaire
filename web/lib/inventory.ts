@@ -90,7 +90,10 @@ export type SessionInvitation = {
   created_at: string
 }
 
-export type Store = { id: string; name: string }
+// `join_code` n'est lisible que par le superviseur affecté (et l'admin), via
+// la fonction SECURITY DEFINER `get_my_stores` — la colonne reste révoquée en
+// SELECT direct pour `anon` / `authenticated`.
+export type Store = { id: string; name: string; join_code?: string | null }
 
 function fail(context: string, error: unknown): never {
   console.error(`[inventory] ${context}`, error)

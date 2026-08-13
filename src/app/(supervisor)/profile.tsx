@@ -5,6 +5,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -16,11 +17,11 @@ import { useAuth } from '@/lib/auth'
 import {
   deleteInvitation,
   generateCompanyBalises,
+  getMyAssignedStores,
   getMyCompany,
   getMySessions,
   getTeamInvitations,
   getTeamMembers,
-  joinStore,
   type Invitation,
   type Profile,
 } from '@/lib/queries'
@@ -48,6 +49,7 @@ export default function SupervisorProfileScreen() {
   const queryClient = useQueryClient()
 
   const { data: company } = useQuery({ queryKey: ['my-company'], queryFn: getMyCompany })
+  const { data: myStores } = useQuery({ queryKey: ['my-stores'], queryFn: getMyAssignedStores })
   const { data: mySessions } = useQuery({ queryKey: ['my-sessions'], queryFn: getMySessions })
   const {
     data: members,
@@ -113,27 +115,24 @@ export default function SupervisorProfileScreen() {
 
   const email = session?.user.email ?? '—'
 
-  function promptJoinStore() {
-    Alert.prompt(
-      'Rejoindre un magasin',
-      'Saisissez le code du magasin communiqué par votre administrateur.',
-      async (txt) => {
-        const code = (txt ?? '').trim()
-        if (!code) return
-        try {
-          const res = await joinStore(code)
-          if (!res.success) { Alert.alert('Erreur', res.error ?? 'Code introuvable.'); return }
-          await queryClient.invalidateQueries({ queryKey: ['my-company'] })
-          await queryClient.invalidateQueries({ queryKey: ['my-stores'] })
-          await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-          await queryClient.invalidateQueries({ queryKey: ['my-sessions'] })
-          Alert.alert('Magasin rejoint', `Vous êtes maintenant affecté à « ${res.store_name} ».`)
-        } catch (e) {
-          Alert.alert('Erreur', errorMessage(e))
-        }
-      },
-      'plain-text', '', 'default',
-    )
+  /**
+   * Transmettre un code magasin.
+   *
+   * C'est le seul usage prévu : le code accompagne la demande d'accès d'un
+   * futur superviseur du magasin, déposée sur le site. Il ne doit jamais
+   * circuler auprès des compteurs.
+   */
+  async function shareStoreCode(name: string, code: string) {
+    try {
+      await Share.share({
+        message:
+          `Code du magasin « ${name} » : ${code}\n\n` +
+          'À utiliser pour demander un accès superviseur sur quantinvo.vercel.app/superviseur. ' +
+          'Ce code est confidentiel : ne le communiquez pas aux compteurs.',
+      })
+    } catch (e) {
+      Alert.alert('Partage impossible', errorMessage(e))
+    }
   }
 
   const INV_STATUS: Record<string, { label: string; fg: string; bg: string }> = {
@@ -205,11 +204,35 @@ export default function SupervisorProfileScreen() {
                 <Text style={styles.infoValue}>{company?.name ?? '—'}</Text>
               </View>
             </View>
-            <Pressable style={styles.joinStoreBtn} onPress={promptJoinStore}>
-              <Text style={styles.joinStoreBtnText}>+ Rejoindre un magasin</Text>
-            </Pressable>
+            {/* Mes magasins et leurs codes */}
+            <Text style={styles.sectionTitle}>Mes magasins</Text>
+            {(myStores?.length ?? 0) === 0 ? (
+              <Text style={styles.emptyInv}>
+                Vous n&apos;êtes affecté à aucun magasin. Contactez l&apos;administrateur Quantinvo.
+              </Text>
+            ) : (
+              <View style={styles.infoCard}>
+                {myStores!.map((s, i) => (
+                  <View key={s.id} style={[styles.storeRow, i > 0 && styles.storeRowSep]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.infoValue}>{s.name}</Text>
+                      <Text style={[styles.storeCode, tabular]}>{s.join_code ?? '—'}</Text>
+                    </View>
+                    {!!s.join_code && (
+                      <Pressable
+                        style={styles.shareCodeBtn}
+                        onPress={() => shareStoreCode(s.name, s.join_code!)}
+                      >
+                        <Text style={styles.shareCodeBtnText}>Partager</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
             <Text style={styles.baliseHint}>
-              Saisissez un code magasin fourni par votre administrateur pour accéder à ses inventaires.
+              Le code magasin sert aux demandes d&apos;accès superviseur sur le site. Il est
+              confidentiel : ne le communiquez jamais aux compteurs.
             </Text>
 
             {/* Carte balises (stock d'entreprise) */}
@@ -391,11 +414,16 @@ function makeStyles(t: Theme) {
     infoValue: { fontSize: 15, color: t.textPrimary, fontFamily: Font.semibold, flexShrink: 1, textAlign: 'right' },
     code: { letterSpacing: 2, ...tabular },
 
-    joinStoreBtn: {
-      backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingVertical: 12,
-      alignItems: 'center', marginTop: Spacing.sm,
+    storeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
+    storeRowSep: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.hairline, marginTop: Spacing.sm },
+    storeCode: {
+      fontSize: 18, color: t.accent, fontFamily: Font.bold, letterSpacing: 4, marginTop: 2,
     },
-    joinStoreBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.bold },
+    shareCodeBtn: {
+      backgroundColor: t.accentSoft, borderRadius: Radius.md,
+      paddingVertical: 10, paddingHorizontal: Spacing.lg,
+    },
+    shareCodeBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.bold },
 
     baliseBtns: { flexDirection: 'row', gap: Spacing.sm },
     baliseBtn: { flex: 1, borderRadius: Radius.md, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },

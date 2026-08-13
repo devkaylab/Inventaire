@@ -171,8 +171,16 @@ export async function getStores(): Promise<Store[]> {
   return (data ?? []) as unknown as Store[]
 }
 
-/** Rejoindre un magasin via son code (fourni par l'administrateur) : rattache le
- *  superviseur à l'entreprise du magasin et l'y affecte. */
+/**
+ * ⚠️ Hors service côté client depuis la migration 20260813000005.
+ *
+ * L'auto-affectation par saisie du code magasin allait à l'envers du parcours
+ * retenu : le code accompagne désormais la *demande* d'accès déposée sur le
+ * site, et c'est la validation Quantinvo qui affecte au magasin. `join_store`
+ * a donc été révoquée au rôle `authenticated` — l'appeler remonte un 42501.
+ *
+ * Conservée pour le back-office (`service_role`).
+ */
 export async function joinStore(code: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)('join_store', { p_code: code.trim() })
