@@ -1,78 +1,51 @@
-import { useState } from 'react'
 import {
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native'
-import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
-import { joinStore } from '@/lib/queries'
+import { SUPERVISOR_REQUEST_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
+/**
+ * Écran de repli : un superviseur connecté sans entreprise rattachée.
+ *
+ * Il saisissait ici son code magasin pour s'auto-affecter (`join_store`). Ce
+ * n'est plus le parcours : le code magasin accompagne désormais la *demande*
+ * déposée sur le site, et c'est la validation Quantinvo qui affecte au
+ * magasin. `join_store` a d'ailleurs été révoquée au rôle `authenticated`.
+ *
+ * Le cas ne devrait donc plus se produire ; l'écran reste pour ne pas laisser
+ * un compte dans une impasse muette, et renvoie vers le bon parcours.
+ */
 export default function CompanySetupScreen() {
-  const { refreshProfile, signOut } = useAuth()
+  const { signOut } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
-  const [code, setCode] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  async function handleJoin() {
-    if (!code.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir le code du magasin.')
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await joinStore(code.trim())
-      if (!res.success) {
-        Alert.alert('Erreur', res.error ?? 'Code introuvable.')
-        return
-      }
-      await refreshProfile()
-      router.replace('/')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>Rejoindre votre magasin</Text>
+            <Text style={styles.title}>Accès en attente</Text>
             <Text style={styles.subtitle}>
-              Saisissez le code du magasin qui vous a été communiqué par votre administrateur.
+              Votre compte n&apos;est rattaché à aucun magasin. L&apos;accès superviseur est accordé
+              par Quantinvo à partir d&apos;une demande accompagnée du code magasin remis par
+              l&apos;administrateur de votre entreprise.
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>Code du magasin</Text>
-            <TextInput
-              style={[styles.input, styles.codeInput]}
-              value={code}
-              onChangeText={t => setCode(t.toUpperCase())}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              placeholder="ABC123"
-              placeholderTextColor={theme.textMuted}
-            />
-
-            <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleJoin} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color={theme.onAccent} />
-              ) : (
-                <Text style={styles.buttonText}>Rejoindre</Text>
-              )}
+            <Pressable style={styles.button} onPress={() => Linking.openURL(SUPERVISOR_REQUEST_URL)}>
+              <Text style={styles.buttonText}>Déposer ma demande</Text>
             </Pressable>
 
             <Pressable style={styles.link} onPress={() => signOut()}>

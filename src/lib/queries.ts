@@ -258,9 +258,27 @@ export async function createInvitation(input: { fullName: string; email: string;
 
 /** Ajoute un membre (compteur) à l'équipe : pré-inscrit l'e-mail et lui envoie
  *  un e-mail pour finaliser son compte. Passe par l'edge function invite-teammate. */
-export async function inviteTeammate(input: { fullName: string; email: string }) {
+/**
+ * Pré-inscrit un compteur dans l'équipe.
+ *
+ * `storeIds` vide signifie « tous les magasins du superviseur » : c'est le
+ * comportement historique, conservé pour un superviseur mono-magasin, où le
+ * choix n'aurait aucun sens. Le serveur revérifie que les magasins choisis
+ * sont bien les siens.
+ */
+export async function inviteTeammate(input: {
+  firstName: string
+  lastName: string
+  email: string
+  storeIds?: string[]
+}) {
   const { data, error } = await supabase.functions.invoke('invite-teammate', {
-    body: { fullName: input.fullName.trim(), email: input.email.trim().toLowerCase() },
+    body: {
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      email: input.email.trim().toLowerCase(),
+      storeIds: input.storeIds ?? [],
+    },
   })
   if (error) throwSupabase('inviteTeammate', error)
   const res = data as { success: boolean; emailSent?: boolean; emailError?: string; error?: string }

@@ -1,8 +1,8 @@
 // Edge function : inviter une personne à un inventaire précis.
 // - Vérifie que l'appelant est participant de l'inventaire (RLS).
 // - Même entreprise uniquement.
-// - Si la personne a déjà un compte : ajout direct comme membre (rôle choisi).
-//   Sinon : invitation en attente, consommée à son inscription (handle_new_user).
+// - La personne doit déjà avoir un compte : un inventaire ne se peuple pas
+//   d'inconnus.
 // - Envoie un e-mail (Resend, si configuré) + une notification push (Expo).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -73,46 +73,37 @@ Deno.serve(async (req) => {
   const { data: existing } = await admin.rpc('find_user_by_email', { p_email: email })
   const found = Array.isArray(existing) && existing.length > 0 ? existing[0] : null
 
-  let outcome: 'added' | 'invited'
-
-  if (found) {
-    if (found.company_id !== session.company_id) {
-      return json(
-        { success: false, error: "Cette personne appartient à une autre entreprise." },
-        409,
-      )
-    }
-    // Ajout direct comme membre de l'inventaire.
-    const { error: mErr } = await admin
-      .from('session_members')
-      .upsert({ session_id: sessionId, user_id: found.user_id, role }, { onConflict: 'session_id,user_id' })
-    if (mErr) return json({ success: false, error: mErr.message }, 500)
-    outcome = 'added'
-  } else {
-    // Invitation en attente (consommée à l'inscription).
-    const { error: iErr } = await admin
-      .from('session_invitations')
-      .upsert(
-        {
-          session_id: sessionId,
-          company_id: session.company_id,
-          email,
-          full_name: fullName,
-          role,
-          created_by: inviter.id,
-        },
-        { onConflict: 'session_id,email' },
-      )
-    if (iErr) return json({ success: false, error: iErr.message }, 500)
-    outcome = 'invited'
+  // Un inventaire ne se peuple que de profils existants. L'écran d'invitation
+  // ne propose déjà que l'annuaire du magasin, mais la règle doit tenir ici
+  // aussi : sans cette garde, un appel direct à l'API créait une invitation en
+  // attente pour un inconnu, qui devenait un profil à sa première inscription.
+  if (!found) {
+    return json(
+      {
+        success: false,
+        error:
+          "Cette personne n'a pas encore de compte Quantinvo. Ajoutez-la d'abord à votre équipe, puis invitez-la à l'inventaire une fois son compte créé.",
+      },
+      404,
+    )
   }
+  if (found.company_id !== session.company_id) {
+    return json({ success: false, error: "Cette personne appartient à une autre entreprise." }, 409)
+  }
+
+  // Ajout direct comme membre de l'inventaire.
+  const { error: mErr } = await admin
+    .from('session_members')
+    .upsert({ session_id: sessionId, user_id: found.user_id, role }, { onConflict: 'session_id,user_id' })
+  if (mErr) return json({ success: false, error: mErr.message }, 500)
+  const outcome: 'added' = 'added'
 
   const sessionLabel = session.name || session.inventory_number
   const roleLabel = role === 'supervisor' ? 'co-superviseur' : 'compteur'
 
   // ── Notification push (si la personne a déjà l'app) ────────────────────────
   let pushSent = false
-  if (found && email !== inviterEmail) {
+  if (email !== inviterEmail) {
     try {
       const { data: tokens } = await admin
         .from('push_tokens')
@@ -146,9 +137,7 @@ Deno.serve(async (req) => {
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
   if (resendKey) {
     const greeting = fullName ? `Bonjour ${fullName},` : 'Bonjour,'
-    const action = found
-      ? `Vous avez été ajouté à l'inventaire « ${sessionLabel} » (${session.store_name}) en tant que ${roleLabel}. Ouvrez l'application Quantinvo pour y accéder.`
-      : `Vous avez été invité à participer à l'inventaire « ${sessionLabel} » (${session.store_name}) en tant que ${roleLabel}. Créez votre compte dans l'application Quantinvo avec cette adresse e-mail (${email}) pour y accéder.`
+    const action = `Vous avez été ajouté à l'inventaire « ${sessionLabel} » (${session.store_name}) en tant que ${roleLabel}. Ouvrez l'application Quantinvo pour y accéder.`
     const html = `
       <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111">
         <h2 style="font-weight:800;letter-spacing:-.4px">Quantinvo</h2>

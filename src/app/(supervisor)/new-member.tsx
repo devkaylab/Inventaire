@@ -9,11 +9,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMyCompany, inviteTeammate } from '@/lib/queries'
+import { getMyAssignedStores, getMyCompany, inviteTeammate } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
@@ -23,23 +24,44 @@ export default function NewMemberScreen() {
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
   const { data: company } = useQuery({ queryKey: ['my-company'], queryFn: getMyCompany })
-  const [fullName, setFullName] = useState('')
+  const { data: stores } = useQuery({ queryKey: ['my-stores'], queryFn: getMyAssignedStores })
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
+  // Vide = tous les magasins. Le choix n'apparaît qu'à partir de deux magasins.
+  const [selectedStores, setSelectedStores] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
+  const multiStore = (stores?.length ?? 0) > 1
+
+  function toggleStore(id: string) {
+    setSelectedStores(prev => (prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]))
+  }
+
   async function handleSubmit() {
-    const name = fullName.trim()
+    const first = firstName.trim()
+    const last = lastName.trim()
     const mail = email.trim().toLowerCase()
-    if (!name) return Alert.alert('Erreur', 'Saisissez le nom du membre.')
+    if (!first) return Alert.alert('Erreur', 'Saisissez le prénom du compteur.')
+    if (!last) return Alert.alert('Erreur', 'Saisissez le nom du compteur.')
     if (!mail || !mail.includes('@')) return Alert.alert('Erreur', "Saisissez une adresse e-mail valide.")
     if (!company) return Alert.alert('Erreur', 'Entreprise introuvable.')
+    if (multiStore && selectedStores.length === 0) {
+      return Alert.alert('Erreur', 'Choisissez au moins un magasin auquel rattacher ce compteur.')
+    }
 
+    const name = `${first} ${last}`
     setLoading(true)
     try {
-      const res = await inviteTeammate({ fullName: name, email: mail })
+      const res = await inviteTeammate({
+        firstName: first,
+        lastName: last,
+        email: mail,
+        storeIds: multiStore ? selectedStores : [],
+      })
       await queryClient.invalidateQueries({ queryKey: ['team-invitations'] })
       Alert.alert(
-        'Membre ajouté',
+        'Compteur ajouté',
         res.emailSent
           ? `Un e-mail a été envoyé à ${mail} pour finaliser son compte.`
           : `${name} a été ajouté. Demandez-lui d'ouvrir l'app, de choisir « Je rejoins mon équipe » et de s'inscrire avec l'adresse ${mail}.\n\n(L'e-mail automatique n'a pas encore pu être envoyé — configuration Resend/domaine à finaliser.)`,
@@ -63,16 +85,29 @@ export default function NewMemberScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
-            Pré-inscrivez un membre de votre équipe. Il pourra ensuite créer son compte lui-même avec
-            cette adresse e-mail et choisir son propre mot de passe.
+            Pré-inscrivez un compteur de votre équipe. Il recevra un e-mail, vérifiera son prénom et
+            son nom, et choisira son propre mot de passe. Son rattachement au magasin est automatique
+            — le code magasin ne lui est jamais communiqué.
           </Text>
 
-          <Text style={styles.label}>Nom complet</Text>
+          <Text style={styles.label}>Prénom</Text>
           <TextInput
             style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Ex: Marie Dupont"
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="Ex: Marie"
+            placeholderTextColor={theme.textMuted}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>Nom</Text>
+          <TextInput
+            style={styles.input}
+            value={lastName}
+            onChangeText={setLastName}
+            placeholder="Ex: Dupont"
             placeholderTextColor={theme.textMuted}
             autoCapitalize="words"
             autoCorrect={false}
@@ -93,8 +128,32 @@ export default function NewMemberScreen() {
             onSubmitEditing={handleSubmit}
           />
           <Text style={styles.hint}>
-            {"L'employé recevra un e-mail à cette adresse et devra l'utiliser exactement pour s'inscrire."}
+            {"Le compteur recevra un e-mail à cette adresse et devra l'utiliser exactement pour s'inscrire."}
           </Text>
+
+          {multiStore && (
+            <>
+              <Text style={styles.label}>Magasins accessibles</Text>
+              <Text style={styles.hint}>
+                Vous supervisez plusieurs magasins : choisissez celui ou ceux où ce compteur pourra
+                intervenir.
+              </Text>
+              <View style={styles.storeList}>
+                {(stores ?? []).map(s => {
+                  const on = selectedStores.includes(s.id)
+                  return (
+                    <Pressable
+                      key={s.id}
+                      style={[styles.storeChip, on && styles.storeChipOn]}
+                      onPress={() => toggleStore(s.id)}
+                    >
+                      <Text style={[styles.storeChipText, on && styles.storeChipTextOn]}>{s.name}</Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+            </>
+          )}
 
           <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
             {loading ? (
@@ -121,6 +180,14 @@ function makeStyles(t: Theme) {
       backgroundColor: t.surface, color: t.textPrimary, fontFamily: Font.regular,
     },
     hint: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular, marginTop: 4, lineHeight: 17 },
+    storeList: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.sm },
+    storeChip: {
+      borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.sm,
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, backgroundColor: t.surface,
+    },
+    storeChipOn: { borderColor: t.accent, backgroundColor: t.accent },
+    storeChipText: { fontSize: 14, fontFamily: Font.semibold, color: t.textSecondary },
+    storeChipTextOn: { color: t.onAccent },
     button: {
       backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg,
       alignItems: 'center', marginTop: Spacing.lg, ...t.shadowButton,

@@ -41,8 +41,8 @@ export default function Home() {
               du scan à l&apos;écart de comptage, jusqu&apos;au rapport.
             </p>
             <div className="cta">
-              <AuthLink className="btn btn-primary" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
-              <a href="#fonctionnalites" className="btn btn-ghost">Découvrir</a>
+              <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
+              <AuthLink className="btn btn-ghost" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
             </div>
           </div>
         </section>
@@ -69,8 +69,12 @@ export default function Home() {
           <div className="container">
             <div className="cta-band">
               <h2>Prêt à fiabiliser vos inventaires ?</h2>
-              <p>Connectez-vous à votre espace pour gérer vos entreprises, magasins et inventaires.</p>
-              <AuthLink className="btn btn-primary" loggedOutLabel="Accéder à mon espace" loggedInLabel="Accéder à mon espace" />
+              <p>
+                Déposez votre demande : nous revenons vers vous avec un devis, puis vos codes
+                entreprise et magasins. Superviseur déjà attendu par votre entreprise ?
+                {' '}<Link href="/superviseur">Demandez votre accès</Link>.
+              </p>
+              <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
             </div>
           </div>
         </section>
