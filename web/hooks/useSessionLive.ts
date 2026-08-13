@@ -79,8 +79,14 @@ export function useSessionLive(
     let disposed = false
     let debounce: ReturnType<typeof setTimeout> | null = null
 
+    // Canal **privé** : Realtime évalue alors les policies de
+    // `realtime.messages`, qui n'autorisent le topic qu'aux participants de
+    // l'inventaire (migration 20260813000009). En public — l'état précédent —
+    // aucune autorisation n'était consultée : connaître l'UUID suffisait à
+    // écouter les noms et l'activité des compteurs, y compris depuis une autre
+    // entreprise, et y compris après avoir été retiré de l'inventaire.
     const channel: RealtimeChannel = supabase.channel(presenceTopic(sessionId), {
-      config: { presence: { key: me.id } },
+      config: { private: true, presence: { key: me.id } },
     })
 
     const readPresence = () => {

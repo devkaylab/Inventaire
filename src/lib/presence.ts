@@ -98,8 +98,13 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
   useEffect(() => {
     if (!sessionId || !userId) return
 
+    // Canal **privé** : Realtime évalue alors les policies de
+    // `realtime.messages`, qui n'autorisent le topic qu'aux participants de
+    // l'inventaire (migration 20260813000009). En public — l'état précédent —
+    // aucune autorisation n'était consultée : connaître l'UUID suffisait à
+    // écouter les noms et l'activité des compteurs.
     const channel = supabase.channel(presenceTopic(sessionId), {
-      config: { presence: { key: userId } },
+      config: { private: true, presence: { key: userId } },
     })
     channelRef.current = channel
 

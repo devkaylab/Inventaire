@@ -83,8 +83,10 @@ export default function WelcomePage() {
       setError('Renseignez votre prénom et votre nom.')
       return
     }
-    if (password.length < 8) {
-      setError('Le mot de passe doit comporter au moins 8 caractères.')
+    // 12 caractères : le seuil que retient la CNIL pour un mot de passe seul,
+    // sans second facteur ni mécanisme de blocage après échecs répétés.
+    if (password.length < 12) {
+      setError('Le mot de passe doit comporter au moins 12 caractères.')
       return
     }
     if (password !== confirm) {
@@ -200,7 +202,7 @@ export default function WelcomePage() {
             <label htmlFor="password">Mot de passe</label>
             <input
               id="password" type="password" autoComplete="new-password"
-              value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8 caractères minimum"
+              value={password} onChange={(e) => setPassword(e.target.value)} placeholder="12 caractères minimum"
             />
           </div>
           <div className="field">
