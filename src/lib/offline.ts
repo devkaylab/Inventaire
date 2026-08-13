@@ -10,8 +10,8 @@ import type { Tables, TablesInsert } from '@/types/database.types'
  * scanner, ouvrir et clôturer des balises, puis tout renvoyer au retour.
  *
  * Aucune dépendance native nouvelle : `AsyncStorage` est déjà embarqué (session
- * Supabase, thème, tutoriel). S'en tenir là évite un `pod install`, qui écrase à
- * chaque fois le correctif du chemin contenant un espace.
+ * Supabase, thème). S'en tenir là évite un `pod install`, qui écrase à chaque
+ * fois le correctif du chemin contenant un espace.
  *
  * ── Pourquoi le stockage est groupé par balise ──────────────────────────────
  *
