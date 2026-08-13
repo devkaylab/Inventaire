@@ -19,14 +19,19 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ success: false, error: 'Non authentifié' }, 401)
 
-  let payload: { email?: string; fullName?: string }
+  let payload: { email?: string; fullName?: string; firstName?: string; lastName?: string; storeIds?: string[] }
   try {
     payload = await req.json()
   } catch {
     return json({ success: false, error: 'Requête invalide' }, 400)
   }
   const email = payload.email?.trim().toLowerCase()
-  const fullName = (payload.fullName ?? '').trim()
+  const firstName = (payload.firstName ?? '').trim()
+  const lastName = (payload.lastName ?? '').trim()
+  // `fullName` reste accepté pour les versions de l'app antérieures au passage
+  // à prénom / nom séparés.
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (payload.fullName ?? '').trim()
+  const storeIds = Array.isArray(payload.storeIds) ? payload.storeIds.filter((s) => typeof s === 'string') : []
   if (!email || !email.includes('@')) return json({ success: false, error: 'Adresse e-mail invalide.' }, 400)
 
   const url = Deno.env.get('SUPABASE_URL')!
@@ -60,11 +65,35 @@ Deno.serve(async (req) => {
     return json({ success: false, error: 'Cette adresse est déjà utilisée dans une autre entreprise.' })
   }
 
-  // Pré-inscription (idempotent).
+  // Les magasins doivent appartenir au superviseur : sans ce filtre, un appel
+  // direct à l'API rattacherait un compteur à n'importe quel magasin.
+  let allowedStoreIds: string[] = []
+  if (storeIds.length > 0) {
+    const { data: mine } = await admin
+      .from('store_supervisors')
+      .select('store_id')
+      .eq('user_id', inviter.id)
+    const mineSet = new Set((mine ?? []).map((s: { store_id: string }) => s.store_id))
+    allowedStoreIds = storeIds.filter((id) => mineSet.has(id))
+    if (allowedStoreIds.length === 0) {
+      return json({ success: false, error: "Aucun des magasins choisis ne vous est affecté." }, 403)
+    }
+  }
+
+  // Pré-inscription (idempotent). `store_ids` vide = tous les magasins du
+  // superviseur, résolu à l'inscription par `handle_new_user`.
   const { error: iErr } = await admin
     .from('team_invitations')
     .upsert(
-      { company_id: prof.company_id, email, full_name: fullName, created_by: inviter.id },
+      {
+        company_id: prof.company_id,
+        email,
+        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
+        store_ids: allowedStoreIds,
+        created_by: inviter.id,
+      },
       { onConflict: 'email' },
     )
   if (iErr) return json({ success: false, error: iErr.message }, 500)

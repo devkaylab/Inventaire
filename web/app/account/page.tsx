@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
-import { getMySessions, STATUS_LABELS, type Session } from '@/lib/inventory'
+import { getMySessions, getMyStores, STATUS_LABELS, type Session, type Store } from '@/lib/inventory'
+import {
+  getMyCompany, getTeamInvitations, getTeamMembers,
+  type Company, type TeamInvitation, type TeamMember,
+} from '@/lib/account'
+import { AddCounter } from '@/components/dashboard/AddCounter'
 
 type ProfileInfo = { full_name: string | null; role: string | null; is_admin: boolean | null }
 
@@ -15,6 +20,20 @@ export default function AccountPage() {
   const [email, setEmail] = useState<string>('')
   const [profile, setProfile] = useState<ProfileInfo | null>(null)
   const [mySessions, setMySessions] = useState<Session[]>([])
+  const [company, setCompany] = useState<Company | null>(null)
+  const [stores, setStores] = useState<Store[]>([])
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [invitations, setInvitations] = useState<TeamInvitation[]>([])
+  const [copied, setCopied] = useState<string | null>(null)
+
+  // Rechargement de l'équipe après l'ajout d'un compteur.
+  async function reloadTeam() {
+    try {
+      const [m, i] = await Promise.all([getTeamMembers(), getTeamInvitations()])
+      setMembers(m)
+      setInvitations(i)
+    } catch { /* RLS ou migration : on garde l'affichage courant */ }
+  }
 
   useEffect(() => {
     let active = true
@@ -32,7 +51,18 @@ export default function AccountPage() {
         .maybeSingle()
       const prof = data as ProfileInfo | null
       if (prof?.role === 'supervisor' && !prof.is_admin) {
-        try { if (active) setMySessions(await getMySessions(session.user.id)) } catch { /* migration en attente */ }
+        // Chaque bloc est indépendant : une migration en retard sur l'un ne
+        // doit pas vider toute la page.
+        const [s, c, st, m, i] = await Promise.all([
+          getMySessions(session.user.id).catch(() => [] as Session[]),
+          getMyCompany().catch(() => null),
+          getMyStores().catch(() => [] as Store[]),
+          getTeamMembers().catch(() => [] as TeamMember[]),
+          getTeamInvitations().catch(() => [] as TeamInvitation[]),
+        ])
+        if (active) {
+          setMySessions(s); setCompany(c); setStores(st); setMembers(m); setInvitations(i)
+        }
       }
       if (active) {
         setProfile(prof)
@@ -41,6 +71,14 @@ export default function AccountPage() {
     })()
     return () => { active = false }
   }, [router])
+
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(code)
+      setTimeout(() => setCopied(null), 2000)
+    } catch { /* sélection manuelle */ }
+  }
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -78,6 +116,44 @@ export default function AccountPage() {
         </div>
       ) : isSupervisor ? (
         <>
+          <div className="panel">
+            <h3>Entreprise</h3>
+            <div className="acc-kv"><span>Entreprise</span><strong>{company?.name ?? '—'}</strong></div>
+            <div className="acc-kv"><span>Balises générées</span><strong>{company?.balise_count ?? 0}</strong></div>
+            <p className="muted small" style={{ marginTop: 10 }}>
+              La génération et l&apos;impression des balises se font depuis l&apos;application mobile.
+            </p>
+          </div>
+
+          <div className="panel">
+            <h3>Mes magasins</h3>
+            {stores.length === 0 ? (
+              <p style={{ marginTop: 8 }}>
+                Vous n&apos;êtes affecté à aucun magasin. Contactez l&apos;administrateur Quantinvo.
+              </p>
+            ) : (
+              <div className="acc-inv-list" style={{ marginTop: 12 }}>
+                {stores.map(s => (
+                  <div className="acc-inv-row" key={s.id}>
+                    <div>
+                      <div className="acc-inv-name">{s.name}</div>
+                      <div className="cred-value" style={{ marginTop: 2 }}>{s.join_code ?? '—'}</div>
+                    </div>
+                    {s.join_code && (
+                      <button type="button" className="link-btn" onClick={() => copyCode(s.join_code!)}>
+                        {copied === s.join_code ? 'Copié' : 'Copier'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="muted small" style={{ marginTop: 10 }}>
+              Le code magasin sert aux demandes d&apos;accès superviseur sur le site. Il est
+              confidentiel : ne le communiquez jamais aux compteurs.
+            </p>
+          </div>
+
           {active.length > 0 && (
             <div className="panel">
               <h3>Inventaires en cours</h3>
@@ -121,6 +197,54 @@ export default function AccountPage() {
                   </Link>
                 ))}
               </div>
+            )}
+          </div>
+
+          <div className="panel">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <h3>Équipe ({members.length})</h3>
+              <AddCounter onAdded={reloadTeam} />
+            </div>
+
+            {members.length === 0 ? (
+              <p style={{ marginTop: 8 }}>Aucun membre pour l&apos;instant.</p>
+            ) : (
+              <div className="people-list" style={{ marginTop: 12 }}>
+                {members.map(m => (
+                  <div className="person-row" key={m.id}>
+                    <div className="person-avatar" aria-hidden="true">
+                      {(m.full_name?.trim()[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div className="person-main">
+                      <div className="person-name">
+                        {m.full_name || 'Sans nom'}
+                        <span className="role-tag">{m.role === 'supervisor' ? 'Superviseur' : 'Compteur'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {invitations.length > 0 && (
+              <>
+                <div className="dash-section-label" style={{ margin: '18px 0 8px' }}>
+                  En attente de création de compte ({invitations.length})
+                </div>
+                <div className="people-list">
+                  {invitations.map(i => (
+                    <div className="person-row" key={i.id}>
+                      <div className="person-avatar" aria-hidden="true">
+                        {(i.full_name?.trim()[0] ?? i.email[0]).toUpperCase()}
+                      </div>
+                      <div className="person-main">
+                        <div className="person-name">{i.full_name || i.email}</div>
+                        <div className="muted small">{i.email}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </>

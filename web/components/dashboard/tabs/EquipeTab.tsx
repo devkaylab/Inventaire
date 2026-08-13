@@ -10,6 +10,7 @@ import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { AddCounter } from '@/components/dashboard/AddCounter'
 
 export function EquipeTab({ session, members, invitations, isCreator, onChanged, onDeleted }: {
   session: Session
@@ -161,13 +162,17 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
         </div>
       )}
 
-      <div className="dash-section-label" style={{ margin: '28px 0 10px' }}>
-        Membres ({members.length})
+      <div
+        className="dash-section-label"
+        style={{ margin: '28px 0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+      >
+        <span>Membres ({members.length})</span>
+        {!closed && <AddCounter onAdded={onChanged} />}
       </div>
       {members.length === 0 ? (
         <EmptyState
           title="Aucun membre"
-          hint="Communiquez le numéro d’inventaire et son code d’accès, ou invitez une personne depuis l’application mobile."
+          hint="Ajoutez un compteur à votre équipe, ou communiquez le numéro d’inventaire et son code d’accès."
         />
       ) : (
         <div className="people-list">

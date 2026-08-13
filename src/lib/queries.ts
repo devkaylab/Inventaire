@@ -171,8 +171,16 @@ export async function getStores(): Promise<Store[]> {
   return (data ?? []) as unknown as Store[]
 }
 
-/** Rejoindre un magasin via son code (fourni par l'administrateur) : rattache le
- *  superviseur à l'entreprise du magasin et l'y affecte. */
+/**
+ * ⚠️ Hors service côté client depuis la migration 20260813000005.
+ *
+ * L'auto-affectation par saisie du code magasin allait à l'envers du parcours
+ * retenu : le code accompagne désormais la *demande* d'accès déposée sur le
+ * site, et c'est la validation Quantinvo qui affecte au magasin. `join_store`
+ * a donc été révoquée au rôle `authenticated` — l'appeler remonte un 42501.
+ *
+ * Conservée pour le back-office (`service_role`).
+ */
 export async function joinStore(code: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)('join_store', { p_code: code.trim() })
@@ -258,9 +266,27 @@ export async function createInvitation(input: { fullName: string; email: string;
 
 /** Ajoute un membre (compteur) à l'équipe : pré-inscrit l'e-mail et lui envoie
  *  un e-mail pour finaliser son compte. Passe par l'edge function invite-teammate. */
-export async function inviteTeammate(input: { fullName: string; email: string }) {
+/**
+ * Pré-inscrit un compteur dans l'équipe.
+ *
+ * `storeIds` vide signifie « tous les magasins du superviseur » : c'est le
+ * comportement historique, conservé pour un superviseur mono-magasin, où le
+ * choix n'aurait aucun sens. Le serveur revérifie que les magasins choisis
+ * sont bien les siens.
+ */
+export async function inviteTeammate(input: {
+  firstName: string
+  lastName: string
+  email: string
+  storeIds?: string[]
+}) {
   const { data, error } = await supabase.functions.invoke('invite-teammate', {
-    body: { fullName: input.fullName.trim(), email: input.email.trim().toLowerCase() },
+    body: {
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      email: input.email.trim().toLowerCase(),
+      storeIds: input.storeIds ?? [],
+    },
   })
   if (error) throwSupabase('inviteTeammate', error)
   const res = data as { success: boolean; emailSent?: boolean; emailError?: string; error?: string }

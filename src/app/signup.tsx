@@ -18,16 +18,21 @@ import { useAuth } from '@/lib/auth'
 import { checkInvitation } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
-import { PRIVACY_URL } from '@/constants/links'
+import { PRIVACY_URL, SUPERVISOR_REQUEST_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
-type Kind = 'supervisor' | 'employee'
-
+/**
+ * Inscription d'un compteur.
+ *
+ * Cet écran ne sert plus qu'aux compteurs pré-inscrits par leur superviseur.
+ * Les superviseurs, eux, passent par une demande sur le site : Quantinvo la
+ * valide, puis un e-mail les invite à créer leur mot de passe. Il n'y a donc
+ * plus de choix de rôle ici — il était de toute façon décidé côté serveur.
+ */
 export default function SignupScreen() {
   const { signUp } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
-  const [kind, setKind] = useState<Kind>('supervisor')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -45,18 +50,16 @@ export default function SignupScreen() {
     const mail = email.trim().toLowerCase()
     setLoading(true)
     try {
-      // Un employé ne peut s'inscrire que si son superviseur l'a pré-inscrit.
-      if (kind === 'employee') {
-        const invited = await checkInvitation(mail)
-        if (!invited) {
-          Alert.alert(
-            'Invitation requise',
-            "Aucune invitation trouvée pour cet e-mail. Demandez à votre superviseur de vous ajouter à son équipe, puis réessayez.",
-          )
-          return
-        }
+      // Un compteur ne peut s'inscrire que si son superviseur l'a pré-inscrit.
+      const invited = await checkInvitation(mail)
+      if (!invited) {
+        Alert.alert(
+          'Invitation requise',
+          "Aucune invitation trouvée pour cet e-mail. Demandez à votre superviseur de vous ajouter à son équipe, puis réessayez.",
+        )
+        return
       }
-      const { error } = await signUp(mail, password, fullName.trim(), kind)
+      const { error } = await signUp(mail, password, fullName.trim(), 'employee')
       if (error) {
         Alert.alert('Inscription échouée', error)
         return
@@ -76,30 +79,14 @@ export default function SignupScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>Créer un compte</Text>
+            <Text style={styles.title}>Rejoindre mon équipe</Text>
             <Text style={styles.subtitle}>
-              {kind === 'supervisor'
-                ? 'Créez votre compte, puis rejoignez votre entreprise avec le code fourni par votre administrateur.'
-                : 'Votre superviseur doit vous avoir ajouté à son équipe.'}
+              Votre superviseur doit vous avoir ajouté à son équipe. Utilisez exactement
+              l&apos;adresse e-mail à laquelle vous avez reçu son invitation.
             </Text>
           </View>
 
           <View style={styles.form}>
-            <View style={styles.kindRow}>
-              {([
-                ['supervisor', 'Je rejoins mon entreprise'],
-                ['employee', 'Je rejoins mon équipe'],
-              ] as const).map(([k, label]) => (
-                <Pressable
-                  key={k}
-                  style={[styles.kindButton, kind === k && styles.kindButtonActive]}
-                  onPress={() => setKind(k)}
-                >
-                  <Text style={[styles.kindText, kind === k && styles.kindTextActive]}>{label}</Text>
-                </Pressable>
-              ))}
-            </View>
-
             <Text style={styles.label}>Nom complet</Text>
             <TextInput
               style={styles.input}
@@ -150,6 +137,14 @@ export default function SignupScreen() {
             <Pressable style={styles.link} onPress={() => router.back()}>
               <Text style={styles.linkText}>Déjà un compte ? Se connecter</Text>
             </Pressable>
+
+            <Text style={styles.consent}>
+              Vous êtes superviseur ?{' '}
+              <Text style={styles.consentLink} onPress={() => Linking.openURL(SUPERVISOR_REQUEST_URL)}>
+                Demandez votre accès
+              </Text>
+              {' '}avec le code magasin remis par votre entreprise.
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

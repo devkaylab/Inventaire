@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
+import { CompanyRequests } from '@/components/admin/CompanyRequests'
+import { SupervisorRequests } from '@/components/admin/SupervisorRequests'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = { id: string; company_id: string; name: string; join_code: string }
@@ -120,6 +122,16 @@ export default function AdminPage() {
 
       <span className="pill">Administrateur</span>
       <h1 className="admin-title">Tableau de bord</h1>
+
+      <section className="admin-section">
+        <h2>Demandes d&apos;inscription — entreprises</h2>
+        <CompanyRequests onCompanyCreated={load} />
+      </section>
+
+      <section className="admin-section">
+        <h2>Demandes d&apos;accès — superviseurs</h2>
+        <SupervisorRequests />
+      </section>
 
       <section className="admin-section">
         <div className="admin-section-head">

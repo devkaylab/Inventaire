@@ -103,6 +103,12 @@ export default function LoginPage() {
         </form>
 
         <div className="center-link">
+          <Link href="/superviseur">Demander un accès superviseur</Link>
+        </div>
+        <div className="center-link" style={{ marginTop: 8 }}>
+          <Link href="/inscription">Inscrire mon entreprise</Link>
+        </div>
+        <div className="center-link" style={{ marginTop: 8 }}>
           <Link href="/">← Retour à l&apos;accueil</Link>
         </div>
       </div>
