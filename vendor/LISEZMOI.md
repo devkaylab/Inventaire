@@ -33,8 +33,13 @@ empreinte `integrity` — l'archive est donc scellée, toute altération fait
 
 ## Mettre à jour la version
 
-1. Ouvrir <https://cdn.sheetjs.com/> et télécharger `xlsx-<version>.tgz`
-   (**≥ 0.20.2**).
+Version en place : **0.20.3**.
+
+1. Ouvrir <https://cdn.sheetjs.com/> et télécharger l'archive (**≥ 0.20.2**).
+   Le CDN la sert sous `xlsx-latest.tgz` comme sous son numéro de version : les
+   deux conviennent, le script lit la version dans le manifeste interne et
+   renomme l'alias en `xlsx-<version>.tgz` — une dépendance figée sur « latest »
+   cesserait d'être vraie à la publication suivante.
 2. Déposer l'archive ici, **sans la renommer ni l'ouvrir**, et supprimer
    l'ancienne : le script refuse d'en trouver deux.
 3. Lancer, depuis la racine du dépôt :
@@ -54,8 +59,10 @@ empreinte `integrity` — l'archive est donc scellée, toute altération fait
 
 - **Ne jamais réinstaller `xlsx` depuis npm** (`npm install xlsx`) : cela
   ramènerait 0.18.5 et ses deux failles, en écrasant silencieusement le
-  `file:`. Après tout ajout de dépendance, vérifier que les deux
-  `package.json` pointent toujours sur `vendor/`.
+  `file:`. Deux tests montent la garde — `tests/xlsx.test.ts` de chaque côté
+  vérifient que la dépendance déclarée commence par `file:` et que la version
+  installée corrige bien les deux failles. Ils échoueront avant la mise en
+  ligne, pas après.
 - Ne pas décompresser l'archive dans le dépôt : npm installe une copie propre
   depuis le `.tgz`, et un dossier versionné serait lié par symlink — ce que le
   bundler de l'application mobile ne suit pas.

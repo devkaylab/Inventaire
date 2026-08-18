@@ -16,11 +16,15 @@
  *   2. La déposer telle quelle dans vendor/ — sans la renommer ni l'ouvrir
  *   3. node scripts/installer-sheetjs.mjs
  *
+ * Le CDN sert aussi l'alias `xlsx-latest.tgz` : le script le renomme d'après la
+ * version qu'il trouve à l'intérieur, pour que la dépendance reste figée sur un
+ * numéro et non sur un nom qui changera de sens à la prochaine publication.
+ *
  * Idempotent : le relancer ne fait que revérifier.
  */
 import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -53,7 +57,8 @@ function auMoins(version, minimale) {
 // ─── 1. Trouver l'archive ────────────────────────────────────────────────────
 if (!existsSync(VENDOR)) echec(`Dossier introuvable : ${VENDOR}`)
 
-const archives = readdirSync(VENDOR).filter(f => /^xlsx-\d+\.\d+\.\d+\.tgz$/.test(f))
+const NOM_ARCHIVE = /^xlsx-(\d+\.\d+\.\d+|latest)\.tgz$/
+const archives = readdirSync(VENDOR).filter(f => NOM_ARCHIVE.test(f))
 
 if (archives.length === 0) {
   echec(
@@ -69,31 +74,37 @@ if (archives.length > 1) {
   echec(`Plusieurs archives dans vendor/ : ${archives.join(', ')}.\n  N'en garder qu'une.`)
 }
 
-const archive = archives[0]
-const chemin = join(VENDOR, archive)
-const version = archive.match(/^xlsx-(\d+\.\d+\.\d+)\.tgz$/)[1]
+let archive = archives[0]
+let chemin = join(VENDOR, archive)
+const nomme = archive.match(NOM_ARCHIVE)[1]        // « latest » ou un numéro
+const alias = nomme === 'latest'
 
 console.log(`\nArchive   : vendor/${archive}`)
 console.log(`SHA-256   : ${createHash('sha256').update(readFileSync(chemin)).digest('hex')}`)
 
-if (!auMoins(version, MINIMALE)) {
-  echec(
-    `Version ${version} trop ancienne — il faut au moins ${MINIMALE.join('.')}.\n` +
-    '  En deçà, les deux failles de la partie lecture sont toujours présentes.',
-  )
-}
-
-// ─── 2. Vérifier le contenu de l'archive ─────────────────────────────────────
-// Le nom du fichier ne prouve rien : on lit le manifeste à l'intérieur.
+// ─── 2. Le manifeste interne fait foi ────────────────────────────────────────
+// Le nom du fichier ne prouve rien, et vaut « latest » sur l'archive que sert
+// le CDN : c'est le manifeste qui donne la version.
+let version = alias ? null : nomme
 try {
   const manifeste = JSON.parse(
     execSync(`tar -xzOf "${chemin}" package/package.json`, { encoding: 'utf8' }),
   )
   if (manifeste.name !== 'xlsx') echec(`L'archive contient « ${manifeste.name} », pas « xlsx ».`)
-  if (manifeste.version !== version) {
+  if (!alias && manifeste.version !== version) {
     echec(`L'archive dit ${manifeste.version} alors que son nom annonce ${version}.`)
   }
-  console.log(`Contenu   : ${manifeste.name}@${manifeste.version} ✓`)
+  version = manifeste.version
+  console.log(`Contenu   : ${manifeste.name}@${version} ✓`)
+
+  // Figer le nom sur la version : « latest » cessera d'être vrai un jour.
+  if (alias) {
+    const renomme = `xlsx-${version}.tgz`
+    renameSync(chemin, join(VENDOR, renomme))
+    archive = renomme
+    chemin = join(VENDOR, renomme)
+    console.log(`Renommée  : vendor/${renomme}`)
+  }
 } catch (e) {
   // `tar` absent du poste : on laisse passer, l'installation vérifiera ensuite
   // ce qui a réellement atterri dans node_modules. Tout autre échec veut dire
@@ -107,10 +118,25 @@ try {
       '  https://cdn.sheetjs.com/ puis relancer.',
     )
   }
+  if (alias) {
+    echec(
+      `Impossible de lire la version de ${archive} sans « tar ».\n` +
+      '  Renommer l\'archive en xlsx-<version>.tgz — le numéro figure sur la page\n' +
+      '  de téléchargement — puis relancer.',
+    )
+  }
   console.log("Contenu   : non vérifié (tar indisponible) — contrôle reporté après l'installation")
 }
 
-// ─── 3. Brancher les deux package.json ───────────────────────────────────────
+// ─── 3. La version doit corriger les deux failles ────────────────────────────
+if (!auMoins(version, MINIMALE)) {
+  echec(
+    `Version ${version} trop ancienne — il faut au moins ${MINIMALE.join('.')}.\n` +
+    '  En deçà, les deux failles de la partie lecture sont toujours présentes.',
+  )
+}
+
+// ─── 4. Brancher les deux package.json ───────────────────────────────────────
 for (const { nom, dossier, prefixe } of PAQUETS) {
   const fichier = join(dossier, 'package.json')
   const avant = readFileSync(fichier, 'utf8')
@@ -127,7 +153,7 @@ for (const { nom, dossier, prefixe } of PAQUETS) {
   }
 }
 
-// ─── 4. Installer, puis vérifier ce qui a réellement atterri ─────────────────
+// ─── 5. Installer, puis vérifier ce qui a réellement atterri ─────────────────
 for (const { nom, dossier } of PAQUETS) {
   console.log(`\n─── npm install (${nom}) ───`)
   execSync('npm install', { cwd: dossier, stdio: 'inherit' })

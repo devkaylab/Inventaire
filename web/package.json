@@ -18,7 +18,7 @@
     "react-dom": "^18.3.1",
     "@supabase/supabase-js": "^2.45.4",
     "papaparse": "^5.4.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "file:../vendor/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
