@@ -107,6 +107,14 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **C2 — `xlsx`** : SheetJS ayant quitté npm, l'archive officielle 0.20.3 est
+  versionnée dans `vendor/` et installée en `file:` des deux côtés. Les deux
+  failles de la partie lecture (CVE-2023-30533, CVE-2024-22363) sont corrigées,
+  et `xlsx` a disparu des deux `npm audit`. **Ne jamais faire
+  `npm install xlsx`** : cela ramènerait 0.18.5 en écrasant le `file:` sans
+  rien signaler — deux tests montent la garde (`tests/xlsx.test.ts` de chaque
+  côté). Procédure de mise à jour : `vendor/LISEZMOI.md`, outillage :
+  `scripts/installer-sheetjs.mjs`.
 
 ## À faire dans la console Supabase (hors SQL)
 
@@ -118,28 +126,24 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 
 ## Reste à traiter, par ordre de priorité
 
-1. **C2** — `xlsx@0.18.5` analyse des fichiers utilisateur (pollution de
-   prototype CVE-2023-30533, ReDoS CVE-2024-22363). SheetJS a quitté npm : les
-   versions npm sont figées et vulnérables. 11 vulnérabilités côté site, 35
-   côté app.
-2. **E4** — aucune mention légale (obligation LCEN, indépendante du RGPD).
-3. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
+1. **E4** — aucune mention légale (obligation LCEN, indépendante du RGPD).
+2. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
    Expo, les transferts hors UE, les durées, et **le droit de réclamation
    auprès de la CNIL**, pourtant obligatoire) et jamais présentée au point de
    collecte (`/inscription`, `/superviseur`, `/bienvenue`).
-4. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
+3. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
    `supervisor_requests` (`ON DELETE SET NULL`), `company_requests`,
    `team_invitations` et `session_invitations` ; aucune durée de conservation
    nulle part, et `pg_cron` n'est pas installé.
-5. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
+4. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
    « depuis 4 min », premier plan) n'est déclaré nulle part, et la politique
    affirme l'inverse. Information des salariés + consultation du CSE côté
    client + AIPD probable.
-6. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
-7. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+5. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
+6. **M3** — `submit_company_request` / `submit_supervisor_request` sans
    limitation de débit ; la seconde distingue « code magasin introuvable » d'un
    succès, ce qui en fait un oracle d'énumération des codes.
-8. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
+7. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
    registre des traitements ni de DPA formalisés, droits d'accès et de
    portabilité non outillés, pas de procédure de violation (72 h).
 
