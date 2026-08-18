@@ -107,6 +107,14 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **E4, page en place** — `/mentions-legales` sur le site, alimentée par
+  `web/lib/legal.ts`. **L'activité éditrice n'est pas encore immatriculée** :
+  tant qu'une mention requise manque, `mentionsCompletes()` est faux, la page
+  passe en `noindex` et le pied de page ne l'annonce pas — une identification à
+  trous ne vaut pas mieux que pas de page. Remplir les valeurs dans ce seul
+  module suffit à tout activer. L'adresse et le téléphone de Vercel sont à
+  recopier depuis leurs informations légales : `vercel.com` est bloqué depuis
+  l'environnement de l'agent, et ces coordonnées ne se citent pas de mémoire.
 - **C2 — `xlsx`** : SheetJS ayant quitté npm, l'archive officielle 0.20.3 est
   versionnée dans `vendor/` et installée en `file:` des deux côtés. Les deux
   failles de la partie lecture (CVE-2023-30533, CVE-2024-22363) sont corrigées,
@@ -126,24 +134,23 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 
 ## Reste à traiter, par ordre de priorité
 
-1. **E4** — aucune mention légale (obligation LCEN, indépendante du RGPD).
-2. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
+1. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
    Expo, les transferts hors UE, les durées, et **le droit de réclamation
    auprès de la CNIL**, pourtant obligatoire) et jamais présentée au point de
    collecte (`/inscription`, `/superviseur`, `/bienvenue`).
-3. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
+2. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
    `supervisor_requests` (`ON DELETE SET NULL`), `company_requests`,
    `team_invitations` et `session_invitations` ; aucune durée de conservation
    nulle part, et `pg_cron` n'est pas installé.
-4. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
+3. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
    « depuis 4 min », premier plan) n'est déclaré nulle part, et la politique
    affirme l'inverse. Information des salariés + consultation du CSE côté
    client + AIPD probable.
-5. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
-6. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+4. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
+5. **M3** — `submit_company_request` / `submit_supervisor_request` sans
    limitation de débit ; la seconde distingue « code magasin introuvable » d'un
    succès, ce qui en fait un oracle d'énumération des codes.
-7. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
+6. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
    registre des traitements ni de DPA formalisés, droits d'accès et de
    portabilité non outillés, pas de procédure de violation (72 h).
 
