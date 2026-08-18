@@ -148,21 +148,44 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 
 ## Reste à traiter, par ordre de priorité
 
-1. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
-   `supervisor_requests` (`ON DELETE SET NULL`), `company_requests`,
-   `team_invitations` et `session_invitations` ; aucune durée de conservation
-   nulle part, et `pg_cron` n'est pas installé.
-2. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
-   « depuis 4 min », premier plan) n'est déclaré nulle part, et la politique
-   affirme l'inverse. Information des salariés + consultation du CSE côté
-   client + AIPD probable.
-3. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
-4. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+1. **E1 / E2 — migration écrite, PAS APPLIQUÉE.**
+   `20260818000001_retention_and_deletion.sql` attend l'accord pour partir en
+   base live. Elle corrige un défaut plus grave que le constat d'origine :
+   `counts.counted_by`, `article_audit.resolved_by` et trois autres clés
+   étrangères pointent `profiles` en **NO ACTION**, donc **supprimer un compte
+   ayant déjà compté échoue** — ce n'est pas « l'identité reste », c'est
+   « l'effacement ne se fait pas ». Vérifié en base : 5 profils sur 8 sont dans
+   ce cas, aucun déclencheur ne nettoie en amont. La migration détache les
+   comptages, anonymise l'identité résiduelle par un déclencheur BEFORE DELETE
+   sur `auth.users` (seul endroit où l'adresse est encore lisible), et pose
+   `purge_expired_data()`. **`pg_cron` est disponible mais non installé** : la
+   planification est laissée hors migration, la commande figure en fin de
+   fichier.
+2. **E3 — analysé et documenté, arbitrages ouverts.**
+   `docs/conformite/suivi-activite-analyse.md` (ce que le produit observe
+   vraiment, et pourquoi l'AIPD est probablement requise : surveillance
+   systématique + personnes vulnérables) et `information-salaries.md` (note type
+   à diffuser par l'entreprise cliente). Restent : la diffusion effective, le
+   CSE, l'AIPD — et **une décision produit** : retirer le signal « application
+   au premier plan », le plus intrusif et le seul qui ne serve à rien pour
+   l'inventaire.
+3. **M5 — documents écrits, à faire relire.**
+   `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
+   relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
+   conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
+4. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
+5. **M3** — `submit_company_request` / `submit_supervisor_request` sans
    limitation de débit ; la seconde distingue « code magasin introuvable » d'un
    succès, ce qui en fait un oracle d'énumération des codes.
-5. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
-   registre des traitements ni de DPA formalisés, droits d'accès et de
-   portabilité non outillés, pas de procédure de violation (72 h).
+6. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
+   de portabilité non outillés, pas de procédure de violation (72 h).
+
+## Dérive entre le dépôt et la base
+
+`account_deletion_requests` et `request_account_deletion` existent en base live
+mais **n'ont aucune migration** dans le dépôt : créés directement via l'outil
+MCP. Repartir d'un `supabase db pull` avant toute refonte de ces objets, sous
+peine d'écrire une migration qui contredit l'existant.
 
 ## Points conformes à préserver
 
