@@ -16,6 +16,12 @@
 --      les détruire — le résultat d'inventaire appartient à l'entreprise ;
 --   2. effacer l'identité résiduelle dans les demandes et invitations ;
 --   3. poser des durées de conservation et la fonction qui les applique.
+--
+-- Appliquée en base live le 18 août 2026 via l'outil MCP, après un essai en
+-- transaction annulée qui a supprimé pour de bon un compte porteur de 32
+-- comptages : suppression réussie, comptages conservés et détachés, le tout
+-- annulé. Contrôlé après application : plus aucune clé étrangère bloquante,
+-- déclencheur en place, 215 comptages et 8 profils intacts.
 -- ─────────────────────────────────────────────────────────────────────────
 
 -- ── 1. La suppression détache, elle ne bloque plus ─────────────────────────
