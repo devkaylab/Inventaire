@@ -7,6 +7,7 @@ import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { CompanyRequests } from '@/components/admin/CompanyRequests'
 import { SupervisorRequests } from '@/components/admin/SupervisorRequests'
+import { AuditLog } from '@/components/admin/AuditLog'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = { id: string; company_id: string; name: string; join_code: string }
@@ -176,6 +177,14 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="admin-section">
+        <h2>Journal des actions</h2>
+        <p className="muted small" style={{ marginTop: -8, marginBottom: 14 }}>
+          Chaque action d&apos;administration est enregistrée automatiquement et conservée un an.
+        </p>
+        <AuditLog />
       </section>
     </div>
   )

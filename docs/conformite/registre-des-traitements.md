@@ -111,6 +111,19 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 | **Support** | Table `account_deletion_requests` |
 | **Conservation** | 1 an, puis suppression ; identité effacée dès l'exécution de la demande |
 
+## T8 — Journal des actions d'administration
+
+| | |
+|---|---|
+| **Finalité** | Tracer qui a fait quoi et quand (imputabilité, article 32 ; réponse au constat M4) |
+| **Base légale** | Intérêt légitime (sécurité et preuve) |
+| **Personnes** | Administrateur (auteur) ; personnes visées par une action (superviseur validé, compte supprimé…) |
+| **Données** | Auteur, action, cible et son libellé au moment de l'action, horodatage |
+| **Support** | Table `admin_audit_log`, alimentée par les fonctions `admin_*` dans la même transaction que l'action |
+| **Destinataires** | Administrateur Quantinvo (lecture seule ; aucune écriture ni suppression côté client) |
+| **Conservation** | 1 an (CNIL, délibération 2021-122 ; ANSSI PA-022), purge par `purge_expired_data` |
+| **Sous-traitants** | Supabase (hébergement) |
+
 ---
 
 ## Sous-traitants et transferts
@@ -134,7 +147,6 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 ## Points ouverts
 
 - Contrat de sous-traitance (article 28) à établir avec chaque entreprise cliente — **M5** ;
-- journal des actions d'administration — **M4** ;
 - procédure de violation de données (72 h) — **M6** ;
 - information des salariés et consultation du CSE pour T5 — **E3** ;
 - planification automatique de `purge_expired_data` (pg_cron non installé) — **E1/E2**.

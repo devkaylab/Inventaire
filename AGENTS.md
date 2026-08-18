@@ -118,6 +118,17 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   formulaire retombe sur la fonction publique de la base si l'edge est
   indisponible : la demande passe, sans l'e-mail. C'est la deuxième fonction du
   projet sans vérification de jeton, avec le futur webhook Stripe.
+- **M4 — journal des actions d'administration** : table `admin_audit_log`
+  (numéro croissant, RLS lecture admin seulement, aucune écriture côté client),
+  alimentée par les onze fonctions `admin_*` d'écriture via `log_admin_action`.
+  **La trace s'écrit dans la même transaction que l'action** : une action qui
+  ne peut pas se journaliser échoue — ne jamais entourer `log_admin_action`
+  d'un bloc qui avale les erreurs, et journaliser toute nouvelle fonction
+  `admin_*` (test de garde : `web/tests/journal-admin.test.ts`). Les libellés
+  (auteur, cible) sont figés au moment de l'action pour survivre aux
+  suppressions. Lecture par `admin_list_audit_log`, affichage dans /admin
+  (section « Journal des actions »). Conservation 1 an, purgée par
+  `purge_expired_data()`. Migration `20260818000003`. Registre : T8.
 - **M3, partie sécurité** — `submit_supervisor_request` répond désormais
   **exactement la même chose** pour un code magasin inconnu, un compte déjà
   existant, une demande en cours ou une création réussie
@@ -203,8 +214,8 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
    `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
    relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
    conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
-3. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
-   de portabilité non outillés, pas de procédure de violation (72 h).
+3. **M6** — droits d'accès et de portabilité non outillés (pas d'export des
+   données d'une personne), pas de procédure de violation (72 h).
 
 ## Dérive entre le dépôt et la base
 

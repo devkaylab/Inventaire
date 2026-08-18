@@ -865,3 +865,23 @@ a { color: inherit; text-decoration: none; }
 }
 .mention-collecte a { color: var(--text-2); text-decoration: underline; }
 .mention-collecte a:hover { color: var(--text); }
+
+/* ── Journal des actions d'administration (M4) ── */
+.journal-list { display: flex; flex-direction: column; }
+.journal-row {
+  display: flex; align-items: baseline; gap: 14px;
+  padding: 11px 2px; border-bottom: 1px solid var(--hairline);
+}
+.journal-row:last-child { border-bottom: none; }
+.journal-when {
+  color: var(--text-3); font-size: 13px; white-space: nowrap;
+  font-variant-numeric: tabular-nums; min-width: 112px;
+}
+.journal-body { flex: 1; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.journal-action { font-size: 14px; font-weight: 600; }
+.journal-target { font-size: 14px; color: var(--text-2); }
+.journal-actor { white-space: nowrap; }
+@media (max-width: 640px) {
+  .journal-row { flex-direction: column; gap: 4px; }
+  .journal-when { min-width: 0; }
+}
