@@ -107,6 +107,17 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **M3, renvoi par e-mail** — fonction edge `submit-supervisor-request` :
+  elle appelle `submit_supervisor_request_detailed` en `service_role` et écrit à
+  l'adresse saisie « vous avez déjà un compte » ou « votre demande est déjà en
+  cours ». **« Code inconnu » et « demande créée » partagent le même message**,
+  sans nom de magasin : deux textes distincts rouvriraient l'oracle, puisque
+  qui essaie des codes utilise sa propre adresse. Déployée en
+  `verify_jwt: false` — un formulaire public n'a pas de session — avec la
+  limitation de débit comme contrepartie, appliquée avant tout travail. Le
+  formulaire retombe sur la fonction publique de la base si l'edge est
+  indisponible : la demande passe, sans l'e-mail. C'est la deuxième fonction du
+  projet sans vérification de jeton, avec le futur webhook Stripe.
 - **M3, partie sécurité** — `submit_supervisor_request` répond désormais
   **exactement la même chose** pour un code magasin inconnu, un compte déjà
   existant, une demande en cours ou une création réussie
@@ -192,15 +203,7 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
    `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
    relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
    conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
-3. **M3, reste le renvoi par e-mail.** La partie sécurité est faite (voir
-   « Traité »). Ce qui manque est la compensation d'ergonomie : une fonction
-   edge appelant `submit_supervisor_request_detailed` en `service_role` pour
-   expliquer par courriel « vous avez déjà un compte » ou « votre demande est
-   déjà en cours » — un canal qui n'atteint que le propriétaire de l'adresse.
-   Ni `pg_net` ni `http` ne sont installés : la base ne peut pas envoyer
-   elle-même. **Le code magasin restera muet quoi qu'il arrive** : qui essaie
-   des codes utilise sa propre adresse et recevrait donc la réponse.
-4. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
+3. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
    de portabilité non outillés, pas de procédure de violation (72 h).
 
 ## Dérive entre le dépôt et la base
