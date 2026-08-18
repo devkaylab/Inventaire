@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
+import { MentionCollecte } from '@/components/MentionCollecte'
 
 /**
  * Finalisation de compte, à l'arrivée du lien reçu par e-mail.
@@ -216,6 +217,7 @@ export default function WelcomePage() {
           <button className="btn btn-primary btn-block" disabled={busy}>
             {busy ? 'Activation…' : 'Activer mon compte'}
           </button>
+          <MentionCollecte finalite="créer votre compte et vous permettre de vous connecter" />
         </form>
       </div>
     </div>

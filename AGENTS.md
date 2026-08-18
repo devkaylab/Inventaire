@@ -107,6 +107,20 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **E5 / E6** — `docs/privacy.html` réécrite : les quatre sous-traitants
+  (Supabase, Vercel, Resend, **Expo** — les jetons de notification partent vers
+  `exp.host`), les transferts hors UE, les finalités et bases légales, les
+  durées, le **droit de réclamation auprès de la CNIL**, et la répartition
+  responsable / sous-traitant vis-à-vis des entreprises clientes. La mention
+  d'information s'affiche **sous chaque formulaire** de collecte
+  (`MentionCollecte`), pas seulement en pied de page — volontairement sans case
+  à cocher, la base légale n'étant pas le consentement. Des tests gardent le
+  tout (`web/tests/confidentialite.test.ts`) : ajouter un prestataire sans le
+  déclarer, ou un formulaire sans la mention, fait échouer la suite.
+  La politique déclare aussi le suivi nominatif de l'activité (constat E3) —
+  restent l'information des salariés, la consultation du CSE et l'AIPD. Elle
+  dit franchement que les demandes et invitations ne sont pas encore purgées
+  (E1 / E2) : à mettre à jour quand les durées seront posées.
 - **E4, page en place** — `/mentions-legales` sur le site, alimentée par
   `web/lib/legal.ts`. **L'activité éditrice n'est pas encore immatriculée** :
   tant qu'une mention requise manque, `mentionsCompletes()` est faux, la page
@@ -134,23 +148,19 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 
 ## Reste à traiter, par ordre de priorité
 
-1. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
-   Expo, les transferts hors UE, les durées, et **le droit de réclamation
-   auprès de la CNIL**, pourtant obligatoire) et jamais présentée au point de
-   collecte (`/inscription`, `/superviseur`, `/bienvenue`).
-2. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
+1. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
    `supervisor_requests` (`ON DELETE SET NULL`), `company_requests`,
    `team_invitations` et `session_invitations` ; aucune durée de conservation
    nulle part, et `pg_cron` n'est pas installé.
-3. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
+2. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
    « depuis 4 min », premier plan) n'est déclaré nulle part, et la politique
    affirme l'inverse. Information des salariés + consultation du CSE côté
    client + AIPD probable.
-4. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
-5. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+3. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
+4. **M3** — `submit_company_request` / `submit_supervisor_request` sans
    limitation de débit ; la seconde distingue « code magasin introuvable » d'un
    succès, ce qui en fait un oracle d'énumération des codes.
-6. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
+5. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
    registre des traitements ni de DPA formalisés, droits d'accès et de
    portabilité non outillés, pas de procédure de violation (72 h).
 

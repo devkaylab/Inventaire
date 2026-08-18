@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
+import { MentionCollecte } from '@/components/MentionCollecte'
 
 /**
  * Demande d'inscription d'une entreprise — première étape du parcours.
@@ -120,6 +121,7 @@ export default function CompanyRequestPage() {
           <button className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Envoi…' : 'Envoyer ma demande'}
           </button>
+          <MentionCollecte finalite="traiter votre demande d’inscription, vous adresser un devis et vous recontacter à son sujet" />
         </form>
 
         <div className="center-link">
