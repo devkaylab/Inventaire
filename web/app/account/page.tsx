@@ -85,6 +85,28 @@ export default function AccountPage() {
     router.replace('/login')
   }
 
+  const [exporting, setExporting] = useState(false)
+  // Droit d'accès et de portabilité (articles 15 et 20 du RGPD) : la base
+  // assemble l'export, le navigateur le remet en fichier — rien ne transite
+  // par un serveur tiers.
+  async function downloadMyData() {
+    if (exporting) return
+    setExporting(true)
+    const { data, error } = await supabase.rpc('export_my_data')
+    setExporting(false)
+    if (error || !data) {
+      alert('Export impossible pour le moment. Réessayez dans un instant.')
+      return
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'quantinvo-mes-donnees.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
@@ -256,6 +278,18 @@ export default function AccountPage() {
           </p>
         </div>
       )}
+
+      <div className="panel">
+        <h3>Mes données</h3>
+        <p className="muted small">
+          Téléchargez une copie des données associées à votre compte — profil, inventaires,
+          invitations, demandes — dans un format lisible et réutilisable
+          (articles 15 et 20 du RGPD).
+        </p>
+        <button className="btn btn-ghost" onClick={downloadMyData} disabled={exporting} style={{ marginTop: 12 }}>
+          {exporting ? 'Préparation…' : 'Télécharger mes données'}
+        </button>
+      </div>
     </div>
   )
 }

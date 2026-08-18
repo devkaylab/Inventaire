@@ -129,6 +129,18 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   suppressions. Lecture par `admin_list_audit_log`, affichage dans /admin
   (section « Journal des actions »). Conservation 1 an, purgée par
   `purge_expired_data()`. Migration `20260818000003`. Registre : T8.
+- **M6 — droits outillés, procédure écrite.** `export_my_data()` (migration
+  `20260818000004`) rend à la personne authentifiée un JSON complet de ce qui
+  est rattaché à son compte — bouton « Télécharger mes données » sur la page
+  Mon compte, annoncé dans la politique. **Aucun code d'accès n'y figure**
+  (entreprise, magasin, sécurité) et le détail ligne à ligne des inventaires
+  n'y est que résumé : l'employeur en est responsable de traitement, l'export
+  le dit et renvoie vers lui. Procédure de violation :
+  `docs/conformite/procedure-violation-donnees.md` (72 h, et surtout la
+  distinction responsable / sous-traitant — pour les données d'inventaire,
+  Devkaylab prévient l'entreprise cliente sans délai, c'est elle qui notifie) ;
+  registre des violations à tenir dans `registre-des-violations.md`.
+  Tests de garde : `web/tests/mes-donnees.test.ts`.
 - **M3, partie sécurité** — `submit_supervisor_request` répond désormais
   **exactement la même chose** pour un code magasin inconnu, un compte déjà
   existant, une demande en cours ou une création réussie
@@ -214,8 +226,6 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
    `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
    relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
    conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
-3. **M6** — droits d'accès et de portabilité non outillés (pas d'export des
-   données d'une personne), pas de procédure de violation (72 h).
 
 ## Dérive entre le dépôt et la base
 

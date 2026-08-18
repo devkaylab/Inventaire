@@ -142,11 +142,12 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 - canaux temps réel privés, autorisation vérifiée à l'abonnement ;
 - fonctions d'administration réservées au rôle `service_role` ;
 - chiffrement des échanges (HTTPS), mots de passe stockés sous forme d'empreinte ;
-- aucun secret dans le dépôt.
+- aucun secret dans le dépôt ;
+- journal des actions d'administration (`admin_audit_log`, 1 an) ;
+- procédure de violation documentée (`procedure-violation-donnees.md`), registre des violations tenu.
 
 ## Points ouverts
 
 - Contrat de sous-traitance (article 28) à établir avec chaque entreprise cliente — **M5** ;
-- procédure de violation de données (72 h) — **M6** ;
 - information des salariés et consultation du CSE pour T5 — **E3** ;
 - planification automatique de `purge_expired_data` (pg_cron non installé) — **E1/E2**.
