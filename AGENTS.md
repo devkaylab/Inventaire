@@ -119,9 +119,15 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 ## Reste à traiter, par ordre de priorité
 
 1. **C2** — `xlsx@0.18.5` analyse des fichiers utilisateur (pollution de
-   prototype CVE-2023-30533, ReDoS CVE-2024-22363). SheetJS a quitté npm : les
-   versions npm sont figées et vulnérables. 11 vulnérabilités côté site, 35
-   côté app.
+   prototype CVE-2023-30533, ReDoS CVE-2024-22363). SheetJS a quitté npm : le
+   paquet y est figé et `npm audit` répond « No fix available ».
+   **Voie retenue : l'archive officielle versionnée dans `vendor/`**, installée
+   en `file:` — ni republication tierce, ni CDN au moment du build. Procédure et
+   justification : `vendor/LISEZMOI.md`, outillage :
+   `scripts/installer-sheetjs.mjs`. Il reste à déposer l'archive : le CDN
+   SheetJS est bloqué depuis l'environnement d'exécution de l'agent.
+   **Ne jamais faire `npm install xlsx`** — cela ramène 0.18.5 et écrase le
+   `file:` sans rien signaler.
 2. **E4** — aucune mention légale (obligation LCEN, indépendante du RGPD).
 3. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
    Expo, les transferts hors UE, les durées, et **le droit de réclamation
