@@ -107,6 +107,16 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **M1** — six en-têtes de sécurité posés dans `web/next.config.mjs` (et non
+  dans `vercel.json`, pour qu'une règle trop stricte se voie dès le
+  développement). La CSP ferme `frame-ancestors`, `object-src`, `base-uri` et
+  `form-action`, et n'ouvre `connect-src` que vers Supabase, WebSocket compris.
+  **`script-src` garde `unsafe-inline`** : le routeur d'application de Next
+  injecte ses scripts d'hydratation en ligne, et `layout.tsx` pose celui du
+  thème. S'en passer demande un nonce par requête, donc un middleware, au prix
+  du rendu statique — arbitrage ouvert. Vérifié au navigateur : aucune
+  violation sur les cinq pages publiques, et une destination externe est bien
+  refusée nommément par la CSP. Tests : `web/tests/entetes-securite.test.ts`.
 - **E1 / E2, partie effacement** — la suppression de compte **échouait** :
   cinq clés étrangères pointaient `profiles` en NO ACTION, donc supprimer un
   compte ayant compté levait une violation de contrainte. Migration
@@ -169,11 +179,10 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
    `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
    relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
    conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
-3. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
-4. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+3. **M3** — `submit_company_request` / `submit_supervisor_request` sans
    limitation de débit ; la seconde distingue « code magasin introuvable » d'un
    succès, ce qui en fait un oracle d'énumération des codes.
-5. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
+4. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
    de portabilité non outillés, pas de procédure de violation (72 h).
 
 ## Dérive entre le dépôt et la base
