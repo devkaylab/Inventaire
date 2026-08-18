@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
+import { mentionsCompletes } from '@/lib/legal'
+import { PRIVACY_URL } from '@/lib/links'
 import { AuthLink } from '@/components/AuthLink'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
@@ -86,7 +88,10 @@ export default function Home() {
           <div className="links">
             <a href="#fonctionnalites">Fonctionnalités</a>
             <Link href="/login">Se connecter</Link>
-            <a href="https://devkaylab.github.io/Inventaire/privacy.html" target="_blank" rel="noreferrer">Confidentialité</a>
+            <a href={PRIVACY_URL} target="_blank" rel="noreferrer">Confidentialité</a>
+            {/* Une identification à trous ne vaut pas mieux que pas de page : on
+                ne l'annonce qu'une fois les mentions requises renseignées. */}
+            {mentionsCompletes() && <Link href="/mentions-legales">Mentions légales</Link>}
           </div>
           <span className="muted">© 2026 Devkaylab · Quantinvo</span>
         </div>

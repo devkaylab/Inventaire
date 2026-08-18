@@ -107,6 +107,37 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **E1 / E2, partie effacement** — la suppression de compte **échouait** :
+  cinq clés étrangères pointaient `profiles` en NO ACTION, donc supprimer un
+  compte ayant compté levait une violation de contrainte. Migration
+  `20260818000001` appliquée en live : les comptages se détachent au lieu de
+  bloquer, un déclencheur BEFORE DELETE sur `auth.users` efface l'identité
+  résiduelle (demandes anonymisées, invitations supprimées), et
+  `purge_expired_data()` porte les durées — 3 mois, 1 an, 3 ans — en un seul
+  point. **`pg_cron` reste non installé** : la purge n'est pas planifiée, elle
+  s'appelle à la main en `service_role`. Son corps n'a jamais été exécuté.
+- **E5 / E6** — `docs/privacy.html` réécrite : les quatre sous-traitants
+  (Supabase, Vercel, Resend, **Expo** — les jetons de notification partent vers
+  `exp.host`), les transferts hors UE, les finalités et bases légales, les
+  durées, le **droit de réclamation auprès de la CNIL**, et la répartition
+  responsable / sous-traitant vis-à-vis des entreprises clientes. La mention
+  d'information s'affiche **sous chaque formulaire** de collecte
+  (`MentionCollecte`), pas seulement en pied de page — volontairement sans case
+  à cocher, la base légale n'étant pas le consentement. Des tests gardent le
+  tout (`web/tests/confidentialite.test.ts`) : ajouter un prestataire sans le
+  déclarer, ou un formulaire sans la mention, fait échouer la suite.
+  La politique déclare aussi le suivi nominatif de l'activité (constat E3) —
+  restent l'information des salariés, la consultation du CSE et l'AIPD. Elle
+  dit franchement que les demandes et invitations ne sont pas encore purgées
+  (E1 / E2) : à mettre à jour quand les durées seront posées.
+- **E4, page en place** — `/mentions-legales` sur le site, alimentée par
+  `web/lib/legal.ts`. **L'activité éditrice n'est pas encore immatriculée** :
+  tant qu'une mention requise manque, `mentionsCompletes()` est faux, la page
+  passe en `noindex` et le pied de page ne l'annonce pas — une identification à
+  trous ne vaut pas mieux que pas de page. Remplir les valeurs dans ce seul
+  module suffit à tout activer. L'adresse et le téléphone de Vercel sont à
+  recopier depuis leurs informations légales : `vercel.com` est bloqué depuis
+  l'environnement de l'agent, et ces coordonnées ne se citent pas de mémoire.
 - **C2 — `xlsx`** : SheetJS ayant quitté npm, l'archive officielle 0.20.3 est
   versionnée dans `vendor/` et installée en `file:` des deux côtés. Les deux
   failles de la partie lecture (CVE-2023-30533, CVE-2024-22363) sont corrigées,
@@ -126,26 +157,31 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 
 ## Reste à traiter, par ordre de priorité
 
-1. **E4** — aucune mention légale (obligation LCEN, indépendante du RGPD).
-2. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
-   Expo, les transferts hors UE, les durées, et **le droit de réclamation
-   auprès de la CNIL**, pourtant obligatoire) et jamais présentée au point de
-   collecte (`/inscription`, `/superviseur`, `/bienvenue`).
-3. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
-   `supervisor_requests` (`ON DELETE SET NULL`), `company_requests`,
-   `team_invitations` et `session_invitations` ; aucune durée de conservation
-   nulle part, et `pg_cron` n'est pas installé.
-4. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
-   « depuis 4 min », premier plan) n'est déclaré nulle part, et la politique
-   affirme l'inverse. Information des salariés + consultation du CSE côté
-   client + AIPD probable.
-5. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
-6. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+1. **E3 — analysé et documenté, arbitrages ouverts.**
+   `docs/conformite/suivi-activite-analyse.md` (ce que le produit observe
+   vraiment, et pourquoi l'AIPD est probablement requise : surveillance
+   systématique + personnes vulnérables) et `information-salaries.md` (note type
+   à diffuser par l'entreprise cliente). Restent : la diffusion effective, le
+   CSE, l'AIPD — et **une décision produit** : retirer le signal « application
+   au premier plan », le plus intrusif et le seul qui ne serve à rien pour
+   l'inventaire.
+2. **M5 — documents écrits, à faire relire.**
+   `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
+   relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
+   conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
+3. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
+4. **M3** — `submit_company_request` / `submit_supervisor_request` sans
    limitation de débit ; la seconde distingue « code magasin introuvable » d'un
    succès, ce qui en fait un oracle d'énumération des codes.
-7. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
-   registre des traitements ni de DPA formalisés, droits d'accès et de
-   portabilité non outillés, pas de procédure de violation (72 h).
+5. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
+   de portabilité non outillés, pas de procédure de violation (72 h).
+
+## Dérive entre le dépôt et la base
+
+`account_deletion_requests` et `request_account_deletion` existent en base live
+mais **n'ont aucune migration** dans le dépôt : créés directement via l'outil
+MCP. Repartir d'un `supabase db pull` avant toute refonte de ces objets, sous
+peine d'écrire une migration qui contredit l'existant.
 
 ## Points conformes à préserver
 

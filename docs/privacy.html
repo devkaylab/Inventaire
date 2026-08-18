@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Politique de confidentialité — Quantinvo</title>
   <style>
     :root { color-scheme: light; }
@@ -21,77 +21,202 @@
     a { color: #4636B0; }
     .note { background: #f3f1fb; border-radius: 8px; padding: 12px 16px; font-size: 0.95rem; }
     code { background: #f0f0f4; padding: 1px 5px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.95rem; }
+    th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid #e6e6ee; }
+    th { color: #4636B0; font-weight: 600; }
+    .wrap { overflow-x: auto; }
   </style>
 </head>
 <body>
   <h1>Politique de confidentialité</h1>
-  <p class="meta">Application <strong>Quantinvo</strong> — Dernière mise à jour : 31 juillet 2026</p>
+  <p class="meta">Application et site Quantinvo — Dernière mise à jour : 18 août 2026</p>
 
   <p>
-    Cette politique explique quelles données personnelles l'application <strong>Quantinvo</strong>
-    (« l'application ») collecte, pourquoi, et quels sont vos droits. L'application est éditée par
-    <strong>Devkaylab</strong> (« nous »). Pour toute question, contactez-nous à
-    <strong>devkaylab@gmail.com</strong>.
+    Cette politique explique quelles données personnelles Quantinvo (« le service ») traite,
+    pourquoi, avec qui elles sont partagées, combien de temps elles sont conservées et quels
+    sont vos droits. Le service est édité par Devkaylab. Pour toute question :
+    <a href="mailto:devkaylab@gmail.com">devkaylab@gmail.com</a>.
   </p>
 
-  <h2>1. Données que nous collectons</h2>
-  <p>Nous collectons uniquement les données nécessaires au fonctionnement de l'application :</p>
+  <h2>1. Qui décide de l'usage des données</h2>
+  <p>
+    Deux situations se distinguent, et elles n'ouvrent pas les mêmes recours :
+  </p>
   <ul>
-    <li><strong>Compte utilisateur</strong> : votre adresse e-mail et votre nom, fournis lors de la création du compte.</li>
-    <li><strong>Données professionnelles</strong> : le nom de votre entreprise, les noms de magasins et le code d'entreprise, pour organiser vos inventaires.</li>
-    <li><strong>Données d'inventaire</strong> : les articles, catalogues, comptages et audits que vous saisissez ou importez dans l'application.</li>
-    <li><strong>Données techniques minimales</strong> : informations nécessaires à la connexion sécurisée et au bon fonctionnement du service.</li>
+    <li>
+      <strong>Devkaylab est responsable de traitement</strong> pour la relation client :
+      demandes d'inscription, devis, comptes, facturation, assistance.
+    </li>
+    <li>
+      <strong>L'entreprise cliente est responsable de traitement</strong> pour les données
+      produites pendant ses inventaires — qui compte, quoi, où et quand. Devkaylab n'agit
+      alors qu'en sous-traitant, sur ses instructions. Cette répartition doit être formalisée
+      par un contrat de sous-traitance (article 28 du RGPD) entre Devkaylab et chaque
+      entreprise cliente.
+    </li>
   </ul>
-  <p>Nous ne collectons pas de données de localisation, ne suivons pas votre activité à des fins publicitaires, et n'affichons aucune publicité.</p>
-
-  <h2>2. Caméra</h2>
   <p>
-    L'application utilise la caméra de votre appareil uniquement pour <strong>scanner des codes-barres et des QR codes</strong>.
-    Les images de la caméra sont traitées <strong>localement sur votre appareil</strong> pour lire les codes ; elles ne sont
-    ni enregistrées, ni transmises à nos serveurs.
+    Concrètement : si vous êtes compteur ou superviseur, les questions sur l'usage fait de
+    votre activité relèvent d'abord de votre employeur.
   </p>
 
-  <h2>3. Utilisation des données</h2>
+  <h2>2. Données traitées</h2>
+  <div class="wrap">
+  <table>
+    <tr><th>Catégorie</th><th>Détail</th></tr>
+    <tr>
+      <td>Compte</td>
+      <td>Adresse électronique, prénom et nom, rôle (compteur, superviseur, administrateur),
+          entreprise et magasins de rattachement.</td>
+    </tr>
+    <tr>
+      <td>Demandes et invitations</td>
+      <td>Demande d'inscription d'entreprise (nom de l'entreprise, contact, téléphone, nombre
+          de magasins, message), demande d'accès superviseur, invitations d'équipe et
+          d'inventaire (adresses électroniques).</td>
+    </tr>
+    <tr>
+      <td>Données d'inventaire</td>
+      <td>Articles, catalogues et stocks théoriques importés, comptages, audits et arbitrages
+          d'écarts. Chaque comptage est <strong>nominatif</strong> : il indique qui a compté quoi,
+          dans quelle zone et à quel moment.</td>
+    </tr>
+    <tr>
+      <td>Activité en direct</td>
+      <td>Pendant un inventaire, l'application signale toutes les 30 secondes l'écran ouvert,
+          le mode (comptage ou audit), la zone en cours et le fait que l'application soit ou non
+          au premier plan. Ces éléments sont visibles <strong>par le superviseur de l'inventaire</strong>,
+          en direct, avec votre nom. Ils ne sont pas conservés après la fin de l'inventaire.</td>
+    </tr>
+    <tr>
+      <td>Notifications</td>
+      <td>Si vous les autorisez, un jeton de notification propre à votre appareil, pour vous
+          prévenir lorsque vous êtes convié à un inventaire.</td>
+    </tr>
+    <tr>
+      <td>Données techniques</td>
+      <td>Éléments strictement nécessaires à la connexion sécurisée et au fonctionnement du
+          service (jeton de session, journaux techniques de nos prestataires).</td>
+    </tr>
+  </table>
+  </div>
+  <p class="note">
+    Aucune donnée de localisation. Aucun traceur publicitaire, aucune mesure d'audience, aucun
+    profilage. Les polices de caractères du site sont hébergées avec lui : votre navigateur
+    n'appelle aucun service tiers au chargement. En conséquence, aucun bandeau cookies n'est
+    requis — les seuls cookies utilisés sont ceux, strictement nécessaires, qui vous maintiennent
+    connecté.
+  </p>
+
+  <h2>3. Caméra</h2>
+  <p>
+    L'application utilise la caméra uniquement pour lire des codes-barres et des QR codes.
+    Les images sont traitées <strong>sur votre appareil</strong> : elles ne sont ni enregistrées,
+    ni transmises.
+  </p>
+
+  <h2>4. Finalités et bases légales</h2>
+  <div class="wrap">
+  <table>
+    <tr><th>Finalité</th><th>Base légale</th></tr>
+    <tr><td>Traiter une demande d'inscription, établir un devis</td><td>Mesures précontractuelles</td></tr>
+    <tr><td>Fournir le service, gérer les comptes et les inventaires</td><td>Exécution du contrat</td></tr>
+    <tr><td>Sécuriser l'accès, prévenir les usages abusifs</td><td>Intérêt légitime</td></tr>
+    <tr><td>Envoyer les courriers de service (invitations, liens de connexion)</td><td>Exécution du contrat</td></tr>
+    <tr><td>Notifications sur l'appareil</td><td>Consentement (autorisation système, révocable à tout moment)</td></tr>
+    <tr><td>Répondre à une obligation légale ou à une réquisition</td><td>Obligation légale</td></tr>
+  </table>
+  </div>
+
+  <h2>5. Qui accède aux données</h2>
+  <p>
+    À l'intérieur du service, l'accès est cloisonné par entreprise : un superviseur voit les
+    inventaires de ses magasins, un compteur les inventaires auxquels il participe. Les données
+    ne sont ni vendues, ni louées, ni utilisées à des fins commerciales.
+  </p>
+  <p>Elles sont traitées par les prestataires suivants, pour notre compte :</p>
+  <div class="wrap">
+  <table>
+    <tr><th>Prestataire</th><th>Rôle</th><th>Localisation</th></tr>
+    <tr><td>Supabase</td><td>Base de données, authentification, temps réel</td><td>Union européenne (Irlande, <code>eu-west-1</code>) — société établie aux États-Unis</td></tr>
+    <tr><td>Vercel</td><td>Hébergement du site <code>quantinvo.vercel.app</code></td><td>États-Unis</td></tr>
+    <tr><td>Resend</td><td>Acheminement des courriers électroniques de service</td><td>États-Unis</td></tr>
+    <tr><td>Expo</td><td>Acheminement des notifications vers votre appareil</td><td>États-Unis</td></tr>
+    <tr><td>Apple, Google</td><td>Distribution de l'application mobile</td><td>États-Unis</td></tr>
+  </table>
+  </div>
+
+  <h2>6. Transferts hors de l'Union européenne</h2>
+  <p>
+    Les données des inventaires sont stockées en Irlande. En revanche, l'hébergement du site,
+    l'envoi des courriers électroniques et l'acheminement des notifications font intervenir des
+    prestataires établis aux États-Unis : ces traitements impliquent un transfert hors de
+    l'Union européenne. Ces prestataires publient des accords de sous-traitance intégrant les
+    clauses contractuelles types de la Commission européenne, sur lesquels ces transferts
+    s'appuient.
+  </p>
+
+  <h2>7. Durées de conservation</h2>
   <ul>
-    <li>Fournir et faire fonctionner le service d'inventaire.</li>
-    <li>Vous authentifier et sécuriser votre compte.</li>
-    <li>Vous permettre de collaborer avec les membres de votre équipe.</li>
-    <li>Assurer le support et la maintenance de l'application.</li>
+    <li><strong>Compte</strong> : conservé tant qu'il est actif. Sa suppression est possible à tout moment (section 9).</li>
+    <li><strong>Données d'inventaire</strong> : conservées tant que l'entreprise cliente utilise le service, celle-ci en décidant la durée.</li>
+    <li><strong>Activité en direct</strong> : jamais enregistrée — elle n'existe que le temps de l'inventaire.</li>
+    <li><strong>Jeton de notification</strong> : supprimé avec le compte, ou lorsque vous retirez l'autorisation.</li>
   </ul>
-  <p>Base légale (RGPD) : exécution du contrat de service et, le cas échéant, votre consentement.</p>
-
-  <h2>4. Hébergement et partage des données</h2>
   <p>
-    Vos données sont stockées et traitées via <strong>Supabase</strong>, notre prestataire d'hébergement et de base de données,
-    qui agit en tant que sous-traitant. Nous ne vendons pas vos données et ne les partageons pas à des fins commerciales.
-    Vos données peuvent être divulguées si la loi l'exige.
+    En toute transparence : les demandes d'inscription, les demandes d'accès superviseur et les
+    invitations ne font pas encore l'objet d'une purge automatique. La mise en place de durées
+    fixes pour ces éléments est en cours ; d'ici là, leur effacement peut être obtenu sur simple
+    demande à <a href="mailto:devkaylab@gmail.com">devkaylab@gmail.com</a>.
   </p>
 
-  <h2>5. Conservation</h2>
+  <h2>8. Vos droits</h2>
   <p>
-    Nous conservons vos données tant que votre compte est actif. Lorsque vous supprimez votre compte, ou sur votre demande,
-    vos données personnelles sont supprimées dans un délai raisonnable, sauf obligation légale de conservation.
+    Vous disposez des droits d'accès, de rectification, d'effacement, de limitation, de
+    portabilité et d'opposition. Pour les exercer, écrivez à
+    <a href="mailto:devkaylab@gmail.com">devkaylab@gmail.com</a> ; il vous sera répondu dans un
+    délai d'un mois. Si vos données ont été produites dans le cadre des inventaires de votre
+    employeur, la demande sera relayée à celui-ci, qui en décide.
+  </p>
+  <p>
+    Vous pouvez également <strong>introduire une réclamation auprès de la CNIL</strong>,
+    l'autorité de contrôle française : <a href="https://www.cnil.fr/fr/plaintes">www.cnil.fr/fr/plaintes</a>,
+    ou 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.
   </p>
 
-  <h2>6. Vos droits</h2>
-  <p>Conformément au RGPD, vous disposez des droits d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition. Pour les exercer, contactez-nous à <strong>devkaylab@gmail.com</strong>.</p>
-
-  <h2>7. Suppression de votre compte</h2>
+  <h2>9. Suppression de votre compte</h2>
   <p>
-    Vous pouvez demander la suppression de votre compte et des données associées à tout moment en nous écrivant à
-    <strong>devkaylab@gmail.com</strong> (et, lorsque la fonction est disponible, directement depuis l'application).
+    La suppression se demande depuis l'application, ou par courrier électronique. Vos données
+    personnelles sont alors supprimées ; les comptages déjà réalisés sont conservés par
+    l'entreprise dont ils constituent le résultat d'inventaire, mais
+    <strong>détachés de votre identité</strong>.
   </p>
 
-  <h2>8. Sécurité</h2>
-  <p>Les échanges avec nos serveurs sont chiffrés (HTTPS) et l'accès aux données est restreint aux personnes autorisées de votre entreprise.</p>
+  <h2>10. Sécurité</h2>
+  <p>
+    Les échanges sont chiffrés (HTTPS). L'accès aux données est contrôlé ligne par ligne par la
+    base elle-même, et non seulement par l'application : un compte ne peut lire que ce qui le
+    concerne. Les mots de passe sont stockés sous forme empreinte par notre prestataire
+    d'authentification, jamais en clair.
+  </p>
 
-  <h2>9. Enfants</h2>
-  <p>L'application est destinée à un usage professionnel et n'est pas conçue pour les personnes de moins de 16 ans.</p>
+  <h2>11. Mineurs</h2>
+  <p>
+    Le service est destiné à un usage professionnel et n'est pas conçu pour les personnes de
+    moins de 16 ans.
+  </p>
 
-  <h2>10. Modifications</h2>
-  <p>Nous pouvons mettre à jour cette politique. La date de dernière mise à jour figure en haut de cette page.</p>
+  <h2>12. Modifications</h2>
+  <p>
+    Cette politique peut être mise à jour. La date de dernière mise à jour figure en haut de
+    cette page ; toute modification substantielle sera signalée dans le service.
+  </p>
 
-  <h2>11. Contact</h2>
-  <p>Pour toute question relative à cette politique ou à vos données : <strong>devkaylab@gmail.com</strong>.</p>
+  <h2>13. Contact</h2>
+  <p>
+    Pour toute question relative à cette politique ou à vos données :
+    <a href="mailto:devkaylab@gmail.com">devkaylab@gmail.com</a>. Les informations relatives à
+    l'éditeur figurent dans les <a href="https://quantinvo.vercel.app/mentions-legales">mentions légales</a>.
+  </p>
 </body>
 </html>

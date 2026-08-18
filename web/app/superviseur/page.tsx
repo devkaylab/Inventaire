@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
+import { MentionCollecte } from '@/components/MentionCollecte'
 
 /**
  * Demande d'inscription d'un superviseur.
@@ -118,6 +119,7 @@ export default function SupervisorRequestPage() {
           <button className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Envoi…' : 'Envoyer ma demande'}
           </button>
+          <MentionCollecte finalite="instruire votre demande d’accès superviseur et la soumettre à validation" />
         </form>
 
         <div className="center-link">
