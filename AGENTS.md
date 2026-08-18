@@ -173,6 +173,12 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   `purge_expired_data()` porte les durées — 3 mois, 1 an, 3 ans — en un seul
   point. **`pg_cron` reste non installé** : la purge n'est pas planifiée, elle
   s'appelle à la main en `service_role`. Son corps n'a jamais été exécuté.
+- **E5 / E6, hébergement de la politique** — découvert le 18 août 2026 :
+  l'adresse `devkaylab.github.io/Inventaire/privacy.html`, vers laquelle
+  pointent l'app et le site, renvoyait **404** — GitHub Pages n'était pas
+  activé sur le dépôt. Réactivé (branche `main`, dossier `/docs`). Aucun test
+  automatique ne surveille cette adresse : après tout changement de
+  configuration du dépôt GitHub, vérifier au moins une fois qu'elle répond.
 - **E5 / E6** — `docs/privacy.html` réécrite : les quatre sous-traitants
   (Supabase, Vercel, Resend, **Expo** — les jetons de notification partent vers
   `exp.host`), les transferts hors UE, les finalités et bases légales, les
