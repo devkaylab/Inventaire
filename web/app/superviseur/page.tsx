@@ -24,7 +24,7 @@ export default function SupervisorRequestPage() {
   const [phone, setPhone] = useState('')
   const [storeCode, setStoreCode] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [sentStore, setSentStore] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -47,20 +47,29 @@ export default function SupervisorRequestPage() {
       setError(data?.error ?? 'Envoi impossible.')
       return
     }
-    setSentStore(data.store_name ?? '')
+    setSent(true)
   }
 
-  if (sentStore !== null) {
+  if (sent) {
     return (
       <div className="auth-wrap">
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>Demande envoyée</h1>
+            <h1>Demande enregistrée</h1>
+            {/* Réponse volontairement identique quel que soit le cas : dire ici
+                « code introuvable » reviendrait à confirmer, code après code,
+                lesquels sont valides. D'où la formulation conditionnelle, et le
+                repère de délai qui rend une faute de frappe rattrapable. */}
             <p className="sub">
-              Votre demande pour {sentStore ? <strong>{sentStore}</strong> : 'votre magasin'} est en cours de validation.
-              Dès qu&apos;elle est acceptée, vous recevez un e-mail à l&apos;adresse {email} vous invitant à
-              créer votre mot de passe. Votre accès est actif immédiatement après.
+              Si ce code correspond à un magasin Quantinvo, votre demande est en cours de validation.
+              Dès qu&apos;elle est acceptée, vous recevez un e-mail à l&apos;adresse {email} vous invitant
+              à créer votre mot de passe. Votre accès est actif immédiatement après.
+            </p>
+            <p className="sub" style={{ marginTop: 12 }}>
+              Sans nouvelle sous 48 heures, vérifiez le code magasin auprès de l&apos;administrateur de
+              votre entreprise : c&apos;est la cause la plus fréquente. Et si vous avez déjà un compte,
+              connectez-vous directement plutôt que de refaire une demande.
             </p>
           </div>
           <Link href="/" className="btn btn-primary btn-block">Retour à l&apos;accueil</Link>

@@ -107,6 +107,19 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
   (migration `20260813000010`).
 - **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+- **M3, partie sécurité** — `submit_supervisor_request` répond désormais
+  **exactement la même chose** pour un code magasin inconnu, un compte déjà
+  existant, une demande en cours ou une création réussie
+  (`{success: true, received: true}`), et ne renvoie plus le nom du magasin.
+  Le détail existe toujours dans `submit_supervisor_request_detailed`,
+  exécutable par le **seul `service_role`**. Les erreurs de saisie restent
+  explicites : elles ne parlent que de ce que la personne vient de taper.
+  `rate_limit_ok` limite les deux formulaires à 5 envois par heure et par
+  adresse e-mail, 20 par point de connexion (`submission_attempts`, purgée à
+  24 h). Migration `20260818000002`, appliquée en live après essai en
+  transaction annulée. **Ne pas réintroduire de message distinct** : c'est
+  l'oracle que ce correctif ferme, et deux tests le gardent
+  (`web/tests/formulaires-publics.test.ts`).
 - **M1** — six en-têtes de sécurité posés dans `web/next.config.mjs` (et non
   dans `vercel.json`, pour qu'une règle trop stricte se voie dès le
   développement). La CSP ferme `frame-ancestors`, `object-src`, `base-uri` et
@@ -179,9 +192,14 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
    `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
    relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
    conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.
-3. **M3** — `submit_company_request` / `submit_supervisor_request` sans
-   limitation de débit ; la seconde distingue « code magasin introuvable » d'un
-   succès, ce qui en fait un oracle d'énumération des codes.
+3. **M3, reste le renvoi par e-mail.** La partie sécurité est faite (voir
+   « Traité »). Ce qui manque est la compensation d'ergonomie : une fonction
+   edge appelant `submit_supervisor_request_detailed` en `service_role` pour
+   expliquer par courriel « vous avez déjà un compte » ou « votre demande est
+   déjà en cours » — un canal qui n'atteint que le propriétaire de l'adresse.
+   Ni `pg_net` ni `http` ne sont installés : la base ne peut pas envoyer
+   elle-même. **Le code magasin restera muet quoi qu'il arrive** : qui essaie
+   des codes utilise sa propre adresse et recevrait donc la réponse.
 4. **M4 / M6** — pas de journal des actions d'administration, droits d'accès et
    de portabilité non outillés, pas de procédure de violation (72 h).
 

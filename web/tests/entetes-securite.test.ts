@@ -2,14 +2,18 @@
 // assouplie « le temps de déboguer », et la protection disparaît sans que rien
 // ne le signale. Ces tests figent ce que l'audit a demandé (constat M1).
 import { describe, expect, it } from 'vitest'
-// @ts-expect-error — configuration Next en JavaScript, sans types.
 import nextConfig from '../next.config.mjs'
 
+type Regle = { source: string; headers: { key: string; value: string }[] }
+
 const entetes = async () => {
-  const regles = await nextConfig.headers()
+  // `headers` est facultatif dans le type de Next : son absence est
+  // précisément ce que ces tests doivent attraper.
+  expect(nextConfig.headers, 'aucun en-tête déclaré dans next.config.mjs').toBeTypeOf('function')
+  const regles = (await nextConfig.headers!()) as Regle[]
   expect(regles).toHaveLength(1)
   expect(regles[0].source).toBe('/:path*')     // toutes les pages, sans exception
-  return Object.fromEntries(regles[0].headers.map((h: { key: string; value: string }) => [h.key, h.value]))
+  return Object.fromEntries(regles[0].headers.map(h => [h.key, h.value])) as Record<string, string>
 }
 
 describe('en-têtes de sécurité', () => {
