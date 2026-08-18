@@ -31,18 +31,32 @@ export default function SupervisorRequestPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { data, error: rpcError } = await supabase.rpc('submit_supervisor_request', {
-      p_first_name: firstName,
-      p_last_name: lastName,
-      p_email: email,
-      p_phone: phone,
-      p_store_code: storeCode,
+    // La fonction edge fait le même dépôt, plus l'explication par e-mail que
+    // l'écran n'a plus le droit de donner. Si elle est indisponible, on retombe
+    // sur la fonction publique de la base : même réponse uniforme, sans e-mail.
+    // La demande passe dans les deux cas — c'est ce qui compte.
+    let data = null
+    const viaEdge = await supabase.functions.invoke('submit-supervisor-request', {
+      body: { firstName, lastName, email, phone, storeCode },
     })
-    setLoading(false)
-    if (rpcError) {
-      setError('Envoi impossible. Vérifiez votre connexion, puis réessayez.')
-      return
+    if (!viaEdge.error && viaEdge.data) {
+      data = viaEdge.data
+    } else {
+      const viaRpc = await supabase.rpc('submit_supervisor_request', {
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_email: email,
+        p_phone: phone,
+        p_store_code: storeCode,
+      })
+      if (viaRpc.error) {
+        setLoading(false)
+        setError('Envoi impossible. Vérifiez votre connexion, puis réessayez.')
+        return
+      }
+      data = viaRpc.data
     }
+    setLoading(false)
     if (!data?.success) {
       setError(data?.error ?? 'Envoi impossible.')
       return

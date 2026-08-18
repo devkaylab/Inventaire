@@ -30,4 +30,32 @@ describe('demande superviseur', () => {
     // La phrase est inconditionnelle : elle ne dit pas si ce compte existe.
     expect(superviseur).toContain('si vous avez déjà un compte')
   })
+
+  it('passe par la fonction edge, et retombe sur la base si elle manque', () => {
+    // L'edge apporte l'explication par e-mail ; le repli garantit que la
+    // demande passe quand même, avec la même réponse uniforme.
+    expect(superviseur).toContain("invoke('submit-supervisor-request'")
+    expect(superviseur).toContain("rpc('submit_supervisor_request'")
+  })
+})
+
+describe('explication par e-mail (fonction edge)', () => {
+  const edge = lire('../../supabase/functions/submit-supervisor-request/index.ts')
+
+  it('ne renvoie jamais le nom du magasin', () => {
+    // Le nom confirmerait la validité du code, par un autre canal.
+    expect(edge).not.toContain('store_name')
+  })
+
+  it('traite « code inconnu » et « demande créée » dans la même branche', () => {
+    // Deux messages distincts rouvriraient l'oracle : qui essaie des codes
+    // utilise sa propre adresse et lirait la réponse.
+    expect(edge).not.toContain("case 'unknown_store'")
+    expect(edge).not.toContain("case 'created'")
+  })
+
+  it('limite le débit avant tout travail', () => {
+    const avantDepot = edge.slice(0, edge.indexOf('submit_supervisor_request_detailed'))
+    expect(avantDepot).toContain('rate_limit_ok')
+  })
 })
