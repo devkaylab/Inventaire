@@ -237,6 +237,48 @@ export function Scanner({
   const [torch, setTorch] = useState(false)
   const seededRef = useRef(false)
 
+  // ── Objectif : viser la mise au point rapprochée ───────────────────────────
+  //
+  // `selectedLens` vaut par défaut `builtInWideAngleCamera` (expo-camera 56),
+  // dont la distance minimale de mise au point est d'une dizaine de
+  // centimètres. C'est ce qui rendait l'app moins capable que l'appareil photo
+  // du téléphone : celui-ci utilise un périphérique **virtuel** qui bascule
+  // tout seul sur l'ultra grand-angle quand on approche — c'est le mode macro.
+  //
+  // On demande donc le même périphérique virtuel quand il existe. iOS gère la
+  // bascule ; sur les modèles sans ultra grand-angle, la liste ne les contient
+  // pas et on garde l'objectif par défaut. La prop est ignorée sur Android.
+  const cameraRef = useRef<CameraView>(null)
+  const [selectedLens, setSelectedLens] = useState<string | undefined>(undefined)
+
+  const pickCloseFocusLens = useCallback(async () => {
+    try {
+      const lenses = await cameraRef.current?.getAvailableLensesAsync()
+      if (!lenses?.length) return
+      // Uniquement des périphériques *virtuels* : ils embarquent l'ultra
+      // grand-angle et laissent iOS choisir l'objectif selon la distance.
+      //
+      // On ne prend surtout pas `builtInUltraWideCamera` seul : son champ à
+      // 0,5× ferait paraître les codes-barres minuscules et dégraderait le
+      // scan à distance normale, pour ne gagner que le très rapproché. Les
+      // téléphones qui ont un ultra grand-angle exposent de toute façon un
+      // périphérique virtuel.
+      const preferred = ['builtInTripleCamera', 'builtInDualWideCamera']
+      const best = preferred.find(l => lenses.includes(l))
+      if (best) setSelectedLens(best)
+    } catch {
+      // Objectif indisponible : l'objectif par défaut reste parfaitement
+      // utilisable, le scan ne doit pas échouer pour autant.
+    }
+  }, [])
+
+  // Recréer l'objet à chaque rendu ferait re-pousser les réglages au natif ;
+  // la liste est constante, on la fige.
+  const barcodeSettings = useMemo(
+    () => ({ barcodeTypes: [...BARCODE_TYPES] as never }),
+    [],
+  )
+
   // ── Zone mode : balise actuellement ouverte ────────────────────────────────
   const [activeBalise, setActiveBaliseState] = useState<{ code: string; name: string | null } | null>(null)
   // Refs miroir : resolveAndRecord est capturé par un callback mémoïsé et doit
@@ -713,11 +755,27 @@ export function Scanner({
           <>
             <View style={styles.cameraWrapper}>
               <CameraView
+                ref={cameraRef}
                 style={styles.camera}
                 facing="back"
                 enableTorch={torch}
-                barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] as never }}
-                onBarcodeScanned={resolving ? undefined : handleBarcodeDetected}
+                selectedLens={selectedLens}
+                // `autofocus` n'est volontairement pas renseigné : dans
+                // expo-camera, `on` signifie « faire le point une fois puis le
+                // **verrouiller** », et `off` (le défaut) « refaire le point
+                // quand c'est nécessaire ». C'est le défaut qu'on veut ; passer
+                // `on` figerait la mise au point sur le premier plan vu.
+                barcodeScannerSettings={barcodeSettings}
+                // Toujours branché, jamais `undefined` : expo-camera calcule
+                // `barcodeScannerEnabled = !!onBarcodeScanned`, et couper puis
+                // rebrancher la détection reconfigure la session de capture —
+                // ce qui éteint la torche côté matériel. La prop `enableTorch`,
+                // elle, n'ayant pas changé de valeur, n'était pas renvoyée au
+                // natif : la lampe s'éteignait pendant que l'icône restait
+                // allumée. Le double enregistrement est déjà empêché par le
+                // verrou synchrone `processingRef`.
+                onBarcodeScanned={handleBarcodeDetected}
+                onCameraReady={pickCloseFocusLens}
               />
               {/* Torch toggle — helps scanning in low light */}
               <Pressable

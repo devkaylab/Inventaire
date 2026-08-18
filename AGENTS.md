@@ -90,6 +90,66 @@ Quand ce sera au programme :
   comme un cas normal, sous peine de faire échouer la livraison et de
   déclencher des relances Stripe en boucle.
 
+# Conformité RGPD / sécurité
+
+Audit complet du 13 août 2026 : 15 manquements relevés (2 critiques, 7 élevés,
+6 moyens). Rapport détaillé :
+https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
+
+## Traité
+
+- **C1 — présence temps réel** : les canaux sont désormais `private: true` des
+  deux côtés, et `realtime.messages` porte deux policies adossées à
+  `can_join_session_topic()` (migration `20260813000009`). **Un canal public ne
+  consulte aucune autorisation** — c'est le piège : ne jamais recréer un canal
+  sans `private: true`, la RLS ne rattraperait rien.
+- **M2** — `check_invitation` révoquée à `anon`/`authenticated` (oracle
+  d'énumération d'e-mails), `compose_full_name` reçoit un `search_path` figé
+  (migration `20260813000010`).
+- **E7, partie code** — mot de passe porté à 12 caractères sur `/bienvenue`.
+
+## À faire dans la console Supabase (hors SQL)
+
+- Activer **Leaked password protection** (vérification HaveIBeenPwned) —
+  actuellement désactivée, signalée par l'advisor `auth_leaked_password_protection`.
+- Porter la longueur minimale de mot de passe à 12 côté serveur.
+- Activer le **second facteur**, au moins pour le compte administrateur : il
+  peut créer des entreprises, valider des superviseurs et supprimer des comptes.
+
+## Reste à traiter, par ordre de priorité
+
+1. **C2** — `xlsx@0.18.5` analyse des fichiers utilisateur (pollution de
+   prototype CVE-2023-30533, ReDoS CVE-2024-22363). SheetJS a quitté npm : les
+   versions npm sont figées et vulnérables. 11 vulnérabilités côté site, 35
+   côté app.
+2. **E4** — aucune mention légale (obligation LCEN, indépendante du RGPD).
+3. **E5 / E6** — politique de confidentialité incomplète (omet Vercel, Resend,
+   Expo, les transferts hors UE, les durées, et **le droit de réclamation
+   auprès de la CNIL**, pourtant obligatoire) et jamais présentée au point de
+   collecte (`/inscription`, `/superviseur`, `/bienvenue`).
+4. **E1 / E2** — l'effacement d'un compte laisse l'identité dans
+   `supervisor_requests` (`ON DELETE SET NULL`), `company_requests`,
+   `team_invitations` et `session_invitations` ; aucune durée de conservation
+   nulle part, et `pg_cron` n'est pas installé.
+5. **E3** — le suivi nominatif de l'activité des compteurs (présence, balise,
+   « depuis 4 min », premier plan) n'est déclaré nulle part, et la politique
+   affirme l'inverse. Information des salariés + consultation du CSE côté
+   client + AIPD probable.
+6. **M1** — aucun en-tête de sécurité : ni `next.config.js`, ni `vercel.json`.
+7. **M3** — `submit_company_request` / `submit_supervisor_request` sans
+   limitation de débit ; la seconde distingue « code magasin introuvable » d'un
+   succès, ce qui en fait un oracle d'énumération des codes.
+8. **M4 / M5 / M6** — pas de journal des actions d'administration, pas de
+   registre des traitements ni de DPA formalisés, droits d'accès et de
+   portabilité non outillés, pas de procédure de violation (72 h).
+
+## Points conformes à préserver
+
+Aucun traceur ni mesure d'audience — **aucun bandeau cookies n'est requis**, ne
+pas en ajouter par réflexe. Polices Google auto-hébergées par `next/font` (pas
+d'appel à Google au chargement). Données en `eu-west-1`. Aucun secret versionné.
+La suppression de compte anonymise les comptages au lieu de les détruire.
+
 # Passes de comptage
 
 `advance_pass` / `revert_pass` ne sont plus exécutables par le rôle
