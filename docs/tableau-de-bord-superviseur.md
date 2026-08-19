@@ -88,8 +88,9 @@ Rien dans la base ne trace la présence, et c'est voulu.
 | Canal Realtime | combien d'appareils sont connectés, et dans quel mode | qui ils sont — plus rien ne le dit depuis la v2 |
 | Fil des scans (`counts`) | ce qui a été scanné, où, quand | par qui : l'auteur n'est plus descendu au navigateur |
 
-`get_session_activity`, qui rendait une ligne nominative par personne, a été **supprimée
-de la base** le 19 août 2026 (migration `20260819171741`).
+`get_session_activity`, qui rendait une ligne nominative par personne, n'a plus d'appelant.
+Sa suppression est prête mais **différée au déploiement** du contrat v2 — voir
+`docs/conformite/suivi-activite-analyse.md`.
 
 ### La règle des 90 secondes
 
@@ -158,7 +159,7 @@ Toutes **déjà appliquées** sur `heabesqvlinzarqenymj`, et présentes dans
 | Migration | Effet |
 |---|---|
 | `20260812000001_get_session_detail_full_join` | la clé (article, balise) vient de l'union comptage ∪ audit — les lignes auditées jamais comptées réapparaissent |
-| `20260812000002_session_activity` | RPC `get_session_activity` + deux index sur `counts` (aucun ne couvrait `created_at`). **La RPC a été supprimée** par `20260819171741` ; les index restent utiles au fil des scans |
+| `20260812000002_session_activity` | RPC `get_session_activity` + deux index sur `counts` (aucun ne couvrait `created_at`). La RPC n'a plus d'appelant ; sa suppression est différée au déploiement. Les index restent utiles au fil des scans |
 | `20260812000003_closed_session_is_read_only` | un inventaire clôturé refuse les insertions de `counts` et `set_balise` |
 | `20260812000004_revoke_anon_session_rpcs` | droits d'exécution refermés ; `find_user_by_email` revient au `service_role` seul |
 

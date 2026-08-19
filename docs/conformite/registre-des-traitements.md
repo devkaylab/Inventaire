@@ -83,7 +83,7 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 | **Base légale** | Intérêt légitime de l'entreprise cliente — **à documenter par elle** (voir l'analyse E3) |
 | **Personnes** | Aucune n'est identifiée depuis le 19 août 2026 : le signal porte un identifiant d'appareil tiré au hasard |
 | **Données** | Mode (comptage / audit / aucun) et battement toutes les 30 s. **Depuis le 19 août 2026** : plus de nom, d'écran, de zone en cours ni d'état d'avant-plan (contrat de présence v2) |
-| **Support** | Canal temps réel Supabase (`session:<id>:presence`), **non persisté**. La RPC `get_session_activity`, nominative, a été supprimée le 19 août 2026 |
+| **Support** | Canal temps réel Supabase (`session:<id>:presence`), **non persisté**. La RPC `get_session_activity`, nominative, n'a plus d'appelant ; sa suppression est différée au déploiement |
 | **Destinataires** | Superviseurs de l'inventaire concerné, sous forme de compteurs agrégés |
 | **Conservation** | Aucune : l'information n'existe que pendant la connexion |
 | **Sous-traitants** | Supabase |

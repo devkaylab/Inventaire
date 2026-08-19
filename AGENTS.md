@@ -304,10 +304,18 @@ restée en v1 continue d'émettre l'ancienne charge, mais le site l'écarte et l
 compte dans `unknownVersions`, affiché à l'écran. **Ne jamais réutiliser le
 numéro de version** en changeant le contrat.
 
-Retirés aussi : `get_session_activity` — nominative, **supprimée de la base**
-par la migration `20260819171741` car elle restait joignable par l'API même
-sans appelant — et `counted_by` dans la requête du fil des scans : ce qui n'est
-pas affiché n'a pas à descendre au navigateur.
+Retirés aussi : l'appel à `get_session_activity` (nominative) et `counted_by`
+dans la requête du fil des scans — ce qui n'est pas affiché n'a pas à descendre
+au navigateur.
+
+**La RPC elle-même existe encore, et c'est un piège dont il faut se souvenir.**
+Sa suppression (`20260819171741`) a dû être annulée dans la minute
+(`20260819172557`) : le site en production l'appelait toujours, et le tableau
+de bord affichait « Cet inventaire n'est pas accessible » à l'ouverture d'un
+inventaire — `refreshLive` la joint dans un `Promise.all` dont l'échec remonte
+jusqu'à l'écran. **Déployer le code d'abord, supprimer l'objet ensuite** ; et à
+la restauration d'une fonction, reposer les GRANT dans la même migration, car
+`create or replace` rend EXECUTE à PUBLIC (corrigé par `20260819172706`).
 
 **Ce qui reste nominatif et doit le rester** : `counts.counted_by`, écrit à
 chaque scan et restitué dans le rapport. Arbitrer un écart suppose de savoir
