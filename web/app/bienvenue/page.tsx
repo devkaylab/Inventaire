@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
+import { PasswordRules } from '@/components/PasswordRules'
+import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
 
 /**
  * Finalisation de compte, à l'arrivée du lien reçu par e-mail.
@@ -84,10 +86,11 @@ export default function WelcomePage() {
       setError('Renseignez votre prénom et votre nom.')
       return
     }
-    // 12 caractères : le seuil que retient la CNIL pour un mot de passe seul,
-    // sans second facteur ni mécanisme de blocage après échecs répétés.
-    if (password.length < 12) {
-      setError('Le mot de passe doit comporter au moins 12 caractères.')
+    // Mêmes règles que le serveur (voir `lib/password.ts`) : les énoncer ici
+    // évite un refus en anglais après envoi.
+    const pwdError = passwordError(password)
+    if (pwdError) {
+      setError(pwdError)
       return
     }
     if (password !== confirm) {
@@ -103,7 +106,7 @@ export default function WelcomePage() {
     })
     if (authError || !updated.user) {
       setBusy(false)
-      setError(authError?.message ?? 'Enregistrement impossible.')
+      setError(authError ? friendlyPasswordError(authError.message) : 'Enregistrement impossible.')
       return
     }
 
@@ -203,8 +206,10 @@ export default function WelcomePage() {
             <label htmlFor="password">Mot de passe</label>
             <input
               id="password" type="password" autoComplete="new-password"
-              value={password} onChange={(e) => setPassword(e.target.value)} placeholder="12 caractères minimum"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder={`${MIN_PASSWORD_LENGTH} caractères minimum`}
             />
+            <PasswordRules password={password} />
           </div>
           <div className="field">
             <label htmlFor="confirm">Confirmer le mot de passe</label>
