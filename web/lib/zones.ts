@@ -131,19 +131,6 @@ export function codeRange(codes: string[]): string {
   return contiguous ? `${first} → ${last}` : `${first} → ${last} (${sorted.length})`
 }
 
-/** Balises non comptées, regroupées par emplacement — pour le rappel terrain. */
-export function missingByZone(rows: ZoneDashboardRow[]): { name: string; codes: string[] }[] {
-  const map = new Map<string, string[]>()
-  for (const r of rows) {
-    if (r.count_status === 'done') continue
-    const name = r.name ?? UNNAMED
-    map.set(name, [...(map.get(name) ?? []), r.code])
-  }
-  return [...map.entries()]
-    .map(([name, codes]) => ({ name, codes: sortCodes(codes) }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-}
-
 /** Validation de plage, alignée sur les règles du serveur (define_zone). */
 export function validateRange(name: string, start: string, end: string): string | null {
   if (!name.trim()) return "Indiquez le nom de l'emplacement (ex. « Réserve »)."

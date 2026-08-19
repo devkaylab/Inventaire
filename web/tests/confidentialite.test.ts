@@ -14,6 +14,7 @@ const POINTS_DE_COLLECTE = [
   '../app/inscription/page.tsx',
   '../app/superviseur/page.tsx',
   '../app/bienvenue/page.tsx',
+  '../app/mot-de-passe-oublie/page.tsx',
 ]
 
 describe('information au point de collecte', () => {

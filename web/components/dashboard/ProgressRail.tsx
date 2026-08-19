@@ -2,25 +2,25 @@
 
 import { useMemo } from 'react'
 import { fmtQty, plural } from '@/lib/format'
-import { missingByZone, type ZoneDashboardRow } from '@/lib/zones'
+import type { ZoneDashboardRow } from '@/lib/zones'
 import type { Totals } from '@/hooks/useSessionData'
 
 /**
  * Colonne de progression. Deux barres, pas une : le comptage et l'audit sont
- * deux cycles indépendants, et le superviseur pilote les deux. L'ancienne
- * version n'affichait la barre que pour le comptage et laissait l'audit en
- * texte, ce qui le faisait passer pour un détail.
+ * deux cycles indépendants, et le superviseur pilote les deux. Le détail par
+ * zone vit dans l'onglet Suivi — le rail n'en garde qu'un total, pour ne pas
+ * répéter la même liste à deux endroits de l'écran.
  */
 export function ProgressRail({
-  usesZones, zones, totals, theoreticalQty, onSeeDetail,
+  usesZones, zones, totals, theoreticalQty, onOpenTab,
 }: {
   usesZones: boolean
   zones: ZoneDashboardRow[]
   totals: Totals
   /** Somme des quantités attendues ; 0 quand aucun stock théorique n'est importé. */
   theoreticalQty: number
-  /** Renvoie au détail : les zones en mode balises, les fichiers sinon. */
-  onSeeDetail: () => void
+  /** Renvoie vers un onglet : l'avancement dans Suivi, la préparation dans Set up. */
+  onOpenTab: (tab: 'suivi' | 'setup') => void
 }) {
   const stats = useMemo(() => {
     const total = zones.length
@@ -34,8 +34,6 @@ export function ProgressRail({
       auditPct: total > 0 ? Math.round((audited / total) * 100) : 0,
     }
   }, [zones])
-
-  const missing = useMemo(() => missingByZone(zones), [zones])
 
   if (!usesZones) {
     // Mode classique : sans balise, le seul dénominateur qui parle au terrain
@@ -84,7 +82,7 @@ export function ProgressRail({
             <div className="dash-progress-sub small">
               Aucun stock théorique importé : l&apos;attendu vaut 0 et aucun écart ne peut être
               calculé.{' '}
-              <button type="button" className="link-btn" onClick={onSeeDetail}>
+              <button type="button" className="link-btn" onClick={() => onOpenTab('setup')}>
                 Importer le fichier
               </button>
             </div>
@@ -131,23 +129,22 @@ export function ProgressRail({
           <p className="muted small">
             Aucune balise affectée. Renseignez les emplacements à inventorier pour suivre l&apos;avancement.
           </p>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onSeeDetail}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenTab('setup')}>
             Renseigner les zones
           </button>
         </div>
-      ) : missing.length === 0 ? (
+      ) : stats.total - stats.counted === 0 ? (
         <div className="dash-ok">Toutes les balises ont été comptées.</div>
       ) : (
         <div className="dash-missing">
-          <div className="dash-section-label">Reste à compter</div>
-          {missing.map(g => (
-            <div className="dash-missing-row" key={g.name}>
-              <span>{g.name}</span>
-              <span className="dash-missing-count num">{g.codes.length}</span>
-            </div>
-          ))}
-          <button type="button" className="link-btn" onClick={onSeeDetail}>
-            Voir le détail des balises
+          <div className="dash-missing-row">
+            <span>Reste à compter</span>
+            <span className="dash-missing-count num">
+              {plural(stats.total - stats.counted, 'balise')}
+            </span>
+          </div>
+          <button type="button" className="link-btn" onClick={() => onOpenTab('suivi')}>
+            Voir l&apos;avancement par zone
           </button>
         </div>
       )}

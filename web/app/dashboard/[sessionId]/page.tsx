@@ -11,26 +11,28 @@ import { STATUS_LABELS } from '@/lib/inventory'
 import { relativeTime } from '@/lib/format'
 import { ProgressRail } from '@/components/dashboard/ProgressRail'
 import { SuiviTab } from '@/components/dashboard/tabs/SuiviTab'
-import { ZonesTab } from '@/components/dashboard/tabs/ZonesTab'
-import { FichiersTab } from '@/components/dashboard/tabs/FichiersTab'
+import { SetupTab } from '@/components/dashboard/tabs/SetupTab'
 import { EcartsTab } from '@/components/dashboard/tabs/EcartsTab'
 import { RapportTab } from '@/components/dashboard/tabs/RapportTab'
 import { EquipeTab } from '@/components/dashboard/tabs/EquipeTab'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 
-type Tab = 'suivi' | 'zones' | 'fichiers' | 'ecarts' | 'rapport' | 'equipe'
+type Tab = 'suivi' | 'setup' | 'ecarts' | 'rapport' | 'equipe'
 
-const TABS: { key: Tab; label: string; zonesOnly?: boolean }[] = [
+const TABS: { key: Tab; label: string }[] = [
   { key: 'suivi', label: 'Suivi' },
-  { key: 'zones', label: 'Zones & balises', zonesOnly: true },
-  { key: 'fichiers', label: 'Fichiers' },
-  { key: 'ecarts', label: 'Écarts' },
+  { key: 'setup', label: 'Set up' },
+  { key: 'ecarts', label: 'Écarts d’audit' },
   { key: 'rapport', label: 'Rapport' },
   { key: 'equipe', label: 'Équipe' },
 ]
 
 const TAB_KEYS = new Set<string>(TABS.map(t => t.key))
+
+// Les anciens onglets « Zones & balises » et « Fichiers » vivent désormais
+// dans Set up : les liens enregistrés continuent d'arriver au bon endroit.
+const LEGACY_TABS: Record<string, Tab> = { zones: 'setup', fichiers: 'setup' }
 
 export default function SessionDashboardPage() {
   const router = useRouter()
@@ -46,7 +48,9 @@ export default function SessionDashboardPage() {
   // pour éviter la frontière Suspense que Next impose au prérendu.
   useEffect(() => {
     const initial = new URLSearchParams(window.location.search).get('tab')
-    if (initial && TAB_KEYS.has(initial)) setTab(initial as Tab)
+    if (!initial) return
+    if (TAB_KEYS.has(initial)) setTab(initial as Tab)
+    else if (LEGACY_TABS[initial]) setTab(LEGACY_TABS[initial])
   }, [])
 
   const selectTab = useCallback((next: Tab) => {
@@ -100,7 +104,7 @@ export default function SessionDashboardPage() {
   const session = data.session
   const closed = session.status === 'closed'
   const isCreator = session.created_by === guard.profile.id
-  const visibleTabs = TABS.filter(t => !t.zonesOnly || session.uses_zones)
+  const visibleTabs = TABS
 
   return (
     <div className="dash dash-wide">
@@ -156,7 +160,7 @@ export default function SessionDashboardPage() {
           zones={data.zones}
           totals={data.totals}
           theoreticalQty={data.importState.theoreticalQty}
-          onSeeDetail={() => selectTab(session.uses_zones ? 'zones' : 'fichiers')}
+          onOpenTab={selectTab}
         />
 
         <div className="dash-main">
@@ -192,25 +196,21 @@ export default function SessionDashboardPage() {
                 recent={data.recent}
                 unknownVersions={live.unknownVersions}
                 totals={data.totals}
-              />
-            )}
-
-            {tab === 'zones' && session.uses_zones && (
-              <ZonesTab
-                sessionId={sessionId}
-                zones={data.zones}
                 readOnly={closed}
-                onChanged={data.refreshLive}
+                onZonesChanged={data.refreshLive}
               />
             )}
 
-            {tab === 'fichiers' && (
-              <FichiersTab
+            {tab === 'setup' && (
+              <SetupTab
                 sessionId={sessionId}
                 status={session.status}
                 readOnly={closed}
                 importState={data.importState}
+                usesZones={session.uses_zones}
+                zones={data.zones}
                 onChanged={data.refreshMeta}
+                onZonesChanged={data.refreshLive}
               />
             )}
 

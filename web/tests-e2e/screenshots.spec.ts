@@ -6,7 +6,7 @@ import { SESSION_ID } from './fixtures'
 // Ce n'est pas une comparaison automatique — c'est de quoi regarder le résultat.
 // Lancer avec : npx playwright test screenshots
 
-const TABS = ['suivi', 'zones', 'fichiers', 'ecarts', 'rapport', 'equipe']
+const TABS = ['suivi', 'setup', 'ecarts', 'rapport', 'equipe']
 const THEMES = ['dark', 'light'] as const
 const SIZES = [
   { name: 'desktop', width: 1440, height: 1100 },

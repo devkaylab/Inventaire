@@ -12,7 +12,11 @@ export const SUPABASE_URL = 'https://heabesqvlinzarqenymj.supabase.co'
 const PROJECT_REF = 'heabesqvlinzarqenymj'
 
 /** Journal des mutations, pour vérifier ce que l'interface a réellement envoyé. */
-export type Calls = { rpc: { name: string; body: unknown }[]; patches: { table: string; body: unknown }[] }
+export type Calls = {
+  rpc: { name: string; body: unknown }[]
+  patches: { table: string; body: unknown }[]
+  auth: { path: string; body: unknown }[]
+}
 
 type State = {
   zones: typeof F.ZONES
@@ -38,8 +42,11 @@ function respond(route: Route, rows: unknown[]) {
   return json(route, rows)
 }
 
-export async function mockSupabase(page: Page): Promise<Calls> {
-  const calls: Calls = { rpc: [], patches: [] }
+export async function mockSupabase(
+  page: Page,
+  { authenticated = true }: { authenticated?: boolean } = {},
+): Promise<Calls> {
+  const calls: Calls = { rpc: [], patches: [], auth: [] }
   const state: State = {
     zones: JSON.parse(JSON.stringify(F.ZONES)),
     audits: JSON.parse(JSON.stringify(F.AUDITS)),
@@ -47,28 +54,32 @@ export async function mockSupabase(page: Page): Promise<Calls> {
     importState: { ...F.IMPORT_STATE },
   }
 
-  // Session d'authentification déposée directement dans le stockage local :
-  // supabase-js la relit sans appel réseau tant qu'elle n'est pas expirée.
-  await page.addInitScript(([ref, profile]) => {
-    const expires = Math.floor(Date.now() / 1000) + 3600
-    window.localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify({
-      access_token: 'test-token',
-      token_type: 'bearer',
-      expires_in: 3600,
-      expires_at: expires,
-      refresh_token: 'test-refresh',
-      user: {
-        id: (profile as { id: string }).id,
-        aud: 'authenticated',
-        role: 'authenticated',
-        email: 'sup@example.test',
-        app_metadata: {},
-        user_metadata: {},
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    }))
+  // Session d'authentification déposée directement dans le stockage de session
+  // — c'est là que vit le jeton depuis que la session ne survit plus à la
+  // fermeture du navigateur — supabase-js la relit sans appel réseau tant
+  // qu'elle n'est pas expirée.
+  await page.addInitScript(([ref, profile, withSession]) => {
+    if (withSession) {
+      const expires = Math.floor(Date.now() / 1000) + 3600
+      window.sessionStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify({
+        access_token: 'test-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        expires_at: expires,
+        refresh_token: 'test-refresh',
+        user: {
+          id: (profile as { id: string }).id,
+          aud: 'authenticated',
+          role: 'authenticated',
+          email: 'sup@example.test',
+          app_metadata: {},
+          user_metadata: {},
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      }))
+    }
     window.localStorage.setItem('quantinvo-theme', 'dark')
-  }, [PROJECT_REF, F.PROFILE] as const)
+  }, [PROJECT_REF, F.PROFILE, authenticated] as const)
 
   // Le service Realtime est injoignable ici : on coupe court pour que
   // l'interface bascule tout de suite sur son mode dégradé (« Temps réel
@@ -94,6 +105,28 @@ export async function mockSupabase(page: Page): Promise<Calls> {
 
     // ── Authentification ────────────────────────────────────────────────────
     if (path.startsWith('/auth/v1/')) {
+      let body: unknown = null
+      try { body = request.postDataJSON() } catch { /* corps vide */ }
+      // La query fait partie de l'enregistrement : c'est elle qui porte
+      // `grant_type` et `redirect_to`.
+      calls.auth.push({ path: path.replace('/auth/v1', '') + url.search, body })
+
+      // Connexion par mot de passe : gotrue renvoie la session complète.
+      if (path.endsWith('/token')) {
+        const expires = Math.floor(Date.now() / 1000) + 3600
+        return json(route, {
+          access_token: 'test-token', token_type: 'bearer',
+          expires_in: 3600, expires_at: expires, refresh_token: 'test-refresh',
+          user: {
+            id: F.PROFILE.id, aud: 'authenticated', role: 'authenticated',
+            email: 'sup@example.test', app_metadata: {}, user_metadata: {},
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        })
+      }
+      // Mot de passe oublié : 200 vide, que le compte existe ou non — comme
+      // Supabase, qui ne divulgue rien à l'appelant.
+      if (path.endsWith('/recover')) return json(route, {})
       if (path.endsWith('/user')) return json(route, { id: F.PROFILE.id, email: 'sup@example.test' })
       return json(route, {})
     }

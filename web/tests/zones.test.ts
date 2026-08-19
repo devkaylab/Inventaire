@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  codeRange, groupByName, missingByZone, sortCodes, UNNAMED, validateRange,
+  codeRange, groupByName, sortCodes, UNNAMED, validateRange,
   type ZoneDashboardRow,
 } from '@/lib/zones'
 
@@ -73,24 +73,6 @@ describe('groupByName', () => {
   it('trie les emplacements par nom', () => {
     expect(groupByName(rows).map(g => g.name))
       .toEqual([UNNAMED, 'Réserve', 'Surface de vente'])
-  })
-})
-
-describe('missingByZone', () => {
-  it('ne retient que les balises dont le comptage n’est pas terminé', () => {
-    const missing = missingByZone([
-      zone({ code: '1', name: 'Réserve', count_status: 'done' }),
-      zone({ code: '2', name: 'Réserve', count_status: 'open' }),
-      zone({ code: '3', name: 'Réserve' }),
-    ])
-    expect(missing).toEqual([{ name: 'Réserve', codes: ['2', '3'] }])
-  })
-
-  it('considère « en cours » comme non terminé', () => {
-    // Une balise ouverte puis abandonnée resterait « open » indéfiniment :
-    // elle doit continuer d'apparaître dans le reste à faire.
-    const missing = missingByZone([zone({ code: '5', name: 'Caisse', count_status: 'open' })])
-    expect(missing[0].codes).toEqual(['5'])
   })
 })
 
