@@ -27,8 +27,8 @@ une personne. Le site, de son côté, **écoute sans publier**.
 Retirés également, côté données descendantes :
 
 - `get_session_activity` — une ligne nominative par personne, avec cadence et
-  dernière balise — n'est plus appelée par aucun client. **Sa suppression est
-  prête mais différée** : voir « Reste ouvert » en fin de note ;
+  dernière balise — a été **supprimée de la base** le 19 août 2026, une fois le
+  code déployé (migration `20260819174148`) ;
 - le fil des derniers scans n'affiche plus l'auteur, et `counted_by` n'est même
   plus demandé au serveur pour l'alimenter.
 
@@ -92,24 +92,21 @@ Voir le tableau ci-dessus. À faire trancher et motiver par écrit.
 - [x] Suivi nominatif en direct retiré (contrat de présence v2, 19 août 2026)
 - [x] Signal « application au premier plan » supprimé
 - [x] `get_session_activity` sans appelant ; fil des scans anonyme
-- [ ] `get_session_activity` supprimée de la base — **après** la mise en production du code
+- [x] `get_session_activity` supprimée de la base, après la mise en production du code
 - [x] Traitement déclaré dans la politique de confidentialité et au registre
 - [ ] Information des salariés diffusée par chaque entreprise cliente
 - [ ] Position écrite sur le CSE
 - [ ] AIPD écartée par écrit et motivée, ou conduite
 
-## Reste ouvert
+## Une leçon de séquencement
 
-La RPC `get_session_activity` existe toujours en base. Sa suppression a été
-appliquée le 19 août (`20260819171741`) puis **immédiatement annulée**
-(`20260819172557`) : le site en production l'appelait encore, et le tableau de
-bord répondait « Cet inventaire n'est pas accessible » à l'ouverture d'un
-inventaire. L'ordre à respecter est celui-ci, sans le raccourcir :
+La suppression a d'abord été appliquée alors que la production appelait encore
+la fonction : le tableau de bord répondait « Cet inventaire n'est pas
+accessible » à l'ouverture d'un inventaire, parce que `refreshLive` la joint
+dans un `Promise.all` dont l'échec remonte jusqu'à l'écran. Rétablie dans la
+minute, puis resupprimée une fois le code déployé.
 
-1. fusionner et déployer le code qui ne l'appelle plus (contrat de présence v2) ;
-2. vérifier qu'un inventaire s'ouvre normalement en production ;
-3. rejouer alors la suppression.
-
-Tant qu'elle existe, elle reste exécutable en SECURITY DEFINER par un
-participant de l'inventaire qui appellerait l'API directement — c'est la raison
-de la supprimer, et elle reste valable.
+**L'ordre est le suivant, et il ne se raccourcit pas** : déployer le code qui
+n'appelle plus l'objet, vérifier, supprimer ensuite. À la restauration d'une
+fonction, reposer les GRANT dans la même migration — `create or replace` rend
+EXECUTE à PUBLIC.
