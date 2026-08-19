@@ -286,17 +286,44 @@ toucher au module afficherait une exigence qui n'existe plus ; la durcir sans
 lui laisserait passer une saisie que le serveur refusera. Tests de garde :
 `web/tests/password.test.ts` (dont le seuil de 12, figé explicitement).
 
+## Suivi d'activité : agrégé, plus nominatif (E3, 19 août 2026)
+
+Le suivi nominatif en direct a été **retiré**. Le superviseur voit des
+compteurs — appareils connectés, en comptage, en audit — et pilote par
+l'avancement par zone, qui décrit le travail et non les personnes.
+
+**Contrat de présence v2** (`web/lib/presence.ts` et `src/lib/presence.ts`,
+dupliqués volontairement, à garder synchronisés) : il ne reste que `mode` et
+`beat`. Ont disparu le nom, l'écran, la balise en cours, le début d'activité et
+**l'application au premier plan**. La clé de présence est un identifiant
+d'appareil tiré au hasard, plus l'`user_id` — il voyageait dans le protocole
+même absent de la charge. Le site **écoute sans publier**.
+
+Le bump de version est ce qui protège la transition : une application mobile
+restée en v1 continue d'émettre l'ancienne charge, mais le site l'écarte et la
+compte dans `unknownVersions`, affiché à l'écran. **Ne jamais réutiliser le
+numéro de version** en changeant le contrat.
+
+Retirés aussi : l'appel à `get_session_activity` (nominative, plus aucun
+appelant — la RPC subsiste en base, sa suppression demande une migration), et
+`counted_by` dans la requête du fil des scans — ce qui n'est pas affiché n'a
+pas à descendre au navigateur.
+
+**Ce qui reste nominatif et doit le rester** : `counts.counted_by`, écrit à
+chaque scan et restitué dans le rapport. Arbitrer un écart suppose de savoir
+qui a compté ; finalité distincte, usage différé. Le supprimer retirerait au
+produit sa capacité d'audit.
+
+Conséquence sur les obligations : le critère « surveillance systématique »
+tombe, il ne reste que « personnes vulnérables » — l'AIPD n'est donc en
+principe plus requise, mais **cela se motive par écrit**. Analyse à jour :
+`docs/conformite/suivi-activite-analyse.md`. Tests de garde :
+`web/tests/presence-summary.test.ts` et le bloc « Suivi — activité agrégée »
+de `web/tests-e2e/dashboard.spec.ts`.
+
 ## Reste à traiter, par ordre de priorité
 
-1. **E3 — analysé et documenté, arbitrages ouverts.**
-   `docs/conformite/suivi-activite-analyse.md` (ce que le produit observe
-   vraiment, et pourquoi l'AIPD est probablement requise : surveillance
-   systématique + personnes vulnérables) et `information-salaries.md` (note type
-   à diffuser par l'entreprise cliente). Restent : la diffusion effective, le
-   CSE, l'AIPD — et **une décision produit** : retirer le signal « application
-   au premier plan », le plus intrusif et le seul qui ne serve à rien pour
-   l'inventaire.
-2. **M5 — documents écrits, à faire relire.**
+1. **M5 — documents écrits, à faire relire.**
    `docs/conformite/registre-des-traitements.md` (7 traitements, établis en
    relisant le code) et `sous-traitance-article-28.md` (clauses à intégrer aux
    conditions de service). Ni l'un ni l'autre n'a été relu par un juriste.

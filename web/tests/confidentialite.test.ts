@@ -52,8 +52,12 @@ describe('politique de confidentialité', () => {
     }
   })
 
-  it('déclare le suivi nominatif de l’activité pendant un inventaire', () => {
+  it('décrit l’activité en direct, et dit qu’elle ne nomme personne', () => {
+    // Le suivi était nominatif jusqu'au 19 août 2026 ; il est désormais
+    // agrégé (constat E3). Si le produit revenait à un suivi individuel, la
+    // politique devrait le redire — ce test tomberait d'abord.
     expect(politique).toContain('Activité en direct')
-    expect(politique).toContain('nominatif')
+    expect(politique).toContain('agrégés')
+    expect(politique).toMatch(/Aucun nom n['’]y figure/)
   })
 })

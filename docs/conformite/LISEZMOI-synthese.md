@@ -30,4 +30,10 @@ découvre après coup perd confiance bien plus qu'un client averti :
   pas faits.
 
 **À mettre à jour dès que l'un de ces points bouge** — en particulier les
-diapositives 3 (répartition chiffrée), 6, 7 et 10.
+diapositives 3 (répartition chiffrée), 6, 7, 10 et 11.
+
+Mise à jour du 19 août 2026 : le suivi d'activité (E3) est passé de « en
+cours » à « clos » après le retrait du suivi nominatif. Une diapositive lui est
+consacrée (la 10) — c'est l'argument à présenter à un CSE ou à un service
+juridique. Les chiffres de couverture ont suivi : 13 clos, 1 socle en place,
+1 en relecture.

@@ -74,8 +74,8 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
   // Bilan chiffré, en colonne à droite.
   const stats = [
     { n: '15', l: 'constats relevés', c: 'CADCFC' },
-    { n: '12', l: 'clos', c: '5FD3A6' },
-    { n: '3', l: 'en cours', c: 'E8B85F' },
+    { n: '13', l: 'clos', c: '5FD3A6' },
+    { n: '2', l: 'restants', c: 'E8B85F' },
   ]
   stats.forEach((st, i) => {
     const y = 1.75 + i * 1.35
@@ -94,8 +94,9 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
   s.addNotes(
     'Deck de synthèse destiné aux clients entreprises. '
     + 'L’audit du 13 août 2026 a relevé 15 manquements (2 critiques, 7 élevés, 6 moyens). '
-    + 'Au 19 août : 12 clos, 1 au socle en place (mentions légales, activation à l’immatriculation), '
-    + '2 en cours (suivi d’activité, documentation juridique).',
+    + 'Au 19 août : 13 clos — dont le suivi d’activité, rendu agrégé ce jour-là —, '
+    + '1 au socle en place (mentions légales, activation à l’immatriculation) '
+    + 'et 1 en relecture (documentation juridique).',
   )
 }
 
@@ -162,9 +163,9 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
   s.addChart(
     pres.ChartType.bar,
     [
-      { name: 'Clos', labels: ['Critiques', 'Élevés', 'Moyens'], values: [2, 5, 5] },
+      { name: 'Clos', labels: ['Critiques', 'Élevés', 'Moyens'], values: [2, 6, 5] },
       { name: 'Socle en place', labels: ['Critiques', 'Élevés', 'Moyens'], values: [0, 1, 0] },
-      { name: 'En cours', labels: ['Critiques', 'Élevés', 'Moyens'], values: [0, 1, 1] },
+      { name: 'En cours', labels: ['Critiques', 'Élevés', 'Moyens'], values: [0, 0, 1] },
     ],
     {
       x: M, y: 1.85, w: 7.3, h: 3.9,
@@ -186,7 +187,7 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
   const notes = [
     { c: CLOS, t: 'Clos', d: 'Corrigé, vérifié, et protégé par un test automatique qui fait échouer toute régression.' },
     { c: ATTENTE, t: 'Socle en place', d: 'La page des mentions légales existe ; son activation attend l’immatriculation de l’activité éditrice.' },
-    { c: COURS, t: 'En cours', d: 'Suivi d’activité des équipes et documentation juridique — détail en fin de document.' },
+    { c: COURS, t: 'En cours', d: 'La documentation juridique, rédigée, attend sa relecture par un conseil.' },
   ]
   notes.forEach((n, i) => {
     const y = 2.0 + i * 1.25
@@ -203,7 +204,7 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
     })
   })
 
-  s.addNotes('Aucun constat critique ni élevé ne reste ouvert sur la sécurité technique. Les deux points en cours relèvent de la documentation et de l’information des salariés.')
+  s.addNotes('Plus aucun constat critique ni élevé n’est ouvert. Le seul point en cours relève de la relecture juridique, pas de la sécurité technique.')
 }
 
 // ═══════════════════════════════════════ 4. Qui est responsable de quoi
@@ -330,12 +331,12 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
 // ═══════════════════════════════════════════ 6. Constats élevés
 {
   const s = pres.addSlide()
-  titre(s, 'Constats de gravité élevée', '7 constats — 5 clos, 1 au socle en place, 1 en cours')
+  titre(s, 'Constats de gravité élevée', '7 constats — 6 clos, 1 au socle en place')
 
   const lignes = [
     ['E1', 'Effacement des comptes', 'La suppression d’un compte échouait après un comptage.', CLOS, 'Clos'],
     ['E2', 'Durées de conservation', 'Aucune durée posée ni outillée.', CLOS, 'Clos'],
-    ['E3', 'Suivi d’activité des salariés', 'Suivi nominatif ni documenté ni annoncé.', COURS, 'En cours'],
+    ['E3', 'Suivi d’activité des salariés', 'Suivi nominatif du travail de chacun, en direct.', CLOS, 'Clos'],
     ['E4', 'Mentions légales', 'Le site n’identifiait pas son éditeur.', ATTENTE, 'Socle en place'],
     ['E5', 'Politique de confidentialité', 'Sous-traitants et transferts non déclarés.', CLOS, 'Clos'],
     ['E6', 'Hébergement de la politique', 'L’adresse publiée était introuvable.', CLOS, 'Clos'],
@@ -374,7 +375,7 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
 // ═══════════════════════════════════════════ 7. Constats moyens
 {
   const s = pres.addSlide()
-  titre(s, 'Constats de gravité moyenne', '6 constats — 5 clos, 1 en cours')
+  titre(s, 'Constats de gravité moyenne', '6 constats — 5 clos, 1 en relecture')
 
   const lignes = [
     ['M1', 'En-têtes de sécurité du site', 'Aucun en-tête : réglages navigateur permissifs.', CLOS, 'Clos'],
@@ -542,44 +543,117 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
   )
 }
 
-// ═══════════════════════════════════ 10. Ce qui reste en cours
+// ═══════════════════════════════════ 10. Le suivi d'activité, repensé
 {
   const s = pres.addSlide()
-  titre(s, 'Ce qui reste en cours', 'Deux chantiers ouverts, et ce qu’ils changent pour vous')
+  titre(s, 'Le suivi d’activité, repensé', 'Décision produit du 19 août 2026 — la question que pose tout CSE')
+
+  const cols = [
+    {
+      x: M, tete: 'Avant', couleur: COURS,
+      items: [
+        'Le nom de chaque personne, en direct',
+        'L’écran ouvert et la zone en cours',
+        'Un battement toutes les 30 secondes',
+        'L’application au premier plan — un téléphone rangé devenait un signal',
+      ],
+    },
+    {
+      x: M + 6.15, tete: 'Depuis le 19 août', couleur: CLOS,
+      items: [
+        'Des compteurs : appareils connectés, en comptage, en audit',
+        'Le pilotage passe par l’avancement des zones, pas par les personnes',
+        'Le signal ne porte plus aucun nom, ni aucun identifiant de compte',
+        'L’état d’avant-plan a purement disparu',
+      ],
+    },
+  ]
+
+  cols.forEach(c => {
+    s.addShape(pres.ShapeType.roundRect, {
+      x: c.x, y: 1.8, w: 5.85, h: 2.95, rectRadius: 0.1,
+      fill: { color: LIGHT }, line: { color: 'E1E7ED', width: 1 },
+    })
+    s.addText(c.tete, {
+      x: c.x + 0.35, y: 2.02, w: c.w ?? 5.15, h: 0.4,
+      fontFace: TITLE_FONT, fontSize: 19, bold: true, color: c.couleur, margin: 0,
+    })
+    s.addText(c.items.map((t, i) => ({
+      text: t, options: { bullet: true, breakLine: i < c.items.length - 1 },
+    })), {
+      x: c.x + 0.35, y: 2.5, w: 5.15, h: 2.1,
+      fontFace: BODY_FONT, fontSize: 12.5, color: INK,
+      lineSpacing: 16, paraSpaceAfter: 7, margin: 0,
+    })
+  })
+
+  s.addShape(pres.ShapeType.roundRect, {
+    x: M, y: 5.0, w: W - 2 * M, h: 1.35, rectRadius: 0.1,
+    fill: { color: NAVY }, line: { color: NAVY, width: 1 },
+  })
+  s.addText('Ce que cela change pour vous', {
+    x: M + 0.4, y: 5.15, w: 11.5, h: 0.35,
+    fontFace: BODY_FONT, fontSize: 13, bold: true, color: '5FD3A6', margin: 0,
+  })
+  s.addText(
+    'Les lignes directrices européennes retenaient deux critères pour imposer une analyse d’impact : '
+    + 'surveillance systématique et personnes vulnérables. Le premier tombe — il n’en reste qu’un. '
+    + 'L’AIPD n’est donc, en principe, plus requise ; cela reste à motiver par écrit avec votre conseil.',
+    {
+      x: M + 0.4, y: 5.5, w: 11.5, h: 0.75,
+      fontFace: BODY_FONT, fontSize: 12.5, color: 'D8E3F0', lineSpacing: 16.5, margin: 0,
+    },
+  )
+
+  s.addText(
+    'Ce qui reste enregistré : l’auteur de chaque comptage, restitué dans le rapport. '
+    + 'Arbitrer un écart suppose de savoir qui a compté — c’est une autre finalité, consultée à la demande.',
+    {
+      x: M, y: 6.5, w: W - 2 * M, h: 0.5,
+      fontFace: BODY_FONT, fontSize: 11.5, italic: true, color: SLATE, lineSpacing: 15, margin: 0,
+    },
+  )
+
+  s.addNotes('Argument à mettre en avant devant un CSE ou un service juridique : le produit ne permet plus de suivre l’activité individuelle en direct.')
+}
+
+// ═══════════════════════════════════ 10 bis. Ce qui reste ouvert
+{
+  const s = pres.addSlide()
+  titre(s, 'Ce qui reste ouvert', 'Deux points, aucun ne portant sur la sécurité technique')
 
   const items = [
     {
-      code: 'E3',
-      t: 'Suivi d’activité des équipes',
-      etat: 'Analysé et documenté · arbitrages ouverts',
-      d: 'Pendant un inventaire, le superviseur voit qui est connecté, sur quelle zone et dans quel mode. '
-       + 'C’est un suivi nominatif de salariés : il est désormais décrit dans notre politique et analysé par écrit. '
-       + 'Restent l’information des salariés, la consultation du CSE et l’analyse d’impact — actes qui vous reviennent, '
-       + 'et pour lesquels nous fournissons une note type.',
-      next: 'Décision produit à l’étude : retirer le signal « application au premier plan », le plus intrusif '
-        + 'et le seul qui ne serve pas à l’inventaire.',
-    },
-    {
       code: 'M5',
       t: 'Documentation juridique',
-      etat: 'Rédigée · relecture juridique à venir',
+      etat: 'Rédigée · relecture à venir',
+      couleur: COURS,
       d: 'Le registre des traitements (huit traitements, établis en relisant le code) et les clauses de '
-       + 'sous-traitance de l’article 28 sont écrits et disponibles. Ils n’ont pas encore été relus par un conseil '
-       + 'juridique, et ne sont donc pas opposables en l’état à un tiers.',
+       + 'sous-traitance de l’article 28 sont écrits et disponibles. Ils n’ont pas encore été relus par un '
+       + 'conseil juridique, et ne sont donc pas opposables en l’état à un tiers.',
       next: 'Relecture prévue avant la première mise en service contractuelle.',
+    },
+    {
+      code: 'E4',
+      t: 'Mentions légales',
+      etat: 'Socle en place · activation administrative',
+      couleur: ATTENTE,
+      d: 'La page existe et se remplit depuis un seul fichier. Elle reste volontairement discrète tant que '
+       + 'l’activité éditrice n’est pas immatriculée : une identification à trous ne vaut pas mieux qu’aucune page.',
+      next: 'Activation en une modification, le jour de l’immatriculation.',
     },
   ]
 
   items.forEach((it, i) => {
-    const y = 1.8 + i * 2.35
-    pastille(s, it.code, M, y + 0.04, COURS, 0.58)
+    const y = 1.85 + i * 2.3
+    pastille(s, it.code, M, y + 0.04, it.couleur, 0.58)
     s.addText(it.t, {
       x: M + 0.85, y, w: 5.9, h: 0.4,
       fontFace: TITLE_FONT, fontSize: 19, bold: true, color: NAVY, margin: 0,
     })
     s.addText(it.etat, {
       x: 7.55, y: y + 0.03, w: 4.85, h: 0.35,
-      fontFace: BODY_FONT, fontSize: 11.5, bold: true, color: ATTENTE,
+      fontFace: BODY_FONT, fontSize: 11.5, bold: true, color: it.couleur,
       align: 'right', margin: 0,
     })
     s.addText(it.d, {
@@ -590,13 +664,13 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
       { text: 'Prochaine étape — ', options: { bold: true, color: SLATE } },
       { text: it.next, options: { color: SLATE } },
     ], {
-      x: M + 0.85, y: y + 1.5, w: 11.0, h: 0.6,
+      x: M + 0.85, y: y + 1.5, w: 11.0, h: 0.55,
       fontFace: BODY_FONT, fontSize: 11.5, italic: true, lineSpacing: 15, margin: 0,
     })
   })
 
   s.addText(
-    'Aucun de ces deux points ne porte sur la sécurité technique du produit.',
+    'Aucun constat critique ni de gravité élevée ne reste ouvert sur la sécurité du produit.',
     {
       x: M, y: 6.5, w: W - 2 * M, h: 0.4,
       fontFace: BODY_FONT, fontSize: 12.5, italic: true, color: SLATE, margin: 0,
@@ -607,7 +681,7 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
 // ═══════════════════════════════════ 11. Ce qui vous revient
 {
   const s = pres.addSlide()
-  titre(s, 'Ce qui vous revient', 'Responsable de traitement, vous avez trois actes à poser avant le premier inventaire')
+  titre(s, 'Ce qui vous revient', 'Responsable de traitement, trois points à traiter avant le premier inventaire')
 
   const actes = [
     {
@@ -618,15 +692,15 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
     },
     {
       n: '2',
-      t: 'Consulter votre CSE',
-      d: 'Un dispositif permettant de suivre l’activité des salariés relève de l’information-consultation '
-       + 'du comité social et économique.',
+      t: 'Informer votre CSE',
+      d: 'Le suivi en direct ayant été retiré, l’obligation de consultation se discute — mais informer '
+       + 'le comité social et économique coûte peu et sécurise la démarche.',
     },
     {
       n: '3',
-      t: 'Évaluer l’analyse d’impact',
-      d: 'Le suivi étant systématique et portant sur des salariés, une analyse d’impact (AIPD) est '
-       + 'probablement requise. Notre analyse écrite vous sert de point de départ.',
+      t: 'Écarter l’analyse d’impact par écrit',
+      d: 'Un seul critère sur six reste rempli : l’AIPD n’est en principe plus requise. Une AIPD écartée '
+       + 'se motive par écrit — elle ne se déduit pas d’un silence. Notre analyse vous sert de base.',
     },
   ]
 
@@ -677,10 +751,10 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
       'Aucun. Ni mesure d’audience, ni publicité, ni bandeau de consentement.'],
     ['Que se passe-t-il en cas de violation de données ?',
       'Procédure écrite. Nous vous alertons sans délai ; sur vos données, c’est vous qui notifiez la CNIL sous 72 heures.'],
+    ['Nos salariés sont-ils surveillés pendant un inventaire ?',
+      'Non. Le superviseur voit des compteurs agrégés, jamais qui fait quoi en direct. L’auteur d’un comptage n’apparaît que dans le rapport, après coup.'],
     ['Un salarié peut-il récupérer ou effacer ses données ?',
       'Oui : export en un clic depuis son compte, et suppression sur demande — les comptages sont alors anonymisés, pas détruits.'],
-    ['Que devient notre inventaire si nous partons ?',
-      'Les rapports restent exportables en Excel et CSV à tout moment, sans intervention de notre part.'],
   ]
 
   faq.forEach((q, i) => {

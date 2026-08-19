@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 import {
-  PRESENCE_V, SYNC_EVENT, flattenPresence, presenceTopic,
+  SYNC_EVENT, flattenPresence, presenceTopic,
   type PresencePayload,
 } from '@/lib/presence'
 
@@ -29,8 +29,9 @@ const POLL_MS = 8_000
 const SYNC_DEBOUNCE_MS = 750
 
 export type LiveState = {
+  /** Une entrée par appareil connecté, indexée par clé de présence anonyme. */
   presence: Record<string, PresencePayload>
-  /** Nombre de participants dont la version de contrat est inconnue. */
+  /** Appareils dont la version de contrat est inconnue (mobile pas à jour). */
   unknownVersions: number
   channelReady: boolean
   lastRefreshAt: number
@@ -40,7 +41,9 @@ export type LiveState = {
 
 export function useSessionLive(
   sessionId: string | undefined,
-  me: { id: string; full_name: string | null; role: string | null } | null,
+  /** Faux tant que la session d'authentification n'est pas prête : s'abonner
+   *  avant ferait échouer l'autorisation du canal privé. */
+  ready: boolean,
   onRefresh: () => Promise<void> | void,
   options?: { enabled?: boolean; pollMs?: number },
 ): LiveState {
@@ -74,27 +77,31 @@ export function useSessionLive(
 
   // ── Canal : présence + broadcast ───────────────────────────────────────────
   useEffect(() => {
-    if (!sessionId || !me) return
+    if (!sessionId || !ready) return
 
     let disposed = false
     let debounce: ReturnType<typeof setTimeout> | null = null
 
     // Canal **privé** : Realtime évalue alors les policies de
     // `realtime.messages`, qui n'autorisent le topic qu'aux participants de
-    // l'inventaire (migration 20260813000009). En public — l'état précédent —
+    // l'inventaire (migration 20260813000009). En public — l'état d'origine —
     // aucune autorisation n'était consultée : connaître l'UUID suffisait à
-    // écouter les noms et l'activité des compteurs, y compris depuis une autre
-    // entreprise, et y compris après avoir été retiré de l'inventaire.
+    // écouter l'activité des compteurs, y compris depuis une autre entreprise,
+    // et y compris après avoir été retiré de l'inventaire.
+    //
+    // Le site **écoute sans publier** : il ne se déclare pas présent. Les
+    // appareils comptés sont donc ceux de l'équipe sur le terrain, ce qui est
+    // l'information utile — et c'est une émission de moins.
     const channel: RealtimeChannel = supabase.channel(presenceTopic(sessionId), {
-      config: { private: true, presence: { key: me.id } },
+      config: { private: true },
     })
 
     const readPresence = () => {
       if (disposed) return
-      const { people, unknownVersions } = flattenPresence(
+      const { devices, unknownVersions } = flattenPresence(
         channel.presenceState() as unknown as Record<string, unknown[]>,
       )
-      setPresence(people)
+      setPresence(devices)
       setUnknownVersions(unknownVersions)
     }
 
@@ -110,34 +117,15 @@ export function useSessionLive(
       .subscribe((status) => {
         if (disposed) return
         setChannelReady(status === 'SUBSCRIBED')
-        if (status !== 'SUBSCRIBED') return
-        const now = Date.now()
-        // Le superviseur devant son écran est lui aussi « présent » : les
-        // autres superviseurs doivent le voir.
-        void channel.track({
-          v: PRESENCE_V,
-          user_id: me.id,
-          full_name: me.full_name ?? 'Sans nom',
-          role: me.role ?? 'supervisor',
-          device: 'web',
-          screen: 'session',
-          mode: null,
-          balise: null,
-          balise_name: null,
-          foreground: true,
-          since: now,
-          beat: now,
-        } satisfies PresencePayload)
       })
 
     return () => {
       disposed = true
       if (debounce) clearTimeout(debounce)
-      void channel.untrack()
       void supabase.removeChannel(channel)
       setChannelReady(false)
     }
-  }, [sessionId, me, refresh])
+  }, [sessionId, ready, refresh])
 
   // ── Sondage, uniquement onglet visible ─────────────────────────────────────
   useEffect(() => {
