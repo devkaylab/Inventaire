@@ -1,0 +1,22 @@
+-- Suppression de `get_session_activity`, dernier reste du suivi nominatif.
+--
+-- Elle rendait une ligne par personne : nom, dernière balise, dernière action,
+-- cadence des scans sur une fenêtre glissante. Le site l'appelait à chaque
+-- rafraîchissement pour alimenter la liste des personnes ; cette liste a été
+-- remplacée le 19 août 2026 par des compteurs agrégés (constat E3), et plus
+-- aucun client ne l'appelle — ni le site, ni l'application mobile.
+--
+-- Tant qu'elle existait, elle restait exécutable par le rôle `authenticated`
+-- en SECURITY DEFINER : un participant de l'inventaire pouvait la joindre
+-- directement par l'API REST et reconstituer le suivi nominatif que
+-- l'interface ne montre plus. Retirer l'affichage sans retirer la fonction
+-- n'aurait fermé que la porte visible.
+--
+-- Aucune dépendance vérifiée avant suppression : aucune autre fonction,
+-- aucune vue, aucune policy ne s'y référait.
+--
+-- Ce qui subsiste, volontairement : `counts.counted_by`, lu par
+-- `get_session_detail` pour le rapport. Arbitrer un écart suppose de savoir
+-- qui a compté — finalité distincte, usage différé.
+
+drop function if exists public.get_session_activity(uuid, integer);

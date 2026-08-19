@@ -66,34 +66,6 @@ export const MEMBERS = [
   },
 ]
 
-/** Deux personnes actives : l'une en comptage, l'autre en audit. */
-export function activity(now = Date.now()) {
-  return [
-    {
-      user_id: SUPERVISOR_ID,
-      full_name: 'Compte Test Sup',
-      last_action_at: new Date(now - 2 * 60_000).toISOString(),
-      last_zone: '5372',
-      last_pass: 2,
-      events_window: 3,
-      units_window: 3,
-      events_total: 3,
-      first_action_at: new Date(now - 40 * 60_000).toISOString(),
-    },
-    {
-      user_id: COUNTER_ID,
-      full_name: 'Compte Test Compteur',
-      last_action_at: new Date(now - 5 * 60_000).toISOString(),
-      last_zone: '5373',
-      last_pass: 1,
-      events_window: 21,
-      units_window: 21,
-      events_total: 21,
-      first_action_at: new Date(now - 60 * 60_000).toISOString(),
-    },
-  ]
-}
-
 export function recentCounts(now = Date.now()) {
   return [
     { id: 'c1', counted_by: SUPERVISOR_ID, zone: '5372', pass_number: 2, qty: 1, sku: 'GHI9123', created_at: new Date(now - 2 * 60_000).toISOString() },

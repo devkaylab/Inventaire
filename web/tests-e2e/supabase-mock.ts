@@ -216,7 +216,6 @@ export async function mockSupabase(
 
       switch (name) {
         case 'get_zone_dashboard': return json(route, state.zones)
-        case 'get_session_activity': return json(route, F.activity())
         case 'get_session_results': return json(route, F.RESULTS)
         case 'get_session_detail': return json(route, F.DETAIL)
         case 'recompute_session_audit': return json(route, { success: true, failed: 2, pending: 1, total: 4 })

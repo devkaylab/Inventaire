@@ -27,7 +27,9 @@ une personne. Le site, de son côté, **écoute sans publier**.
 Retirés également, côté données descendantes :
 
 - `get_session_activity` — une ligne nominative par personne, avec cadence et
-  dernière balise — n'est plus appelée par aucun client ;
+  dernière balise — a été **supprimée de la base** (migration
+  `20260819171741`) ; elle n'avait plus d'appelant, mais restait exécutable par
+  un participant appelant l'API directement ;
 - le fil des derniers scans n'affiche plus l'auteur, et `counted_by` n'est même
   plus demandé au serveur pour l'alimenter.
 
@@ -90,14 +92,9 @@ Voir le tableau ci-dessus. À faire trancher et motiver par écrit.
 
 - [x] Suivi nominatif en direct retiré (contrat de présence v2, 19 août 2026)
 - [x] Signal « application au premier plan » supprimé
-- [x] `get_session_activity` sans appelant ; fil des scans anonyme
+- [x] `get_session_activity` supprimée de la base ; fil des scans anonyme
 - [x] Traitement déclaré dans la politique de confidentialité et au registre
 - [ ] Information des salariés diffusée par chaque entreprise cliente
 - [ ] Position écrite sur le CSE
 - [ ] AIPD écartée par écrit et motivée, ou conduite
 
-## Reste ouvert
-
-La RPC `get_session_activity` existe toujours en base, sans appelant. La
-supprimer demande une migration ; tant qu'elle est là, elle reste exécutable
-par un participant de l'inventaire qui appellerait l'API directement.

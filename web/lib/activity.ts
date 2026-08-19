@@ -1,9 +1,8 @@
 // Activité réelle d'un inventaire, déduite du journal `counts`.
 //
 // `get_session_activity` — une ligne nominative par personne, avec sa cadence
-// et sa dernière balise — n'est plus appelée : le suivi en direct est agrégé
-// et ne nomme plus personne (constat E3). La RPC existe toujours en base ;
-// elle n'a plus d'appelant, ni ici ni sur mobile.
+// et sa dernière balise — a été supprimée de la base le 19 août 2026 : le
+// suivi en direct est agrégé et ne nomme plus personne (constat E3).
 //
 // `counted_by` n'est pas non plus demandé ci-dessous : le fil des scans ne
 // l'affiche plus, et ce qui n'est pas affiché n'a pas à descendre jusqu'au

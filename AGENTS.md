@@ -304,10 +304,10 @@ restée en v1 continue d'émettre l'ancienne charge, mais le site l'écarte et l
 compte dans `unknownVersions`, affiché à l'écran. **Ne jamais réutiliser le
 numéro de version** en changeant le contrat.
 
-Retirés aussi : l'appel à `get_session_activity` (nominative, plus aucun
-appelant — la RPC subsiste en base, sa suppression demande une migration), et
-`counted_by` dans la requête du fil des scans — ce qui n'est pas affiché n'a
-pas à descendre au navigateur.
+Retirés aussi : `get_session_activity` — nominative, **supprimée de la base**
+par la migration `20260819171741` car elle restait joignable par l'API même
+sans appelant — et `counted_by` dans la requête du fil des scans : ce qui n'est
+pas affiché n'a pas à descendre au navigateur.
 
 **Ce qui reste nominatif et doit le rester** : `counts.counted_by`, écrit à
 chaque scan et restitué dans le rapport. Arbitrer un écart suppose de savoir
