@@ -57,36 +57,40 @@ test.describe('Tableau de bord — profil de l’inventaire', () => {
   })
 })
 
-test.describe('Suivi — qui compte quelle balise', () => {
-  test('montre chaque personne, son mode et sa balise', async ({ page }) => {
+test.describe('Suivi — activité agrégée, sans suivi nominatif', () => {
+  test('ne nomme personne : ni liste de personnes, ni auteur des scans', async ({ page }) => {
+    // C'est la garantie du constat E3 : le superviseur pilote l'inventaire
+    // sans observer les individus. Un nom qui réapparaîtrait ici rétablirait
+    // la surveillance que l'agrégation retire.
     await gotoDashboard(page, 'suivi')
 
-    const counter = page.locator('.person-row', { hasText: 'Compte Test Compteur' })
-    await expect(counter).toBeVisible()
-    await expect(counter).toContainText('balise 5373')
-    await expect(counter.locator('.mode-badge')).toHaveText('Comptage')
-
-    const supervisor = page.locator('.person-row', { hasText: 'Compte Test Sup' })
-    await expect(supervisor).toContainText('balise 5372')
-    await expect(supervisor.locator('.mode-badge')).toHaveText('Audit')
+    await expect(page.locator('.person-row')).toHaveCount(0)
+    for (const nom of ['Compte Test Compteur', 'Compte Test Sup']) {
+      await expect(page.locator('.dash-main').getByText(nom)).toHaveCount(0)
+    }
   })
 
-  test('sans temps réel, ne prétend jamais que quelqu’un est « en ligne »', async ({ page }) => {
-    // Le canal Realtime est coupé dans le harnais : la présence est vide et
-    // seule l'activité déduite des comptages subsiste. C'est exactement la
-    // situation d'un magasin sans réseau, et l'interface doit le dire.
+  test('compte les appareils par mode', async ({ page }) => {
+    // Le canal Realtime est coupé dans le harnais : aucun appareil n'est
+    // connecté, et l'interface doit le dire au lieu d'inventer un chiffre.
     await gotoDashboard(page, 'suivi')
 
     await expect(page.getByText('Temps réel indisponible')).toBeVisible()
-    await expect(page.locator('.person-row').first()).toContainText('dernier scan')
-    await expect(page.locator('.person-state-online')).toHaveCount(0)
+    const connectes = page.locator('.dash-stat', { hasText: 'Appareils connectés' })
+    await expect(connectes).toContainText('aucun appareil connecté')
+    for (const mode of ['En comptage', 'En audit']) {
+      await expect(page.locator('.dash-stat', { hasText: mode })).toBeVisible()
+    }
   })
 
   test('résume l’avancement par zone, sans numéro de balise', async ({ page }) => {
     await gotoDashboard(page, 'suivi')
 
-    // La ligne de correction (quantité négative) doit rester visible.
-    await expect(page.locator('.feed-row', { hasText: 'ABC1236' })).toContainText('-1')
+    // La ligne de correction (quantité négative) doit rester visible : le fil
+    // perd le nom de l'auteur, pas l'information sur le travail.
+    const correction = page.locator('.feed-row', { hasText: 'ABC1236' })
+    await expect(correction).toContainText('-1')
+    await expect(correction).toContainText('balise 5372')
 
     // Une seule zone dans le jeu de données : comptées 3/10 (30 %), auditées 2/10 (20 %).
     const row = page.locator('.zone-progress', { hasText: 'Surface de vente' })

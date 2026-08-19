@@ -198,9 +198,7 @@ export default function SessionDashboardPage() {
               <SuiviTab
                 session={session}
                 zones={data.zones}
-                members={data.members}
                 presence={live.presence}
-                activity={data.activity}
                 recent={data.recent}
                 unknownVersions={live.unknownVersions}
                 totals={data.totals}
