@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
@@ -61,15 +61,8 @@ export default function SessionDashboardPage() {
     window.history.replaceState(null, '', url.toString())
   }, [])
 
-  const me = useMemo(
-    () => (guard.status === 'ready'
-      ? { id: guard.profile.id, full_name: guard.profile.full_name, role: guard.profile.role }
-      : null),
-    [guard],
-  )
-
   const { refreshLive } = data
-  const live = useSessionLive(sessionId, me, refreshLive, {
+  const live = useSessionLive(sessionId, guard.status === 'ready', refreshLive, {
     // Un inventaire clôturé ne bouge plus : inutile de le sonder.
     enabled: data.session?.status !== 'closed',
   })
@@ -198,9 +191,7 @@ export default function SessionDashboardPage() {
               <SuiviTab
                 session={session}
                 zones={data.zones}
-                members={data.members}
                 presence={live.presence}
-                activity={data.activity}
                 recent={data.recent}
                 unknownVersions={live.unknownVersions}
                 totals={data.totals}

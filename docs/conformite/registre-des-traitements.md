@@ -1,7 +1,7 @@
 # Registre des activités de traitement
 
 **Responsable** : Devkaylab, éditeur de Quantinvo — devkaylab@gmail.com
-**Dernière mise à jour** : 18 août 2026
+**Dernière mise à jour** : 19 août 2026
 **Base** : article 30 du RGPD (constat M5 de l'audit du 13 août 2026)
 
 > Ce registre décrit ce que le produit fait **réellement** : chaque ligne a été
@@ -79,13 +79,13 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 | | |
 |---|---|
 | **Rôle** | **Sous-traitance** pour le compte de l'entreprise cliente |
-| **Finalité** | Permettre au superviseur de piloter l'inventaire en cours : qui est présent, sur quelle zone, en comptage ou en audit |
+| **Finalité** | Permettre au superviseur de savoir combien d'appareils travaillent, et dans quel mode |
 | **Base légale** | Intérêt légitime de l'entreprise cliente — **à documenter par elle** (voir l'analyse E3) |
-| **Personnes** | Compteurs et superviseurs participant à un inventaire |
-| **Données** | Nom, écran ouvert, mode, zone en cours, application au premier plan ou non, battement toutes les 30 s |
-| **Support** | Canal temps réel Supabase (`session:<id>:presence`), **non persisté** ; RPC `get_session_activity`, déduite des comptages |
-| **Destinataires** | Superviseurs de l'inventaire concerné, en direct |
-| **Conservation** | Aucune : l'information n'existe que pendant la connexion. L'activité déduite suit la conservation des comptages (T4) |
+| **Personnes** | Aucune n'est identifiée depuis le 19 août 2026 : le signal porte un identifiant d'appareil tiré au hasard |
+| **Données** | Mode (comptage / audit / aucun) et battement toutes les 30 s. **Depuis le 19 août 2026** : plus de nom, d'écran, de zone en cours ni d'état d'avant-plan (contrat de présence v2) |
+| **Support** | Canal temps réel Supabase (`session:<id>:presence`), **non persisté**. La RPC `get_session_activity`, nominative, n'a plus d'appelant ; sa suppression est différée au déploiement |
+| **Destinataires** | Superviseurs de l'inventaire concerné, sous forme de compteurs agrégés |
+| **Conservation** | Aucune : l'information n'existe que pendant la connexion |
 | **Sous-traitants** | Supabase |
 
 ## T6 — Notifications sur appareil
@@ -149,5 +149,5 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 ## Points ouverts
 
 - Contrat de sous-traitance (article 28) à établir avec chaque entreprise cliente — **M5** ;
-- information des salariés et consultation du CSE pour T5 — **E3** ;
+- information des salariés pour T4 (les comptages restent nominatifs), et position écrite sur le CSE et l'AIPD — **E3**, réexaminé le 19 août après le passage au suivi agrégé ;
 - planification automatique de `purge_expired_data` (pg_cron non installé) — **E1/E2**.

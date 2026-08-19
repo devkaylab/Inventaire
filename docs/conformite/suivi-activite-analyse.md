@@ -1,95 +1,115 @@
 # Suivi de l'activité des compteurs — analyse et obligations
 
 **Base** : constat E3 de l'audit du 13 août 2026
-**Dernière mise à jour** : 18 août 2026
+**Dernière mise à jour** : 19 août 2026 — *le dispositif a changé, voir ci-dessous*
 
-## Ce que le produit observe réellement
+## Décision produit du 19 août 2026 : passage à un suivi agrégé
 
-Relevé dans le code (`src/lib/presence.ts`, `web/hooks/useSessionLive.ts`,
-RPC `get_session_activity`), pas déduit d'une intention :
+Le suivi nominatif en direct a été **retiré**. Il est remplacé par des
+compteurs : nombre d'appareils connectés, nombre en comptage, nombre en audit.
+Le pilotage de l'inventaire passe désormais par l'avancement par zone, qui
+décrit le **travail** et non les personnes.
+
+Ce que le canal temps réel transporte encore (contrat de présence v2,
+`web/lib/presence.ts` et `src/lib/presence.ts`) :
 
 | Signal | Détail | Persisté ? |
 |---|---|---|
-| Présence | Nom de la personne, connectée ou non, battement toutes les 30 s | Non |
-| Écran | `session` ou `scan` — donc « en train de scanner » | Non |
-| Mode | Comptage ou audit | Non |
-| Zone | Balise ouverte, avec son libellé | Non |
-| Premier plan | L'application est-elle affichée, ou passée en arrière-plan | Non |
-| Activité déduite | Cadence des scans, « depuis 4 min », dernière balise | Oui, via les comptages |
+| Mode | Comptage, audit, ou aucun | Non |
+| Battement | Horodatage, pour écarter une socket fantôme | Non |
 
-Le superviseur voit tout cela **nominativement et en direct**. Un compteur qui
-range son téléphone dans sa poche apparaît comme n'ayant plus l'application au
-premier plan.
+Et ce qui en a disparu : le **nom**, l'**écran ouvert**, la **balise en cours**,
+l'**horodatage de début d'activité** et l'**application au premier plan**. La
+clé de présence n'est plus l'identifiant de l'utilisateur mais un identifiant
+d'appareil tiré au hasard à chaque montage : plus rien sur ce canal ne désigne
+une personne. Le site, de son côté, **écoute sans publier**.
 
-## Est-ce de la surveillance des salariés ?
+Retirés également, côté données descendantes :
 
-Oui, au sens du droit du travail : le dispositif permet de suivre l'activité
-individuelle d'un salarié pendant son temps de travail. Peu importe que ce ne
-soit pas sa finalité première — c'est son effet.
+- `get_session_activity` — une ligne nominative par personne, avec cadence et
+  dernière balise — n'est plus appelée par aucun client. **Sa suppression est
+  prête mais différée** : voir « Reste ouvert » en fin de note ;
+- le fil des derniers scans n'affiche plus l'auteur, et `counted_by` n'est même
+  plus demandé au serveur pour l'alimenter.
 
-Deux nuances qui jouent en faveur du dispositif :
+## Ce qui reste nominatif, et pourquoi
 
-- il ne fonctionne **que pendant un inventaire**, pas en continu ;
-- rien n'est conservé : la présence disparaît avec la connexion.
+`counts.counted_by` continue d'être écrit à chaque scan, et ressort dans le
+rapport et l'export (« Compté par », « Audité par »).
+
+C'est **une autre finalité** : arbitrer un écart entre comptage et audit
+suppose de savoir qui a compté, pour reprendre avec la bonne personne. L'usage
+est différé, à la demande du superviseur, et non un flux d'observation continu.
+Supprimer cette colonne retirerait au produit sa capacité d'audit — c'est-à-dire
+sa raison d'être.
+
+## Est-ce encore de la surveillance des salariés ?
+
+Le dispositif ne permet plus de suivre l'activité **individuelle** en direct.
+Il subsiste un traitement de données personnelles — les comptages sont
+nominatifs — mais il documente un travail accompli, comme le ferait n'importe
+quel enregistrement de production.
+
+### Critères de l'analyse d'impact, réexaminés
+
+| Critère | Avant le 19 août | Après |
+|---|---|---|
+| Surveillance systématique | Oui — battement régulier, activité observée en continu | **Non** — plus d'observation individuelle, des compteurs agrégés |
+| Personnes vulnérables | Oui — un salarié n'est pas en position de refuser | Oui, inchangé |
+| Évaluation ou notation | Non | Non |
+| Décision automatisée | Non | Non |
+| Données sensibles | Non | Non |
+| Grande échelle | Non | Non |
+
+Deux critères remplis appelaient une analyse d'impact ; **il n'en reste qu'un**.
+L'AIPD n'est donc, en principe, plus requise. Cette conclusion doit être
+confirmée par un conseil et **écrite** : une AIPD écartée se motive par écrit,
+elle ne se déduit pas d'un silence.
 
 ## Ce qui doit être fait, et par qui
 
-L'entreprise cliente est responsable de traitement : ces obligations lui
-incombent. Devkaylab doit les lui signaler et lui fournir les éléments.
+L'entreprise cliente est responsable de traitement. Devkaylab lui signale ces
+obligations et lui fournit les éléments.
 
-### 1. Information individuelle des salariés — obligatoire
+### 1. Information des salariés — toujours obligatoire
 
-Aucun dispositif de suivi n'est opposable à un salarié qui n'en a pas été
-informé. Une note d'information type est fournie :
-`information-salaries.md`.
+Les comptages restent nominatifs : les personnes doivent le savoir. La note
+type reste valable, allégée de ce qui ne s'applique plus (`information-salaries.md`).
 
-### 2. Consultation du comité social et économique — obligatoire si CSE
+### 2. Consultation du CSE — à réexaminer
 
-Le CSE doit être consulté **avant** la mise en place d'un dispositif permettant
-de contrôler l'activité des salariés (article L. 2312-38 du code du travail).
-La consultation précède le déploiement : la régulariser après coup ne l'efface
-pas.
+L'obligation vise les dispositifs permettant de **contrôler l'activité** des
+salariés (article L. 2312-38 du code du travail). Le suivi en direct ayant été
+retiré, l'argument d'un simple enregistrement de production devient défendable.
+La prudence reste de mise : informer le CSE coûte peu et sécurise.
 
-### 3. Analyse d'impact (AIPD) — probablement requise
+### 3. Analyse d'impact — probablement écartée
 
-Les critères des lignes directrices européennes retenus ici :
-
-| Critère | Rempli ? |
-|---|---|
-| Surveillance systématique | Oui — battement régulier, activité en continu pendant l'inventaire |
-| Personnes vulnérables | Oui — un salarié n'est pas en position de refuser |
-| Évaluation ou notation | Non |
-| Décision automatisée | Non |
-| Données sensibles | Non |
-| Grande échelle | Non, à ce stade |
-
-Deux critères remplis : l'analyse d'impact est **en principe requise**. La
-liste de la CNIL vise le « contrôle permanent de l'activité des employés » — le
-caractère intermittent du dispositif laisse une marge d'appréciation, mais elle
-est trop mince pour s'en dispenser sans avis. À faire trancher par un conseil,
-entreprise cliente par entreprise cliente.
-
-## Recommandation produit : retirer le signal « premier plan »
-
-Un signal se distingue des autres. Savoir sur quelle zone travaille un compteur
-sert à piloter l'inventaire — c'est le métier. Savoir si son téléphone est
-allumé et l'application affichée ne sert **à rien pour l'inventaire** : cela
-renseigne uniquement sur le comportement de la personne.
-
-C'est le signal le plus intrusif et le moins utile. Le retirer réduirait
-sensiblement la portée du dispositif, donc la lourdeur des obligations, sans
-rien coûter au produit. À arbitrer.
-
-Deux minimisations moins tranchées, à considérer ensuite :
-
-- n'afficher la présence qu'**agrégée** hors inventaire en cours ;
-- remplacer « depuis 4 min » par un simple indicateur d'activité récente, qui
-  informe le superviseur sans chronométrer la personne.
+Voir le tableau ci-dessus. À faire trancher et motiver par écrit.
 
 ## État
 
-- [ ] Information des salariés diffusée par chaque entreprise cliente
-- [ ] CSE consulté, le cas échéant
-- [ ] AIPD conduite ou écartée par écrit et motivée
-- [ ] Arbitrage sur le signal « premier plan »
+- [x] Suivi nominatif en direct retiré (contrat de présence v2, 19 août 2026)
+- [x] Signal « application au premier plan » supprimé
+- [x] `get_session_activity` sans appelant ; fil des scans anonyme
+- [ ] `get_session_activity` supprimée de la base — **après** la mise en production du code
 - [x] Traitement déclaré dans la politique de confidentialité et au registre
+- [ ] Information des salariés diffusée par chaque entreprise cliente
+- [ ] Position écrite sur le CSE
+- [ ] AIPD écartée par écrit et motivée, ou conduite
+
+## Reste ouvert
+
+La RPC `get_session_activity` existe toujours en base. Sa suppression a été
+appliquée le 19 août (`20260819171741`) puis **immédiatement annulée**
+(`20260819172557`) : le site en production l'appelait encore, et le tableau de
+bord répondait « Cet inventaire n'est pas accessible » à l'ouverture d'un
+inventaire. L'ordre à respecter est celui-ci, sans le raccourcir :
+
+1. fusionner et déployer le code qui ne l'appelle plus (contrat de présence v2) ;
+2. vérifier qu'un inventaire s'ouvre normalement en production ;
+3. rejouer alors la suppression.
+
+Tant qu'elle existe, elle reste exécutable en SECURITY DEFINER par un
+participant de l'inventaire qui appellerait l'API directement — c'est la raison
+de la supprimer, et elle reste valable.

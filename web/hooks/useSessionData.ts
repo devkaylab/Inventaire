@@ -14,7 +14,7 @@ import {
   type ImportState, type Member, type Session, type SessionInvitation,
 } from '@/lib/inventory'
 import { getZoneDashboard, type ZoneDashboardRow } from '@/lib/zones'
-import { getRecentCounts, getSessionActivity, type ActivityRow, type CountEvent } from '@/lib/activity'
+import { getRecentCounts, type CountEvent } from '@/lib/activity'
 
 export type Totals = { counted: number; audited: number; countedSkus: number; auditedSkus: number }
 
@@ -27,7 +27,6 @@ export type SessionData = {
   totals: Totals
   members: Member[]
   invitations: SessionInvitation[]
-  activity: ActivityRow[]
   recent: CountEvent[]
   importState: ImportState
   refreshLive: () => Promise<void>
@@ -46,7 +45,6 @@ export function useSessionData(sessionId: string): SessionData {
   const [totals, setTotals] = useState<Totals>(EMPTY_TOTALS)
   const [members, setMembers] = useState<Member[]>([])
   const [invitations, setInvitations] = useState<SessionInvitation[]>([])
-  const [activity, setActivity] = useState<ActivityRow[]>([])
   const [recent, setRecent] = useState<CountEvent[]>([])
   const [importState, setImportState] = useState<ImportState>({ articles: 0, stock: 0, theoreticalQty: 0 })
 
@@ -61,14 +59,13 @@ export function useSessionData(sessionId: string): SessionData {
 
   const refreshLive = useCallback(async () => {
     if (!sessionId) return
-    const [z, t, a, r] = await Promise.all([
+    const [z, t, r] = await Promise.all([
       usesZonesRef.current ? getZoneDashboard(sessionId) : Promise.resolve<ZoneDashboardRow[]>([]),
       getCountTotals(sessionId),
-      getSessionActivity(sessionId),
       getRecentCounts(sessionId),
     ])
     if (!aliveRef.current) return
-    setZones(z); setTotals(t); setActivity(a); setRecent(r)
+    setZones(z); setTotals(t); setRecent(r)
   }, [sessionId])
 
   const refreshMeta = useCallback(async () => {
@@ -107,6 +104,6 @@ export function useSessionData(sessionId: string): SessionData {
 
   return {
     loading, error, notFound, session, zones, totals, members, invitations,
-    activity, recent, importState, refreshLive, refreshMeta, refreshAll,
+    recent, importState, refreshLive, refreshMeta, refreshAll,
   }
 }

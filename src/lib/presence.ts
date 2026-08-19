@@ -3,96 +3,93 @@
 // ⚠️ À GARDER SYNCHRONISÉ AVEC web/lib/presence.ts (site).
 // Les deux paquets npm sont séparés (Expo/React 19 ici, Next/React 18 là-bas) :
 // ce fichier est donc dupliqué volontairement. Une dérive de ce contrat serait
-// silencieuse — le site afficherait « personne connectée » sans que rien ne
-// signale l'erreur. D'où le champ `v` : le site écarte les charges dont il ne
+// silencieuse — le site afficherait « aucun appareil connecté » sans que rien
+// ne le signale. D'où le champ `v` : le site écarte les charges dont il ne
 // connaît pas la version et l'affiche explicitement.
+//
+// ── Version 2 : la présence ne nomme plus personne ──────────────────────────
+//
+// La v1 publiait le nom, l'écran ouvert, la balise en cours, le début
+// d'activité et l'état d'avant-plan de l'application. Le superviseur suivait
+// donc l'activité de chacun, nominativement et en direct (constat E3 de
+// l'audit du 13 août 2026). La v2 ne publie plus que le mode et le battement :
+// le site en tire des compteurs, sans jamais désigner qui que ce soit.
+//
+// L'état d'avant-plan a disparu, et c'est le point le plus important : il ne
+// disait rien de l'inventaire, seulement du comportement de la personne.
+//
+// La clé de présence est un identifiant d'appareil tiré au hasard au montage,
+// et non plus l'identifiant de l'utilisateur — celui-ci voyageait dans le
+// protocole même absent de la charge.
+//
+// Ce qui reste nominatif : `counts.counted_by`, écrit à chaque scan. Arbitrer
+// un écart suppose de savoir qui a compté ; c'est une finalité distincte et
+// différée, pas du suivi en direct.
 //
 // Rien à configurer côté serveur : présence et broadcast passent par le service
 // Realtime et ne touchent pas à la réplication logique de Postgres.
 
-import { useCallback, useEffect, useRef } from 'react'
-import { AppState, Platform } from 'react-native'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 
-export const PRESENCE_V = 1
+/** v2 : voir l'en-tête. Doit valoir la même chose que dans web/lib/presence.ts. */
+export const PRESENCE_V = 2
 
 export const presenceTopic = (sessionId: string) => `session:${sessionId}:presence`
 
 export const SYNC_EVENT = 'sync'
 
-/** Cadence des battements. Le site considère une présence périmée au-delà de
+/** Cadence des battements. Le site considère un appareil parti au-delà de
  *  trois battements manqués (90 s). */
 const BEAT_MS = 30_000
 
 export type PresenceMode = 'count' | 'audit' | null
 
+/** Tout ce que l'application publie désormais : le mode courant. */
 export type PresenceActivity = {
-  screen: 'session' | 'scan'
   mode: PresenceMode
-  balise: string | null
-  baliseName: string | null
 }
 
-export const IDLE_ACTIVITY: PresenceActivity = {
-  screen: 'session', mode: null, balise: null, baliseName: null,
-}
+export const IDLE_ACTIVITY: PresenceActivity = { mode: null }
 
-function signature(a: PresenceActivity): string {
-  return `${a.screen}|${a.mode}|${a.balise}`
+/** Identifiant d'appareil, tiré au hasard et sans lien avec le compte. */
+function newDeviceKey(): string {
+  const c = globalThis.crypto as { randomUUID?: () => string } | undefined
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID()
+  return `d-${Math.floor(Math.random() * 1e9).toString(36)}${Date.now().toString(36)}`
 }
 
 /**
- * Publie la présence de l'utilisateur courant sur un inventaire.
+ * Publie la présence de l'appareil courant sur un inventaire.
  *
- * Le superviseur voit alors, depuis le site et en direct, qui est connecté et
- * sur quelle balise chacun travaille. Sans effet si l'inventaire ou le profil
- * manquent — l'appel est donc sûr en tête de composant.
+ * Le superviseur voit alors, depuis le site, **combien** d'appareils sont
+ * connectés et dans quel mode — jamais qui fait quoi. Sans effet si
+ * l'inventaire ou le profil manquent : l'appel est donc sûr en tête de
+ * composant.
  *
- * Toutes les valeurs mutables passent par des refs mises à jour *dans* des
- * effets, jamais pendant le rendu : la charge est construite au moment de
- * l'émission (battement, changement d'état de l'application, changement
- * d'activité), pas au moment du rendu.
+ * Le mode passe par une ref mise à jour *dans* un effet, jamais pendant le
+ * rendu : la charge est construite au moment de l'émission (battement ou
+ * changement de mode), pas au moment du rendu.
  */
 export function useSessionPresence(sessionId: string | undefined, activity: PresenceActivity) {
   const { profile } = useAuth()
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const sinceRef = useRef(0)
-  const signatureRef = useRef('')
   const activityRef = useRef(activity)
-  const foregroundRef = useRef(true)
-  const identityRef = useRef({ userId: '', fullName: 'Sans nom', role: 'employee' })
 
   const userId = profile?.id
-  const fullName = profile?.full_name ?? 'Sans nom'
-  const role = profile?.role ?? 'employee'
+  // Une clé par montage : un appareil qui se reconnecte n'est pas compté deux
+  // fois, et rien ne relie cette clé au compte.
+  const deviceKey = useMemo(() => newDeviceKey(), [])
 
-  // Synchronisation des refs — déclarée avant les effets qui publient, donc
-  // exécutée avant eux : ceux-ci lisent toujours la valeur du rendu courant.
+  const build = useCallback(() => ({
+    v: PRESENCE_V,
+    mode: activityRef.current.mode,
+    beat: Date.now(),
+  }), [])
+
   useEffect(() => { activityRef.current = activity }, [activity])
-  useEffect(() => {
-    identityRef.current = { userId: userId ?? '', fullName, role }
-  }, [userId, fullName, role])
-
-  const build = useCallback(() => {
-    const { userId: id, fullName: name, role: r } = identityRef.current
-    const a = activityRef.current
-    return {
-      v: PRESENCE_V,
-      user_id: id,
-      full_name: name,
-      role: r,
-      device: Platform.OS === 'ios' ? 'ios' : 'android',
-      screen: a.screen,
-      mode: a.mode,
-      balise: a.balise,
-      balise_name: a.baliseName,
-      foreground: foregroundRef.current,
-      since: sinceRef.current,
-      beat: Date.now(),
-    }
-  }, [])
 
   // ── Canal : reconstruit seulement si l'inventaire ou l'utilisateur change ──
   useEffect(() => {
@@ -100,11 +97,11 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
 
     // Canal **privé** : Realtime évalue alors les policies de
     // `realtime.messages`, qui n'autorisent le topic qu'aux participants de
-    // l'inventaire (migration 20260813000009). En public — l'état précédent —
+    // l'inventaire (migration 20260813000009). En public — l'état d'origine —
     // aucune autorisation n'était consultée : connaître l'UUID suffisait à
-    // écouter les noms et l'activité des compteurs.
+    // écouter le canal.
     const channel = supabase.channel(presenceTopic(sessionId), {
-      config: { private: true, presence: { key: userId } },
+      config: { private: true, presence: { key: deviceKey } },
     })
     channelRef.current = channel
 
@@ -114,32 +111,18 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
 
     const beat = setInterval(() => { void channelRef.current?.track(build()) }, BEAT_MS)
 
-    // Un téléphone en poche n'est pas quelqu'un au travail : on le dit.
-    const appState = AppState.addEventListener('change', (state) => {
-      foregroundRef.current = state === 'active'
-      void channelRef.current?.track(build())
-    })
-
     return () => {
       clearInterval(beat)
-      appState.remove()
       void channel.untrack()
       void supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [sessionId, userId, build])
+  }, [sessionId, userId, deviceKey, build])
 
-  // ── Activité : republication immédiate, et remise à zéro de `since` ────────
+  // ── Changement de mode : republication immédiate ───────────────────────────
   useEffect(() => {
-    const sig = signature(activity)
-    // `since` ne repart que si l'activité change réellement. Sinon chaque
-    // battement redémarrerait le « depuis 4 min » affiché au superviseur.
-    if (sig !== signatureRef.current) {
-      signatureRef.current = sig
-      sinceRef.current = Date.now()
-    }
     void channelRef.current?.track(build())
-  }, [activity, build])
+  }, [activity.mode, build])
 }
 
 /**

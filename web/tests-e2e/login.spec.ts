@@ -181,7 +181,10 @@ test.describe('Réinitialisation du mot de passe', () => {
     await expect(rules.filter({ hasText: 'une minuscule' })).toHaveClass(/ok/)
     await expect(rules.filter({ hasText: 'une majuscule' })).not.toHaveClass(/ok/)
 
+    // Sélecteur CSS, et non `filter({ hasClass })` qui n'existe pas dans
+    // l'API : Playwright ignorait l'option et comptait les cinq puces quelles
+    // que soient leurs classes — le test passait sans rien vérifier.
     await page.getByLabel('Nouveau mot de passe').fill('Inventaire2026!')
-    await expect(rules.filter({ hasClass: /ok/ })).toHaveCount(5)
+    await expect(page.locator('.pwd-rules li.ok')).toHaveCount(5)
   })
 })

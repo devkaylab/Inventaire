@@ -298,19 +298,14 @@ export function Scanner({
   }
 
   // ── Présence temps réel ────────────────────────────────────────────────────
-  // Le hook vit ici, et pas dans les écrans qui montent ce composant, parce que
-  // c'est ici que se trouve `activeBalise`. La remonter au parent obligerait à
-  // dupliquer l'état dans les deux écrans de scan — pour une valeur qui a déjà
-  // un ref miroir justement parce qu'elle se périme facilement.
   // Le mode est dérivé de `passNumber` (1 = comptage, 2 = audit), la valeur
-  // réellement écrite dans `counts.pass_number` : présence et activité déduite
-  // désignent ainsi toujours la même chose.
+  // réellement écrite dans `counts.pass_number` : le compteur affiché au
+  // superviseur et les comptages enregistrés désignent ainsi la même chose.
+  // La balise ouverte n'est plus publiée (contrat v2) : l'avancement par zone
+  // du site la donne, rattachée au travail et non à la personne.
   const presenceActivity = useMemo<PresenceActivity>(() => ({
-    screen: 'scan',
     mode: passNumber === 2 ? 'audit' : 'count',
-    balise: activeBalise?.code ?? null,
-    baliseName: activeBalise?.name ?? null,
-  }), [passNumber, activeBalise?.code, activeBalise?.name])
+  }), [passNumber])
   useSessionPresence(sessionId, presenceActivity)
 
   // Mode classique : amorce la liste une fois depuis les comptages persistés.

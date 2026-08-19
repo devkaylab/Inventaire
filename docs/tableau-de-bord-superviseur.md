@@ -39,13 +39,17 @@ profil complet, en six onglets.
 | `src/lib/presence.ts` | **mobile** : publie la présence sur un canal Realtime |
 | `web/lib/presence.ts` | **site** : contrat partagé + aplatissement de l'état du canal |
 | `web/hooks/useSessionLive.ts` | une seule socket : présence + broadcast + sondage de repli |
-| `web/lib/merge.ts` | fusion présence / activité / membres — **le cœur de la logique** |
-| `web/lib/activity.ts` | appelle `get_session_activity`, lit le fil des scans |
+| `web/lib/presence-summary.ts` | compte les appareils par mode — **tout ce que le site déduit de la présence** |
+| `web/lib/activity.ts` | lit le fil des scans (sans l'auteur) |
 | `web/components/dashboard/tabs/SuiviTab.tsx` | l'écran |
 
-Côté mobile, le hook est appelé depuis `src/components/scanner.tsx` (là où vit
-`activeBalise`) et depuis les deux écrans de session superviseur et compteur. Le scanner
-émet aussi un `pingSession` après chaque scan et chaque ouverture/clôture de balise.
+Côté mobile, le hook est appelé depuis `src/components/scanner.tsx` (là où vit le mode
+courant) et depuis les deux écrans de session superviseur et compteur. Le scanner émet
+aussi un `pingSession` après chaque scan et chaque ouverture/clôture de balise.
+
+**Depuis le 19 août 2026 (contrat v2)**, la présence ne transporte plus que le mode et le
+battement : ni nom, ni écran, ni balise, ni état d'avant-plan. Le site en tire des
+compteurs et n'émet rien lui-même. Voir `docs/conformite/suivi-activite-analyse.md`.
 
 ### Les autres onglets
 
@@ -77,19 +81,22 @@ ressemblent à des complications gratuites.
 
 ### Deux couches pour la présence, pas une
 
-Rien dans la base ne traçait la présence. Deux sources ont été posées, et **aucune ne
-suffit seule** :
+Rien dans la base ne trace la présence, et c'est voulu.
 
 | Source | Sait | Ne sait pas |
 |---|---|---|
-| Canal Realtime | qui a l'app ouverte, sur quelle balise, dans quel mode, depuis quand | rien dès que le réseau tombe |
-| `get_session_activity` (déduite de `counts`) | qui a réellement scanné, où, quand | ne distingue pas « parti » de « compte sans réseau » |
+| Canal Realtime | combien d'appareils sont connectés, et dans quel mode | qui ils sont — plus rien ne le dit depuis la v2 |
+| Fil des scans (`counts`) | ce qui a été scanné, où, quand | par qui : l'auteur n'est plus descendu au navigateur |
+
+`get_session_activity`, qui rendait une ligne nominative par personne, n'a plus d'appelant.
+Sa suppression est prête mais **différée au déploiement** du contrat v2 — voir
+`docs/conformite/suivi-activite-analyse.md`.
 
 ### La règle des 90 secondes
 
 Une présence dont le dernier battement dépasse `STALE_MS` (90 s, soit trois battements
-manqués) **cesse d'être traitée comme une position actuelle** : le site écrit « dernière
-balise » au lieu de « compte la balise X ». C'est le cas du téléphone oublié dans une poche
+manqués) **cesse d'être comptée** : sans ce filtre, une socket fermée brutalement
+gonflerait durablement le nombre d'appareils connectés. C'est le cas du téléphone oublié dans une poche
 ou de la réserve sans réseau — celui où un suivi naïf ment avec assurance, parce que la
 socket serveur survit au téléphone. La règle est testée dans `web/tests/merge.test.ts`.
 
@@ -152,7 +159,7 @@ Toutes **déjà appliquées** sur `heabesqvlinzarqenymj`, et présentes dans
 | Migration | Effet |
 |---|---|
 | `20260812000001_get_session_detail_full_join` | la clé (article, balise) vient de l'union comptage ∪ audit — les lignes auditées jamais comptées réapparaissent |
-| `20260812000002_session_activity` | RPC `get_session_activity` + deux index sur `counts` (aucun ne couvrait `created_at`) |
+| `20260812000002_session_activity` | RPC `get_session_activity` + deux index sur `counts` (aucun ne couvrait `created_at`). La RPC n'a plus d'appelant ; sa suppression est différée au déploiement. Les index restent utiles au fil des scans |
 | `20260812000003_closed_session_is_read_only` | un inventaire clôturé refuse les insertions de `counts` et `set_balise` |
 | `20260812000004_revoke_anon_session_rpcs` | droits d'exécution refermés ; `find_user_by_email` revient au `service_role` seul |
 
