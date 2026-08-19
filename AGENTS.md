@@ -210,13 +210,31 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   côté). Procédure de mise à jour : `vendor/LISEZMOI.md`, outillage :
   `scripts/installer-sheetjs.mjs`.
 
+## Console Supabase — configuration des URL (fait le 19 août 2026)
+
+La **Site URL** (Authentication → URL Configuration) vaut
+`https://quantinvo.vercel.app` — elle sortait d'usine à `http://localhost:3000`,
+ce qui envoyait vers localhost tout lien d'authentification retombé sur le
+repli. Les **Redirect URLs** déclarent `/reinitialisation` (destination des
+liens « mot de passe oublié ») en production et en preview :
+`https://quantinvo.vercel.app/reinitialisation` et
+`https://quantinvo-*-devkaylab.vercel.app/reinitialisation`.
+
+**Le jour où le produit passera sur son propre domaine**, cette configuration
+ne suivra pas toute seule. À reprendre ce jour-là, en une passe :
+
+- Console Supabase : la Site URL et chaque Redirect URL
+  (`/reinitialisation`, et les destinations d'invitation vers `/bienvenue`).
+- Variable `APP_PUBLIC_URL` des edge functions (`invite-supervisor`,
+  `invite-teammate`, `invite-to-session`, `submit-supervisor-request`) — leur
+  repli codé en dur est `https://quantinvo.vercel.app`.
+- `src/constants/links.ts` (`SITE_URL`, utilisé par l'app mobile, y compris le
+  texte de partage de `profile.tsx`).
+- `docs/privacy.html` et la page des mentions légales, qui citent
+  `quantinvo.vercel.app` nommément.
+
 ## À faire dans la console Supabase (hors SQL)
 
-- Ajouter `https://<domaine>/reinitialisation` (production **et** previews
-  Vercel) aux **Redirect URLs** de l'authentification : c'est la destination
-  des liens « mot de passe oublié » (`resetPasswordForEmail`). Sans elle,
-  Supabase rabat le lien sur la Site URL et la personne atterrit sur l'accueil
-  au lieu du formulaire de nouveau mot de passe.
 - Activer **Leaked password protection** (vérification HaveIBeenPwned) —
   actuellement désactivée, signalée par l'advisor `auth_leaked_password_protection`.
 - Porter la longueur minimale de mot de passe à 12 côté serveur.
