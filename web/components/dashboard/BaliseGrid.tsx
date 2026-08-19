@@ -30,9 +30,11 @@ function matches(z: ZoneDashboardRow, f: Filter): boolean {
  * cycles sont indépendants : une balise peut être comptée sans être auditée, et
  * l'inverse arrive aussi.
  */
-export function BaliseGrid({ zones, onSelect }: {
+export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
   zones: ZoneDashboardRow[]
   onSelect?: (zone: ZoneDashboardRow) => void
+  /** À couper quand la grille ne montre qu'une zone déjà titrée par l'appelant. */
+  showGroupLabels?: boolean
 }) {
   const [filter, setFilter] = useState<Filter>('all')
   const groups = useMemo(() => groupByName(zones.filter(z => matches(z, filter))), [zones, filter])
@@ -42,7 +44,7 @@ export function BaliseGrid({ zones, onSelect }: {
     return (
       <EmptyState
         title="Aucune balise affectée"
-        hint="Renseignez les emplacements à inventorier depuis l'onglet « Zones & balises » : une plage de balises par emplacement."
+        hint="Renseignez les emplacements à inventorier depuis l'onglet « Set up » : une plage de balises par emplacement."
       />
     )
   }
@@ -67,9 +69,11 @@ export function BaliseGrid({ zones, onSelect }: {
         <p className="muted small">Aucune balise dans ce filtre.</p>
       ) : groups.map(g => (
         <div key={g.name} style={{ marginBottom: 16 }}>
-          <div className="dash-section-label" style={{ marginBottom: 6 }}>
-            {g.name} — {g.counted}/{g.total} comptées · {g.audited}/{g.total} auditées
-          </div>
+          {showGroupLabels && (
+            <div className="dash-section-label" style={{ marginBottom: 6 }}>
+              {g.name} — {g.counted}/{g.total} comptées · {g.audited}/{g.total} auditées
+            </div>
+          )}
           <div className="balise-grid">
             {g.codes.map(code => {
               const z = byCode.get(code)

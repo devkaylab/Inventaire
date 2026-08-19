@@ -144,7 +144,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
         <div className="banner banner-warn">
           {totals.unresolved} article{totals.unresolved > 1 ? 's présentent' : ' présente'} encore un écart
           non arbitré entre le comptage et l’audit. Sans arbitrage, c’est <strong>la quantité de
-          l’auditeur</strong> qui part dans le rapport. Tranchez-les depuis l’onglet Écarts pour un
+          l’auditeur</strong> qui part dans le rapport. Tranchez-les depuis l’onglet Écarts d’audit pour un
           rapport définitif.
         </div>
       )}

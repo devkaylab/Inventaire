@@ -18,7 +18,7 @@ async function gotoDashboard(page: Page, tab?: string) {
 }
 
 test.describe('Tableau de bord — profil de l’inventaire', () => {
-  test('affiche l’en-tête, la progression et les six onglets', async ({ page }) => {
+  test('affiche l’en-tête, la progression et les cinq onglets', async ({ page }) => {
     await gotoDashboard(page)
 
     await expect(page.getByRole('heading', { name: 'Test' })).toBeVisible()
@@ -30,10 +30,13 @@ test.describe('Tableau de bord — profil de l’inventaire', () => {
     const rail = page.locator('.dash-progress')
     await expect(rail.locator('.dash-bar-legend', { hasText: 'Comptage' })).toContainText('3/10')
     await expect(rail.locator('.dash-bar-legend', { hasText: 'Audit' })).toContainText('2/10')
+    // Le rail résume ce qui reste sans répéter la liste par zone du Suivi.
+    await expect(rail.locator('.dash-missing-row')).toContainText('7 balises')
 
-    for (const label of ['Suivi', 'Zones & balises', 'Fichiers', 'Écarts', 'Rapport', 'Équipe']) {
+    for (const label of ['Suivi', 'Set up', 'Écarts d’audit', 'Rapport', 'Équipe']) {
       await expect(page.getByRole('tab', { name: label })).toBeVisible()
     }
+    await expect(page.getByRole('tab')).toHaveCount(5)
   })
 
   test('l’onglet vit dans l’URL et survit au rechargement', async ({ page }) => {
@@ -43,6 +46,14 @@ test.describe('Tableau de bord — profil de l’inventaire', () => {
 
     await page.reload()
     await expect(page.getByRole('tab', { name: 'Rapport' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('les anciennes adresses zones et fichiers mènent à Set up', async ({ page }) => {
+    await gotoDashboard(page, 'fichiers')
+    await expect(page.getByRole('tab', { name: 'Set up' })).toHaveAttribute('aria-selected', 'true')
+
+    await gotoDashboard(page, 'zones')
+    await expect(page.getByRole('tab', { name: 'Set up' })).toHaveAttribute('aria-selected', 'true')
   })
 })
 
@@ -71,22 +82,52 @@ test.describe('Suivi — qui compte quelle balise', () => {
     await expect(page.locator('.person-state-online')).toHaveCount(0)
   })
 
-  test('affiche la grille des balises et le fil des scans, corrections comprises', async ({ page }) => {
+  test('résume l’avancement par zone, sans numéro de balise', async ({ page }) => {
     await gotoDashboard(page, 'suivi')
 
+    // La ligne de correction (quantité négative) doit rester visible.
+    await expect(page.locator('.feed-row', { hasText: 'ABC1236' })).toContainText('-1')
+
+    // Une seule zone dans le jeu de données : comptées 3/10 (30 %), auditées 2/10 (20 %).
+    const row = page.locator('.zone-progress', { hasText: 'Surface de vente' })
+    await expect(row.locator('.dash-bar-legend', { hasText: 'Comptées' })).toContainText('3/10 · 30 %')
+    await expect(row.locator('.dash-bar-legend', { hasText: 'Auditées' })).toContainText('2/10 · 20 %')
+    // Les numéros de balises n'apparaissent pas tant qu'on n'a pas ouvert le détail.
+    await expect(page.locator('.balise-chip')).toHaveCount(0)
+  })
+
+  test('le nom de la zone ouvre le détail de ses balises', async ({ page }) => {
+    await gotoDashboard(page, 'suivi')
+
+    await page.locator('.zone-progress', { hasText: 'Surface de vente' }).click()
     await expect(page.locator('.balise-chip')).toHaveCount(10)
     await page.getByRole('button', { name: 'À faire' }).click()
     await expect(page.locator('.balise-chip')).toHaveCount(6)
 
-    await page.getByRole('button', { name: 'Toutes' }).click()
-    // La ligne de correction (quantité négative) doit rester visible.
-    await expect(page.locator('.feed-row', { hasText: 'ABC1236' })).toContainText('-1')
+    // Le retour ramène à la vue d'ensemble.
+    await page.getByRole('button', { name: '← Suivi' }).click()
+    await expect(page.locator('.zone-progress')).toBeVisible()
+  })
+
+  test('rouvre une balise restée ouverte depuis le détail de la zone', async ({ page }) => {
+    await gotoDashboard(page, 'suivi')
+
+    await page.locator('.zone-progress', { hasText: 'Surface de vente' }).click()
+    await page.locator('.balise-chip', { hasText: '5371' }).last().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText('Balise 5371')
+
+    await dialog.getByRole('button', { name: 'Rouvrir' }).first().click()
+    await expect(page.locator('.toast-success')).toContainText('rouverte')
+
+    const call = calls.rpc.find(c => c.name === 'set_balise')
+    expect(call?.body).toMatchObject({ p_code: '5371', p_open: true })
   })
 })
 
-test.describe('Zones & balises', () => {
+test.describe('Set up — balises', () => {
   test('affecte une plage à un emplacement', async ({ page }) => {
-    await gotoDashboard(page, 'zones')
+    await gotoDashboard(page, 'setup')
 
     await page.getByLabel('Emplacement').fill('Réserve')
     await page.getByLabel('Balise début').fill('20')
@@ -101,7 +142,7 @@ test.describe('Zones & balises', () => {
   })
 
   test('refuse une plage invalide avant d’appeler le serveur', async ({ page }) => {
-    await gotoDashboard(page, 'zones')
+    await gotoDashboard(page, 'setup')
 
     await page.getByLabel('Emplacement').fill('Réserve')
     await page.getByLabel('Balise début').fill('30')
@@ -111,23 +152,9 @@ test.describe('Zones & balises', () => {
     await expect(page.locator('.error')).toContainText('inférieure ou égale')
     expect(calls.rpc.filter(c => c.name === 'define_zone')).toHaveLength(0)
   })
-
-  test('rouvre une balise restée ouverte', async ({ page }) => {
-    await gotoDashboard(page, 'zones')
-
-    await page.locator('.balise-chip', { hasText: '5371' }).last().click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toContainText('Balise 5371')
-
-    await dialog.getByRole('button', { name: 'Rouvrir' }).first().click()
-    await expect(page.locator('.toast-success')).toContainText('rouverte')
-
-    const call = calls.rpc.find(c => c.name === 'set_balise')
-    expect(call?.body).toMatchObject({ p_code: '5371', p_open: true })
-  })
 })
 
-test.describe('Écarts — comptage contre audit', () => {
+test.describe('Écarts d’audit — comptage contre audit', () => {
   test('distingue les trois natures d’écart', async ({ page }) => {
     await gotoDashboard(page, 'ecarts')
 
@@ -206,8 +233,9 @@ test.describe('Rapport', () => {
   test('télécharge le rapport Excel avec les deux feuilles', async ({ page }) => {
     await gotoDashboard(page, 'rapport')
 
+    await page.getByRole('button', { name: 'Télécharger' }).click()
     const download = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Télécharger Excel' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Excel (.xlsx)' }).click()
     const file = await download
 
     expect(file.suggestedFilename()).toMatch(/^inventaire_INV-20260807-C255_\d{4}-\d{2}-\d{2}\.xlsx$/)
@@ -218,15 +246,16 @@ test.describe('Rapport', () => {
   test('télécharge aussi en CSV', async ({ page }) => {
     await gotoDashboard(page, 'rapport')
 
+    await page.getByRole('button', { name: 'Télécharger' }).click()
     const download = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'CSV' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'CSV (2 fichiers)' }).click()
     expect((await download).suggestedFilename()).toMatch(/\.csv$/)
   })
 })
 
-test.describe('Fichiers', () => {
+test.describe('Set up — fichiers', () => {
   test('montre ce qui est déjà chargé et les colonnes acceptées', async ({ page }) => {
-    await gotoDashboard(page, 'fichiers')
+    await gotoDashboard(page, 'setup')
 
     await expect(page.getByText('Référentiel articles').first()).toBeVisible()
     await expect(page.getByText('références chargées')).toBeVisible()
@@ -234,7 +263,7 @@ test.describe('Fichiers', () => {
   })
 
   test('prévient qu’un import remplace ce qui est déjà chargé', async ({ page }) => {
-    await gotoDashboard(page, 'fichiers')
+    await gotoDashboard(page, 'setup')
 
     await page.locator('.import-step', { hasText: 'Référentiel articles' })
       .locator('input[type="file"]')
@@ -299,28 +328,28 @@ test.describe('Équipe et cycle de vie', () => {
     await expect(page.locator('.banner-info')).toContainText('aucun comptage ne peut plus')
     await expect(page.getByRole('button', { name: 'Rouvrir' })).toBeVisible()
 
-    await openTab(page, 'Écarts')
+    await openTab(page, 'Écarts d’audit')
     await expect(page.getByRole('button', { name: 'Auditeur' })).toHaveCount(0)
 
     await openTab(page, 'Rapport')
-    await expect(page.getByRole('button', { name: 'Télécharger Excel' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Télécharger', exact: true })).toBeEnabled()
   })
 })
 
 test.describe('Création d’un inventaire', () => {
-  test('crée puis enchaîne sur les zones', async ({ page }) => {
+  test('crée puis enchaîne sur Set up', async ({ page }) => {
     await page.goto('/dashboard/new')
 
     await page.getByLabel('Nom de l’inventaire').fill('Inventaire annuel')
     await page.getByLabel('Magasin').selectOption('store-1')
     await page.getByRole('button', { name: 'Créer l’inventaire' }).click()
 
-    await expect(page).toHaveURL(/tab=zones/)
+    await expect(page).toHaveURL(/tab=setup/)
     const call = calls.rpc.find(c => c.name === 'create_session')
     expect(call?.body).toMatchObject({ p_name: 'Inventaire annuel', p_store_id: 'store-1', p_uses_zones: true })
   })
 
-  test('le mode classique enchaîne directement sur les fichiers', async ({ page }) => {
+  test('le mode classique enchaîne aussi sur Set up', async ({ page }) => {
     await page.goto('/dashboard/new')
 
     await page.getByLabel('Nom de l’inventaire').fill('Sans balise')
@@ -328,6 +357,6 @@ test.describe('Création d’un inventaire', () => {
     await page.getByLabel('Organisation du comptage').selectOption('classic')
     await page.getByRole('button', { name: 'Créer l’inventaire' }).click()
 
-    await expect(page).toHaveURL(/tab=fichiers/)
+    await expect(page).toHaveURL(/tab=setup/)
   })
 })

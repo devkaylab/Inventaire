@@ -642,6 +642,22 @@ a { color: inherit; text-decoration: none; }
 .zone-chip-dot { width: 7px; height: 7px; border-radius: 50%; }
 .zone-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end; }
 
+/* Avancement par zone (onglet Suivi) : toute la carte est cliquable et mène
+   au détail des balises de l'emplacement. */
+.zone-progress {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+  padding: 14px 16px; box-shadow: var(--shadow-card);
+  color: inherit; font-family: inherit; font-size: inherit;
+}
+.zone-progress:hover { border-color: var(--accent); }
+.zone-progress:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.zone-progress-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.zone-progress-arrow { color: var(--text-3); font-size: 18px; line-height: 1; }
+.zone-progress:hover .zone-progress-arrow { color: var(--accent); }
+.zone-progress-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+.zone-detail-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+
 /* ── Onglet Fichiers ────────────────────────────────────── */
 .import-step { margin-bottom: 20px; }
 .file-drop {
@@ -815,6 +831,7 @@ a { color: inherit; text-decoration: none; }
   /* Le fil d'activité s'empile : sur trois colonnes, l'horodatage se
      retrouvait tantôt sur la même ligne, tantôt seul en dessous. */
   .feed-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .zone-progress-bars { grid-template-columns: 1fr; }
   .feed-what { min-width: 0; }
   .dash-detail-head { flex-direction: column; align-items: stretch; }
   .dash-audit-row { align-items: stretch; }

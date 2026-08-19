@@ -70,9 +70,8 @@ export default function NewSessionPage() {
         return
       }
       toast.success(`Inventaire ${r.inventory_number} créé. Code d’accès : ${r.security_code ?? code}`)
-      // Même enchaînement guidé que sur mobile : on renseigne les zones (si le
-      // mode le prévoit), puis les fichiers, puis on suit le comptage.
-      router.replace(`/dashboard/${r.session_id}?tab=${usesZones ? 'zones' : 'fichiers'}`)
+      // Toute la préparation — balises et fichiers — se fait dans Set up.
+      router.replace(`/dashboard/${r.session_id}?tab=setup`)
     } catch (err) {
       setError(friendlyError(err))
     } finally {
