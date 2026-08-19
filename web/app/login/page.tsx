@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { getMySpacePath, homePathForRole } from '@/lib/auth'
+import { challengeAndVerify, mfaPending, verifiedTotpFactor } from '@/lib/mfa'
 
 /**
  * Un échec réseau et un mauvais mot de passe ne doivent pas dire la même chose.
@@ -38,16 +39,38 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // Double authentification : identifiant du facteur à vérifier, ou null tant
+  // que le mot de passe n'a pas été accepté (ou que le compte n'en a pas).
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null)
+  const [code, setCode] = useState('')
 
-  // Déjà connecté : rediriger vers l'espace au lieu de redemander le mot de passe.
+  // Déjà connecté : rediriger vers l'espace au lieu de redemander le mot de
+  // passe — sauf si la session attend encore son code de double
+  // authentification, auquel cas c'est justement l'étape à afficher.
   useEffect(() => {
-    getMySpacePath().then((path) => { if (path) router.replace(path) })
+    ;(async () => {
+      if (await mfaPending()) {
+        const factorId = await verifiedTotpFactor()
+        if (factorId) { setMfaFactorId(factorId); return }
+      }
+      const path = await getMySpacePath()
+      if (path) router.replace(path)
+    })()
   }, [router])
 
   useEffect(() => {
     const saved = window.localStorage.getItem(REMEMBER_KEY)
     if (saved) { setEmail(saved); setRemember(true) }
   }, [])
+
+  async function goToSpace(userId: string) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('role, is_admin')
+      .eq('id', userId)
+      .maybeSingle()
+    router.replace(homePathForRole(prof as { role: string | null; is_admin: boolean | null } | null))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -69,13 +92,79 @@ export default function LoginPage() {
     }
     if (remember) window.localStorage.setItem(REMEMBER_KEY, email.trim())
     else window.localStorage.removeItem(REMEMBER_KEY)
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('role, is_admin')
-      .eq('id', data.user.id)
-      .maybeSingle()
+
+    // Compte avec double authentification : le mot de passe ne suffit pas,
+    // place à la saisie du code.
+    const factorId = await verifiedTotpFactor()
+    if (factorId) {
+      setLoading(false)
+      setPassword('')
+      setMfaFactorId(factorId)
+      return
+    }
+
+    await goToSpace(data.user.id)
     setLoading(false)
-    router.replace(homePathForRole(prof as { role: string | null; is_admin: boolean | null } | null))
+  }
+
+  async function handleCodeSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!mfaFactorId) return
+    setError(null)
+    setLoading(true)
+    const r = await challengeAndVerify(mfaFactorId, code)
+    if (!r.success) {
+      setLoading(false)
+      setError('Code incorrect ou expiré. Vérifiez le code affiché par votre application.')
+      return
+    }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) await goToSpace(session.user.id)
+    setLoading(false)
+  }
+
+  async function cancelMfa() {
+    // La session au mot de passe seul ne doit pas traîner : on la ferme.
+    await supabase.auth.signOut()
+    setMfaFactorId(null)
+    setCode('')
+    setError(null)
+  }
+
+  if (mfaFactorId) {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="head">
+            <Link href="/"><Logo size={56} /></Link>
+            <h1>Double authentification</h1>
+            <p className="sub">Saisissez le code affiché par votre application d&apos;authentification.</p>
+          </div>
+
+          {error && <div className="error">{error}</div>}
+
+          <form onSubmit={handleCodeSubmit}>
+            <div className="field">
+              <label htmlFor="totp-code">Code de vérification</label>
+              <input
+                id="totp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+                value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456"
+                autoFocus
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading || code.trim().length < 6}>
+              {loading ? 'Vérification…' : 'Vérifier'}
+            </button>
+          </form>
+
+          <div className="center-link">
+            <button type="button" className="link-btn" onClick={() => void cancelMfa()}>
+              ← Revenir à la connexion
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

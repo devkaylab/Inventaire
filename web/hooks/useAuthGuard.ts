@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { homePathForRole } from '@/lib/auth'
+import { mfaPending } from '@/lib/mfa'
 
 export type Profile = {
   id: string
@@ -51,6 +52,13 @@ export function useAuthGuard(requirement: Requirement = 'auth'): GuardState {
       const { data: { session } } = await supabase.auth.getSession()
       if (!active) return
       if (!session) { router.replace('/login'); return }
+
+      // Mot de passe accepté mais code de double authentification pas encore
+      // saisi : la session est incomplète, retour à /login qui affiche l'étape
+      // du code. Sans cette garde, fermer l'onglet au milieu de la saisie
+      // laisserait entrer avec le mot de passe seul.
+      if (await mfaPending()) { router.replace('/login'); return }
+      if (!active) return
 
       const { data, error } = await supabase
         .from('profiles')
