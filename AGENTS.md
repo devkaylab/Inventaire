@@ -233,13 +233,30 @@ ne suivra pas toute seule. À reprendre ce jour-là, en une passe :
 - `docs/privacy.html` et la page des mentions légales, qui citent
   `quantinvo.vercel.app` nommément.
 
+## Double authentification (TOTP)
+
+Le parcours vit dans l'app web depuis le 19 août 2026 — la console Supabase
+n'avait rien à activer, le TOTP y est permis d'office ; ce qui manquait,
+c'était l'interface. Activation depuis **Mon compte** (`MfaPanel` : QR code,
+puis code de vérification), saisie du code à chaque connexion (`/login`,
+deuxième étape), logique dans `web/lib/mfa.ts`. `useAuthGuard` renvoie vers
+`/login` toute session restée au mot de passe seul (`aal1`) alors que le
+compte a un facteur — sans cette garde, fermer l'onglet entre le mot de passe
+et le code laisserait entrer à moitié authentifié.
+
+Restent, dans l'ordre : **enrôler réellement le compte administrateur** (il
+peut créer des entreprises, valider des superviseurs et supprimer des
+comptes) ; puis le **durcissement serveur** — aucune policy ni fonction
+n'exige encore `aal2`, la garde est côté client. Ne durcir les fonctions
+`admin_*` qu'une fois l'administrateur enrôlé, sous peine de l'enfermer
+dehors. Pas de codes de secours : un téléphone perdu se règle en
+`service_role` (suppression du facteur dans `auth.mfa_factors`).
+
 ## À faire dans la console Supabase (hors SQL)
 
 - Activer **Leaked password protection** (vérification HaveIBeenPwned) —
   actuellement désactivée, signalée par l'advisor `auth_leaked_password_protection`.
 - Porter la longueur minimale de mot de passe à 12 côté serveur.
-- Activer le **second facteur**, au moins pour le compte administrateur : il
-  peut créer des entreprises, valider des superviseurs et supprimer des comptes.
 
 ## Reste à traiter, par ordre de priorité
 

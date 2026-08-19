@@ -11,6 +11,7 @@ import {
   type Company, type TeamInvitation, type TeamMember,
 } from '@/lib/account'
 import { AddCounter } from '@/components/dashboard/AddCounter'
+import { MfaPanel } from '@/components/MfaPanel'
 
 type ProfileInfo = { full_name: string | null; role: string | null; is_admin: boolean | null }
 
@@ -278,6 +279,8 @@ export default function AccountPage() {
           </p>
         </div>
       )}
+
+      <MfaPanel />
 
       <div className="panel">
         <h3>Mes données</h3>

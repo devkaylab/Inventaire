@@ -100,6 +100,52 @@ test.describe('Mot de passe oublié', () => {
   })
 })
 
+test.describe('Double authentification', () => {
+  test('s’active depuis Mon compte : QR code, puis code de vérification', async ({ page }) => {
+    const calls = await mockSupabase(page) // connecté, sans facteur
+
+    await page.goto('/account')
+    await page.getByRole('button', { name: 'Activer la double authentification' }).click()
+
+    await expect(page.getByAltText('QR code d’enrôlement')).toBeVisible()
+    await expect(page.getByText('QUANTINVOTESTSECRET234')).toBeVisible()
+
+    await page.getByLabel('Code de vérification').fill('123456')
+    await page.getByRole('button', { name: 'Vérifier' }).click()
+
+    await expect(page.getByText('La double authentification est activée.')).toBeVisible()
+    expect(calls.auth.some(a => a.path.includes('/factors') && a.path.includes('/verify'))).toBe(true)
+  })
+
+  test('demande le code à la connexion quand le compte a un facteur', async ({ page }) => {
+    const calls = await mockSupabase(page, { authenticated: false, mfaEnrolled: true })
+
+    await page.goto('/login')
+    await page.getByLabel('E-mail').fill(EMAIL)
+    await page.getByLabel('Mot de passe').fill('un-mot-de-passe-long')
+    await page.getByRole('button', { name: 'Se connecter' }).click()
+
+    // Le mot de passe seul ne suffit plus : l'étape du code s'affiche.
+    await expect(page.getByRole('heading', { name: 'Double authentification' })).toBeVisible()
+    await page.getByLabel('Code de vérification').fill('654321')
+    await page.getByRole('button', { name: 'Vérifier' }).click()
+
+    await expect(page).toHaveURL(/\/dashboard/)
+    const verify = calls.auth.find(a => a.path.includes('/verify'))
+    expect(verify?.body).toMatchObject({ code: '654321', challenge_id: 'challenge-1' })
+  })
+
+  test('une session sans le code n’entre nulle part', async ({ page }) => {
+    // Compte à double authentification, mais jeton resté au mot de passe seul
+    // (aal1) : la situation « mot de passe accepté, code jamais saisi ».
+    await mockSupabase(page, { authenticated: true, mfaEnrolled: true, mfaCodePending: true })
+
+    await page.goto('/dashboard')
+    // La garde renvoie vers /login, qui affiche l'étape du code.
+    await expect(page.getByRole('heading', { name: 'Double authentification' })).toBeVisible()
+  })
+})
+
 test.describe('Réinitialisation du mot de passe', () => {
   test.beforeEach(async ({ page }) => {
     await mockSupabase(page) // session de récupération déjà ouverte

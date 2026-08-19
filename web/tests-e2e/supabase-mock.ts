@@ -18,11 +18,36 @@ export type Calls = {
   auth: { path: string; body: unknown }[]
 }
 
+type MfaFactor = {
+  id: string
+  factor_type: 'totp'
+  status: 'verified' | 'unverified'
+  friendly_name: string
+}
+
 type State = {
   zones: typeof F.ZONES
   audits: typeof F.AUDITS
   session: typeof F.SESSION
   importState: { articles: number; stock: number }
+  mfaFactors: MfaFactor[]
+}
+
+/**
+ * Jeton d'accès au format JWT : `getAuthenticatorAssuranceLevel` décode le
+ * segment central pour lire `aal`, un simple `test-token` le ferait échouer.
+ * La signature n'est jamais vérifiée côté client.
+ */
+function fakeJwt(aal: 'aal1' | 'aal2'): string {
+  const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url')
+  // Le troisième segment doit avoir une longueur valide en base64url
+  // (multiple de 4, ±2 ou 3) : « signature » (9 caractères) ferait échouer le
+  // décodage côté client.
+  return [
+    b64({ alg: 'none', typ: 'JWT' }),
+    b64({ sub: F.PROFILE.id, aal, session_id: 'session-test', exp: Math.floor(Date.now() / 1000) + 3600 }),
+    'x'.repeat(16),
+  ].join('.')
 }
 
 function json(route: Route, body: unknown, headers: Record<string, string> = {}) {
@@ -44,7 +69,14 @@ function respond(route: Route, rows: unknown[]) {
 
 export async function mockSupabase(
   page: Page,
-  { authenticated = true }: { authenticated?: boolean } = {},
+  { authenticated = true, mfaEnrolled = false, mfaCodePending = false }: {
+    authenticated?: boolean
+    /** Le compte a un facteur TOTP vérifié : la connexion exige le code. */
+    mfaEnrolled?: boolean
+    /** Session déposée avec le mot de passe seul (aal1) alors que le compte a
+     *  un facteur : la situation « code jamais saisi ». */
+    mfaCodePending?: boolean
+  } = {},
 ): Promise<Calls> {
   const calls: Calls = { rpc: [], patches: [], auth: [] }
   const state: State = {
@@ -52,34 +84,42 @@ export async function mockSupabase(
     audits: JSON.parse(JSON.stringify(F.AUDITS)),
     session: JSON.parse(JSON.stringify(F.SESSION)),
     importState: { ...F.IMPORT_STATE },
+    mfaFactors: mfaEnrolled
+      ? [{ id: 'factor-1', factor_type: 'totp', status: 'verified', friendly_name: 'Application d’authentification' }]
+      : [],
   }
+
+  const userObj = () => ({
+    id: F.PROFILE.id,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'sup@example.test',
+    app_metadata: {},
+    user_metadata: {},
+    created_at: '2026-01-01T00:00:00Z',
+    factors: state.mfaFactors,
+  })
 
   // Session d'authentification déposée directement dans le stockage de session
   // — c'est là que vit le jeton depuis que la session ne survit plus à la
   // fermeture du navigateur — supabase-js la relit sans appel réseau tant
-  // qu'elle n'est pas expirée.
-  await page.addInitScript(([ref, profile, withSession]) => {
-    if (withSession) {
-      const expires = Math.floor(Date.now() / 1000) + 3600
-      window.sessionStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify({
-        access_token: 'test-token',
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: expires,
-        refresh_token: 'test-refresh',
-        user: {
-          id: (profile as { id: string }).id,
-          aud: 'authenticated',
-          role: 'authenticated',
-          email: 'sup@example.test',
-          app_metadata: {},
-          user_metadata: {},
-          created_at: '2026-01-01T00:00:00Z',
-        },
-      }))
-    }
+  // qu'elle n'est pas expirée. Une session pré-déposée avec un facteur MFA est
+  // réputée avoir déjà passé le code (aal2).
+  const storedSession = authenticated
+    ? JSON.stringify({
+      access_token: fakeJwt(mfaEnrolled && !mfaCodePending ? 'aal2' : 'aal1'),
+      token_type: 'bearer',
+      expires_in: 3600,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      refresh_token: 'test-refresh',
+      user: userObj(),
+    })
+    : null
+
+  await page.addInitScript(([ref, session]) => {
+    if (session) window.sessionStorage.setItem(`sb-${ref}-auth-token`, session as string)
     window.localStorage.setItem('quantinvo-theme', 'dark')
-  }, [PROJECT_REF, F.PROFILE, authenticated] as const)
+  }, [PROJECT_REF, storedSession] as const)
 
   // Le service Realtime est injoignable ici : on coupe court pour que
   // l'interface bascule tout de suite sur son mode dégradé (« Temps réel
@@ -111,23 +151,59 @@ export async function mockSupabase(
       // `grant_type` et `redirect_to`.
       calls.auth.push({ path: path.replace('/auth/v1', '') + url.search, body })
 
-      // Connexion par mot de passe : gotrue renvoie la session complète.
+      // Connexion par mot de passe : gotrue renvoie la session complète —
+      // toujours aal1, le code TOTP viendra l'élever si le compte en a un.
       if (path.endsWith('/token')) {
-        const expires = Math.floor(Date.now() / 1000) + 3600
         return json(route, {
-          access_token: 'test-token', token_type: 'bearer',
-          expires_in: 3600, expires_at: expires, refresh_token: 'test-refresh',
-          user: {
-            id: F.PROFILE.id, aud: 'authenticated', role: 'authenticated',
-            email: 'sup@example.test', app_metadata: {}, user_metadata: {},
-            created_at: '2026-01-01T00:00:00Z',
-          },
+          access_token: fakeJwt('aal1'), token_type: 'bearer',
+          expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600,
+          refresh_token: 'test-refresh',
+          user: userObj(),
         })
       }
       // Mot de passe oublié : 200 vide, que le compte existe ou non — comme
       // Supabase, qui ne divulgue rien à l'appelant.
       if (path.endsWith('/recover')) return json(route, {})
-      if (path.endsWith('/user')) return json(route, { id: F.PROFILE.id, email: 'sup@example.test' })
+
+      // ── Double authentification (TOTP) ──────────────────────────────────
+      if (path.endsWith('/factors') && method === 'POST') {
+        state.mfaFactors = [{
+          id: 'factor-1', factor_type: 'totp', status: 'unverified',
+          friendly_name: 'Application d’authentification',
+        }]
+        return json(route, {
+          id: 'factor-1', type: 'totp', friendly_name: 'Application d’authentification',
+          totp: {
+            qr_code: 'data:image/svg+xml;base64,' + Buffer.from(
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21">'
+              + '<rect width="21" height="21" fill="white"/><rect x="2" y="2" width="5" height="5"/>'
+              + '<rect x="14" y="2" width="5" height="5"/><rect x="2" y="14" width="5" height="5"/>'
+              + '<rect x="9" y="9" width="3" height="3"/></svg>',
+            ).toString('base64'),
+            secret: 'QUANTINVOTESTSECRET234',
+            uri: 'otpauth://totp/Quantinvo:sup%40example.test?secret=QUANTINVOTESTSECRET234',
+          },
+        })
+      }
+      if (/\/factors\/[^/]+\/challenge$/.test(path)) {
+        return json(route, { id: 'challenge-1', type: 'totp', expires_at: Math.floor(Date.now() / 1000) + 300 })
+      }
+      if (/\/factors\/[^/]+\/verify$/.test(path)) {
+        state.mfaFactors = state.mfaFactors.map(f => ({ ...f, status: 'verified' as const }))
+        return json(route, {
+          access_token: fakeJwt('aal2'), token_type: 'bearer',
+          expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600,
+          refresh_token: 'test-refresh-aal2',
+          user: userObj(),
+        })
+      }
+      const unenroll = path.match(/\/factors\/([^/]+)$/)
+      if (unenroll && method === 'DELETE') {
+        state.mfaFactors = state.mfaFactors.filter(f => f.id !== unenroll[1])
+        return json(route, { id: unenroll[1] })
+      }
+
+      if (path.endsWith('/user')) return json(route, userObj())
       return json(route, {})
     }
 
