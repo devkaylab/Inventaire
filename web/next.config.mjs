@@ -27,7 +27,14 @@ const csp = [
   // middleware — au prix du rendu statique des pages publiques. À arbitrer.
   // Même sans lui, la règle bloque déjà l'essentiel : aucun script d'un autre
   // domaine ne peut s'exécuter.
-  "script-src 'self' 'unsafe-inline'",
+  //
+  // `unsafe-eval` n'est accordé qu'au serveur de développement : le runtime de
+  // `next dev` (rafraîchissement à chaud, source maps) passe par `eval()`, et
+  // sans lui aucune page ne se charge — les tests Playwright tournent sur ce
+  // serveur. Le build de production n'en a pas besoin, et le test de garde
+  // (`tests/entetes-securite.test.ts`, exécuté hors développement) vérifie
+  // qu'il n'y figure jamais.
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
 
   // Next injecte également ses styles en ligne.
   "style-src 'self' 'unsafe-inline'",
