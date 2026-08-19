@@ -244,13 +244,26 @@ deuxième étape), logique dans `web/lib/mfa.ts`. `useAuthGuard` renvoie vers
 compte a un facteur — sans cette garde, fermer l'onglet entre le mot de passe
 et le code laisserait entrer à moitié authentifié.
 
-Restent, dans l'ordre : **enrôler réellement le compte administrateur** (il
-peut créer des entreprises, valider des superviseurs et supprimer des
-comptes) ; puis le **durcissement serveur** — aucune policy ni fonction
-n'exige encore `aal2`, la garde est côté client. Ne durcir les fonctions
-`admin_*` qu'une fois l'administrateur enrôlé, sous peine de l'enfermer
-dehors. Pas de codes de secours : un téléphone perdu se règle en
-`service_role` (suppression du facteur dans `auth.mfa_factors`).
+Le compte administrateur est enrôlé (19 août 2026), et **le serveur l'exige
+désormais** : migration `20260819123621_mfa_admin_aal2`. La garde tient en un
+seul point — les dix-huit fonctions `admin_*` passent toutes par `is_admin()`,
+qui répond faux à une session restée au mot de passe seul. Avant cette
+migration, un jeton `aal1` gardait tous les droits côté serveur : la garde
+client ne protégeait que l'interface, pas l'API.
+
+**L'exigence est conditionnelle, ne pas la « simplifier »** en un `aal2`
+obligatoire : elle ne vise que les comptes ayant un facteur vérifié. C'est ce
+qui rend le dépannage possible — un téléphone perdu se règle en `service_role`
+(`delete from auth.mfa_factors where user_id = …`), l'administrateur retrouve
+ses droits au mot de passe seul le temps de se réenrôler, sans qu'il faille
+défaire la migration. Il n'y a pas de codes de secours. Tests de garde :
+`web/tests/mfa.test.ts`.
+
+Non concernés : les comptes sans second facteur, les superviseurs ordinaires,
+`service_role` (pas de `auth.uid()`), et l'app mobile — elle n'appelle aucune
+fonction `admin_*`. **Si un écran mobile devait un jour en appeler une**, il
+faudrait d'abord y porter le parcours TOTP : sans lui, une session mobile est
+en `aal1` et serait refusée.
 
 ## Politique de mot de passe (console + code, 19 août 2026)
 
