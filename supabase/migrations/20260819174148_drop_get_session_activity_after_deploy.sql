@@ -1,0 +1,24 @@
+-- Suppression de `get_session_activity`, cette fois dans le bon ordre.
+--
+-- Elle rendait une ligne nominative par personne : nom, dernière balise,
+-- dernière action, cadence des scans. Plus aucun client ne l'appelle depuis le
+-- passage au suivi agrégé (constat E3), mais elle restait SECURITY DEFINER et
+-- exécutable par le rôle `authenticated` : un participant de l'inventaire
+-- pouvait la joindre par l'API REST et reconstituer le suivi que l'interface
+-- ne montre plus.
+--
+-- Premier essai (20260819171741) : appliqué alors que la production appelait
+-- encore la fonction — `refreshLive` la joint dans un `Promise.all` dont
+-- l'échec remonte à l'écran, et ouvrir un inventaire répondait « Cet
+-- inventaire n'est pas accessible ». Annulé dans la minute (20260819172557),
+-- droits PUBLIC recorrigés ensuite (20260819172706).
+--
+-- Cette fois le code qui ne l'appelle plus est fusionné dans `main` et
+-- déployé : la suppression ne peut plus casser l'écran.
+--
+-- Dépendances revérifiées : aucune fonction, aucune vue, aucune policy.
+-- Ce qui subsiste volontairement : `counts.counted_by`, lu par
+-- `get_session_detail` pour le rapport — arbitrer un écart suppose de savoir
+-- qui a compté, finalité distincte et usage différé.
+
+drop function if exists public.get_session_activity(uuid, integer);
