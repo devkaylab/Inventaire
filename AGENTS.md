@@ -252,11 +252,26 @@ n'exige encore `aal2`, la garde est côté client. Ne durcir les fonctions
 dehors. Pas de codes de secours : un téléphone perdu se règle en
 `service_role` (suppression du facteur dans `auth.mfa_factors`).
 
-## À faire dans la console Supabase (hors SQL)
+## Politique de mot de passe (console + code, 19 août 2026)
 
-- Activer **Leaked password protection** (vérification HaveIBeenPwned) —
-  actuellement désactivée, signalée par l'advisor `auth_leaked_password_protection`.
-- Porter la longueur minimale de mot de passe à 12 côté serveur.
+La console applique désormais : **12 caractères minimum**, une minuscule, une
+majuscule, un chiffre, un symbole, et le refus des mots de passe présents dans
+les fuites connues (**Leaked password protection**, HaveIBeenPwned). L'advisor
+`auth_leaked_password_protection` a disparu — il ne reste que les avertissements
+`*_security_definer_function_executable`, connus et voulus (les RPC portent
+leurs propres contrôles).
+
+`web/lib/password.ts` **rejoue ces règles côté client** pour les énoncer en
+français avant l'envoi, et traduit les refus que seul le serveur peut prononcer
+(mot de passe issu d'une fuite, réutilisation de l'ancien) — sans quoi la
+personne reçoit un message technique en anglais. Les deux formulaires
+(`/bienvenue`, `/reinitialisation`) affichent les exigences cochées à la frappe
+(`PasswordRules`).
+
+**Console et code doivent bouger ensemble** : assouplir la console sans
+toucher au module afficherait une exigence qui n'existe plus ; la durcir sans
+lui laisserait passer une saisie que le serveur refusera. Tests de garde :
+`web/tests/password.test.ts` (dont le seuil de 12, figé explicitement).
 
 ## Reste à traiter, par ordre de priorité
 

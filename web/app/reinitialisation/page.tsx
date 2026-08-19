@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { getMySpacePath } from '@/lib/auth'
+import { PasswordRules } from '@/components/PasswordRules'
+import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
 
 /**
  * Choix d'un nouveau mot de passe, à l'arrivée du lien « mot de passe oublié ».
@@ -46,10 +48,10 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    // Même seuil que /bienvenue : 12 caractères, le repère CNIL pour un mot de
-    // passe seul, sans second facteur.
-    if (password.length < 12) {
-      setError('Le mot de passe doit comporter au moins 12 caractères.')
+    // Mêmes règles que /bienvenue et que le serveur (voir `lib/password.ts`).
+    const pwdError = passwordError(password)
+    if (pwdError) {
+      setError(pwdError)
       return
     }
     if (password !== confirm) {
@@ -60,7 +62,7 @@ export default function ResetPasswordPage() {
     const { error: authError } = await supabase.auth.updateUser({ password })
     setBusy(false)
     if (authError) {
-      setError(authError.message ?? 'Enregistrement impossible.')
+      setError(friendlyPasswordError(authError.message))
       return
     }
     setDone(true)
@@ -132,8 +134,9 @@ export default function ResetPasswordPage() {
             <input
               id="password" type="password" autoComplete="new-password"
               value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="12 caractères minimum"
+              placeholder={`${MIN_PASSWORD_LENGTH} caractères minimum`}
             />
+            <PasswordRules password={password} />
           </div>
           <div className="field">
             <label htmlFor="confirm">Confirmer le mot de passe</label>

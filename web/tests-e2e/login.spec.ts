@@ -151,7 +151,7 @@ test.describe('Réinitialisation du mot de passe', () => {
     await mockSupabase(page) // session de récupération déjà ouverte
   })
 
-  test('exige 12 caractères puis enregistre', async ({ page }) => {
+  test('applique la politique du serveur avant l’envoi, puis enregistre', async ({ page }) => {
     await page.goto('/reinitialisation')
     await expect(page.getByRole('heading', { name: 'Nouveau mot de passe' })).toBeVisible()
 
@@ -160,9 +160,28 @@ test.describe('Réinitialisation du mot de passe', () => {
     await page.getByRole('button', { name: 'Enregistrer' }).click()
     await expect(page.locator('.error')).toContainText('12 caractères')
 
-    await page.getByLabel('Nouveau mot de passe').fill('un-mot-de-passe-long')
-    await page.getByLabel('Confirmer le mot de passe').fill('un-mot-de-passe-long')
+    // Assez long, mais sans majuscule, chiffre ni symbole : la console les
+    // exige, l'interface doit le dire ici plutôt qu'après un refus en anglais.
+    await page.getByLabel('Nouveau mot de passe').fill('unmotdepasselong')
+    await page.getByLabel('Confirmer le mot de passe').fill('unmotdepasselong')
+    await page.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(page.locator('.error')).toContainText('majuscule')
+
+    await page.getByLabel('Nouveau mot de passe').fill('Inventaire2026!')
+    await page.getByLabel('Confirmer le mot de passe').fill('Inventaire2026!')
     await page.getByRole('button', { name: 'Enregistrer' }).click()
     await expect(page.getByRole('heading', { name: 'Mot de passe modifié' })).toBeVisible()
+  })
+
+  test('les exigences se cochent à mesure de la frappe', async ({ page }) => {
+    await page.goto('/reinitialisation')
+    const rules = page.locator('.pwd-rules li')
+
+    await page.getByLabel('Nouveau mot de passe').fill('inventaire')
+    await expect(rules.filter({ hasText: 'une minuscule' })).toHaveClass(/ok/)
+    await expect(rules.filter({ hasText: 'une majuscule' })).not.toHaveClass(/ok/)
+
+    await page.getByLabel('Nouveau mot de passe').fill('Inventaire2026!')
+    await expect(rules.filter({ hasClass: /ok/ })).toHaveCount(5)
   })
 })
