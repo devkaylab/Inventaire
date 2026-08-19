@@ -24,10 +24,18 @@ function isNetworkFailure(e: unknown): boolean {
   return false
 }
 
+/**
+ * Seul l'identifiant est mémorisé, jamais la session : le jeton vit en
+ * `sessionStorage` (voir `lib/supabaseClient.ts`), fermer le navigateur
+ * déconnecte. La case ci-dessous ne fait que pré-remplir l'e-mail.
+ */
+const REMEMBER_KEY = 'quantinvo-identifiant'
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -35,6 +43,11 @@ export default function LoginPage() {
   useEffect(() => {
     getMySpacePath().then((path) => { if (path) router.replace(path) })
   }, [router])
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(REMEMBER_KEY)
+    if (saved) { setEmail(saved); setRemember(true) }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -54,6 +67,8 @@ export default function LoginPage() {
       )
       return
     }
+    if (remember) window.localStorage.setItem(REMEMBER_KEY, email.trim())
+    else window.localStorage.removeItem(REMEMBER_KEY)
     const { data: prof } = await supabase
       .from('profiles')
       .select('role, is_admin')
@@ -96,6 +111,18 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
+          </div>
+          <div className="login-options">
+            <label className="remember-label" htmlFor="remember">
+              <input
+                id="remember"
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              Se souvenir de mon identifiant
+            </label>
+            <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
           </div>
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Connexion…' : 'Se connecter'}

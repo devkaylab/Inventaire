@@ -212,6 +212,11 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
 
 ## À faire dans la console Supabase (hors SQL)
 
+- Ajouter `https://<domaine>/reinitialisation` (production **et** previews
+  Vercel) aux **Redirect URLs** de l'authentification : c'est la destination
+  des liens « mot de passe oublié » (`resetPasswordForEmail`). Sans elle,
+  Supabase rabat le lien sur la Site URL et la personne atterrit sur l'accueil
+  au lieu du formulaire de nouveau mot de passe.
 - Activer **Leaked password protection** (vérification HaveIBeenPwned) —
   actuellement désactivée, signalée par l'advisor `auth_leaked_password_protection`.
 - Porter la longueur minimale de mot de passe à 12 côté serveur.

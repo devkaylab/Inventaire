@@ -40,6 +40,30 @@ if (usingFallbackConfig && typeof window !== 'undefined') {
   )
 }
 
+// ── Durée de vie de la session : celle du navigateur, pas plus ──────────────
+//
+// Par défaut, supabase-js range le jeton dans `localStorage` : fermer le
+// navigateur ne déconnecte pas, et n'importe qui rouvrant le poste retrouve la
+// session — inacceptable sur les ordinateurs partagés d'un magasin. On range
+// donc la session dans `sessionStorage` : fermer le navigateur (ou l'onglet)
+// la termine, et chaque nouvel onglet demande une connexion.
+//
+// Les versions précédentes ont laissé des jetons dans `localStorage` : on les
+// purge au chargement, sinon ces sessions dormantes survivraient au correctif.
+const projectRef = new URL(url).hostname.split('.')[0]
+
+if (typeof window !== 'undefined') {
+  for (const key of Object.keys(window.localStorage)) {
+    if (key.startsWith(`sb-${projectRef}-`)) window.localStorage.removeItem(key)
+  }
+}
+
 export const supabase = createClient(url, anonKey, {
-  auth: { persistSession: true, autoRefreshToken: true },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    // Au prérendu (pas de `window`), supabase-js retombe sur son adaptateur
+    // par défaut, qui ne fait rien hors navigateur.
+    ...(typeof window !== 'undefined' ? { storage: window.sessionStorage } : {}),
+  },
 })
