@@ -336,6 +336,41 @@ test.describe('Équipe et cycle de vie', () => {
   })
 })
 
+test.describe('Version mobile', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('les sections passent dans un menu burger', async ({ page }) => {
+    await gotoDashboard(page)
+
+    // La barre d'onglets a cédé la place au bouton burger.
+    await expect(page.getByRole('tab', { name: 'Suivi' })).toBeHidden()
+    await page.getByRole('button', { name: 'Ouvrir le menu' }).click()
+
+    const nav = page.locator('.mobile-nav')
+    for (const label of ['Suivi', 'Set up', 'Écarts d’audit', 'Rapport', 'Équipe', 'Mes inventaires', 'Mon compte']) {
+      await expect(nav.getByText(label)).toBeVisible()
+    }
+
+    // Choisir une section navigue et referme le menu.
+    await nav.getByRole('button', { name: 'Écarts d’audit' }).click()
+    await expect(page).toHaveURL(/tab=ecarts/)
+    await expect(page.getByText('Écarts à traiter')).toBeVisible()
+    await expect(page.locator('.mobile-nav')).toHaveCount(0)
+  })
+
+  test('le menu se referme sans choisir, par la croix ou le fond', async ({ page }) => {
+    await gotoDashboard(page)
+
+    await page.getByRole('button', { name: 'Ouvrir le menu' }).click()
+    await page.getByRole('button', { name: 'Fermer le menu' }).click()
+    await expect(page.locator('.mobile-nav')).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Ouvrir le menu' }).click()
+    await page.locator('.mobile-nav-overlay').click({ position: { x: 10, y: 400 } })
+    await expect(page.locator('.mobile-nav')).toHaveCount(0)
+  })
+})
+
 test.describe('Création d’un inventaire', () => {
   test('crée puis enchaîne sur Set up', async ({ page }) => {
     await page.goto('/dashboard/new')

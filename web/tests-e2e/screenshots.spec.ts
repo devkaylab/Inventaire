@@ -24,7 +24,9 @@ test.describe('captures', () => {
 
         for (const tab of TABS) {
           await page.goto(`/dashboard/${SESSION_ID}?tab=${tab}`)
-          await page.waitForSelector('.dash-tabs')
+          // `.dash-tabs` est masqué sur mobile (menu burger) : on attend le
+          // conteneur, présent à toutes les largeurs.
+          await page.waitForSelector('.dash-main')
           // Laisse retomber les états de chargement des onglets qui recalculent.
           await page.waitForTimeout(900)
           await page.screenshot({

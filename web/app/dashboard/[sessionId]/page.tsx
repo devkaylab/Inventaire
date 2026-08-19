@@ -10,6 +10,7 @@ import { useSessionLive } from '@/hooks/useSessionLive'
 import { STATUS_LABELS } from '@/lib/inventory'
 import { relativeTime } from '@/lib/format'
 import { ProgressRail } from '@/components/dashboard/ProgressRail'
+import { MobileNav } from '@/components/dashboard/MobileNav'
 import { SuiviTab } from '@/components/dashboard/tabs/SuiviTab'
 import { SetupTab } from '@/components/dashboard/tabs/SetupTab'
 import { EcartsTab } from '@/components/dashboard/tabs/EcartsTab'
@@ -110,10 +111,12 @@ export default function SessionDashboardPage() {
     <div className="dash dash-wide">
       <div className="row">
         <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
-        <div style={{ display: 'flex', gap: 12 }}>
+        {/* Sur mobile, ces liens rejoignent le menu burger avec les sections. */}
+        <div className="dash-head-links">
           <Link href="/dashboard" className="btn btn-ghost">← Mes inventaires</Link>
           <Link href="/account" className="btn btn-ghost">Mon compte</Link>
         </div>
+        <MobileNav tabs={TABS} active={tab} onSelect={k => selectTab(k as Tab)} />
       </div>
 
       <div className="dash-detail-head">
@@ -183,6 +186,11 @@ export default function SessionDashboardPage() {
                 {t.label}
               </button>
             ))}
+          </div>
+
+          {/* Sur mobile la barre d'onglets n'existe pas : ce titre dit où on est. */}
+          <div className="dash-mobile-title dash-section-label" aria-hidden="true">
+            {TABS.find(t => t.key === tab)?.label}
           </div>
 
           <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
