@@ -127,6 +127,9 @@ export default function CompanyRequestPage() {
         <div className="center-link">
           <Link href="/login">J&apos;ai déjà un compte</Link>
         </div>
+        <div className="center-link">
+          <Link href="/">← Retour à l&apos;accueil</Link>
+        </div>
       </div>
     </div>
   )
