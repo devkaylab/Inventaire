@@ -10,7 +10,7 @@ const FEATURES = [
   { icon: <IconZones />, title: 'Zones & balises', desc: 'Organisez le comptage par emplacement : on scanne une balise pour ouvrir une zone, on compte, on clôture.' },
   { icon: <IconStore />, title: 'Multi-magasins', desc: 'Gérez plusieurs magasins par entreprise et lancez un inventaire pour chacun en quelques secondes.' },
   { icon: <IconAudit />, title: 'Audit & écarts', desc: 'Double comptage, audit et arbitrage : repérez les écarts avant de valider votre stock.' },
-  { icon: <IconReport />, title: 'Rapports', desc: 'Export Excel des résultats, des écarts en valeur et du détail par zone. Prêt pour votre compta.' },
+  { icon: <IconReport />, title: 'Rapports', desc: 'Export Excel des résultats, des écarts en valeur et du détail par zone. Prêt pour l’analyse et la correction du stock.' },
   { icon: <IconTeam />, title: 'Équipes', desc: 'Un superviseur, plusieurs compteurs. Chacun rejoint la session avec un numéro et un code de sécurité.' },
 ]
 
