@@ -20,11 +20,11 @@ export default function InventairePage() {
       <main>
         <section className="hero" style={{ paddingBottom: 40 }}>
           <div className="container">
-            <div><span className="eyebrow">Comprendre</span></div>
-            <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
+            <div data-reveal="0"><span className="eyebrow">Comprendre</span></div>
+            <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
               L’inventaire,<br /><span className="grad">expliqué simplement.</span>
             </h1>
-            <p className="lead">
+            <p className="lead" data-reveal="2">
               Ce qu’est un inventaire, ce que révèle l’écart entre le stock que vous croyez
               avoir et celui que vous avez vraiment — et pourquoi compter plus souvent
               change la gestion d’un magasin.
@@ -35,7 +35,7 @@ export default function InventairePage() {
         <section className="section" style={{ paddingTop: 8 }}>
           <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            <div className="card" style={{ padding: '30px 34px' }}>
+            <div className="card" data-reveal="0" style={{ padding: '30px 34px' }}>
               <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>Qu’est-ce qu’un inventaire ?</h2>
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 15.5 }}>
@@ -60,7 +60,7 @@ export default function InventairePage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '30px 34px' }}>
+            <div className="card" data-reveal="0" style={{ padding: '30px 34px' }}>
               <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>La démarque inconnue : ce que le stock théorique cache</h2>
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 15.5 }}>
@@ -86,7 +86,7 @@ export default function InventairePage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '30px 34px' }}>
+            <div className="card" data-reveal="0" style={{ padding: '30px 34px' }}>
               <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>Ce que l’inventaire révèle d’autre</h2>
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 15.5 }}>
@@ -112,7 +112,7 @@ export default function InventairePage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '30px 34px' }}>
+            <div className="card" data-reveal="0" style={{ padding: '30px 34px' }}>
               <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>Annuel, tournant, ciblé : les trois façons de compter</h2>
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 15.5 }}>
@@ -142,7 +142,7 @@ export default function InventairePage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '30px 34px' }}>
+            <div className="card" data-reveal="0" style={{ padding: '30px 34px' }}>
               <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>Bien compter : la méthode</h2>
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 15.5 }}>
@@ -173,7 +173,7 @@ export default function InventairePage() {
 
         <section className="section">
           <div className="container">
-            <div className="cta-band">
+            <div className="cta-band" data-reveal="0">
               <h2>Comptez quand vous voulez</h2>
               <p>
                 Quantinvo est l’outil de cette méthode : zones et balises, double comptage,

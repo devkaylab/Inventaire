@@ -73,11 +73,11 @@ export default function PourquoiPage() {
       <main>
         <section className="hero" style={{ paddingBottom: 40 }}>
           <div className="container">
-            <div><span className="eyebrow">Pourquoi nous choisir ?</span></div>
-            <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
+            <div data-reveal="0"><span className="eyebrow">Pourquoi nous choisir ?</span></div>
+            <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
               Six raisons de compter<br /><span className="grad">avec Quantinvo.</span>
             </h1>
-            <p className="lead">
+            <p className="lead" data-reveal="2">
               L’accueil vous a donné l’essentiel. Voici le détail — ce que l’outil fait
               vraiment, et pourquoi ces choix comptent sur le terrain.
             </p>
@@ -87,7 +87,7 @@ export default function PourquoiPage() {
         <section className="section" style={{ paddingTop: 8 }}>
           <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {RAISONS.map((r) => (
-              <div className="card" style={{ padding: '30px 34px' }} key={r.title}>
+              <div className="card" data-reveal="0" style={{ padding: '30px 34px' }} key={r.title}>
                 <div className="ico">{r.icon}</div>
                 <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>{r.title}</h2>
                 <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -102,7 +102,7 @@ export default function PourquoiPage() {
 
         <section className="section">
           <div className="container">
-            <div className="cta-band">
+            <div className="cta-band" data-reveal="0">
               <h2>Équipez votre magasin</h2>
               <p>
                 Déposez votre demande : nous revenons vers vous avec un devis au volume de

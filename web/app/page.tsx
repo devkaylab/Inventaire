@@ -33,16 +33,16 @@ export default function Home() {
       <main>
         <section className="hero">
           <div className="container">
-            <div className="logo-glow" style={{ display: 'inline-block' }}>
+            <div className="logo-glow" data-reveal="0" style={{ display: 'inline-block' }}>
               <Logo size={84} />
             </div>
-            <div><span className="eyebrow">Outil d&apos;inventaire</span></div>
-            <h1>La simplicité<br /><span className="grad">en main.</span></h1>
-            <p className="lead">
+            <div data-reveal="1"><span className="eyebrow">Outil d&apos;inventaire</span></div>
+            <h1 data-reveal="2">La simplicité<br /><span className="grad">en main.</span></h1>
+            <p className="lead" data-reveal="3">
               Un stock fiable toute l&apos;année, compté par vos propres équipes : elles scannent,
               vous suivez l&apos;avancement en direct, et l&apos;écart se voit avant de coûter.
             </p>
-            <div className="cta">
+            <div className="cta" data-reveal="4">
               <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
               <AuthLink className="btn btn-ghost" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
             </div>
@@ -51,7 +51,7 @@ export default function Home() {
 
         <section className="section">
           <div className="container">
-            <div className="section-head">
+            <div className="section-head" data-reveal="0">
               <h2>Comptez quand vous voulez</h2>
               <p>
                 Plus besoin d&apos;attendre la fermeture annuelle : vous choisissez la date,
@@ -59,8 +59,8 @@ export default function Home() {
               </p>
             </div>
             <div className="grid">
-              {RYTHMES.map((r) => (
-                <div className="card" key={r.title}>
+              {RYTHMES.map((r, i) => (
+                <div className="card" data-reveal={i + 1} key={r.title}>
                   <h3>{r.title}</h3>
                   <p>{r.desc}</p>
                 </div>
@@ -71,13 +71,13 @@ export default function Home() {
 
         <section className="section" id="fonctionnalites">
           <div className="container">
-            <div className="section-head">
+            <div className="section-head" data-reveal="0">
               <h2>Tout pour un inventaire maîtrisé</h2>
               <p>Du premier scan au rapport final, sans rien installer côté bureau.</p>
             </div>
             <div className="grid">
-              {FEATURES.map((f) => (
-                <div className="card" key={f.title}>
+              {FEATURES.map((f, i) => (
+                <div className="card" data-reveal={(i % 3) + 1} key={f.title}>
                   <div className="ico">{f.icon}</div>
                   <h3>{f.title}</h3>
                   <p>{f.desc}</p>
@@ -89,13 +89,13 @@ export default function Home() {
 
         <section className="section">
           <div className="container">
-            <div className="section-head">
+            <div className="section-head" data-reveal="0">
               <h2>Pensé pour l&apos;entreprise</h2>
               <p>Votre stock est votre principal actif : l&apos;outil qui le compte doit être irréprochable.</p>
             </div>
             <div className="grid">
-              {CONFIANCE.map((c) => (
-                <div className="card" key={c.title}>
+              {CONFIANCE.map((c, i) => (
+                <div className="card" data-reveal={i + 1} key={c.title}>
                   <h3>{c.title}</h3>
                   <p>{c.desc}</p>
                 </div>
@@ -106,7 +106,7 @@ export default function Home() {
 
         <section className="section">
           <div className="container">
-            <div className="cta-band">
+            <div className="cta-band" data-reveal="0">
               <h2>Équipez votre magasin</h2>
               <p>
                 Une licence annuelle par magasin, au volume de votre stock — inventaires et compteurs
