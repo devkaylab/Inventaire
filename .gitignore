@@ -52,3 +52,4 @@ logo-d-application-inventaire/
 
 # Playwright (exécution hors du dossier web)
 test-results/
+supabase/.temp/
