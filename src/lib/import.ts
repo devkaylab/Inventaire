@@ -170,29 +170,50 @@ export async function importCatalogFile(
   const rawRows = isXlsx(name) ? await xlsxToRawRows(uri) : await csvToRawRows(await new File(uri).text())
   const total = rawRows.length
 
-  // 2. Validate, map & deduplicate (last row wins for duplicate SKUs)
+  // 2. Validate, map & deduplicate (last row wins for duplicate SKUs).
+  // Aucune ligne portant un EAN ne doit disparaître en silence — un EAN perdu
+  // ici ressort « article inconnu » au scan alors qu'il est dans le fichier.
+  // Mêmes règles que web/lib/import.ts (mapCatalogRows), à garder synchrones :
+  // - ligne sans SKU mais avec EAN → l'EAN sert de clé, comme au scan d'un
+  //   article inconnu (le rapport masque déjà le SKU quand sku === ean) ;
+  // - même SKU avec des EAN différents → chaque ligne supplémentaire devient un
+  //   article à part, sous son EAN (contrainte UNIQUE (session_id, sku) oblige).
   const articleMap = new Map<string, TablesInsert<'articles'>>()
   let skipped = 0
+  let keptByEan = 0
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
-    const sku = pickCode(r, SKU_KEYS)
+    const ean = pickCode(r, EAN_KEYS) || null
+    const sku = pickCode(r, SKU_KEYS) || ean
     if (!sku) {
       skipped++
-      if (errors.length < 10) errors.push(`Ligne ${i + 2}: SKU manquant — ignorée`)
+      if (errors.length < 10) errors.push(`Ligne ${i + 2}: ni SKU ni EAN — ignorée`)
       continue
     }
     // Colonne prix d'achat optionnelle — en-têtes normalisés (sans séparateurs).
     const price = parseFloat(String(r['prixdachat'] ?? r['cost'] ?? r['cogs'] ?? r['cout'] ?? r['pa'] ?? '0'))
-    articleMap.set(sku, {
+    const article: TablesInsert<'articles'> = {
       session_id: sessionId,
       sku,
-      ean: pickCode(r, EAN_KEYS) || null,
+      ean,
       brand: String(r['brand'] ?? r['marque'] ?? r['fournisseur'] ?? '').trim() || '',
       label: String(r['label'] ?? r['libelle'] ?? r['designation'] ?? r['description'] ?? r['nom'] ?? '').trim() || '',
       unit_purchase_price: isNaN(price) ? 0 : price,
-    })
+    }
+    const already = articleMap.get(sku)
+    if (already?.ean && ean && already.ean !== ean) {
+      articleMap.set(ean, { ...article, sku: ean })
+      keptByEan++
+      continue
+    }
+    // Doublon de SKU : la dernière ligne l'emporte, sans perdre un EAN déjà vu
+    // si la nouvelle ligne n'en porte pas.
+    articleMap.set(sku, already?.ean && !ean ? { ...article, ean: already.ean } : article)
   }
   const articles = Array.from(articleMap.values())
+  if (keptByEan > 0) {
+    errors.push(`${keptByEan} ligne(s) au même SKU avec un EAN différent — conservée(s) séparément sous leur EAN`)
+  }
   const dupes = total - skipped - articles.length
   if (dupes > 0) errors.push(`${dupes} SKU(s) en double dans le fichier — dernière valeur conservée`)
 

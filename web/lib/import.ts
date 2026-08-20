@@ -152,34 +152,59 @@ async function readRows(file: File): Promise<Record<string, unknown>[]> {
 
 // ── Référentiel articles ─────────────────────────────────────────────────────
 
-/** Mappe des lignes brutes vers des articles. Pur, donc testable. */
+/**
+ * Mappe des lignes brutes vers des articles. Pur, donc testable.
+ *
+ * Aucune ligne portant un EAN ne doit disparaître en silence : un EAN perdu à
+ * l'import ressort « article inconnu » au scan alors qu'il est bien dans le
+ * fichier. Deux cas concrets (référentiels bijouterie/horlogerie, un EAN par
+ * pièce) :
+ * - ligne sans SKU mais avec EAN → l'EAN sert de clé, comme au scan d'un
+ *   article inconnu (le rapport masque déjà le SKU quand sku === ean) ;
+ * - même SKU sur plusieurs lignes avec des EAN différents → chaque ligne
+ *   supplémentaire est importée comme article à part, sous son EAN, au lieu
+ *   d'écraser l'EAN précédent (contrainte UNIQUE (session_id, sku) oblige).
+ */
 export function mapCatalogRows(rawRows: Record<string, unknown>[], sessionId: string): {
   articles: ArticleInsert[]; errors: string[]; skipped: number
 } {
   const errors: string[] = []
   const byS = new Map<string, ArticleInsert>()
   let skipped = 0
+  let keptByEan = 0
 
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
-    const sku = pickCode(r, SKU_KEYS)
+    const ean = pickCode(r, EAN_KEYS) || null
+    const sku = pickCode(r, SKU_KEYS) || ean
     if (!sku) {
       skipped++
-      if (errors.length < 10) errors.push(`Ligne ${i + 2} : SKU manquant — ignorée`)
+      if (errors.length < 10) errors.push(`Ligne ${i + 2} : ni SKU ni EAN — ignorée`)
       continue
     }
-    // Doublon de SKU : la dernière ligne l'emporte (même règle que le mobile).
-    byS.set(sku, {
+    const article: ArticleInsert = {
       session_id: sessionId,
       sku,
-      ean: pickCode(r, EAN_KEYS) || null,
+      ean,
       brand: pickText(r, BRAND_KEYS),
       label: pickText(r, LABEL_KEYS),
       unit_purchase_price: pickNumber(r, PRICE_KEYS),
-    })
+    }
+    const already = byS.get(sku)
+    if (already?.ean && ean && already.ean !== ean) {
+      byS.set(ean, { ...article, sku: ean })
+      keptByEan++
+      continue
+    }
+    // Doublon de SKU : la dernière ligne l'emporte, sans perdre un EAN déjà vu
+    // si la nouvelle ligne n'en porte pas.
+    byS.set(sku, already?.ean && !ean ? { ...article, ean: already.ean } : article)
   }
 
   const articles = [...byS.values()]
+  if (keptByEan > 0) {
+    errors.push(`${keptByEan} ligne(s) au même SKU avec un EAN différent — conservée(s) séparément sous leur EAN`)
+  }
   const dupes = rawRows.length - skipped - articles.length
   if (dupes > 0) errors.push(`${dupes} SKU en double dans le fichier — dernière valeur conservée`)
   return { articles, errors, skipped }
