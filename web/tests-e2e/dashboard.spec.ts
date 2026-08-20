@@ -217,8 +217,10 @@ test.describe('Rapport', () => {
   test('affiche la synthèse, le statut et alerte sur les écarts non arbitrés', async ({ page }) => {
     await gotoDashboard(page, 'rapport')
 
-    await expect(page.locator('.dash-stat', { hasText: 'Démarque' })).toContainText('-140,00 €')
-    await expect(page.locator('.dash-stat', { hasText: 'Écart (valeur achat)' })).toContainText('-140,00 €')
+    await expect(page.locator('.dash-stat', { hasText: 'Stock théorique' })).toContainText('12')
+    await expect(page.locator('.dash-stat', { hasText: 'Stock compté' })).toContainText('5')
+    await expect(page.locator('.dash-stat', { hasText: 'Écart total (unités)' })).toContainText('-7')
+    await expect(page.locator('.dash-stat', { hasText: 'Écart total (valeur achat)' })).toContainText('-140,00 €')
     await expect(page.locator('.banner-warn')).toContainText('non arbitré')
     await expect(page.locator('.dash-audit-badge', { hasText: 'Écart de comptage' }).first()).toBeVisible()
   })

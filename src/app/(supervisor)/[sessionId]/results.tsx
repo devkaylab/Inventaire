@@ -45,10 +45,10 @@ export default function ResultsScreen() {
   const totals = useMemo(() => {
     const r = rows ?? []
     return {
-      lines: r.length,
+      theoreticalUnits: r.reduce((s, x) => s + Number(x.theoretical_qty), 0),
+      countedUnits: r.reduce((s, x) => s + Number(x.counted_qty), 0),
       varianceUnits: r.reduce((s, x) => s + Number(x.variance_units), 0),
       varianceValue: r.reduce((s, x) => s + Number(x.variance_value), 0),
-      shrinkValue: r.reduce((s, x) => s + Math.min(0, Number(x.variance_value)), 0),
     }
   }, [rows])
 
@@ -79,11 +79,11 @@ export default function ResultsScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.textMuted} />}
       >
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Synthèse des écarts</Text>
-          <Row styles={styles} label="Articles comptés" value={String(totals.lines)} />
-          <Row styles={styles} label="Écart total (unités)" value={fmt(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
+          <Text style={styles.summaryTitle}>Synthèse</Text>
+          <Row styles={styles} label="Stock théorique" value={fmt(totals.theoreticalUnits)} />
+          <Row styles={styles} label="Stock compté" value={fmt(totals.countedUnits)} />
+          <Row styles={styles} label="Écart total (unités)" value={(totals.varianceUnits > 0 ? '+' : '') + fmt(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
           <Row styles={styles} label="Écart total (valeur achat)" value={`${money(totals.varianceValue)} €`} color={totals.varianceValue < 0 ? theme.danger : theme.success} />
-          <Row styles={styles} label="Démarque (écarts négatifs)" value={`${money(totals.shrinkValue)} €`} color={theme.danger} hero />
         </View>
 
         <Pressable
@@ -125,11 +125,11 @@ function ResultCard({ row, theme, styles }: { row: SessionResultRow; theme: Them
   )
 }
 
-function Row({ label, value, color, hero, styles }: { label: string; value: string; color?: string; hero?: boolean; styles: ReturnType<typeof makeStyles> }) {
+function Row({ label, value, color, styles }: { label: string; value: string; color?: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.summaryRow}>
       <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={[styles.summaryValue, hero && styles.summaryValueHero, color ? { color } : null]}>{value}</Text>
+      <Text style={[styles.summaryValue, color ? { color } : null]}>{value}</Text>
     </View>
   )
 }
@@ -153,7 +153,6 @@ function makeStyles(t: Theme) {
     summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: t.hairline },
     summaryLabel: { fontSize: 13, color: t.textSecondary, fontFamily: Font.regular },
     summaryValue: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, ...tabular },
-    summaryValueHero: { fontSize: 28, letterSpacing: -0.5 },
     exportBtn: { backgroundColor: t.success, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center' },
     exportBtnText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
     empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },

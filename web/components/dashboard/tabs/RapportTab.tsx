@@ -71,10 +71,10 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
   }, [liveTick, load])
 
   const totals = useMemo(() => ({
-    lines: rows.length,
+    theoUnits: rows.reduce((s, x) => s + Number(x.theoretical_qty), 0),
+    countedUnits: rows.reduce((s, x) => s + Number(x.counted_qty), 0),
     varUnits: rows.reduce((s, x) => s + Number(x.variance_units), 0),
     varValue: rows.reduce((s, x) => s + Number(x.variance_value), 0),
-    shrink: rows.reduce((s, x) => s + Math.min(0, Number(x.variance_value)), 0),
     unresolved: rows.filter(r => r.status === 'failed').length,
   }), [rows])
 
@@ -134,10 +134,10 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
   return (
     <div>
       <div className="dash-stats">
-        <Stat label="Articles comptés" value={String(totals.lines)} />
-        <Stat label="Écart (unités)" value={fmtSigned(totals.varUnits)} tone={totals.varUnits < 0 ? 'neg' : 'pos'} />
-        <Stat label="Écart (valeur achat)" value={`${money(totals.varValue)} €`} tone={totals.varValue < 0 ? 'neg' : 'pos'} />
-        <Stat label="Démarque" value={`${money(totals.shrink)} €`} tone="neg" sub="somme des écarts négatifs" />
+        <Stat label="Stock théorique" value={fmtQty(totals.theoUnits)} />
+        <Stat label="Stock compté" value={fmtQty(totals.countedUnits)} />
+        <Stat label="Écart total (unités)" value={fmtSigned(totals.varUnits)} tone={totals.varUnits < 0 ? 'neg' : 'pos'} />
+        <Stat label="Écart total (valeur achat)" value={`${money(totals.varValue)} €`} tone={totals.varValue < 0 ? 'neg' : 'pos'} />
       </div>
 
       {totals.unresolved > 0 && (
