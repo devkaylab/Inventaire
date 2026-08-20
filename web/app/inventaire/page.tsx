@@ -180,7 +180,7 @@ export default function InventairePage() {
                 écarts arbitrés en direct et rapport prêt pour la correction du stock —
                 autant de fois par an que vous le décidez.
               </p>
-              <Link href="/pourquoi-nous-choisir" className="btn btn-ghost" style={{ marginRight: 12 }}>Pourquoi Quantinvo</Link>
+              <Link href="/pourquoi-nous-choisir" className="btn btn-ghost" style={{ marginRight: 12 }}>Pourquoi nous choisir ?</Link>
               <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
             </div>
           </div>

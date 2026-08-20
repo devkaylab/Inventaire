@@ -18,7 +18,7 @@ export function SiteHeader() {
           <span>Quantinvo</span>
         </Link>
         <nav className="nav-links">
-          <Link href="/pourquoi-nous-choisir">Pourquoi Quantinvo</Link>
+          <Link href="/pourquoi-nous-choisir">Pourquoi nous choisir ?</Link>
           <Link href="/inventaire">L&apos;inventaire</Link>
           <Link href="/#fonctionnalites">Fonctionnalités</Link>
           <AuthLink className="btn btn-ghost" style={{ padding: '8px 16px' }} loggedOutLabel="Se connecter" loggedInLabel="Mon espace" />
@@ -34,7 +34,7 @@ export function SiteFooter() {
       <div className="container inner">
         <div className="brand"><Logo size={24} /><span>Quantinvo</span></div>
         <div className="links">
-          <Link href="/pourquoi-nous-choisir">Pourquoi Quantinvo</Link>
+          <Link href="/pourquoi-nous-choisir">Pourquoi nous choisir ?</Link>
           <Link href="/inventaire">L&apos;inventaire</Link>
           <Link href="/login">Se connecter</Link>
           <a href={PRIVACY_URL} target="_blank" rel="noreferrer">Confidentialité</a>
