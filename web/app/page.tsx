@@ -121,7 +121,7 @@ export default function Home() {
             <div className="cta-band">
               <h2>Équipez votre magasin</h2>
               <p>
-                Une licence par magasin, à l&apos;année ou au mois — inventaires et compteurs
+                Une licence annuelle par magasin, au volume de votre stock — inventaires et compteurs
                 illimités. Déposez votre demande : nous revenons vers vous avec un devis, puis
                 vos codes entreprise et magasins. Votre entreprise utilise déjà Quantinvo ?
                 {' '}<Link href="/superviseur">Demandez votre accès superviseur</Link>.
