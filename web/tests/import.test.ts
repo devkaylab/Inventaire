@@ -53,7 +53,7 @@ describe('mapCatalogRows', () => {
     expect(articles[0].unit_purchase_price).toBe(9.99)
   })
 
-  it('ignore les lignes sans SKU et le signale', () => {
+  it('ignore les lignes sans aucun code (ni SKU ni EAN) et le signale', () => {
     const { articles, errors, skipped } = mapCatalogRows([
       { sku: 'A' }, { label: 'sans code' }, { sku: 'B' },
     ], S)
@@ -63,6 +63,17 @@ describe('mapCatalogRows', () => {
     expect(errors[0]).toContain('Ligne 3')
   })
 
+  it('importe une ligne sans SKU mais avec EAN, sous son EAN', () => {
+    // Une pièce sans référence interne reste scannable : même convention que
+    // l'article inconnu créé au scan (sku = ean, masqué dans le rapport).
+    const { articles, skipped } = mapCatalogRows([
+      { ean: '3701234567890', libelle: 'Pièce sans référence' },
+    ], S)
+    expect(skipped).toBe(0)
+    expect(articles).toHaveLength(1)
+    expect(articles[0]).toMatchObject({ sku: '3701234567890', ean: '3701234567890', label: 'Pièce sans référence' })
+  })
+
   it('sur doublon de SKU, la dernière ligne l’emporte', () => {
     const { articles, errors } = mapCatalogRows([
       { sku: 'A', libelle: 'ancien' }, { sku: 'A', libelle: 'nouveau' },
@@ -70,6 +81,31 @@ describe('mapCatalogRows', () => {
     expect(articles).toHaveLength(1)
     expect(articles[0].label).toBe('nouveau')
     expect(errors.join(' ')).toMatch(/double/i)
+  })
+
+  it('un même SKU avec des EAN différents garde chaque EAN scannable', () => {
+    // Référentiel bijouterie/horlogerie : une ligne par pièce, le SKU (modèle)
+    // se répète, l'EAN identifie la pièce. Écraser perdait tous les EAN sauf
+    // le dernier — et chaque pièce écrasée sortait « article inconnu » au scan.
+    const { articles, errors } = mapCatalogRows([
+      { sku: 'A', ean: '7624709024384', libelle: 'Montre' },
+      { sku: 'A', ean: '7624709024391', libelle: 'Montre' },
+    ], S)
+    expect(articles).toHaveLength(2)
+    const bySku = new Map(articles.map(a => [a.sku, a]))
+    expect(bySku.get('A')!.ean).toBe('7624709024384')
+    expect(bySku.get('7624709024391')!.ean).toBe('7624709024391')
+    expect(errors.join(' ')).toMatch(/EAN différent/i)
+  })
+
+  it('ne perd pas l’EAN quand une ligne en double n’en porte pas', () => {
+    const { articles } = mapCatalogRows([
+      { sku: 'A', ean: '3701', libelle: 'ancien' },
+      { sku: 'A', libelle: 'nouveau' },
+    ], S)
+    expect(articles).toHaveLength(1)
+    expect(articles[0].label).toBe('nouveau')
+    expect(articles[0].ean).toBe('3701')
   })
 
   it('met un EAN absent à null plutôt qu’à une chaîne vide', () => {
