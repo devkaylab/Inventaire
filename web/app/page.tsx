@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
-import { mentionsCompletes } from '@/lib/legal'
-import { PRIVACY_URL } from '@/lib/links'
 import { AuthLink } from '@/components/AuthLink'
+import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
 const FEATURES = [
@@ -29,18 +28,7 @@ const CONFIANCE = [
 export default function Home() {
   return (
     <>
-      <header className="site-header">
-        <div className="container inner">
-          <Link href="/" className="brand">
-            <Logo size={30} />
-            <span>Quantinvo</span>
-          </Link>
-          <nav className="nav-links">
-            <a href="#fonctionnalites">Fonctionnalités</a>
-            <AuthLink className="btn btn-ghost" style={{ padding: '8px 16px' }} loggedOutLabel="Se connecter" loggedInLabel="Mon espace" />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
         <section className="hero">
@@ -132,20 +120,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div className="container inner">
-          <div className="brand"><Logo size={24} /><span>Quantinvo</span></div>
-          <div className="links">
-            <a href="#fonctionnalites">Fonctionnalités</a>
-            <Link href="/login">Se connecter</Link>
-            <a href={PRIVACY_URL} target="_blank" rel="noreferrer">Confidentialité</a>
-            {/* Une identification à trous ne vaut pas mieux que pas de page : on
-                ne l'annonce qu'une fois les mentions requises renseignées. */}
-            {mentionsCompletes() && <Link href="/mentions-legales">Mentions légales</Link>}
-          </div>
-          <span className="muted">© 2026 Devkaylab · Quantinvo</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   )
 }
