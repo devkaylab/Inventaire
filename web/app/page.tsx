@@ -119,12 +119,12 @@ export default function Home() {
         <section className="section">
           <div className="container">
             <div className="cta-band">
-              <h2>Voyez-le compter.</h2>
+              <h2>Équipez votre magasin</h2>
               <p>
                 Une licence par magasin, à l&apos;année ou au mois — inventaires et compteurs
                 illimités. Déposez votre demande : nous revenons vers vous avec un devis, puis
-                vos codes entreprise et magasins. Superviseur déjà attendu par votre entreprise ?
-                {' '}<Link href="/superviseur">Demandez votre accès</Link>.
+                vos codes entreprise et magasins. Votre entreprise utilise déjà Quantinvo ?
+                {' '}<Link href="/superviseur">Demandez votre accès superviseur</Link>.
               </p>
               <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
             </div>
