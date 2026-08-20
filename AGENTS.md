@@ -30,6 +30,26 @@ administrateur).
 - **Compteur** : ajouté par son superviseur (app ou dashboard web), prénom + nom
   + e-mail, rattaché aux magasins choisis (`team_invitations.store_ids`, vide =
   tous ceux du superviseur).
+- **Administrateur d'entreprise** (20 août 2026) : nommé par l'administrateur
+  Quantinvo depuis /admin (edge `invite-company-admin` — promotion immédiate si
+  le compte existe dans l'entreprise, invitation sinon). C'est **un drapeau**
+  `profiles.is_company_admin`, pas une valeur de `role` : l'admin garde
+  `role = 'supervisor'` pour hériter des policies RLS existantes, et le cumul
+  admin + superviseur des petites structures marche par construction. Il gère
+  ses superviseurs depuis /equipe (RPC `ca_*`, gardées par
+  `is_company_admin()` — miroir d'`is_admin()`, aal2 conditionnel compris —
+  et journalisées dans `company_audit_log`, purgé à 1 an). Invitation de
+  superviseur par l'edge `ca-invite-supervisor`. **La policy de
+  `team_invitations` est restreinte à `role = 'employee'`** pour les
+  superviseurs : sans cela, un superviseur s'écrirait une invitation
+  `company_admin` que `handle_new_user` honorerait (élévation). Ne jamais la
+  rouvrir. Le verrou `profiles_pin_privileged` fige aussi ce drapeau. Seul
+  Quantinvo nomme/révoque les admins (`admin_invite_company_admin` /
+  `admin_revoke_company_admin`, journalisées) et crée entreprises et magasins
+  (la licence est par magasin). Migrations `20260820190001..4`, tests de
+  garde : `web/tests/admin-entreprise.test.ts`. Le formulaire public
+  /superviseur reste en place (cohabitation) ; son extinction éventuelle
+  suivra la règle « code déployé d'abord, objets supprimés ensuite ».
 
 **Personne ne s'inscrit** : les deux parcours créent l'utilisateur auth par
 invitation (`generateLink` type `invite`, envoi Resend, repli SMTP Supabase) et

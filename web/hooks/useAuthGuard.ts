@@ -18,6 +18,7 @@ export type Profile = {
   full_name: string | null
   role: string | null
   is_admin: boolean | null
+  is_company_admin: boolean | null
   company_id: string | null
 }
 
@@ -62,7 +63,7 @@ export function useAuthGuard(requirement: Requirement = 'auth'): GuardState {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role, is_admin, company_id')
+        .select('id, full_name, role, is_admin, is_company_admin, company_id')
         .eq('id', session.user.id)
         .maybeSingle()
       if (!active) return

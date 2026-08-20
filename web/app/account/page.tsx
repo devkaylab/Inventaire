@@ -13,7 +13,7 @@ import {
 import { AddCounter } from '@/components/dashboard/AddCounter'
 import { MfaPanel } from '@/components/MfaPanel'
 
-type ProfileInfo = { full_name: string | null; role: string | null; is_admin: boolean | null }
+type ProfileInfo = { full_name: string | null; role: string | null; is_admin: boolean | null; is_company_admin: boolean | null }
 
 export default function AccountPage() {
   const router = useRouter()
@@ -47,7 +47,7 @@ export default function AccountPage() {
       setEmail(session.user.email ?? '')
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, role, is_admin')
+        .select('full_name, role, is_admin, is_company_admin')
         .eq('id', session.user.id)
         .maybeSingle()
       const prof = data as ProfileInfo | null
@@ -128,6 +128,16 @@ export default function AccountPage() {
         Bonjour {profile?.full_name || ''}
       </h1>
       <p className="muted" style={{ marginTop: 4 }}>{email}</p>
+
+      {!isAdmin && profile?.is_company_admin && (
+        <div className="panel">
+          <h3>Mon équipe</h3>
+          <p>Vous administrez les accès de votre entreprise&nbsp;: invitez vos superviseurs et affectez-les à vos magasins.</p>
+          <Link href="/equipe" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex' }}>
+            Gérer mon équipe
+          </Link>
+        </div>
+      )}
 
       {isAdmin ? (
         <div className="panel">

@@ -94,7 +94,7 @@ export default function AdminPage() {
 
   async function processRequest(r: DeletionRequest) {
     const who = r.full_name || r.email || 'cet utilisateur'
-    if (!confirm(`Supprimer définitivement le compte de ${who} ?\n\nSes contributions seront anonymisées et son compte supprimé. Cette action est irréversible.`)) return
+    if (!confirm(`Supprimer définitivement le compte de ${who} ?\n\nSes contributions seront anonymisées et son compte supprimé. Cette action est irréversible.`)) return
     const { data, error } = await supabase.rpc('admin_delete_user', { p_user_id: r.user_id })
     if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     load()
@@ -190,7 +190,7 @@ export default function AdminPage() {
   )
 }
 
-type Supervisor = { id: string; full_name: string | null; role: string | null }
+type Supervisor = { id: string; full_name: string | null; role: string | null; is_company_admin: boolean | null }
 
 function CompanyCard({
   company, stores, onAddStore, onCopy, onDeleteCompany, onDeleteStore,
@@ -264,6 +264,11 @@ function CompanyCard({
       </div>
 
       <div className="stores">
+        <div className="stores-label">Administrateur d&apos;entreprise</div>
+        <CompanyAdminBlock company={company} admins={supervisors.filter((m) => m.is_company_admin)} onChanged={loadAssign} />
+      </div>
+
+      <div className="stores">
         <div className="stores-label">Magasins ({stores.length})</div>
         {stores.length === 0 ? (
           <p className="muted small">Aucun magasin pour l&apos;instant.</p>
@@ -316,6 +321,78 @@ function CompanyCard({
           <button className="btn btn-ghost">Ajouter</button>
         </form>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Nomination de l'administrateur d'entreprise — le client qui gère ensuite
+ * lui-même ses superviseurs depuis « Mon équipe ».
+ *
+ * Deux issues côté serveur : un compte de l'entreprise existe pour cette
+ * adresse et il est promu sur-le-champ ; sinon l'invitation part par e-mail
+ * (edge function invite-company-admin, garde is_admin() revérifiée en base).
+ */
+function CompanyAdminBlock({
+  company, admins, onChanged,
+}: {
+  company: Company
+  admins: Supervisor[]
+  onChanged: () => void
+}) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function invite(e: React.FormEvent) {
+    e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke('invite-company-admin', {
+      body: { companyId: company.id, email: email.trim(), firstName: firstName.trim(), lastName: lastName.trim() },
+    })
+    setBusy(false)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
+      return
+    }
+    if (data.mode === 'promoted') {
+      alert(`${data.full_name || 'Ce compte'} est maintenant administrateur de l'entreprise.`)
+    } else {
+      alert(`Invitation envoyée. ${data.email} reçoit un e-mail pour créer son mot de passe.`)
+    }
+    setFirstName(''); setLastName(''); setEmail('')
+    onChanged()
+  }
+
+  async function revoke(a: Supervisor) {
+    if (!confirm(`Retirer le rôle d'administrateur d'entreprise à ${a.full_name || 'ce compte'} ?\n\nSon compte superviseur et ses magasins sont conservés.`)) return
+    const { data, error } = await supabase.rpc('admin_revoke_company_admin', { p_user: a.id })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    onChanged()
+  }
+
+  return (
+    <div>
+      <div className="chips" style={{ marginBottom: admins.length ? 12 : 8 }}>
+        {admins.length === 0 && <span className="muted small">Aucun administrateur — l&apos;entreprise est gérée par Quantinvo.</span>}
+        {admins.map((a) => (
+          <span className="chip" key={a.id}>
+            {a.full_name || 'Sans nom'}
+            <button className="chip-x" onClick={() => revoke(a)} aria-label="Révoquer">×</button>
+          </span>
+        ))}
+      </div>
+      <form className="inline-form" onSubmit={invite} style={{ flexWrap: 'wrap' }}>
+        <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" style={{ minWidth: 120 }} />
+        <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" style={{ minWidth: 120 }} />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" type="email" style={{ minWidth: 200 }} />
+        <button className="btn btn-ghost" disabled={busy || !email.trim()}>Nommer administrateur</button>
+      </form>
+      <p className="muted small" style={{ marginTop: 8 }}>
+        Si un compte de l&apos;entreprise existe déjà pour cette adresse, il est promu directement — sinon la personne reçoit une invitation.
+      </p>
     </div>
   )
 }
