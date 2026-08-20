@@ -62,7 +62,7 @@ export function MfaPanel() {
   async function disable() {
     if (state.kind !== 'on') return
     const ok = await confirm({
-      title: 'Désactiver la double authentification ?',
+      title: 'Désactiver la double authentification ?',
       message: 'Le mot de passe redeviendra la seule protection du compte.',
       confirmLabel: 'Désactiver',
       tone: 'danger',
@@ -104,7 +104,7 @@ export function MfaPanel() {
           {/* eslint-disable-next-line @next/next/no-img-element -- data URI générée par Supabase */}
           <img src={state.enroll.qrCode} alt="QR code d’enrôlement" className="mfa-qr" />
           <p className="muted small">
-            Impossible de scanner ? Saisissez la clé à la main :{' '}
+            Impossible de scanner ? Saisissez la clé à la main :{' '}
             <span className="num">{state.enroll.secret}</span>
           </p>
 

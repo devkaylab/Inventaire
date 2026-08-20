@@ -211,7 +211,7 @@ export default function LoginPage() {
               />
               Se souvenir de mon identifiant
             </label>
-            <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+            <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
           </div>
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Connexion…' : 'Se connecter'}

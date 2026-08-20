@@ -69,7 +69,7 @@ export default function NewSessionPage() {
         setError(r.error ?? "L'inventaire n'a pas pu être créé.")
         return
       }
-      toast.success(`Inventaire ${r.inventory_number} créé. Code d’accès : ${r.security_code ?? code}`)
+      toast.success(`Inventaire ${r.inventory_number} créé. Code d’accès : ${r.security_code ?? code}`)
       // Toute la préparation — balises et fichiers — se fait dans Set up.
       router.replace(`/dashboard/${r.session_id}?tab=setup`)
     } catch (err) {
@@ -92,7 +92,7 @@ export default function NewSessionPage() {
 
       <h1 className="admin-title">Nouvel inventaire</h1>
       <p className="muted" style={{ marginBottom: 24 }}>
-        Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les
+        Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les
         fichiers, puis suivre le comptage.
       </p>
 

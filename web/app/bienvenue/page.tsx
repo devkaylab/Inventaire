@@ -155,7 +155,7 @@ export default function WelcomePage() {
             <Link href="/"><Logo size={56} /></Link>
             <h1>Compte activé</h1>
             <p className="sub">
-              Bienvenue {firstName}. Votre compte est actif : vous pouvez vous connecter dès maintenant.
+              Bienvenue {firstName}. Votre compte est actif : vous pouvez vous connecter dès maintenant.
             </p>
           </div>
           {isSupervisor ? (

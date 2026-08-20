@@ -82,7 +82,7 @@ export default function SupervisorRequestPage() {
             </p>
             <p className="sub" style={{ marginTop: 12 }}>
               Sans nouvelle sous 48 heures, vérifiez le code magasin auprès de l&apos;administrateur de
-              votre entreprise : c&apos;est la cause la plus fréquente. Et si vous avez déjà un compte,
+              votre entreprise : c&apos;est la cause la plus fréquente. Et si vous avez déjà un compte,
               connectez-vous directement plutôt que de refaire une demande.
             </p>
           </div>

@@ -62,7 +62,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
     setStarting(true)
     try {
       await startSession(sessionId)
-      toast.success('Inventaire démarré : l’équipe peut compter.')
+      toast.success('Inventaire démarré : l’équipe peut compter.')
       await onChanged()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -82,7 +82,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
     // dire avant, pas après.
     if (existing > 0) {
       const ok = await confirm({
-        title: kind === 'catalogue' ? 'Remplacer le référentiel articles ?' : 'Remplacer le stock théorique ?',
+        title: kind === 'catalogue' ? 'Remplacer le référentiel articles ?' : 'Remplacer le stock théorique ?',
         message: `${existing} ligne(s) sont déjà chargées pour cet inventaire. Elles seront remplacées par le contenu de « ${file.name} ».`,
         details: ['Les comptages déjà enregistrés ne sont pas touchés.'],
         confirmLabel: 'Remplacer',
@@ -127,7 +127,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
 
       {readOnly && (
         <div className="banner banner-warn">
-          Cet inventaire est clôturé : les fichiers ne peuvent plus être remplacés ni les
+          Cet inventaire est clôturé : les fichiers ne peuvent plus être remplacés ni les
           balises réaffectées. Rouvrez-le depuis l’onglet Équipe si nécessaire.
         </div>
       )}
@@ -173,7 +173,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
             « PRIX D ACHAT » et « prixdachat » sont équivalents.
           </p>
           <p className="muted small" style={{ marginBottom: 0 }}>
-            Formatez vos colonnes de codes (SKU, EAN) en <strong>Texte</strong> dans le tableur :
+            Formatez vos colonnes de codes (SKU, EAN) en <strong>Texte</strong> dans le tableur :
             un tableur transforme <span className="num">0123</span> en <span className="num">123</span> et
             l’information est perdue avant même l’import. Le scan reste tolérant aux zéros de tête,
             mais l’export vous rendra le code tel qu’il a été chargé.
@@ -205,7 +205,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
           <>
             <p className="muted small">
               Fichier optionnel — uniquement si vous voulez comparer le comptage au stock attendu.
-              Le rapprochement se fait par SKU ; les EAN viennent du fichier précédent.
+              Le rapprochement se fait par SKU ; les EAN viennent du fichier précédent.
               Un même SKU présent sur plusieurs emplacements voit ses quantités additionnées.
             </p>
             <ul className="col-list">
@@ -262,7 +262,7 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
 
   async function onDelete(zoneName: string, count: number) {
     const ok = await confirm({
-      title: `Retirer l'emplacement « ${zoneName} » ?`,
+      title: `Retirer l'emplacement « ${zoneName} » ?`,
       message: `Ses ${count} balises ne seront plus rattachées à un emplacement.`,
       details: ['Les comptages déjà enregistrés sur ces balises sont conservés.'],
       confirmLabel: 'Retirer',
@@ -289,7 +289,7 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
           <h3>Affecter une plage de balises à un emplacement</h3>
           <p className="muted small" style={{ marginTop: 6, marginBottom: 16 }}>
             Indiquez quelles balises — déjà imprimées depuis votre profil — sont collées à quel endroit.
-            Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
+            Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
             Réaffecter une plage déjà nommée la renomme. {MAX_RANGE} balises au maximum par affectation.
           </p>
 

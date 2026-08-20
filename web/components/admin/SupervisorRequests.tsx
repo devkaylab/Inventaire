@@ -57,7 +57,7 @@ export function SupervisorRequests() {
     })
     setBusy(null)
     if (error || !data?.success) {
-      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
+      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
       await load()
       return
     }

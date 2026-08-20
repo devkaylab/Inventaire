@@ -65,7 +65,7 @@ export function ThemeToggle() {
   const label = pref === 'system' ? 'Système' : pref === 'light' ? 'Clair' : 'Sombre'
 
   return (
-    <button className="theme-toggle" onClick={cycle} aria-label={`Thème : ${label}`} title={`Thème : ${label} (cliquer pour changer)`}>
+    <button className="theme-toggle" onClick={cycle} aria-label={`Thème : ${label}`} title={`Thème : ${label} (cliquer pour changer)`}>
       <ThemeGlyph pref={pref} />
     </button>
   )

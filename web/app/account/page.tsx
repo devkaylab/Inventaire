@@ -173,7 +173,7 @@ export default function AccountPage() {
             )}
             <p className="muted small" style={{ marginTop: 10 }}>
               Le code magasin sert aux demandes d&apos;accès superviseur sur le site. Il est
-              confidentiel : ne le communiquez jamais aux compteurs.
+              confidentiel : ne le communiquez jamais aux compteurs.
             </p>
           </div>
 

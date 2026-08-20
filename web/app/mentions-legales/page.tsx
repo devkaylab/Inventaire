@@ -52,7 +52,7 @@ export default function MentionsLegalesPage() {
 
         {manquantes.length > 0 && (
           <p className="legal-avis">
-            Cette page est en cours de constitution : l’activité éditrice n’est pas encore
+            Cette page est en cours de constitution : l’activité éditrice n’est pas encore
             immatriculée. Les informations manquantes sont signalées ci-dessous et seront
             publiées dès qu’elles seront disponibles.
           </p>
@@ -88,14 +88,14 @@ export default function MentionsLegalesPage() {
           </p>
           <p>
             Les données d’inventaire saisies ou importées par une entreprise cliente restent sa
-            propriété ; Quantinvo n’en fait aucun autre usage que la fourniture du service.
+            propriété ; Quantinvo n’en fait aucun autre usage que la fourniture du service.
           </p>
         </section>
 
         <section>
           <h2>Contact</h2>
           <p>
-            Pour toute question relative au site ou à ces mentions :{' '}
+            Pour toute question relative au site ou à ces mentions :{' '}
             <a href="mailto:devkaylab@gmail.com">devkaylab@gmail.com</a>.
           </p>
         </section>

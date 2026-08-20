@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
           <Link href="/"><Logo size={56} /></Link>
           <h1>Mot de passe oublié</h1>
           <p className="sub">
-            Indiquez l&apos;adresse e-mail de votre compte : vous recevrez un lien pour
+            Indiquez l&apos;adresse e-mail de votre compte : vous recevrez un lien pour
             choisir un nouveau mot de passe.
           </p>
         </div>

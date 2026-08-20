@@ -30,7 +30,7 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
       await navigator.clipboard.writeText(value)
       toast.success(`${label} copié.`)
     } catch {
-      toast.error('Copie impossible : sélectionnez la valeur puis copiez-la manuellement.')
+      toast.error('Copie impossible : sélectionnez la valeur puis copiez-la manuellement.')
     }
   }
 
@@ -65,8 +65,8 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
 
   async function onClose() {
     const ok = await confirm({
-      title: 'Clôturer l’inventaire ?',
-      message: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.',
+      title: 'Clôturer l’inventaire ?',
+      message: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.',
       details: [
         'Toutes les données sont conservées.',
         'Le rapport reste consultable et téléchargeable.',
@@ -89,7 +89,7 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
 
   async function onReopen() {
     const ok = await confirm({
-      title: 'Rouvrir l’inventaire ?',
+      title: 'Rouvrir l’inventaire ?',
       message: 'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
       confirmLabel: 'Rouvrir',
     })
@@ -108,7 +108,7 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
 
   async function onDelete() {
     const ok = await confirm({
-      title: 'Supprimer définitivement cet inventaire ?',
+      title: 'Supprimer définitivement cet inventaire ?',
       message: 'Cette action est irréversible et ne peut pas être annulée.',
       details: [
         'Tous les comptages seront supprimés',

@@ -17,7 +17,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
         <div className="head">
           <h1>Une erreur est survenue</h1>
           <p className="sub">
-            L’écran n’a pas pu s’afficher. Réessayez ; si le problème persiste, vérifiez votre
+            L’écran n’a pas pu s’afficher. Réessayez ; si le problème persiste, vérifiez votre
             connexion ou revenez à vos inventaires.
           </p>
         </div>

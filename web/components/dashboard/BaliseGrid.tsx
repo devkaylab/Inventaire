@@ -44,7 +44,7 @@ export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
     return (
       <EmptyState
         title="Aucune balise affectée"
-        hint="Renseignez les emplacements à inventorier depuis l'onglet « Set up » : une plage de balises par emplacement."
+        hint="Renseignez les emplacements à inventorier depuis l'onglet « Set up » : une plage de balises par emplacement."
       />
     )
   }
@@ -80,8 +80,8 @@ export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
               if (!z) return null
               const title =
                 `Balise ${z.code} · ${z.name ?? 'sans emplacement'}\n` +
-                `Comptage : ${STATUS_FR[z.count_status]} (${z.count_lines} réf.)\n` +
-                `Audit : ${STATUS_FR[z.audit_status]} (${z.audit_lines} réf.)`
+                `Comptage : ${STATUS_FR[z.count_status]} (${z.count_lines} réf.)\n` +
+                `Audit : ${STATUS_FR[z.audit_status]} (${z.audit_lines} réf.)`
               const content = (
                 <>
                   <span className="num">{z.code}</span>

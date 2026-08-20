@@ -67,28 +67,28 @@ export default function AdminPage() {
     setBusy(true)
     const { data, error } = await supabase.rpc('admin_create_company', { p_name: name })
     setBusy(false)
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     setCompanyName('')
     load()
   }
 
   async function addStore(companyId: string, name: string) {
     const { data, error } = await supabase.rpc('admin_add_store', { p_company_id: companyId, p_name: name })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     load()
   }
 
   async function deleteCompany(c: Company) {
     if (!confirm(`Supprimer définitivement « ${c.name} » ?\n\nTous ses inventaires et données seront supprimés, et ses membres détachés de l'entreprise. Cette action est irréversible.`)) return
     const { data, error } = await supabase.rpc('admin_delete_company', { p_company_id: c.id })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     load()
   }
 
   async function deleteStore(s: Store) {
-    if (!confirm(`Supprimer le magasin « ${s.name} » ?`)) return
+    if (!confirm(`Supprimer le magasin « ${s.name} » ?`)) return
     const { data, error } = await supabase.rpc('admin_delete_store', { p_store_id: s.id })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     load()
   }
 
@@ -96,7 +96,7 @@ export default function AdminPage() {
     const who = r.full_name || r.email || 'cet utilisateur'
     if (!confirm(`Supprimer définitivement le compte de ${who} ?\n\nSes contributions seront anonymisées et son compte supprimé. Cette action est irréversible.`)) return
     const { data, error } = await supabase.rpc('admin_delete_user', { p_user_id: r.user_id })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     load()
   }
 
@@ -230,12 +230,12 @@ function CompanyCard({
 
   async function assign(storeId: string, userId: string) {
     const { data, error } = await supabase.rpc('admin_assign_supervisor', { p_store_id: storeId, p_user_id: userId })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     loadAssign()
   }
   async function unassign(storeId: string, userId: string) {
     const { data, error } = await supabase.rpc('admin_unassign_supervisor', { p_store_id: storeId, p_user_id: userId })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     loadAssign()
   }
 
@@ -253,7 +253,7 @@ function CompanyCard({
         <div>
           <h3>{company.name}</h3>
           <div className="code-row">
-            Code : <code>{company.join_code}</code>
+            Code : <code>{company.join_code}</code>
             <button className="link-btn" onClick={() => onCopy(company.join_code)}>Copier</button>
           </div>
         </div>
@@ -279,7 +279,7 @@ function CompanyCard({
                     <div>
                       <span className="store-block-name">{s.name}</span>
                       <div className="code-row">
-                        Code magasin : <code>{s.join_code}</code>
+                        Code magasin : <code>{s.join_code}</code>
                         <button className="link-btn" onClick={() => onCopy(s.join_code)}>Copier</button>
                       </div>
                     </div>

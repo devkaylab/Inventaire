@@ -16,7 +16,7 @@ const sora = Sora({ subsets: ['latin'], weight: ['600', '700', '800'], variable:
 export const metadata: Metadata = {
   title: "Quantinvo — Outil d'inventaire",
   description:
-    "Quantinvo : l'outil d'inventaire pour compter, auditer et fiabiliser vos stocks en magasin. Scan rapide, zones & balises, rapports d'écarts.",
+    "Quantinvo : l'outil d'inventaire pour compter, auditer et fiabiliser vos stocks en magasin. Scan rapide, zones & balises, rapports d'écarts.",
   icons: { icon: '/favicon.svg' },
 }
 

@@ -81,7 +81,7 @@ export default function CompanyRequestPage() {
           <Link href="/"><Logo size={56} /></Link>
           <h1>Inscrire mon entreprise</h1>
           <p className="sub">
-            Décrivez votre besoin : nous revenons vers vous avec un devis adapté au nombre de magasins.
+            Décrivez votre besoin : nous revenons vers vous avec un devis adapté au nombre de magasins.
           </p>
         </div>
 

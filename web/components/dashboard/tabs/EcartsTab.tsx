@@ -115,7 +115,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   async function onDelete(d: Discrepancy) {
     const label = labels[d.audit.sku]?.label || d.audit.sku
     const ok = await confirm({
-      title: 'Supprimer cette ligne ?',
+      title: 'Supprimer cette ligne ?',
       message: `Tous les comptages de « ${label} »${d.audit.zone ? ` dans la balise ${d.audit.zone}` : ''} seront supprimés — ceux du compteur comme ceux de l'auditeur.`,
       details: ['Cette action est irréversible.', "À n'utiliser que si la ligne est une erreur de saisie, pas pour corriger une quantité."],
       confirmLabel: 'Supprimer la ligne',
@@ -139,7 +139,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
 
   async function onUndo(a: ArticleAudit) {
     const ok = await confirm({
-      title: 'Annuler cet arbitrage ?',
+      title: 'Annuler cet arbitrage ?',
       message: 'La ligne repassera en écart et devra être arbitrée à nouveau.',
       confirmLabel: 'Annuler l’arbitrage',
     })
@@ -292,7 +292,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
           <summary>Écarts arbitrés ({resolved.length})</summary>
           <div className="collapsible-body">
             <p className="muted small" style={{ marginBottom: 12 }}>
-              Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport.
+              Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport.
               Un nouveau comptage ne l’écrase pas.
             </p>
             <div className="dash-audit-list">

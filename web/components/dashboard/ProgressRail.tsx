@@ -80,7 +80,7 @@ export function ProgressRail({
             // Un 0 sans explication laisse croire à une panne. C'est presque
             // toujours un fichier optionnel qu'on n'a pas chargé.
             <div className="dash-progress-sub small">
-              Aucun stock théorique importé : l&apos;attendu vaut 0 et aucun écart ne peut être
+              Aucun stock théorique importé : l&apos;attendu vaut 0 et aucun écart ne peut être
               calculé.{' '}
               <button type="button" className="link-btn" onClick={() => onOpenTab('setup')}>
                 Importer le fichier

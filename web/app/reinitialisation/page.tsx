@@ -105,7 +105,7 @@ export default function ResetPasswordPage() {
             <Link href="/"><Logo size={56} /></Link>
             <h1>Mot de passe modifié</h1>
             <p className="sub">
-              Votre nouveau mot de passe est enregistré : c&apos;est lui qu&apos;il faudra
+              Votre nouveau mot de passe est enregistré : c&apos;est lui qu&apos;il faudra
               utiliser à la prochaine connexion.
             </p>
           </div>

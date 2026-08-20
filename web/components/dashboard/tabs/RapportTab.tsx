@@ -112,7 +112,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
         const names = downloadCsv(inventoryNumber, rows, detail)
         toast.success(
           names.length > 1
-            ? `${names.length} fichiers téléchargés : écarts et détail par zone.`
+            ? `${names.length} fichiers téléchargés : écarts et détail par zone.`
             : `${names[0]} téléchargé.`,
         )
       } else {
@@ -120,7 +120,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
         // requête la plus lourde et elle ne sert qu'au fichier.
         const detail = await getSessionDetail(sessionId)
         const name = await downloadXlsx(inventoryNumber, rows, detail)
-        toast.success(`${name} téléchargé (2 feuilles : Écarts, Détail par zone).`)
+        toast.success(`${name} téléchargé (2 feuilles : Écarts, Détail par zone).`)
       }
     } catch (err) {
       toast.error(friendlyError(err))
@@ -187,14 +187,14 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
             <button type="button" className="format-option" onClick={() => { setAskFormat(false); void onExport('xlsx') }}>
               <strong>Excel (.xlsx)</strong>
               <span className="muted small">
-                Deux feuilles : « Écarts » (une ligne par article) et « Détail par zone »
+                Deux feuilles : « Écarts » (une ligne par article) et « Détail par zone »
                 (une ligne par balise, avec Compté par et Audité par).
               </span>
             </button>
             <button type="button" className="format-option" onClick={() => { setAskFormat(false); void onExport('csv') }}>
               <strong>CSV (2 fichiers)</strong>
               <span className="muted small">
-                Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux en
+                Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux en
                 deux fichiers, avec exactement les mêmes colonnes qu&apos;Excel.
               </span>
             </button>
@@ -250,7 +250,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
           </div>
           <p className="muted small" style={{ marginTop: 10 }}>
             {visible.length} ligne{visible.length > 1 ? 's' : ''} affichée{visible.length > 1 ? 's' : ''}
-            {query && ` sur ${rows.length}`}. Quantité retenue : arbitrage, sinon auditeur, sinon compteur.
+            {query && ` sur ${rows.length}`}. Quantité retenue : arbitrage, sinon auditeur, sinon compteur.
           </p>
         </>
       )}

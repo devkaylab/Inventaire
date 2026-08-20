@@ -47,9 +47,9 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
     if (data.emailSent) {
       toast.success(`${first} ${last} reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.`)
     } else if (data.alreadyInvited) {
-      toast.success(`${first} ${last} avait déjà été invité : le lien reçu précédemment reste valable.`)
+      toast.success(`${first} ${last} avait déjà été invité : le lien reçu précédemment reste valable.`)
     } else {
-      toast.error(`${first} ${last} a été ajouté, mais l’e-mail n’a pas pu partir : ${data.emailError ?? 'raison inconnue'}.`)
+      toast.error(`${first} ${last} a été ajouté, mais l’e-mail n’a pas pu partir : ${data.emailError ?? 'raison inconnue'}.`)
     }
     setFirstName(''); setLastName(''); setEmail(''); setOpen(false)
     await onAdded()
@@ -77,7 +77,7 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
         <label htmlFor="counter-email">Adresse e-mail</label>
         <input id="counter-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.dupont@exemple.fr" />
         <p className="field-hint">
-          Elle recevra à cette adresse un lien personnel : elle y vérifiera son prénom et son nom,
+          Elle recevra à cette adresse un lien personnel : elle y vérifiera son prénom et son nom,
           puis choisira son mot de passe.
         </p>
       </div>

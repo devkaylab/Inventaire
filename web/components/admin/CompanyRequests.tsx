@@ -62,7 +62,7 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
     const { error, data } = await fn()
     setBusy(null)
     if (error || !data?.success) {
-      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
       return false
     }
     await load()
@@ -70,9 +70,9 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
   }
 
   async function quote(r: CompanyRequest) {
-    const reference = prompt(`Référence du devis pour « ${r.company_name} » :`, r.quote_reference || '')
+    const reference = prompt(`Référence du devis pour « ${r.company_name} » :`, r.quote_reference || '')
     if (reference === null) return
-    const amount = prompt('Montant TTC en euros :', r.quote_amount_cents ? String(r.quote_amount_cents / 100) : '')
+    const amount = prompt('Montant TTC en euros :', r.quote_amount_cents ? String(r.quote_amount_cents / 100) : '')
     if (amount === null) return
     const cents = Math.round(Number(amount.replace(',', '.')) * 100)
     if (!Number.isFinite(cents) || cents < 0) { alert('Montant invalide.'); return }
@@ -93,7 +93,7 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
   async function fulfil(r: CompanyRequest) {
     const raw = prompt(
       `Créer « ${r.company_name} » et ses ${r.store_count} magasin(s).\n\n` +
-        'Noms des magasins, séparés par une virgule (laissez vide pour « Magasin 1 », « Magasin 2 »…) :',
+        'Noms des magasins, séparés par une virgule (laissez vide pour « Magasin 1 », « Magasin 2 »…) :',
       '',
     )
     if (raw === null) return
@@ -106,14 +106,14 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
     })
     setBusy(null)
     if (error || !data?.success) {
-      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
       return
     }
     const stores = (data.stores as { name: string; join_code: string }[]) ?? []
     alert(
-      `Entreprise créée.\n\nCode entreprise : ${data.company_code}\n\n` +
+      `Entreprise créée.\n\nCode entreprise : ${data.company_code}\n\n` +
         stores.map((s) => `${s.name} : ${s.join_code}`).join('\n') +
-        '\n\nTransmettez les codes magasin à l’administrateur de l’entreprise : chaque demande de superviseur devra être accompagnée du code de son magasin.',
+        '\n\nTransmettez les codes magasin à l’administrateur de l’entreprise : chaque demande de superviseur devra être accompagnée du code de son magasin.',
     )
     await load()
     onCompanyCreated()
@@ -171,7 +171,7 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
               <button
                 className="btn btn-danger btn-sm"
                 disabled={busy === r.id}
-                onClick={() => setStatus(r, 'rejected', `Refuser la demande de « ${r.company_name} » ?`)}
+                onClick={() => setStatus(r, 'rejected', `Refuser la demande de « ${r.company_name} » ?`)}
               >
                 Refuser
               </button>

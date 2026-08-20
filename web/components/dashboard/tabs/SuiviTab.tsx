@@ -90,7 +90,7 @@ export function SuiviTab({
       {unknownVersions > 0 && (
         <div className="banner banner-warn">
           {plural(unknownVersions, 'appareil utilise', 'appareils utilisent')} une version de
-          l&apos;application dont le format est inconnu : {unknownVersions === 1 ? 'il n’est' : 'ils ne sont'}{' '}
+          l&apos;application dont le format est inconnu : {unknownVersions === 1 ? 'il n’est' : 'ils ne sont'}{' '}
           pas {unknownVersions === 1 ? 'compté' : 'comptés'} ci-dessus. Les scans, eux, remontent normalement.
         </div>
       )}
