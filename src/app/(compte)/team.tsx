@@ -46,7 +46,7 @@ export default function TeamScreen() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['my-team'],
     queryFn: getMyTeamByStore,
   })
@@ -55,6 +55,7 @@ export default function TeamScreen() {
 
   const stores = data?.stores ?? []
   const invitations = data?.invitations ?? []
+  const sansMagasin = stores.length === 0
   const personne = stores.every((s) => s.counters.length === 0) && invitations.length === 0
 
   function handleCancelInvite(inv: TeamInvite) {
@@ -96,12 +97,25 @@ export default function TeamScreen() {
       >
         {isLoading ? (
           <ActivityIndicator color={theme.accent} style={{ marginTop: Spacing.xxxl }} />
+        ) : isError ? (
+          // Même règle que les magasins : un échec n'est pas une équipe vide.
+          <Text style={styles.empty}>
+            Votre équipe n&apos;a pas pu être chargée. Vérifiez votre connexion, puis tirez vers le
+            bas pour réessayer.
+          </Text>
         ) : (
           <>
             {personne && (
               <Text style={styles.empty}>
-                Personne dans votre équipe pour l&apos;instant. Ajoutez un compteur : il recevra
-                une invitation par e-mail.
+                {/* L'équipe se lit magasin par magasin, et un magasin n'apparaît
+                    que si l'on en est superviseur. Un administrateur
+                    d'entreprise qui n'en supervise aucun ne verrait rien, sans
+                    comprendre pourquoi. */}
+                {sansMagasin
+                  ? profile?.is_company_admin
+                    ? 'Aucun magasin ne vous est affecté, votre équipe se lit donc magasin par magasin depuis le site. Vous administrez cette entreprise : affectez-vous un magasin depuis la page Mon équipe du site pour la retrouver ici.'
+                    : 'Aucun magasin ne vous est affecté. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'
+                  : 'Personne dans votre équipe pour l’instant. Ajoutez un compteur : il recevra une invitation par e-mail.'}
               </Text>
             )}
 
@@ -141,9 +155,11 @@ export default function TeamScreen() {
               </View>
             )}
 
-            <Pressable style={styles.addBtn} onPress={() => router.push('/(compte)/new-member')}>
-              <Text style={styles.addBtnText}>Ajouter un membre</Text>
-            </Pressable>
+            {!sansMagasin && (
+              <Pressable style={styles.addBtn} onPress={() => router.push('/(compte)/new-member')}>
+                <Text style={styles.addBtnText}>Ajouter un membre</Text>
+              </Pressable>
+            )}
           </>
         )}
       </ScrollView>

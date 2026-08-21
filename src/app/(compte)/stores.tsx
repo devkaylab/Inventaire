@@ -36,7 +36,7 @@ export default function StoresScreen() {
   const styles = makeStyles(theme)
   const { profile } = useAuth()
 
-  const { data: stores, isLoading, refetch, isRefetching } = useQuery({
+  const { data: stores, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['my-stores'],
     queryFn: getMyAssignedStores,
   })
@@ -81,12 +81,28 @@ export default function StoresScreen() {
       >
         {isLoading ? (
           <ActivityIndicator color={theme.accent} style={{ marginTop: Spacing.xxxl }} />
+        ) : isError ? (
+          // Une requête en échec n'est pas une liste vide. Sans cette
+          // distinction, une coupure de réseau annonçait « Aucun magasin » à
+          // quelqu'un qui en a — et l'envoyait réclamer un accès pour rien.
+          <View style={styles.card}>
+            <Text style={styles.emptyTitle}>Chargement impossible</Text>
+            <Text style={styles.emptyText}>
+              Vos magasins n&apos;ont pas pu être chargés. Vérifiez votre connexion, puis tirez
+              vers le bas pour réessayer.
+            </Text>
+          </View>
         ) : (stores?.length ?? 0) === 0 ? (
           <View style={styles.card}>
             <Text style={styles.emptyTitle}>Aucun magasin</Text>
             <Text style={styles.emptyText}>
-              Vous n&apos;êtes affecté à aucun magasin. L&apos;administrateur de votre entreprise
-              peut vous en affecter depuis la page Mon équipe du site.
+              {/* L'administrateur d'entreprise est lui-même un superviseur : il
+                  peut s'affecter un magasin. Lui dire de s'adresser à
+                  « l'administrateur de votre entreprise » le renverrait à
+                  lui-même. */}
+              {profile?.is_company_admin
+                ? 'Vous n’êtes affecté à aucun magasin. Vous administrez cette entreprise : affectez-vous un magasin depuis la page Mon équipe du site, et il apparaîtra ici.'
+                : 'Vous n’êtes affecté à aucun magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'}
             </Text>
           </View>
         ) : (

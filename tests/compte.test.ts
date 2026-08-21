@@ -159,3 +159,25 @@ describe('connexion — les deux étapes sont deux écrans', () => {
     expect(login).toMatch(/input: \{[^}]*letterSpacing: 0/s)
   })
 })
+
+describe('administrateur d’entreprise — ne pas le renvoyer à lui-même', () => {
+  // Julien, 21 août 2026 : « qu'en est-il de l'admin d'une entreprise ? tu te
+  // contredis ». L'administrateur d'entreprise est lui-même un superviseur
+  // (`role = 'supervisor'` + le drapeau), et `ca_set_supervisor_stores`
+  // accepte n'importe quel superviseur de l'entreprise : il peut donc
+  // s'affecter un magasin. Lui dire de s'adresser à « l'administrateur de
+  // votre entreprise » le renvoyait à lui-même.
+  it('les écrans vides distinguent l’administrateur du superviseur ordinaire', () => {
+    for (const ecran of ['stores', 'team']) {
+      expect(lire(`app/(compte)/${ecran}.tsx`)).toContain('profile?.is_company_admin')
+    }
+  })
+
+  it('un échec de chargement ne s’affiche pas comme une liste vide', () => {
+    // Sinon une coupure de réseau annonce « Aucun magasin » à quelqu'un qui en
+    // a, et l'envoie réclamer un accès pour rien.
+    for (const ecran of ['stores', 'team']) {
+      expect(lire(`app/(compte)/${ecran}.tsx`)).toContain('isError')
+    }
+  })
+})

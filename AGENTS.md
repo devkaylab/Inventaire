@@ -318,6 +318,20 @@ dans chacun de ces quatre écrans (`profile?.role !== 'supervisor'` → retour �
 « Mon compte ») ; les RPC refusent déjà un compteur côté serveur, cette garde
 lui évite un écran en erreur.
 
+**L'administrateur d'entreprise est un superviseur comme les autres pour ces
+écrans**, et c'est un piège de rédaction : lui écrire « l'administrateur de
+votre entreprise vous affectera un magasin » le renvoie à lui-même.
+`ca_set_supervisor_stores` accepte tout profil `role = 'supervisor'` de
+l'entreprise — le drapeau `is_company_admin` n'y change rien — donc il peut
+s'affecter un magasin depuis /equipe. Les états vides de Magasins et Mon
+équipe branchent sur `profile?.is_company_admin` pour le lui dire.
+
+**Un échec de chargement n'est pas une liste vide.** Ces deux écrans
+distinguent `isError` du cas « aucune ligne » : sans cela, une coupure de
+réseau annonce « Aucun magasin » à quelqu'un qui en a, et l'envoie réclamer un
+accès pour rien. Vu en simulateur, requête refusée et message « Aucun
+magasin » à l'écran.
+
 « Mon compte », lui, est le **premier** écran de sa pile : la flèche native ne
 s'affiche pas alors qu'on arrive bien de Sessions ou de l'accueil. D'où le
 `headerLeft` « Retour » du layout, conditionné à `router.canGoBack()`.
