@@ -185,28 +185,44 @@ export async function deleteSession(id: string): Promise<{ success: boolean; err
 // ── Progression ──────────────────────────────────────────────────────────────
 
 /**
- * Totaux du mode classique (sans balise).
+ * Totaux de l'inventaire : quatre nombres, calculés **par le serveur**.
+ *
  * `counts` est un journal append-only où les corrections sont des lignes de
- * quantité négative : on somme `qty`, on ne compte jamais les lignes.
+ * quantité négative : on somme `qty`, on ne compte jamais les lignes. Les
+ * références sont comptées en distinct — un SKU scanné vingt fois reste une
+ * référence.
+ *
+ * ⚠️ Ne jamais revenir à un `select` sur `counts` ici. La version d'origine
+ * téléchargeait toutes les lignes de comptage de l'inventaire pour les
+ * additionner dans le navigateur, et cette fonction est rejouée **toutes les
+ * huit secondes** par chaque tableau de bord ouvert (`refreshLive`). À cent
+ * compteurs sur un magasin, cela fait des centaines de milliers de lignes
+ * transférées par sondage : c'est ce qui empêchait le produit de tenir un gros
+ * inventaire, bien avant que Postgres ne peine à écrire les scans.
+ * Voir la migration 20260821240001. Un test garde ce choix.
  */
 export async function getCountTotals(id: string): Promise<{
   counted: number; audited: number; countedSkus: number; auditedSkus: number
 }> {
-  const { data, error } = await supabase
-    .from('counts')
-    .select('qty,pass_number,sku')
-    .eq('session_id', id)
+  const { data, error } = await supabase.rpc('get_session_count_totals', { p_session_id: id })
   if (error) fail('getCountTotals', error)
 
-  let counted = 0
-  let audited = 0
-  const countedSkus = new Set<string>()
-  const auditedSkus = new Set<string>()
-  for (const c of (data ?? []) as { qty: number; pass_number: number; sku: string }[]) {
-    if (c.pass_number === 2) { audited += Number(c.qty); auditedSkus.add(c.sku) }
-    else if (c.pass_number === 1) { counted += Number(c.qty); countedSkus.add(c.sku) }
+  // La fonction renvoie une table d'une seule ligne : PostgREST la rend sous
+  // forme de tableau. Un inventaire sans aucun scan renvoie bien une ligne de
+  // zéros — mais on se protège du tableau vide plutôt que de le supposer.
+  const row = (Array.isArray(data) ? data[0] : data) as {
+    counted: number | string | null
+    audited: number | string | null
+    counted_skus: number | string | null
+    audited_skus: number | string | null
+  } | undefined
+
+  return {
+    counted: Number(row?.counted ?? 0),
+    audited: Number(row?.audited ?? 0),
+    countedSkus: Number(row?.counted_skus ?? 0),
+    auditedSkus: Number(row?.audited_skus ?? 0),
   }
-  return { counted, audited, countedSkus: countedSkus.size, auditedSkus: auditedSkus.size }
 }
 
 /** Ce qui est chargé pour cet inventaire : référentiel et stock théorique. */

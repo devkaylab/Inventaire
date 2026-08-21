@@ -83,6 +83,26 @@ export const COUNTS_TOTALS = [
   { qty: 1, pass_number: 2, sku: 'GHI9123' },
 ]
 
+/**
+ * Totaux tels que la base les calcule désormais (RPC `get_session_count_totals`).
+ *
+ * Dérivés des lignes ci-dessus plutôt que recopiés : le jour où quelqu'un
+ * ajoute un scan au jeu d'essai, les totaux suivent — c'est ce qui empêche le
+ * harnais de valider un affichage faux.
+ */
+export function countTotals() {
+  const unites = (pass: number) =>
+    COUNTS_TOTALS.filter(c => c.pass_number === pass).reduce((n, c) => n + c.qty, 0)
+  const refs = (pass: number) =>
+    new Set(COUNTS_TOTALS.filter(c => c.pass_number === pass).map(c => c.sku)).size
+  return {
+    counted: unites(1),
+    audited: unites(2),
+    counted_skus: refs(1),
+    audited_skus: refs(2),
+  }
+}
+
 export const AUDITS = [
   { id: 'a1', session_id: SESSION_ID, sku: 'ABC1234', zone: '5371', qty_pass1: 4, qty_pass2: 1, qty_pass3: null, final_qty: null, status: 'failed', resolved_by: null, updated_at: '2026-08-07T18:07:18Z' },
   { id: 'a2', session_id: SESSION_ID, sku: 'DEF5678', zone: '5371', qty_pass1: 4, qty_pass2: 1, qty_pass3: null, final_qty: null, status: 'failed', resolved_by: null, updated_at: '2026-08-07T18:07:18Z' },

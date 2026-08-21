@@ -451,6 +451,80 @@ pas en ajouter par réflexe. Polices Google auto-hébergées par `next/font` (pa
 d'appel à Google au chargement). Données en `eu-west-1`. Aucun secret versionné.
 La suppression de compte anonymise les comptages au lieu de les détruire.
 
+# Tenue en charge (21 août 2026)
+
+Question posée : « Quantinvo résiste-t-il à 200 magasins faisant un inventaire
+avec 100 compteurs chacun, au même moment ? » L'étude a montré que **le mur
+n'est pas le nombre de magasins, mais le nombre de compteurs d'un même
+magasin**, et qu'il ne tenait pas à la puissance louée mais à deux endroits du
+code. Les deux sont corrigés ; le reste est un curseur et une facture.
+
+## Ce qui a été corrigé
+
+**Les totaux se calculent sur le serveur.** `getCountTotals` téléchargeait
+toutes les lignes de `counts` de l'inventaire pour additionner quatre nombres
+dans le navigateur — rejoué toutes les huit secondes par tableau de bord
+ouvert, soit des centaines de milliers de lignes par sondage sur un gros
+inventaire. Remplacé par la RPC `get_session_count_totals` (migration
+`20260821240001`). **Ne jamais y remettre un `select` sur `counts`.**
+
+**Les téléphones ne rejoignent plus le canal temps réel** — contrat de présence
+**v3**. En v2, chaque téléphone publiait sa présence sur le canal de
+l'inventaire, et le service recopiait chaque battement vers *tous* les membres,
+donc vers les 99 autres téléphones qui n'en font rien : un coût en n² pour un
+service en n. Mesuré à cent compteurs : ~336 messages/s pour la seule présence,
+plus ~1 000 pour le `sync` émis à chaque scan, contre un plafond d'abonnement
+de 500/s tous magasins confondus — et une connexion ouverte par téléphone, pour
+un plafond de 10 000.
+
+En v3, le téléphone envoie son battement par **broadcast HTTP**
+(`channel.httpSend`), sans jamais s'abonner, et seul le tableau de bord écoute.
+Deux bornes de cadence, aussi importantes que le reste : au plus un message
+toutes les 5 s (une rafale de scans est regroupée — c'est ce qui remplace le
+`sync` par scan), au moins un toutes les 30 s (sinon le site croit l'appareil
+parti à 90 s). L'identifiant d'appareil, que la présence portait comme clé de
+canal, voyage désormais dans la charge (`k`).
+
+## Ce qu'il faut savoir avant d'y toucher
+
+- **La double écoute du site est temporaire et nécessaire.** `useSessionLive`
+  lit à la fois la présence v2 et les battements v3, et fusionne. Les
+  téléphones déjà installés émettent encore en v2 : retirer `flattenPresence`
+  avant que le nouveau build soit partout ferait disparaître de l'écran des
+  équipes bel et bien au travail. Même règle que pour `get_session_activity` —
+  code déployé d'abord, ancien chemin retiré ensuite.
+- **`PRESENCE_V` n'existe plus** : deux constantes distinctes, `BEAT_V = 3`
+  (contrat v3) et `LEGACY_PRESENCE_V = 2` (lecture de transition, côté site
+  seulement). Ne jamais réutiliser un numéro de version en changeant le
+  contrat.
+- **Sécurité inchangée, et vérifiée à la source de Realtime** : le canal reste
+  privé, les policies de `realtime.messages` s'appliquent à l'envoi HTTP comme
+  à l'envoi par socket, et les messages publics circulent sur une file
+  distincte de la file privée — une injection anonyme n'atteindrait pas le
+  tableau de bord.
+- **Piège** : le point d'entrée HTTP de Realtime répond **202 quoi qu'il
+  arrive**. Un message refusé faute de droits est écarté en silence. `httpSend`
+  qui réussit ne prouve donc pas que le message est arrivé : si le tableau de
+  bord n'affiche aucun appareil alors que les téléphones comptent, chercher du
+  côté des droits sur l'inventaire, pas du réseau.
+- Les deux modules `presence.ts` (site et mobile) restent **dupliqués
+  volontairement** et doivent bouger ensemble. Tests de garde :
+  `web/tests/charge.test.ts` et `web/tests/presence-summary.test.ts`.
+
+## Ce qui reste ouvert
+
+- **Index manquant** sur `counts (session_id, zone, pass_number)` :
+  `get_zone_dashboard` agrège tous les comptages de l'inventaire à chaque
+  battement.
+- **Compute Micro** (`max_connections` = 60) : à monter le jour où le volume
+  arrive. 20 000 compteurs à six scans/minute font ~2 000 écritures/s, une
+  Micro en encaisse 200 à 400. C'est un curseur, pas un chantier.
+- **Abonnement Realtime** : le plafond de dépense limite à 500 connexions
+  simultanées. À retirer avant d'ouvrir beaucoup de magasins.
+- **Sortie réseau** : `primeOfflineCache` télécharge le référentiel articles
+  **par appareil**. Cent téléphones sur un catalogue de 10 Mo font 1 Go pour un
+  seul magasin ; le forfait en inclut 250.
+
 # Balises : séries imprimées, pas de stock (21 août 2026)
 
 La création de balises ne passe plus par le serveur. Le superviseur choisit

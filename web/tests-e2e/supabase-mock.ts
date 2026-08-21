@@ -216,6 +216,10 @@ export async function mockSupabase(
 
       switch (name) {
         case 'get_zone_dashboard': return json(route, state.zones)
+        // Les totaux sont calculés par la base depuis le 21 août 2026 : le
+        // navigateur ne télécharge plus les lignes de comptage. PostgREST rend
+        // une fonction `returns table` sous forme de tableau.
+        case 'get_session_count_totals': return json(route, [F.countTotals()])
         case 'get_session_results': return json(route, F.RESULTS)
         case 'get_session_detail': return json(route, F.DETAIL)
         case 'recompute_session_audit': return json(route, { success: true, failed: 2, pending: 1, total: 4 })
@@ -329,9 +333,12 @@ export async function mockSupabase(
       case 'articles': return respond(route, F.ARTICLES)
       case 'counts': {
         const select = url.searchParams.get('select') ?? ''
-        // Deux usages distincts de la table : les totaux et le fil d'activité.
+        // Seul le fil d'activité lit encore cette table, et il est borné à 40
+        // lignes. Les totaux passent par `get_session_count_totals` : si un
+        // jour ils repassaient par ici, le tableau vide ci-dessous ferait
+        // échouer les tests d'affichage — c'est voulu.
         if (select.includes('created_at')) return respond(route, F.recentCounts())
-        return respond(route, F.COUNTS_TOTALS)
+        return respond(route, [])
       }
       default: return respond(route, [])
     }

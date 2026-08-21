@@ -2,12 +2,15 @@
 // compte, et surtout ce qu'elle ne peut plus dire (constat E3).
 import { describe, expect, it } from 'vitest'
 import { summarizePresence } from '@/lib/presence-summary'
-import { PRESENCE_V, STALE_MS, flattenPresence, type PresencePayload } from '@/lib/presence'
+import {
+  BEAT_V, LEGACY_PRESENCE_V, STALE_MS, flattenPresence, readBeat,
+  type PresencePayload,
+} from '@/lib/presence'
 
 const now = 1_800_000_000_000
 
 const appareil = (mode: PresencePayload['mode'], beat = now): PresencePayload =>
-  ({ v: PRESENCE_V, mode, beat })
+  ({ v: LEGACY_PRESENCE_V, mode, beat })
 
 describe('summarizePresence', () => {
   it('compte les appareils par mode', () => {
@@ -68,5 +71,66 @@ describe('flattenPresence', () => {
     } as unknown as Record<string, unknown[]>)
     expect(Object.keys(devices)).toEqual(['nouvelle'])
     expect(unknownVersions).toBe(1)
+  })
+})
+
+// ── v3 : le téléphone ne parle qu'au superviseur ─────────────────────────────
+//
+// Ces tests figent le contrat de battement. Ce qu'ils protègent n'est pas une
+// fonctionnalité mais une facture et un plafond : en v2, chaque battement était
+// recopié vers tous les téléphones du canal (coût en n²), ce qui rendait un
+// magasin à cent compteurs impossible à tenir.
+describe('readBeat', () => {
+  const battement = (over: Record<string, unknown> = {}) =>
+    ({ v: BEAT_V, k: 'appareil-1', mode: 'count', beat: now, ...over })
+
+  it('lit un battement et rend un appareil', () => {
+    const r = readBeat(battement())
+    expect(r).toEqual({
+      kind: 'device',
+      key: 'appareil-1',
+      payload: { v: BEAT_V, mode: 'count', beat: now },
+      dirty: false,
+    })
+  })
+
+  it('signale les scans survenus depuis le battement précédent', () => {
+    // C'est ce qui remplace le `sync` émis à chaque scan en v2 : un seul
+    // message porte à la fois « je suis là » et « il y a du nouveau ».
+    const r = readBeat(battement({ dirty: true }))
+    expect(r.kind === 'device' && r.dirty).toBe(true)
+  })
+
+  it('retire l’appareil qui annonce son départ', () => {
+    expect(readBeat(battement({ gone: true }))).toEqual({ kind: 'gone', key: 'appareil-1' })
+  })
+
+  it('rend la clé d’un appareil de version inconnue, pour compter des appareils', () => {
+    // Sans la clé, un seul téléphone pas à jour ferait grimper le compteur
+    // d'une unité toutes les trente secondes.
+    expect(readBeat(battement({ v: 99 }))).toEqual({
+      kind: 'unknown', key: 'appareil-1', beat: now,
+    })
+  })
+
+  it('ignore sans rien dire une charge inexploitable', () => {
+    // Message tronqué ou sonde : ce n'est pas une application plus récente,
+    // l'annoncer à l'écran inquiéterait pour rien.
+    expect(readBeat(null).kind).toBe('ignored')
+    expect(readBeat({ v: BEAT_V, beat: now }).kind).toBe('ignored')
+    expect(readBeat(battement({ beat: 'hier' })).kind).toBe('ignored')
+  })
+
+  it('ne transporte toujours rien de nominatif', () => {
+    // Même garde que la v2 (constat E3) : un champ nominatif glissé dans la
+    // charge ne doit pas ressortir de la lecture.
+    const r = readBeat(battement({ full_name: 'Nom Prénom', user_id: 'u1' }))
+    expect(r.kind === 'device' && Object.keys(r.payload).sort()).toEqual(['beat', 'mode', 'v'])
+  })
+
+  it('n’accepte pas la version v2 comme un battement', () => {
+    // Les deux contrats coexistent le temps que les téléphones se mettent à
+    // jour, mais ils ne se lisent pas l'un pour l'autre.
+    expect(readBeat(battement({ v: LEGACY_PRESENCE_V })).kind).toBe('unknown')
   })
 })

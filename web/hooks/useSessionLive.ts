@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 import {
-  SYNC_EVENT, flattenPresence, presenceTopic,
+  BEAT_EVENT, STALE_MS, SYNC_EVENT, flattenPresence, presenceTopic, readBeat,
   type PresencePayload,
 } from '@/lib/presence'
 
@@ -75,7 +75,18 @@ export function useSessionLive(
       })
   }, [])
 
-  // ── Canal : présence + broadcast ───────────────────────────────────────────
+  // ── Canal : battements v3 + présence v2 ────────────────────────────────────
+  //
+  // Deux sources pendant la transition (voir l'en-tête de lib/presence.ts) :
+  //
+  //  · les téléphones à jour envoient un **battement** en broadcast, sans
+  //    rejoindre le canal — c'est ce qui divise par cinquante le trafic et
+  //    supprime une connexion ouverte par compteur ;
+  //  · les téléphones pas encore mis à jour publient encore leur **présence**.
+  //
+  // Le site fusionne les deux. Retirer la lecture de la présence avant que le
+  // nouveau build soit installé partout ferait disparaître de l'écran des
+  // équipes bel et bien au travail.
   useEffect(() => {
     if (!sessionId || !ready) return
 
@@ -96,24 +107,75 @@ export function useSessionLive(
       config: { private: true },
     })
 
+    // Appareils v3, tenus à jour au fil des battements. En ref et non en état :
+    // c'est `publish` qui décide quand le rendu doit changer.
+    const beats: Record<string, PresencePayload> = {}
+    /** Appareils v3 dont la version dépasse la nôtre, par clé et par battement. */
+    const beatUnknown: Record<string, number> = {}
+    let legacy: { devices: Record<string, PresencePayload>; unknownVersions: number } =
+      { devices: {}, unknownVersions: 0 }
+
+    const publish = () => {
+      if (disposed) return
+      // Un appareil dont on n'a plus de nouvelles depuis trois battements est
+      // oublié : sans cette purge, les tables grossiraient indéfiniment (chaque
+      // ouverture d'écran tire une nouvelle clé d'appareil) sur un tableau de
+      // bord laissé ouvert toute la journée. C'est aussi ce qui fait qu'on
+      // compte des appareils et non des messages reçus.
+      const cutoff = Date.now() - STALE_MS
+      for (const [key, p] of Object.entries(beats)) {
+        if (p.beat < cutoff) delete beats[key]
+      }
+      for (const [key, beat] of Object.entries(beatUnknown)) {
+        if (beat < cutoff) delete beatUnknown[key]
+      }
+      setPresence({ ...legacy.devices, ...beats })
+      setUnknownVersions(legacy.unknownVersions + Object.keys(beatUnknown).length)
+    }
+
+    /** Une rafale de scans ne doit produire qu'un seul rafraîchissement. */
+    const askRefresh = () => {
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(() => { if (!disposed) refresh() }, SYNC_DEBOUNCE_MS)
+    }
+
     const readPresence = () => {
       if (disposed) return
-      const { devices, unknownVersions } = flattenPresence(
+      legacy = flattenPresence(
         channel.presenceState() as unknown as Record<string, unknown[]>,
       )
-      setPresence(devices)
-      setUnknownVersions(unknownVersions)
+      publish()
     }
 
     channel
       .on('presence', { event: 'sync' }, readPresence)
       .on('presence', { event: 'join' }, readPresence)
       .on('presence', { event: 'leave' }, readPresence)
-      .on('broadcast', { event: SYNC_EVENT }, () => {
-        // Une rafale de scans ne doit produire qu'un seul rafraîchissement.
-        if (debounce) clearTimeout(debounce)
-        debounce = setTimeout(() => { if (!disposed) refresh() }, SYNC_DEBOUNCE_MS)
+      .on('broadcast', { event: BEAT_EVENT }, (message) => {
+        if (disposed) return
+        const read = readBeat((message as { payload?: unknown }).payload)
+        switch (read.kind) {
+          case 'device':
+            beats[read.key] = read.payload
+            publish()
+            // Le battement porte lui-même le « il s'est passé quelque chose » :
+            // c'est ce qui remplace le `sync` par scan de la v2.
+            if (read.dirty) askRefresh()
+            break
+          case 'gone':
+            delete beats[read.key]
+            delete beatUnknown[read.key]
+            publish()
+            break
+          case 'unknown':
+            beatUnknown[read.key] = read.beat
+            publish()
+            break
+          case 'ignored':
+            break
+        }
       })
+      .on('broadcast', { event: SYNC_EVENT }, askRefresh)
       .subscribe((status) => {
         if (disposed) return
         setChannelReady(status === 'SUBSCRIBED')

@@ -83,6 +83,20 @@ test.describe('Suivi — activité agrégée, sans suivi nominatif', () => {
     }
   })
 
+  test('affiche les totaux calculés par la base, pas par le navigateur', async ({ page }) => {
+    // Depuis le 21 août 2026, les quatre nombres viennent de la RPC
+    // `get_session_count_totals`. Le harnais ne sert plus les lignes de
+    // comptage pour cet usage : si `getCountTotals` repassait par la table,
+    // cette carte afficherait zéro. Jeu d'essai : 4 + 4 + 1 = 9 pièces
+    // comptées, 1 + 1 + 1 = 3 auditées.
+    await gotoDashboard(page, 'suivi')
+
+    const piece = page.locator('.dash-stat', { hasText: 'Pièces comptées' })
+    await expect(piece).toContainText('9')
+    await expect(piece).toContainText('3 auditées')
+    expect(calls.rpc.map(c => c.name)).toContain('get_session_count_totals')
+  })
+
   test('résume l’avancement par zone, sans numéro de balise', async ({ page }) => {
     await gotoDashboard(page, 'suivi')
 
