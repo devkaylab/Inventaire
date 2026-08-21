@@ -169,8 +169,14 @@ Quatre points à ne pas défaire :
 - **Tout ce qui vient de la base est échappé** par le gabarit, et un lien qui
   n'est pas en `http(s)` est refusé. Avant, un nom de magasin ou un prénom
   était interpolé tel quel dans le HTML.
-- **Aucune image ni police distante** : le mot-symbole est du texte, le filet
-  est un aplat. Rien à débloquer chez le destinataire.
+- **Une seule image, aucune police distante** : le logo, en PNG servi par le
+  site (`web/public/email/logo-quantinvo.png`, adresse dérivée de
+  `APP_PUBLIC_URL`). Gmail retire les SVG et bloque les `data:` en source
+  d'image — d'où le PNG hébergé. Le mot-symbole reste **du texte à côté** de la
+  tuile, avec un `alt` vide : la moitié des messageries coupent les images par
+  défaut, la marque doit se lire quand même, et sans afficher « Quantinvo »
+  deux fois. **Le site doit être déployé avant les fonctions edge**, sinon les
+  e-mails pointent vers une image absente.
 - **Tableaux et styles en ligne**, pas de flexbox : Outlook. La dégradation
   (coins droits, mêmes couleurs) est prévue — ne pas « moderniser » ce
   balisage.

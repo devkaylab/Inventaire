@@ -41,6 +41,13 @@ const POLICE =
 /** Adresse du site, reprise du pied de page et des liens légaux. */
 export const SITE_PAR_DEFAUT = 'https://quantinvo.vercel.app'
 export const POLITIQUE_URL = 'https://devkaylab.github.io/Inventaire/privacy.html'
+/**
+ * Le logo est servi par le site (`web/public/email/`), en PNG : Gmail retire
+ * les SVG et bloque les `data:` en source d'image. Il suit donc `siteUrl`,
+ * c'est-à-dire `APP_PUBLIC_URL` — le jour du domaine propre, rien à reprendre
+ * ici.
+ */
+export const CHEMIN_LOGO = '/email/logo-quantinvo.png'
 
 export type BoutonEmail = { libelle: string; lien: string }
 export type DetailEmail = { intitule: string; valeur: string }
@@ -64,6 +71,8 @@ export type ContenuEmail = {
   raison?: string
   /** Racine du site, pour les liens de pied de page. */
   siteUrl?: string
+  /** Logo affiché en tête. Par défaut, celui servi par le site. */
+  logoUrl?: string
 }
 
 /** Échappe une valeur avant insertion dans du HTML (texte ou attribut). */
@@ -124,6 +133,11 @@ function boutonHtml(bouton: BoutonEmail): string {
  */
 export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: string } {
   const site = lienSur(contenu.siteUrl ?? SITE_PAR_DEFAUT)
+  // Le mot-symbole reste du texte **à côté** de l'image : la moitié des
+  // messageries coupent les images par défaut, et la marque doit se lire
+  // quand même. D'où l'`alt` vide sur la tuile — un `alt` parlant afficherait
+  // « Quantinvo » deux fois.
+  const logo = echapper(lienSur(contenu.logoUrl ?? `${site}${CHEMIN_LOGO}`))
   const apercu = contenu.apercu ?? contenu.paragraphes[0] ?? ''
 
   const corps = [
@@ -151,10 +165,19 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
   <tr><td align="center" style="padding:28px 12px;">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:${COULEURS.blanc};border:1px solid ${COULEURS.filet};border-radius:14px;font-family:${POLICE};">
 
-      <!-- En-tête : mot-symbole + filet de scan cyan -->
-      <tr><td style="padding:26px 30px 14px;">
-        <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:${COULEURS.encre};">Quantinvo</span>
-        <span style="font-size:12px;color:${COULEURS.ardoise};">&nbsp;&nbsp;par Devkaylab</span>
+      <!-- En-tête : tuile, mot-symbole, filet de scan -->
+      <tr><td style="padding:24px 30px 14px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td valign="middle" style="padding-right:12px;">
+              <img src="${logo}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:11px;">
+            </td>
+            <td valign="middle">
+              <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:${COULEURS.encre};">Quantinvo</span>
+              <span style="font-size:12px;color:${COULEURS.ardoise};">&nbsp;&nbsp;par Devkaylab</span>
+            </td>
+          </tr>
+        </table>
       </td></tr>
       <tr><td style="padding:0 30px;">
         <div style="height:2px;line-height:2px;font-size:0;background:${COULEURS.cyan};border-radius:2px;">&nbsp;</div>

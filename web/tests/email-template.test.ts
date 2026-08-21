@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
-import { COULEURS, echapper, emailQuantinvo, lienSur } from '../../supabase/functions/_shared/email'
+import { CHEMIN_LOGO, COULEURS, echapper, emailQuantinvo, lienSur } from '../../supabase/functions/_shared/email'
 
 const exemple = {
   titre: 'Votre accès superviseur',
@@ -23,13 +23,37 @@ describe('Gabarit d’e-mail — charte', () => {
     expect(html).not.toContain('#151a27')
   })
 
-  it('reste du HTML d’e-mail : tableaux, styles en ligne, aucune ressource distante', () => {
+  it('reste du HTML d’e-mail : tableaux, styles en ligne, pas de feuille ni de script', () => {
     const { html } = emailQuantinvo(exemple)
     expect(html).toContain('role="presentation"')
-    expect(html).not.toMatch(/<img/i)
     expect(html).not.toMatch(/<link/i)
     expect(html).not.toMatch(/<script/i)
     expect(html).not.toMatch(/display:\s*flex/i)
+  })
+
+  it('porte le logo, en PNG servi par le site, et le nom en texte à côté', () => {
+    const { html } = emailQuantinvo({ ...exemple, siteUrl: 'https://quantinvo.com' })
+    const images = html.match(/<img[^>]*>/gi) ?? []
+    expect(images).toHaveLength(1)
+    expect(images[0]).toContain('src="https://quantinvo.com/email/logo-quantinvo.png"')
+    // Gmail retire les SVG et bloque les `data:` : le logo doit rester un
+    // fichier servi en http(s).
+    expect(images[0]).not.toMatch(/\.svg|data:/i)
+    // `alt` vide, parce que le mot-symbole est déjà en texte juste à côté :
+    // images coupées, la marque se lit quand même, et sans doublon.
+    expect(images[0]).toMatch(/alt=""/)
+    expect(html).toContain('>Quantinvo</span>')
+  })
+
+  it('sert le logo depuis la même racine que le reste — un seul point à changer', () => {
+    const { html } = emailQuantinvo({ ...exemple, siteUrl: 'https://apercu.quantinvo.com' })
+    expect(html).toContain('src="https://apercu.quantinvo.com/email/logo-quantinvo.png"')
+  })
+
+  it('le fichier du logo existe bien là où le gabarit va le chercher', () => {
+    const fichier = path.resolve(__dirname, '../public', CHEMIN_LOGO.replace(/^\//, ''))
+    expect(existsSync(fichier)).toBe(true)
+    expect(readFileSync(fichier).subarray(1, 4).toString()).toBe('PNG')
   })
 
   it('rend tout le contenu demandé, bouton et lien en clair compris', () => {
