@@ -16,6 +16,8 @@ const composant = lire('../components/admin/AuditLog.tsx')
 // Les fonctions d'administration qui modifient des données. En ajouter une
 // nouvelle sans la journaliser doit se voir : compléter cette liste ET la
 // migration (ou une suivante).
+// (admin_review_supervisor_request en est sortie le 21 août 2026 : le
+// parcours public superviseur est éteint, la fonction supprimée.)
 const FONCTIONS_INSTRUMENTEES = [
   'admin_create_company',
   'admin_add_store',
@@ -24,7 +26,6 @@ const FONCTIONS_INSTRUMENTEES = [
   'admin_delete_user',
   'admin_assign_supervisor',
   'admin_unassign_supervisor',
-  'admin_review_supervisor_request',
   'admin_quote_company_request',
   'admin_set_company_request_status',
   'admin_fulfil_company_request',

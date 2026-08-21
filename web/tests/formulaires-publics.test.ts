@@ -36,23 +36,20 @@ describe('parcours public superviseur — éteint le 21 août 2026', () => {
   })
 })
 
-describe('explication par e-mail (fonction edge)', () => {
-  const edge = lire('../../supabase/functions/submit-supervisor-request/index.ts')
+describe('fonctions edge du parcours éteint', () => {
+  const edgeDepot = lire('../../supabase/functions/submit-supervisor-request/index.ts')
+  const edgeValidation = lire('../../supabase/functions/invite-supervisor/index.ts')
 
-  it('ne renvoie jamais le nom du magasin', () => {
-    // Le nom confirmerait la validité du code, par un autre canal.
-    expect(edge).not.toContain('store_name')
-  })
-
-  it('traite « code inconnu » et « demande créée » dans la même branche', () => {
-    // Deux messages distincts rouvriraient l'oracle : qui essaie des codes
-    // utilise sa propre adresse et lirait la réponse.
-    expect(edge).not.toContain("case 'unknown_store'")
-    expect(edge).not.toContain("case 'created'")
-  })
-
-  it('limite le débit avant tout travail', () => {
-    const avantDepot = edge.slice(0, edge.indexOf('submit_supervisor_request_detailed'))
-    expect(avantDepot).toContain('rate_limit_ok')
+  it('ne collectent plus et ne touchent plus la base', () => {
+    // Les RPC qu'elles appelaient sont supprimées (migration 20260821140001) :
+    // le point d'entrée subsiste en 410 le temps que les appels résiduels
+    // s'éteignent, sans client Supabase ni envoi d'e-mail.
+    for (const edge of [edgeDepot, edgeValidation]) {
+      expect(edge).toContain('410')
+      expect(edge).not.toContain('createClient')
+      expect(edge).not.toContain('resend')
+      expect(edge).not.toContain('.rpc(')
+      expect(edge).not.toContain('Deno.env.get')
+    }
   })
 })

@@ -24,9 +24,10 @@ administrateur).
 - **Entreprise** : demande sur `/inscription` → devis → acceptation →
   encaissement → `admin_fulfil_company_request` crée l'entreprise, ses magasins
   et leurs codes. C'est le **seul** chemin de création d'entreprise.
-- **Superviseur** : demande sur `/superviseur` **avec le code magasin** →
-  validation admin → invitation Supabase → mot de passe choisi par la personne →
-  profil créé et affecté au magasin de la demande.
+- **Superviseur** : invité par l'**administrateur de son entreprise** depuis
+  /equipe (edge `ca-invite-supervisor`), ou par l'administrateur Quantinvo.
+  Le formulaire public `/superviseur` est **éteint depuis le 21 août 2026** —
+  voir la section « Extinction du parcours public superviseur » plus bas.
 - **Compteur** : ajouté par son superviseur (app ou dashboard web), prénom + nom
   + e-mail, rattaché aux magasins choisis (`team_invitations.store_ids`, vide =
   tous ceux du superviseur).
@@ -48,8 +49,7 @@ administrateur).
   `admin_revoke_company_admin`, journalisées) et crée entreprises et magasins
   (la licence est par magasin). Migrations `20260820190001..4`, tests de
   garde : `web/tests/admin-entreprise.test.ts`. Le formulaire public
-  /superviseur reste en place (cohabitation) ; son extinction éventuelle
-  suivra la règle « code déployé d'abord, objets supprimés ensuite ».
+  /superviseur a été éteint le 21 août 2026 (voir ci-dessous).
 
 **Personne ne s'inscrit** : les deux parcours créent l'utilisateur auth par
 invitation (`generateLink` type `invite`, envoi Resend, repli SMTP Supabase) et
@@ -77,6 +77,46 @@ le voir.
 
 Un inventaire ne se peuple que de profils existants — `invite-to-session`
 refuse les e-mails sans compte.
+
+## Extinction du parcours public superviseur (21 août 2026)
+
+Le formulaire public de demande d'accès superviseur n'existe plus. Les accès
+sont ouverts par l'administrateur de l'entreprise (/equipe), ou par Quantinvo
+pour une entreprise qui n'a pas encore d'administrateur.
+
+Déroulé, dans l'ordre imposé par la règle du projet — **code déployé d'abord,
+objets supprimés ensuite** (leçon `get_session_activity`) :
+
+1. Commit `50bbf6e` : `/superviseur` devient une explication, la section
+   « Demandes d'accès » quitte /admin avec son composant, les liens de
+   l'accueil et de la connexion disparaissent, les tests changent d'objet.
+2. Migration `20260821140001`, une fois ce code en ligne : suppression de
+   `submit_supervisor_request` (**la surface publique, exécutable par
+   `anon`**), `submit_supervisor_request_detailed`,
+   `admin_list_supervisor_requests` et `admin_review_supervisor_request`.
+3. Edge functions `submit-supervisor-request` et `invite-supervisor`
+   redéployées en **410 Gone**, sans client Supabase ni envoi d'e-mail. La
+   console MCP ne sait pas supprimer une edge function : les retirer depuis
+   le tableau de bord Supabase quand plus aucun appel résiduel n'arrive.
+
+**La page `/superviseur` doit rester** : l'application mobile installée sur
+les téléphones partage encore cette adresse avec le code magasin (voir
+`src/constants/links.ts` et `src/app/(supervisor)/profile.tsx`). La supprimer
+enverrait ces personnes sur une erreur. Elle n'est plus qu'une explication —
+même motif que l'écran d'inscription de l'app. **À reprendre au prochain
+build mobile** : le texte de partage du code magasin y parle encore de
+« demander un accès superviseur sur le site ».
+
+**La table `supervisor_requests` reste aussi**, vide, RLS active sans aucune
+policy (donc refus par défaut). La supprimer obligerait à réécrire
+`handle_new_user` — la fonction qui conditionne toute création de compte —
+pour un gain nul : ses branches, comme celles de `purge_expired_data`,
+`export_my_data`, `anonymize_on_user_delete` et `ca_invite_supervisor`, lisent
+une table qui restera vide. Ce sont des non-opérations.
+
+Bénéfice de sécurité : l'oracle d'énumération d'e-mails que défendait tout le
+travail du constat M3 (réponse uniforme, limitation de débit) n'a plus d'objet
+— la surface publique elle-même a disparu.
 
 ## Paiement : Stripe à terme
 
