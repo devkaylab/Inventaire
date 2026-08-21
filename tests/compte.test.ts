@@ -190,3 +190,27 @@ describe('administrateur d’entreprise — ne pas le renvoyer à lui-même', ()
     }
   })
 })
+
+describe('balise hors plage — proposer l’ajout plutôt qu’un « OK » sec', () => {
+  // Relevé par Julien en test, 21 août 2026 : scanner une balise absente des
+  // plages affichait « Balise / Balise non définie » avec un seul bouton. Le
+  // compteur restait devant une étiquette bien réelle, sans moyen d'avancer.
+  const scanner = readFileSync(path.join(here, '..', 'src', 'components', 'scanner.tsx'), 'utf8')
+
+  it('l’alerte propose d’ajouter la balise', () => {
+    expect(scanner).toContain('Balise hors plage')
+    expect(scanner).toMatch(/text: 'Ajouter'/)
+  })
+
+  it('l’ajout repasse par la base avec la création autorisée', () => {
+    // `set_balise(..., p_allow_create := true)` crée la zone et l'ouvre ;
+    // sans ce second passage, le bouton ne ferait rien.
+    expect(scanner).toMatch(/openBaliseCode\(code, false, true\)/)
+  })
+
+  it('la création n’est jamais tentée au premier passage', () => {
+    // Sinon toute balise mal saisie créerait une zone en silence.
+    expect(scanner).toMatch(/allowCreate = false/)
+    expect(scanner).toMatch(/!allowCreate && \/non/)
+  })
+})

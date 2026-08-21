@@ -474,14 +474,40 @@ export function Scanner({
   }
 
   // ── Ouvre une balise (par son code). closePrev clôture la zone en cours. ──
-  async function openBaliseCode(code: string, closePrev: boolean) {
+  //
+  // `allowCreate` n'est vrai qu'au second passage, quand la personne a confirmé
+  // vouloir ajouter une balise absente des plages de l'inventaire.
+  async function openBaliseCode(code: string, closePrev: boolean, allowCreate = false) {
     try {
       if (closePrev && activeBaliseRef.current) {
         await setBalise(sessionId, activeBaliseRef.current.code, baliseModeRef.current, false)
       }
-      const result = await setBalise(sessionId, code, baliseModeRef.current, true)
+      const result = await setBalise(sessionId, code, baliseModeRef.current, true, allowCreate)
       if (!result.success) {
         playErrorSound()
+        // Balise qui n'appartient à aucune plage : ce n'est pas une erreur de
+        // manipulation, c'est une plage que le superviseur n'a pas couverte.
+        // Un « OK » sec laissait le compteur devant une étiquette bien réelle,
+        // sans moyen d'avancer. On lui propose donc de l'ajouter.
+        //
+        // Le libellé vient de `set_balise` (comparaison souple : il n'y a pas
+        // de code d'erreur distinct côté base).
+        if (!allowCreate && /non\s+d[ée]finie/i.test(result.error ?? '')) {
+          Alert.alert(
+            'Balise hors plage',
+            `La balise ${code} n'appartient à aucune plage de cet inventaire.\n\n` +
+              'Vérifiez le numéro. Si l\'étiquette est bien collée dans ce magasin, ' +
+              'ajoutez-la pour compter tout de suite — le superviseur lui donnera son ' +
+              'emplacement ensuite.',
+            [
+              { text: 'Annuler', style: 'cancel' },
+              // La zone précédente a déjà été clôturée au premier passage :
+              // ne pas la reclôturer.
+              { text: 'Ajouter', onPress: () => { void openBaliseCode(code, false, true) } },
+            ],
+          )
+          return
+        }
         Alert.alert('Balise', result.error ?? 'Balise inconnue.')
         return
       }
