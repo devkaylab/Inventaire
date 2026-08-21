@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Logo } from '@/components/Logo'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { AppShell } from '@/components/AppShell'
+import { getMyCompany } from '@/lib/account'
 import { useSessionData, type LiveScope } from '@/hooks/useSessionData'
 import { useSessionLive } from '@/hooks/useSessionLive'
 import { STATUS_LABELS } from '@/lib/inventory'
@@ -59,7 +60,15 @@ export default function SessionDashboardPage() {
 
   const guard = useAuthGuard('supervisor')
   const [tab, setTab] = useState<Tab>('suivi')
+  const [companyName, setCompanyName] = useState<string | null>(null)
   const data = useSessionData(sessionId, LIVE_SCOPES[tab])
+
+  // La barre de navigation lit l'entreprise sous le nom de la personne :
+  // même barre que les autres pages, donc même chargement.
+  useEffect(() => {
+    if (guard.status !== 'ready') return
+    getMyCompany().then(c => setCompanyName(c?.name ?? null)).catch(() => {})
+  }, [guard.status])
 
   // L'onglet vit dans l'URL — lien profond, retour navigateur et rechargement
   // conservent la vue. On lit `location.search` plutôt que `useSearchParams`
@@ -103,27 +112,35 @@ export default function SessionDashboardPage() {
     rechargerMaintenant()
   }, [tab, rechargerMaintenant])
 
-  if (guard.status === 'loading' || data.loading) {
+  if (guard.status === 'loading') {
     return (
       <div className="dash dash-wide">
-        <div className="row"><span className="muted">Chargement de l’inventaire…</span></div>
+        <span className="muted">Chargement de l’inventaire…</span>
         <SkeletonRows rows={5} height={72} />
       </div>
     )
   }
 
+  // Dès que le profil est connu, la barre est là : l'inventaire se charge
+  // sous une navigation déjà en place, plutôt qu'après elle.
+  if (data.loading) {
+    return (
+      <AppShell profile={guard.profile} companyName={companyName} wide>
+        <p className="muted" style={{ marginBottom: 16 }}>Chargement de l’inventaire…</p>
+        <SkeletonRows rows={5} height={72} />
+      </AppShell>
+    )
+  }
+
   if (data.error || !data.session) {
     return (
-      <div className="dash dash-wide">
-        <div className="row">
-          <Link href="/dashboard" className="btn btn-ghost">← Tableau de bord</Link>
-        </div>
+      <AppShell profile={guard.profile} companyName={companyName} wide>
         <EmptyState
           title="Cet inventaire n’est pas accessible"
           hint={data.error ?? "Vous n’en êtes ni le créateur ni un participant. Demandez au créateur de vous y inviter."}
           action={<Link href="/dashboard" className="btn btn-primary">Retour à mes inventaires</Link>}
         />
-      </div>
+      </AppShell>
     )
   }
 
@@ -133,17 +150,7 @@ export default function SessionDashboardPage() {
   const visibleTabs = TABS
 
   return (
-    <div className="dash dash-wide">
-      <div className="row">
-        <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
-        {/* Sur mobile, ces liens rejoignent le menu burger avec les sections. */}
-        <div className="dash-head-links">
-          <Link href="/dashboard" className="btn btn-ghost">← Mes inventaires</Link>
-          <Link href="/account" className="btn btn-ghost">Mon compte</Link>
-        </div>
-        <MobileNav tabs={TABS} active={tab} onSelect={k => selectTab(k as Tab)} />
-      </div>
-
+    <AppShell profile={guard.profile} companyName={companyName} wide>
       <div className="dash-detail-head">
         <div>
           <h1 className="admin-title" style={{ margin: 0 }}>{session.name || session.store_name}</h1>
@@ -226,9 +233,13 @@ export default function SessionDashboardPage() {
             ))}
           </div>
 
-          {/* Sur mobile la barre d'onglets n'existe pas : ce titre dit où on est. */}
-          <div className="dash-mobile-title dash-section-label" aria-hidden="true">
-            {TABS.find(t => t.key === tab)?.label}
+          {/* Sur mobile la barre d'onglets n'existe pas : ce titre dit où on
+              est, et le burger à côté mène aux autres sections. */}
+          <div className="dash-mobile-bar">
+            <div className="dash-mobile-title dash-section-label" aria-hidden="true">
+              {TABS.find(t => t.key === tab)?.label}
+            </div>
+            <MobileNav tabs={TABS} active={tab} onSelect={k => selectTab(k as Tab)} />
           </div>
 
           <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
@@ -289,7 +300,7 @@ export default function SessionDashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 
 /**
  * Navigation mobile du tableau de bord : sur petit écran, la barre d'onglets
  * cède la place à un bouton burger qui ouvre un panneau latéral avec les
- * mêmes sections, plus les liens d'en-tête (Mes inventaires, Mon compte)
- * masqués à cette taille. Le bouton comme le panneau n'existent qu'en dessous
- * du point de bascule (voir globals.css) — au-dessus, ce composant est
+ * mêmes sections. Le bouton comme le panneau n'existent qu'en dessous du
+ * point de bascule (voir globals.css) — au-dessus, ce composant est
  * invisible et la barre d'onglets reprend la main.
+ *
+ * Il ne porte QUE les sections de l'inventaire : « Mes inventaires » et
+ * « Mon compte » sont dans la barre de navigation de l'espace connecté
+ * (AppShell), qui reste visible ici aussi. Les répéter ferait doublon.
  */
 export function MobileNav({ tabs, active, onSelect }: {
   tabs: { key: string; label: string }[]
@@ -73,10 +75,6 @@ export function MobileNav({ tabs, active, onSelect }: {
                 {t.label}
               </button>
             ))}
-
-            <div className="mobile-nav-sep" />
-            <Link href="/dashboard" className="mobile-nav-item">← Mes inventaires</Link>
-            <Link href="/account" className="mobile-nav-item">Mon compte</Link>
           </nav>
         </div>
       )}

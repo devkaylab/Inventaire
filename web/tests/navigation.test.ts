@@ -16,6 +16,8 @@ const compte = lire('../app/account/page.tsx')
 // doit se voir : elle n'aurait ni navigation, ni retour, ni déconnexion.
 const PAGES_CONNECTEES = [
   '../app/dashboard/page.tsx',
+  '../app/dashboard/new/page.tsx',
+  '../app/dashboard/[sessionId]/page.tsx',
   '../app/equipe/page.tsx',
   '../app/magasins/page.tsx',
   '../app/outils/page.tsx',
@@ -62,6 +64,35 @@ describe('la barre de navigation', () => {
   it('se referme au clic ailleurs et à Échap', () => {
     expect(shell).toContain("addEventListener('mousedown'")
     expect(shell).toContain("'Escape'")
+  })
+
+  it('s’allume sur les sous-pages d’un espace', () => {
+    // Reproche de Julien, 21 août 2026 : le tableau de bord d'un inventaire
+    // portait son propre bandeau — logo, « Mes inventaires », « Mon compte » —
+    // au lieu de la barre. Elle y est ; l'onglet « Inventaires » doit rester
+    // allumé pendant qu'on travaille dans un inventaire.
+    expect(shell).not.toContain("o.href !== '/dashboard'")
+    // /admin garde son exception : il ne s'allume pas sur /admin/entreprises.
+    expect(shell).toContain("o.href !== '/admin'")
+  })
+})
+
+describe('le tableau de bord d’un inventaire', () => {
+  const page = lire('../app/dashboard/[sessionId]/page.tsx')
+  const burger = lire('../components/dashboard/MobileNav.tsx')
+
+  it('ne rejoue plus son propre bandeau', () => {
+    // Un logo « Quantinvo » posé dans la page, sous celui de la barre, ferait
+    // deux fois la même chose à deux hauteurs différentes.
+    expect(page).not.toContain('<Logo')
+    expect(page).not.toContain('dash-head-links')
+  })
+
+  it('laisse la barre porter les liens, le burger ne garde que les sections', () => {
+    expect(burger).not.toContain("href=\"/dashboard\"")
+    expect(burger).not.toContain("href=\"/account\"")
+    // Les sections de l'inventaire, elles, restent atteignables sur mobile.
+    expect(page).toContain('<MobileNav')
   })
 })
 

@@ -57,11 +57,16 @@ function initiales(nom: string | null): string {
 }
 
 export function AppShell({
-  profile, companyName, children,
+  profile, companyName, wide, children,
 }: {
   profile: Profile
   /** Nom de l'entreprise, affiché sous celui de la personne. */
   companyName?: string | null
+  /**
+   * Le tableau de bord d'un inventaire a besoin de plus de large que les
+   * autres pages : deux colonnes, un fil d'activité et des tableaux.
+   */
+  wide?: boolean
   children: React.ReactNode
 }) {
   const router = useRouter()
@@ -113,7 +118,9 @@ export function AppShell({
   return (
     <>
       <header className="appbar">
-        <div className="appbar-inner">
+        {/* La barre suit la largeur du contenu : au-dessus d'une page large,
+            un bandeau resté à 1120 laisserait le titre déborder à gauche. */}
+        <div className={`appbar-inner${wide ? ' appbar-inner-wide' : ''}`}>
           <Link href="/" className="brand" title="Retour au site Quantinvo">
             <Logo size={30} />
             <span>
@@ -126,8 +133,11 @@ export function AppShell({
             {onglets.map((o) => {
               // /admin ne doit pas s'allumer sur /admin/entreprises : on
               // n'accepte l'égalité stricte que pour la racine d'un espace.
+              // /dashboard fait exception : ses sous-pages (un inventaire,
+              // la création) sont bien « Inventaires », et l'onglet doit le
+              // dire pendant qu'on y travaille.
               const actif = pathname === o.href ||
-                (o.href !== '/admin' && o.href !== '/dashboard' && pathname.startsWith(o.href + '/'))
+                (o.href !== '/admin' && pathname.startsWith(o.href + '/'))
               return (
                 <Link
                   key={o.href}
@@ -177,7 +187,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="app-main">{children}</main>
+      <main className={`app-main${wide ? ' app-main-wide' : ''}`}>{children}</main>
     </>
   )
 }

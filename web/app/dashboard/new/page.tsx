@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Logo } from '@/components/Logo'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { AppShell } from '@/components/AppShell'
+import { getMyCompany } from '@/lib/account'
 import { createSession, getMyStores, type Store } from '@/lib/inventory'
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
@@ -34,11 +35,13 @@ export default function NewSessionPage() {
   const [usesZones, setUsesZones] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [companyName, setCompanyName] = useState<string | null>(null)
 
   useEffect(() => { setCode(generateCode()) }, [])
 
   useEffect(() => {
     if (guard.status !== 'ready') return
+    getMyCompany().then(c => setCompanyName(c?.name ?? null)).catch(() => {})
     let active = true
     ;(async () => {
       try {
@@ -84,88 +87,85 @@ export default function NewSessionPage() {
   }
 
   return (
-    <div className="dash" style={{ maxWidth: 720 }}>
-      <div className="row">
-        <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
-        <Link href="/dashboard" className="btn btn-ghost">← Mes inventaires</Link>
-      </div>
+    <AppShell profile={guard.profile} companyName={companyName}>
+      <div style={{ maxWidth: 720 }}>
+        <h1 className="page-title">Nouvel inventaire</h1>
+        <p className="muted" style={{ marginBottom: 24 }}>
+          Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les
+          fichiers, puis suivre le comptage.
+        </p>
 
-      <h1 className="admin-title">Nouvel inventaire</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les
-        fichiers, puis suivre le comptage.
-      </p>
+        {loadingStores ? (
+          <SkeletonRows rows={2} />
+        ) : stores.length === 0 ? (
+          <EmptyState
+            title="Aucun magasin ne vous est affecté"
+            hint="Un inventaire est toujours rattaché à un magasin. Demandez à votre administrateur de vous affecter au magasin concerné."
+            action={<Link href="/account" className="btn btn-ghost">Mon compte</Link>}
+          />
+        ) : (
+          <form className="panel" onSubmit={onSubmit} style={{ marginTop: 0 }}>
+            {error && <div className="error" role="alert">{error}</div>}
 
-      {loadingStores ? (
-        <SkeletonRows rows={2} />
-      ) : stores.length === 0 ? (
-        <EmptyState
-          title="Aucun magasin ne vous est affecté"
-          hint="Un inventaire est toujours rattaché à un magasin. Demandez à votre administrateur de vous affecter au magasin concerné."
-          action={<Link href="/account" className="btn btn-ghost">Mon compte</Link>}
-        />
-      ) : (
-        <form className="panel" onSubmit={onSubmit} style={{ marginTop: 0 }}>
-          {error && <div className="error" role="alert">{error}</div>}
-
-          <div className="field">
-            <label htmlFor="inv-name">Nom de l’inventaire</label>
-            <input
-              id="inv-name" value={name} onChange={e => setName(e.target.value)}
-              placeholder="Inventaire annuel 2026" autoComplete="off"
-            />
-            <p className="field-hint">Sert à le reconnaître dans la liste. Le numéro est généré automatiquement.</p>
-          </div>
-
-          <div className="field">
-            <label htmlFor="inv-store">Magasin</label>
-            <select id="inv-store" value={storeId} onChange={e => setStoreId(e.target.value)}>
-              <option value="">Choisir un magasin…</option>
-              {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="inv-code">Code d’accès</label>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="field">
+              <label htmlFor="inv-name">Nom de l’inventaire</label>
               <input
-                id="inv-code" value={code}
-                onChange={e => setCode(e.target.value.toUpperCase())}
-                maxLength={10} autoComplete="off" spellCheck={false}
-                style={{ letterSpacing: 2, fontWeight: 700 }}
+                id="inv-name" value={name} onChange={e => setName(e.target.value)}
+                placeholder="Inventaire annuel 2026" autoComplete="off"
               />
-              <button type="button" className="btn btn-ghost" onClick={() => setCode(generateCode())}>
-                Générer
-              </button>
+              <p className="field-hint">Sert à le reconnaître dans la liste. Le numéro est généré automatiquement.</p>
             </div>
-            <p className="field-hint">
-              Les compteurs saisissent le numéro d’inventaire et ce code pour rejoindre la session.
-              4 caractères minimum.
-            </p>
-          </div>
 
-          <div className="field">
-            <label htmlFor="inv-zones">Organisation du comptage</label>
-            <select
-              id="inv-zones"
-              value={usesZones ? 'zones' : 'classic'}
-              onChange={e => setUsesZones(e.target.value === 'zones')}
-            >
-              <option value="zones">Zones et balises — recommandé</option>
-              <option value="classic">Classique — sans balise</option>
-            </select>
-            <p className="field-hint">
-              {usesZones
-                ? 'Chaque emplacement reçoit une plage de balises QR (étiquettes à imprimer et coller — vous les créerez à l’étape suivante, dans Set up). Vous suivez l’avancement balise par balise et l’audit se compare zone par zone.'
-                : 'Les compteurs scannent sans délimiter d’emplacement. Plus simple à lancer, mais pas de suivi par zone ni de comparaison d’audit par balise.'}
-            </p>
-          </div>
+            <div className="field">
+              <label htmlFor="inv-store">Magasin</label>
+              <select id="inv-store" value={storeId} onChange={e => setStoreId(e.target.value)}>
+                <option value="">Choisir un magasin…</option>
+                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
 
-          <button className="btn btn-primary btn-block" disabled={busy} type="submit">
-            {busy ? 'Création…' : 'Créer l’inventaire'}
-          </button>
-        </form>
-      )}
-    </div>
+            <div className="field">
+              <label htmlFor="inv-code">Code d’accès</label>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input
+                  id="inv-code" value={code}
+                  onChange={e => setCode(e.target.value.toUpperCase())}
+                  maxLength={10} autoComplete="off" spellCheck={false}
+                  style={{ letterSpacing: 2, fontWeight: 700 }}
+                />
+                <button type="button" className="btn btn-ghost" onClick={() => setCode(generateCode())}>
+                  Générer
+                </button>
+              </div>
+              <p className="field-hint">
+                Les compteurs saisissent le numéro d’inventaire et ce code pour rejoindre la session.
+                4 caractères minimum.
+              </p>
+            </div>
+
+            <div className="field">
+              <label htmlFor="inv-zones">Organisation du comptage</label>
+              <select
+                id="inv-zones"
+                value={usesZones ? 'zones' : 'classic'}
+                onChange={e => setUsesZones(e.target.value === 'zones')}
+              >
+                <option value="zones">Zones et balises — recommandé</option>
+                <option value="classic">Classique — sans balise</option>
+              </select>
+              <p className="field-hint">
+                {usesZones
+                  ? 'Chaque emplacement reçoit une plage de balises QR (étiquettes à imprimer et coller — vous les créerez à l’étape suivante, dans Set up). Vous suivez l’avancement balise par balise et l’audit se compare zone par zone.'
+                  : 'Les compteurs scannent sans délimiter d’emplacement. Plus simple à lancer, mais pas de suivi par zone ni de comparaison d’audit par balise.'}
+              </p>
+            </div>
+
+            <button className="btn btn-primary btn-block" disabled={busy} type="submit">
+              {busy ? 'Création…' : 'Créer l’inventaire'}
+            </button>
+          </form>
+        )}
+      </div>
+    </AppShell>
   )
 }
