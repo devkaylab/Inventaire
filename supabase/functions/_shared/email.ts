@@ -48,8 +48,11 @@ export const POLITIQUE_URL = 'https://devkaylab.github.io/Inventaire/privacy.htm
  * les SVG et bloque les `data:` en source d'image. Il suit donc `siteUrl`,
  * c'est-à-dire `APP_PUBLIC_URL` — le jour du domaine propre, rien à reprendre
  * ici.
+ *
+ * C'est **le cube seul, sur fond transparent** : la tuile de l'icône
+ * d'application, posée sur le bandeau encre, faisait vignette rapportée.
  */
-export const CHEMIN_LOGO = '/email/logo-quantinvo.png'
+export const CHEMIN_LOGO = '/email/logo-quantinvo-encre.png'
 
 export type BoutonEmail = { libelle: string; lien: string }
 export type DetailEmail = { intitule: string; valeur: string }
@@ -69,7 +72,7 @@ export type ContenuEmail = {
   bouton?: BoutonEmail
   /** Précision discrète sous le bouton (usage unique, expiration…). */
   note?: string
-  /** Pourquoi cette personne reçoit ce message — affiché en pied. */
+  /** Pourquoi cette personne reçoit ce message — affiché sous le bouton. */
   raison?: string
   /** Racine du site, pour les liens de pied de page. */
   siteUrl?: string
@@ -152,6 +155,9 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
     contenu.note
       ? `<p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">${echapper(contenu.note)}</p>`
       : '',
+    contenu.raison
+      ? `<p style="margin:${contenu.note ? 8 : 20}px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">${echapper(contenu.raison)}</p>`
+      : '',
   ].join('')
 
   const html = `<!doctype html>
@@ -175,7 +181,7 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td valign="middle" style="padding-right:12px;">
-              <img src="${logo}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:11px;">
+              <img src="${logo}" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border:0;">
             </td>
             <td valign="middle">
               <span style="font-size:18px;font-weight:800;letter-spacing:-0.4px;color:#ffffff;">Quantinvo</span>
@@ -196,7 +202,7 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
       <!-- Pied : bande gris clair, tout ce qui est secondaire y descend -->
       <tr><td style="background:${COULEURS.brume};border-top:1px solid ${COULEURS.filet};padding:20px 32px 22px;border-radius:0 0 13px 13px;">
         <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">
-          <strong style="color:${COULEURS.encre};font-weight:600;">Quantinvo</strong> — l'outil d'inventaire pour le commerce.${contenu.raison ? `<br>${echapper(contenu.raison)}` : ''}
+          <strong style="color:${COULEURS.encre};font-weight:600;">Quantinvo</strong> — l'outil d'inventaire pour le commerce.
         </p>
         <p style="margin:0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">
           <a href="${echapper(site)}" style="color:${COULEURS.ardoise};text-decoration:underline;">${echapper(site.replace(/^https?:\/\//, ''))}</a>
@@ -221,10 +227,10 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
     ...(contenu.details?.length ? ['', ...contenu.details.map((d) => `${d.intitule} : ${d.valeur}`)] : []),
     ...(contenu.bouton ? ['', `${contenu.bouton.libelle} : ${lienSur(contenu.bouton.lien)}`] : []),
     ...(contenu.note ? ['', contenu.note] : []),
+    ...(contenu.raison ? ['', contenu.raison] : []),
     '',
     '--',
     "Quantinvo — l'outil d'inventaire pour le commerce.",
-    ...(contenu.raison ? [contenu.raison] : []),
     site,
     `Politique de confidentialité : ${POLITIQUE_URL}`,
   ]

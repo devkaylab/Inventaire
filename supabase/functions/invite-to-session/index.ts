@@ -150,7 +150,6 @@ Deno.serve(async (req) => {
         { intitule: 'Votre rôle', valeur: roleLabel },
       ],
       bouton: { libelle: 'Ouvrir Quantinvo', lien: `${appUrl}/open` },
-      note: "Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.",
       raison: 'Vous recevez ce message parce que votre superviseur vous a ajouté à cet inventaire.',
       siteUrl: appUrl,
     })

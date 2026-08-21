@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       "Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.",
     ],
     bouton: { libelle: 'Finaliser mon compte', lien: actionLink },
-    note: "Ce lien est personnel et à usage unique. Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.",
+    note: 'Ce lien est personnel et à usage unique.',
     raison: 'Vous recevez ce message parce que votre responsable vous a ajouté à son équipe.',
     siteUrl: appUrl,
   })

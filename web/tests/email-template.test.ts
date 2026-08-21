@@ -35,7 +35,7 @@ describe('Gabarit d’e-mail — charte', () => {
     const { html } = emailQuantinvo({ ...exemple, siteUrl: 'https://quantinvo.com' })
     const images = html.match(/<img[^>]*>/gi) ?? []
     expect(images).toHaveLength(1)
-    expect(images[0]).toContain('src="https://quantinvo.com/email/logo-quantinvo.png"')
+    expect(images[0]).toContain(`src="https://quantinvo.com${CHEMIN_LOGO}"`)
     // Gmail retire les SVG et bloque les `data:` : le logo doit rester un
     // fichier servi en http(s).
     expect(images[0]).not.toMatch(/\.svg|data:/i)
@@ -47,7 +47,7 @@ describe('Gabarit d’e-mail — charte', () => {
 
   it('sert le logo depuis la même racine que le reste — un seul point à changer', () => {
     const { html } = emailQuantinvo({ ...exemple, siteUrl: 'https://apercu.quantinvo.com' })
-    expect(html).toContain('src="https://apercu.quantinvo.com/email/logo-quantinvo.png"')
+    expect(html).toContain(`src="https://apercu.quantinvo.com${CHEMIN_LOGO}"`)
   })
 
   it('le fichier du logo existe bien là où le gabarit va le chercher', () => {
