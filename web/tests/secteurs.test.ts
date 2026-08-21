@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { SECTEURS, SECTEUR_INCONNU, densiteAttendue, secteurDe } from '../lib/secteurs'
+import {
+  SECTEURS,
+  SECTEUR_INCONNU,
+  densiteAttendue,
+  secteurDe,
+  secteurReconnu,
+} from '../lib/secteurs'
 import { densite } from '../lib/tarifs'
 
 const racine = join(__dirname, '..', '..')
@@ -129,9 +135,38 @@ describe('Où le repère s’affiche, et comment', () => {
     expect(admin).not.toContain("'À vérifier'")
   })
 
+  it('annonce contre quoi la densité a été comparée, même quand tout va bien', () => {
+    // Sans ça, deux situations opposées se ressemblent : « comparé à la bonne
+    // fourchette, rien à signaler » et « aucun secteur connu, donc rien n'a
+    // été vérifié ». Prendre la seconde pour la première, c'est le piège que
+    // le retrait du libellé « Cohérent » venait de refermer.
+    const admin = readFileSync(join(racine, 'web/components/admin/CompanyRequests.tsx'), 'utf8')
+    expect(admin).toContain('secteur inconnu, densité non vérifiée')
+    expect(admin).toContain('densité non calculable')
+    expect(admin).toContain('secteurReconnu')
+  })
+
   it('transmet le code APE avec la demande', () => {
     // Sans lui, la fourchette retombe sur la générique et ne signale rien.
     const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
     expect(page).toContain('p_ape')
+  })
+})
+
+describe('Secteur reconnu ou non', () => {
+  it('distingue un secteur identifié du repli générique', () => {
+    expect(secteurReconnu(secteurDe('47.71Z'))).toBe(true)
+    expect(secteurReconnu(secteurDe('62.01Z'))).toBe(false) // hors commerce
+    expect(secteurReconnu(secteurDe(null))).toBe(false)
+    expect(secteurReconnu(SECTEUR_INCONNU)).toBe(false)
+  })
+
+  it('applique quand même la fourchette générique sur un secteur inconnu', () => {
+    // Une fourchette large attrape encore un zéro oublié : renoncer à tout
+    // contrôle faute de secteur serait pire que de contrôler grossièrement.
+    // C'est bien pour ça que la console doit dire que le secteur est inconnu.
+    const absurde = densiteAttendue(2, null) // 2 u/m², sous le plancher de 20
+    expect(absurde?.plausible).toBe(false)
+    expect(secteurReconnu(absurde!.secteur)).toBe(false)
   })
 })

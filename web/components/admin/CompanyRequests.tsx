@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { densite, trancheDe } from '@/lib/tarifs'
-import { densiteAttendue } from '@/lib/secteurs'
+import { type Secteur, densiteAttendue, secteurReconnu } from '@/lib/secteurs'
 import { formaterSiren } from '@/lib/siren'
 
 export type CompanyRequest = {
@@ -63,10 +63,37 @@ function euros(cents: number | null) {
  * La fourchette vient du secteur d'activité, tiré du code APE rendu par le
  * registre (`web/lib/secteurs.ts`). Une fourchette unique ne servait à rien :
  * assez large pour couvrir meubles et pharmacie, elle laissait passer trois
- * tranches tarifaires d'écart. Rien ne s'affiche quand le secteur est inconnu
- * ou que la densité tient debout — un écran d'administration qui crie tout le
- * temps ne se lit plus.
+ * tranches tarifaires d'écart.
+ *
+ * **Chaque ligne dit contre quoi elle a été comparée**, et le dit même quand
+ * tout va bien. Avant, le silence recouvrait deux situations opposées : « la
+ * densité a été comparée à la bonne fourchette et elle tient » et « aucun
+ * secteur n'est connu, donc rien n'a été vérifié ». Prendre la seconde pour la
+ * première, c'est exactement le piège qu'on venait de refermer en retirant le
+ * libellé « Cohérent ». Seul l'avertissement reste conditionnel : un écran
+ * d'administration qui crie tout le temps ne se lit plus.
  */
+/**
+ * Ce qui s'écrit sous chaque magasin à propos de la densité.
+ *
+ * Quatre cas, et il faut les distinguer : la densité mesurée et comparée à un
+ * secteur connu ; la densité mesurée mais sans secteur pour la juger ; la
+ * surface manquante, qui rend le calcul impossible ; et le stock manquant.
+ * Les trois derniers signifient **rien n'a été vérifié**, et doivent le dire.
+ */
+function libelleDensite(
+  d: number | null,
+  repere: { secteur: Secteur; plausible: boolean } | null,
+): string {
+  if (d === null || repere === null) {
+    return 'densité non calculable — stock ou surface manquant'
+  }
+  const mesure = `${Math.round(d)} u/m²`
+  return secteurReconnu(repere.secteur)
+    ? `${mesure} — ${repere.secteur.nom}`
+    : `${mesure} — secteur inconnu, densité non vérifiée`
+}
+
 function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ape: string | null }) {
   const liste = (stores ?? []).filter((m) => m.units != null || m.sqm != null || (m.name ?? '') !== '')
   if (liste.length === 0) return null
@@ -79,26 +106,33 @@ function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ap
         const repere = densiteAttendue(d, ape)
         return (
           <div className="declare-row" key={i}>
-            <span className="declare-nom">{(m.name ?? '').trim() || `Magasin ${i + 1}`}</span>
-            <span className="declare-meta">
-              {m.units == null ? 'stock non déclaré' : `${m.units.toLocaleString('fr-FR')} u`}
-              {m.sqm == null ? '' : ` · ${m.sqm.toLocaleString('fr-FR')} m²`}
-              {d === null ? '' : ` · ${Math.round(d)} u/m²`}
-            </span>
-            {tranche && (
+            <div className="declare-haut">
+              <span className="declare-nom">{(m.name ?? '').trim() || `Magasin ${i + 1}`}</span>
               <span className="declare-meta">
-                {tranche.profil}
-                {tranche.prixEuros === null ? ' · sur devis' : ` · ${tranche.prixEuros.toLocaleString('fr-FR')} €/an`}
+                {m.units == null ? 'stock non déclaré' : `${m.units.toLocaleString('fr-FR')} u`}
+                {m.sqm == null ? '' : ` · ${m.sqm.toLocaleString('fr-FR')} m²`}
               </span>
-            )}
-            {repere && !repere.plausible && (
-              <span
-                className="declare-flag"
-                title={`Attendu entre ${repere.secteur.min} et ${repere.secteur.max} u/m² pour « ${repere.secteur.nom} »`}
-              >
-                Densité inhabituelle — vérifier qu’il ne manque pas un zéro
-              </span>
-            )}
+              {tranche && (
+                <span className="declare-tranche">
+                  {tranche.profil}
+                  {tranche.prixEuros === null
+                    ? ' · sur devis'
+                    : ` · ${tranche.prixEuros.toLocaleString('fr-FR')} €/an`}
+                </span>
+              )}
+            </div>
+
+            <div className="declare-bas">
+              <span className="declare-meta">{libelleDensite(d, repere)}</span>
+              {repere && !repere.plausible && (
+                <span
+                  className="declare-flag"
+                  title={`Attendu entre ${repere.secteur.min} et ${repere.secteur.max} u/m² pour « ${repere.secteur.nom} »`}
+                >
+                  Densité inhabituelle — vérifier qu’il ne manque pas un zéro
+                </span>
+              )}
+            </div>
           </div>
         )
       })}

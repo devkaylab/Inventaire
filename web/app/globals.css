@@ -379,12 +379,16 @@ a { color: inherit; text-decoration: none; }
 /* ── Magasins déclarés, côté console d'administration ──────────────────── */
 .declare { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .declare-row {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  display: flex; flex-direction: column; gap: 4px;
   padding: 8px 11px; border: 1px solid var(--hairline); border-radius: 10px;
   font-size: 12.5px; background: var(--bg);
 }
+.declare-haut, .declare-bas {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
 .declare-nom { font-weight: 600; color: var(--text); margin-right: auto; }
 .declare-meta { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.declare-tranche { color: var(--text-2); font-variant-numeric: tabular-nums; }
 .declare-flag {
   font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
   background: var(--warning-soft); color: var(--warning-text);

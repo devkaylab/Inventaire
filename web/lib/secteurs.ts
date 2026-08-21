@@ -28,6 +28,12 @@
  * d'administration : sur un formulaire public il soupçonnerait avant le devis,
  * et indiquerait quel chiffre ajuster.
  *
+ * Quand le secteur est inconnu, la fourchette générique s'applique quand même :
+ * elle reste capable d'attraper un zéro oublié, qui traverse le plus souvent
+ * même une fourchette large. Mais la console doit alors **dire que le secteur
+ * est inconnu** (voir `secteurReconnu`), sans quoi un silence se lirait comme
+ * une vérification réussie.
+ *
  * ## ⚠ Les chiffres ci-dessous sont une première estimation, à corriger
  *
  * Ils viennent d'un raisonnement sur les ordres de grandeur du commerce de
@@ -147,6 +153,20 @@ export function secteurDe(ape: string | null | undefined): Secteur {
   const classe = `${chiffres.slice(0, 2)}.${chiffres.slice(2, 4)}`
 
   return SECTEURS.find((s) => s.naf.includes(classe)) ?? SECTEUR_INCONNU
+}
+
+/**
+ * Le secteur a-t-il été reconnu ?
+ *
+ * La console d'administration doit pouvoir dire la différence entre « comparé
+ * à la bonne fourchette, rien à signaler » et « aucun secteur connu, donc rien
+ * n'a vraiment été vérifié ». Les deux se ressemblaient : dans les deux cas,
+ * aucun avertissement ne s'affichait. Une absence de contrôle prise pour un
+ * contrôle réussi, c'est le piège qu'on venait de refermer en retirant le
+ * libellé « Cohérent ».
+ */
+export function secteurReconnu(secteur: Secteur): boolean {
+  return secteur !== SECTEUR_INCONNU
 }
 
 /**
