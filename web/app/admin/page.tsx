@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { CompanyRequests } from '@/components/admin/CompanyRequests'
-import { SupervisorRequests } from '@/components/admin/SupervisorRequests'
 import { AuditLog } from '@/components/admin/AuditLog'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
@@ -127,11 +126,6 @@ export default function AdminPage() {
       <section className="admin-section">
         <h2>Demandes d&apos;inscription — entreprises</h2>
         <CompanyRequests onCompanyCreated={load} />
-      </section>
-
-      <section className="admin-section">
-        <h2>Demandes d&apos;accès — superviseurs</h2>
-        <SupervisorRequests />
       </section>
 
       <section className="admin-section">

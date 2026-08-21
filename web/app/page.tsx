@@ -112,7 +112,7 @@ export default function Home() {
                 Une licence annuelle par magasin, au volume de votre stock — inventaires et compteurs
                 illimités. Déposez votre demande : nous revenons vers vous avec un devis, puis
                 vos codes entreprise et magasins. Votre entreprise utilise déjà Quantinvo ?
-                {' '}<Link href="/superviseur">Demandez votre accès superviseur</Link>.
+                Son administrateur vous ouvre l&apos;accès depuis son espace.
               </p>
               <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
             </div>

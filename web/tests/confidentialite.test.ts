@@ -10,9 +10,10 @@ const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 
 // Tout formulaire collectant des données personnelles auprès d'une personne
 // non encore connectée.
+// (/superviseur en est sorti le 21 août 2026 : le formulaire public est
+// éteint, la page n'est plus qu'une explication.)
 const POINTS_DE_COLLECTE = [
   '../app/inscription/page.tsx',
-  '../app/superviseur/page.tsx',
   '../app/bienvenue/page.tsx',
   '../app/mot-de-passe-oublie/page.tsx',
 ]

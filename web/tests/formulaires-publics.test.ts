@@ -12,30 +12,27 @@ import { describe, expect, it } from 'vitest'
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const superviseur = lire('../app/superviseur/page.tsx')
 
-describe('demande superviseur', () => {
-  it('n’exploite plus le nom du magasin renvoyé par la base', () => {
-    expect(superviseur).not.toContain('store_name')
+describe('parcours public superviseur — éteint le 21 août 2026', () => {
+  // Les accès superviseur sont ouverts par l'administrateur de l'entreprise
+  // (/equipe). La page subsiste en explication : l'application mobile
+  // installée partage encore cette adresse, la supprimer ferait un 404.
+  it('ne collecte plus rien', () => {
+    expect(superviseur).not.toContain('<form')
+    expect(superviseur).not.toContain('MentionCollecte')
   })
 
-  it('annonce la prise en compte sans confirmer la validité du code', () => {
-    expect(superviseur).toContain('Si ce code correspond à un magasin')
+  it('n’appelle plus aucune fonction de dépôt', () => {
+    // C'est l'extinction de la surface publique : ni edge, ni RPC. Les
+    // objets de base sont supprimés dans un second temps, une fois ce code
+    // déployé — règle du projet, jamais l'inverse.
+    expect(superviseur).not.toContain("invoke('submit-supervisor-request'")
+    expect(superviseur).not.toContain("rpc('submit_supervisor_request'")
+    expect(superviseur).not.toContain('supabase')
   })
 
-  it('donne un repère de délai, seul recours contre une faute de frappe', () => {
-    // Sans lui, une erreur de code laisse la personne attendre indéfiniment.
-    expect(superviseur).toMatch(/48\s*heures/)
-  })
-
-  it('oriente vers la connexion sans révéler l’existence du compte', () => {
-    // La phrase est inconditionnelle : elle ne dit pas si ce compte existe.
-    expect(superviseur).toContain('si vous avez déjà un compte')
-  })
-
-  it('passe par la fonction edge, et retombe sur la base si elle manque', () => {
-    // L'edge apporte l'explication par e-mail ; le repli garantit que la
-    // demande passe quand même, avec la même réponse uniforme.
-    expect(superviseur).toContain("invoke('submit-supervisor-request'")
-    expect(superviseur).toContain("rpc('submit_supervisor_request'")
+  it('oriente vers l’administrateur de l’entreprise', () => {
+    expect(superviseur).toContain('administrateur')
+    expect(superviseur).toContain('Mon équipe')
   })
 })
 
