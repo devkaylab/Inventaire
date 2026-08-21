@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 
 export default function Index() {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, mfaRequired } = useAuth()
   const theme = useTheme()
 
   if (loading) {
@@ -17,6 +17,11 @@ export default function Index() {
 
   if (!session) return <Redirect href="/login" />
   if (!profile) return <Redirect href="/login" />
+
+  // Session ouverte au mot de passe seul alors que le compte a un second
+  // facteur : il manque le code. Sans ce renvoi, fermer l'app entre le mot de
+  // passe et le code laisserait entrer à moitié authentifié.
+  if (mfaRequired) return <Redirect href="/login" />
 
   if (profile.role === 'supervisor') {
     // Un superviseur doit appartenir à une entreprise avant d'accéder à ses

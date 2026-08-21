@@ -7,13 +7,14 @@ import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 /**
- * Bouton « Supprimer mon compte » : envoie une demande de suppression à
- * l'administrateur (qui la traite). Affiche l'état « en attente » si une
- * demande est déjà en cours. Partagé par les écrans superviseur et employé.
+ * Demande de suppression de compte.
+ *
+ * La logique est dans le hook, l'apparence dans qui l'appelle : l'écran
+ * compteur garde son lien discret, « Mon compte » l'affiche comme une ligne de
+ * menu au milieu des autres. Le geste, lui, est le même des deux côtés —
+ * c'est ce qui évite deux textes de confirmation qui divergent.
  */
-export function DeleteAccountButton() {
-  const theme = useTheme()
-  const styles = makeStyles(theme)
+export function useAccountDeletion() {
   const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
 
@@ -53,11 +54,20 @@ export function DeleteAccountButton() {
     )
   }
 
+  return { pending: !!pending, loading, confirm }
+}
+
+/** Lien discret — écran compteur. */
+export function DeleteAccountButton() {
+  const theme = useTheme()
+  const styles = makeStyles(theme)
+  const { pending, loading, confirm } = useAccountDeletion()
+
   if (pending) {
     return (
       <View style={styles.pendingBox}>
         <Text style={styles.pendingText}>
-          Suppression de compte demandée — en attente de traitement par l'administrateur.
+          Suppression de compte demandée — en attente de traitement par l&apos;administrateur.
         </Text>
       </View>
     )
@@ -71,6 +81,18 @@ export function DeleteAccountButton() {
         <Text style={styles.btnText}>Supprimer mon compte</Text>
       )}
     </Pressable>
+  )
+}
+
+/** Bandeau « demande en cours », à poser sous une ligne de menu. */
+export function DeletionPendingNote() {
+  const styles = makeStyles(useTheme())
+  return (
+    <View style={styles.pendingBox}>
+      <Text style={styles.pendingText}>
+        Suppression de compte demandée — en attente de traitement par l&apos;administrateur.
+      </Text>
+    </View>
   )
 }
 

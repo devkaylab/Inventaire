@@ -14,25 +14,58 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
+import { challengeAndVerify, verifiedTotpFactor } from '@/lib/mfa'
 import { useTheme } from '@/lib/theme'
 import { AppLogo } from '@/components/AppLogo'
 import { PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function LoginScreen() {
-  const { signIn, profile, loading: authLoading } = useAuth()
+  const { signIn, signOut, profile, loading: authLoading, mfaRequired, recheckMfa } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Deuxième étape : le compte a un second facteur et la session en est
+  // restée au mot de passe. Tant que le code n'est pas saisi, on n'entre pas.
+  const [code, setCode] = useState('')
+
   // Navigate away as soon as the profile is available after a sign-in attempt
   useEffect(() => {
+    if (mfaRequired) return
     if (!authLoading && profile) {
       router.replace(profile.role === 'supervisor' ? '/(supervisor)/' : '/(employee)/')
     }
-  }, [authLoading, profile])
+  }, [authLoading, profile, mfaRequired])
+
+  async function verifierCode() {
+    setLoading(true)
+    const factorId = await verifiedTotpFactor()
+    if (!factorId) {
+      setLoading(false)
+      Alert.alert('Erreur', 'Aucune application d’authentification n’est associée à ce compte.')
+      return
+    }
+    const r = await challengeAndVerify(factorId, code)
+    if (!r.success) {
+      setLoading(false)
+      setCode('')
+      Alert.alert(
+        'Code refusé',
+        'Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.',
+      )
+      return
+    }
+    await recheckMfa()
+    setLoading(false)
+  }
+
+  async function abandonner() {
+    setCode('')
+    await signOut()
+  }
 
   async function handleLogin() {
     if (!email || !password) {
@@ -47,6 +80,58 @@ export default function LoginScreen() {
     }
     // On success: keep the spinner visible — useEffect above will navigate
     // once the auth state (session + profile) is fully resolved.
+  }
+
+  // Deuxième étape — rien d'autre à l'écran : la personne est déjà
+  // identifiée, il ne lui manque que son code.
+  if (mfaRequired) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+          <View style={styles.header}>
+            <View style={styles.logoMark}>
+              <AppLogo size={84} />
+            </View>
+            <Text style={styles.title}>Code de vérification</Text>
+            <Text style={styles.subtitle}>
+              Saisissez le code affiché par votre application d&apos;authentification.
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <Text style={styles.label}>Code à six chiffres</Text>
+            <TextInput
+              style={[styles.input, styles.codeInput]}
+              value={code}
+              onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+              keyboardType="number-pad"
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+              maxLength={6}
+              autoFocus
+              placeholder="123456"
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <Pressable
+              style={[styles.button, (loading || code.length < 6) && styles.buttonDisabled]}
+              onPress={verifierCode}
+              disabled={loading || code.length < 6}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.onAccent} />
+              ) : (
+                <Text style={styles.buttonText}>Vérifier</Text>
+              )}
+            </Pressable>
+
+            <Pressable style={styles.link} onPress={abandonner}>
+              <Text style={styles.linkText}>Revenir à la connexion</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    )
   }
 
   return (
@@ -139,6 +224,13 @@ function makeStyles(t: Theme) {
       alignItems: 'center',
       marginTop: Spacing.sm,
       ...t.shadowButton,
+    },
+    codeInput: {
+      fontSize: 22,
+      fontFamily: Font.semibold,
+      letterSpacing: 8,
+      textAlign: 'center',
+      fontVariant: ['tabular-nums'],
     },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },

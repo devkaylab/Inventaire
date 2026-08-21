@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string
+          created_at: string
+          details: Json
+          id: number
+          target_id: string
+          target_label: string
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label?: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string
+          target_label?: string
+          target_type?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string
+          target_label?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       article_audit: {
         Row: {
           final_qty: number | null
@@ -171,6 +207,127 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      company_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string
+          company_id: string
+          created_at: string
+          details: Json
+          id: number
+          target_label: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label?: string
+          company_id: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_label?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string
+          company_id?: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_audit_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_requests: {
+        Row: {
+          accepted_at: string | null
+          admin_note: string
+          ape: string | null
+          company_id: string | null
+          company_name: string
+          contact_email: string
+          contact_first_name: string
+          contact_last_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          message: string
+          paid_at: string | null
+          quote_amount_cents: number | null
+          quote_reference: string
+          quote_sent_at: string | null
+          siren: string | null
+          status: string
+          store_count: number
+          stores: Json
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          admin_note?: string
+          ape?: string | null
+          company_id?: string | null
+          company_name: string
+          contact_email: string
+          contact_first_name: string
+          contact_last_name: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          message?: string
+          paid_at?: string | null
+          quote_amount_cents?: number | null
+          quote_reference?: string
+          quote_sent_at?: string | null
+          siren?: string | null
+          status?: string
+          store_count: number
+          stores?: Json
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          admin_note?: string
+          ape?: string | null
+          company_id?: string | null
+          company_name?: string
+          contact_email?: string
+          contact_first_name?: string
+          contact_last_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          message?: string
+          paid_at?: string | null
+          quote_amount_cents?: number | null
+          quote_reference?: string
+          quote_sent_at?: string | null
+          siren?: string | null
+          status?: string
+          store_count?: number
+          stores?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       counts: {
         Row: {
@@ -297,25 +454,34 @@ export type Database = {
         Row: {
           company_id: string | null
           created_at: string
+          first_name: string
           full_name: string
           id: string
           is_admin: boolean
+          is_company_admin: boolean
+          last_name: string
           role: string
         }
         Insert: {
           company_id?: string | null
           created_at?: string
+          first_name?: string
           full_name?: string
           id: string
           is_admin?: boolean
+          is_company_admin?: boolean
+          last_name?: string
           role?: string
         }
         Update: {
           company_id?: string | null
           created_at?: string
+          first_name?: string
           full_name?: string
           id?: string
           is_admin?: boolean
+          is_company_admin?: boolean
+          last_name?: string
           role?: string
         }
         Relationships: [
@@ -481,8 +647,42 @@ export type Database = {
           },
         ]
       }
+      store_team: {
+        Row: {
+          created_at: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_team_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_team_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
+          annual_price_cents: number | null
           company_id: string
           created_at: string
           id: string
@@ -490,6 +690,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          annual_price_cents?: number | null
           company_id: string
           created_at?: string
           id?: string
@@ -497,6 +698,7 @@ export type Database = {
           name: string
         }
         Update: {
+          annual_price_cents?: number | null
           company_id?: string
           created_at?: string
           id?: string
@@ -513,30 +715,140 @@ export type Database = {
           },
         ]
       }
+      submission_attempts: {
+        Row: {
+          created_at: string
+          id: number
+          key: string
+          scope: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          key: string
+          scope: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          key?: string
+          scope?: string
+        }
+        Relationships: []
+      }
+      supervisor_requests: {
+        Row: {
+          admin_note: string
+          company_id: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          store_id: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string
+          company_id: string
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          store_id: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string
+          company_id?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          store_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervisor_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_invitations: {
         Row: {
           company_id: string
           created_at: string
           created_by: string | null
           email: string
+          first_name: string
           full_name: string
           id: string
+          last_name: string
+          role: string
+          store_ids: string[]
         }
         Insert: {
           company_id: string
           created_at?: string
           created_by?: string | null
           email: string
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
+          role?: string
+          store_ids?: string[]
         }
         Update: {
           company_id?: string
           created_at?: string
           created_by?: string | null
           email?: string
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
+          role?: string
+          store_ids?: string[]
         }
         Relationships: [
           {
@@ -644,10 +956,38 @@ export type Database = {
         Args: { p_store_id: string; p_user_id: string }
         Returns: Json
       }
+      admin_business_overview: { Args: never; Returns: Json }
+      admin_company_detail: { Args: { p_company_id: string }; Returns: Json }
       admin_create_company: { Args: { p_name: string }; Returns: Json }
       admin_delete_company: { Args: { p_company_id: string }; Returns: Json }
       admin_delete_store: { Args: { p_store_id: string }; Returns: Json }
       admin_delete_user: { Args: { p_user_id: string }; Returns: Json }
+      admin_fulfil_company_request: {
+        Args: { p_id: string; p_store_names?: string[] }
+        Returns: Json
+      }
+      admin_invite_company_admin: {
+        Args: {
+          p_company: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+        }
+        Returns: Json
+      }
+      admin_list_audit_log: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          actor_label: string
+          created_at: string
+          details: Json
+          id: number
+          target_id: string
+          target_label: string
+          target_type: string
+        }[]
+      }
       admin_list_companies: {
         Args: never
         Returns: {
@@ -657,12 +997,50 @@ export type Database = {
           name: string
         }[]
       }
+      admin_list_companies_overview: {
+        Args: never
+        Returns: {
+          company_admin_count: number
+          counter_count: number
+          created_at: string
+          id: string
+          last_session_at: string
+          name: string
+          pending_invitations: number
+          store_count: number
+          supervisor_count: number
+        }[]
+      }
       admin_list_company_members: {
         Args: { p_company_id: string }
         Returns: {
+          email: string
           full_name: string
           id: string
+          is_company_admin: boolean
           role: string
+        }[]
+      }
+      admin_list_company_requests: {
+        Args: never
+        Returns: {
+          admin_note: string
+          ape: string
+          company_id: string
+          company_name: string
+          contact_email: string
+          contact_first_name: string
+          contact_last_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          message: string
+          quote_amount_cents: number
+          quote_reference: string
+          siren: string
+          status: string
+          store_count: number
+          stores: Json
         }[]
       }
       admin_list_store_supervisors: {
@@ -681,13 +1059,54 @@ export type Database = {
           name: string
         }[]
       }
+      admin_quote_company_request: {
+        Args: {
+          p_amount_cents: number
+          p_id: string
+          p_note?: string
+          p_reference: string
+        }
+        Returns: Json
+      }
+      admin_revoke_company_admin: { Args: { p_user: string }; Returns: Json }
+      admin_set_company_request_status: {
+        Args: { p_id: string; p_note?: string; p_status: string }
+        Returns: Json
+      }
+      admin_set_store_price: {
+        Args: { p_price_cents: number; p_store_id: string }
+        Returns: Json
+      }
       admin_unassign_supervisor: {
         Args: { p_store_id: string; p_user_id: string }
         Returns: Json
       }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      ca_cancel_invitation: { Args: { p_id: string }; Returns: Json }
+      ca_invite_supervisor: {
+        Args: {
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_store_ids?: string[]
+        }
+        Returns: Json
+      }
+      ca_list_team: { Args: never; Returns: Json }
+      ca_remove_supervisor: { Args: { p_user: string }; Returns: Json }
+      ca_set_supervisor_stores: {
+        Args: { p_store_ids: string[]; p_user: string }
+        Returns: Json
+      }
       can_access_session: { Args: { p_session_id: string }; Returns: boolean }
+      can_join_session_topic: { Args: { p_topic: string }; Returns: boolean }
+      cancel_my_invitation: { Args: { p_id: string }; Returns: Json }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
+      client_ip: { Args: never; Returns: string }
+      compose_full_name: {
+        Args: { p_fallback?: string; p_first: string; p_last: string }
+        Returns: string
+      }
       create_company: { Args: { p_name: string }; Returns: Json }
       create_session: {
         Args: {
@@ -720,6 +1139,7 @@ export type Database = {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
       }
+      export_my_data: { Args: never; Returns: Json }
       find_user_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -745,22 +1165,23 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_store_directory: {
-        Args: { p_store_id: string }
-        Returns: {
-          email: string
-          full_name: string
-          role: string
-          user_id: string
-        }[]
-      }
       get_my_company: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_my_stores: {
         Args: never
         Returns: {
           id: string
+          join_code: string
           name: string
+        }[]
+      }
+      get_session_count_totals: {
+        Args: { p_session_id: string }
+        Returns: {
+          audited: number
+          audited_skus: number
+          counted: number
+          counted_skus: number
         }[]
       }
       get_session_detail: {
@@ -794,6 +1215,19 @@ export type Database = {
           variance_value: number
         }[]
       }
+      get_session_theoretical_total: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      get_store_directory: {
+        Args: { p_store_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_zone_dashboard: {
         Args: { p_session_id: string }
         Returns: {
@@ -821,6 +1255,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_assigned_store: { Args: { p_store_id: string }; Returns: boolean }
+      is_company_admin: { Args: { p_company?: string }; Returns: boolean }
       is_session_participant: {
         Args: { p_session_id: string }
         Returns: boolean
@@ -832,10 +1267,44 @@ export type Database = {
       }
       join_store: { Args: { p_code: string }; Returns: Json }
       leave_session: { Args: { p_session_id: string }; Returns: Json }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_target_id: string
+          p_target_label: string
+          p_target_type: string
+        }
+        Returns: undefined
+      }
+      log_company_action: {
+        Args: {
+          p_action: string
+          p_company: string
+          p_details?: Json
+          p_target_label: string
+        }
+        Returns: undefined
+      }
+      my_team_by_store: { Args: never; Returns: Json }
       norm_balise: { Args: { p: string }; Returns: string }
+      purge_expired_data: { Args: never; Returns: Json }
+      rate_limit_ok: {
+        Args: {
+          p_key: string
+          p_max: number
+          p_scope: string
+          p_window: string
+        }
+        Returns: boolean
+      }
       recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
       register_balise: {
         Args: { p_code: string; p_name: string; p_session_id: string }
+        Returns: Json
+      }
+      remove_counter_from_store: {
+        Args: { p_store_id: string; p_user: string }
         Returns: Json
       }
       remove_session_member: {
@@ -868,6 +1337,22 @@ export type Database = {
       }
       set_zone_status: {
         Args: { p_status: string; p_zone_id: string }
+        Returns: Json
+      }
+      siren_valide: { Args: { p_siren: string }; Returns: boolean }
+      submit_company_request: {
+        Args: {
+          p_ape?: string
+          p_company_name: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_message?: string
+          p_phone: string
+          p_siren?: string
+          p_store_count: number
+          p_stores?: Json
+        }
         Returns: Json
       }
     }

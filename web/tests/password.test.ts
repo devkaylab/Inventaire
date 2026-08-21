@@ -3,6 +3,9 @@
 // l'envoi). Ces tests figent le second sur ce que la console applique —
 // 12 caractères, minuscule, majuscule, chiffre, symbole — pour qu'un
 // relâchement se voie.
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   checkPassword, friendlyPasswordError, MIN_PASSWORD_LENGTH, passwordError, passwordSatisfies,
@@ -93,5 +96,27 @@ describe('friendlyPasswordError', () => {
 
   it('laisse passer un message qu’il ne sait pas traduire', () => {
     expect(friendlyPasswordError('Erreur inattendue')).toBe('Erreur inattendue')
+  })
+})
+
+// L'app applique les mêmes règles, depuis sa propre copie du module : le site
+// et l'app ne compilent pas ensemble. Même garde que pour les séries de
+// balises — si les deux fichiers divergent, la personne verrait des exigences
+// différentes selon qu'elle change son mot de passe sur le téléphone ou sur
+// le site, alors que le serveur, lui, n'en applique qu'une.
+describe('mot de passe — site et app', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url))
+  const lire = (p: string) => readFileSync(path.join(here, p), 'utf8')
+  const corps = (s: string) => s.slice(s.indexOf('/** Longueur minimale'))
+
+  it('le module de l’app est la copie exacte de celui du site (hors en-tête)', () => {
+    expect(corps(lire('../../src/lib/password.ts')))
+      .toBe(corps(lire('../lib/password.ts')))
+  })
+
+  it('les deux écrans de l’app passent par ce module', () => {
+    const ecran = lire('../../src/app/(supervisor)/password.tsx')
+    expect(ecran).toContain("from '@/lib/password'")
+    expect(ecran).toContain('friendlyPasswordError')
   })
 })

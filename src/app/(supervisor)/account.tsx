@@ -1,0 +1,166 @@
+import { useCallback, useState } from 'react'
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/lib/auth'
+import { getMyCompany } from '@/lib/queries'
+import { verifiedTotpFactor } from '@/lib/mfa'
+import { DeletionPendingNote, useAccountDeletion } from '@/components/DeleteAccountButton'
+import { MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
+import { useTheme } from '@/lib/theme'
+import { SITE_URL } from '@/constants/links'
+import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+
+/**
+ * Mon compte — la personne, puis ce qu'elle ouvre.
+ *
+ * Cet écran s'appelait « Mon profil » et servait de carrefour : identité,
+ * entreprise, magasins et leurs codes, balises, inventaires, équipe,
+ * déconnexion et suppression, empilés sur deux hauteurs d'écran. Le site a
+ * démonté le même carrefour ; l'app suit, en gardant un seul point d'entrée.
+ *
+ * Ce qui reste ici : qui on est, et des lignes vers le reste. Les inventaires
+ * n'y figurent plus — l'écran Sessions les liste déjà, c'était le doublon que
+ * le site avait lui aussi retiré de « Mon compte ».
+ */
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+}
+
+export default function AccountScreen() {
+  const { profile, session, signOut } = useAuth()
+  const theme = useTheme()
+  const styles = makeStyles(theme)
+  const suppression = useAccountDeletion()
+
+  const { data: company } = useQuery({ queryKey: ['my-company'], queryFn: getMyCompany })
+
+  // L'état du second facteur se relit à chaque retour sur l'écran : on en
+  // revient précisément après l'avoir activé ou retiré.
+  const [mfaOn, setMfaOn] = useState<boolean | null>(null)
+  const relireMfa = useCallback(() => {
+    let vivant = true
+    verifiedTotpFactor()
+      .then((id) => { if (vivant) setMfaOn(!!id) })
+      .catch(() => { if (vivant) setMfaOn(null) })
+    return () => { vivant = false }
+  }, [])
+  // `useFocusEffect` couvre aussi le premier affichage : pas besoin d'un
+  // `useEffect` en plus, qui ferait une lecture pour rien à l'ouverture.
+  useFocusEffect(relireMfa)
+
+  const email = session?.user.email ?? '—'
+  const role = profile?.is_company_admin ? 'Administrateur' : 'Superviseur'
+
+  function confirmSignOut() {
+    Alert.alert('Se déconnecter', 'Vous devrez ressaisir votre mot de passe.', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Se déconnecter', style: 'destructive', onPress: () => { void signOut() } },
+    ])
+  }
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials(profile?.full_name ?? '?')}</Text>
+          </View>
+          <Text style={styles.name}>{profile?.full_name || 'Superviseur'}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{role}</Text>
+          </View>
+          <Text style={styles.email}>{email}</Text>
+          {!!company?.name && (
+            <View style={styles.companyRow}>
+              <Text style={styles.companyText}>
+                <Text style={styles.companyName}>{company.name}</Text> · {role}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <SectionLabel>Mon travail</SectionLabel>
+        <MenuCard>
+          <MenuRow label="Mes magasins" onPress={() => router.push('/(supervisor)/stores')} />
+          <MenuRow label="Mon équipe" onPress={() => router.push('/(supervisor)/team')} />
+          <MenuRow label="Boîte à outils" onPress={() => router.push('/(supervisor)/tools')} last />
+        </MenuCard>
+
+        <SectionLabel>Ma sécurité</SectionLabel>
+        <MenuCard>
+          <MenuRow label="Mot de passe" onPress={() => router.push('/(supervisor)/password')} />
+          <MenuRow
+            label="Double authentification"
+            value={mfaOn === null ? undefined : mfaOn ? 'Activée' : 'Non activée'}
+            onPress={() => router.push('/(supervisor)/mfa')}
+            last
+          />
+        </MenuCard>
+
+        <SectionLabel>Mon compte</SectionLabel>
+        <MenuCard>
+          <MenuRow label="Modifier mon nom" onPress={() => router.push('/(supervisor)/name')} />
+          <MenuRow label="Télécharger mes données" onPress={() => router.push('/(supervisor)/my-data')} />
+          <MenuRow label="Se déconnecter" onPress={confirmSignOut} />
+          {!suppression.pending && (
+            <MenuRow label="Supprimer mon compte" onPress={suppression.confirm} danger last />
+          )}
+        </MenuCard>
+        {suppression.pending && <DeletionPendingNote />}
+
+        <Text style={styles.footNote}>
+          Quantinvo — {SITE_URL.replace(/^https?:\/\//, '')}
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  )
+}
+
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: t.background },
+    container: { padding: Spacing.lg, paddingBottom: Spacing.xxxl, gap: Spacing.md },
+
+    identityCard: {
+      backgroundColor: t.surface,
+      borderRadius: Radius.lg,
+      padding: Spacing.xl,
+      borderWidth: 1,
+      borderColor: t.hairline,
+      alignItems: 'center',
+      gap: Spacing.xs,
+      ...t.shadowCard,
+    },
+    avatar: {
+      width: 68, height: 68, borderRadius: 34, backgroundColor: t.accent,
+      alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs,
+    },
+    avatarText: { fontSize: 26, fontFamily: Font.bold, color: t.onAccent },
+    name: { fontSize: 20, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
+    roleBadge: {
+      backgroundColor: t.accentSoft, borderRadius: Radius.pill,
+      paddingHorizontal: Spacing.md, paddingVertical: 3,
+    },
+    roleBadgeText: {
+      fontSize: 11, fontFamily: Font.bold, color: t.accent,
+      textTransform: 'uppercase', letterSpacing: 0.5,
+    },
+    email: { fontSize: 14, color: t.textSecondary, fontFamily: Font.regular, marginTop: 2 },
+    companyRow: {
+      alignSelf: 'stretch', marginTop: Spacing.md, paddingTop: Spacing.md,
+      borderTopWidth: 1, borderTopColor: t.hairline, alignItems: 'center',
+    },
+    companyText: { fontSize: 13, color: t.textSecondary, fontFamily: Font.medium },
+    companyName: { color: t.textPrimary, fontFamily: Font.semibold },
+
+    footNote: {
+      fontSize: 11, color: t.textMuted, fontFamily: Font.regular,
+      textAlign: 'center', marginTop: Spacing.lg,
+    },
+  })
+}

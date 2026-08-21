@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { mfaPending } from '@/lib/mfa'
 import { registerForPushNotifications } from '@/lib/push'
 import { cacheProfile, getCachedProfile } from '@/lib/offline'
 import type { Tables } from '@/types/database.types'
@@ -11,6 +12,15 @@ interface AuthContextValue {
   session: Session | null
   profile: Profile | null
   loading: boolean
+  /**
+   * La session est ouverte au mot de passe seul alors que le compte a un
+   * second facteur : il manque le code. Tant que c'est vrai, rien d'autre que
+   * l'écran de connexion ne doit s'afficher — sinon activer la double
+   * authentification depuis le téléphone ne protégerait que le site.
+   */
+  mfaRequired: boolean
+  /** Relit le niveau d'authentification (après saisie du code). */
+  recheckMfa: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string, role: 'employee' | 'supervisor') => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -23,21 +33,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mfaRequired, setMfaRequired] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session) fetchProfile(session.user.id)
-      else setLoading(false)
+      if (session) {
+        void recheckMfa()
+        fetchProfile(session.user.id)
+      } else {
+        setMfaRequired(false)
+        setLoading(false)
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (session) {
         setLoading(true)   // show spinner while profile is being fetched
+        void recheckMfa()
         fetchProfile(session.user.id)
       } else {
         setProfile(null)
+        setMfaRequired(false)
         setLoading(false)
       }
     })
@@ -95,6 +113,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  /**
+   * Relit le niveau d'authentification de la session.
+   *
+   * Appelée à l'ouverture et à chaque changement d'état : une session reprise
+   * du disque peut très bien être restée au mot de passe seul, si l'app a été
+   * fermée entre le mot de passe et le code.
+   */
+  async function recheckMfa() {
+    setMfaRequired(await mfaPending())
+  }
+
   // Reload the profile from the DB (e.g. after creating/joining a company so
   // company_id is reflected in context and the routing gate lets the user in).
   async function refreshProfile() {
@@ -102,7 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{ session, profile, loading, mfaRequired, recheckMfa, signIn, signUp, signOut, refreshProfile }}
+    >
       {children}
     </AuthContext.Provider>
   )

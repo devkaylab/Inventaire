@@ -34,18 +34,6 @@ export async function getSessions() {
   return data
 }
 
-/** Les inventaires créés par le superviseur courant (« Mes inventaires »). */
-export async function getMySessions() {
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data, error } = await supabase
-    .from('inventory_sessions')
-    .select('*')
-    .eq('created_by', user?.id ?? '')
-    .order('created_at', { ascending: false })
-  if (error) throwSupabase('getMySessions', error)
-  return data
-}
-
 export async function getSession(sessionId: string) {
   const { data, error } = await supabase
     .from('inventory_sessions')
@@ -227,30 +215,6 @@ export async function requestAccountDeletion() {
   return data as { success: boolean; already?: boolean; error?: string }
 }
 
-/** Tous les profils visibles par le superviseur = les membres de son
- *  entreprise (employés + co-superviseurs), lui compris. */
-export async function getTeamMembers(): Promise<Profile[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('role', { ascending: true })
-    .order('full_name', { ascending: true })
-  if (error) throwSupabase('getTeamMembers', error)
-  return data ?? []
-}
-
-export type Invitation = Tables<'team_invitations'>
-
-/** Invitations en attente (membres pré-inscrits pas encore connectés). */
-export async function getTeamInvitations(): Promise<Invitation[]> {
-  const { data, error } = await supabase
-    .from('team_invitations')
-    .select('*')
-    .order('created_at', { ascending: false })
-  if (error) throwSupabase('getTeamInvitations', error)
-  return data ?? []
-}
-
 /** Pré-inscrit un membre : le superviseur ajoute son e-mail à l'équipe.
  *  L'employé pourra ensuite créer son compte lui-même. RLS restreint
  *  l'insertion à l'entreprise du superviseur. */
@@ -301,9 +265,18 @@ export async function inviteTeammate(input: {
 }
 
 /** Annule une invitation en attente. */
-export async function deleteInvitation(id: string) {
-  const { error } = await supabase.from('team_invitations').delete().eq('id', id)
-  if (error) throwSupabase('deleteInvitation', error)
+/**
+ * Annule une invitation qu'on a soi-même émise.
+ *
+ * Passe par `cancel_my_invitation`, comme la page « Mon équipe » du site : la
+ * fonction porte la garde côté serveur. Un DELETE nu sur la table dépendait
+ * d'une policy dont rien ne garantit qu'elle couvre ce cas.
+ */
+export async function cancelMyInvitation(id: string) {
+  const { data, error } = await supabase.rpc('cancel_my_invitation', { p_id: id })
+  if (error) throwSupabase('cancelMyInvitation', error)
+  const r = data as { success?: boolean; error?: string } | null
+  if (r && r.success === false) throw new Error(r.error ?? "Annulation impossible.")
 }
 
 /**
@@ -752,3 +725,79 @@ export async function getZoneDashboard(sessionId: string): Promise<ZoneDashboard
   return (data ?? []) as ZoneDashboardRow[]
 }
 
+
+// ─── Mon compte ──────────────────────────────────────────────────────────────
+// Ce que la personne peut faire sur elle-même. Le trigger
+// `profiles_pin_privileged` fige `role`, `company_id` et `is_admin` : seuls le
+// prénom et le nom sont modifiables ici, et c'est voulu.
+
+/**
+ * Corrige son nom. Un seul champ, découpé comme sur le site (premier mot =
+ * prénom, le reste = nom) : les deux moitiés doivent rester d'accord, sinon
+ * l'équipe et les invitations affichent un nom et le profil un autre.
+ */
+export async function updateMyName(userId: string, fullName: string) {
+  const propre = fullName.trim().replace(/\s+/g, ' ')
+  const morceaux = propre.split(' ')
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: propre,
+      first_name: morceaux[0],
+      last_name: morceaux.length > 1 ? morceaux.slice(1).join(' ') : '',
+    })
+    .eq('id', userId)
+  if (error) throwSupabase('updateMyName', error)
+}
+
+/**
+ * Droit d'accès et de portabilité (articles 15 et 20 du RGPD).
+ *
+ * La base assemble l'export ; l'app n'en fait qu'un fichier. Aucun code
+ * d'accès n'y figure et le détail des comptages n'y est que résumé —
+ * l'employeur en est responsable de traitement, l'export le dit lui-même.
+ */
+export async function exportMyData(): Promise<unknown> {
+  const { data, error } = await supabase.rpc('export_my_data')
+  if (error) throwSupabase('exportMyData', error)
+  return data
+}
+
+// ─── Mon équipe ──────────────────────────────────────────────────────────────
+
+export type TeamCounter = {
+  id: string
+  full_name: string | null
+  email: string | null
+  is_active: boolean
+  sessions_counted: number
+  last_count_at: string | null
+}
+export type TeamStore = { id: string; name: string; counters: TeamCounter[] }
+
+/**
+ * Invitation telle que la rend `my_team_by_store` — et non la ligne de table :
+ * la RPC ne renvoie ni `full_name`, ni `role`, ni `store_ids`. S'appuyer sur
+ * le type de la table ferait afficher un nom toujours vide.
+ */
+export type TeamInvite = {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  created_at: string
+}
+export type TeamByStore = { stores: TeamStore[]; invitations: TeamInvite[] }
+
+/**
+ * L'équipe du superviseur, rangée par magasin — la même RPC que la page
+ * « Mon équipe » du site. Deux écrans qui montrent la même chose doivent la
+ * demander de la même façon, sinon ils finissent par ne plus dire pareil.
+ */
+export async function getMyTeamByStore(): Promise<TeamByStore> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)('my_team_by_store')
+  if (error) throwSupabase('getMyTeamByStore', error)
+  const r = (data ?? {}) as Partial<TeamByStore>
+  return { stores: r.stores ?? [], invitations: r.invitations ?? [] }
+}
