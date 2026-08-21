@@ -238,3 +238,66 @@ describe('accueil superviseur — mes inventaires et les invités', () => {
     expect(accueil).not.toContain('Inventaire en cours')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fiche d'un inventaire — harmonisation du 21 août 2026
+//
+// Julien, capture à l'appui : « est-ce qu'on peut harmoniser la taille des
+// différents textes ? Et bouger set up au-dessus de membres ». En lisant
+// l'écran, deux défauts plus lourds sont apparus : quatre géométries de
+// boutons pour le même genre de travail, et surtout « Créateur » (une
+// étiquette) dessiné comme « Retirer » (une suppression).
+
+describe('fiche d’un inventaire', () => {
+  const ecran = lire('app/(supervisor)/[sessionId]/index.tsx')
+
+  it('reprend le motif de menu de la bibliothèque', () => {
+    // Il était redessiné à la main ici — carte, lignes, filet, chevron, titre
+    // de section — alors que MenuList existe et sert « Mon compte » et
+    // « Mon équipe ». Deux définitions, c'est deux choses à faire évoluer
+    // ensemble ; personne ne s'en souvient.
+    expect(ecran).toContain("from '@/components/ui/MenuList'")
+    expect(ecran).toContain('<MenuCard>')
+    expect(ecran).toContain('<MenuRow')
+    expect(ecran).toContain('<SectionLabel>')
+    expect(ecran).not.toContain('function ActionRow')
+    expect(ecran).not.toContain('menuCard:')
+    expect(ecran).not.toContain('function ChevronIcon')
+  })
+
+  it('n’emploie que les cinq tailles de son échelle', () => {
+    // Sept tailles avant — 10, 11, 13, 14, 15, 17, 18 — dont plusieurs une
+    // seule fois, et un titre de feuille (17) plus petit que le code qu'elle
+    // affiche (18). Les tailles passent par `Texte`, jamais en clair.
+    expect(ecran).toContain('const Texte = {')
+    const styles = ecran.split('function makeStyles(')[1] ?? ''
+    const enClair = [...styles.matchAll(/fontSize: (\d+)/g)].map(m => Number(m[1]))
+    // 56 est le grand nombre de la progression : un chiffre d'affichage.
+    expect(enClair.filter(n => n !== 56)).toEqual([])
+  })
+
+  it('distingue l’étiquette de l’action', () => {
+    // « Créateur » dit un état, « Retirer » supprime quelqu'un. Les deux
+    // étaient des pastilles colorées de même taille.
+    const tag = ecran.split('memberTag: {')[1]?.split('},')[0] ?? ''
+    expect(tag, 'l’étiquette ne doit plus porter la couleur d’accent').not.toContain('t.accent')
+    const retirer = ecran.split('removeBtn: {')[1]?.split('},')[0] ?? ''
+    expect(retirer, 'l’action ne doit plus être une pastille pleine').not.toContain('backgroundColor')
+  })
+
+  it('n’a plus qu’une hauteur de bouton pleine largeur', () => {
+    expect(ecran).toContain('const BTN_H = 48')
+    for (const bouton of ['countBtn', 'auditBtn', 'shareBtn', 'inviteBtn']) {
+      const corps = ecran.split(`${bouton}: {`)[1]?.split('},')[0] ?? ''
+      expect(corps, `${bouton} doit suivre la hauteur commune`).toContain('height: BTN_H')
+    }
+  })
+
+  it('range la configuration avant les membres', () => {
+    // On prépare un inventaire avant d'y mettre des gens — et c'est l'ordre
+    // du site, où Set up précède Équipe.
+    const feuille = ecran.split('function InfoPanel(')[1] ?? ''
+    expect(feuille.indexOf('SectionLabel>Configuration'))
+      .toBeLessThan(feuille.indexOf('SectionLabel>Membres'))
+  })
+})

@@ -12,6 +12,7 @@ import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { PendingBalisesRow } from '@/components/PendingBalisesRow'
+import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -21,14 +22,6 @@ function InfoIcon({ color }: { color: string }) {
     <Svg width={16} height={16} viewBox="0 0 24 24">
       <Circle cx={12} cy={6.5} r={1.6} fill={color} />
       <Rect x={10.6} y={10} width={2.8} height={8.5} rx={1.4} fill={color} />
-    </Svg>
-  )
-}
-
-function ChevronIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24">
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </Svg>
   )
 }
@@ -308,7 +301,7 @@ export default function SessionDetailScreen() {
         {/* Progression */}
         {usesZones ? (
           <View style={styles.progressBlock}>
-            <Text style={styles.sectionLabel}>Progression</Text>
+            <SectionLabel>Progression</SectionLabel>
             <View style={styles.progressBigRow}>
               <Text style={styles.progressBig}>{countPct}%</Text>
               {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
@@ -336,7 +329,7 @@ export default function SessionDetailScreen() {
           </View>
         ) : (
           <View style={styles.progressBlock}>
-            <Text style={styles.sectionLabel}>Progression</Text>
+            <SectionLabel>Progression</SectionLabel>
             <View style={styles.progressBigRow}>
               <Text style={styles.progressBig}>{countedPieces}</Text>
               {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
@@ -359,28 +352,26 @@ export default function SessionDetailScreen() {
         )}
 
         {/* Menu d'actions */}
-        <Text style={styles.sectionLabel}>Actions</Text>
-        <View style={styles.menuCard}>
+        <SectionLabel>Actions</SectionLabel>
+        <MenuCard>
           {!closed && (
-            <>
-              <ActionRow styles={styles} theme={theme} label="Inviter une personne" onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
-            </>
+            <MenuRow label="Inviter une personne" onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
           )}
-          <ActionRow styles={styles} theme={theme} label="Audit et écart de comptage" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
-          <ActionRow styles={styles} theme={theme} label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} />
+          <MenuRow label="Audit et écart de comptage" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
+          <MenuRow label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} />
           {!closed && isCreator && (
-            <ActionRow styles={styles} theme={theme} label="Clôturer l'inventaire" onPress={confirmClose} />
+            <MenuRow label="Clôturer l'inventaire" onPress={confirmClose} />
           )}
           {closed && isCreator && (
-            <ActionRow styles={styles} theme={theme} label="Rouvrir l'inventaire" onPress={confirmReopen} />
+            <MenuRow label="Rouvrir l'inventaire" onPress={confirmReopen} />
           )}
           {isCreator && (
-            <ActionRow styles={styles} theme={theme} label="Supprimer définitivement" onPress={confirmDelete} danger last />
+            <MenuRow label="Supprimer définitivement" onPress={confirmDelete} danger last />
           )}
           {!closed && !isCreator && (
-            <ActionRow styles={styles} theme={theme} label="Quitter l'inventaire" onPress={confirmLeave} danger last />
+            <MenuRow label="Quitter l'inventaire" onPress={confirmLeave} danger last />
           )}
-        </View>
+        </MenuCard>
       </ScrollView>
 
       <InfoPanel
@@ -402,15 +393,6 @@ export default function SessionDetailScreen() {
         onZones={() => { setInfoOpen(false); router.push(`/(supervisor)/${sessionId}/zones`) }}
       />
     </SafeAreaView>
-  )
-}
-
-function ActionRow({ label, onPress, danger, last, styles, theme }: { label: string; onPress: () => void; danger?: boolean; last?: boolean; styles: ReturnType<typeof makeStyles>; theme: Theme }) {
-  return (
-    <Pressable style={[styles.menuRow, !last && styles.menuRowBorder]} onPress={onPress}>
-      <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>{label}</Text>
-      <ChevronIcon color={danger ? theme.danger : theme.textMuted} />
-    </Pressable>
   )
 }
 
@@ -455,7 +437,7 @@ function InfoPanel({
         </View>
 
         <ScrollView contentContainerStyle={styles.sheetBody}>
-          <Text style={styles.sectionLabel}>Identifiants</Text>
+          <SectionLabel>Identifiants</SectionLabel>
           <CredRow
             styles={styles}
             label="N° d'inventaire"
@@ -473,7 +455,20 @@ function InfoPanel({
             <Text style={styles.shareBtnText}>Partager les identifiants</Text>
           </Pressable>
 
-          <Text style={styles.sectionLabel}>Membres ({memberList.length})</Text>
+          {/* La configuration passe avant les membres : on prépare un
+              inventaire avant d'y mettre des gens. Même ordre que le site,
+              où Set up précède Équipe. */}
+          {!closed && (
+            <>
+              <SectionLabel>Configuration</SectionLabel>
+              <MenuCard>
+                <MenuRow label="Importer les données" onPress={onImport} last={!usesZones} />
+                {usesZones && <MenuRow label="Zones & balises" onPress={onZones} last />}
+              </MenuCard>
+            </>
+          )}
+
+          <SectionLabel>Membres ({memberList.length})</SectionLabel>
           {memberList.length === 0 ? (
             <Text style={styles.zoneEmpty}>{"Aucun membre pour l'instant."}</Text>
           ) : memberList.map(m => {
@@ -486,6 +481,9 @@ function InfoPanel({
                   <Text style={styles.memberAvatarText}>{name.charAt(0).toUpperCase()}</Text>
                 </View>
                 <Text style={styles.memberName}>{name}</Text>
+                {/* « Créateur » dit un état, « Retirer » supprime quelqu'un.
+                    Les deux étaient des pastilles colorées de même taille :
+                    rien ne les distinguait au premier coup d'œil. */}
                 {isOwner ? (
                   <Text style={styles.memberTag}>Créateur</Text>
                 ) : mm.role === 'supervisor' ? (
@@ -502,7 +500,7 @@ function InfoPanel({
 
           {pendingInvites.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>Invitations en attente ({pendingInvites.length})</Text>
+              <SectionLabel>Invitations en attente ({pendingInvites.length})</SectionLabel>
               {pendingInvites.map(inv => (
                 <View key={inv.id} style={styles.memberRow}>
                   <View style={[styles.memberAvatar, styles.memberAvatarPending]}>
@@ -529,17 +527,6 @@ function InfoPanel({
             </Pressable>
           )}
 
-          {!closed && (
-            <>
-              <Text style={styles.sectionLabel}>Configuration</Text>
-              <View style={styles.menuCard}>
-                <ActionRow styles={styles} theme={theme} label="Importer les données" onPress={onImport} last={!usesZones} />
-                {usesZones && (
-                  <ActionRow styles={styles} theme={theme} label="Zones & balises" onPress={onZones} last />
-                )}
-              </View>
-            </>
-          )}
         </ScrollView>
 
         <Pressable style={styles.sheetClose} onPress={onClose}>
@@ -566,6 +553,37 @@ function CredRow({ label, value, secret, onCopy, styles }: { label: string; valu
   )
 }
 
+/**
+ * Échelle de texte de l'écran — cinq marches, pas sept.
+ *
+ * La feuille employait 10, 11, 13, 14, 15, 17 et 18, dont plusieurs une seule
+ * fois, et son titre (17) était plus petit que le code qu'elle affiche (18) :
+ * la hiérarchie était à l'envers. Chaque marche a maintenant un rôle, et une
+ * taille qui ne correspond à aucun de ces rôles n'a pas lieu d'exister.
+ *
+ * Le grand nombre de la progression (56) est à part : c'est un chiffre
+ * d'affichage, pas du texte.
+ */
+const Texte = {
+  /** Titre de la feuille. */
+  titre: 20,
+  /** Les valeurs qu'on vient chercher : le numéro d'inventaire, le code. */
+  valeur: 18,
+  /** Le texte courant : nom d'un membre, ligne de menu, boutons, « Fermer ». */
+  courant: 15,
+  /** Le second plan : e-mail en attente, état vide, petits boutons. */
+  second: 13,
+  /** Les étiquettes : titres de section, statut, « Créateur ». */
+  etiquette: 11,
+} as const
+
+/**
+ * Hauteur des boutons pleine largeur — « Compter », « Auditer »,
+ * « Inviter une personne », « Partager les identifiants ». Une seule valeur :
+ * la feuille en comptait quatre géométries pour le même genre de travail.
+ */
+const BTN_H = 48
+
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
@@ -574,74 +592,73 @@ function makeStyles(t: Theme) {
 
     // Slim info card
     infoCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
-    infoStore: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
-    infoHint: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular, marginTop: 2 },
+    infoStore: { fontSize: Texte.valeur, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
+    infoHint: { fontSize: Texte.second, color: t.textMuted, fontFamily: Font.regular, marginTop: 2 },
     infoBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
 
     statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.successSoft, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
     statusBadgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: t.success },
-    statusBadgeText: { fontSize: 11, fontFamily: Font.semibold, color: t.success },
+    statusBadgeText: { fontSize: Texte.etiquette, fontFamily: Font.semibold, color: t.success },
 
     // Progression
     progressBigRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     progressBlock: { gap: Spacing.xs },
-    sectionLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs, marginLeft: 2 },
     progressBig: { fontSize: 56, fontFamily: Font.extrabold, color: t.textPrimary, letterSpacing: -1.5, ...tabular },
-    progressSub: { fontSize: 14, color: t.textSecondary, fontFamily: Font.medium, ...tabular },
+    progressSub: { fontSize: Texte.courant, color: t.textSecondary, fontFamily: Font.medium, ...tabular },
 
     missingRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.md },
-    missingCount: { fontSize: 15, fontFamily: Font.bold, color: t.warning },
-    missingHint: { fontSize: 12, color: t.textSecondary, fontFamily: Font.medium, marginTop: 2 },
+    missingCount: { fontSize: Texte.courant, fontFamily: Font.bold, color: t.warning },
+    missingHint: { fontSize: Texte.second, color: t.textSecondary, fontFamily: Font.medium, marginTop: 2 },
     missingDoneRow: { backgroundColor: t.successSoft, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.md },
-    missingDone: { fontSize: 14, fontFamily: Font.semibold, color: t.success },
-    zoneEmpty: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },
+    missingDone: { fontSize: Texte.courant, fontFamily: Font.semibold, color: t.success },
+    zoneEmpty: { fontSize: Texte.second, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },
 
     // Boutons Compter / Auditer (couleurs de mode)
     scanBtnRow: { flexDirection: 'row', gap: Spacing.md },
-    countBtn: { flex: 1, backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowButton },
-    countBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
-    auditBtn: { flex: 1, backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowButton },
-    auditBtnText: { color: AUDIT_ON, fontSize: 15, fontFamily: Font.bold },
+    countBtn: { flex: 1, height: BTN_H, backgroundColor: t.accent, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
+    countBtnText: { color: t.onAccent, fontSize: Texte.courant, fontFamily: Font.bold },
+    auditBtn: { flex: 1, height: BTN_H, backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
+    auditBtnText: { color: AUDIT_ON, fontSize: Texte.courant, fontFamily: Font.bold },
 
-    // Menu (grouped list)
-    menuCard: { backgroundColor: t.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline, overflow: 'hidden', ...t.shadowCard },
-    menuRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.lg },
-    menuRowBorder: { borderBottomWidth: 1, borderBottomColor: t.hairline },
-    menuLabel: { fontSize: 15, color: t.textPrimary, fontFamily: Font.semibold },
-    menuLabelDanger: { color: t.danger },
 
     // Credentials
-    credRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: t.background, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md },
+    credRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md },
     credRowLeft: { flex: 1, gap: 3 },
-    credLabel: { fontSize: 10, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
-    credValue: { fontSize: 18, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: 0.5, ...tabular },
+    credLabel: { fontSize: Texte.etiquette, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+    credValue: { fontSize: Texte.valeur, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: 0.5, ...tabular },
     credValueSecret: { color: t.accent, letterSpacing: 2 },
-    copyBtn: { backgroundColor: t.accent, borderRadius: Radius.sm, paddingHorizontal: Spacing.md, paddingVertical: 8 },
-    copyBtnText: { color: t.onAccent, fontSize: 13, fontFamily: Font.semibold },
-    shareBtn: { backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center' },
-    shareBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.semibold },
+    copyBtn: {
+      height: 34, paddingHorizontal: Spacing.lg, borderRadius: Radius.md,
+      borderWidth: 1, borderColor: t.borderStrong, alignItems: 'center', justifyContent: 'center',
+    },
+    copyBtnText: { color: t.accent, fontSize: Texte.second, fontFamily: Font.semibold },
+    shareBtn: { height: BTN_H, backgroundColor: t.accentSoft, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+    shareBtnText: { color: t.accent, fontSize: Texte.courant, fontFamily: Font.semibold },
 
     // Members
-    memberRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.background, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline },
+    memberRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline },
     memberAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
     memberAvatarPending: { backgroundColor: t.warningSoft },
-    memberAvatarText: { fontSize: 13, fontFamily: Font.bold, color: t.accent },
-    memberName: { fontSize: 14, color: t.textPrimary, fontFamily: Font.medium },
-    memberTag: { fontSize: 10, fontFamily: Font.semibold, color: t.accent, backgroundColor: t.accentSoft, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden' },
-    invitePendingHint: { fontSize: 11, color: t.textMuted, fontFamily: Font.regular, marginTop: 1 },
-    removeBtn: { backgroundColor: t.dangerSoft, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
-    removeBtnText: { fontSize: 11, fontFamily: Font.semibold, color: t.danger },
-    inviteBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
-    inviteBtnText: { color: t.onAccent, fontSize: 14, fontFamily: Font.bold },
+    memberAvatarText: { fontSize: Texte.second, fontFamily: Font.bold, color: t.accent },
+    memberName: { fontSize: Texte.courant, color: t.textPrimary, fontFamily: Font.medium },
+    // Une étiquette, pas un bouton : elle dit un état, elle n'a pas à attirer
+    // l'œil ni à ressembler à quelque chose qui se touche.
+    memberTag: { fontSize: Texte.etiquette, fontFamily: Font.semibold, color: t.textSecondary, backgroundColor: t.hairline, borderRadius: Radius.pill, paddingHorizontal: 9, paddingVertical: 3, overflow: 'hidden' },
+    invitePendingHint: { fontSize: Texte.second, color: t.textMuted, fontFamily: Font.regular, marginTop: 1 },
+    // Une action, pas une étiquette : du texte, qui se touche.
+    removeBtn: { paddingHorizontal: 4, paddingVertical: 4 },
+    removeBtnText: { fontSize: Texte.second, fontFamily: Font.semibold, color: t.danger },
+    inviteBtn: { height: BTN_H, backgroundColor: t.accent, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xs, ...t.shadowButton },
+    inviteBtnText: { color: t.onAccent, fontSize: Texte.courant, fontFamily: Font.bold },
 
     // Info panel sheet
     sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
     sheet: { backgroundColor: t.background, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, paddingTop: Spacing.sm, maxHeight: '85%' },
     sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: t.borderStrong, marginBottom: Spacing.sm },
     sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: t.hairline },
-    sheetTitle: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, flex: 1, letterSpacing: -0.3 },
+    sheetTitle: { fontSize: Texte.titre, fontFamily: Font.bold, color: t.textPrimary, flex: 1, letterSpacing: -0.3 },
     sheetBody: { padding: Spacing.lg, gap: Spacing.sm },
     sheetClose: { paddingVertical: Spacing.lg, alignItems: 'center', borderTopWidth: 1, borderTopColor: t.hairline },
-    sheetCloseText: { fontSize: 15, fontFamily: Font.semibold, color: t.textSecondary },
+    sheetCloseText: { fontSize: Texte.courant, fontFamily: Font.semibold, color: t.textSecondary },
   })
 }
