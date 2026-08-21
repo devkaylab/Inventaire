@@ -99,7 +99,7 @@ export default function LoginScreen() {
   // identifiée, il ne lui manque que son code.
   if (mfaRequired) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView key="etape-code" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
           <View style={styles.header}>
             <View style={styles.logoMark}>
@@ -150,14 +150,14 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView key="etape-mot-de-passe" style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <View style={styles.header}>
           <View style={styles.logoMark}>
             <AppLogo size={84} />
           </View>
           <Text style={styles.title}>Quantinvo</Text>
-          <Text style={styles.subtitle}>Outil d'inventaire</Text>
+          <Text style={styles.subtitle}>Outil d&apos;inventaire</Text>
         </View>
 
         <View style={styles.form}>
@@ -222,6 +222,9 @@ function makeStyles(t: Theme) {
     form: { gap: Spacing.md },
     label: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary },
     input: {
+      // Espacement énoncé explicitement : le champ du code le pousse à 8, et
+      // une valeur absente n'est pas une valeur nulle pour une vue réutilisée.
+      letterSpacing: 0,
       borderWidth: 1,
       borderColor: t.hairline,
       borderRadius: Radius.md,

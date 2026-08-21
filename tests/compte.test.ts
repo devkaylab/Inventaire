@@ -116,3 +116,22 @@ describe('connexion — le sablier ne doit pas rester allumé', () => {
     expect(login).toContain('session?.user.email')
   })
 })
+
+describe('connexion — les deux étapes sont deux écrans', () => {
+  // Anomalie du 21 août 2026, vue par Julien : de retour de la saisie du code,
+  // le champ e-mail affichait « v o t r e @ e m a i l . c o m ». Les deux
+  // étapes ont la même forme d'arbre, React réutilisait donc la vue native du
+  // champ, et l'espacement des chiffres (letterSpacing: 8) restait collé —
+  // sur iOS il passe par le texte attribué et n'est pas remis à zéro quand le
+  // style suivant ne le mentionne plus.
+  const login = lire('app/login.tsx')
+
+  it('chaque étape porte sa propre identité, pour forcer un remontage', () => {
+    expect(login).toContain('key="etape-code"')
+    expect(login).toContain('key="etape-mot-de-passe"')
+  })
+
+  it('le champ ordinaire énonce son espacement au lieu de le laisser vacant', () => {
+    expect(login).toMatch(/input: \{[^}]*letterSpacing: 0/s)
+  })
+})
