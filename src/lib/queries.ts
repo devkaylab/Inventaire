@@ -151,7 +151,7 @@ export type Company = Tables<'companies'>
 export async function getMyCompany(): Promise<Company | null> {
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, balise_count, created_at')
+    .select('id, name, created_at')
     .limit(1)
     .maybeSingle()
   if (error) throwSupabase('getMyCompany', error)
@@ -720,13 +720,6 @@ export async function deleteZone(sessionId: string, name: string) {
   })
   if (error) throwSupabase('deleteZone', error)
   return data as { success: boolean; deleted?: number; error?: string }
-}
-
-/** Génère N balises supplémentaires au stock de l'entreprise (numérotation continue). */
-export async function generateCompanyBalises(count: number) {
-  const { data, error } = await supabase.rpc('generate_company_balises', { p_count: count })
-  if (error) throwSupabase('generateCompanyBalises', error)
-  return data as { success: boolean; from?: number; to?: number; total?: number; error?: string }
 }
 
 /** Scan d'une balise : ouvre (open=true) ou clôture (open=false) pour le mode donné.

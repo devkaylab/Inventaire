@@ -158,9 +158,8 @@ export default function AccountPage() {
           <div className="panel">
             <h3>Entreprise</h3>
             <div className="acc-kv"><span>Entreprise</span><strong>{company?.name ?? '—'}</strong></div>
-            <div className="acc-kv"><span>Balises générées</span><strong>{company?.balise_count ?? 0}</strong></div>
             <p className="muted small" style={{ marginTop: 10 }}>
-              La génération et l&apos;impression des balises se font depuis l&apos;application mobile.
+              La création et l&apos;impression des balises se font depuis l&apos;application mobile.
             </p>
           </div>
 

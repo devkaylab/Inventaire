@@ -7,7 +7,7 @@ import { errorMessage } from '@/lib/errors'
  * borne le périmètre (entreprise du membre), pas le client.
  */
 
-export type Company = { id: string; name: string; balise_count: number }
+export type Company = { id: string; name: string }
 export type TeamMember = { id: string; full_name: string | null; role: string | null }
 export type TeamInvitation = { id: string; email: string; full_name: string | null; created_at: string }
 
@@ -20,7 +20,7 @@ function fail(context: string, error: unknown): never {
 export async function getMyCompany(): Promise<Company | null> {
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, balise_count')
+    .select('id, name')
     .limit(1)
     .maybeSingle()
   if (error) fail('getMyCompany', error)

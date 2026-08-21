@@ -3,8 +3,8 @@
 // Vocabulaire (souvent confondu, donc explicite ici) :
 //  · une BALISE est une étiquette QR numérotée, physique, collée dans le
 //    magasin. En base c'est une ligne de `zones`, identifiée par son `code`.
-//    Le stock d'étiquettes appartient à l'entreprise (companies.balise_count)
-//    et se réutilise d'un inventaire à l'autre.
+//    Les étiquettes sont imprimées par série depuis l'app (aucun stock tenu en
+//    base) et se réutilisent d'un inventaire à l'autre.
 //  · une ZONE (ou emplacement) n'a pas de table : c'est simplement l'ensemble
 //    des balises partageant le même `zones.name`. « Réserve » = balises 1 à 10.
 //

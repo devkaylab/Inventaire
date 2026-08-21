@@ -411,6 +411,22 @@ pas en ajouter par réflexe. Polices Google auto-hébergées par `next/font` (pa
 d'appel à Google au chargement). Données en `eu-west-1`. Aucun secret versionné.
 La suppression de compte anonymise les comptages au lieu de les détruire.
 
+# Balises : séries imprimées, pas de stock (21 août 2026)
+
+La création de balises ne passe plus par le serveur. Depuis l'écran profil de
+l'app, le superviseur choisit une numérotation (simples `1, 2, 3…`, 4 chiffres
+`1000…9999`, 5 chiffres `10000…99999`), un premier numéro et un nombre, et la
+planche PDF part directement à l'impression (`src/lib/baliseSeries.ts`, testé
+dans `tests/baliseSeries.test.ts` ; formulaire `BaliseSheetModal`). **Aucun
+compteur de balises n'est affiché**, ni dans l'app ni sur le site : personne
+n'en a l'usage, les zones s'affectent par plage libre (`define_zone`).
+
+La RPC `generate_company_balises` et la colonne `companies.balise_count`
+**restent en base** tant que des builds mobiles antérieurs peuvent encore les
+appeler — même règle que pour `get_session_activity` : code déployé d'abord,
+objets supprimés ensuite. À supprimer dans une migration ultérieure, une fois
+le nouveau build installé sur les téléphones ; ne plus rien y lire d'ici là.
+
 # Passes de comptage
 
 `advance_pass` / `revert_pass` ne sont plus exécutables par le rôle

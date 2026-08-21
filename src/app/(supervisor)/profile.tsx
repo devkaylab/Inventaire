@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import {
   deleteInvitation,
-  generateCompanyBalises,
   getMyAssignedStores,
   getMyCompany,
   getMySessions,
@@ -25,7 +24,9 @@ import {
   type Invitation,
   type Profile,
 } from '@/lib/queries'
-import { exportBaliseSheet, type BaliseInfo } from '@/lib/balises'
+import { exportBaliseSheet } from '@/lib/balises'
+import type { BaliseSeries } from '@/lib/baliseSeries'
+import { BaliseSheetModal } from '@/components/BaliseSheetModal'
 import { GeneratingOverlay } from '@/components/GeneratingOverlay'
 import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { errorMessage } from '@/lib/errors'
@@ -64,54 +65,15 @@ export default function SupervisorProfileScreen() {
 
   const onRefresh = useCallback(() => { refetch(); refetchInvites() }, [refetch, refetchInvites])
 
-  // ── Balises (stock d'entreprise) ────────────────────────────────────────────
+  // ── Balises ─────────────────────────────────────────────────────────────────
+  // Pas de stock à tenir : le superviseur choisit la numérotation et imprime.
+  const [baliseModal, setBaliseModal] = useState(false)
   const print = useMutation({
-    mutationFn: ({ from, to }: { from: number; to: number }) => {
-      const balises: BaliseInfo[] = []
-      for (let i = from; i <= to; i++) balises.push({ code: String(i) })
-      return exportBaliseSheet(`${from}-${to}`, balises)
-    },
+    mutationFn: (series: BaliseSeries) =>
+      exportBaliseSheet(`${series.from}-${series.to}`, series.codes.map((code) => ({ code }))),
     onSuccess: (r) => { if (!r.shared) Alert.alert('PDF généré', `Le fichier ${r.filename} a été créé.`) },
     onError: (e) => Alert.alert('Erreur', errorMessage(e)),
   })
-
-  const generate = useMutation({
-    mutationFn: (n: number) => generateCompanyBalises(n),
-    onSuccess: async (r) => {
-      if (!r.success) { Alert.alert('Erreur', r.error ?? 'Génération impossible.'); return }
-      await queryClient.invalidateQueries({ queryKey: ['my-company'] })
-      Alert.alert('Balises créées', `Balises ${r.from} à ${r.to} ajoutées au stock.`, [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Imprimer', onPress: () => print.mutate({ from: r.from!, to: r.to! }) },
-      ])
-    },
-    onError: (e) => Alert.alert('Erreur', errorMessage(e)),
-  })
-
-  const baliseCount = company?.balise_count ?? 0
-
-  function promptGenerate() {
-    Alert.prompt('Générer des balises', 'Combien de balises voulez-vous créer ?', (txt) => {
-      const n = parseInt(txt ?? '', 10)
-      if (isNaN(n) || n < 1) { Alert.alert('Nombre invalide', 'Entrez un nombre supérieur à 0.'); return }
-      generate.mutate(n)
-    }, 'plain-text', '', 'number-pad')
-  }
-  function promptPrintAll() {
-    if (baliseCount < 1) { Alert.alert('Aucune balise', 'Générez d’abord des balises.'); return }
-    print.mutate({ from: 1, to: baliseCount })
-  }
-  function promptPrintRange() {
-    Alert.prompt('Imprimer une plage', 'Balise de début', (a) => {
-      const from = parseInt(a ?? '', 10)
-      if (isNaN(from) || from < 1) { Alert.alert('Erreur', 'Début invalide.'); return }
-      Alert.prompt('Imprimer une plage', 'Balise de fin', (b) => {
-        const to = parseInt(b ?? '', 10)
-        if (isNaN(to) || to < from) { Alert.alert('Erreur', 'Fin invalide.'); return }
-        print.mutate({ from, to })
-      }, 'plain-text', '', 'number-pad')
-    }, 'plain-text', '', 'number-pad')
-  }
 
   const email = session?.user.email ?? '—'
 
@@ -171,9 +133,9 @@ export default function SupervisorProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <GeneratingOverlay
-        visible={generate.isPending || print.isPending}
-        message={print.isPending ? 'Préparation de l’impression…' : 'Génération en cours…'}
-        sub={print.isPending ? 'Création du PDF des balises' : undefined}
+        visible={print.isPending}
+        message="Préparation de l’impression…"
+        sub="Création du PDF des balises"
       />
       <FlatList
         data={rows}
@@ -235,30 +197,20 @@ export default function SupervisorProfileScreen() {
               confidentiel : ne le communiquez jamais aux compteurs.
             </Text>
 
-            {/* Carte balises (stock d'entreprise) */}
+            {/* Balises */}
             <Text style={styles.sectionTitle}>Balises</Text>
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Balises générées</Text>
-                <Text style={[styles.infoValue, tabular]}>{baliseCount}</Text>
-              </View>
-            </View>
-            <View style={styles.baliseBtns}>
-              <Pressable style={[styles.baliseBtn, styles.baliseBtnPrimary]} onPress={promptGenerate} disabled={generate.isPending}>
-                {generate.isPending
-                  ? <ActivityIndicator color={theme.onAccent} />
-                  : <Text style={styles.baliseBtnPrimaryText}>Générer</Text>}
-              </Pressable>
-              <Pressable style={[styles.baliseBtn, styles.baliseBtnSecondary]} onPress={promptPrintAll} disabled={print.isPending}>
-                <Text style={styles.baliseBtnSecondaryText}>Imprimer tout</Text>
-              </Pressable>
-              <Pressable style={[styles.baliseBtn, styles.baliseBtnSecondary]} onPress={promptPrintRange} disabled={print.isPending}>
-                <Text style={styles.baliseBtnSecondaryText}>Une plage</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              style={[styles.baliseBtn, styles.baliseBtnPrimary]}
+              onPress={() => setBaliseModal(true)}
+              disabled={print.isPending}
+            >
+              {print.isPending
+                ? <ActivityIndicator color={theme.onAccent} />
+                : <Text style={styles.baliseBtnPrimaryText}>Créer des balises</Text>}
+            </Pressable>
             <Text style={styles.baliseHint}>
-              Imprimez les balises sur des planches autocollantes Avery L7160 (à 100 %), collez-les,
-              puis affectez les plages aux emplacements dans chaque inventaire.
+              Choisissez la numérotation et le nombre, puis imprimez sur des planches autocollantes
+              Avery L7160 (à 100 %). Collez-les, puis affectez les plages aux emplacements dans chaque inventaire.
             </Text>
 
             {/* Mes inventaires (créés par moi) */}
@@ -315,6 +267,11 @@ export default function SupervisorProfileScreen() {
             <DeleteAccountButton />
           </>
         }
+      />
+      <BaliseSheetModal
+        visible={baliseModal}
+        onClose={() => setBaliseModal(false)}
+        onSubmit={(series) => print.mutate(series)}
       />
     </SafeAreaView>
   )
@@ -425,12 +382,9 @@ function makeStyles(t: Theme) {
     },
     shareCodeBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.bold },
 
-    baliseBtns: { flexDirection: 'row', gap: Spacing.sm },
-    baliseBtn: { flex: 1, borderRadius: Radius.md, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
+    baliseBtn: { borderRadius: Radius.md, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
     baliseBtnPrimary: { backgroundColor: t.accent, ...t.shadowButton },
     baliseBtnPrimaryText: { color: t.onAccent, fontSize: 14, fontFamily: Font.bold },
-    baliseBtnSecondary: { backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderStrong },
-    baliseBtnSecondaryText: { color: t.textPrimary, fontSize: 14, fontFamily: Font.semibold },
     baliseHint: { fontSize: 12, color: t.textMuted, lineHeight: 17, fontFamily: Font.regular, marginTop: 2 },
 
     emptyInv: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },
