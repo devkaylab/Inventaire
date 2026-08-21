@@ -1,12 +1,13 @@
 'use client'
 
-import { useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
 import { libelleTranche, totalAnnuel, trancheDe } from '@/lib/tarifs'
+import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/registre'
 
 /**
  * Demande d'inscription d'une entreprise — première étape du parcours.
@@ -42,6 +43,17 @@ interface MagasinSaisi {
 const SEUIL_RESEAU = 6
 
 /**
+ * Exemple de format affiché dans le champ SIREN.
+ *
+ * **Il ne passe volontairement pas la clé de Luhn.** Un exemple valide
+ * désignerait une vraie entreprise : le registre en renverrait la raison
+ * sociale, qui est un nom de personne physique dans le cas d'un entrepreneur
+ * individuel. Un placeholder est un exemple de format, il ne doit désigner
+ * personne. C'est aussi celui qu'utilisent les modèles de devis et de facture.
+ */
+const SIREN_EXEMPLE = '123 456 789'
+
+/**
  * Première ligne, identique côté serveur et côté client.
  *
  * Un compteur au niveau du module ne conviendrait pas : il est partagé entre
@@ -58,6 +70,59 @@ function nombreOuNull(saisie: string): number | null {
 }
 
 const euros = (v: number) => v.toLocaleString('fr-FR') + ' €'
+
+/**
+ * Ce que le registre public répond, sous le champ SIREN.
+ *
+ * Trois états à distinguer, et le troisième compte autant que les deux autres :
+ * une société trouvée, une société introuvable, et un registre injoignable.
+ * Confondre les deux derniers ferait dire « cette société n'existe pas » à une
+ * simple coupure réseau, ce qui découragerait une demande légitime.
+ *
+ * Le champ `dirigeants` de la réponse — les noms des personnes physiques — n'est
+ * jamais lu (voir `web/lib/registre.ts`). Rien de ce qui s'affiche ici n'est une
+ * donnée personnelle.
+ */
+function BlocRegistre({ resultat, enCours }: { resultat: ResultatRegistre | null; enCours: boolean }) {
+  if (enCours) {
+    return <p className="field-hint">Consultation du registre…</p>
+  }
+  if (!resultat) return null
+
+  if (resultat.etat === 'indisponible') {
+    return (
+      <p className="field-hint">
+        Le registre public ne répond pas pour le moment. Ce n’est pas bloquant : envoyez votre
+        demande, nous vérifierons de notre côté.
+      </p>
+    )
+  }
+
+  if (resultat.etat === 'introuvable') {
+    return (
+      <p className="field-alert">
+        Aucune entreprise trouvée à ce numéro au registre public. Vérifiez la saisie — ou
+        envoyez quand même votre demande si vous êtes sûr de vous.
+      </p>
+    )
+  }
+
+  const { fiche } = resultat
+  const lieu = lieuCourt(fiche)
+  return (
+    <div className={fiche.active ? 'registre' : 'registre registre-ko'}>
+      <div className="registre-line">
+        <span className="registre-raison">{fiche.raisonSociale}</span>
+        <span className="registre-pill">{fiche.active ? 'Active' : 'Cessée'}</span>
+      </div>
+      {(lieu || fiche.ape) && (
+        <p className="registre-detail">
+          {[lieu, fiche.ape ? `APE ${fiche.ape}` : null].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function CompanyRequestPage() {
   const [companyName, setCompanyName] = useState('')
@@ -76,6 +141,48 @@ export default function CompanyRequestPage() {
 
   const alerteSiren = messageSiren(siren)
   const sirenOk = siren.length > 0 && sirenValide(siren)
+  const [registre, setRegistre] = useState<ResultatRegistre | null>(null)
+  const [consultation, setConsultation] = useState(false)
+  const nomRempliDuRegistre = useRef(false)
+
+  /**
+   * Consultation du registre, dès que les neuf chiffres sont plausibles.
+   *
+   * La clé de Luhn passe d'abord, côté client : on n'interroge jamais le
+   * registre sur un numéro dont on sait déjà qu'il est faux. La requête est
+   * annulée si la saisie change entre-temps, et une panne du registre laisse le
+   * formulaire parfaitement utilisable — vérifier l'existence d'une société est
+   * un confort, pas une condition pour déposer une demande.
+   */
+  useEffect(() => {
+    if (!sirenOk) {
+      setRegistre(null)
+      setConsultation(false)
+      return
+    }
+    const controleur = new AbortController()
+    setConsultation(true)
+    chercherParSiren(siren, { signal: controleur.signal })
+      .then((r) => {
+        if (controleur.signal.aborted) return
+        setRegistre(r)
+        // Le nom est proposé, jamais imposé : une enseigne diffère souvent de
+        // la raison sociale, et la personne doit pouvoir la corriger. On ne
+        // remplit donc que si le champ est vide, ou si son contenu vient
+        // lui-même d'une consultation précédente.
+        if (r.etat === 'trouve' && (companyName.trim() === '' || nomRempliDuRegistre.current)) {
+          setCompanyName(r.fiche.raisonSociale)
+          nomRempliDuRegistre.current = true
+        }
+      })
+      .finally(() => {
+        if (!controleur.signal.aborted) setConsultation(false)
+      })
+    return () => controleur.abort()
+    // `companyName` est volontairement absent : le relire ici relancerait la
+    // consultation à chaque frappe dans le champ du nom.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siren, sirenOk])
 
   const total = useMemo(
     () => totalAnnuel(magasins.map((m) => nombreOuNull(m.stock))),
@@ -179,7 +286,7 @@ export default function CompanyRequestPage() {
               maxLength={11}
               value={formaterSiren(siren)}
               onChange={(e) => setSiren(normaliserSiren(e.target.value))}
-              placeholder="123 456 782"
+              placeholder={SIREN_EXEMPLE}
               aria-describedby="siren-aide"
               aria-invalid={alerteSiren ? true : undefined}
             />
@@ -188,12 +295,25 @@ export default function CompanyRequestPage() {
               registre public — aucun Kbis à fournir.
             </p>
             {alerteSiren && <p className="field-alert">{alerteSiren}</p>}
-            {sirenOk && <p className="field-ok">SIREN valide.</p>}
+            <BlocRegistre resultat={registre} enCours={consultation} />
           </div>
 
           <div className="field">
             <label htmlFor="company">Nom de l&apos;entreprise</label>
-            <input id="company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="ACME Retail" />
+            <input
+              id="company"
+              value={companyName}
+              onChange={(e) => {
+                nomRempliDuRegistre.current = false
+                setCompanyName(e.target.value)
+              }}
+              placeholder="ACME Retail"
+            />
+            {nomRempliDuRegistre.current && companyName !== '' && (
+              <p className="field-hint">
+                Repris du registre. Corrigez-le si votre enseigne diffère de la raison sociale.
+              </p>
+            )}
           </div>
 
           <div className="field-duo">
@@ -260,7 +380,7 @@ export default function CompanyRequestPage() {
                         step={1000}
                         value={m.stock}
                         onChange={(e) => modifier(m.cle, 'stock', e.target.value)}
-                        placeholder="180000"
+                        placeholder="180 000"
                       />
                       <p className="field-hint">En pièces, toutes marques confondues.</p>
                     </div>
@@ -273,7 +393,7 @@ export default function CompanyRequestPage() {
                         step={10}
                         value={m.surface}
                         onChange={(e) => modifier(m.cle, 'surface', e.target.value)}
-                        placeholder="1200"
+                        placeholder="1 200"
                       />
                       <p className="field-hint">En m², réserve comprise.</p>
                     </div>
@@ -303,7 +423,7 @@ export default function CompanyRequestPage() {
 
             {magasins.length >= SEUIL_RESEAU && (
               <p className="magasin-reseau">
-                Beaucoup de magasins ? Renseignez-en deux ou trois, dites-le nous en fin de
+                Beaucoup de magasins ? Renseignez-en deux ou trois, et dites-le nous en fin de
                 formulaire : nous vous enverrons un tableau à remplir plutôt que de vous faire
                 tout saisir ici.
               </p>

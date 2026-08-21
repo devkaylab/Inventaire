@@ -298,14 +298,18 @@ sort des données à la fin, audit).
 Le volume s'entend en **unités en stock** — le nombre de pièces physiques du
 magasin, et non son nombre de références.
 
-| Tranche de volume de stock du magasin | Licence annuelle HT |
-|---|---|
-| Jusqu'à 10 000 unités | 2 100 € |
-| De 10 001 à 50 000 unités | 4 200 € |
-| De 50 001 à 200 000 unités | 6 600 € |
-| De 200 001 à 500 000 unités | 10 200 € |
-| De 500 001 à 1 000 000 unités | 14 400 € |
-| Au-delà de 1 000 000 unités | Sur devis |
+| Profil | Tranche de volume de stock du magasin | Licence annuelle HT |
+|---|---|---|
+| Boutique | Jusqu'à 10 000 unités | 2 100 € |
+| Magasin | De 10 001 à 50 000 unités | 4 200 € |
+| Grande surface | De 50 001 à 200 000 unités | 6 600 € |
+| Grand magasin | De 200 001 à 500 000 unités | 10 200 € |
+| Très grand magasin | De 500 001 à 1 000 000 unités | 14 400 € |
+| Hypermarché | Au-delà de 1 000 000 unités | Sur devis |
+
+Les noms de profil sont indicatifs et n'ont pas de portée contractuelle : ils
+servent à se repérer dans la grille. **Seul le volume de stock détermine la
+tranche applicable.**
 
 ---
 

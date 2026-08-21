@@ -43,8 +43,16 @@ const csp = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
 
-  // Les seules destinations réseau légitimes : la base et son canal temps réel.
-  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS}`,
+  // Les seules destinations réseau légitimes : la base, son canal temps réel,
+  // et le registre public des entreprises.
+  //
+  // `recherche-entreprises.api.gouv.fr` est interrogé depuis le navigateur par
+  // le formulaire d'inscription, pour confirmer un SIREN. L'appel part du poste
+  // du visiteur et non du serveur : le quota de l'API est de sept appels par
+  // seconde et par IP appelante, qu'un appel serveur ferait sauter globalement
+  // en concentrant tous les visiteurs sur les IP de sortie de l'hébergeur.
+  // Ouverture au seul hôte, sans joker.
+  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS} https://recherche-entreprises.api.gouv.fr`,
 
   "object-src 'none'",
   "base-uri 'self'",

@@ -87,6 +87,21 @@ describe('Grille tarifaire', () => {
     }
   })
 
+  it('nomme les profils de la même façon dans le code, les CGV et le deck', () => {
+    // Les profils s'affichent au prospect sur /inscription et sur la
+    // diapositive « L'offre ». Les laisser diverger d'un support à l'autre
+    // ferait douter, au moment précis où on demande de la confiance.
+    const deck = readFileSync(join(racine, 'docs/entreprise/deck/build.js'), 'utf8')
+    for (const t of TRANCHES) {
+      expect(cgv, `profil « ${t.profil} » absent des CGV`).toContain(`| ${t.profil} |`)
+      expect(deck, `profil « ${t.profil} » absent du deck`).toContain(t.profil)
+    }
+
+    // Les noms n'engagent pas : seul le volume détermine la tranche, et le
+    // contrat doit le dire — sans quoi un client pourrait plaider son profil.
+    expect(cgv).toContain('Seul le volume de stock détermine la')
+  })
+
   it('compte en unités, et les CGV le disent', () => {
     // L'ancienne rédaction laissait le choix ouvert (« nombre de références ou
     // d'unités »). C'était trois tranches d'écart sur un même magasin.

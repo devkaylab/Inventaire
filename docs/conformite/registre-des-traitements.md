@@ -46,6 +46,17 @@ consultation se fait sur le registre public.
 Le **stock déclaré et la surface** servent à déterminer la tranche tarifaire
 et à la recouper. Ce sont des données d'entreprise, non personnelles.
 
+La **consultation du registre public** part du navigateur du visiteur, pas de
+nos serveurs : `recherche-entreprises.api.gouv.fr` voit donc son adresse IP,
+exactement comme s'il consultait lui-même l'annuaire des entreprises. Nous ne
+transmettons que le numéro saisi. Du résultat, seules la raison sociale,
+l'état administratif, la commune et le code APE sont lus ; le champ
+`dirigeants`, qui porte des noms de personnes physiques, est ignoré. **Réserve
+à garder en tête** : pour un entrepreneur individuel, la raison sociale *est*
+un nom de personne — donnée publiée en données ouvertes par l'État, et rendue
+à la personne qui vient de saisir son propre numéro, mais donnée personnelle
+tout de même.
+
 ## T2 — Demandes d'accès superviseur
 
 | | |

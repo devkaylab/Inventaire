@@ -361,31 +361,35 @@ async function main() {
     // Le 2e palier est mis en avant : c'est le magasin type, et il porte le
     // panier moyen. La borne à 200 000 sépare la grande surface du grand
     // magasin — c'est le seuil qui parle dans le métier.
-    // Les bornes tiennent sur deux lignes pour que les cinq cartes s'alignent.
+    // Chaque carte porte le profil, puis ses bornes. Les noms de profil sont
+    // les mêmes que dans `web/lib/tarifs.ts`, dans l'annexe 2 des CGV et sur le
+    // formulaire d'inscription — un test de la suite web garde cette identité.
     const TIERS = [
-      ['Jusqu’à', '10 000', '2 100 €', false],
-      ['10 000 à', '50 000', '4 200 €', true],
-      ['50 000 à', '200 000', '6 600 €', false],
-      ['200 000 à', '500 000', '10 200 €', false],
-      ['500 000 à', '1 000 000', '14 400 €', false],
+      ['Boutique', 'jusqu’à 10 000', '2 100 €', false],
+      ['Magasin', '10 001 à 50 000', '4 200 €', true],
+      ['Grande surface', '50 001 à 200 000', '6 600 €', false],
+      ['Grand magasin', '200 001 à 500 000', '10 200 €', false],
+      ['Très grand magasin', '500 001 à 1 000 000', '14 400 €', false],
     ]
     const CW = 2.21 // largeur de carte
     const CSTEP = 2.405 // pas horizontal : 5 cartes de 0,75 à 12,58
     const PAD = 0.22
     const IW = CW - 2 * PAD // largeur utile dans la carte
     let tx = 0.75
-    for (const [rangeTop, rangeBottom, price, hot] of TIERS) {
+    for (const [profil, bornes, price, hot] of TIERS) {
       if (hot) {
         card(s, tx, 2.45, CW, 3.25, { fill: '171A33', line: ACCENT, lineW: 1.75 })
-        s.addText('LE PLUS COURANT', { x: tx + PAD, y: 2.70, w: IW, h: 0.24, fontFace: FONTD, fontSize: 9, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 })
+        s.addText('LE PLUS COURANT', { x: tx + PAD, y: 2.68, w: IW, h: 0.24, fontFace: FONTD, fontSize: 9, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 })
       } else {
         card(s, tx, 2.45, CW, 3.25)
       }
-      s.addText(String(rangeTop), { x: tx + PAD, y: 3.00, w: IW, h: 0.30, fontFace: FONTD, fontSize: 13.5, bold: true, color: TEXT, margin: 0 })
-      s.addText(String(rangeBottom), { x: tx + PAD, y: 3.28, w: IW, h: 0.30, fontFace: FONTD, fontSize: 13.5, bold: true, color: TEXT, margin: 0 })
-      s.addText('unités en stock', { x: tx + PAD, y: 3.64, w: IW, h: 0.28, fontFace: FONT, fontSize: 10.5, color: TEXT3, margin: 0 })
-      s.addText(String(price), { x: tx + PAD, y: 4.15, w: IW, h: 0.68, fontFace: FONTD, fontSize: 28, bold: true, color: hot ? LAVENDER : TEXT, margin: 0 })
-      s.addText('par an et par magasin', { x: tx + PAD, y: 4.88, w: IW, h: 0.3, fontFace: FONT, fontSize: 10, color: TEXT2, margin: 0 })
+      // « Très grand magasin » est le plus long : 12,5 pt le fait tenir dans la
+      // largeur utile de la carte sans passer à la ligne.
+      s.addText(String(profil), { x: tx + PAD, y: 3.00, w: IW, h: 0.30, fontFace: FONTD, fontSize: 12.5, bold: true, color: TEXT, margin: 0 })
+      s.addText(String(bornes), { x: tx + PAD, y: 3.32, w: IW, h: 0.28, fontFace: FONT, fontSize: 10.5, color: TEXT3, margin: 0 })
+      s.addText('unités en stock', { x: tx + PAD, y: 3.58, w: IW, h: 0.28, fontFace: FONT, fontSize: 10.5, color: TEXT3, margin: 0 })
+      s.addText(String(price), { x: tx + PAD, y: 4.10, w: IW, h: 0.66, fontFace: FONTD, fontSize: 27, bold: true, color: hot ? LAVENDER : TEXT, margin: 0 })
+      s.addText('par an et par magasin', { x: tx + PAD, y: 4.84, w: IW, h: 0.3, fontFace: FONT, fontSize: 10, color: TEXT2, margin: 0 })
       tx += CSTEP
     }
 
@@ -394,7 +398,7 @@ async function main() {
     })
     s.addText([
       { text: 'Tout est compris : ', options: { bold: true, color: TEXT } },
-      { text: "application iOS, tableau de bord web, compteurs illimités, mises à jour. Réseau multi-magasins : une licence par magasin, activée à votre rythme. Au-delà d'un million d'unités, prix sur devis.", options: { color: TEXT2 } },
+      { text: "application iOS, tableau de bord web, compteurs illimités, mises à jour. Réseau multi-magasins : une licence par magasin, activée à votre rythme. Au-delà d'un million d'unités — profil Hypermarché — le prix est établi sur devis.", options: { color: TEXT2 } },
     ], { x: 0.75, y: 6.45, w: 11.8, h: 0.6, fontFace: FONT, fontSize: 12.5, margin: 0 })
     pageFoot(s, 8)
     s.addNotes("Grille au volume de stock, en unités : parler en budget d'inventaire annuel, jamais en prix d'application. Le volume se lit dans le fichier de stock du prospect, et le client le déclare à la demande. Un grand magasin dépasse 200 000 pièces : c'est la borne des deux dernières cartes. Tarifs à confirmer au devis.")

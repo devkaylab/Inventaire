@@ -76,7 +76,13 @@
           superviseur, invitations d'équipe et d'inventaire (adresses électroniques).
           Nous ne demandons <strong>aucun extrait Kbis</strong> : le SIREN suffit, et il
           nous évite de conserver les date et lieu de naissance et l'adresse personnelle
-          d'un dirigeant.</td>
+          d'un dirigeant. Lorsque vous saisissez un SIREN, votre navigateur interroge
+          directement le registre public des entreprises
+          (<code>recherche-entreprises.api.gouv.fr</code>, service de l'État) pour afficher
+          la raison sociale correspondante : votre adresse IP est alors vue par ce service,
+          comme si vous consultiez vous-même l'annuaire des entreprises. Nous ne lui
+          transmettons rien d'autre que le numéro que vous venez de saisir, et nous ne
+          conservons pas les noms de dirigeants qu'il publie.</td>
     </tr>
     <tr>
       <td>Données d'inventaire</td>
