@@ -114,7 +114,7 @@ export default function SessionDashboardPage() {
 
   if (guard.status === 'loading') {
     return (
-      <div className="dash dash-wide">
+      <div className="dash">
         <span className="muted">Chargement de l’inventaire…</span>
         <SkeletonRows rows={5} height={72} />
       </div>
@@ -125,7 +125,7 @@ export default function SessionDashboardPage() {
   // sous une navigation déjà en place, plutôt qu'après elle.
   if (data.loading) {
     return (
-      <AppShell profile={guard.profile} companyName={companyName} wide>
+      <AppShell profile={guard.profile} companyName={companyName}>
         <p className="muted" style={{ marginBottom: 16 }}>Chargement de l’inventaire…</p>
         <SkeletonRows rows={5} height={72} />
       </AppShell>
@@ -134,7 +134,7 @@ export default function SessionDashboardPage() {
 
   if (data.error || !data.session) {
     return (
-      <AppShell profile={guard.profile} companyName={companyName} wide>
+      <AppShell profile={guard.profile} companyName={companyName}>
         <EmptyState
           title="Cet inventaire n’est pas accessible"
           hint={data.error ?? "Vous n’en êtes ni le créateur ni un participant. Demandez au créateur de vous y inviter."}
@@ -150,15 +150,18 @@ export default function SessionDashboardPage() {
   const visibleTabs = TABS
 
   return (
-    <AppShell profile={guard.profile} companyName={companyName} wide>
-      <div className="dash-detail-head">
+    <AppShell profile={guard.profile} companyName={companyName}>
+      {/* Même en-tête que les autres pages de l'espace connecté : `app-head`
+          et `page-title`. Cet écran avait gardé les siens, hérités du temps
+          où il vivait hors de la coquille. */}
+      <div className="app-head">
         <div>
-          <h1 className="admin-title" style={{ margin: 0 }}>{session.name || session.store_name}</h1>
-          <p className="muted" style={{ marginTop: 4 }}>
+          <h1 className="page-title">{session.name || session.store_name}</h1>
+          <p className="page-sub">
             {session.store_name} · <span className="num">{session.inventory_number}</span>
           </p>
         </div>
-        <div className="dash-detail-head-actions">
+        <div className="app-head-actions">
           <span className={`dash-badge dash-badge-${session.status}`}>
             <span className="dash-dot" />{STATUS_LABELS[session.status] ?? session.status}
           </span>

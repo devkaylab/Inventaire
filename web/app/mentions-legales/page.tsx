@@ -44,7 +44,7 @@ export default function MentionsLegalesPage() {
   return (
     <div className="legal-wrap">
       <header className="legal-head">
-        <Link href="/" className="brand"><Logo size={30} /><span>Quantinvo</span></Link>
+        <Link href="/" className="brand"><Logo size={38} /><span>Quantinvo</span></Link>
       </header>
 
       <main className="legal">

@@ -17,7 +17,7 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="container inner">
         <Link href="/" className="brand">
-          <Logo size={30} />
+          <Logo size={38} />
           <span>Quantinvo</span>
         </Link>
         <nav className="nav-links">

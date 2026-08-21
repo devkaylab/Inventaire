@@ -178,6 +178,11 @@ a { color: inherit; text-decoration: none; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 11px 20px; border-radius: 12px; font-size: 15px; font-weight: 600;
   cursor: pointer; border: 1px solid transparent;
+  /* Sans cette ligne, un `<button class="btn">` et un `<a class="btn">` n'ont
+     pas la même hauteur : le navigateur impose `line-height: normal` aux
+     boutons et n'hérite pas de celui du corps. Deux boutons côte à côte
+     tombaient à 42 et 48 px — et 42 passe sous la cible tactile de 44. */
+  line-height: 1.5;
   transition: transform .08s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
   font-family: inherit;
 }
@@ -448,7 +453,6 @@ a { color: inherit; text-decoration: none; }
 /* ── Console d'administration ───────────────────────────── */
 .admin { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
 .admin .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-.admin-title { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; margin: 12px 0 8px; }
 .admin-section { margin-top: 44px; }
 .admin-section > h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 16px; }
 .admin-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -475,8 +479,6 @@ a { color: inherit; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
 .link-btn:disabled { opacity: .5; cursor: not-allowed; text-decoration: none; }
 
-.stores { margin-top: 18px; border-top: 1px solid var(--hairline); padding-top: 16px; }
-.stores-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); margin-bottom: 10px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .chip {
   display: inline-flex; align-items: center; gap: 6px; font-size: 14px;
@@ -610,14 +612,17 @@ a { color: inherit; text-decoration: none; }
 .dash-card-meta { color: var(--text-3); font-size: 13px; margin-top: 4px; }
 
 /* ── Tableau de bord — détail d'un inventaire ───────────── */
-.dash-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 8px 0 24px; flex-wrap: wrap; }
-.dash-detail-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .dash-detail { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
 .dash-section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-3); }
 
 /* Le rail de gauche : progression, puis informations. Le collant passe du
    panneau au rail, pour que les deux tuiles montent ensemble. */
-.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: 24px; }
+.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: calc(var(--appbar-h) + 24px); }
+/* `.panel` porte un `margin-top: 16px` pour les pages qui empilent des blocs.
+   Dans le rail, l'espacement vient du `gap` : sans cette remise à zéro, la
+   première carte descendait de 16 px sous la barre d'onglets d'en face, et
+   l'écart entre les cartes valait 36 px au lieu de 20. */
+.dash-rail > .panel { margin-top: 0; }
 .dash-big { font-size: 56px; font-weight: 800; letter-spacing: -2px; line-height: 1; margin: 10px 0 6px; }
 .dash-big-unit { font-size: 28px; font-weight: 700; color: var(--text-2); margin-left: 4px; }
 .dash-progress-sub { color: var(--text-2); font-size: 14px; }
@@ -1149,7 +1154,6 @@ a { color: inherit; text-decoration: none; }
   .feed-row { flex-direction: column; align-items: flex-start; gap: 4px; }
   .zone-progress-bars { grid-template-columns: 1fr; }
   .feed-what { min-width: 0; }
-  .dash-detail-head { flex-direction: column; align-items: stretch; }
   .dash-audit-row { align-items: stretch; }
   .dash-audit-actions { width: 100%; }
   .dash-audit-actions .dash-audit-input { flex: 1; width: auto; }
@@ -1251,6 +1255,7 @@ a { color: inherit; text-decoration: none; }
    Une seule barre pour toutes les pages authentifiées : le logo ramène au
    site public, les onglets ne portent que le travail, et tout ce qui
    concerne la personne vit sous son avatar. Voir components/AppShell.tsx. */
+:root { --appbar-h: 64px; }
 .appbar {
   position: sticky; top: 0; z-index: 30;
   background: var(--header-bg); backdrop-filter: blur(12px);
@@ -1260,7 +1265,6 @@ a { color: inherit; text-decoration: none; }
   max-width: 1120px; margin: 0 auto; padding: 0 24px;
   height: 64px; display: flex; align-items: center; gap: 28px;
 }
-.appbar-inner-wide { max-width: 1280px; }
 .appbar .brand { flex: none; }
 .brand-retour {
   display: block; margin-top: -3px;
@@ -1297,7 +1301,14 @@ a { color: inherit; text-decoration: none; }
   background: var(--accent-soft); color: var(--accent-light);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
-.who-caret { color: var(--text-3); font-size: 11px; margin-left: -4px; }
+.who-caret {
+  color: var(--text-3); flex: none; margin-left: -2px;
+  transition: transform .18s ease, color .15s ease;
+}
+.who-btn:hover .who-caret { color: var(--text-2); }
+/* Le chevron pointe vers le haut quand le menu est ouvert : il dit dans quel
+   sens va le prochain clic, plutôt que de rester figé. */
+.who-btn[aria-expanded="true"] .who-caret { transform: rotate(180deg); color: var(--text-2); }
 
 .who-menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
@@ -1307,7 +1318,10 @@ a { color: inherit; text-decoration: none; }
   display: flex; flex-direction: column; gap: 2px;
   animation: toast-in .14s ease-out;
 }
-@media (prefers-reduced-motion: reduce) { .who-menu { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .who-menu { animation: none; }
+  .who-caret { transition: none; }
+}
 .who-menu-head { padding: 10px 12px 12px; border-bottom: 1px solid var(--hairline); margin-bottom: 4px; }
 .who-menu-nom { font-size: 14px; font-weight: 600; }
 .who-menu-role { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
@@ -1322,10 +1336,11 @@ a { color: inherit; text-decoration: none; }
 
 /* Le contenu des pages authentifiées, sous la barre. */
 .app-main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 96px; }
-/* Le tableau de bord d'un inventaire : deux colonnes, des tableaux et un
-   fil d'activité — il respire mal à 1120. */
-.app-main-wide { max-width: 1280px; }
 .app-main .page-title { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; }
+/* Ce qui situe la page sous son titre — le magasin et le numéro d'un
+   inventaire. Une classe plutôt qu'un style en ligne : le jour où un autre
+   écran en a besoin, il n'a rien à recopier. */
+.page-sub { color: var(--text-2); font-size: 14px; margin-top: 4px; }
 .app-head {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
@@ -1343,8 +1358,78 @@ a { color: inherit; text-decoration: none; }
 .kpi-note { color: var(--text-3); font-size: 12px; margin-top: 6px; }
 
 @media (max-width: 900px) {
+  /* La barre passe sur deux rangs : ce qui se colle dessous doit le savoir.
+     Valeur mesurée au navigateur, pas estimée. */
+  :root { --appbar-h: 125px; }
   .appbar-inner { height: auto; padding: 12px 20px; flex-wrap: wrap; gap: 14px; }
-  .appbar-tabs { order: 3; width: 100%; overflow-x: auto; padding-bottom: 2px; }
+  /* `flex: none` est indispensable : la règle de base pose `flex: 1`, dont
+     la base 0 l'emportait sur `width: 100%`. Les onglets ne passaient donc
+     jamais à la ligne — ils s'écrasaient à droite de l'avatar et il n'en
+     restait qu'un, coupé, dans un défilement horizontal. */
+  .appbar-tabs { order: 3; flex: none; width: 100%; overflow-x: auto; padding-bottom: 2px; }
   .appbar-who { margin-left: auto; }
   .who-text { display: none; }
+}
+
+/* ── Boutons de téléchargement de l'application ─────────────────────────────
+   Dessinés à nos couleurs plutôt qu'en reprenant les images de marque d'Apple
+   et de Google, soumises à leurs chartes. Voir components/StoreBadges.tsx. */
+.store-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 9px 14px; border-radius: 12px;
+  background: var(--text); color: var(--bg);
+  border: 1px solid var(--text);
+  transition: opacity .15s ease, transform .08s ease;
+}
+.store-badge:hover { opacity: .88; }
+.store-badge:active { transform: translateY(1px); }
+.store-badge svg { flex: none; }
+.store-badge-txt { display: flex; flex-direction: column; text-align: left; line-height: 1.15; }
+.store-badge-sur { font-size: 9.5px; letter-spacing: 0.3px; text-transform: uppercase; opacity: .75; }
+.store-badge-nom {
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+  font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
+}
+
+/* ── En dessous de cette largeur, l'espace connecté ne s'ouvre pas ──────────
+   Décision de Julien, 21 août 2026 : « il y a une app, investir du temps dans
+   la version mobile du site n'a pas de sens ». Le site est l'outil du
+   superviseur — tableaux, imports de fichiers, rapports — et le comptage se
+   fait dans l'application. Plutôt qu'une mise en page qui fait semblant, on
+   le dit.
+
+   La porte ne ferme QUE l'espace connecté (la coquille AppShell). Le site
+   public, la connexion, `/bienvenue`, `/reinitialisation`, `/inventaire` et
+   `/open` restent pleinement utilisables au téléphone : les liens d'invitation
+   arrivent par e-mail, donc sur un téléphone. */
+.ordinateur-requis { display: none; }
+@media (max-width: 719px) {
+  .appbar, .app-main, .dash { display: none; }
+  .ordinateur-requis {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100dvh; padding: 32px 24px; text-align: center; gap: 4px;
+  }
+  .ordinateur-requis .brand { margin-bottom: 22px; }
+  .ordinateur-requis h1 {
+    font-size: 24px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.25;
+    max-width: 15ch;
+  }
+  .ordinateur-requis p {
+    color: var(--text-2); font-size: 15px; line-height: 1.6;
+    max-width: 34ch; margin-top: 12px;
+  }
+  .ordinateur-requis-app {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px; margin-top: 22px; font-size: 14px; line-height: 1.55;
+    color: var(--text-2); max-width: 34ch;
+  }
+  .ordinateur-requis-app strong { color: var(--text); }
+  .boutiques { margin-top: 16px; }
+  /* Côte à côte quand la place le permet, empilés sinon — et dans ce cas de
+     largeur égale : deux pastilles empilées de largeurs différentes se lisent
+     comme un défaut d'alignement. */
+  .boutiques-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .boutiques-note { color: var(--text-3); font-size: 12px; line-height: 1.5; margin-top: 12px; }
+  .ordinateur-requis-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 26px; width: min(100%, 260px); }
+  .ordinateur-requis-qui { color: var(--text-3); font-size: 12.5px; margin-top: 26px; max-width: 32ch; }
 }

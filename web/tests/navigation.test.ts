@@ -61,6 +61,36 @@ describe('la barre de navigation', () => {
     expect(onglets).not.toContain("'/account'")
   })
 
+  it('a la même largeur sur toutes les pages', () => {
+    // Reproche de Julien, 21 août 2026 : la barre était plus large sur le
+    // tableau de bord d'un inventaire que partout ailleurs — j'avais élargi
+    // cette page seule. Une seule largeur, une seule règle : pas de
+    // modificateur par page, sinon le bandeau change de dimension d'un
+    // onglet à l'autre.
+    const css = lire('../app/globals.css')
+    expect(shell).toContain('className="appbar-inner"')
+    expect(shell).toContain('className="app-main"')
+    expect(css).not.toContain('.app-main-wide')
+    expect(css).not.toContain('.appbar-inner-wide')
+  })
+
+  it('signale son menu par un vrai chevron, pas par un caractère', () => {
+    // Reproche de Julien, 21 août 2026 : « la flèche proche de l'icône compte
+    // est trop petite, ça ressemble à un point ». C'était « ▾ » à 11 px. Un
+    // tracé SVG reste net à toute taille — et c'est la règle du projet :
+    // icônes dessinées, jamais de caractère ni d'emoji.
+    // Le commentaire du composant cite le caractère pour expliquer le
+    // pourquoi : on ne regarde donc que le code.
+    const codeSeul = shell
+      .split('\n')
+      .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join('\n')
+    expect(codeSeul).not.toContain('▾')
+    expect(codeSeul).toContain('ChevronBas')
+    // Il pivote à l'ouverture : il dit dans quel sens va le prochain clic.
+    expect(lire('../app/globals.css')).toContain('.who-btn[aria-expanded="true"] .who-caret')
+  })
+
   it('se referme au clic ailleurs et à Échap', () => {
     expect(shell).toContain("addEventListener('mousedown'")
     expect(shell).toContain("'Escape'")
@@ -115,6 +145,112 @@ describe('les onglets suivent le rôle', () => {
 
   it('l’administrateur d’entreprise ouvre sur son équipe', () => {
     expect(onglets).toContain('is_company_admin')
+  })
+})
+
+describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
+  // Décision de Julien, 21 août 2026 : « il y a une app, investir du temps
+  // dans la version mobile du site n'a pas de sens ». Le site est l'outil du
+  // superviseur — tableaux, imports, rapports ; compter se fait dans
+  // l'application. Plutôt qu'une mise en page qui fait semblant, on le dit.
+  const css = lire('../app/globals.css')
+
+  it('la coquille porte l’écran « ordinateur requis »', () => {
+    expect(shell).toContain('ordinateur-requis')
+    expect(shell).toContain('EcranOrdinateur')
+  })
+
+  it('la porte est en CSS, sur la seule coquille', () => {
+    // En CSS et non en mesure JavaScript : pas de bascule visible au
+    // chargement, et le rendu serveur reste le même.
+    const bloc = css.split('@media (max-width: 719px)')[1]?.split('\n}')[0] ?? ''
+    expect(bloc, 'la barre et le contenu sont masqués sous 720 px').toContain('.appbar, .app-main, .dash { display: none; }')
+    expect(css).toContain('.ordinateur-requis { display: none; }')
+  })
+
+  it('ne laisse personne enfermé', () => {
+    // Deux sorties : revenir au site public, ou se déconnecter.
+    expect(shell).toContain('Retour au site')
+    expect(shell).toContain('ordinateur-requis-actions')
+  })
+
+  it('ne ferme aucune page publique', () => {
+    // Les liens d'invitation arrivent par e-mail, donc sur un téléphone :
+    // /bienvenue, /reinitialisation, /login, /inventaire et /open doivent
+    // rester utilisables. Ils ne passent pas par AppShell — le vérifier ici
+    // empêche de « ranger » un jour ces pages dans la coquille.
+    for (const page of [
+      '../app/bienvenue/page.tsx',
+      '../app/reinitialisation/page.tsx',
+      '../app/login/page.tsx',
+      '../app/inventaire/page.tsx',
+      '../app/open/page.tsx',
+    ]) {
+      expect(lire(page), `${page} doit rester hors de la coquille`).not.toContain('<AppShell')
+    }
+  })
+
+  it('les onglets passent vraiment à la ligne sur écran étroit', () => {
+    // `flex: 1` (base 0) l'emportait sur `width: 100%` : les onglets ne
+    // passaient jamais à la ligne, ils s'écrasaient à droite de l'avatar et
+    // il n'en restait qu'un, coupé. Le `flex: none` est le correctif.
+    const bloc = css.split('@media (max-width: 900px)').pop() ?? ''
+    expect(bloc).toContain('.appbar-tabs { order: 3; flex: none; width: 100%')
+  })
+})
+
+describe('les boutons des boutiques d’applications', () => {
+  // Demande de Julien, 21 août 2026 : « ajoute les logos liés vers les
+  // plateformes de téléchargement de l'app même si ce n'est pas encore en
+  // ligne […] note-toi qu'il faudra le faire, très important ».
+  const stores = lire('../lib/appStores.ts')
+  const badges = lire('../components/StoreBadges.tsx')
+
+  it('figurent sur l’écran « ordinateur requis »', () => {
+    expect(shell).toContain('<StoreBadges />')
+    expect(badges).toContain('l’App Store')
+    expect(badges).toContain('Google Play')
+  })
+
+  it('les adresses ne vivent qu’à un seul endroit', () => {
+    // Le jour de la publication, un seul fichier change. Un lien écrit en
+    // dur dans le composant se retrouverait oublié.
+    expect(badges).toContain("from '@/lib/appStores'")
+    expect(badges).not.toMatch(/https:\/\/(apps\.apple|play\.google)/)
+  })
+
+  it('disent la vérité tant que l’application n’est pas publiée', () => {
+    // Tant que PUBLIEE vaut faux, les liens ouvrent la recherche de chaque
+    // boutique — jamais une fiche qui n'existe pas — et l'écran l'annonce.
+    expect(stores).toContain('export const PUBLIEE')
+    if (/export const PUBLIEE = false/.test(stores)) {
+      expect(stores).toContain('search?term=')
+      expect(stores).toContain('store/search?q=')
+      expect(badges).toContain('arrive bientôt')
+    }
+  })
+
+  it('ne reprennent pas les images de marque d’Apple et de Google', () => {
+    // Leurs badges officiels sont soumis à leurs chartes : les nôtres sont
+    // dessinés, en SVG. Et jamais d'emoji.
+    expect(badges).toContain('<svg')
+    expect(badges).not.toContain('<img')
+  })
+
+  it('ouvrent la boutique dans un nouvel onglet, sans fuite de référent', () => {
+    expect(badges).toContain('rel="noopener noreferrer"')
+  })
+})
+
+describe('le logo', () => {
+  const logo = lire('../components/Logo.tsx')
+
+  it('porte un dégradé identifiable par instance', () => {
+    // Un identifiant SVG est unique dans la page. La barre et l'écran
+    // « ordinateur requis » posent deux logos : avec le même identifiant, le
+    // second perd son fond dès que le premier disparaît.
+    expect(logo).toContain('gradientId')
+    expect(shell).toContain('gradientId="qbg-ordinateur"')
   })
 })
 

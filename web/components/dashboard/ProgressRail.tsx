@@ -107,7 +107,7 @@ export function ProgressRail({
           <div className="dash-bar-fill dash-bar-count" style={{ width: `${stats.countPct}%` }} />
         </div>
         {stats.countOpen > 0 && (
-          <div className="dash-progress-sub small">{plural(stats.countOpen, 'balise en cours')}</div>
+          <div className="dash-progress-sub small">{plural(stats.countOpen, 'balise en cours', 'balises en cours')}</div>
         )}
       </div>
 
@@ -120,7 +120,7 @@ export function ProgressRail({
           <div className="dash-bar-fill dash-bar-audit" style={{ width: `${stats.auditPct}%` }} />
         </div>
         {stats.auditOpen > 0 && (
-          <div className="dash-progress-sub small">{plural(stats.auditOpen, 'balise en cours')}</div>
+          <div className="dash-progress-sub small">{plural(stats.auditOpen, 'balise en cours', 'balises en cours')}</div>
         )}
       </div>
 

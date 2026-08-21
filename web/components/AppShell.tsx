@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
+import { StoreBadges } from '@/components/StoreBadges'
 import { signOut, type Profile } from '@/hooks/useAuthGuard'
 
 type Onglet = { href: string; label: string }
@@ -50,6 +51,25 @@ export function ongletsPour(profile: Profile): Onglet[] {
   return travail
 }
 
+/**
+ * Le chevron du menu de compte.
+ *
+ * C'était le caractère « ▾ » à 11 px : à cette taille il ne se lisait plus,
+ * il ressemblait à un point. Un tracé SVG reste net à toute taille, prend la
+ * couleur du texte autour, et peut pivoter à l'ouverture du menu.
+ */
+function ChevronBas() {
+  return (
+    <svg
+      className="who-caret" width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2.2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
 function initiales(nom: string | null): string {
   const mots = (nom ?? '').trim().split(/\s+/).filter(Boolean)
   if (mots.length === 0) return '?'
@@ -57,16 +77,11 @@ function initiales(nom: string | null): string {
 }
 
 export function AppShell({
-  profile, companyName, wide, children,
+  profile, companyName, children,
 }: {
   profile: Profile
   /** Nom de l'entreprise, affiché sous celui de la personne. */
   companyName?: string | null
-  /**
-   * Le tableau de bord d'un inventaire a besoin de plus de large que les
-   * autres pages : deux colonnes, un fil d'activité et des tableaux.
-   */
-  wide?: boolean
   children: React.ReactNode
 }) {
   const router = useRouter()
@@ -117,12 +132,20 @@ export function AppShell({
 
   return (
     <>
+      {/* Sous 720 px, c'est tout ce qui s'affiche : la barre et le contenu
+          sont masqués par la feuille de style. Le rendu reste le même côté
+          serveur — pas de mesure d'écran en JavaScript, donc pas de bascule
+          visible au chargement. */}
+      <EcranOrdinateur
+        nom={profile.full_name}
+        appartenance={appartenance}
+        onPartir={partir}
+      />
+
       <header className="appbar">
-        {/* La barre suit la largeur du contenu : au-dessus d'une page large,
-            un bandeau resté à 1120 laisserait le titre déborder à gauche. */}
-        <div className={`appbar-inner${wide ? ' appbar-inner-wide' : ''}`}>
+        <div className="appbar-inner">
           <Link href="/" className="brand" title="Retour au site Quantinvo">
-            <Logo size={30} />
+            <Logo size={38} />
             <span>
               Quantinvo
               <span className="brand-retour">← retour au site</span>
@@ -164,7 +187,7 @@ export function AppShell({
                 <span className="who-co">{appartenance}</span>
               </span>
               <span className="who-avatar">{initiales(profile.full_name)}</span>
-              <span className="who-caret" aria-hidden="true">▾</span>
+              <ChevronBas />
             </button>
 
             {menuOuvert && (
@@ -187,7 +210,63 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={`app-main${wide ? ' app-main-wide' : ''}`}>{children}</main>
+      <main className="app-main">{children}</main>
     </>
+  )
+}
+
+/**
+ * L'espace connecté ne s'ouvre pas sur un petit écran.
+ *
+ * Décision de Julien, 21 août 2026 : « il y a une app, investir du temps dans
+ * la version mobile du site n'a pas de sens ». Le site est l'outil du
+ * superviseur — tableaux, imports de fichiers, rapports — et compter se fait
+ * dans l'application. Une mise en page qui fait semblant coûterait cher et
+ * servirait mal ; on le dit franchement, et on laisse deux sorties : revenir
+ * au site public, ou se déconnecter.
+ *
+ * La porte ne ferme que ce que cette coquille enveloppe. Les pages publiques
+ * — connexion, `/bienvenue`, `/reinitialisation`, `/inventaire`, `/open` —
+ * restent utilisables au téléphone : les liens d'invitation arrivent par
+ * e-mail, donc sur un téléphone.
+ */
+function EcranOrdinateur({
+  nom, appartenance, onPartir,
+}: {
+  nom: string | null
+  appartenance: string
+  onPartir: () => void
+}) {
+  return (
+    <div className="ordinateur-requis">
+      <Link href="/" className="brand">
+        <Logo size={38} gradientId="qbg-ordinateur" />
+        <span>Quantinvo</span>
+      </Link>
+
+      <h1>Cet espace se pilote depuis un ordinateur</h1>
+      <p>
+        Le tableau de bord montre des tableaux d’articles, des imports de fichiers et
+        des rapports à télécharger. Ouvrez <strong>quantinvo.vercel.app</strong> sur un
+        ordinateur — ou agrandissez cette fenêtre.
+      </p>
+
+      <div className="ordinateur-requis-app">
+        Sur le téléphone, c’est <strong>l’application Quantinvo</strong> qui sert :
+        c’est là qu’on scanne et qu’on compte.
+        <StoreBadges />
+      </div>
+
+      <div className="ordinateur-requis-actions">
+        <Link href="/" className="btn btn-ghost">Retour au site</Link>
+        <button type="button" className="btn btn-ghost" onClick={onPartir}>
+          Se déconnecter
+        </button>
+      </div>
+
+      <div className="ordinateur-requis-qui">
+        Connecté en tant que {nom || 'vous'}{appartenance ? ` — ${appartenance}` : ''}
+      </div>
+    </div>
   )
 }
