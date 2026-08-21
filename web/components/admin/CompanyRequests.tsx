@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { densite, densitePlausible, trancheDe } from '@/lib/tarifs'
+import { densite, trancheDe } from '@/lib/tarifs'
+import { densiteAttendue } from '@/lib/secteurs'
 import { formaterSiren } from '@/lib/siren'
 
 export type CompanyRequest = {
@@ -22,6 +23,7 @@ export type CompanyRequest = {
   created_at: string
   siren: string | null
   stores: MagasinDeclare[] | null
+  ape: string | null
 }
 
 /** Ce que le prospect a déclaré, magasin par magasin, sur /inscription. */
@@ -52,13 +54,20 @@ function euros(cents: number | null) {
  * public il reviendrait à soupçonner le prospect avant même le devis, et
  * surtout à lui indiquer quel chiffre ajuster pour changer de tranche.
  *
- * Il ne prouve rien non plus : le Service ne sait pas mesurer le stock total
- * d'un magasin — l'import du stock théorique est facultatif et rattaché à un
- * inventaire, souvent limité à une marque ou une zone. La surface, elle, se
- * vérifie de l'extérieur. « À vérifier » veut donc dire « regardez », pas
- * « c'est faux ».
+ * **Ce n'est pas un détecteur de mensonge, et il ne faut pas le lire ainsi.**
+ * Le stock et la surface sont déclarés par la même personne : deux
+ * déclarations ne se contrôlent pas l'une l'autre. Ce que le repère attrape,
+ * c'est l'erreur d'ordre de grandeur — un zéro oublié, une saisie en milliers.
+ * C'est fréquent, et le rattraper avant le devis évite une correction gênante.
+ *
+ * La fourchette vient du secteur d'activité, tiré du code APE rendu par le
+ * registre (`web/lib/secteurs.ts`). Une fourchette unique ne servait à rien :
+ * assez large pour couvrir meubles et pharmacie, elle laissait passer trois
+ * tranches tarifaires d'écart. Rien ne s'affiche quand le secteur est inconnu
+ * ou que la densité tient debout — un écran d'administration qui crie tout le
+ * temps ne se lit plus.
  */
-function MagasinsDeclares({ stores }: { stores: MagasinDeclare[] | null }) {
+function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ape: string | null }) {
   const liste = (stores ?? []).filter((m) => m.units != null || m.sqm != null || (m.name ?? '') !== '')
   if (liste.length === 0) return null
 
@@ -67,7 +76,7 @@ function MagasinsDeclares({ stores }: { stores: MagasinDeclare[] | null }) {
       {liste.map((m, i) => {
         const tranche = trancheDe(m.units)
         const d = densite(m.units, m.sqm)
-        const plausible = densitePlausible(d)
+        const repere = densiteAttendue(d, ape)
         return (
           <div className="declare-row" key={i}>
             <span className="declare-nom">{(m.name ?? '').trim() || `Magasin ${i + 1}`}</span>
@@ -82,9 +91,12 @@ function MagasinsDeclares({ stores }: { stores: MagasinDeclare[] | null }) {
                 {tranche.prixEuros === null ? ' · sur devis' : ` · ${tranche.prixEuros.toLocaleString('fr-FR')} €/an`}
               </span>
             )}
-            {plausible !== null && (
-              <span className={plausible ? 'declare-flag ok' : 'declare-flag'}>
-                {plausible ? 'Cohérent' : 'À vérifier'}
+            {repere && !repere.plausible && (
+              <span
+                className="declare-flag"
+                title={`Attendu entre ${repere.secteur.min} et ${repere.secteur.max} u/m² pour « ${repere.secteur.nom} »`}
+              >
+                Densité inhabituelle — vérifier qu’il ne manque pas un zéro
               </span>
             )}
           </div>
@@ -224,7 +236,7 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
               <div className="muted small">Devis {r.quote_reference} — {euros(r.quote_amount_cents)}</div>
             )}
             {r.message && <div className="muted small">« {r.message} »</div>}
-            <MagasinsDeclares stores={r.stores} />
+            <MagasinsDeclares stores={r.stores} ape={r.ape} />
           </div>
 
           <div className="req-actions">

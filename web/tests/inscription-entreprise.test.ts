@@ -2,16 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import {
-  DENSITE_MAX,
-  DENSITE_MIN,
-  TRANCHES,
-  densite,
-  densitePlausible,
-  libelleTranche,
-  totalAnnuel,
-  trancheDe,
-} from '../lib/tarifs'
+import { TRANCHES, densite, libelleTranche, totalAnnuel, trancheDe } from '../lib/tarifs'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '../lib/siren'
 
 const racine = join(__dirname, '..', '..')
@@ -119,12 +110,13 @@ describe('Recoupement stock / surface', () => {
     expect(densite(240_000, 0)).toBeNull()
   })
 
-  it('repère l’invraisemblable sans arbitrer les écarts fins', () => {
-    expect(densitePlausible(densite(240_000, 1_800))).toBe(true)
-    expect(densitePlausible(densite(40_000, 3_000))).toBe(false) // 13 u/m²
-    expect(densitePlausible(densite(500_000, 100))).toBe(false) // 5 000 u/m²
-    expect(densitePlausible(null)).toBeNull()
-    expect(DENSITE_MIN).toBeLessThan(DENSITE_MAX)
+  it('ne juge plus la densité ici : c’est l’affaire du secteur', () => {
+    // Le seuil unique a été retiré volontairement. Le laisser à côté de la
+    // fourchette sectorielle aurait fait deux vérités concurrentes.
+    const tarifs = readFileSync(join(racine, 'web/lib/tarifs.ts'), 'utf8')
+    expect(tarifs).not.toContain('DENSITE_MIN')
+    expect(tarifs).not.toContain('densitePlausible')
+    expect(tarifs).toContain('secteurs.ts')
   })
 })
 

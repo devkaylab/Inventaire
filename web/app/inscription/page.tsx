@@ -142,6 +142,7 @@ export default function CompanyRequestPage() {
   const alerteSiren = messageSiren(siren)
   const sirenOk = siren.length > 0 && sirenValide(siren)
   const [registre, setRegistre] = useState<ResultatRegistre | null>(null)
+  const ape = registre?.etat === 'trouve' ? (registre.fiche.ape ?? '') : ''
   const [consultation, setConsultation] = useState(false)
   const nomRempliDuRegistre = useRef(false)
 
@@ -228,6 +229,7 @@ export default function CompanyRequestPage() {
       p_store_count: magasins.length,
       p_message: message,
       p_siren: normaliserSiren(siren),
+      p_ape: ape,
       p_stores: magasins.map((m) => ({
         name: m.nom,
         units: m.stock === '' ? null : nombreOuNull(m.stock),

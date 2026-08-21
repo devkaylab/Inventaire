@@ -92,21 +92,9 @@ export function densite(unites: number | null | undefined, m2: number | null | u
   return unites / m2
 }
 
-/**
- * Fourchette de densité tenue pour plausible dans le commerce de détail.
- *
- * Volontairement large : le but est de repérer l'invraisemblable — un magasin
- * de 3 000 m² qui déclare 40 000 pièces (13 u/m²), ou 100 m² qui en déclare
- * 500 000 (5 000 u/m²) — pas d'arbitrer un écart de 20 %. Le plancher de 20
- * laisse passer les commerces peu denses (ameublement, gros électroménager)
- * sans laisser passer un stock manifestement sous-déclaré. Un repère hors fourchette ne prouve rien :
- * il dit qu'il faut regarder, et **il ne s'affiche jamais au prospect**, seulement
- * dans la console d'administration.
+/*
+ * Le jugement « cette densité tient-elle debout ? » ne vit pas ici mais dans
+ * `web/lib/secteurs.ts` : il dépend du secteur d'activité, et une fourchette
+ * unique ne servait à rien — assez large pour couvrir un magasin de meubles et
+ * une pharmacie, elle laissait passer trois tranches tarifaires d'écart.
  */
-export const DENSITE_MIN = 20
-export const DENSITE_MAX = 400
-
-export function densitePlausible(d: number | null): boolean | null {
-  if (d === null) return null
-  return d >= DENSITE_MIN && d <= DENSITE_MAX
-}

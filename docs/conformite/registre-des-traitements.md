@@ -28,7 +28,7 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 | **Finalité** | Instruire une demande, établir un devis, encaisser, créer l'entreprise et ses magasins |
 | **Base légale** | Mesures précontractuelles, puis exécution du contrat |
 | **Personnes** | Contact professionnel de l'entreprise candidate |
-| **Données** | Nom de l'entreprise, **SIREN**, prénom, nom, adresse électronique, téléphone, **magasins déclarés (nom, stock théorique en unités, surface de vente en m²)**, nombre de magasins, message libre ; statut, devis, montant, horodatages, note administrative |
+| **Données** | Nom de l'entreprise, **SIREN**, **code APE**, prénom, nom, adresse électronique, téléphone, **magasins déclarés (nom, stock théorique en unités, surface de vente en m²)**, nombre de magasins, message libre ; statut, devis, montant, horodatages, note administrative |
 | **Support** | Table `company_requests` |
 | **Destinataires** | Administrateur Quantinvo uniquement (aucune policy RLS : accès par fonctions `SECURITY DEFINER`) |
 | **Conservation** | Rejetées : 1 an. Autres : contact anonymisé à 3 ans (`purge_expired_data`) |
@@ -56,6 +56,14 @@ l'état administratif, la commune et le code APE sont lus ; le champ
 un nom de personne — donnée publiée en données ouvertes par l'État, et rendue
 à la personne qui vient de saisir son propre numéro, mais donnée personnelle
 tout de même.
+
+Le **code APE** est conservé avec la demande. Ce n'est pas une donnée à
+caractère personnel : c'est la classification d'activité d'un établissement.
+Il ne sert qu'à choisir la fourchette de densité stock / surface qui a un sens
+pour ce commerce (`web/lib/secteurs.ts`), et n'ouvre aucun droit. Comme il
+transite par le navigateur du visiteur, il vaut indication et non preuve — la
+console d'administration porte le lien vers l'annuaire des entreprises pour
+vérifier d'un clic.
 
 ## T2 — Demandes d'accès superviseur
 
