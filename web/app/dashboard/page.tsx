@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Logo } from '@/components/Logo'
-import { useAuthGuard, signOut } from '@/hooks/useAuthGuard'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { AppShell } from '@/components/AppShell'
+import { getMyCompany } from '@/lib/account'
 import {
   getAccessibleSessions, groupByStore, STATUS_LABELS, type Session,
 } from '@/lib/inventory'
@@ -15,15 +15,16 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 
 export default function DashboardPage() {
-  const router = useRouter()
   const toast = useToast()
   const guard = useAuthGuard('supervisor')
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [companyName, setCompanyName] = useState<string | null>(null)
 
   useEffect(() => {
     if (guard.status !== 'ready') return
+    getMyCompany().then((c) => setCompanyName(c?.name ?? null)).catch(() => {})
     let active = true
     ;(async () => {
       try {
@@ -51,28 +52,14 @@ export default function DashboardPage() {
   const activeCount = useMemo(() => sessions.filter(s => s.status !== 'closed').length, [sessions])
   const storeCount = useMemo(() => new Set(sessions.map(s => s.store_name)).size, [sessions])
 
-  const onSignOut = useCallback(async () => {
-    await signOut()
-    router.replace('/login')
-  }, [router])
-
   if (guard.status === 'loading') {
     return <div className="dash"><SkeletonRows rows={3} /></div>
   }
 
   return (
-    <div className="dash">
-      <div className="row">
-        <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Link href="/account" className="btn btn-ghost">Mon compte</Link>
-          <button className="btn btn-ghost" onClick={onSignOut}>Déconnexion</button>
-        </div>
-      </div>
-
-      <span className="pill">Superviseur</span>
-      <div className="admin-section-head" style={{ marginTop: 8 }}>
-        <h1 className="admin-title" style={{ margin: 0 }}>Mes inventaires</h1>
+    <AppShell profile={guard.profile} companyName={companyName}>
+      <div className="app-head">
+        <h1 className="page-title">Inventaires</h1>
         <Link href="/dashboard/new" className="btn btn-primary">Nouvel inventaire</Link>
       </div>
 
@@ -142,7 +129,7 @@ export default function DashboardPage() {
           )
         })
       )}
-    </div>
+    </AppShell>
   )
 }
 

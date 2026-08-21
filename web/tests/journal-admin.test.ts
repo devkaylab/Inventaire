@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const migration = lire('../../supabase/migrations/20260818000003_journal_actions_admin.sql')
-const pageAdmin = lire('../app/admin/page.tsx')
+// Le journal a suivi les demandes sur l'écran Console (21 août 2026).
+const pageAdmin = lire('../app/admin/console/page.tsx')
 const composant = lire('../components/admin/AuditLog.tsx')
 
 // Les fonctions d'administration qui modifient des données. En ajouter une
@@ -62,7 +63,7 @@ describe('journal des actions admin (migration)', () => {
 })
 
 describe('journal des actions admin (écran)', () => {
-  it('est affiché sur le tableau de bord administrateur', () => {
+  it('est affiché sur l’écran Console', () => {
     expect(pageAdmin).toContain('AuditLog')
     expect(pageAdmin).toContain('Journal des actions')
   })

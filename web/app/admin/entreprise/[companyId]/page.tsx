@@ -13,9 +13,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
-import { useAuthGuard, signOut } from '@/hooks/useAuthGuard'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { AppShell } from '@/components/AppShell'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = { id: string; name: string; join_code: string; supervisor_ids: string[] }
@@ -106,10 +106,12 @@ export default function AdminCompanyPage() {
   }
   if (erreur) {
     return (
-      <div className="admin">
+      <AppShell profile={guard.profile}>
         <p className="muted">Cette entreprise n&apos;est pas accessible.</p>
-        <Link href="/admin" className="btn btn-ghost" style={{ marginTop: 16 }}>← Retour à la console</Link>
-      </div>
+        <Link href="/admin/entreprises" className="btn btn-ghost" style={{ marginTop: 16 }}>
+          ← Toutes les entreprises
+        </Link>
+      </AppShell>
     )
   }
   if (!detail) {
@@ -119,17 +121,11 @@ export default function AdminCompanyPage() {
   const admins = supervisors.filter((m) => m.is_company_admin)
 
   return (
-    <div className="admin">
-      <div className="row">
-        <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Link href="/admin" className="btn btn-ghost">← Console</Link>
-          <button className="btn btn-ghost" onClick={async () => { await signOut(); router.replace('/login') }}>Déconnexion</button>
-        </div>
-      </div>
-
-      <span className="pill">Entreprise</span>
-      <h1 className="admin-title">{detail.company.name}</h1>
+    <AppShell profile={guard.profile}>
+      <Link href="/admin/entreprises" className="link-btn" style={{ display: 'inline-block', marginBottom: 14 }}>
+        ← Toutes les entreprises
+      </Link>
+      <h1 className="page-title">{detail.company.name}</h1>
       <div className="code-row" style={{ marginTop: -4 }}>
         Code : <code>{detail.company.join_code}</code>
         <button className="link-btn" onClick={() => copier(detail.company.join_code)}>
@@ -269,7 +265,7 @@ export default function AdminCompanyPage() {
           <button className="btn btn-danger" onClick={supprimerEntreprise}>Supprimer l&apos;entreprise</button>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -1,20 +1,23 @@
 'use client'
 
-// Mon équipe — l'espace de l'administrateur d'entreprise.
+// Mon équipe — les personnes, selon ce qu'on a le droit d'en faire.
 //
-// Il gère lui-même ses superviseurs : invitation (l'e-mail part par l'edge
-// function ca-invite-supervisor), affectation aux magasins, retrait des
-// accès, annulation d'invitation. Chaque écriture passe par une RPC
-// SECURITY DEFINER gardée par is_company_admin() côté base — double
-// authentification conditionnelle comprise — et s'inscrit au journal de
-// l'entreprise. La garde client n'est que du confort.
+// Un superviseur y gère ses compteurs, rangés par magasin comme le sont ses
+// inventaires. Un administrateur d'entreprise voit en plus ses superviseurs :
+// invitation (l'e-mail part par l'edge function ca-invite-supervisor),
+// affectation aux magasins, retrait des accès, annulation d'invitation.
+//
+// Même écran, contenu selon le rôle — c'est ce qui évite deux pages qui se
+// ressemblent. Chaque écriture passe par une RPC SECURITY DEFINER gardée
+// côté base ; la garde client n'est que du confort.
 
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
-import { useAuthGuard, signOut } from '@/hooks/useAuthGuard'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { AppShell } from '@/components/AppShell'
+import { AddCounter } from '@/components/dashboard/AddCounter'
+import { getMyCompany, type Company } from '@/lib/account'
 
 type Store = { id: string; name: string }
 type Member = {
@@ -37,30 +40,60 @@ type Invitation = {
   store_ids: string[]
   created_at: string
 }
-type Team = { stores: Store[]; members: Member[]; invitations: Invitation[] }
+type TeamCA = { stores: Store[]; members: Member[]; invitations: Invitation[] }
+
+type Counter = {
+  id: string; full_name: string | null; email: string | null
+  is_active: boolean; sessions_counted: number
+}
+type StoreTeam = { id: string; name: string; counters: Counter[] }
+type TeamSup = { stores: StoreTeam[]; invitations: Invitation[] }
+
+/** Pastille « le compte existe mais n'a pas encore servi ». */
+function BadgeEnAttente() {
+  return (
+    <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
+      <span className="dash-dot" />Mot de passe à créer
+    </span>
+  )
+}
 
 export default function EquipePage() {
-  const router = useRouter()
-  const guard = useAuthGuard('auth')
-  const [team, setTeam] = useState<Team | null>(null)
+  const guard = useAuthGuard('supervisor')
+  const [company, setCompany] = useState<Company | null>(null)
+  const [ca, setCa] = useState<TeamCA | null>(null)
+  const [sup, setSup] = useState<TeamSup | null>(null)
   const [mfaEnrolled, setMfaEnrolled] = useState(true)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc('ca_list_team')
-    if (!error && data) setTeam(data as Team)
+  const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
+
+  const charger = useCallback(async (admin: boolean) => {
+    const [c, s] = await Promise.all([
+      getMyCompany().catch(() => null),
+      supabase.rpc('my_team_by_store'),
+    ])
+    setCompany(c)
+    if (!s.error && s.data) setSup(s.data as TeamSup)
+    if (admin) {
+      const { data, error } = await supabase.rpc('ca_list_team')
+      if (!error && data) setCa(data as TeamCA)
+    }
   }, [])
 
   useEffect(() => {
     if (guard.status !== 'ready') return
-    if (!guard.profile.is_company_admin) { router.replace('/account'); return }
-    load()
-    supabase.auth.mfa.listFactors().then(({ data }) => {
-      setMfaEnrolled((data?.totp ?? []).some((f) => f.status === 'verified'))
-    })
-  }, [guard, router, load])
+    charger(!!guard.profile.is_company_admin)
+    if (guard.profile.is_company_admin) {
+      supabase.auth.mfa.listFactors().then(({ data }) => {
+        setMfaEnrolled((data?.totp ?? []).some((f) => f.status === 'verified'))
+      })
+    }
+  }, [guard, charger])
 
-  async function inviteSupervisor(firstName: string, lastName: string, email: string, storeIds: string[]) {
+  async function rafraichir() { await charger(estAdmin) }
+
+  async function inviterSuperviseur(firstName: string, lastName: string, email: string, storeIds: string[]) {
     setBusy(true)
     const { data, error } = await supabase.functions.invoke('ca-invite-supervisor', {
       body: { email, firstName, lastName, storeIds },
@@ -68,183 +101,190 @@ export default function EquipePage() {
     setBusy(false)
     if (error || !data?.success) {
       alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
-      await load()
+      await rafraichir()
       return false
     }
     alert(`Invitation envoyée. ${data.email} reçoit un e-mail pour créer son mot de passe.`)
-    await load()
+    await rafraichir()
     return true
   }
 
-  async function setStores(member: Member, storeIds: string[]) {
-    const { data, error } = await supabase.rpc('ca_set_supervisor_stores', {
-      p_user: member.id, p_store_ids: storeIds,
-    })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
-    load()
+  async function appliquer(fn: string, args: Record<string, unknown>) {
+    const { data, error } = await supabase.rpc(fn, args)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      return
+    }
+    rafraichir()
   }
 
-  async function removeMember(member: Member) {
-    const who = member.full_name || member.email || 'cette personne'
-    if (!confirm(`Retirer tous les accès de ${who} ?\n\nSon compte n'est pas supprimé, mais il n'aura plus accès à aucun magasin.`)) return
-    const { data, error } = await supabase.rpc('ca_remove_supervisor', { p_user: member.id })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
-    load()
-  }
-
-  async function cancelInvitation(inv: Invitation) {
-    if (!confirm(`Annuler l'invitation de ${inv.first_name} ${inv.last_name} ?`)) return
-    const { data, error } = await supabase.rpc('ca_cancel_invitation', { p_id: inv.id })
-    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
-    load()
-  }
-
-  if (guard.status !== 'ready' || !team) {
+  if (guard.status !== 'ready') {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
 
   const storeById: Record<string, Store> = {}
-  for (const s of team.stores) storeById[s.id] = s
-  const supervisors = team.members.filter((m) => m.role === 'supervisor')
-  const counters = team.members.filter((m) => m.role !== 'supervisor')
+  for (const s of ca?.stores ?? []) storeById[s.id] = s
+  const superviseurs = (ca?.members ?? []).filter((m) => m.role === 'supervisor')
 
   return (
-    <div className="admin">
-      <div className="row">
-        <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Link href="/dashboard" className="btn btn-ghost">Inventaires</Link>
-          <Link href="/account" className="btn btn-ghost">Mon compte</Link>
-          <button className="btn btn-ghost" onClick={async () => { await signOut(); router.replace('/login') }}>Déconnexion</button>
-        </div>
+    <AppShell profile={guard.profile} companyName={company?.name}>
+      <div className="app-head">
+        <h1 className="page-title">Mon équipe</h1>
+        <AddCounter onAdded={rafraichir} />
       </div>
 
-      <span className="pill">Administrateur d&apos;entreprise</span>
-      <h1 className="admin-title">Mon équipe</h1>
-
-      {!mfaEnrolled && (
+      {estAdmin && !mfaEnrolled && (
         <div className="banner banner-warn">
           Votre compte administre les accès de l&apos;entreprise&nbsp;: activez la double
-          authentification depuis <Link href="/account" style={{ textDecoration: 'underline' }}>Mon compte</Link> pour
-          le protéger.
+          authentification depuis <Link href="/account" style={{ textDecoration: 'underline' }}>Mon compte</Link>.
         </div>
       )}
 
-      <section className="admin-section">
-        <h2>Superviseurs</h2>
-        {supervisors.length === 0 ? (
-          <p className="muted">Aucun superviseur pour l&apos;instant. Invitez-en un ci-dessous.</p>
-        ) : (
-          <div className="store-blocks">
-            {supervisors.map((m) => (
-              <div className="store-block" key={m.id}>
-                <div className="store-block-head">
-                  <div>
-                    <span className="store-block-name">{m.full_name || 'Sans nom'}</span>
-                    {m.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
-                    {/* Le profil existe dès l'invitation : tant que la personne
-                        n'a pas choisi son mot de passe, elle ne peut pas se
-                        connecter. Le dire, sinon la ligne est trompeuse. */}
-                    {!m.is_active && (
-                      <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
-                        <span className="dash-dot" />Mot de passe à créer
-                      </span>
-                    )}
-                    <div className="muted small">{m.email}</div>
-                  </div>
-                  {!m.is_company_admin && (
-                    <button className="link-btn danger-link" onClick={() => removeMember(m)}>Retirer les accès</button>
-                  )}
-                </div>
-                <div className="store-sup">
-                  {m.store_ids.length === 0 && <span className="muted small">Aucun magasin affecté</span>}
-                  {m.store_ids.map((sid) => (
-                    <span className="chip" key={sid}>
-                      {storeById[sid]?.name || 'Magasin'}
+      {/* ── Superviseurs : administrateur d'entreprise seulement ── */}
+      {estAdmin && (
+        <>
+          <div className="dash-sub">Superviseurs</div>
+          {superviseurs.length === 0 ? (
+            <p className="muted">Aucun superviseur pour l&apos;instant.</p>
+          ) : (
+            <div className="store-blocks">
+              {superviseurs.map((m) => (
+                <div className="store-block" key={m.id}>
+                  <div className="store-block-head">
+                    <div>
+                      <span className="store-block-name">{m.full_name || 'Sans nom'}</span>
+                      {m.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
+                      {!m.is_active && <BadgeEnAttente />}
+                      <div className="muted small">{m.email}</div>
+                    </div>
+                    {!m.is_company_admin && (
                       <button
-                        className="chip-x"
-                        onClick={() => setStores(m, m.store_ids.filter((x) => x !== sid))}
-                        aria-label="Retirer ce magasin"
-                      >×</button>
-                    </span>
-                  ))}
-                  {team.stores.some((s) => !m.store_ids.includes(s.id)) && (
-                    <select
-                      className="store-sup-select"
-                      value=""
-                      onChange={(e) => { if (e.target.value) setStores(m, [...m.store_ids, e.target.value]) }}
-                    >
-                      <option value="">+ Affecter un magasin</option>
-                      {team.stores.filter((s) => !m.store_ids.includes(s.id)).map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="admin-section">
-        <h2>Inviter un superviseur</h2>
-        <InviteForm stores={team.stores} busy={busy} onInvite={inviteSupervisor} />
-      </section>
-
-      {team.invitations.length > 0 && (
-        <section className="admin-section">
-          <h2>Invitations en cours</h2>
-          <div className="req-list">
-            {team.invitations.map((inv) => (
-              <div className="req-row" key={inv.id}>
-                <div>
-                  <div className="req-name">
-                    {inv.first_name} {inv.last_name}{' '}
-                    <span className="pill">{inv.role === 'company_admin' ? 'Admin' : inv.role === 'supervisor' ? 'Superviseur' : 'Compteur'}</span>
-                  </div>
-                  <div className="muted small">
-                    {inv.email}
-                    {inv.store_ids.length > 0 && ' · ' + inv.store_ids.map((sid) => storeById[sid]?.name || 'Magasin').join(', ')}
-                  </div>
-                </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => cancelInvitation(inv)}>Annuler</button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {counters.length > 0 && (
-        <section className="admin-section">
-          <h2>Compteurs</h2>
-          <p className="muted small" style={{ marginTop: -8, marginBottom: 14 }}>
-            Les compteurs sont ajoutés au quotidien par leurs superviseurs&nbsp;— vous pouvez seulement retirer des accès ici.
-          </p>
-          <div className="req-list">
-            {counters.map((m) => (
-              <div className="req-row" key={m.id}>
-                <div>
-                  <div className="req-name">
-                    {m.full_name || 'Sans nom'}
-                    {!m.is_active && (
-                      <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
-                        <span className="dash-dot" />Mot de passe à créer
-                      </span>
+                        className="link-btn danger-link"
+                        onClick={() => {
+                          if (!confirm(`Retirer tous les accès de ${m.full_name || 'cette personne'} ?\n\nSon compte n'est pas supprimé, mais il n'aura plus accès à aucun magasin.`)) return
+                          appliquer('ca_remove_supervisor', { p_user: m.id })
+                        }}
+                      >Retirer les accès</button>
                     )}
                   </div>
-                  <div className="muted small">
-                    {m.email}
-                    {m.store_ids.length > 0 && ' · ' + m.store_ids.map((sid) => storeById[sid]?.name || 'Magasin').join(', ')}
+                  <div className="store-sup">
+                    {m.store_ids.length === 0 && <span className="muted small">Aucun magasin affecté</span>}
+                    {m.store_ids.map((sid) => (
+                      <span className="chip" key={sid}>
+                        {storeById[sid]?.name || 'Magasin'}
+                        <button
+                          className="chip-x"
+                          aria-label="Retirer ce magasin"
+                          onClick={() => appliquer('ca_set_supervisor_stores', {
+                            p_user: m.id, p_store_ids: m.store_ids.filter((x) => x !== sid),
+                          })}
+                        >×</button>
+                      </span>
+                    ))}
+                    {(ca?.stores ?? []).some((s) => !m.store_ids.includes(s.id)) && (
+                      <select
+                        className="store-sup-select"
+                        value=""
+                        onChange={(e) => {
+                          if (!e.target.value) return
+                          appliquer('ca_set_supervisor_stores', {
+                            p_user: m.id, p_store_ids: [...m.store_ids, e.target.value],
+                          })
+                        }}
+                      >
+                        <option value="">+ Affecter un magasin</option>
+                        {(ca?.stores ?? []).filter((s) => !m.store_ids.includes(s.id)).map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => removeMember(m)}>Retirer les accès</button>
+              ))}
+            </div>
+          )}
+
+          <div className="dash-sub">Inviter un superviseur</div>
+          <InviteForm stores={ca?.stores ?? []} busy={busy} onInvite={inviterSuperviseur} />
+        </>
+      )}
+
+      {/* ── Compteurs, rangés par magasin ── */}
+      {(sup?.stores ?? []).length === 0 ? (
+        <>
+          <div className="dash-sub">Compteurs</div>
+          <p className="muted">Vous n&apos;êtes affecté à aucun magasin.</p>
+        </>
+      ) : (
+        (sup?.stores ?? []).map((s) => (
+          <div key={s.id}>
+            <div className="dash-sub">Compteurs · {s.name}</div>
+            {s.counters.length === 0 ? (
+              <p className="muted small">Aucun compteur sur ce magasin.</p>
+            ) : (
+              <div className="req-list">
+                {s.counters.map((c) => (
+                  <div className="req-row" key={c.id}>
+                    <div>
+                      <div className="req-name">
+                        {c.full_name || 'Sans nom'}
+                        {!c.is_active && <BadgeEnAttente />}
+                      </div>
+                      <div className="muted small">
+                        {c.email}
+                        {c.sessions_counted > 0
+                          ? ` · a compté ${c.sessions_counted} inventaire${c.sessions_counted > 1 ? 's' : ''}`
+                          : ' · pas encore de comptage'}
+                      </div>
+                    </div>
+                    {estAdmin && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          if (!confirm(`Retirer tous les accès de ${c.full_name || 'cette personne'} ?`)) return
+                          appliquer('ca_remove_supervisor', { p_user: c.id })
+                        }}
+                      >Retirer</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+
+      {/* ── Invitations en cours ── */}
+      {((estAdmin ? ca?.invitations : sup?.invitations) ?? []).length > 0 && (
+        <>
+          <div className="dash-sub">Invitations en cours</div>
+          <div className="req-list">
+            {((estAdmin ? ca?.invitations : sup?.invitations) ?? []).map((i) => (
+              <div className="req-row" key={i.id}>
+                <div>
+                  <div className="req-name">
+                    {i.first_name} {i.last_name}{' '}
+                    <span className="pill">
+                      {i.role === 'company_admin' ? 'Admin' : i.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
+                    </span>
+                  </div>
+                  <div className="muted small">{i.email}</div>
+                </div>
+                {estAdmin && (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      if (!confirm(`Annuler l'invitation de ${i.first_name} ${i.last_name} ?`)) return
+                      appliquer('ca_cancel_invitation', { p_id: i.id })
+                    }}
+                  >Annuler</button>
+                )}
               </div>
             ))}
           </div>
-        </section>
+        </>
       )}
-    </div>
+    </AppShell>
   )
 }
 

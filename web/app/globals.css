@@ -1015,3 +1015,101 @@ a { color: inherit; text-decoration: none; }
   .balise-formats { grid-template-columns: 1fr; }
   .balise-form { grid-template-columns: 1fr; }
 }
+
+/* ── Barre de navigation de l'espace connecté ────────────────
+   Une seule barre pour toutes les pages authentifiées : le logo ramène au
+   site public, les onglets ne portent que le travail, et tout ce qui
+   concerne la personne vit sous son avatar. Voir components/AppShell.tsx. */
+.appbar {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--header-bg); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--hairline);
+}
+.appbar-inner {
+  max-width: 1120px; margin: 0 auto; padding: 0 24px;
+  height: 64px; display: flex; align-items: center; gap: 28px;
+}
+.appbar .brand { flex: none; }
+.brand-retour {
+  display: block; margin-top: -3px;
+  font-family: var(--font-inter), sans-serif; font-weight: 500;
+  font-size: 10px; letter-spacing: 0; color: var(--text-3);
+}
+.appbar-tabs { display: flex; align-items: center; gap: 4px; flex: 1; }
+.appbar-tab {
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+  font-size: 14px; font-weight: 600; color: var(--text-2);
+  padding: 8px 14px; border-radius: 10px; white-space: nowrap;
+  transition: color .15s ease, background .15s ease;
+}
+.appbar-tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
+.appbar-tab[aria-current="page"] { color: var(--text); background: var(--accent-soft); }
+
+.appbar-who { position: relative; flex: none; }
+.who-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: none; border: 1px solid transparent; cursor: pointer;
+  padding: 5px 6px 5px 10px; border-radius: 999px; color: inherit;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.who-btn:hover { background: color-mix(in srgb, var(--text) 5%, transparent); border-color: var(--hairline); }
+.who-btn[aria-expanded="true"],
+.who-btn.who-btn-actif { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.who-text { text-align: right; line-height: 1.25; display: block; }
+.who-name { display: block; font-size: 13.5px; font-weight: 600; }
+.who-co { display: block; font-size: 12px; color: var(--text-3); }
+.who-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-weight: 700; font-size: 13px;
+  background: var(--accent-soft); color: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.who-caret { color: var(--text-3); font-size: 11px; margin-left: -4px; }
+
+.who-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  min-width: 236px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 14px; box-shadow: var(--shadow-elev);
+  display: flex; flex-direction: column; gap: 2px;
+  animation: toast-in .14s ease-out;
+}
+@media (prefers-reduced-motion: reduce) { .who-menu { animation: none; } }
+.who-menu-head { padding: 10px 12px 12px; border-bottom: 1px solid var(--hairline); margin-bottom: 4px; }
+.who-menu-nom { font-size: 14px; font-weight: 600; }
+.who-menu-role { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+.who-menu-item {
+  display: block; text-align: left; background: none; border: none; cursor: pointer;
+  color: var(--text); font-size: 14px; font-weight: 500; font-family: inherit;
+  padding: 9px 12px; border-radius: 9px;
+}
+.who-menu-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.who-menu-sortie { color: var(--danger-text); width: 100%; }
+.who-menu-sortie:hover { background: var(--danger-soft); }
+
+/* Le contenu des pages authentifiées, sous la barre. */
+.app-main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 96px; }
+.app-main .page-title { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; }
+.app-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
+}
+
+/* Signaux du tableau de bord Quantinvo : ce qui demande une décision. */
+.signal {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 12px; padding: 13px 16px;
+}
+.signal-alerte { border-color: color-mix(in srgb, var(--warning) 35%, transparent); background: var(--warning-soft); }
+.signal-txt { font-size: 14px; }
+.kpi-note { color: var(--text-3); font-size: 12px; margin-top: 6px; }
+
+@media (max-width: 900px) {
+  .appbar-inner { height: auto; padding: 12px 20px; flex-wrap: wrap; gap: 14px; }
+  .appbar-tabs { order: 3; width: 100%; overflow-x: auto; padding-bottom: 2px; }
+  .appbar-who { margin-left: auto; }
+  .who-text { display: none; }
+}

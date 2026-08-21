@@ -40,7 +40,7 @@ export function BaliseSheetPanel({ context }: Props) {
     setBusy(true)
     try {
       const filename = await downloadBaliseSheet(r.series.codes, r.series.from, r.series.to)
-      setDone(`Planche téléchargée : ${filename}. Imprimez-la à 100 % (taille réelle) sur des planches Avery L7160.`)
+      setDone(`Planche téléchargée : ${filename}. Imprimez-la à 100 % (taille réelle) sur des planches Avery L7160.`)
     } catch {
       setError('La planche n’a pas pu être générée. Réessayez, ou créez-la depuis l’application.')
     } finally {
@@ -53,7 +53,7 @@ export function BaliseSheetPanel({ context }: Props) {
       <h3>Créer des balises</h3>
       <p>
         {context === 'setup'
-          ? 'Avant de compter, chaque emplacement du magasin reçoit des balises : des étiquettes QR numérotées, collées sur place, que les compteurs scannent pour dire où ils sont.'
+          ? 'Avant de compter, chaque emplacement du magasin reçoit des balises : des étiquettes QR numérotées, collées sur place, que les compteurs scannent pour dire où ils sont.'
           : 'Les balises sont des étiquettes QR numérotées, collées dans le magasin, que les compteurs scannent pour dire où ils sont. Elles s’impriment une fois et servent pour tous vos inventaires.'}
       </p>
 
@@ -63,7 +63,7 @@ export function BaliseSheetPanel({ context }: Props) {
           Avery L7160 (21 par page), à 100 % — sans « ajuster à la page ».
         </li>
         <li>
-          <strong>Collez</strong> les balises dans le magasin, dans l’ordre des numéros : c’est plus simple
+          <strong>Collez</strong> les balises dans le magasin, dans l’ordre des numéros : c’est plus simple
           à retrouver ensuite (par exemple 1 à 10 dans la réserve, 11 à 30 en surface de vente).
         </li>
         <li>
@@ -103,7 +103,7 @@ export function BaliseSheetPanel({ context }: Props) {
           <div className="field" style={{ marginBottom: 0 }}>
             <label htmlFor="balise-count">Nombre de balises</label>
             <input
-              id="balise-count" className="num" inputMode="numeric" value={count} placeholder="Ex : 50"
+              id="balise-count" className="num" inputMode="numeric" value={count} placeholder="Ex : 50"
               onChange={e => { setCount(e.target.value); setError(null); setDone(null) }}
             />
           </div>
