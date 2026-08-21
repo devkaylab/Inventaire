@@ -10,9 +10,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { useAuthGuard, type Profile } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { MfaPanel } from '@/components/MfaPanel'
+import { PasswordRules } from '@/components/PasswordRules'
+import { friendlyPasswordError, passwordError, passwordSatisfies } from '@/lib/password'
 import { getMyCompany, type Company } from '@/lib/account'
 
 export default function AccountPage() {
@@ -92,6 +94,19 @@ export default function AccountPage() {
             <strong>{role}{company?.name ? ` — ${company.name}` : ''}</strong>
           </div>
         </div>
+        {/* Le nom est la seule information qu'on peut corriger soi-même :
+            l'adresse identifie le compte, le rôle est figé par le serveur
+            (trigger profiles_pin_privileged). */}
+        <ModifierMonNom profile={profile} onSaved={charger} />
+      </div>
+
+      <div className="panel">
+        <h3>Mot de passe</h3>
+        <p className="muted small">
+          Il fallait jusqu&apos;ici se déconnecter et passer par «&nbsp;mot de passe
+          oublié&nbsp;». Vous pouvez le changer ici, en restant connecté.
+        </p>
+        <ChangerMotDePasse />
       </div>
 
       <MfaPanel />
@@ -113,5 +128,126 @@ export default function AccountPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+/**
+ * Correction de son propre nom.
+ *
+ * `profiles` est modifiable par son porteur, mais le trigger
+ * profiles_pin_privileged fige le rôle, l'entreprise et les drapeaux : même
+ * une requête forgée ne peut toucher qu'au nom.
+ */
+function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+  const [ouvert, setOuvert] = useState(false)
+  const [nom, setNom] = useState(profile.full_name ?? '')
+  const [busy, setBusy] = useState(false)
+
+  if (!ouvert) {
+    return (
+      <button className="btn btn-ghost btn-sm" style={{ marginTop: 14 }} onClick={() => { setNom(profile.full_name ?? ''); setOuvert(true) }}>
+        Modifier mon nom
+      </button>
+    )
+  }
+
+  async function enregistrer(e: React.FormEvent) {
+    e.preventDefault()
+    const propre = nom.trim().replace(/\s+/g, ' ')
+    if (propre.length < 2) { alert('Indiquez au moins deux caractères.'); return }
+    const morceaux = propre.split(' ')
+    setBusy(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: propre,
+        first_name: morceaux[0],
+        last_name: morceaux.length > 1 ? morceaux.slice(1).join(' ') : '',
+      })
+      .eq('id', profile.id)
+    setBusy(false)
+    if (error) { alert('Modification impossible pour le moment.'); return }
+    setOuvert(false)
+    onSaved()
+  }
+
+  return (
+    <form onSubmit={enregistrer} className="inline-form" style={{ marginTop: 14, flexWrap: 'wrap' }}>
+      <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Prénom et nom" style={{ minWidth: 220 }} autoFocus />
+      <button className="btn btn-primary btn-sm" disabled={busy || nom.trim() === (profile.full_name ?? '')}>
+        {busy ? 'Enregistrement…' : 'Enregistrer'}
+      </button>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOuvert(false)}>Annuler</button>
+    </form>
+  )
+}
+
+/**
+ * Changement de mot de passe en restant connecté.
+ *
+ * Les mêmes règles que /bienvenue et /reinitialisation, par le même module :
+ * douze caractères, majuscule, minuscule, chiffre, symbole — et la traduction
+ * des refus que seul le serveur peut prononcer (mot de passe issu d'une fuite,
+ * réutilisation de l'ancien).
+ */
+function ChangerMotDePasse() {
+  const [ouvert, setOuvert] = useState(false)
+  const [mdp, setMdp] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [fait, setFait] = useState(false)
+
+  if (!ouvert) {
+    return (
+      <div style={{ marginTop: 14 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => { setFait(false); setOuvert(true) }}>
+          Changer mon mot de passe
+        </button>
+        {fait && <p className="balise-done" role="status" style={{ marginTop: 10 }}>Mot de passe modifié.</p>}
+      </div>
+    )
+  }
+
+  async function enregistrer(e: React.FormEvent) {
+    e.preventDefault()
+    const probleme = passwordError(mdp)
+    if (probleme) { setErreur(probleme); return }
+    if (mdp !== confirmation) { setErreur('Les deux saisies ne correspondent pas.'); return }
+    setBusy(true)
+    const { error } = await supabase.auth.updateUser({ password: mdp })
+    setBusy(false)
+    if (error) { setErreur(friendlyPasswordError(error.message)); return }
+    setMdp(''); setConfirmation(''); setErreur(null)
+    setOuvert(false); setFait(true)
+  }
+
+  return (
+    <form onSubmit={enregistrer} style={{ marginTop: 14 }}>
+      {erreur && <div className="error" role="alert">{erreur}</div>}
+      <div className="field">
+        <label htmlFor="mdp-nouveau">Nouveau mot de passe</label>
+        <input
+          id="mdp-nouveau" type="password" autoComplete="new-password" value={mdp}
+          onChange={(e) => { setMdp(e.target.value); setErreur(null) }} autoFocus
+        />
+        <PasswordRules password={mdp} />
+      </div>
+      <div className="field">
+        <label htmlFor="mdp-confirmation">Confirmer</label>
+        <input
+          id="mdp-confirmation" type="password" autoComplete="new-password" value={confirmation}
+          onChange={(e) => { setConfirmation(e.target.value); setErreur(null) }}
+        />
+      </div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary btn-sm" disabled={busy || !passwordSatisfies(mdp) || mdp !== confirmation}>
+          {busy ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setOuvert(false); setErreur(null); setMdp(''); setConfirmation('') }}>
+          Annuler
+        </button>
+      </div>
+    </form>
   )
 }

@@ -102,6 +102,20 @@ describe('« Mon compte » ne parle plus que de la personne', () => {
     expect(compte).toContain('MfaPanel')
     expect(compte).toContain('export_my_data')
   })
+
+  it('permet de corriger son nom et de changer son mot de passe', () => {
+    // Deux capacités que la maquette promettait et que le premier jet avait
+    // laissées de côté : sans elles, changer de mot de passe imposait de se
+    // déconnecter et de passer par « mot de passe oublié ».
+    expect(compte).toContain('Modifier mon nom')
+    expect(compte).toContain('Changer mon mot de passe')
+    expect(compte).toContain('auth.updateUser')
+    // Les règles de mot de passe viennent du module partagé, pas d'une
+    // vérification réécrite ici.
+    expect(compte).toContain('passwordError')
+    expect(compte).toContain('PasswordRules')
+    expect(compte).toContain('friendlyPasswordError')
+  })
 })
 
 describe('le tarif des magasins', () => {
