@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
+import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
+import { libelleTranche, totalAnnuel, trancheDe } from '@/lib/tarifs'
 
 /**
  * Demande d'inscription d'une entreprise — première étape du parcours.
@@ -12,27 +14,103 @@ import { MentionCollecte } from '@/components/MentionCollecte'
  * Rien n'est créé ici : le formulaire dépose une demande que l'administrateur
  * Quantinvo devise, facture, puis transforme en entreprise et magasins. Les
  * codes ne sont générés qu'après encaissement, dans la console admin.
+ *
+ * Deux choses se déclarent magasin par magasin, et pas globalement :
+ *
+ * - le **stock théorique en unités**, parce que la tranche tarifaire s'applique
+ *   à chaque magasin. Trois magasins de 60 000 unités ne se tarifent pas comme
+ *   un de 180 000, donc un total serait inexploitable ;
+ * - la **surface de vente**, qui ne tarife rien. Elle sert à recouper une
+ *   déclaration que le Service ne sait pas vérifier lui-même (article 6.4 des
+ *   CGV). Le recoupement **ne s'affiche jamais ici** : sur un formulaire public
+ *   il reviendrait à soupçonner le prospect avant le devis, et surtout à lui
+ *   indiquer quel chiffre ajuster. Il vit dans la console d'administration.
+ *
+ * Le tarif, lui, s'affiche (décision du 21 août 2026) : le prospect se qualifie
+ * seul, et un prix annoncé est un argument là où aucun concurrent du haut de
+ * gamme n'en publie.
  */
+
+interface MagasinSaisi {
+  cle: number
+  nom: string
+  stock: string
+  surface: string
+}
+
+/** Au-delà, saisir ligne à ligne n'a plus de sens : on propose un tableau. */
+const SEUIL_RESEAU = 6
+
+/**
+ * Première ligne, identique côté serveur et côté client.
+ *
+ * Un compteur au niveau du module ne conviendrait pas : il est partagé entre
+ * le rendu serveur et le rendu client, les identifiants de champ sortaient
+ * donc différents des deux côtés et React refusait d'hydrater la page. Les
+ * clés suivantes viennent d'un `useRef`, et les identifiants se dérivent de
+ * `useId()` et de l'index — stables par construction.
+ */
+const PREMIER_MAGASIN: MagasinSaisi = { cle: 0, nom: '', stock: '', surface: '' }
+
+function nombreOuNull(saisie: string): number | null {
+  const n = Number.parseFloat(saisie.replace(/\s/g, '').replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+const euros = (v: number) => v.toLocaleString('fr-FR') + ' €'
+
 export default function CompanyRequestPage() {
   const [companyName, setCompanyName] = useState('')
+  const [siren, setSiren] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [storeCount, setStoreCount] = useState('1')
+  const [magasins, setMagasins] = useState<MagasinSaisi[]>(() => [PREMIER_MAGASIN])
+  const cleSuivante = useRef(1)
+  const uid = useId()
   const [message, setMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const alerteSiren = messageSiren(siren)
+  const sirenOk = siren.length > 0 && sirenValide(siren)
+
+  const total = useMemo(
+    () => totalAnnuel(magasins.map((m) => nombreOuNull(m.stock))),
+    [magasins],
+  )
+
+  function ajouter() {
+    const cle = cleSuivante.current
+    cleSuivante.current += 1
+    setMagasins((liste) => [...liste, { cle, nom: '', stock: '', surface: '' }])
+  }
+
+  function modifier(cle: number, champ: keyof MagasinSaisi, valeur: string) {
+    setMagasins((liste) => liste.map((m) => (m.cle === cle ? { ...m, [champ]: valeur } : m)))
+  }
+
+  function retirer(cle: number) {
+    setMagasins((liste) => (liste.length > 1 ? liste.filter((m) => m.cle !== cle) : liste))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    const count = Number.parseInt(storeCount, 10)
-    if (!Number.isFinite(count) || count < 1) {
-      setError('Indiquez un nombre de magasins valide.')
+
+    // Le SIREN reste facultatif — quelqu'un peut ne pas l'avoir sous la main —
+    // mais s'il est commencé, il doit être complet et juste.
+    if (siren.length > 0 && !sirenValide(siren)) {
+      setError('Vérifiez le SIREN, ou laissez le champ vide si vous ne l’avez pas sous la main.')
       return
     }
+    if (magasins.length < 1 || magasins.length > 500) {
+      setError('Indiquez entre 1 et 500 magasins.')
+      return
+    }
+
     setLoading(true)
     const { data, error: rpcError } = await supabase.rpc('submit_company_request', {
       p_company_name: companyName,
@@ -40,8 +118,14 @@ export default function CompanyRequestPage() {
       p_last_name: lastName,
       p_email: email,
       p_phone: phone,
-      p_store_count: count,
+      p_store_count: magasins.length,
       p_message: message,
+      p_siren: normaliserSiren(siren),
+      p_stores: magasins.map((m) => ({
+        name: m.nom,
+        units: m.stock === '' ? null : nombreOuNull(m.stock),
+        sqm: m.surface === '' ? null : nombreOuNull(m.surface),
+      })),
     })
     setLoading(false)
     if (rpcError) {
@@ -76,46 +160,187 @@ export default function CompanyRequestPage() {
 
   return (
     <div className="auth-wrap">
-      <div className="auth-card">
+      <div className="auth-card auth-card-large">
         <div className="head">
           <Link href="/"><Logo size={56} /></Link>
           <h1>Inscrire mon entreprise</h1>
-          <p className="sub">
-            Décrivez votre besoin : nous revenons vers vous avec un devis adapté au nombre de magasins.
-          </p>
+          <p className="sub">Nous revenons vers vous avec un devis adapté à chacun de vos magasins.</p>
         </div>
 
         {error && <div className="error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="field">
+            <label htmlFor="siren">SIREN de l&apos;entreprise</label>
+            <input
+              id="siren"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={11}
+              value={formaterSiren(siren)}
+              onChange={(e) => setSiren(normaliserSiren(e.target.value))}
+              placeholder="123 456 782"
+              aria-describedby="siren-aide"
+              aria-invalid={alerteSiren ? true : undefined}
+            />
+            <p className="field-hint" id="siren-aide">
+              Neuf chiffres, sur vos factures ou vos statuts. Nous vérifions le reste sur le
+              registre public — aucun Kbis à fournir.
+            </p>
+            {alerteSiren && <p className="field-alert">{alerteSiren}</p>}
+            {sirenOk && <p className="field-ok">SIREN valide.</p>}
+          </div>
+
+          <div className="field">
             <label htmlFor="company">Nom de l&apos;entreprise</label>
             <input id="company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="ACME Retail" />
           </div>
-          <div className="field">
-            <label htmlFor="firstName">Prénom du contact</label>
-            <input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Marie" />
+
+          <div className="field-duo">
+            <div className="field">
+              <label htmlFor="firstName">Prénom du contact</label>
+              <input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Marie" />
+            </div>
+            <div className="field">
+              <label htmlFor="lastName">Nom du contact</label>
+              <input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Durand" />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="lastName">Nom du contact</label>
-            <input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Durand" />
+
+          <div className="field-duo">
+            <div className="field">
+              <label htmlFor="email">E-mail</label>
+              <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.durand@acme.fr" />
+            </div>
+            <div className="field">
+              <label htmlFor="phone">Téléphone</label>
+              <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01 23 45 67 89" />
+            </div>
           </div>
+
           <div className="field">
-            <label htmlFor="email">E-mail</label>
-            <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.durand@acme.fr" />
-          </div>
-          <div className="field">
-            <label htmlFor="phone">Téléphone</label>
-            <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01 23 45 67 89" />
-          </div>
-          <div className="field">
-            <label htmlFor="stores">Nombre de magasins</label>
-            <input id="stores" type="number" min={1} max={500} value={storeCount} onChange={(e) => setStoreCount(e.target.value)} />
+            <div className="magasins-head">
+              <span className="magasins-lab">Vos magasins</span>
+              <span className="magasins-cnt">
+                {magasins.length} magasin{magasins.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {magasins.map((m, i) => {
+              const tranche = trancheDe(nombreOuNull(m.stock))
+              return (
+                <div className="magasin" key={m.cle}>
+                  <div className="magasin-top">
+                    <span className="magasin-no">{i + 1}</span>
+                    <input
+                      value={m.nom}
+                      onChange={(e) => modifier(m.cle, 'nom', e.target.value)}
+                      placeholder="Nom du magasin — Lyon Part-Dieu"
+                      aria-label={`Nom du magasin ${i + 1}`}
+                    />
+                    {magasins.length > 1 && (
+                      <button
+                        type="button"
+                        className="magasin-kill"
+                        onClick={() => retirer(m.cle)}
+                        aria-label={`Retirer le magasin ${i + 1}`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="field-duo">
+                    <div className="field">
+                      <label htmlFor={`${uid}-stock-${i}`}>Stock théorique</label>
+                      <input
+                        id={`${uid}-stock-${i}`}
+                        type="number"
+                        min={0}
+                        step={1000}
+                        value={m.stock}
+                        onChange={(e) => modifier(m.cle, 'stock', e.target.value)}
+                        placeholder="180000"
+                      />
+                      <p className="field-hint">En pièces, toutes marques confondues.</p>
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`${uid}-surface-${i}`}>Surface de vente</label>
+                      <input
+                        id={`${uid}-surface-${i}`}
+                        type="number"
+                        min={0}
+                        step={10}
+                        value={m.surface}
+                        onChange={(e) => modifier(m.cle, 'surface', e.target.value)}
+                        placeholder="1200"
+                      />
+                      <p className="field-hint">En m², réserve comprise.</p>
+                    </div>
+                  </div>
+
+                  <div className="magasin-tranche">
+                    {tranche ? (
+                      <>
+                        <span className="magasin-tranche-nom">
+                          <b>{tranche.profil}</b> — {tranche.bornes}
+                        </span>
+                        <span className="magasin-tranche-prix">
+                          {tranche.prixEuros === null ? 'Sur devis' : `${euros(tranche.prixEuros)} / an`}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="magasin-tranche-vide">Indiquez le stock pour voir la tranche</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            <button type="button" className="magasin-add" onClick={ajouter}>
+              + Ajouter un magasin
+            </button>
+
+            {magasins.length >= SEUIL_RESEAU && (
+              <p className="magasin-reseau">
+                Beaucoup de magasins ? Renseignez-en deux ou trois, dites-le nous en fin de
+                formulaire : nous vous enverrons un tableau à remplir plutôt que de vous faire
+                tout saisir ici.
+              </p>
+            )}
+
             <p className="field-hint">Un code d&apos;accès sera généré pour chaque magasin.</p>
           </div>
+
+          {total.chiffres > 0 && (
+            <div className="estimation">
+              <div className="estimation-row">
+                <span className="estimation-lab">Estimation annuelle</span>
+                <span className="estimation-val">
+                  {euros(total.euros)}
+                  {total.surDevis > 0 ? ' + devis' : ''}
+                </span>
+              </div>
+              <p className="estimation-note">
+                Montants hors taxes, à confirmer sur le devis.{' '}
+                {total.surDevis > 0
+                  ? total.surDevis > 1
+                    ? `${total.surDevis} magasins dépassent le million d’unités : leur prix est établi au cas par cas.`
+                    : 'Un magasin dépasse le million d’unités : son prix est établi au cas par cas.'
+                  : 'Comptages et compteurs illimités.'}
+              </p>
+            </div>
+          )}
+
           <div className="field">
             <label htmlFor="message">Votre besoin (facultatif)</label>
-            <textarea id="message" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Volumétrie, échéance, contraintes…" />
+            <textarea
+              id="message"
+              rows={3}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Échéance, contraintes, nombre de magasins si le réseau est grand…"
+            />
           </div>
 
           <button className="btn btn-primary btn-block" disabled={loading}>

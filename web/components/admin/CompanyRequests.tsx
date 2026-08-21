@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { densite, densitePlausible, trancheDe } from '@/lib/tarifs'
+import { formaterSiren } from '@/lib/siren'
 
 export type CompanyRequest = {
   id: string
@@ -18,6 +20,15 @@ export type CompanyRequest = {
   admin_note: string
   company_id: string | null
   created_at: string
+  siren: string | null
+  stores: MagasinDeclare[] | null
+}
+
+/** Ce que le prospect a déclaré, magasin par magasin, sur /inscription. */
+export type MagasinDeclare = {
+  name: string | null
+  units: number | null
+  sqm: number | null
 }
 
 const STATUS_LABEL: Record<CompanyRequest['status'], string> = {
@@ -32,6 +43,55 @@ const STATUS_LABEL: Record<CompanyRequest['status'], string> = {
 function euros(cents: number | null) {
   if (cents == null) return '—'
   return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+}
+
+/**
+ * Magasins déclarés au formulaire, avec le recoupement stock / surface.
+ *
+ * Le repère de cohérence n'existe **que** dans cette console. Sur le formulaire
+ * public il reviendrait à soupçonner le prospect avant même le devis, et
+ * surtout à lui indiquer quel chiffre ajuster pour changer de tranche.
+ *
+ * Il ne prouve rien non plus : le Service ne sait pas mesurer le stock total
+ * d'un magasin — l'import du stock théorique est facultatif et rattaché à un
+ * inventaire, souvent limité à une marque ou une zone. La surface, elle, se
+ * vérifie de l'extérieur. « À vérifier » veut donc dire « regardez », pas
+ * « c'est faux ».
+ */
+function MagasinsDeclares({ stores }: { stores: MagasinDeclare[] | null }) {
+  const liste = (stores ?? []).filter((m) => m.units != null || m.sqm != null || (m.name ?? '') !== '')
+  if (liste.length === 0) return null
+
+  return (
+    <div className="declare">
+      {liste.map((m, i) => {
+        const tranche = trancheDe(m.units)
+        const d = densite(m.units, m.sqm)
+        const plausible = densitePlausible(d)
+        return (
+          <div className="declare-row" key={i}>
+            <span className="declare-nom">{(m.name ?? '').trim() || `Magasin ${i + 1}`}</span>
+            <span className="declare-meta">
+              {m.units == null ? 'stock non déclaré' : `${m.units.toLocaleString('fr-FR')} u`}
+              {m.sqm == null ? '' : ` · ${m.sqm.toLocaleString('fr-FR')} m²`}
+              {d === null ? '' : ` · ${Math.round(d)} u/m²`}
+            </span>
+            {tranche && (
+              <span className="declare-meta">
+                {tranche.profil}
+                {tranche.prixEuros === null ? ' · sur devis' : ` · ${tranche.prixEuros.toLocaleString('fr-FR')} €/an`}
+              </span>
+            )}
+            {plausible !== null && (
+              <span className={plausible ? 'declare-flag ok' : 'declare-flag'}>
+                {plausible ? 'Cohérent' : 'À vérifier'}
+              </span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 /**
@@ -91,10 +151,17 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
   }
 
   async function fulfil(r: CompanyRequest) {
+    // Les noms déclarés au formulaire sont proposés tels quels : dans la
+    // plupart des cas il n'y a plus qu'à valider. Le tarif de chaque magasin
+    // est posé côté base depuis la tranche de son volume déclaré.
+    const proposes = (r.stores ?? [])
+      .map((m) => (m.name ?? '').trim())
+      .filter(Boolean)
+      .join(', ')
     const raw = prompt(
       `Créer « ${r.company_name} » et ses ${r.store_count} magasin(s).\n\n` +
         'Noms des magasins, séparés par une virgule (laissez vide pour « Magasin 1 », « Magasin 2 »…) :',
-      '',
+      proposes,
     )
     if (raw === null) return
     const names = raw.split(',').map((s) => s.trim()).filter(Boolean)
@@ -109,10 +176,16 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
       alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
       return
     }
-    const stores = (data.stores as { name: string; join_code: string }[]) ?? []
+    const stores = (data.stores as { name: string; join_code: string; annual_price_cents: number | null }[]) ?? []
     alert(
       `Entreprise créée.\n\nCode entreprise : ${data.company_code}\n\n` +
-        stores.map((s) => `${s.name} : ${s.join_code}`).join('\n') +
+        stores
+          .map(
+            (s) =>
+              `${s.name} : ${s.join_code}` +
+              (s.annual_price_cents == null ? ' (tarif à saisir)' : ` — ${euros(s.annual_price_cents)}/an`),
+          )
+          .join('\n') +
         '\n\nTransmettez les codes magasin à l’administrateur de l’entreprise : chaque demande de superviseur devra être accompagnée du code de son magasin.',
     )
     await load()
@@ -135,10 +208,23 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
               {r.contact_first_name} {r.contact_last_name} · {r.contact_email}
               {r.contact_phone ? ` · ${r.contact_phone}` : ''} · {r.store_count} magasin{r.store_count > 1 ? 's' : ''}
             </div>
+            {r.siren && (
+              <div className="muted small">
+                SIREN {formaterSiren(r.siren)} —{' '}
+                <a
+                  href={`https://annuaire-entreprises.data.gouv.fr/entreprise/${r.siren}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  voir au registre
+                </a>
+              </div>
+            )}
             {r.quote_reference && (
               <div className="muted small">Devis {r.quote_reference} — {euros(r.quote_amount_cents)}</div>
             )}
             {r.message && <div className="muted small">« {r.message} »</div>}
+            <MagasinsDeclares stores={r.stores} />
           </div>
 
           <div className="req-actions">

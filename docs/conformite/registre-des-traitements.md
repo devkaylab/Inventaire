@@ -28,11 +28,23 @@ Cette répartition doit être formalisée par le contrat de l'article 28
 | **Finalité** | Instruire une demande, établir un devis, encaisser, créer l'entreprise et ses magasins |
 | **Base légale** | Mesures précontractuelles, puis exécution du contrat |
 | **Personnes** | Contact professionnel de l'entreprise candidate |
-| **Données** | Nom de l'entreprise, prénom, nom, adresse électronique, téléphone, nombre de magasins, message libre ; statut, devis, montant, horodatages, note administrative |
+| **Données** | Nom de l'entreprise, **SIREN**, prénom, nom, adresse électronique, téléphone, **magasins déclarés (nom, stock théorique en unités, surface de vente en m²)**, nombre de magasins, message libre ; statut, devis, montant, horodatages, note administrative |
 | **Support** | Table `company_requests` |
 | **Destinataires** | Administrateur Quantinvo uniquement (aucune policy RLS : accès par fonctions `SECURITY DEFINER`) |
 | **Conservation** | Rejetées : 1 an. Autres : contact anonymisé à 3 ans (`purge_expired_data`) |
 | **Sous-traitants** | Supabase (hébergement) |
+
+Le **SIREN** est demandé à la place d'un extrait Kbis, et c'est un choix de
+minimisation : le Kbis porte les date et lieu de naissance, la nationalité et
+l'adresse personnelle du dirigeant, données d'identité sans rapport avec la
+finalité — vérifier qu'une société existe et qu'elle est active. Le SIREN
+d'une personne morale n'est pas une donnée à caractère personnel ; il en va
+autrement pour un entrepreneur individuel, dont le SIREN identifie une
+personne physique. Aucun document n'est téléversé ni conservé : la
+consultation se fait sur le registre public.
+
+Le **stock déclaré et la surface** servent à déterminer la tranche tarifaire
+et à la recouper. Ce sont des données d'entreprise, non personnelles.
 
 ## T2 — Demandes d'accès superviseur
 

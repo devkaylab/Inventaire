@@ -281,6 +281,97 @@ a { color: inherit; text-decoration: none; }
 }
 .center-link { text-align: center; margin-top: 18px; }
 .center-link a { color: var(--text-2); font-size: 14px; }
+
+/* ── Demande d'inscription : SIREN et magasins déclarés ──────────────────
+   La carte s'élargit pour cette page : la licence étant tarifée magasin par
+   magasin, le formulaire porte une ligne par magasin — nom, stock, surface —
+   et les 400 px de la carte d'authentification ne suffisent plus.
+   Le recoupement stock / surface n'apparaît volontairement pas ici : sur un
+   formulaire public il soupçonnerait le prospect avant le devis, et lui
+   indiquerait quel chiffre ajuster. Il vit dans la console d'administration. */
+.auth-card-large { max-width: 520px; }
+
+.field-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .field-duo { grid-template-columns: 1fr; } }
+
+.field-alert { font-size: 12px; color: var(--warning-text); margin-top: 6px; }
+.field-ok { font-size: 12px; color: var(--success-text); margin-top: 6px; }
+
+.magasins-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-bottom: 9px;
+}
+.magasins-lab { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.magasins-cnt { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+.magasin {
+  border: 1px solid var(--hairline); border-radius: 14px; padding: 14px;
+  background: var(--bg); margin-bottom: 10px;
+}
+.magasin .field { margin-bottom: 0; }
+.magasin .field label { font-size: 12px; }
+.magasin input[type="number"] { font-variant-numeric: tabular-nums; }
+
+.magasin-top { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.magasin-top input { flex: 1; }
+.magasin-no {
+  flex: none; width: 24px; height: 24px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent-light);
+  font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.magasin-kill {
+  flex: none; width: 30px; height: 30px; border-radius: 9px; cursor: pointer;
+  background: none; border: 1px solid var(--hairline); color: var(--text-3);
+  font-size: 15px; line-height: 1; display: grid; place-items: center; font-family: inherit;
+}
+.magasin-kill:hover { color: var(--text); border-color: var(--border-strong); }
+
+.magasin-tranche {
+  margin-top: 11px; padding-top: 11px; border-top: 1px dashed var(--hairline);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 12.5px; min-height: 20px;
+}
+.magasin-tranche-nom { color: var(--text-3); }
+.magasin-tranche-nom b { color: var(--accent-light); font-weight: 700; }
+.magasin-tranche-prix { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.magasin-tranche-vide { color: var(--text-3); }
+
+.magasin-add {
+  width: 100%; padding: 11px; border-radius: 12px; cursor: pointer;
+  background: none; border: 1px dashed var(--border-strong); color: var(--text-2);
+  font-family: inherit; font-size: 13.5px; font-weight: 600;
+}
+.magasin-add:hover { color: var(--accent-light); border-color: var(--accent); }
+
+.magasin-reseau {
+  margin-top: 10px; padding: 11px 13px; border-radius: 11px; font-size: 12.5px;
+  background: var(--warning-soft); color: var(--warning-text); line-height: 1.5;
+}
+
+.estimation {
+  margin: 16px 0; padding: 14px 16px; border-radius: 13px;
+  background: var(--accent-soft); border: 1px solid var(--hairline);
+}
+.estimation-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.estimation-lab { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.estimation-val { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.estimation-note { font-size: 11.5px; color: var(--text-3); margin-top: 7px; line-height: 1.5; }
+
+/* ── Magasins déclarés, côté console d'administration ──────────────────── */
+.declare { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.declare-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 11px; border: 1px solid var(--hairline); border-radius: 10px;
+  font-size: 12.5px; background: var(--bg);
+}
+.declare-nom { font-weight: 600; color: var(--text); margin-right: auto; }
+.declare-meta { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.declare-flag {
+  font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+  background: var(--warning-soft); color: var(--warning-text);
+}
+.declare-flag.ok { background: var(--success-soft); color: var(--success-text); }
 .center-link a:hover { color: var(--text); }
 
 /* Exigences du mot de passe, cochées à la frappe. */
