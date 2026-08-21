@@ -1,0 +1,349 @@
+'use client'
+
+// Page d'une entreprise, côté console Quantinvo.
+//
+// Tout le détail d'une entreprise vit ici : ses codes confidentiels, ses
+// magasins, l'affectation des superviseurs, son administrateur. La console
+// d'accueil (/admin) n'en montre qu'un aperçu chiffré — à cinquante
+// entreprises, dérouler chaque carte rendait la page illisible et lançait
+// deux requêtes par entreprise au chargement.
+//
+// Une seule requête ici : admin_company_detail rend l'ensemble.
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import Link from 'next/link'
+import { Logo } from '@/components/Logo'
+import { supabase } from '@/lib/supabaseClient'
+import { useAuthGuard, signOut } from '@/hooks/useAuthGuard'
+
+type Company = { id: string; name: string; join_code: string; created_at: string }
+type Store = { id: string; name: string; join_code: string; supervisor_ids: string[] }
+type Member = {
+  id: string; full_name: string | null; role: string | null
+  is_company_admin: boolean; email: string | null; is_active: boolean
+}
+type Invitation = {
+  id: string; email: string; role: string
+  first_name: string | null; last_name: string | null; created_at: string
+}
+type Detail = { company: Company; stores: Store[]; members: Member[]; invitations: Invitation[] }
+
+function frDate(s: string) {
+  return new Date(s).toLocaleDateString('fr-FR')
+}
+
+export default function AdminCompanyPage() {
+  const router = useRouter()
+  const params = useParams<{ companyId: string }>()
+  const companyId = params?.companyId
+  const guard = useAuthGuard('admin')
+  const [detail, setDetail] = useState<Detail | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [storeName, setStoreName] = useState('')
+  const [copie, setCopie] = useState<string | null>(null)
+
+  const charger = useCallback(async () => {
+    if (!companyId) return
+    const { data, error } = await supabase.rpc('admin_company_detail', { p_company_id: companyId })
+    if (error) { setErreur(error.message); return }
+    setDetail(data as Detail)
+  }, [companyId])
+
+  useEffect(() => {
+    if (guard.status !== 'ready') return
+    charger()
+  }, [guard.status, charger])
+
+  const supervisors = useMemo(
+    () => (detail?.members ?? []).filter((m) => m.role === 'supervisor'),
+    [detail],
+  )
+  const memberById = useMemo(() => {
+    const m: Record<string, Member> = {}
+    for (const x of detail?.members ?? []) m[x.id] = x
+    return m
+  }, [detail])
+
+  async function appel(fn: string, args: Record<string, unknown>) {
+    const { data, error } = await supabase.rpc(fn, args)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      return false
+    }
+    await charger()
+    return true
+  }
+
+  function copier(code: string) {
+    navigator.clipboard?.writeText(code)
+    setCopie(code)
+    setTimeout(() => setCopie(null), 2000)
+  }
+
+  async function ajouterMagasin(e: React.FormEvent) {
+    e.preventDefault()
+    const nom = storeName.trim()
+    if (!nom) return
+    if (await appel('admin_add_store', { p_company_id: companyId, p_name: nom })) setStoreName('')
+  }
+
+  async function supprimerMagasin(s: Store) {
+    if (!confirm(`Supprimer le magasin « ${s.name} » ?`)) return
+    appel('admin_delete_store', { p_store_id: s.id })
+  }
+
+  async function supprimerEntreprise() {
+    if (!detail) return
+    if (!confirm(`Supprimer définitivement « ${detail.company.name} » ?\n\nTous ses inventaires et données seront supprimés, et ses membres détachés de l'entreprise. Cette action est irréversible.`)) return
+    const { data, error } = await supabase.rpc('admin_delete_company', { p_company_id: companyId })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    router.replace('/admin')
+  }
+
+  if (guard.status !== 'ready') {
+    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+  }
+  if (erreur) {
+    return (
+      <div className="admin">
+        <p className="muted">Cette entreprise n&apos;est pas accessible.</p>
+        <Link href="/admin" className="btn btn-ghost" style={{ marginTop: 16 }}>← Retour à la console</Link>
+      </div>
+    )
+  }
+  if (!detail) {
+    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+  }
+
+  const admins = supervisors.filter((m) => m.is_company_admin)
+
+  return (
+    <div className="admin">
+      <div className="row">
+        <Link href="/" className="brand"><Logo size={28} /><span>Quantinvo</span></Link>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Link href="/admin" className="btn btn-ghost">← Console</Link>
+          <button className="btn btn-ghost" onClick={async () => { await signOut(); router.replace('/login') }}>Déconnexion</button>
+        </div>
+      </div>
+
+      <span className="pill">Entreprise</span>
+      <h1 className="admin-title">{detail.company.name}</h1>
+      <div className="code-row" style={{ marginTop: -4 }}>
+        Code : <code>{detail.company.join_code}</code>
+        <button className="link-btn" onClick={() => copier(detail.company.join_code)}>
+          {copie === detail.company.join_code ? 'Copié' : 'Copier'}
+        </button>
+        <span className="muted small" style={{ marginLeft: 10 }}>créée le {frDate(detail.company.created_at)}</span>
+      </div>
+
+      <section className="admin-section">
+        <h2>Administrateur d&apos;entreprise</h2>
+        <CompanyAdminBlock
+          companyId={detail.company.id}
+          admins={admins}
+          onChanged={charger}
+        />
+      </section>
+
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <h2>Magasins ({detail.stores.length})</h2>
+          <form className="inline-form" onSubmit={ajouterMagasin}>
+            <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Nouveau magasin" />
+            <button className="btn btn-ghost">Ajouter</button>
+          </form>
+        </div>
+
+        {detail.stores.length === 0 ? (
+          <p className="muted">Aucun magasin. La licence étant par magasin, une entreprise sans magasin n&apos;a pas encore d&apos;usage.</p>
+        ) : (
+          <div className="store-blocks">
+            {detail.stores.map((s) => {
+              const affectes = new Set(s.supervisor_ids)
+              const libres = supervisors.filter((m) => !affectes.has(m.id))
+              return (
+                <div className="store-block" key={s.id}>
+                  <div className="store-block-head">
+                    <div>
+                      <span className="store-block-name">{s.name}</span>
+                      <div className="code-row">
+                        Code magasin : <code>{s.join_code}</code>
+                        <button className="link-btn" onClick={() => copier(s.join_code)}>
+                          {copie === s.join_code ? 'Copié' : 'Copier'}
+                        </button>
+                      </div>
+                    </div>
+                    <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
+                  </div>
+                  <div className="store-sup">
+                    {s.supervisor_ids.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
+                    {s.supervisor_ids.map((uid) => (
+                      <span className="chip" key={uid}>
+                        {memberById[uid]?.full_name || 'Superviseur'}
+                        <button
+                          className="chip-x"
+                          onClick={() => appel('admin_unassign_supervisor', { p_store_id: s.id, p_user_id: uid })}
+                          aria-label="Retirer"
+                        >×</button>
+                      </span>
+                    ))}
+                    {libres.length > 0 && (
+                      <select
+                        className="store-sup-select"
+                        value=""
+                        onChange={(e) => { if (e.target.value) appel('admin_assign_supervisor', { p_store_id: s.id, p_user_id: e.target.value }) }}
+                      >
+                        <option value="">+ Affecter un superviseur</option>
+                        {libres.map((m) => (
+                          <option key={m.id} value={m.id}>{m.full_name || 'Sans nom'}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>Personnes ({detail.members.length})</h2>
+        {detail.members.length === 0 ? (
+          <p className="muted">Aucun compte rattaché à cette entreprise.</p>
+        ) : (
+          <div className="req-list">
+            {detail.members.map((m) => (
+              <div className="req-row" key={m.id}>
+                <div>
+                  <div className="req-name">
+                    {m.full_name || 'Sans nom'}
+                    {m.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
+                    {!m.is_active && (
+                      <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
+                        <span className="dash-dot" />Mot de passe à créer
+                      </span>
+                    )}
+                  </div>
+                  <div className="muted small">
+                    {m.email} · {m.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {detail.invitations.length > 0 && (
+        <section className="admin-section">
+          <h2>Invitations en cours ({detail.invitations.length})</h2>
+          <div className="req-list">
+            {detail.invitations.map((i) => (
+              <div className="req-row" key={i.id}>
+                <div>
+                  <div className="req-name">
+                    {i.first_name} {i.last_name}{' '}
+                    <span className="pill">
+                      {i.role === 'company_admin' ? 'Admin' : i.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
+                    </span>
+                  </div>
+                  <div className="muted small">{i.email} · envoyée le {frDate(i.created_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="dash-danger">
+        <div className="dash-danger-row">
+          <div className="dash-danger-text">
+            <strong>Supprimer cette entreprise</strong>
+            <p className="muted small" style={{ marginTop: 4 }}>
+              Ses inventaires et ses données seront supprimés, ses membres détachés. Irréversible.
+            </p>
+          </div>
+          <button className="btn btn-danger" onClick={supprimerEntreprise}>Supprimer l&apos;entreprise</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Nomination de l'administrateur d'entreprise — le client qui gère ensuite
+ * lui-même ses superviseurs depuis « Mon équipe ».
+ *
+ * Deux issues côté serveur : un compte de l'entreprise existe pour cette
+ * adresse et il est promu sur-le-champ ; sinon l'invitation part par e-mail
+ * (edge invite-company-admin, garde is_admin() revérifiée en base).
+ */
+function CompanyAdminBlock({
+  companyId, admins, onChanged,
+}: {
+  companyId: string
+  admins: Member[]
+  onChanged: () => void
+}) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function inviter(e: React.FormEvent) {
+    e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke('invite-company-admin', {
+      body: { companyId, email: email.trim(), firstName: firstName.trim(), lastName: lastName.trim() },
+    })
+    setBusy(false)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
+      return
+    }
+    alert(data.mode === 'promoted'
+      ? `${data.full_name || 'Ce compte'} est maintenant administrateur de l'entreprise.`
+      : `Invitation envoyée. ${data.email} reçoit un e-mail pour créer son mot de passe.`)
+    setFirstName(''); setLastName(''); setEmail('')
+    onChanged()
+  }
+
+  async function revoquer(a: Member) {
+    if (!confirm(`Retirer le rôle d'administrateur d'entreprise à ${a.full_name || 'ce compte'}${a.email ? ` (${a.email})` : ''} ?\n\nSon compte superviseur et ses magasins sont conservés.`)) return
+    const { data, error } = await supabase.rpc('admin_revoke_company_admin', { p_user: a.id })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    onChanged()
+  }
+
+  return (
+    <div className="panel" style={{ marginTop: 0 }}>
+      <div className="chips" style={{ marginBottom: admins.length ? 14 : 10 }}>
+        {admins.length === 0 && (
+          <span className="muted small">Aucun administrateur — l&apos;entreprise est gérée par Quantinvo.</span>
+        )}
+        {admins.map((a) => (
+          <span className="chip" key={a.id}>
+            <span>
+              {a.full_name || 'Sans nom'}
+              {a.email && <span className="muted small" style={{ marginLeft: 6 }}>{a.email}</span>}
+            </span>
+            <button className="chip-x" onClick={() => revoquer(a)} aria-label="Révoquer">×</button>
+          </span>
+        ))}
+      </div>
+      <form className="inline-form" onSubmit={inviter} style={{ flexWrap: 'wrap' }}>
+        <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" style={{ minWidth: 120 }} />
+        <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" style={{ minWidth: 120 }} />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" type="email" style={{ minWidth: 200 }} />
+        <button className="btn btn-ghost" disabled={busy || !email.trim()}>Nommer administrateur</button>
+      </form>
+      <p className="muted small" style={{ marginTop: 10 }}>
+        Si un compte de l&apos;entreprise existe déjà pour cette adresse, il est promu directement — sinon la personne reçoit une invitation.
+      </p>
+    </div>
+  )
+}

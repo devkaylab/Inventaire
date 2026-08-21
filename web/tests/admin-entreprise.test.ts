@@ -15,7 +15,9 @@ const m2 = lire('../../supabase/migrations/20260820190002_invitations_avec_role.
 const m3 = lire('../../supabase/migrations/20260820190003_fonctions_admin_entreprise.sql')
 const m4 = lire('../../supabase/migrations/20260820190004_admin_gere_admin_entreprise.sql')
 const pageEquipe = lire('../app/equipe/page.tsx')
-const pageAdmin = lire('../app/admin/page.tsx')
+// Le bloc de nomination a suivi le détail de l'entreprise sur sa fiche
+// (découpage de la console du 21 août 2026).
+const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
 
 describe('le drapeau et sa garde (migration 1)', () => {
   it('le verrou anti-élévation fige le nouveau drapeau', () => {
@@ -126,9 +128,9 @@ describe('écrans', () => {
     expect(pageEquipe).toContain('double')
   })
 
-  it('/admin nomme par l’edge function, jamais en direct', () => {
-    expect(pageAdmin).toContain("functions.invoke('invite-company-admin'")
-    expect(pageAdmin).toContain("rpc('admin_revoke_company_admin'")
+  it('la fiche entreprise nomme par l’edge function, jamais en direct', () => {
+    expect(ficheEntreprise).toContain("functions.invoke('invite-company-admin'")
+    expect(ficheEntreprise).toContain("rpc('admin_revoke_company_admin'")
   })
 })
 
