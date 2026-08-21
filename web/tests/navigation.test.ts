@@ -39,10 +39,16 @@ describe('la barre de navigation', () => {
     expect(shell).toContain('retour au site')
   })
 
-  it('porte le nom de la personne et son entreprise, ensemble', () => {
+  it('porte le nom, l’entreprise ET le rôle, ensemble', () => {
+    // « Entreprise C » seul ne dit pas ce qu'on y fait ; le rôle seul ne dit
+    // pas où. Les deux se lisent sur la même ligne, sous le nom.
     expect(shell).toContain('who-name')
     expect(shell).toContain('who-co')
     expect(shell).toContain('companyName')
+    expect(shell).toContain('roleCourt')
+    expect(shell).toContain('appartenance')
+    // L'administrateur Quantinvo n'a pas d'entreprise : c'est Quantinvo même.
+    expect(shell).toContain("'Quantinvo'")
   })
 
   it('range le compte et la déconnexion sous l’avatar, pas dans les onglets', () => {

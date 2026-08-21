@@ -95,6 +95,16 @@ export function AppShell({
       ? 'Administrateur d’entreprise'
       : profile.role === 'supervisor' ? 'Superviseur' : 'Compteur'
 
+  // Sous le nom : à qui on appartient, et à quel titre. Les deux vont
+  // ensemble — « Entreprise C » seul ne dit pas ce qu'on y fait, et le rôle
+  // seul ne dit pas où. L'administrateur Quantinvo n'a pas d'entreprise :
+  // c'est Quantinvo même.
+  const roleCourt = profile.is_admin || profile.is_company_admin
+    ? 'Administrateur'
+    : profile.role === 'supervisor' ? 'Superviseur' : 'Compteur'
+  const appartenance = `${companyName ?? (profile.is_admin ? 'Quantinvo' : '')} · ${roleCourt}`
+    .replace(/^ · /, '')
+
   async function partir() {
     await signOut()
     router.replace('/login')
@@ -141,7 +151,7 @@ export function AppShell({
             >
               <span className="who-text">
                 <span className="who-name">{profile.full_name || 'Mon compte'}</span>
-                {companyName && <span className="who-co">{companyName}</span>}
+                <span className="who-co">{appartenance}</span>
               </span>
               <span className="who-avatar">{initiales(profile.full_name)}</span>
               <span className="who-caret" aria-hidden="true">▾</span>
