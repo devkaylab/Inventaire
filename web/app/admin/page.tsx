@@ -7,9 +7,10 @@
 // ce qui menace ce chiffre — un client sans magasin ne paie rien, un magasin
 // qui ne compte plus est un client qui décroche.
 //
-// Le revenu n'est pas affiché : aucun prix n'est enregistré en base. Le
-// montrer supposerait un tarif par magasin — une décision à prendre, pas un
-// chiffre à inventer.
+// Le revenu vient de la base, jamais d'une constante écrite ici : chaque
+// magasin porte son tarif annuel (stores.annual_price_cents). Ceux qui n'en
+// ont pas encore sont estimés au panier moyen, et la carte le dit — un
+// chiffre approché doit s'annoncer comme tel.
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -21,7 +22,11 @@ type CompanyRef = { id: string; name: string }
 type IdleStore = { id: string; name: string; company_id: string; company_name: string; days: number | null }
 type Overview = {
   companies: number
+  companies_new_month: number
   stores: number
+  arr_cents: number
+  priced_stores: number
+  default_price_cents: number
   active_stores_month: number
   sessions_month: number
   counts_month: number
@@ -33,6 +38,9 @@ type Overview = {
 }
 
 const nb = (n: number) => n.toLocaleString('fr-FR')
+/** Un montant se lit en euros entiers : les centimes n'aident personne ici. */
+const euros = (cents: number) =>
+  Math.round(cents / 100).toLocaleString('fr-FR') + ' €'
 
 export default function AdminPage() {
   const guard = useAuthGuard('admin')
@@ -73,24 +81,27 @@ export default function AdminPage() {
             <div className="dash-kpi">
               <div className="dash-kpi-value">{nb(v.companies)}</div>
               <div className="dash-kpi-label">Entreprises clientes</div>
+              {v.companies_new_month > 0 && (
+                <div className="kpi-note">+{nb(v.companies_new_month)} ce mois-ci</div>
+              )}
             </div>
             <div className="dash-kpi">
               <div className="dash-kpi-value">{nb(v.stores)}</div>
               <div className="dash-kpi-label">Magasins sous licence</div>
-              <div className="kpi-note">L&apos;unité de facturation</div>
+              <div className="kpi-note">
+                L&apos;unité de facturation
+                {v.stores > 0 && ` · ${nb(v.active_stores_month)} ${v.active_stores_month > 1 ? 'ont' : 'a'} compté ce mois`}
+              </div>
             </div>
             <div className="dash-kpi">
-              <div className="dash-kpi-value">
-                {nb(v.active_stores_month)}
-                <span className="dash-kpi-sur"> / {nb(v.stores)}</span>
-              </div>
-              <div className="dash-kpi-label">Magasins actifs ce mois</div>
+              <div className="dash-kpi-value dash-kpi-argent">{euros(v.arr_cents)}</div>
+              <div className="dash-kpi-label">Revenu annuel récurrent</div>
               <div className="kpi-note">
                 {v.stores === 0
                   ? 'Aucun magasin sous licence'
-                  : v.active_stores_month === v.stores
-                    ? 'Tout le parc a compté'
-                    : `${nb(v.stores - v.active_stores_month)} n’${v.stores - v.active_stores_month > 1 ? 'ont' : 'a'} pas compté`}
+                  : v.priced_stores === v.stores
+                    ? `${euros(Math.round(v.arr_cents / v.stores))} en moyenne par magasin`
+                    : `${nb(v.stores - v.priced_stores)} magasin${v.stores - v.priced_stores > 1 ? 's' : ''} estimé${v.stores - v.priced_stores > 1 ? 's' : ''} à ${euros(v.default_price_cents)}`}
               </div>
             </div>
           </div>
@@ -145,16 +156,16 @@ export default function AdminPage() {
           <div className="dash-sub">Usage du mois</div>
           <div className="dash-kpis" style={{ marginTop: 0 }}>
             <div className="dash-kpi">
+              <div className="dash-kpi-value">{nb(v.sessions_month)}</div>
+              <div className="dash-kpi-label">Inventaires lancés</div>
+            </div>
+            <div className="dash-kpi">
               <div className="dash-kpi-value">{nb(v.counts_month)}</div>
               <div className="dash-kpi-label">Articles comptés</div>
             </div>
             <div className="dash-kpi">
               <div className="dash-kpi-value">{nb(v.active_people_month)}</div>
               <div className="dash-kpi-label">Personnes actives</div>
-            </div>
-            <div className="dash-kpi">
-              <div className="dash-kpi-value">{nb(v.sessions_month)}</div>
-              <div className="dash-kpi-label">Inventaires lancés</div>
             </div>
           </div>
         </>

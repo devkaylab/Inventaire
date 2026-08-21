@@ -104,6 +104,31 @@ describe('« Mon compte » ne parle plus que de la personne', () => {
   })
 })
 
+describe('le tarif des magasins', () => {
+  const fiche = lire('../app/admin/entreprise/[companyId]/page.tsx')
+  const migration = lire('../../supabase/migrations/20260821190001_tarif_par_magasin_et_revenu.sql')
+
+  it('se pose par magasin, pas par entreprise', () => {
+    // La licence est par magasin, au volume de stock : le tarif appartient
+    // au magasin.
+    expect(migration).toContain('alter table public.stores')
+    expect(migration).toContain('annual_price_cents')
+  })
+
+  it('se modifie depuis la fiche de l’entreprise, par une RPC gardée', () => {
+    expect(fiche).toContain("rpc('admin_set_store_price'")
+    expect(migration).toMatch(/revoke all on function public\.admin_set_store_price\(uuid, integer\) from public, anon/)
+  })
+
+  it('journalise chaque changement de tarif', () => {
+    // C'est de l'argent : la trace suit la même règle que les autres
+    // actions d'administration.
+    const corps = migration.split('function public.admin_set_store_price(')[1]?.split('$$;')[0] ?? ''
+    expect(corps).toContain('log_admin_action')
+    expect(corps).toContain('is_admin()')
+  })
+})
+
 describe('les écrans déplacés', () => {
   it('les magasins et leurs codes ont leur page', () => {
     const magasins = lire('../app/magasins/page.tsx')
@@ -131,22 +156,33 @@ describe('le tableau de bord Quantinvo', () => {
   it('n’affiche pas deux fois le même chiffre', () => {
     // « Inventaires ce mois-ci » en tête et « Inventaires lancés » plus bas
     // donnaient le même nombre : c'est le doublon que la refonte combat.
+    // Une occurrence pour le type, une pour le rendu — pas davantage.
     const occurrences = (tdb.match(/sessions_month/g) ?? []).length
-    expect(occurrences, 'sessions_month ne doit être affiché qu’une fois').toBe(2) // type + rendu
+    expect(occurrences, 'sessions_month ne doit être rendu qu’une fois').toBe(2)
+    // Les magasins actifs restent visibles, en note de « Magasins sous
+    // licence » plutôt qu'en tuile séparée : c'est la même famille d'idée.
     expect(tdb).toContain('active_stores_month')
-    expect(tdb).toContain('Magasins actifs ce mois')
+    expect(tdb).toContain('compté ce mois')
   })
 
-  it('ne montre aucun montant tant qu’aucun prix n’existe en base', () => {
-    // La maquette affichait un revenu calculé de tête. Sans tarif enregistré,
-    // l'afficher reviendrait à l'inventer à chaque chargement.
-    // On n'examine que le code, pas les commentaires — ceux-ci expliquent
-    // justement pourquoi le montant est absent.
+  it('ne calcule aucun montant dans la page : il vient de la base', () => {
+    // Le revenu est affiché (décision du 21 août 2026), mais il doit sortir
+    // de stores.annual_price_cents via admin_business_overview — jamais d'un
+    // tarif écrit en dur ici, qui mentirait dès le premier client réel.
     const codeSeul = tdb
       .split('\n')
       .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
       .join('\n')
-    expect(codeSeul).not.toMatch(/€/)
-    expect(codeSeul).not.toMatch(/revenu/i)
+    expect(tdb).toContain('arr_cents')
+    expect(codeSeul).not.toMatch(/2\s?200/)
+    expect(codeSeul).not.toMatch(/220000/)
+    expect(codeSeul).not.toMatch(/8\s?800/)
+  })
+
+  it('annonce ce qui n’est qu’estimé', () => {
+    // Un magasin sans tarif négocié compte pour le panier moyen : la carte
+    // doit le dire, sinon le chiffre passe pour exact.
+    expect(tdb).toContain('priced_stores')
+    expect(tdb).toContain('estimé')
   })
 })

@@ -18,7 +18,11 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
-type Store = { id: string; name: string; join_code: string; supervisor_ids: string[] }
+type Store = {
+  id: string; name: string; join_code: string
+  annual_price_cents: number | null
+  supervisor_ids: string[]
+}
 type Member = {
   id: string; full_name: string | null; role: string | null
   is_company_admin: boolean; email: string | null; is_active: boolean
@@ -173,6 +177,7 @@ export default function AdminCompanyPage() {
                     </div>
                     <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
                   </div>
+                  <TarifMagasin store={s} onSaved={charger} />
                   <div className="store-sup">
                     {s.supervisor_ids.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
                     {s.supervisor_ids.map((uid) => (
@@ -340,6 +345,70 @@ function CompanyAdminBlock({
       <p className="muted small" style={{ marginTop: 10 }}>
         Si un compte de l&apos;entreprise existe déjà pour cette adresse, il est promu directement — sinon la personne reçoit une invitation.
       </p>
+    </div>
+  )
+}
+
+/**
+ * Tarif annuel d'un magasin — la licence est par magasin, au volume de
+ * stock. Tant qu'il n'est pas posé, le tableau de bord estime ce magasin au
+ * panier moyen et le signale : renseigner le vrai chiffre rend le revenu
+ * exact.
+ */
+function TarifMagasin({ store, onSaved }: { store: Store; onSaved: () => void }) {
+  const initial = store.annual_price_cents === null ? '' : String(Math.round(store.annual_price_cents / 100))
+  const [valeur, setValeur] = useState(initial)
+  const [busy, setBusy] = useState(false)
+
+  // Le champ suit la valeur du serveur quand elle change (rechargement).
+  useEffect(() => { setValeur(initial) }, [initial])
+
+  const modifie = valeur.trim() !== initial
+
+  async function enregistrer() {
+    const brut = valeur.trim()
+    let cents: number | null = null
+    if (brut !== '') {
+      const euros = Number(brut.replace(/\s/g, '').replace(',', '.'))
+      if (!Number.isFinite(euros) || euros < 0) {
+        alert('Indiquez un montant en euros, par exemple 2400.')
+        return
+      }
+      cents = Math.round(euros * 100)
+    }
+    setBusy(true)
+    const { data, error } = await supabase.rpc('admin_set_store_price', {
+      p_store_id: store.id, p_price_cents: cents,
+    })
+    setBusy(false)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <div className="store-sup" style={{ marginTop: 10, alignItems: 'center' }}>
+      <label className="muted small" htmlFor={`tarif-${store.id}`}>Licence annuelle</label>
+      <input
+        id={`tarif-${store.id}`}
+        className="dash-audit-input"
+        inputMode="numeric"
+        value={valeur}
+        placeholder="Non renseignée"
+        onChange={(e) => setValeur(e.target.value)}
+        aria-label={`Licence annuelle de ${store.name}, en euros`}
+      />
+      <span className="muted small">€ / an</span>
+      {modifie && (
+        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={enregistrer}>
+          {busy ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+      )}
+      {!modifie && store.annual_price_cents === null && (
+        <span className="muted small">Estimé au panier moyen tant qu&apos;il est vide</span>
+      )}
     </div>
   )
 }
