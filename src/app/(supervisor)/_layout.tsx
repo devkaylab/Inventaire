@@ -30,20 +30,15 @@ export default function SupervisorLayout() {
 
   const actionsRight = () => <HeaderActions />
   const actionsProfileRight = () => (
-    <HeaderActions onProfile={() => router.push('/(supervisor)/account')} />
+    <HeaderActions onProfile={() => router.push('/(compte)/account')} />
   )
 
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Sessions', ...headerBase, headerRight: actionsProfileRight }} />
-      <Stack.Screen name="account" options={{ title: 'Mon compte', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="stores" options={{ title: 'Magasins', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="team" options={{ title: 'Mon équipe', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="tools" options={{ title: 'Boîte à outils', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="password" options={{ title: 'Mot de passe', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="mfa" options={{ title: 'Double authentification', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="my-data" options={{ title: 'Mes données', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="name" options={{ title: 'Mon nom', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="new-session" options={{ title: 'Nouvelle session', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Session', ...headerBase, headerRight: actionsProfileRight }} />

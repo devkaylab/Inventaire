@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, StyleSheet, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyDeletionRequest, requestAccountDeletion } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
@@ -9,10 +9,11 @@ import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 /**
  * Demande de suppression de compte.
  *
- * La logique est dans le hook, l'apparence dans qui l'appelle : l'écran
- * compteur garde son lien discret, « Mon compte » l'affiche comme une ligne de
- * menu au milieu des autres. Le geste, lui, est le même des deux côtés —
- * c'est ce qui évite deux textes de confirmation qui divergent.
+ * La logique est dans le hook, l'apparence dans qui l'appelle : « Mon compte »
+ * l'affiche comme une ligne de menu au milieu des autres, en rouge et en
+ * dernier. Le lien souligné qui traînait en pied de l'écran compteur a
+ * disparu avec le reste — le compte se gère au même endroit pour tout le
+ * monde.
  */
 export function useAccountDeletion() {
   const queryClient = useQueryClient()
@@ -24,6 +25,8 @@ export function useAccountDeletion() {
   })
 
   async function submit() {
+    // Deux appuis rapprochés sur la ligne de menu enverraient deux demandes.
+    if (loading) return
     setLoading(true)
     try {
       const res = await requestAccountDeletion()
@@ -57,33 +60,6 @@ export function useAccountDeletion() {
   return { pending: !!pending, loading, confirm }
 }
 
-/** Lien discret — écran compteur. */
-export function DeleteAccountButton() {
-  const theme = useTheme()
-  const styles = makeStyles(theme)
-  const { pending, loading, confirm } = useAccountDeletion()
-
-  if (pending) {
-    return (
-      <View style={styles.pendingBox}>
-        <Text style={styles.pendingText}>
-          Suppression de compte demandée — en attente de traitement par l&apos;administrateur.
-        </Text>
-      </View>
-    )
-  }
-
-  return (
-    <Pressable style={styles.btn} onPress={confirm} disabled={loading} hitSlop={8}>
-      {loading ? (
-        <ActivityIndicator color={theme.danger} />
-      ) : (
-        <Text style={styles.btnText}>Supprimer mon compte</Text>
-      )}
-    </Pressable>
-  )
-}
-
 /** Bandeau « demande en cours », à poser sous une ligne de menu. */
 export function DeletionPendingNote() {
   const styles = makeStyles(useTheme())
@@ -98,8 +74,6 @@ export function DeletionPendingNote() {
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
-    btn: { alignItems: 'center', paddingVertical: Spacing.md },
-    btnText: { color: t.danger, fontSize: 14, fontFamily: Font.medium, textDecorationLine: 'underline' },
     pendingBox: { backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.sm },
     pendingText: { color: t.warning, fontSize: 13, fontFamily: Font.medium, lineHeight: 18, textAlign: 'center' },
   })

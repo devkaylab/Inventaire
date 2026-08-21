@@ -1,4 +1,4 @@
-import { Redirect, Stack } from 'expo-router'
+import { Redirect, router, Stack } from 'expo-router'
 import { useAuth } from '@/lib/auth'
 import { ActivityIndicator, View } from 'react-native'
 import { useTheme } from '@/lib/theme'
@@ -27,10 +27,16 @@ export default function EmployeeLayout() {
   }
 
   const actionsRight = () => <HeaderActions />
+  // Le compteur avait « Déconnexion » posé en haut de son écran d'accueil et
+  // rien d'autre. Il a le même bouton profil que le superviseur : son compte
+  // se gère au même endroit, avec les mêmes gestes.
+  const actionsProfileRight = () => (
+    <HeaderActions onProfile={() => router.push('/(compte)/account')} />
+  )
 
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: 'Rejoindre une session', ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="index" options={{ title: 'Rejoindre une session', ...headerBase, headerRight: actionsProfileRight }} />
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Ma progression', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/counted" options={{ title: "Balises comptées", ...headerBase, headerRight: actionsRight }} />

@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { getMyCompany } from '@/lib/queries'
 import { verifiedTotpFactor } from '@/lib/mfa'
-import { DeletionPendingNote, useAccountDeletion } from '@/components/DeleteAccountButton'
+import { DeletionPendingNote, useAccountDeletion } from '@/components/AccountDeletion'
 import { MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
@@ -23,6 +23,12 @@ import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
  * Ce qui reste ici : qui on est, et des lignes vers le reste. Les inventaires
  * n'y figurent plus — l'écran Sessions les liste déjà, c'était le doublon que
  * le site avait lui aussi retiré de « Mon compte ».
+ *
+ * **Un seul écran pour tous les rôles**, comme /account sur le site. Seul le
+ * bloc « Mon travail » dépend du rôle : un compteur n'a ni magasins, ni
+ * équipe, ni balises à imprimer. Sa sécurité et ses données, en revanche, sont
+ * les mêmes que celles de n'importe qui — il n'y avait aucune raison qu'elles
+ * restent réservées aux superviseurs.
  */
 
 function initials(name: string) {
@@ -54,7 +60,10 @@ export default function AccountScreen() {
   useFocusEffect(relireMfa)
 
   const email = session?.user.email ?? '—'
-  const role = profile?.is_company_admin ? 'Administrateur' : 'Superviseur'
+  const superviseur = profile?.role === 'supervisor'
+  const role = profile?.is_company_admin
+    ? 'Administrateur'
+    : superviseur ? 'Superviseur' : 'Compteur'
 
   function confirmSignOut() {
     Alert.alert('Se déconnecter', 'Vous devrez ressaisir votre mot de passe.', [
@@ -84,28 +93,32 @@ export default function AccountScreen() {
           )}
         </View>
 
-        <SectionLabel>Mon travail</SectionLabel>
-        <MenuCard>
-          <MenuRow label="Mes magasins" onPress={() => router.push('/(supervisor)/stores')} />
-          <MenuRow label="Mon équipe" onPress={() => router.push('/(supervisor)/team')} />
-          <MenuRow label="Boîte à outils" onPress={() => router.push('/(supervisor)/tools')} last />
-        </MenuCard>
+        {superviseur && (
+          <>
+            <SectionLabel>Mon travail</SectionLabel>
+            <MenuCard>
+              <MenuRow label="Mes magasins" onPress={() => router.push('/(supervisor)/stores')} />
+              <MenuRow label="Mon équipe" onPress={() => router.push('/(supervisor)/team')} />
+              <MenuRow label="Boîte à outils" onPress={() => router.push('/(supervisor)/tools')} last />
+            </MenuCard>
+          </>
+        )}
 
         <SectionLabel>Ma sécurité</SectionLabel>
         <MenuCard>
-          <MenuRow label="Mot de passe" onPress={() => router.push('/(supervisor)/password')} />
+          <MenuRow label="Mot de passe" onPress={() => router.push('/(compte)/password')} />
           <MenuRow
             label="Double authentification"
             value={mfaOn === null ? undefined : mfaOn ? 'Activée' : 'Non activée'}
-            onPress={() => router.push('/(supervisor)/mfa')}
+            onPress={() => router.push('/(compte)/mfa')}
             last
           />
         </MenuCard>
 
         <SectionLabel>Mon compte</SectionLabel>
         <MenuCard>
-          <MenuRow label="Modifier mon nom" onPress={() => router.push('/(supervisor)/name')} />
-          <MenuRow label="Télécharger mes données" onPress={() => router.push('/(supervisor)/my-data')} />
+          <MenuRow label="Modifier mon nom" onPress={() => router.push('/(compte)/name')} />
+          <MenuRow label="Télécharger mes données" onPress={() => router.push('/(compte)/my-data')} />
           <MenuRow label="Se déconnecter" onPress={confirmSignOut} />
           {!suppression.pending && (
             <MenuRow label="Supprimer mon compte" onPress={suppression.confirm} danger last />

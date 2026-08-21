@@ -18,7 +18,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { joinSession } from '@/lib/queries'
 import { getSessions } from '@/lib/offlineSync'
-import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -26,7 +25,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
 export default function EmployeeHomeScreen() {
-  const { signOut, profile } = useAuth()
+  const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const [inventoryNumber, setInventoryNumber] = useState('')
@@ -71,9 +70,6 @@ export default function EmployeeHomeScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.topBar}>
         <Text style={styles.welcome}>Bonjour, <Text style={styles.welcomeName}>{profile?.full_name}</Text></Text>
-        <Pressable onPress={signOut}>
-          <Text style={styles.signOut}>Déconnexion</Text>
-        </Pressable>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -136,9 +132,6 @@ export default function EmployeeHomeScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.footer}>
-            <DeleteAccountButton />
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -151,7 +144,6 @@ function makeStyles(t: Theme) {
     topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, backgroundColor: t.surface, borderBottomWidth: 1, borderBottomColor: t.hairline },
     welcome: { fontSize: 14, color: t.textSecondary, fontFamily: Font.regular },
     welcomeName: { color: t.textPrimary, fontFamily: Font.semibold },
-    signOut: { fontSize: 14, color: t.danger, fontFamily: Font.medium },
     body: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxl },
     sectionLabel: { fontSize: 12, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs },
     sessionCard: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.xs, ...t.shadowCard },
@@ -170,6 +162,5 @@ function makeStyles(t: Theme) {
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
-    footer: { paddingTop: Spacing.sm },
   })
 }

@@ -235,10 +235,12 @@ autres.
 
 Ce qui a bougé :
 
-- `(supervisor)/profile.tsx` **supprimé**, remplacé par `account.tsx` ;
-- écrans nés de son démembrement : `stores.tsx` (Magasins), `team.tsx` (Mon
-  équipe), `tools.tsx` (Boîte à outils) — mêmes noms que les onglets du site ;
-- écrans de compte : `password.tsx`, `mfa.tsx`, `my-data.tsx`, `name.tsx` ;
+- `(supervisor)/profile.tsx` **supprimé**, remplacé par `(compte)/account.tsx` ;
+- écrans nés de son démembrement, dans `(supervisor)` car ils sont le travail
+  du superviseur : `stores.tsx` (Magasins), `team.tsx` (Mon équipe),
+  `tools.tsx` (Boîte à outils) — mêmes noms que les onglets du site ;
+- **groupe `(compte)`** : `account.tsx`, `password.tsx`, `mfa.tsx`,
+  `my-data.tsx`, `name.tsx`, communs à tous les rôles (voir plus bas) ;
 - **« Mes inventaires » retiré** : l'écran Sessions les liste déjà. C'est le
   doublon que le site avait lui aussi sorti de `/account`.
 - `MenuList.tsx` (`MenuCard`, `MenuRow`, `SectionLabel`, `ChevronIcon`) : le
@@ -290,9 +292,28 @@ Les trois fonctions n'existaient que sur le site. Elles sont dans l'app.
   Ouvrir l'activation à tous les superviseurs rend ce dépannage plus fréquent :
   l'écran le dit avant l'activation, dans un encadré, plutôt qu'après la perte.
 
-Reste sur le site, faute d'équivalent mobile : rien. L'écran compteur, lui,
-n'a pas été touché — il garde son lien « Supprimer mon compte » et n'a ni mot
-de passe, ni double authentification, ni export. À porter si le besoin vient.
+## Le compte est le même pour tous les rôles — groupe `(compte)`
+
+Les écrans de compte ont d'abord été écrits sous `(supervisor)`, ce qui les
+rendait **inatteignables pour un compteur** : la garde de ce groupe renvoie
+vers la connexion tout ce qui n'est pas superviseur. Or changer son mot de
+passe, activer sa double authentification ou récupérer ses données ne dépend
+pas du rôle. Ils vivent donc dans `(compte)`, dont la seule condition d'entrée
+est d'avoir un profil — et une session complète (`mfaRequired` y est refusé,
+sinon on pourrait retirer son second facteur à moitié authentifié).
+
+`(compte)/account.tsx` est **un seul écran pour tout le monde**, comme
+`/account` sur le site : seul le bloc « Mon travail » (Magasins, Mon équipe,
+Boîte à outils) est conditionné au rôle superviseur. Les deux layouts,
+`(supervisor)` et `(employee)`, ouvrent le même écran par le bouton profil du
+bandeau.
+
+Conséquence côté compteur : « Déconnexion » posé en haut de son accueil et le
+lien souligné « Supprimer mon compte » en pied ont disparu — les deux sont
+dans « Mon compte », comme pour le superviseur. `DeleteAccountButton` (le
+lien) n'avait plus d'appelant : le fichier est devenu
+`components/AccountDeletion.tsx`, qui n'expose plus que `useAccountDeletion`
+et `DeletionPendingNote`.
 
 Maquette de référence :
 https://claude.ai/code/artifact/032d3ee8-ee0f-4b32-9b21-c6a5d278356c

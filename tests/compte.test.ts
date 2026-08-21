@@ -15,23 +15,49 @@ const lire = (p: string) => readFileSync(src(p), 'utf8')
 describe('découpage de Mon compte', () => {
   it('l’ancien écran carrefour n’existe plus', () => {
     expect(existsSync(src('app/(supervisor)/profile.tsx'))).toBe(false)
-    expect(existsSync(src('app/(supervisor)/account.tsx'))).toBe(true)
+    expect(existsSync(src('app/(compte)/account.tsx'))).toBe(true)
   })
 
-  it('chaque bloc sorti du profil a son écran', () => {
-    for (const ecran of ['stores', 'team', 'tools', 'password', 'mfa', 'my-data', 'name']) {
+  it('le travail du superviseur a ses écrans, à lui', () => {
+    for (const ecran of ['stores', 'team', 'tools']) {
       expect(existsSync(src(`app/(supervisor)/${ecran}.tsx`))).toBe(true)
     }
   })
 
-  it('le bouton profil du bandeau ouvre Mon compte', () => {
-    const layout = lire('app/(supervisor)/_layout.tsx')
-    expect(layout).toContain("router.push('/(supervisor)/account')")
-    expect(layout).not.toContain("/(supervisor)/profile")
+  it('les écrans du compte sont communs à tous les rôles', () => {
+    // Sous `(supervisor)`, la garde du groupe renvoyait un compteur vers la
+    // connexion : il ne pouvait ni changer son mot de passe, ni récupérer ses
+    // données. Ils vivent dans `(compte)`, dont la seule condition est d'avoir
+    // un profil.
+    for (const ecran of ['account', 'password', 'mfa', 'my-data', 'name']) {
+      expect(existsSync(src(`app/(compte)/${ecran}.tsx`))).toBe(true)
+      expect(existsSync(src(`app/(supervisor)/${ecran}.tsx`))).toBe(false)
+    }
+    const layout = lire('app/(compte)/_layout.tsx')
+    expect(layout).not.toContain("role !== 'supervisor'")
+    expect(layout).toContain('mfaRequired')
+  })
+
+  it('les deux rôles ouvrent Mon compte par le bouton du bandeau', () => {
+    for (const groupe of ['(supervisor)', '(employee)']) {
+      expect(lire(`app/${groupe}/_layout.tsx`)).toContain("router.push('/(compte)/account')")
+    }
+  })
+
+  it('le compteur ne garde ni déconnexion ni suppression sur son accueil', () => {
+    const accueil = lire('app/(employee)/index.tsx')
+    expect(accueil).not.toContain('Déconnexion')
+    expect(accueil).not.toContain('DeleteAccountButton')
+  })
+
+  it('le bloc « Mon travail » ne s’affiche que pour un superviseur', () => {
+    const compte = lire('app/(compte)/account.tsx')
+    expect(compte).toContain("profile?.role === 'supervisor'")
+    expect(compte).toMatch(/\{superviseur && \(/)
   })
 
   it('Mon compte ne liste plus les inventaires — l’écran Sessions le fait déjà', () => {
-    const compte = lire('app/(supervisor)/account.tsx')
+    const compte = lire('app/(compte)/account.tsx')
     expect(compte).not.toContain('getMySessions')
   })
 
