@@ -521,7 +521,7 @@ fonction `admin_*`. **Si un écran mobile devait un jour en appeler une**, il
 faudrait d'abord y porter le parcours TOTP : sans lui, une session mobile est
 en `aal1` et serait refusée.
 
-## Expiration des sessions (préparé le 21 août 2026, **pas encore activé**)
+## Expiration des sessions (posée en console le 21 août 2026)
 
 Constat de départ : `auth.sessions.not_after` est vide partout, et une session
 de compteur ouverte le 18 juin vivait encore le 13 août. **Rien n'expire.** Un
@@ -537,13 +537,19 @@ pas accorder `aal2` côté client, donc sauter l'écran laisserait la session en
 `aal1` — les fonctions `admin_*` refuseraient, et pour un superviseur ce serait
 une protection de façade.
 
-**Le code est prêt, la console ne l'est pas.** Réglage à poser dans
-Authentication → Sessions (offert à partir du plan Pro — l'organisation y est).
-**Les deux champs sont en heures**, pas en jours :
+**Réglage en place**, Authentication → Sessions (offert à partir du plan Pro —
+l'organisation y est). **Les deux champs sont en heures**, pas en jours :
 
 - *Inactivity timeout* — la session meurt faute d'usage → **720 h (30 jours)** ;
 - *Time-box user sessions* — plafond absolu depuis la connexion →
   **4320 h (180 jours)**.
+
+⚠️ **Ce réglage ne se relit pas depuis la base.** Le plafond n'est pas
+matérialisé dans `auth.sessions` (`not_after` reste vide) : GoTrue compare
+`created_at + plafond` et `refreshed_at + inactivité` au moment du
+rafraîchissement. Seule l'API de gestion, ou le panneau de la console, dit ce
+qui est configuré. En cas de doute, aller le lire — ne pas conclure de
+`not_after` vide que rien n'est posé.
 
 Qui compte régulièrement n'est jamais dérangé ; qui n'a pas ouvert l'app depuis
 un mois ressaisit son mot de passe une fois.
