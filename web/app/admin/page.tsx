@@ -190,7 +190,7 @@ export default function AdminPage() {
   )
 }
 
-type Supervisor = { id: string; full_name: string | null; role: string | null; is_company_admin: boolean | null }
+type Supervisor = { id: string; full_name: string | null; role: string | null; is_company_admin: boolean | null; email: string | null }
 
 function CompanyCard({
   company, stores, onAddStore, onCopy, onDeleteCompany, onDeleteStore,
@@ -367,7 +367,7 @@ function CompanyAdminBlock({
   }
 
   async function revoke(a: Supervisor) {
-    if (!confirm(`Retirer le rôle d'administrateur d'entreprise à ${a.full_name || 'ce compte'} ?\n\nSon compte superviseur et ses magasins sont conservés.`)) return
+    if (!confirm(`Retirer le rôle d'administrateur d'entreprise à ${a.full_name || 'ce compte'}${a.email ? ` (${a.email})` : ''} ?\n\nSon compte superviseur et ses magasins sont conservés.`)) return
     const { data, error } = await supabase.rpc('admin_revoke_company_admin', { p_user: a.id })
     if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     onChanged()
@@ -379,7 +379,10 @@ function CompanyAdminBlock({
         {admins.length === 0 && <span className="muted small">Aucun administrateur — l&apos;entreprise est gérée par Quantinvo.</span>}
         {admins.map((a) => (
           <span className="chip" key={a.id}>
-            {a.full_name || 'Sans nom'}
+            <span>
+              {a.full_name || 'Sans nom'}
+              {a.email && <span className="muted small" style={{ marginLeft: 6 }}>{a.email}</span>}
+            </span>
             <button className="chip-x" onClick={() => revoke(a)} aria-label="Révoquer">×</button>
           </span>
         ))}
