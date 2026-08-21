@@ -396,7 +396,14 @@ raison écrite : on peut y compter et lire le rapport, la clôture définitive e
 la réouverture appartiennent au créateur. Dire la règle par la mise en page
 évite de la découvrir au moment du refus.
 
-Tests de garde : `web/tests/suppression-inventaire.test.ts`.
+**L'app suit le même découpage** : l'écran d'accueil du superviseur
+(`(supervisor)/index.tsx`) sépare « Mes inventaires » et « Inventaires
+invités », avec la même explication. Le bloc « En cours » qui coiffait la liste
+a disparu : il répétait les inventaires en cours, dont le statut figure déjà
+sur chaque tuile.
+
+Tests de garde : `web/tests/suppression-inventaire.test.ts` et
+`tests/compte.test.ts` (bloc « accueil superviseur »).
 
 **Pas encore fait, décrit mais hors de ce chantier** : l'administrateur
 d'entreprise ne peut pas supprimer les *comptes* de son entreprise (il retire

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -10,6 +10,10 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import type { Tables } from '@/types/database.types'
 
 type Session = Tables<'inventory_sessions'>
+
+type Row =
+  | { kind: 'header'; label: string; hint?: string }
+  | { kind: 'session'; session: Session }
 
 const STATUS_LABELS: Record<string, string> = {
   open: 'Ouverte',
@@ -60,9 +64,37 @@ export default function SupervisorHomeScreen() {
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
 
-  // Inventaires en cours (partagés) regroupés par magasin — accessibles à tous les
-  // superviseurs affectés au magasin.
-  const active = (sessions ?? []).filter(s => s.status !== 'closed')
+  /**
+   * Deux listes, pas une : ce qu'on a créé, et ce à quoi on a été invité.
+   *
+   * L'écran mélangeait les deux, et affichait en plus les inventaires en cours
+   * une seconde fois dans un bloc « En cours » — le statut étant déjà sur
+   * chaque tuile, la répétition n'apprenait rien. Un inventaire invité ne se
+   * rouvre pas et ne se supprime pas : le dire par la mise en page évite de le
+   * découvrir au moment du refus. Même découpage que le site.
+   */
+  const rows = useMemo<Row[]>(() => {
+    const all = sessions ?? []
+    const rang = (s: Session) => (s.status === 'closed' ? 1 : 0)
+    const trier = (list: Session[]) => [...list].sort((a, b) => rang(a) - rang(b))
+    const miens = trier(all.filter(s => s.created_by === profile?.id))
+    const invites = trier(all.filter(s => s.created_by !== profile?.id))
+
+    const out: Row[] = []
+    if (miens.length > 0) {
+      out.push({ kind: 'header', label: 'Mes inventaires' })
+      for (const s of miens) out.push({ kind: 'session', session: s })
+    }
+    if (invites.length > 0) {
+      out.push({
+        kind: 'header',
+        label: 'Inventaires invités',
+        hint: 'Vous y participez sans les avoir créés : vous pouvez compter et consulter le rapport, leur clôture définitive et leur réouverture appartiennent à leur créateur.',
+      })
+      for (const s of invites) out.push({ kind: 'session', session: s })
+    }
+    return out
+  }, [sessions, profile?.id])
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -72,39 +104,28 @@ export default function SupervisorHomeScreen() {
         </View>
       ) : (
         <FlatList
-          data={sessions}
-          keyExtractor={s => s.id}
-          renderItem={({ item }) => <SessionCard session={item} theme={theme} styles={styles} />}
+          data={rows}
+          keyExtractor={r => (r.kind === 'header' ? `h-${r.label}` : r.session.id)}
+          renderItem={({ item }) =>
+            item.kind === 'header' ? (
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>{item.label}</Text>
+                {!!item.hint && <Text style={styles.sectionHint}>{item.hint}</Text>}
+              </View>
+            ) : (
+              <SessionCard session={item.session} theme={theme} styles={styles} />
+            )
+          }
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
-
-              {active.length > 0 && (
-                <View style={styles.liveBlock}>
-                  <Text style={styles.sectionLabel}>En cours</Text>
-                  {active.map(s => (
-                    <Pressable key={s.id} style={styles.liveCard} onPress={() => router.push(`/(supervisor)/${s.id}`)}>
-                      <View style={styles.liveHead}>
-                        <View style={styles.liveDot} />
-                        <Text style={styles.liveLabel}>Inventaire en cours</Text>
-                      </View>
-                      <Text style={styles.liveStore}>{s.name || s.inventory_number}</Text>
-                      <Text style={styles.liveMeta}>
-                        {s.store_name} · {STATUS_LABELS[s.status] ?? s.status}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-
-              <Text style={styles.sectionLabel}>Sessions</Text>
             </View>
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>Aucune session d'inventaire</Text>
+              <Text style={styles.emptyText}>Aucun inventaire pour l&apos;instant</Text>
             </View>
           }
         />
@@ -122,16 +143,8 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     listHeader: { gap: Spacing.sm },
     greeting: { fontSize: 26, color: t.textSecondary, fontFamily: Font.regular, letterSpacing: -0.4 },
-    liveBlock: { gap: Spacing.sm, marginTop: Spacing.sm },
-    liveCard: {
-      backgroundColor: t.accentSoft, borderRadius: Radius.lg, padding: 18,
-      borderWidth: 1, borderColor: t.accent, gap: 4,
-    },
-    liveHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.accent },
-    liveLabel: { fontSize: 11, fontFamily: Font.bold, color: t.accent, textTransform: 'uppercase', letterSpacing: 0.6 },
-    liveStore: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
-    liveMeta: { fontSize: 13, color: t.textSecondary, fontFamily: Font.medium, ...tabular },
+    sectionBlock: { gap: 4, marginTop: Spacing.md },
+    sectionHint: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular, lineHeight: 17 },
     greetingName: { color: t.textPrimary, fontFamily: Font.bold },
     sectionLabel: { fontSize: 12, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6 },
     list: { padding: Spacing.lg, paddingBottom: 90, gap: Spacing.md },

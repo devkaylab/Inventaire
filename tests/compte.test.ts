@@ -214,3 +214,27 @@ describe('balise hors plage — proposer l’ajout plutôt qu’un « OK » sec'
     expect(scanner).toMatch(/!allowCreate && \/non/)
   })
 })
+
+describe('accueil superviseur — mes inventaires et les invités', () => {
+  // Même découpage que le site (21 août 2026) : un inventaire auquel on est
+  // invité ne se rouvre pas et ne se supprime pas, la mise en page le dit.
+  // L'écran affichait en plus les inventaires en cours deux fois — une fois
+  // dans un bloc « En cours », une fois dans la liste — alors que le statut
+  // est déjà sur chaque tuile.
+  const accueil = lire('app/(supervisor)/index.tsx')
+
+  it('sépare ce qu’on a créé de ce à quoi on est invité', () => {
+    expect(accueil).toContain('Mes inventaires')
+    expect(accueil).toContain('Inventaires invités')
+    expect(accueil).toContain('s.created_by === profile?.id')
+  })
+
+  it('les clôturés passent après les inventaires en cours', () => {
+    expect(accueil).toMatch(/rang = \(s: Session\) => \(s\.status === 'closed' \? 1 : 0\)/)
+  })
+
+  it('le bloc « En cours » en double a disparu', () => {
+    expect(accueil).not.toContain('liveCard')
+    expect(accueil).not.toContain('Inventaire en cours')
+  })
+})
