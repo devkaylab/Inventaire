@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import {
-  closeSession, deleteSession, deleteSessionInvitation, removeSessionMember, reopenSession,
-  STATUS_LABELS, type Member, type Session, type SessionInvitation,
+  deleteSessionInvitation, removeSessionMember,
+  type Member, type Session, type SessionInvitation,
 } from '@/lib/inventory'
 import { fmtDate, fmtDateTime } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
@@ -22,7 +21,6 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
 }) {
   const toast = useToast()
   const confirm = useConfirm()
-  const [busy, setBusy] = useState(false)
   const closed = session.status === 'closed'
 
   async function copy(value: string, label: string) {
@@ -63,77 +61,8 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
     }
   }
 
-  async function onClose() {
-    const ok = await confirm({
-      title: 'Clôturer l’inventaire ?',
-      message: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.',
-      details: [
-        'Toutes les données sont conservées.',
-        'Le rapport reste consultable et téléchargeable.',
-        'Vous pourrez rouvrir l’inventaire si besoin.',
-      ],
-      confirmLabel: 'Clôturer',
-    })
-    if (!ok) return
-    setBusy(true)
-    try {
-      await closeSession(session.id)
-      toast.success('Inventaire clôturé.')
-      await onChanged()
-    } catch (err) {
-      toast.error(friendlyError(err))
-    } finally {
-      setBusy(false)
-    }
-  }
 
-  async function onReopen() {
-    const ok = await confirm({
-      title: 'Rouvrir l’inventaire ?',
-      message: 'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
-      confirmLabel: 'Rouvrir',
-    })
-    if (!ok) return
-    setBusy(true)
-    try {
-      await reopenSession(session.id)
-      toast.success('Inventaire rouvert.')
-      await onChanged()
-    } catch (err) {
-      toast.error(friendlyError(err))
-    } finally {
-      setBusy(false)
-    }
-  }
 
-  async function onDelete() {
-    const ok = await confirm({
-      title: 'Supprimer définitivement cet inventaire ?',
-      message: 'Cette action est irréversible et ne peut pas être annulée.',
-      details: [
-        'Tous les comptages seront supprimés',
-        'Le stock théorique sera supprimé',
-        'Les audits et arbitrages seront supprimés',
-        'Les membres seront retirés',
-        'Le référentiel articles de cet inventaire sera supprimé',
-      ],
-      confirmLabel: 'Supprimer définitivement',
-      tone: 'danger',
-      requireText: session.inventory_number,
-    })
-    if (!ok) return
-    setBusy(true)
-    try {
-      const r = await deleteSession(session.id)
-      if (!r.success) { toast.error(r.error ?? 'Suppression impossible.'); return }
-      toast.success('Inventaire supprimé.')
-      onDeleted()
-    } catch (err) {
-      toast.error(friendlyError(err))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   return (
     <div>
@@ -231,59 +160,7 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
         </>
       )}
 
-      <div className="dash-section-label" style={{ margin: '28px 0 10px' }}>Informations</div>
-      <div className="dash-info-grid">
-        <Info label="Magasin" value={session.store_name} />
-        <Info label="Statut" value={STATUS_LABELS[session.status] ?? session.status} />
-        <Info label="Mode" value={session.uses_zones ? 'Zones et balises' : 'Classique (sans balise)'} />
-        <Info label="Créé le" value={fmtDate(session.created_at)} />
-        {session.closed_at && <Info label="Clôturé le" value={fmtDateTime(session.closed_at)} />}
-      </div>
-
-      <div className="dash-danger">
-        <div className="dash-danger-row">
-          <div className="dash-danger-text">
-            <strong>{closed ? 'Rouvrir l’inventaire' : 'Clôturer l’inventaire'}</strong>
-            <p className="muted small" style={{ marginTop: 4 }}>
-              {closed
-                ? 'Le comptage pourra reprendre. Les données n’ont pas été supprimées.'
-                : 'Arrête le comptage et passe l’inventaire en lecture seule. Toutes les données sont conservées et le rapport reste téléchargeable.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            className={closed ? 'btn btn-primary' : 'btn btn-ghost'}
-            disabled={busy}
-            onClick={closed ? onReopen : onClose}
-          >
-            {closed ? 'Rouvrir' : 'Clôturer'}
-          </button>
-        </div>
-
-        {isCreator && (
-          <div className="dash-danger-row" style={{ borderTop: '1px solid var(--danger-border)', paddingTop: 16 }}>
-            <div className="dash-danger-text">
-              <strong>Supprimer définitivement</strong>
-              <p className="muted small" style={{ marginTop: 4 }}>
-                Efface comptages, stock théorique, audits, membres et référentiel de cet inventaire.
-                Pensez à télécharger le rapport avant. Action irréversible.
-              </p>
-            </div>
-            <button type="button" className="btn btn-danger" disabled={busy} onClick={onDelete}>
-              Supprimer
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="dash-info-row">
-      <span className="dash-info-label">{label}</span>
-      <span className="dash-info-value">{value}</span>
-    </div>
-  )
-}

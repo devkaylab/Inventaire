@@ -10,6 +10,8 @@ import { useSessionLive } from '@/hooks/useSessionLive'
 import { STATUS_LABELS } from '@/lib/inventory'
 import { relativeTime } from '@/lib/format'
 import { ProgressRail } from '@/components/dashboard/ProgressRail'
+import { SessionInfo } from '@/components/dashboard/SessionInfo'
+import { SessionActionsMenu } from '@/components/dashboard/SessionActionsMenu'
 import { MobileNav } from '@/components/dashboard/MobileNav'
 import { SuiviTab } from '@/components/dashboard/tabs/SuiviTab'
 import { SetupTab } from '@/components/dashboard/tabs/SetupTab'
@@ -169,6 +171,12 @@ export default function SessionDashboardPage() {
             <RefreshIcon />
             <span>{live.refreshing ? 'Actualisation…' : `Mis à jour ${relativeTime(new Date(live.lastRefreshAt).toISOString())}`}</span>
           </button>
+          <SessionActionsMenu
+            session={session}
+            isCreator={isCreator}
+            onChanged={data.refreshMeta}
+            onDeleted={() => router.replace('/dashboard')}
+          />
         </div>
       </div>
 
@@ -176,18 +184,21 @@ export default function SessionDashboardPage() {
         <div className="banner banner-info">
           Cet inventaire est <strong>clôturé</strong> : aucun comptage ne peut plus y être enregistré,
           y compris depuis un téléphone resté ouvert sur la session. Les données sont conservées et le
-          rapport reste téléchargeable. Vous pouvez le rouvrir depuis l’onglet Équipe.
+          rapport reste téléchargeable. Vous pouvez le rouvrir depuis le menu « ••• » en haut de page.
         </div>
       )}
 
       <div className="dash-detail">
-        <ProgressRail
-          usesZones={session.uses_zones}
-          zones={data.zones}
-          totals={data.totals}
-          theoreticalQty={data.importState.theoreticalQty}
-          onOpenTab={selectTab}
-        />
+        <div className="dash-rail">
+          <ProgressRail
+            usesZones={session.uses_zones}
+            zones={data.zones}
+            totals={data.totals}
+            theoreticalQty={data.importState.theoreticalQty}
+            onOpenTab={selectTab}
+          />
+          <SessionInfo session={session} />
+        </div>
 
         <div className="dash-main">
           <div className="dash-tabs" role="tablist" aria-label="Sections de l’inventaire">

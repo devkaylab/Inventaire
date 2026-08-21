@@ -615,7 +615,9 @@ a { color: inherit; text-decoration: none; }
 .dash-detail { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
 .dash-section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-3); }
 
-.dash-progress { position: sticky; top: 24px; }
+/* Le rail de gauche : progression, puis informations. Le collant passe du
+   panneau au rail, pour que les deux tuiles montent ensemble. */
+.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: 24px; }
 .dash-big { font-size: 56px; font-weight: 800; letter-spacing: -2px; line-height: 1; margin: 10px 0 6px; }
 .dash-big-unit { font-size: 28px; font-weight: 700; color: var(--text-2); margin-left: 4px; }
 .dash-progress-sub { color: var(--text-2); font-size: 14px; }
@@ -760,6 +762,25 @@ a { color: inherit; text-decoration: none; }
 .refresh-btn svg { transition: transform .2s ease; }
 .refresh-btn[data-busy="true"] svg { animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Menu d'actions de l'inventaire, dans l'en-tête à côté du statut. */
+.dash-menu { position: relative; }
+.dash-menu-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 30;
+  min-width: 234px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+  box-shadow: 0 16px 32px -18px rgba(11, 15, 25, 0.4);
+}
+.dash-menu-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0; border-radius: 8px; cursor: pointer;
+  padding: 10px 11px; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--text);
+}
+.dash-menu-item:hover { background: var(--bg); }
+/* L'irréversible en dernier, en rouge, séparé d'un filet : il ne se clique
+   pas dans l'élan du geste précédent. */
+.dash-menu-danger { color: var(--danger-text); border-top: 1px solid var(--hairline); border-radius: 0 0 8px 8px; margin-top: 5px; padding-top: 12px; }
+.dash-menu-danger:hover { background: var(--danger-soft); }
 
 .people-list { display: flex; flex-direction: column; gap: 8px; }
 .person-row {
@@ -1024,7 +1045,7 @@ a { color: inherit; text-decoration: none; }
 }
 @media (max-width: 780px) {
   .dash-detail { grid-template-columns: 1fr; }
-  .dash-progress { position: static; }
+  .dash-rail { position: static; }
   .dash-kpis { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
   .zone-form { grid-template-columns: 1fr; }
