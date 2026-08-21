@@ -346,6 +346,43 @@ et `DeletionPendingNote`.
 Maquette de référence :
 https://claude.ai/code/artifact/032d3ee8-ee0f-4b32-9b21-c6a5d278356c
 
+# Supprimer un inventaire : créateur ou administrateur d'entreprise (21 août 2026)
+
+`delete_session` ne vérifiait que `can_access_session`, c'est-à-dire **n'importe
+quel superviseur participant**. Le bouton était caché aux autres côté
+navigateur ; la fonction ne l'était pas. Un co-superviseur pouvait effacer
+comptages, stock théorique, audits, membres et référentiel d'un inventaire
+qu'il n'avait pas créé — même famille que le trou d'`advance_pass`.
+
+Règle arrêtée par Julien : **le créateur** pour ses propres inventaires,
+**l'administrateur d'entreprise** pour tous ceux de son entreprise, y compris
+ceux auxquels il ne participe pas — c'est justement son rôle. Migration
+`20260821250001`. Le créateur rétrogradé en compteur perd le droit avec le
+rôle, et `is_company_admin()` porte l'exigence aal2 conditionnelle.
+
+L'écran applique la même règle : sur la liste des inventaires, la case à cocher
+et la corbeille n'apparaissent que sur ce qu'on peut supprimer, plutôt que de
+laisser découvrir le refus après coup.
+
+**Sélection multiple** sur `/dashboard`, trois précautions à ne pas relâcher :
+
+- « Tout sélectionner » ne porte que sur `filtered`, la liste **après
+  recherche**. Sur `sessions`, un « tout » déborderait de ce que la personne
+  voit.
+- La confirmation **nomme** les inventaires (huit au plus, puis « et N
+  autres ») et signale ceux encore en cours.
+- Il n'existe pas de RPC de suppression groupée : on appelle `delete_session`
+  une fois par inventaire et **on rapporte les échecs** au lieu d'annoncer un
+  succès global. Sur dix inventaires, un refus ne doit pas passer inaperçu.
+
+Tests de garde : `web/tests/suppression-inventaire.test.ts`.
+
+**Pas encore fait, décrit mais hors de ce chantier** : l'administrateur
+d'entreprise ne peut pas supprimer les *comptes* de son entreprise (il retire
+l'accès d'un superviseur par `ca_remove_supervisor` ; supprimer un compte auth
+reste `admin_delete_user`, réservé à Quantinvo), et **il n'existe aucun
+parcours de demande d'ajout de magasin** vers l'administrateur Quantinvo.
+
 # Conformité RGPD / sécurité
 
 Audit complet du 13 août 2026 : 15 manquements relevés (2 critiques, 7 élevés,
