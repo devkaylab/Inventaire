@@ -122,8 +122,8 @@ function encadreDetails(details: DetailEmail[]): string {
 function boutonHtml(bouton: BoutonEmail): string {
   const lien = echapper(lienSur(bouton.lien))
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0;">
-            <tr><td align="center" bgcolor="${COULEURS.indigo}" style="border-radius:10px;">
-              <a href="${lien}" style="display:inline-block;padding:14px 28px;font-family:${POLICE};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${echapper(bouton.libelle)}</a>
+            <tr><td align="center" bgcolor="${COULEURS.indigo}" style="border-radius:8px;">
+              <a href="${lien}" style="display:inline-block;padding:11px 20px;font-family:${POLICE};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${echapper(bouton.libelle)}</a>
             </td></tr>
           </table>
           <p style="margin:28px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">Le bouton ne fonctionne pas ? Copiez cette adresse :<br>
