@@ -159,10 +159,24 @@ faits, bouton, note, raison de l'envoi — et reçoivent en retour le **HTML et 
 version texte**, envoyés tous les deux à Resend (les messageries sans HTML, et
 les filtres anti-spam, lisent la seconde).
 
-Le gabarit suit la charte « Papier » : **fond blanc**, encre en texte, indigo
-profond en titre, bouton indigo, filet de scan cyan sous le mot-symbole. Un
-e-mail se lit, s'imprime et se transfère comme un document — la direction
-sombre du site n'a pas cours ici.
+Le gabarit suit la charte « Papier », en trois zones (arrêté avec Julien le
+21 août 2026, après plusieurs passes sur le rendu réel dans Gmail) :
+
+- **bandeau encre** en tête — le cube seul (sans la tuile de l'icône
+  d'application, qui faisait vignette rapportée) à 56 px, « Quantinvo » en
+  blanc à 28 px, le filet de scan cyan faisant la frontière avec le corps ;
+- **corps blanc** — titre noir à 20 px, texte à 15 px, bouton indigo mesuré
+  (14 px demi-gras) : il vient après la marque, il ne doit pas peser plus
+  qu'elle ;
+- **pied gris clair** — l'identité et les liens, rien d'autre.
+
+Sous le bouton : l'adresse de secours, puis « Ce lien est personnel… » s'il y
+a lieu, puis **« Vous recevez ce message parce que… »**. Cette phrase a
+remplacé « vous pouvez ignorer cet e-mail » et ne se répète pas en pied.
+
+Vérifié sur 375 px de large : l'en-tête tient sur une ligne. Au-delà de cette
+échelle de marque, il mangerait l'écran d'un petit téléphone avant que le
+message ne commence.
 
 Quatre points à ne pas défaire :
 
