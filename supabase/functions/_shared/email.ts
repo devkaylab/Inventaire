@@ -169,21 +169,22 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
   <tr><td align="center" style="padding:28px 12px;">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:${COULEURS.blanc};border:1px solid ${COULEURS.filet};border-radius:14px;font-family:${POLICE};">
 
-      <!-- En-tête : tuile, mot-symbole, filet de scan -->
-      <tr><td style="padding:28px 32px 16px;">
+      <!-- En-tête : bandeau encre, tuile et mot-symbole en blanc. Le filet
+           de scan cyan fait la frontière avec le corps. -->
+      <tr><td bgcolor="${COULEURS.encre}" style="background:${COULEURS.encre};padding:24px 32px;border-radius:13px 13px 0 0;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td valign="middle" style="padding-right:12px;">
               <img src="${logo}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:11px;">
             </td>
             <td valign="middle">
-              <span style="font-size:18px;font-weight:800;letter-spacing:-0.4px;color:${COULEURS.encre};">Quantinvo</span>
+              <span style="font-size:18px;font-weight:800;letter-spacing:-0.4px;color:#ffffff;">Quantinvo</span>
             </td>
           </tr>
         </table>
       </td></tr>
-      <tr><td style="padding:0 32px;">
-        <div style="height:2px;line-height:2px;font-size:0;background:${COULEURS.cyan};border-radius:2px;">&nbsp;</div>
+      <tr><td style="padding:0;">
+        <div style="height:2px;line-height:2px;font-size:0;background:${COULEURS.cyan};">&nbsp;</div>
       </td></tr>
 
       <!-- Corps -->
