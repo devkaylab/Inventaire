@@ -538,14 +538,26 @@ pas accorder `aal2` côté client, donc sauter l'écran laisserait la session en
 une protection de façade.
 
 **Le code est prêt, la console ne l'est pas.** Réglage à poser dans
-Authentication → Sessions :
+Authentication → Sessions (offert à partir du plan Pro — l'organisation y est).
+**Les deux champs sont en heures**, pas en jours :
 
-- *Inactivity timeout* — la session meurt faute d'usage ;
-- *Time-box user sessions* — plafond absolu depuis la connexion.
+- *Inactivity timeout* — la session meurt faute d'usage → **720 h (30 jours)** ;
+- *Time-box user sessions* — plafond absolu depuis la connexion →
+  **4320 h (180 jours)**.
 
-Valeurs proposées : **30 jours d'inactivité, 180 jours de plafond**. Qui compte
-régulièrement n'est jamais dérangé ; qui n'a pas ouvert l'app depuis un mois
-ressaisit son mot de passe une fois.
+Qui compte régulièrement n'est jamais dérangé ; qui n'a pas ouvert l'app depuis
+un mois ressaisit son mot de passe une fois.
+
+Trois précisions de la documentation Supabase, qui évitent des surprises :
+
+- **La durée réelle est le réglage plus l'expiration du jeton** (une heure ici).
+  Le contrôle n'a lieu qu'au rafraîchissement suivant.
+- **Changer le réglage ne tue pas les sessions en cours** : elles tombent au fur
+  et à mesure de leurs rafraîchissements. Les sessions expirées sont effacées de
+  la base 24 h plus tard.
+- **Ne pas activer *Single session per user*.** Cette option ne garde que la
+  dernière connexion : se connecter sur le téléphone déconnecterait du site, et
+  inversement. Or un superviseur travaille précisément avec les deux.
 
 **Ce qu'il fallait corriger avant d'activer, et qui l'est.** Une session
 expirée n'annule pas les comptages en attente :
