@@ -68,10 +68,16 @@ export default function AdminPage() {
     charger()
   }, [guard.status, charger])
 
+  // Recherche par fragments : chaque mot saisi doit se retrouver dans le nom,
+  // dans n'importe quel ordre. « retail paris » trouve « Paris Retail Group »,
+  // « ely » trouve « Élysée » — accents et casse indifférents.
   const visibles = useMemo(() => {
-    const q = normaliser(recherche.trim())
-    if (!q) return companies
-    return companies.filter((c) => normaliser(c.name).includes(q))
+    const mots = normaliser(recherche).split(/\s+/).filter(Boolean)
+    if (mots.length === 0) return companies
+    return companies.filter((c) => {
+      const nom = normaliser(c.name)
+      return mots.every((mot) => nom.includes(mot))
+    })
   }, [companies, recherche])
 
   async function creerEntreprise(e: React.FormEvent) {
@@ -125,17 +131,27 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {companies.length > 6 && (
+        {companies.length > 0 && (
           <div className="toolbar">
             <div className="toolbar-grow">
               <input
                 type="search"
                 value={recherche}
                 onChange={(e) => setRecherche(e.target.value)}
-                placeholder="Rechercher une entreprise…"
+                placeholder="Rechercher une entreprise par son nom…"
                 aria-label="Rechercher une entreprise"
               />
             </div>
+            {recherche.trim() !== '' && (
+              <>
+                <span className="muted small" aria-live="polite">
+                  {visibles.length} sur {companies.length}
+                </span>
+                <button type="button" className="link-btn" onClick={() => setRecherche('')}>
+                  Effacer
+                </button>
+              </>
+            )}
           </div>
         )}
 

@@ -71,3 +71,27 @@ describe('la fiche d’une entreprise', () => {
     }
   })
 })
+
+describe('la recherche d’entreprise', () => {
+  // Elle était masquée en dessous de sept entreprises : avec trois clients,
+  // elle n'apparaissait jamais, et on la croyait absente.
+  it('est toujours proposée dès qu’il y a une entreprise', () => {
+    expect(console_).toContain('companies.length > 0 &&')
+    expect(console_).not.toContain('companies.length > 6')
+  })
+
+  it('cherche sur un fragment, sans accents ni casse', () => {
+    expect(console_).toContain('normalize(\'NFD\')')
+    expect(console_).toContain('toLowerCase()')
+    expect(console_).toContain('nom.includes(mot)')
+  })
+
+  it('accepte plusieurs mots dans n’importe quel ordre', () => {
+    expect(console_).toContain('mots.every')
+  })
+
+  it('dit combien de lignes restent, et permet d’effacer', () => {
+    expect(console_).toContain('sur {companies.length}')
+    expect(console_).toContain('Effacer')
+  })
+})
