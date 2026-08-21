@@ -5,6 +5,11 @@
 que chacune rapporte et ce qu'elle coûte, pour que le choix se fasse sur des
 chiffres et non sur une impression.
 
+> **Décision du 21 août 2026 — c'est la tarification au volume de stock qui est
+> retenue** (hypothèse 1). Le prix fixe par magasin a été chiffré puis écarté.
+> Ce document reste pour garder la trace du raisonnement : si la question
+> revient, elle repart d'ici plutôt que de zéro.
+
 > Comme la check-list de création, ce document est une grille de travail, pas
 > un conseil comptable. Les taux d'imposition utilisés sont ceux connus début
 > 2026 et doivent être confirmés par l'expert-comptable.
@@ -72,7 +77,7 @@ devis, une clause de régularisation, et un recoupement fait à la main.
 
 ---
 
-## Hypothèse 2 — prix fixe par magasin
+## Hypothèse 2 — prix fixe par magasin (écartée le 21 août 2026)
 
 Un seul prix, quelle que soit la taille du magasin.
 
@@ -153,7 +158,9 @@ clientèle on veut**.
 
 - Si la cible reste large — de la boutique parisienne au grand magasin —
   **l'hypothèse 1** est la bonne : elle est la seule qui reste juste des deux
-  côtés du spectre, et elle rapporte quel que soit le mix.
+  côtés du spectre, et elle rapporte quel que soit le mix. **C'est le choix
+  retenu** : la cible reste large, et on ne veut pas parier sur un mix de
+  clientèle qu'aucun client réel n'a encore confirmé.
 - Si la cible se resserre sur le magasin de chaîne et la grande surface, et
   qu'on accepte de ne pas vendre aux plus petits, **l'hypothèse 2 avec
   plafond** simplifie tout : la vente, le contrat, le site, et elle supprime
