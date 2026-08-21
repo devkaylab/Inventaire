@@ -60,9 +60,11 @@ raisonnable.
 
 ## 5. Souscription, ouverture des accès
 
-5.1 Le Client adresse une demande depuis le site. L'Éditeur établit un devis
+5.1 Le Client adresse une demande depuis le site, en indiquant pour chaque
+magasin son **volume de stock théorique** en unités. L'Éditeur établit un devis
 précisant les magasins couverts, la tranche de volume de stock applicable à
-chacun et le prix annuel correspondant.
+chacun et le prix annuel correspondant. Le Client répond de l'exactitude des
+volumes qu'il déclare (article 6.4).
 
 5.2 À l'acceptation du devis et à l'encaissement, l'Éditeur crée l'entreprise
 du Client dans le Service, ses magasins et leurs codes d'accès, et invite la
@@ -80,26 +82,40 @@ prévient l'Éditeur sans délai en cas de divulgation.
 ## 6. Prix et paiement
 
 6.1 Le prix est une **licence annuelle par magasin**, déterminée par la tranche
-de volume de stock du magasin (nombre de références ou d'unités, selon la
-grille en vigueur au jour du devis, [de 1 200 à 5 400 € HT par an et par
-magasin]). Le prix est exprimé hors taxes ; la TVA s'ajoute au taux en vigueur.
+de volume de stock du magasin. Le volume s'entend en **unités en stock** — le
+nombre de pièces physiques, et non le nombre de références — selon la grille en
+vigueur au jour du devis, reprise en annexe 2 [de 1 200 à 8 400 € HT par an et
+par magasin ; au-delà d'un million d'unités, prix sur devis]. Le prix est
+exprimé hors taxes ; la TVA s'ajoute au taux en vigueur.
 
 6.2 La licence est payable **d'avance, pour l'année**, à réception de la
 facture, par virement [ou par carte via Stripe lorsque ce moyen sera proposé].
 Les accès sont ouverts à l'encaissement.
 
-6.3 Si le volume de stock réel d'un magasin dépasse la tranche souscrite au
-cours de l'année, l'Éditeur en informe le Client ; la tranche supérieure
-s'applique au renouvellement suivant. [Variante : facturation du complément au
-prorata.]
+6.3 La tranche est déterminée à partir du **volume de stock théorique déclaré
+par le Client** pour chaque magasin lors de sa demande. Elle est **acquise pour
+toute la période annuelle** : les variations de stock en cours d'année,
+notamment saisonnières, sont sans effet sur le prix déjà facturé.
 
-6.4 Retard de paiement : pénalités au taux de [trois fois le taux d'intérêt
+6.4 Le volume déclaré est **vérifié au premier import** du stock théorique dans
+le Service, qui en donne le nombre exact d'unités. Si ce nombre place le
+magasin dans une tranche supérieure à celle souscrite, au-delà d'une tolérance
+de [10] %, l'Éditeur en informe le Client et facture le complément au prorata
+de la période restant à courir ; le Client peut, dans les [trente] jours de
+cette information, préférer résilier la licence du magasin concerné et être
+remboursé au prorata. Si le nombre place le magasin dans une tranche
+inférieure, la différence est déduite du renouvellement suivant.
+
+6.5 La tranche applicable à chaque renouvellement est celle constatée au
+dernier inventaire réalisé dans le Service.
+
+6.6 Retard de paiement : pénalités au taux de [trois fois le taux d'intérêt
 légal], exigibles sans rappel, et indemnité forfaitaire de recouvrement de
 40 € par facture (articles L. 441-10 et D. 441-5 du Code de commerce). Aucun
 escompte pour paiement anticipé. Après mise en demeure restée quinze jours sans
 effet, l'Éditeur peut suspendre les accès du magasin concerné.
 
-6.5 Le prix peut être révisé à chaque renouvellement, avec un préavis de
+6.7 Le prix peut être révisé à chaque renouvellement, avec un préavis de
 [deux] mois avant l'échéance ; le Client peut alors refuser le renouvellement.
 
 ## 7. Durée, renouvellement, résiliation
@@ -278,15 +294,17 @@ sort des données à la fin, audit).
 
 ## Annexe 2 — Grille tarifaire en vigueur
 
+Le volume s'entend en **unités en stock** — le nombre de pièces physiques du
+magasin, et non son nombre de références.
+
 | Tranche de volume de stock du magasin | Licence annuelle HT |
 |---|---|
-| [tranche 1] | [1 200 €] |
-| [tranche 2] | [… €] |
-| [tranche 3] | [… €] |
-| [tranche 4] | [5 400 €] |
-
-[Recopier la grille figée dans la mémoire du projet et préciser l'unité de
-mesure : références actives ou unités en stock.]
+| Jusqu'à 10 000 unités | 1 200 € |
+| De 10 001 à 50 000 unités | 2 400 € |
+| De 50 001 à 200 000 unités | 3 900 € |
+| De 200 001 à 500 000 unités | 6 000 € |
+| De 500 001 à 1 000 000 unités | 8 400 € |
+| Au-delà de 1 000 000 unités | Sur devis |
 
 ---
 
@@ -300,6 +318,9 @@ mesure : références actives ou unités en stock.]
 4. Engagement de disponibilité chiffré : aucun pour l'instant, à prévoir si
    une enseigne le demande (et alors l'assortir de crédits plutôt que de
    pénalités).
-5. Clause de référence commerciale : à garder ou non.
-6. Conditions d'un essai gratuit ou d'un inventaire pilote, si cette pratique
+5. Tolérance de l'article 6.4 sur le volume déclaré : 10 % est un arbitrage de
+   départ, à confirmer — trop basse, elle déclenche des régularisations pour
+   rien ; trop haute, elle rend la déclaration facultative.
+6. Clause de référence commerciale : à garder ou non.
+7. Conditions d'un essai gratuit ou d'un inventaire pilote, si cette pratique
    commerciale est retenue.

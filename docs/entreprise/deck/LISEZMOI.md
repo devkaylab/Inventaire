@@ -25,7 +25,10 @@ sont, dans ~/Library/Fonts).
   blanc** pour tout document qu'on imprime, signe ou projette — voir la
   palette « Papier ». Ce deck est donc à refaire en blanc s'il est repris.
 - Les tarifs de la diapositive « L'offre » suivent la grille au volume de
-  stock : 1 200 / 2 400 / 3 900 / 5 400 € par an et par magasin.
+  stock, révisée le 21 août 2026 : 1 200 / 2 400 / 3 900 / 6 000 / 8 400 € par
+  an et par magasin, puis sur devis au-delà d'un million d'unités. Le volume se
+  compte en **unités** (pièces physiques), jamais en références. Cinq paliers
+  au lieu de quatre : la diapositive porte donc cinq cartes, plus étroites.
 
 Les couleurs et le logo sont recopiés de `web/app/globals.css` et de
 `web/components/Logo.tsx` : si la charte bouge, les reprendre ici.
