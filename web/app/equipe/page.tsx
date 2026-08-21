@@ -25,6 +25,7 @@ type Member = {
   role: string | null
   is_company_admin: boolean
   email: string | null
+  is_active: boolean
   store_ids: string[]
 }
 type Invitation = {
@@ -141,6 +142,14 @@ export default function EquipePage() {
                   <div>
                     <span className="store-block-name">{m.full_name || 'Sans nom'}</span>
                     {m.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
+                    {/* Le profil existe dès l'invitation : tant que la personne
+                        n'a pas choisi son mot de passe, elle ne peut pas se
+                        connecter. Le dire, sinon la ligne est trompeuse. */}
+                    {!m.is_active && (
+                      <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
+                        <span className="dash-dot" />Mot de passe à créer
+                      </span>
+                    )}
                     <div className="muted small">{m.email}</div>
                   </div>
                   {!m.is_company_admin && (
@@ -216,7 +225,14 @@ export default function EquipePage() {
             {counters.map((m) => (
               <div className="req-row" key={m.id}>
                 <div>
-                  <div className="req-name">{m.full_name || 'Sans nom'}</div>
+                  <div className="req-name">
+                    {m.full_name || 'Sans nom'}
+                    {!m.is_active && (
+                      <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
+                        <span className="dash-dot" />Mot de passe à créer
+                      </span>
+                    )}
+                  </div>
                   <div className="muted small">
                     {m.email}
                     {m.store_ids.length > 0 && ' · ' + m.store_ids.map((sid) => storeById[sid]?.name || 'Magasin').join(', ')}

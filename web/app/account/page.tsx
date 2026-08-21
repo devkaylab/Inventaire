@@ -123,7 +123,13 @@ export default function AccountPage() {
         <button className="btn btn-ghost" onClick={signOut}>Déconnexion</button>
       </div>
 
-      <span className="pill">{isAdmin ? 'Administrateur' : profile?.role === 'supervisor' ? 'Superviseur' : 'Membre'}</span>
+      <span className="pill">
+        {isAdmin
+          ? 'Administrateur'
+          : profile?.is_company_admin
+            ? 'Administrateur d\u2019entreprise'
+            : profile?.role === 'supervisor' ? 'Superviseur' : 'Membre'}
+      </span>
       <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.6px', marginTop: 12 }}>
         Bonjour {profile?.full_name || ''}
       </h1>

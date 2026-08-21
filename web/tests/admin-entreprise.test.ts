@@ -131,3 +131,29 @@ describe('écrans', () => {
     expect(pageAdmin).toContain("rpc('admin_revoke_company_admin'")
   })
 })
+
+// Constats du test terrain du 21 août 2026.
+describe('test terrain — corrections', () => {
+  const m5 = lire('../../supabase/migrations/20260821090001_equipe_mot_de_passe_a_creer.sql')
+  const pageCompte = lire('../app/account/page.tsx')
+
+  it('ca_list_team dit si le compte est utilisable', () => {
+    // Le profil existe dès l'invitation : sans cet indicateur, un compte sans
+    // mot de passe se présentait comme un superviseur actif.
+    expect(m5).toContain("'is_active'")
+    expect(m5).toContain('u.last_sign_in_at is not null')
+    expect(m5).toMatch(/revoke all on function public\.ca_list_team\(\) from public, anon/)
+  })
+
+  it('l’écran équipe affiche « Mot de passe à créer »', () => {
+    expect(pageEquipe).toContain('Mot de passe à créer')
+    expect(pageEquipe).toContain('!m.is_active')
+  })
+
+  it('« Mon compte » nomme correctement l’administrateur d’entreprise', () => {
+    // Le badge disait « Superviseur » alors que /equipe disait « Administrateur
+    // d'entreprise » : deux écrans, deux vérités.
+    expect(pageCompte).toContain('is_company_admin')
+    expect(pageCompte).toMatch(/Administrateur d\\u2019entreprise|Administrateur d’entreprise/)
+  })
+})
