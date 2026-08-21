@@ -34,3 +34,14 @@ communs). Pour changer une règle commune, modifier le script puis :
 
 Ne pas éditer `devis.html` et `facture.html` à la main pour une règle
 commune, la prochaine génération l'écraserait.
+
+## Date de péremption : la facture électronique
+
+La réforme française impose d'émettre les factures B2B au format
+électronique via une plateforme agréée à partir du **1er septembre 2027**
+pour les PME et micro-entreprises (réception obligatoire pour toutes dès le
+1er septembre 2026). Devkaylab ne vend qu'à des entreprises : à cette date,
+`facture.html` ne produira plus une facture valable. Le modèle de devis,
+lui, reste utilisable. Prévoir la facturation dans Pennylane ou Qonto (tous
+deux plateformes agréées) avant cette échéance — et dès le départ si
+l'expert-comptable travaille sur Pennylane.
