@@ -3,6 +3,7 @@
 // - Pré-inscrit l'e-mail (team_invitations) dans son entreprise.
 // - Crée l'utilisateur auth et envoie le lien de finalisation.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -158,13 +159,24 @@ Deno.serve(async (req) => {
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const greeting = firstName ? `Bonjour ${firstName},` : 'Bonjour,'
   const inviterName = prof.full_name ? ` par ${prof.full_name}` : ''
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111"><h2 style="font-weight:800">Quantinvo</h2><p>${greeting}</p><p>Vous avez été ajouté à une équipe d'inventaire${inviterName}. Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.</p><p style="margin-top:24px"><a href="${actionLink}" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Finaliser mon compte</a></p><p style="color:#666;font-size:13px;margin-top:24px">Ce lien est personnel et à usage unique. Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.</p></div>`
+  const { html, text } = emailQuantinvo({
+    titre: 'Votre compte est prêt à être activé',
+    salutation: greeting,
+    paragraphes: [
+      `Vous avez été ajouté à une équipe d'inventaire${inviterName}.`,
+      "Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.",
+    ],
+    bouton: { libelle: 'Finaliser mon compte', lien: actionLink },
+    note: "Ce lien est personnel et à usage unique. Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.",
+    raison: 'Vous recevez ce message parce que votre responsable vous a ajouté à son équipe.',
+    siteUrl: appUrl,
+  })
 
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [email], subject: 'Finalisez votre compte Quantinvo', html }),
+      body: JSON.stringify({ from: fromAddr, to: [email], subject: 'Finalisez votre compte Quantinvo', html, text }),
     })
     const bodyText = await resp.text()
     if (!resp.ok) {

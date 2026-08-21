@@ -9,6 +9,7 @@
 //     la RPC, l'utilisateur auth est créé ici et le lien de finalisation
 //     envoyé. handle_new_user créera le profil (role supervisor + drapeau).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -96,13 +97,24 @@ Deno.serve(async (req) => {
   if (!actionLink) return sendFailed('lien absent de la réponse Supabase')
 
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111"><h2 style="font-weight:800">Quantinvo</h2><p>Bonjour ${result.first_name},</p><p>Vous êtes invité comme administrateur de votre entreprise sur Quantinvo : vous pourrez gérer vos superviseurs et leurs magasins. Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.</p><p style="margin-top:24px"><a href="${actionLink}" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Finaliser mon compte</a></p><p style="color:#666;font-size:13px;margin-top:24px">Ce lien est personnel et à usage unique.</p></div>`
+  const { html, text } = emailQuantinvo({
+    titre: 'Votre accès administrateur',
+    salutation: `Bonjour ${result.first_name},`,
+    paragraphes: [
+      'Vous êtes invité comme administrateur de votre entreprise sur Quantinvo : vous pourrez gérer vos superviseurs et leurs magasins.',
+      "Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.",
+    ],
+    bouton: { libelle: 'Finaliser mon compte', lien: actionLink },
+    note: 'Ce lien est personnel et à usage unique.',
+    raison: 'Vous recevez ce message parce que Quantinvo vous a désigné administrateur de votre entreprise.',
+    siteUrl: appUrl,
+  })
 
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [result.email], subject: 'Votre accès administrateur Quantinvo', html }),
+      body: JSON.stringify({ from: fromAddr, to: [result.email], subject: 'Votre accès administrateur Quantinvo', html, text }),
     })
     if (!resp.ok) return sendFailed(`${resp.status} ${await resp.text()}`)
     return json({ success: true, mode: 'invited', email: result.email, via: 'resend' })

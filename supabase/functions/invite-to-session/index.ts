@@ -5,6 +5,7 @@
 //   d'inconnus.
 // - Envoie un e-mail (Resend, si configuré) + une notification push (Expo).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -137,17 +138,22 @@ Deno.serve(async (req) => {
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
   if (resendKey) {
     const greeting = fullName ? `Bonjour ${fullName},` : 'Bonjour,'
-    const action = `Vous avez été ajouté à l'inventaire « ${sessionLabel} » (${session.store_name}) en tant que ${roleLabel}. Ouvrez l'application Quantinvo pour y accéder.`
-    const html = `
-      <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:auto;color:#111">
-        <h2 style="font-weight:800;letter-spacing:-.4px">Quantinvo</h2>
-        <p>${greeting}</p>
-        <p>${action}</p>
-        <p style="margin-top:24px">
-          <a href="${appUrl}/open" style="background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Ouvrir Quantinvo</a>
-        </p>
-        <p style="color:#666;font-size:13px;margin-top:24px">Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.</p>
-      </div>`
+    const { html, text } = emailQuantinvo({
+      titre: 'Vous participez à un inventaire',
+      salutation: greeting,
+      paragraphes: [
+        "Vous avez été ajouté à un inventaire. Ouvrez l'application Quantinvo sur votre téléphone pour y accéder.",
+      ],
+      details: [
+        { intitule: 'Inventaire', valeur: sessionLabel },
+        { intitule: 'Magasin', valeur: session.store_name },
+        { intitule: 'Votre rôle', valeur: roleLabel },
+      ],
+      bouton: { libelle: 'Ouvrir Quantinvo', lien: `${appUrl}/open` },
+      note: "Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.",
+      raison: 'Vous recevez ce message parce que votre superviseur vous a ajouté à cet inventaire.',
+      siteUrl: appUrl,
+    })
     try {
       const resp = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -157,6 +163,7 @@ Deno.serve(async (req) => {
           to: [email],
           subject: `Invitation à un inventaire — ${sessionLabel}`,
           html,
+          text,
         }),
       })
       emailSent = resp.ok

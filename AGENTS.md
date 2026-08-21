@@ -150,6 +150,40 @@ Quand ce sera au programme :
   comme un cas normal, sous peine de faire échouer la livraison et de
   déclencher des relances Stripe en boucle.
 
+# E-mails transactionnels : un seul gabarit
+
+Tout ce que le produit envoie par Resend passe par
+`supabase/functions/_shared/email.ts` (`emailQuantinvo`). Les fonctions edge ne
+décrivent plus que le contenu — titre, salutation, paragraphes, encadré de
+faits, bouton, note, raison de l'envoi — et reçoivent en retour le **HTML et la
+version texte**, envoyés tous les deux à Resend (les messageries sans HTML, et
+les filtres anti-spam, lisent la seconde).
+
+Le gabarit suit la charte « Papier » : **fond blanc**, encre en texte, indigo
+profond en titre, bouton indigo, filet de scan cyan sous le mot-symbole. Un
+e-mail se lit, s'imprime et se transfère comme un document — la direction
+sombre du site n'a pas cours ici.
+
+Quatre points à ne pas défaire :
+
+- **Tout ce qui vient de la base est échappé** par le gabarit, et un lien qui
+  n'est pas en `http(s)` est refusé. Avant, un nom de magasin ou un prénom
+  était interpolé tel quel dans le HTML.
+- **Aucune image ni police distante** : le mot-symbole est du texte, le filet
+  est un aplat. Rien à débloquer chez le destinataire.
+- **Tableaux et styles en ligne**, pas de flexbox : Outlook. La dégradation
+  (coins droits, mêmes couleurs) est prévue — ne pas « moderniser » ce
+  balisage.
+- Le module reste **sans API Deno** : c'est ce qui permet aux tests du site de
+  l'exécuter tel quel (`web/tests/email-template.test.ts`, qui vérifie aussi
+  qu'aucune fonction edge ne réécrit son HTML à la main).
+
+Aperçu des quatre messages (compteur, superviseur, administrateur, invitation à
+un inventaire) : https://claude.ai/code/artifact/c5dc05ae-7500-4455-8c9f-3ae600b2ecf4
+
+**Les fonctions edge modifiées doivent être redéployées** pour que le nouveau
+gabarit parte réellement : le dépôt ne déploie rien tout seul.
+
 # Conformité RGPD / sécurité
 
 Audit complet du 13 août 2026 : 15 manquements relevés (2 critiques, 7 élevés,
