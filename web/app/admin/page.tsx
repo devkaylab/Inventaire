@@ -22,6 +22,7 @@ type IdleStore = { id: string; name: string; company_id: string; company_name: s
 type Overview = {
   companies: number
   stores: number
+  active_stores_month: number
   sessions_month: number
   counts_month: number
   active_people_month: number
@@ -79,8 +80,18 @@ export default function AdminPage() {
               <div className="kpi-note">L&apos;unité de facturation</div>
             </div>
             <div className="dash-kpi">
-              <div className="dash-kpi-value">{nb(v.sessions_month)}</div>
-              <div className="dash-kpi-label">Inventaires ce mois-ci</div>
+              <div className="dash-kpi-value">
+                {nb(v.active_stores_month)}
+                <span className="dash-kpi-sur"> / {nb(v.stores)}</span>
+              </div>
+              <div className="dash-kpi-label">Magasins actifs ce mois</div>
+              <div className="kpi-note">
+                {v.stores === 0
+                  ? 'Aucun magasin sous licence'
+                  : v.active_stores_month === v.stores
+                    ? 'Tout le parc a compté'
+                    : `${nb(v.stores - v.active_stores_month)} n’${v.stores - v.active_stores_month > 1 ? 'ont' : 'a'} pas compté`}
+              </div>
             </div>
           </div>
 

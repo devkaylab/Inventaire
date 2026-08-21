@@ -118,3 +118,29 @@ describe('les écrans déplacés', () => {
     expect(equipe).toContain('Compteurs · ')
   })
 })
+
+describe('le tableau de bord Quantinvo', () => {
+  const tdb = lire('../app/admin/page.tsx')
+
+  it('n’affiche pas deux fois le même chiffre', () => {
+    // « Inventaires ce mois-ci » en tête et « Inventaires lancés » plus bas
+    // donnaient le même nombre : c'est le doublon que la refonte combat.
+    const occurrences = (tdb.match(/sessions_month/g) ?? []).length
+    expect(occurrences, 'sessions_month ne doit être affiché qu’une fois').toBe(2) // type + rendu
+    expect(tdb).toContain('active_stores_month')
+    expect(tdb).toContain('Magasins actifs ce mois')
+  })
+
+  it('ne montre aucun montant tant qu’aucun prix n’existe en base', () => {
+    // La maquette affichait un revenu calculé de tête. Sans tarif enregistré,
+    // l'afficher reviendrait à l'inventer à chaque chargement.
+    // On n'examine que le code, pas les commentaires — ceux-ci expliquent
+    // justement pourquoi le montant est absent.
+    const codeSeul = tdb
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join('\n')
+    expect(codeSeul).not.toMatch(/€/)
+    expect(codeSeul).not.toMatch(/revenu/i)
+  })
+})
