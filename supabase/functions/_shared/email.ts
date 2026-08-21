@@ -97,7 +97,7 @@ export function lienSur(lien: string): string {
 }
 
 function paragraphe(texte: string): string {
-  return `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${COULEURS.encre2};">${echapper(texte)}</p>`
+  return `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:${COULEURS.encre2};">${echapper(texte)}</p>`
 }
 
 function encadreDetails(details: DetailEmail[]): string {
@@ -109,7 +109,7 @@ function encadreDetails(details: DetailEmail[]): string {
             </tr>`,
     )
     .join('')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 20px;background:${COULEURS.brume};border:1px solid ${COULEURS.filet};border-radius:10px;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:2px 0 24px;background:${COULEURS.brume};border:1px solid ${COULEURS.filet};border-radius:10px;">
             <tr><td style="padding:14px 16px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">${lignes}</table>
             </td></tr>
@@ -118,13 +118,13 @@ function encadreDetails(details: DetailEmail[]): string {
 
 function boutonHtml(bouton: BoutonEmail): string {
   const lien = echapper(lienSur(bouton.lien))
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 10px;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0;">
             <tr><td align="center" bgcolor="${COULEURS.indigo}" style="border-radius:10px;">
-              <a href="${lien}" style="display:inline-block;padding:14px 26px;font-family:${POLICE};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${echapper(bouton.libelle)}</a>
+              <a href="${lien}" style="display:inline-block;padding:14px 28px;font-family:${POLICE};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${echapper(bouton.libelle)}</a>
             </td></tr>
           </table>
-          <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:${COULEURS.ardoise};">Le bouton ne fonctionne pas ? Copiez cette adresse dans votre navigateur :<br>
-            <a href="${lien}" style="color:${COULEURS.indigoProfond};text-decoration:underline;word-break:break-all;">${lien}</a>
+          <p style="margin:28px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">Le bouton ne fonctionne pas ? Copiez cette adresse :<br>
+            <a href="${lien}" style="color:${COULEURS.ardoise};text-decoration:underline;word-break:break-all;">${lien}</a>
           </p>`
 }
 
@@ -143,12 +143,14 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
   const apercu = contenu.apercu ?? contenu.paragraphes[0] ?? ''
 
   const corps = [
-    contenu.salutation ? paragraphe(contenu.salutation) : '',
+    contenu.salutation
+      ? `<p style="margin:0 0 8px;font-size:15px;line-height:1.65;color:${COULEURS.encre2};">${echapper(contenu.salutation)}</p>`
+      : '',
     ...contenu.paragraphes.map(paragraphe),
     contenu.details?.length ? encadreDetails(contenu.details) : '',
     contenu.bouton ? boutonHtml(contenu.bouton) : '',
     contenu.note
-      ? `<p style="margin:16px 0 0;font-size:12.5px;line-height:1.6;color:${COULEURS.ardoise};">${echapper(contenu.note)}</p>`
+      ? `<p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">${echapper(contenu.note)}</p>`
       : '',
   ].join('')
 
@@ -161,43 +163,41 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
 <meta name="supported-color-schemes" content="light">
 <title>${echapper(contenu.titre)}</title>
 </head>
-<body style="margin:0;padding:0;background:${COULEURS.brume};">
+<body style="margin:0;padding:0;background:${COULEURS.filet};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${echapper(apercu)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COULEURS.brume};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COULEURS.filet};">
   <tr><td align="center" style="padding:28px 12px;">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:${COULEURS.blanc};border:1px solid ${COULEURS.filet};border-radius:14px;font-family:${POLICE};">
 
       <!-- En-tête : tuile, mot-symbole, filet de scan -->
-      <tr><td style="padding:24px 30px 14px;">
+      <tr><td style="padding:28px 32px 16px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td valign="middle" style="padding-right:12px;">
               <img src="${logo}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:0;border-radius:11px;">
             </td>
             <td valign="middle">
-              <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:${COULEURS.encre};">Quantinvo</span>
-              <span style="font-size:12px;color:${COULEURS.ardoise};">&nbsp;&nbsp;par Devkaylab</span>
+              <span style="font-size:18px;font-weight:800;letter-spacing:-0.4px;color:${COULEURS.encre};">Quantinvo</span>
             </td>
           </tr>
         </table>
       </td></tr>
-      <tr><td style="padding:0 30px;">
+      <tr><td style="padding:0 32px;">
         <div style="height:2px;line-height:2px;font-size:0;background:${COULEURS.cyan};border-radius:2px;">&nbsp;</div>
       </td></tr>
 
       <!-- Corps -->
-      <tr><td style="padding:24px 30px 6px;">
-        <h1 style="margin:0 0 16px;font-size:21px;line-height:1.3;font-weight:800;letter-spacing:-0.4px;color:${COULEURS.indigoProfond};">${echapper(contenu.titre)}</h1>
+      <tr><td style="padding:26px 32px 30px;">
+        <h1 style="margin:0 0 18px;font-size:20px;line-height:1.35;font-weight:700;letter-spacing:-0.3px;color:${COULEURS.encre};">${echapper(contenu.titre)}</h1>
         ${corps}
       </td></tr>
 
-      <!-- Pied -->
-      <tr><td style="padding:24px 30px 26px;">
-        <div style="height:1px;line-height:1px;font-size:0;background:${COULEURS.filet};margin-bottom:16px;">&nbsp;</div>
-        <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:${COULEURS.ardoise};">
-          <strong style="color:${COULEURS.encre};">Quantinvo</strong> — l'outil d'inventaire pour le commerce.${contenu.raison ? `<br>${echapper(contenu.raison)}` : ''}
+      <!-- Pied : bande gris clair, tout ce qui est secondaire y descend -->
+      <tr><td style="background:${COULEURS.brume};border-top:1px solid ${COULEURS.filet};padding:20px 32px 22px;border-radius:0 0 13px 13px;">
+        <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">
+          <strong style="color:${COULEURS.encre};font-weight:600;">Quantinvo</strong> — l'outil d'inventaire pour le commerce.${contenu.raison ? `<br>${echapper(contenu.raison)}` : ''}
         </p>
-        <p style="margin:0;font-size:12px;line-height:1.6;color:${COULEURS.ardoise};">
+        <p style="margin:0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">
           <a href="${echapper(site)}" style="color:${COULEURS.ardoise};text-decoration:underline;">${echapper(site.replace(/^https?:\/\//, ''))}</a>
           &nbsp;·&nbsp;
           <a href="${POLITIQUE_URL}" style="color:${COULEURS.ardoise};text-decoration:underline;">Politique de confidentialité</a>
