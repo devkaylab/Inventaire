@@ -6,8 +6,8 @@
 // imprime la planche. Les numéros n'ont aucun sens côté serveur tant qu'ils ne
 // sont pas affectés à un emplacement dans un inventaire (define_zone, par plage).
 //
-// Module volontairement sans dépendance native : testé en Node (tests/).
-// Dupliqué dans web/lib/baliseSeries.ts : garder les deux identiques.
+// Copie volontaire de src/lib/baliseSeries.ts (app mobile) : les deux doivent
+// rester identiques — un test le garde (web/tests/balises.test.ts).
 
 export type BaliseFormat = 'simple' | 'four' | 'five'
 

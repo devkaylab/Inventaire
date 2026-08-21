@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import {
   deleteInvitation,
@@ -24,10 +24,7 @@ import {
   type Invitation,
   type Profile,
 } from '@/lib/queries'
-import { exportBaliseSheet } from '@/lib/balises'
-import type { BaliseSeries } from '@/lib/baliseSeries'
-import { BaliseSheetModal } from '@/components/BaliseSheetModal'
-import { GeneratingOverlay } from '@/components/GeneratingOverlay'
+import { BaliseCreator } from '@/components/BaliseCreator'
 import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -65,31 +62,22 @@ export default function SupervisorProfileScreen() {
 
   const onRefresh = useCallback(() => { refetch(); refetchInvites() }, [refetch, refetchInvites])
 
-  // ── Balises ─────────────────────────────────────────────────────────────────
-  // Pas de stock à tenir : le superviseur choisit la numérotation et imprime.
-  const [baliseModal, setBaliseModal] = useState(false)
-  const print = useMutation({
-    mutationFn: (series: BaliseSeries) =>
-      exportBaliseSheet(`${series.from}-${series.to}`, series.codes.map((code) => ({ code }))),
-    onSuccess: (r) => { if (!r.shared) Alert.alert('PDF généré', `Le fichier ${r.filename} a été créé.`) },
-    onError: (e) => Alert.alert('Erreur', errorMessage(e)),
-  })
-
   const email = session?.user.email ?? '—'
 
   /**
    * Transmettre un code magasin.
    *
-   * C'est le seul usage prévu : le code accompagne la demande d'accès d'un
-   * futur superviseur du magasin, déposée sur le site. Il ne doit jamais
-   * circuler auprès des compteurs.
+   * Le code identifie le magasin ; les accès superviseur sont ouverts par
+   * l'administrateur de l'entreprise (/equipe) — plus de demande publique
+   * depuis le 21 août 2026. Il ne doit jamais circuler auprès des compteurs.
    */
   async function shareStoreCode(name: string, code: string) {
     try {
       await Share.share({
         message:
           `Code du magasin « ${name} » : ${code}\n\n` +
-          'À utiliser pour demander un accès superviseur sur quantinvo.vercel.app/superviseur. ' +
+          'Ce code identifie le magasin dans Quantinvo. Les accès superviseur sont ouverts par ' +
+          'l’administrateur de votre entreprise (page Mon équipe du site). ' +
           'Ce code est confidentiel : ne le communiquez pas aux compteurs.',
       })
     } catch (e) {
@@ -132,11 +120,6 @@ export default function SupervisorProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <GeneratingOverlay
-        visible={print.isPending}
-        message="Préparation de l’impression…"
-        sub="Création du PDF des balises"
-      />
       <FlatList
         data={rows}
         keyExtractor={r => (r.kind === 'member' ? `m-${r.profile.id}` : `i-${r.invitation.id}`)}
@@ -193,25 +176,13 @@ export default function SupervisorProfileScreen() {
               </View>
             )}
             <Text style={styles.baliseHint}>
-              Le code magasin sert aux demandes d&apos;accès superviseur sur le site. Il est
-              confidentiel : ne le communiquez jamais aux compteurs.
+              Le code magasin est confidentiel : ne le communiquez jamais aux compteurs. Les accès
+              superviseur sont ouverts par l&apos;administrateur de votre entreprise, depuis le site.
             </Text>
 
             {/* Balises */}
             <Text style={styles.sectionTitle}>Balises</Text>
-            <Pressable
-              style={[styles.baliseBtn, styles.baliseBtnPrimary]}
-              onPress={() => setBaliseModal(true)}
-              disabled={print.isPending}
-            >
-              {print.isPending
-                ? <ActivityIndicator color={theme.onAccent} />
-                : <Text style={styles.baliseBtnPrimaryText}>Créer des balises</Text>}
-            </Pressable>
-            <Text style={styles.baliseHint}>
-              Choisissez la numérotation et le nombre, puis imprimez sur des planches autocollantes
-              Avery L7160 (à 100 %). Collez-les, puis affectez les plages aux emplacements dans chaque inventaire.
-            </Text>
+            <BaliseCreator context="profile" />
 
             {/* Mes inventaires (créés par moi) */}
             <Text style={styles.sectionTitle}>Mes inventaires</Text>
@@ -267,11 +238,6 @@ export default function SupervisorProfileScreen() {
             <DeleteAccountButton />
           </>
         }
-      />
-      <BaliseSheetModal
-        visible={baliseModal}
-        onClose={() => setBaliseModal(false)}
-        onSubmit={(series) => print.mutate(series)}
       />
     </SafeAreaView>
   )
@@ -382,9 +348,6 @@ function makeStyles(t: Theme) {
     },
     shareCodeBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.bold },
 
-    baliseBtn: { borderRadius: Radius.md, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
-    baliseBtnPrimary: { backgroundColor: t.accent, ...t.shadowButton },
-    baliseBtnPrimaryText: { color: t.onAccent, fontSize: 14, fontFamily: Font.bold },
     baliseHint: { fontSize: 12, color: t.textMuted, lineHeight: 17, fontFamily: Font.regular, marginTop: 2 },
 
     emptyInv: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginLeft: 2 },

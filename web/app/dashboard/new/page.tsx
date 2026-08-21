@@ -156,7 +156,7 @@ export default function NewSessionPage() {
             </select>
             <p className="field-hint">
               {usesZones
-                ? 'Chaque emplacement reçoit une plage de balises QR. Vous suivez l’avancement balise par balise et l’audit se compare zone par zone.'
+                ? 'Chaque emplacement reçoit une plage de balises QR (étiquettes à imprimer et coller — vous les créerez à l’étape suivante, dans Set up). Vous suivez l’avancement balise par balise et l’audit se compare zone par zone.'
                 : 'Les compteurs scannent sans délimiter d’emplacement. Plus simple à lancer, mais pas de suivi par zone ni de comparaison d’audit par balise.'}
             </p>
           </div>

@@ -987,3 +987,31 @@ a { color: inherit; text-decoration: none; }
   .journal-row { flex-direction: column; gap: 4px; }
   .journal-when { min-width: 0; }
 }
+
+/* ── Création de balises (Mon compte, Set up) ─────────────────────────────── */
+.balise-steps { margin: 14px 0 18px; padding-left: 0; list-style: none; counter-reset: step; display: grid; gap: 8px; }
+.balise-steps li {
+  counter-increment: step; position: relative; padding-left: 36px;
+  font-size: 14px; line-height: 1.5; color: var(--text-2);
+}
+.balise-steps li::before {
+  content: counter(step); position: absolute; left: 0; top: 0;
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px;
+}
+.balise-steps strong { color: var(--text); }
+.balise-formats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.balise-format {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 12px; border-radius: 10px; cursor: pointer; text-align: left; font-family: inherit;
+  background: var(--bg); border: 1px solid var(--hairline); color: var(--text); font-size: 14px; font-weight: 600;
+}
+.balise-format:hover { border-color: var(--accent); }
+.balise-format.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.balise-format-ex { font-size: 12px; font-weight: 400; opacity: .8; }
+.balise-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+.balise-done { margin-top: 12px; font-size: 14px; color: var(--success-text, var(--accent)); }
+@media (max-width: 720px) {
+  .balise-formats { grid-template-columns: 1fr; }
+  .balise-form { grid-template-columns: 1fr; }
+}

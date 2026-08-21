@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { defineZoneRange, deleteZone, getSession, getZoneDashboard } from '@/lib/queries'
 import type { ZoneDashboardRow } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
+import { BaliseCreator } from '@/components/BaliseCreator'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -147,12 +148,14 @@ export default function ZonesScreen() {
             </View>
           )}
 
+          {!closed && <BaliseCreator context="zones" />}
+
           {!closed && (
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Affecter une plage à un emplacement</Text>
               <Text style={styles.hint}>
-                Indiquez quelles balises (déjà imprimées depuis votre profil) sont collées à quel
-                endroit. Ex. « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
+                Indiquez quelles balises (imprimées et collées) sont à quel endroit.
+                Ex. « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
               </Text>
               <Text style={styles.label}>Emplacement</Text>
               <TextInput

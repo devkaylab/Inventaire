@@ -11,6 +11,7 @@ import {
   type Company, type TeamInvitation, type TeamMember,
 } from '@/lib/account'
 import { AddCounter } from '@/components/dashboard/AddCounter'
+import { BaliseSheetPanel } from '@/components/BaliseSheetPanel'
 import { MfaPanel } from '@/components/MfaPanel'
 
 type ProfileInfo = { full_name: string | null; role: string | null; is_admin: boolean | null; is_company_admin: boolean | null }
@@ -158,10 +159,9 @@ export default function AccountPage() {
           <div className="panel">
             <h3>Entreprise</h3>
             <div className="acc-kv"><span>Entreprise</span><strong>{company?.name ?? '—'}</strong></div>
-            <p className="muted small" style={{ marginTop: 10 }}>
-              La création et l&apos;impression des balises se font depuis l&apos;application mobile.
-            </p>
           </div>
+
+          <BaliseSheetPanel context="account" />
 
           <div className="panel">
             <h3>Mes magasins</h3>

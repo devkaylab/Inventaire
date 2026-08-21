@@ -103,9 +103,9 @@ objets supprimés ensuite** (leçon `get_session_activity`) :
 les téléphones partage encore cette adresse avec le code magasin (voir
 `src/constants/links.ts` et `src/app/(supervisor)/profile.tsx`). La supprimer
 enverrait ces personnes sur une erreur. Elle n'est plus qu'une explication —
-même motif que l'écran d'inscription de l'app. **À reprendre au prochain
-build mobile** : le texte de partage du code magasin y parle encore de
-« demander un accès superviseur sur le site ».
+même motif que l'écran d'inscription de l'app. Le texte de partage du code
+magasin a été corrigé le 21 août 2026 (il renvoie vers l'administrateur de
+l'entreprise) ; il entre en vigueur au prochain build mobile.
 
 **La table `supervisor_requests` reste aussi**, vide, RLS active sans aucune
 policy (donc refus par défaut). La supprimer obligerait à réécrire
@@ -413,13 +413,24 @@ La suppression de compte anonymise les comptages au lieu de les détruire.
 
 # Balises : séries imprimées, pas de stock (21 août 2026)
 
-La création de balises ne passe plus par le serveur. Depuis l'écran profil de
-l'app, le superviseur choisit une numérotation (simples `1, 2, 3…`, 4 chiffres
-`1000…9999`, 5 chiffres `10000…99999`), un premier numéro et un nombre, et la
-planche PDF part directement à l'impression (`src/lib/baliseSeries.ts`, testé
-dans `tests/baliseSeries.test.ts` ; formulaire `BaliseSheetModal`). **Aucun
-compteur de balises n'est affiché**, ni dans l'app ni sur le site : personne
-n'en a l'usage, les zones s'affectent par plage libre (`define_zone`).
+La création de balises ne passe plus par le serveur. Le superviseur choisit
+une numérotation (simples `1, 2, 3…`, 4 chiffres `1000…9999`, 5 chiffres
+`10000…99999`), un premier numéro et un nombre, et la planche PDF est produite
+sur place. **Elle se crée partout où on en a besoin**, avec le mode d'emploi en
+trois étapes (imprimer, coller, indiquer) écrit pour des personnes peu à l'aise :
+
+- app : profil et écran Zones d'un inventaire (`BaliseCreator`, formulaire
+  `BaliseSheetModal`, dessin `src/lib/balises.ts`) ;
+- site : Mon compte et onglet Set up (`BaliseSheetPanel`, dessin
+  `web/lib/balisePdf.ts`, téléchargement du PDF dans le navigateur).
+
+La logique des séries est dupliquée volontairement (`src/lib/baliseSeries.ts`
+et `web/lib/baliseSeries.ts`, un test garde l'identité : `web/tests/balises.test.ts`).
+**Les deux dessins de planche doivent rester identiques** (gabarit Avery L7160,
+QR `SCB1:<numéro>`) : une balise imprimée depuis le site doit se scanner comme
+une balise imprimée depuis l'app. **Aucun compteur de balises n'est affiché**,
+ni dans l'app ni sur le site : personne n'en a l'usage, les zones s'affectent
+par plage libre (`define_zone`).
 
 La RPC `generate_company_balises` et la colonne `companies.balise_count`
 **restent en base** tant que des builds mobiles antérieurs peuvent encore les

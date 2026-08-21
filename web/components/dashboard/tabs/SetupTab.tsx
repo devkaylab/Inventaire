@@ -9,6 +9,7 @@ import {
   codeRange, defineZoneRange, deleteZone, groupByName,
   type ZoneDashboardRow, validateRange, MAX_RANGE,
 } from '@/lib/zones'
+import { BaliseSheetPanel } from '@/components/BaliseSheetPanel'
 import { fmtQty, plural } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { FileDrop } from '@/components/ui/FileDrop'
@@ -284,11 +285,13 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
     <div>
       <div className="dash-section-label" style={{ marginBottom: 12 }}>Balises</div>
 
+      {!readOnly && <BaliseSheetPanel context="setup" />}
+
       {!readOnly && (
-        <form className="panel" onSubmit={onDefine} style={{ marginTop: 0 }}>
+        <form className="panel" onSubmit={onDefine} style={{ marginTop: 16 }}>
           <h3>Affecter une plage de balises à un emplacement</h3>
           <p className="muted small" style={{ marginTop: 6, marginBottom: 16 }}>
-            Indiquez quelles balises — déjà imprimées depuis votre profil — sont collées à quel endroit.
+            Indiquez quelles balises — imprimées et collées — sont à quel endroit.
             Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
             Réaffecter une plage déjà nommée la renomme. {MAX_RANGE} balises au maximum par affectation.
           </p>
