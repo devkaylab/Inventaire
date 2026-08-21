@@ -190,6 +190,25 @@ un inventaire) : https://claude.ai/code/artifact/c5dc05ae-7500-4455-8c9f-3ae600b
 **Les fonctions edge modifiées doivent être redéployées** pour que le nouveau
 gabarit parte réellement : le dépôt ne déploie rien tout seul.
 
+**Les templates hébergés par Resend ont été examinés puis écartés**
+(21 août 2026, décision de Julien). Ils existent bien — `template: { id,
+variables }` à l'envoi, éditeur et historique côté tableau de bord — et ils
+permettraient de changer un mot sans redéployer. Trois raisons de rester au
+code : la syntaxe de variables est `{{{NOM}}}`, dont la documentation ne dit
+pas si elle échappe (c'est précisément le trou fermé ici) ; il n'y a ni
+condition ni répétition, alors que nos messages en ont (salutation nommée ou
+non, encadré de faits pour le seul inventaire, note et raison facultatives) ;
+et le gabarit sortirait de git et de ses tests.
+
+À savoir si la question revient : **la clé Resend en production est limitée à
+l'envoi**. Vérifié en direct — `POST /emails` répond 200, mais `POST
+/templates`, `GET /templates` et `GET /emails/{id}` répondent tous 401
+« This API key is restricted to only send emails ». C'est du moindre privilège
+voulu : une fuite de cette clé permettrait d'envoyer, pas de lire ce qui est
+parti. Passer aux templates Resend obligerait donc à créer une clé plus
+puissante quelque part — c'est une décision de sécurité, pas un simple
+déplacement de fichiers.
+
 # Conformité RGPD / sécurité
 
 Audit complet du 13 août 2026 : 15 manquements relevés (2 critiques, 7 élevés,
