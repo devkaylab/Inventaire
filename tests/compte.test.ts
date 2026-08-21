@@ -94,3 +94,25 @@ describe('double authentification — la connexion doit demander le code', () =>
     expect(mfa).toContain('return false')
   })
 })
+
+describe('connexion — le sablier ne doit pas rester allumé', () => {
+  // Anomalie du 21 août 2026, relevée par Julien en test : après « Se
+  // connecter », l'écran basculait sur la saisie du code **en gardant le
+  // sablier du mot de passe**, qui n'était jamais éteint (on le laissait
+  // tourner jusqu'à la navigation, laquelle n'arrive jamais quand un second
+  // facteur est attendu). Le bouton « Vérifier » étant désactivé tant que le
+  // sablier tourne, la connexion devenait impossible.
+  const login = lire('app/login.tsx')
+
+  it('le mot de passe accepté éteint le sablier quand le code est attendu', () => {
+    expect(login).toMatch(/if \(await mfaPending\(\)\) \{\s*\n\s*setLoading\(false\)/)
+  })
+
+  it('un échec de connexion sort de la fonction au lieu de poursuivre', () => {
+    expect(login).toMatch(/Alert\.alert\('Connexion échouée', error\)\s*\n\s*return/)
+  })
+
+  it('l’écran du code dit de quel compte il s’agit', () => {
+    expect(login).toContain('session?.user.email')
+  })
+})

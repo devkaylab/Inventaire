@@ -23,7 +23,11 @@ export default function CompteLayout() {
   const { profile, loading, mfaRequired } = useAuth()
   const theme = useTheme()
 
-  if (loading) {
+  // Sablier seulement tant qu'on ne sait pas qui est là. S'il se rallumait
+  // alors que le profil est connu, la pile repartirait de « Mon compte » —
+  // par exemple juste après un changement de mot de passe, qui émet un
+  // événement d'authentification.
+  if (loading && !profile) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator size="large" color={theme.accent} />

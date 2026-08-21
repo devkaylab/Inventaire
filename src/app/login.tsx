@@ -14,14 +14,14 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/lib/auth'
-import { challengeAndVerify, verifiedTotpFactor } from '@/lib/mfa'
+import { challengeAndVerify, mfaPending, verifiedTotpFactor } from '@/lib/mfa'
 import { useTheme } from '@/lib/theme'
 import { AppLogo } from '@/components/AppLogo'
 import { PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function LoginScreen() {
-  const { signIn, signOut, profile, loading: authLoading, mfaRequired, recheckMfa } = useAuth()
+  const { signIn, signOut, session, profile, loading: authLoading, mfaRequired, recheckMfa } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const [email, setEmail] = useState('')
@@ -45,7 +45,11 @@ export default function LoginScreen() {
     const factorId = await verifiedTotpFactor()
     if (!factorId) {
       setLoading(false)
-      Alert.alert('Erreur', 'Aucune application d’authentification n’est associée à ce compte.')
+      Alert.alert(
+        'Second facteur introuvable',
+        'Aucune application d’authentification n’est associée à ce compte. Reconnectez-vous.',
+        [{ text: 'Revenir à la connexion', onPress: () => { void abandonner() } }],
+      )
       return
     }
     const r = await challengeAndVerify(factorId, code)
@@ -77,9 +81,18 @@ export default function LoginScreen() {
     if (error) {
       setLoading(false)
       Alert.alert('Connexion échouée', error)
+      return
     }
-    // On success: keep the spinner visible — useEffect above will navigate
-    // once the auth state (session + profile) is fully resolved.
+    // Le mot de passe ne suffit pas toujours. Quand un second facteur est
+    // attendu, l'écran bascule sur la saisie du code : il faut arrêter le
+    // sablier ici, sinon il tourne sur le bouton « Vérifier » — désactivé
+    // tant qu'il tourne — et la connexion devient impossible.
+    if (await mfaPending()) {
+      setLoading(false)
+      return
+    }
+    // Sinon on garde le sablier : l'effet ci-dessus navigue dès que le profil
+    // est chargé, et l'écran disparaît.
   }
 
   // Deuxième étape — rien d'autre à l'écran : la personne est déjà
@@ -94,7 +107,9 @@ export default function LoginScreen() {
             </View>
             <Text style={styles.title}>Code de vérification</Text>
             <Text style={styles.subtitle}>
-              Saisissez le code affiché par votre application d&apos;authentification.
+              {session?.user.email
+                ? `${session.user.email} est protégé par une application d’authentification. Saisissez le code qu’elle affiche.`
+                : 'Ce compte est protégé par une application d’authentification. Saisissez le code qu’elle affiche.'}
             </Text>
           </View>
 
@@ -126,7 +141,7 @@ export default function LoginScreen() {
             </Pressable>
 
             <Pressable style={styles.link} onPress={abandonner}>
-              <Text style={styles.linkText}>Revenir à la connexion</Text>
+              <Text style={styles.linkText}>Se déconnecter et changer de compte</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>

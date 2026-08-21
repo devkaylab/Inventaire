@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { mfaPending } from '@/lib/mfa'
@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [mfaRequired, setMfaRequired] = useState(false)
+  const profileRef = useRef<Profile | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,10 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (session) {
-        setLoading(true)   // show spinner while profile is being fetched
+        // Le sablier ne se rallume que si l'on n'a pas déjà le profil de ce
+        // compte. Sinon, chaque événement d'authentification — rafraîchissement
+        // horaire du jeton, changement de mot de passe — remplacerait l'écran
+        // par un sablier et **remonterait la pile de navigation à sa racine** :
+        // la personne se retrouverait à l'accueil sans comprendre pourquoi.
+        setLoading((prev) => prev || profileRef.current?.id !== session.user.id)
         void recheckMfa()
         fetchProfile(session.user.id)
       } else {
+        profileRef.current = null
         setProfile(null)
         setMfaRequired(false)
         setLoading(false)
@@ -82,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single()
 
     if (data) {
+      profileRef.current = data
       setProfile(data)
       void cacheProfile(data)
       setLoading(false)
@@ -91,7 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const cached = await getCachedProfile<Profile>()
     // On ne sert le cache que s'il correspond au compte réellement connecté.
-    setProfile(cached && cached.id === userId ? cached : null)
+    profileRef.current = cached && cached.id === userId ? cached : null
+    setProfile(profileRef.current)
     setLoading(false)
   }
 
