@@ -93,21 +93,23 @@ export function EquipeTab({ session, members, invitations, isCreator, currentUse
         </div>
       )}
 
-      <div
-        className="dash-section-label"
-        style={{ margin: '28px 0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
-      >
-        <span>Membres ({members.length})</span>
-        {!closed && (
-          <AddSessionMember
-            sessionId={session.id}
-            storeId={session.store_id}
-            members={members}
-            invitations={invitations}
-            currentUserId={currentUserId}
-            onAdded={onChanged}
-          />
-        )}
+      {/* Le formulaire vivait DANS ce libellé, qui porte `text-transform:
+          uppercase` : tout son texte partait en capitales, et la rangée
+          `space-between` l'écrasait contre le compteur de membres. Il a son
+          propre bloc. */}
+      {!closed && (
+        <AddSessionMember
+          sessionId={session.id}
+          storeId={session.store_id}
+          members={members}
+          invitations={invitations}
+          currentUserId={currentUserId}
+          onAdded={onChanged}
+        />
+      )}
+
+      <div className="dash-section-label" style={{ margin: '28px 0 10px' }}>
+        Membres ({members.length})
       </div>
       {members.length === 0 ? (
         <EmptyState

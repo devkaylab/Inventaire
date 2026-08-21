@@ -764,10 +764,47 @@ a { color: inherit; text-decoration: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Recherche d'une personne à ajouter à un inventaire. */
-.member-search { margin-top: 18px; }
-.member-search-row { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
-.member-search-field { position: relative; flex: 1; min-width: 220px; }
-.member-search-field input { width: 100%; }
+.member-search {
+  margin: 24px 0 4px; padding: 16px;
+  background: var(--bg); border: 1px solid var(--hairline); border-radius: 14px;
+}
+/* Titre en casse normale : ce bloc vivait dans un libellé en capitales, qui
+   transformait jusqu'à sa phrase d'explication. */
+.member-search-title { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+.member-search-hint { margin: 5px 0 12px; font-size: 13px; line-height: 1.5; color: var(--text-3); }
+.member-search-hint strong { color: var(--text-2); font-weight: 600; }
+
+/* Une grille, pas un `flex-wrap` : le bouton tombait seul à la ligne dès que
+   la place manquait, et la rangée se lisait cassée. Trois colonnes qui
+   s'empilent d'un coup sur petit écran. */
+.member-search-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px; align-items: stretch;
+}
+.member-search-field { position: relative; min-width: 0; }
+.member-search-field input,
+.member-search-row select {
+  width: 100%; height: 42px; padding: 0 14px; font-size: 15px; font-family: inherit;
+  border-radius: 10px; background: var(--surface); border: 1px solid var(--hairline);
+  color: var(--text); outline: none;
+}
+.member-search-row select { width: auto; min-width: 148px; }
+.member-search-field input:focus,
+.member-search-row select:focus { border-color: var(--accent); }
+.member-search-row .btn { height: 42px; }
+
+.member-chosen {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 10px; padding: 9px 12px;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px;
+}
+.member-chosen-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.member-chosen-mail { font-size: 13px; color: var(--text-3); margin-right: auto; }
+
+@media (max-width: 620px) {
+  .member-search-row { grid-template-columns: 1fr; }
+  .member-search-row select { min-width: 0; }
+}
 .member-suggestions {
   position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
   margin: 0; padding: 5px; list-style: none;

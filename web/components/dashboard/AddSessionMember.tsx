@@ -108,22 +108,39 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
   if (!storeId) return null
 
   return (
-    <form onSubmit={ajouter} className="member-search">
-      <label htmlFor="recherche-membre" className="dash-section-label">
+    <form onSubmit={ajouter} className="member-search" autoComplete="off">
+      <label htmlFor="recherche-membre" className="member-search-title">
         Ajouter quelqu’un à cet inventaire
       </label>
-      <p className="muted small" style={{ margin: '6px 0 10px' }}>
+      <p className="member-search-hint">
         Cherchez une personne de l’équipe du magasin par nom, prénom ou adresse e-mail.
         Pour créer un compte, passez par <strong>Mon équipe</strong>.
       </p>
 
       <div className="member-search-row">
         <div className="member-search-field">
+          {/*
+            Le gestionnaire de mots de passe du navigateur proposait ses
+            identifiants enregistrés par-dessus nos suggestions, dès la
+            première lettre. `autoComplete="off"` ne suffit pas — Safari et
+            Chrome l'ignorent quand le champ ressemble à un identifiant. D'où
+            le nom neutre, le type `text` (un champ `search` attire aussi
+            l'historique), et les drapeaux que lisent 1Password, LastPass et
+            Bitwarden.
+          */}
           <input
             id="recherche-membre"
-            type="search"
+            name="recherche-personne"
+            type="text"
+            inputMode="search"
             value={query}
             autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-bwignore="true"
+            data-form-type="other"
             placeholder="Nom, prénom ou e-mail…"
             onChange={e => { setQuery(e.target.value); setChoisi(null) }}
           />
@@ -156,17 +173,17 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
       </div>
 
       {choisi && (
-        <p className="muted small" style={{ marginTop: 8 }}>
-          <strong>{choisi.full_name || choisi.email}</strong> — {choisi.email}
-          {' · '}
+        <div className="member-chosen">
+          <span className="member-chosen-name">{choisi.full_name || choisi.email}</span>
+          <span className="member-chosen-mail">{choisi.email}</span>
           <button type="button" className="link-btn" onClick={() => { setChoisi(null); setQuery('') }}>
-            changer
+            Changer
           </button>
-        </p>
+        </div>
       )}
 
       {rienTrouve && (
-        <p className="muted small" style={{ marginTop: 8 }}>
+        <p className="member-search-hint" style={{ marginTop: 10 }}>
           Personne de l’équipe de ce magasin ne correspond à «&nbsp;{query.trim()}&nbsp;». Si la
           personne n’a pas encore de compte, créez-le depuis <strong>Mon équipe</strong> ; elle
           apparaîtra ensuite ici.

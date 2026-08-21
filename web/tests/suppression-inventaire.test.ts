@@ -146,3 +146,36 @@ describe('ajouter quelqu’un à un inventaire : on cherche, on ne saisit pas', 
     expect(lire('../app/equipe/page.tsx')).toContain('AddCounter')
   })
 })
+
+describe('la barre de recherche ne se fait pas couvrir par le navigateur', () => {
+  // Relevé par Julien : le gestionnaire de mots de passe affichait ses
+  // identifiants enregistrés par-dessus les suggestions, dès la première
+  // lettre. `autoComplete="off"` seul ne suffit pas.
+  const ajout = lire('../components/dashboard/AddSessionMember.tsx')
+
+  it('le champ porte les drapeaux qui écartent les gestionnaires', () => {
+    expect(ajout).toContain('data-1p-ignore')
+    expect(ajout).toContain('data-lpignore')
+    expect(ajout).toContain('data-form-type="other"')
+    expect(ajout).toContain('autoComplete="off"')
+  })
+
+  it('le champ ne se déclare ni identifiant ni recherche', () => {
+    // `type="search"` attire aussi l'historique du navigateur ; un `name`
+    // évoquant un e-mail réveille le gestionnaire.
+    expect(ajout).toContain('name="recherche-personne"')
+    expect(ajout).not.toContain('type="search"')
+  })
+
+  it('la rangée est une grille, le bouton ne tombe plus seul à la ligne', () => {
+    const css = lire('../app/globals.css')
+    expect(css).toContain('grid-template-columns: minmax(0, 1fr) auto auto')
+  })
+
+  it('le bloc a son propre titre, hors du libellé en capitales', () => {
+    // Rendu dans `.dash-section-label`, tout son texte partait en majuscules.
+    expect(ajout).toContain('member-search-title')
+    expect(lire('../components/dashboard/tabs/EquipeTab.tsx'))
+      .not.toMatch(/dash-section-label[^>]*>\s*<span>Membres/)
+  })
+})
