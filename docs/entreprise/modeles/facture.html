@@ -1,0 +1,230 @@
+<title>Facture Quantinvo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  /* Palette « Papier » — charte Quantinvo v1.1. Document volontairement
+     mono-thème : il s'imprime sur papier blanc, il se montre donc blanc
+     partout, quel que soit le thème de l'hôte. */
+  :root {
+    --paper: #ffffff; --ink: #0b0f19; --ink-2: #3d4556; --slate: #5b6475;
+    --indigo-deep: #4636b0; --indigo: #6366f1; --cyan: #38c9ff;
+    --mist: #f4f5f9; --hairline: #e3e6ee;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --display: "Sora", "Inter", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #d9dce6; }
+  body { background: #d9dce6; color: var(--ink); font-family: var(--sans); font-size: 10.5pt; line-height: 1.5;
+         -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+
+  .aide { max-width: 210mm; margin: 18px auto 0; background: var(--paper); border: 1px solid var(--hairline);
+          border-radius: 10px; padding: 12px 16px; font-size: 9.5pt; color: var(--ink-2); }
+  .aide b { color: var(--ink); }
+  .aide kbd { font-family: inherit; border: 1px solid var(--hairline); border-radius: 4px; padding: 0 5px; background: var(--mist); }
+
+  .page { width: 210mm; min-height: 297mm; margin: 14px auto 40px; background: var(--paper);
+          padding: 14mm 18mm 12mm; box-shadow: 0 10px 40px rgba(11,15,25,0.12); display: flex; flex-direction: column; }
+
+  [contenteditable] { outline: none; border-radius: 3px; transition: background 0.15s; }
+  [contenteditable]:hover { background: rgba(99,102,241,0.06); }
+  [contenteditable]:focus { background: rgba(99,102,241,0.10); box-shadow: 0 0 0 1px var(--indigo); }
+  .vide { color: var(--indigo-deep); }
+
+  header.tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .lockup { display: flex; align-items: center; gap: 10px; }
+  .lockup .mot { font-family: var(--display); font-weight: 700; font-size: 19pt; letter-spacing: -0.5px; color: var(--ink); }
+  .lockup small { display: block; font-size: 8.5pt; color: var(--slate); margin-top: -2px; letter-spacing: 0; font-family: var(--sans); font-weight: 500; }
+  .piece { text-align: right; }
+  .piece h1 { font-family: var(--display); font-weight: 800; font-size: 24pt; letter-spacing: -0.8px; color: var(--indigo-deep); line-height: 1; }
+  .piece .ref { margin-top: 6px; font-size: 9.5pt; color: var(--slate); display: grid; grid-template-columns: auto auto; gap: 2px 10px; justify-content: end; }
+  .piece .ref b { color: var(--ink); font-weight: 600; }
+  .scan { height: 2px; background: var(--cyan); border-radius: 2px; margin: 6mm 0 6mm; }
+
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
+  .bloc h2 { font-size: 8pt; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--slate); margin-bottom: 5px; }
+  .bloc p { font-size: 10pt; line-height: 1.45; }
+  .bloc p strong { font-family: var(--display); font-weight: 700; font-size: 11pt; }
+  .bloc p span.l { color: var(--slate); }
+
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 6mm; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; }
+  .meta div { padding: 8px 12px; border-right: 1px solid var(--hairline); background: var(--mist); }
+  .meta div:last-child { border-right: none; }
+  .meta small { display: block; font-size: 7.5pt; letter-spacing: 1px; text-transform: uppercase; color: var(--slate); font-weight: 600; }
+  .meta b { font-weight: 600; font-size: 10pt; }
+
+  table.lignes { width: 100%; border-collapse: collapse; margin-top: 6mm; }
+  table.lignes th { text-align: left; font-size: 7.5pt; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase;
+                    color: var(--slate); background: var(--mist); padding: 8px 10px; border-bottom: 1px solid var(--hairline); }
+  table.lignes td { padding: 10px 10px; border-bottom: 1px solid var(--hairline); vertical-align: top; font-size: 10pt; }
+  table.lignes td .det { display: block; color: var(--slate); font-size: 9pt; margin-top: 2px; }
+  .num { text-align: right; white-space: nowrap; }
+  th.num { text-align: right; }
+  .qte { width: 14mm; } .pu { width: 28mm; } .tot { width: 30mm; }
+
+  .totaux { display: flex; justify-content: flex-end; margin-top: 6mm; }
+  .totaux table { border-collapse: collapse; min-width: 78mm; }
+  .totaux td { padding: 5px 10px; font-size: 10pt; }
+  .totaux td:first-child { color: var(--slate); }
+  .totaux tr.ttc td { font-family: var(--display); font-weight: 700; font-size: 13pt; color: var(--indigo-deep);
+                      border-top: 2px solid var(--indigo); padding-top: 9px; }
+
+  .conditions { margin-top: 6mm; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
+  .conditions h2 { font-size: 8pt; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--slate); margin-bottom: 5px; }
+  .conditions p, .conditions li { font-size: 9pt; color: var(--ink-2); line-height: 1.5; }
+  .conditions ul { list-style: none; }
+  .conditions li { padding-left: 12px; position: relative; }
+  .conditions li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; border-radius: 1.5px; background: var(--indigo); }
+
+  .signature { border: 1px solid var(--hairline); border-radius: 8px; padding: 10px 12px; min-height: 30mm; }
+  .signature p { font-size: 9pt; }
+  .signature .cadre { margin-top: 6px; height: 17mm; border: 1px dashed var(--hairline); border-radius: 6px; }
+
+  .pied { margin-top: auto; padding-top: 6mm; border-top: 1px solid var(--hairline); font-size: 8pt; color: var(--slate); line-height: 1.5;
+          display: flex; justify-content: space-between; gap: 12px; }
+  .pied .num-page { white-space: nowrap; }
+
+  @page { size: A4; margin: 0; }
+  @media print {
+    html, body { background: #ffffff; }
+    .aide { display: none; }
+    .page { margin: 0; box-shadow: none; width: 210mm; height: 296.5mm; min-height: 0; overflow: hidden; page-break-after: avoid; }
+    [contenteditable]:hover, [contenteditable]:focus { background: transparent; box-shadow: none; }
+  }
+</style>
+
+<div class="aide">
+  <b>Mode d’emploi.</b> Cliquez sur un texte pour le modifier directement — les montants se recalculent tout seuls.
+  Les valeurs entre crochets sont à compléter une fois la société immatriculée.
+  Pour obtenir le PDF : <kbd>Cmd</kbd> + <kbd>P</kbd>, puis « Enregistrer au format PDF », sans marges.
+  Ce bandeau ne s’imprime pas.
+</div>
+
+<main class="page">
+  <header class="tete">
+    <div class="lockup">
+      <svg width="40" height="40" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7466F4"/><stop offset="0.52" stop-color="#4636B0"/><stop offset="1" stop-color="#1C153F"/></linearGradient></defs>
+  <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
+  <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
+  <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
+  <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
+  <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF"/>
+</svg>
+      <div>
+        <span class="mot">Quantinvo</span>
+        <small>par Devkaylab</small>
+      </div>
+    </div>
+    <div class="piece">
+      <h1>Facture</h1>
+      <div class="ref"><span>Numéro</span><b contenteditable="true">F-2026-0001</b><span>Date d’émission</span><b contenteditable="true">1er septembre 2026</b><span>Échéance</span><b contenteditable="true">à réception</b><span>Devis</span><b contenteditable="true">D-2026-0001</b></div>
+    </div>
+  </header>
+  <div class="scan" aria-hidden="true"></div>
+
+  <section class="parties">
+    <div class="bloc">
+      <h2>Émetteur</h2>
+      <p contenteditable="true"><strong>Devkaylab</strong><br>
+         <span class="vide">[SASU au capital de … €]</span><br>
+         <span class="vide">[Adresse du siège]</span><br>
+         <span class="vide">[Code postal Ville]</span><br>
+         <span class="l">SIREN</span> <span class="vide">[000 000 000]</span> — <span class="l">RCS</span> <span class="vide">[Ville]</span><br>
+         <span class="l">TVA</span> <span class="vide">[FR00 000000000]</span><br>
+         devkaylab@gmail.com · <span class="vide">[téléphone]</span></p>
+    </div>
+    <div class="bloc">
+      <h2>Client</h2>
+      <p contenteditable="true"><strong>Maison Dupont SAS</strong><br>
+         À l’attention de Claire Martin, directrice de magasin<br>
+         12 rue de la République<br>
+         69002 Lyon<br>
+         <span class="l">SIREN</span> 123 456 789<br>
+         claire.martin@maisondupont.fr</p>
+    </div>
+  </section>
+
+  <section class="meta"><div><small>Objet</small><b contenteditable="true">Licence annuelle Quantinvo</b></div><div><small>Période</small><b contenteditable="true">01/09/2026 – 31/08/2027</b></div><div><small>Paiement</small><b contenteditable="true">Virement, à réception</b></div><div><small>Référence à rappeler</small><b contenteditable="true">F-2026-0001</b></div></section>
+
+  <table class="lignes">
+    <thead>
+      <tr><th>Désignation</th><th class="num qte">Qté</th><th class="num pu">Prix unitaire HT</th><th class="num tot">Total HT</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td contenteditable="true">Licence annuelle Quantinvo — magasin <b>Lyon Part-Dieu</b>
+          <span class="det">Tranche jusqu’à 50 000 unités en stock · 12 mois · comptages et compteurs illimités · application iOS et tableau de bord web</span></td>
+        <td class="num qte" contenteditable="true">1</td>
+        <td class="num pu" contenteditable="true">2 400,00 €</td>
+        <td class="num tot">2 400,00 €</td>
+      </tr>
+      <tr>
+        <td contenteditable="true">Licence annuelle Quantinvo — magasin <b>Lyon Confluence</b>
+          <span class="det">Tranche jusqu’à 10 000 unités en stock · 12 mois</span></td>
+        <td class="num qte" contenteditable="true">1</td>
+        <td class="num pu" contenteditable="true">1 200,00 €</td>
+        <td class="num tot">1 200,00 €</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <section class="totaux">
+    <table>
+      <tr><td>Total HT</td><td class="num" id="ht">0</td></tr>
+      <tr><td>TVA <span id="taux" contenteditable="true">20</span> %</td><td class="num" id="tva">0</td></tr>
+      <tr class="ttc"><td>Net à payer</td><td class="num" id="ttc">0</td></tr>
+    </table>
+  </section>
+
+  <section class="conditions">
+    
+        <div>
+          <h2>Règlement</h2>
+          <p><strong>Virement bancaire</strong><br>
+             Titulaire : Devkaylab<br>
+             IBAN : <span contenteditable="true" class="vide">[FR76 •••• •••• •••• •••• •••• •••]</span><br>
+             BIC : <span contenteditable="true" class="vide">[QNTOFRP1XXX]</span><br>
+             Référence à indiquer : <b contenteditable="true">F-2026-0001</b></p>
+        </div>
+    
+        <div>
+          <h2>Mentions</h2>
+          <ul>
+            <li>Paiement à réception de la facture. Aucun escompte pour paiement anticipé.</li>
+            <li>Tout retard entraîne des pénalités au taux de <span contenteditable="true">trois fois le taux d’intérêt légal</span> et une indemnité forfaitaire de recouvrement de 40 € (art. L. 441-10 et D. 441-5 C. com.).</li>
+            <li>TVA acquittée sur les encaissements.</li>
+            <li>Prestation soumise aux conditions générales de vente acceptées avec le devis.</li>
+          </ul>
+        </div>
+  </section>
+
+  <footer class="pied">
+    <span contenteditable="true">Devkaylab — <span class="vide">[SASU au capital de … €]</span> — <span class="vide">[adresse du siège]</span> — SIREN <span class="vide">[000 000 000]</span> — RCS <span class="vide">[Ville 000 000 000]</span> — TVA <span class="vide">[FR00 000000000]</span> — quantinvo.vercel.app</span>
+    <span class="num-page">Page 1 / 1</span>
+  </footer>
+</main>
+
+<script>
+  // Recalcule les totaux à chaque frappe. Les montants se saisissent en
+  // chiffres ; l'affichage suit la typographie française (espace fine, virgule).
+  const fmt = n => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00a0€';
+  const lire = el => parseFloat((el.textContent || '0').replace(/[^\d,.-]/g, '').replace(/\s/g, '').replace(',', '.')) || 0;
+  function recalc() {
+    let ht = 0;
+    document.querySelectorAll('table.lignes tbody tr').forEach(tr => {
+      const q = lire(tr.querySelector('.qte')), pu = lire(tr.querySelector('.pu'));
+      const t = q * pu; ht += t;
+      tr.querySelector('.tot').textContent = fmt(t);
+    });
+    const taux = lire(document.getElementById('taux')) / 100;
+    const tva = ht * taux;
+    document.getElementById('ht').textContent = fmt(ht);
+    document.getElementById('tva').textContent = fmt(tva);
+    document.getElementById('ttc').textContent = fmt(ht + tva);
+  }
+  document.addEventListener('input', e => { if (e.target.closest('.qte, .pu, #taux')) recalc(); });
+  document.querySelectorAll('.qte, .pu').forEach(el => el.addEventListener('blur', () => { el.textContent = el.classList.contains('pu') ? fmt(lire(el)) : String(lire(el)); recalc(); }));
+  recalc();
+</script>
