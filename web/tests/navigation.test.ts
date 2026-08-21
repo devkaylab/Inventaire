@@ -188,3 +188,48 @@ describe('le tableau de bord Quantinvo', () => {
     expect(tdb).toContain('estimé')
   })
 })
+
+describe('un superviseur gère vraiment son équipe', () => {
+  // Reproche de Julien, 21 août 2026 : « comment un superviseur est-il
+  // supposé gérer son équipe s'il ne peut pas retirer un membre ! » La
+  // maquette montrait un « Retirer » sur chaque ligne ; le premier jet le
+  // réservait à l'administrateur d'entreprise.
+  const equipe = lire('../app/equipe/page.tsx')
+  const migration = lire('../../supabase/migrations/20260821200001_superviseur_gere_son_equipe.sql')
+
+  it('le bouton Retirer n’est réservé à personne', () => {
+    const bloc = equipe.split('Compteurs · ')[1]?.split('Invitations en cours')[0] ?? ''
+    expect(bloc).toContain('>Retirer</button>')
+    expect(bloc, 'le retrait ne doit pas être conditionné au rôle').not.toContain('estAdmin &&')
+  })
+
+  it('le retrait vise UN magasin, pas tous', () => {
+    // Un compteur présent dans deux magasins supervisés par deux personnes
+    // ne doit pas disparaître des deux d'un seul clic.
+    // La page passe par l'assistant appliquer(), qui enveloppe supabase.rpc.
+    expect(equipe).toContain("'remove_counter_from_store'")
+    expect(equipe).toContain('p_store_id: s.id')
+  })
+
+  it('un superviseur annule l’invitation qu’il a envoyée', () => {
+    expect(equipe).toContain('cancel_my_invitation')
+  })
+
+  it('la base vérifie que le magasin est bien le sien', () => {
+    const corps = migration.split('function public.remove_counter_from_store(')[1]?.split('$$;')[0] ?? ''
+    expect(corps).toContain('store_supervisors')
+    expect(corps).toContain('is_company_admin')
+    expect(corps).toContain('Vous ne pouvez pas vous retirer vous-même')
+    expect(corps).toContain('log_company_action')
+  })
+
+  it('l’annulation ne porte que sur ses propres invitations', () => {
+    const corps = migration.split('function public.cancel_my_invitation(')[1]?.split('$$;')[0] ?? ''
+    expect(corps).toContain('created_by = v_uid')
+  })
+
+  it('anon n’atteint ni l’un ni l’autre', () => {
+    expect(migration).toMatch(/revoke all on function public\.remove_counter_from_store\(uuid, uuid\) from public, anon/)
+    expect(migration).toMatch(/revoke all on function public\.cancel_my_invitation\(uuid\) from public, anon/)
+  })
+})

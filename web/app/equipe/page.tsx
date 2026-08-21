@@ -44,10 +44,15 @@ type TeamCA = { stores: Store[]; members: Member[]; invitations: Invitation[] }
 
 type Counter = {
   id: string; full_name: string | null; email: string | null
-  is_active: boolean; sessions_counted: number
+  is_active: boolean; sessions_counted: number; last_count_at: string | null
 }
 type StoreTeam = { id: string; name: string; counters: Counter[] }
 type TeamSup = { stores: StoreTeam[]; invitations: Invitation[] }
+
+/** Date courte, comme sur la maquette : « 14/08 ». */
+function jourCourt(iso: string) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+}
 
 /** Pastille « le compte existe mais n'a pas encore servi ». */
 function BadgeEnAttente() {
@@ -235,17 +240,18 @@ export default function EquipePage() {
                         {c.sessions_counted > 0
                           ? ` · a compté ${c.sessions_counted} inventaire${c.sessions_counted > 1 ? 's' : ''}`
                           : ' · pas encore de comptage'}
+                        {c.last_count_at && ` · dernier le ${jourCourt(c.last_count_at)}`}
                       </div>
                     </div>
-                    {estAdmin && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => {
-                          if (!confirm(`Retirer tous les accès de ${c.full_name || 'cette personne'} ?`)) return
-                          appliquer('ca_remove_supervisor', { p_user: c.id })
-                        }}
-                      >Retirer</button>
-                    )}
+                    {/* Le geste quotidien du superviseur : un saisonnier part,
+                        il le retire de SON magasin — pas de partout. */}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        if (!confirm(`Retirer ${c.full_name || 'cette personne'} du magasin ${s.name} ?\n\nSon compte n'est pas supprimé : elle n'aura simplement plus accès aux inventaires de ce magasin.`)) return
+                        appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
+                      }}
+                    >Retirer</button>
                   </div>
                 ))}
               </div>
@@ -270,15 +276,16 @@ export default function EquipePage() {
                   </div>
                   <div className="muted small">{i.email}</div>
                 </div>
-                {estAdmin && (
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      if (!confirm(`Annuler l'invitation de ${i.first_name} ${i.last_name} ?`)) return
-                      appliquer('ca_cancel_invitation', { p_id: i.id })
-                    }}
-                  >Annuler</button>
-                )}
+                {/* L'administrateur annule toute invitation de son entreprise ;
+                    un superviseur annule celles qu'il a envoyées — une adresse
+                    mal tapée doit pouvoir se rattraper. */}
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    if (!confirm(`Annuler l'invitation de ${i.first_name} ${i.last_name} ?`)) return
+                    appliquer(estAdmin ? 'ca_cancel_invitation' : 'cancel_my_invitation', { p_id: i.id })
+                  }}
+                >Annuler</button>
               </div>
             ))}
           </div>

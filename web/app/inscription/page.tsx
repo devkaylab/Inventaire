@@ -92,7 +92,7 @@ function BlocRegistre({ resultat, enCours }: { resultat: ResultatRegistre | null
   if (resultat.etat === 'indisponible') {
     return (
       <p className="field-hint">
-        Le registre public ne répond pas pour le moment. Ce n’est pas bloquant : envoyez votre
+        Le registre public ne répond pas pour le moment. Ce n’est pas bloquant : envoyez votre
         demande, nous vérifierons de notre côté.
       </p>
     )
@@ -425,8 +425,8 @@ export default function CompanyRequestPage() {
 
             {magasins.length >= SEUIL_RESEAU && (
               <p className="magasin-reseau">
-                Beaucoup de magasins ? Renseignez-en deux ou trois, et dites-le nous en fin de
-                formulaire : nous vous enverrons un tableau à remplir plutôt que de vous faire
+                Beaucoup de magasins ? Renseignez-en deux ou trois, et dites-le nous en fin de
+                formulaire : nous vous enverrons un tableau à remplir plutôt que de vous faire
                 tout saisir ici.
               </p>
             )}
@@ -447,8 +447,8 @@ export default function CompanyRequestPage() {
                 Montants hors taxes, à confirmer sur le devis.{' '}
                 {total.surDevis > 0
                   ? total.surDevis > 1
-                    ? `${total.surDevis} magasins dépassent le million d’unités : leur prix est établi au cas par cas.`
-                    : 'Un magasin dépasse le million d’unités : son prix est établi au cas par cas.'
+                    ? `${total.surDevis} magasins dépassent le million d’unités : leur prix est établi au cas par cas.`
+                    : 'Un magasin dépasse le million d’unités : son prix est établi au cas par cas.'
                   : 'Comptages et compteurs illimités.'}
               </p>
             </div>
