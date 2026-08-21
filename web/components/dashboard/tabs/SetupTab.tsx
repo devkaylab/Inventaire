@@ -10,6 +10,7 @@ import {
   type ZoneDashboardRow, validateRange, MAX_RANGE,
 } from '@/lib/zones'
 import { BaliseSheetPanel } from '@/components/BaliseSheetPanel'
+import { Volet } from '@/components/ui/Volet'
 import { fmtQty, plural } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { FileDrop } from '@/components/ui/FileDrop'
@@ -35,9 +36,19 @@ const EMPTY: StepState = {
 }
 
 /**
- * Tout ce qui prépare l'inventaire, en un seul endroit : les fichiers à
- * importer et — en mode balises — l'affectation des plages aux emplacements.
- * Le suivi de l'avancement, lui, reste dans l'onglet Suivi.
+ * Tout ce qui prépare l'inventaire : les fichiers à importer et — en mode
+ * balises — l'affectation des plages aux emplacements. Le suivi de
+ * l'avancement, lui, reste dans l'onglet Suivi.
+ *
+ * Deux volets repliés, pas un empilement. La page déroulait tout en
+ * permanence — planche de balises, affectation des plages, liste des
+ * emplacements, deux imports et leurs colonnes attendues — et se lisait comme
+ * un mur. « Zone de comptage » et « Données d'inventaire » la ramènent à deux
+ * lignes ; chacune dit ce qu'elle contient, on ouvre ce qu'on vient faire.
+ *
+ * Décision de Julien, 21 août 2026 : **pas d'ouverture automatique**. Ni selon
+ * l'avancement, ni pour la seule section restante en mode sans balise. Tout
+ * part replié, sans exception — c'est ce qui rend la page prévisible.
  */
 export function SetupTab({ sessionId, status, readOnly, importState, usesZones, zones, onChanged, onZonesChanged }: {
   sessionId: string
@@ -112,6 +123,26 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
   const busy = catalog.phase === 'parsing' || catalog.phase === 'uploading'
     || stock.phase === 'parsing' || stock.phase === 'uploading'
 
+  // Ce que les en-têtes annoncent. C'est la moitié de l'idée : replier n'a
+  // d'intérêt que si on n'a pas besoin d'ouvrir pour savoir où on en est.
+  const resumeZones = useMemo(() => {
+    const groups = groupByName(zones)
+    if (groups.length === 0) return 'Aucun emplacement affecté — les balises ne sont rattachées à rien'
+    const balises = groups.reduce((n, g) => n + g.total, 0)
+    return `${plural(groups.length, 'emplacement')} · ${plural(balises, 'balise affectée', 'balises affectées')}`
+  }, [zones])
+
+  const resumeFichiers = importState.articles === 0
+    ? 'Aucun fichier chargé — le référentiel articles est indispensable'
+    : `${plural(importState.articles, 'référence')} · ${
+        importState.theoreticalQty > 0
+          ? `${fmtQty(importState.theoreticalQty)} pièces attendues`
+          : 'aucun stock théorique'
+      }`
+
+  const etat = (fait: boolean) =>
+    fait ? { libelle: 'Prêt', ton: 'pret' as const } : { libelle: 'À faire', ton: 'faire' as const }
+
   return (
     <div>
       {canStart && (
@@ -134,18 +165,21 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
       )}
 
       {usesZones && (
-        <ZonesSetup
-          sessionId={sessionId}
-          zones={zones}
-          readOnly={readOnly}
-          onChanged={onZonesChanged}
-        />
+        <Volet titre="Zone de comptage" resume={resumeZones} etat={etat(zones.length > 0)}>
+          <ZonesSetup
+            sessionId={sessionId}
+            zones={zones}
+            readOnly={readOnly}
+            onChanged={onZonesChanged}
+          />
+        </Volet>
       )}
 
-      <div className="dash-section-label" style={{ margin: usesZones ? '28px 0 12px' : '0 0 12px' }}>
-        Fichiers
-      </div>
-
+      <Volet
+        titre="Données d’inventaire"
+        resume={resumeFichiers}
+        etat={etat(importState.articles > 0)}
+      >
       <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <Stat
           label="Référentiel articles"
@@ -219,6 +253,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
         disabled={readOnly || busy}
         onFile={f => run(f, importState.stock, 'stock', setStock, importStockFile)}
       />
+      </Volet>
     </div>
   )
 }
@@ -283,8 +318,6 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
 
   return (
     <div>
-      <div className="dash-section-label" style={{ marginBottom: 12 }}>Balises</div>
-
       {!readOnly && <BaliseSheetPanel context="setup" />}
 
       {!readOnly && (

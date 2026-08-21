@@ -412,6 +412,42 @@ Deux choix à connaître, pris le 21 août 2026 :
 Rappel : il n'y a pas encore de build Android, donc la fiche Google Play
 suppose d'abord un APK. Voir la section « Build iOS » de la mémoire projet.
 
+## L'onglet Set up tient en deux volets (21 août 2026)
+
+Demande de Julien : *« deux sections qui collapsent, une Zone de comptage pour
+la partie balise et une Données d'inventaire pour la partie fichiers. L'idée
+est d'épurer cette page trop chargée. »* La page déroulait tout en permanence
+— planche de balises, affectation des plages, liste des emplacements, deux
+imports et leurs colonnes attendues — et se lisait comme un mur.
+
+Composant : `components/ui/Volet.tsx`, un `<details>` (le clavier, le lecteur
+d'écran et la recherche dans la page marchent sans qu'on ait à les
+rebrancher).
+
+Deux règles portent l'idée, à ne pas défaire :
+
+- **Tout part replié.** Décision explicite de Julien : *« Pas d'ouverture
+  auto, reste collapsés. Même en mode sans balise. »* Une première version
+  ouvrait la section restant à faire ; c'est écarté. Pas de `open`
+  conditionnel — un test le vérifie.
+- **L'en-tête dit ce qu'il y a dedans.** C'est ce qui sépare « replié » de
+  « caché » : un résumé (« 3 emplacements · 40 balises affectées »,
+  « 135 références · aucun stock théorique ») et une pastille « À faire » /
+  « Prêt ». Sans eux, il faudrait ouvrir chaque volet pour savoir où on en
+  est, et la page n'aurait rien désencombré.
+
+**Le bandeau « Commencer l'inventaire » reste au-dessus des volets** : c'est
+une action, pas un réglage, elle ne doit jamais se retrouver derrière une
+section fermée. Même chose pour l'avertissement d'inventaire clôturé.
+
+Au passage, le chevron des `<details>` déjà en place (`.collapsible`, employé
+par « Conseils de format » et l'onglet Écarts) n'est plus le caractère « ▸ » :
+deux bordures et une rotation, pour la même raison que le chevron du menu de
+compte — à cette taille, un caractère ne se lit plus.
+
+Maquette de référence :
+https://claude.ai/code/artifact/3f89b33f-7a72-4bc1-bc00-78429c8443db
+
 ## Une seule largeur, un seul en-tête (passe de finition)
 
 Reproche de Julien : *« la barre n'a pas la même longueur entre dashboard et

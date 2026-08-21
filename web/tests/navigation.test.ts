@@ -199,6 +199,52 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
   })
 })
 
+describe('l’onglet Set up tient en deux volets', () => {
+  // Demande de Julien, 21 août 2026 : « deux sections qui collapsent, une
+  // Zone de comptage pour la partie balise et une Données d'inventaire pour
+  // la partie fichiers. L'idée est d'épurer cette page trop chargée. »
+  const setup = lire('../components/dashboard/tabs/SetupTab.tsx')
+  const volet = lire('../components/ui/Volet.tsx')
+
+  it('porte les deux sections, aux mots de Julien', () => {
+    expect(setup).toContain('titre="Zone de comptage"')
+    expect(setup).toContain('titre="Données d’inventaire"')
+  })
+
+  it('ne s’ouvre jamais tout seul', () => {
+    // Décision explicite : « Pas d'ouverture auto, reste collapsés. Même en
+    // mode sans balise. » Un `open` conditionnel réintroduirait exactement ce
+    // qui a été écarté.
+    expect(volet).toContain('<details className="volet">')
+    expect(volet).not.toMatch(/<details[^>]*\bopen\b/)
+    expect(setup).not.toMatch(/<Volet[^>]*\bopen\b/)
+  })
+
+  it('dit ce qu’il y a dedans sans qu’on ouvre', () => {
+    // C'est ce qui sépare « replié » de « caché » : sans le résumé ni la
+    // pastille, il faudrait ouvrir chaque volet pour savoir où on en est.
+    expect(setup).toContain('resumeZones')
+    expect(setup).toContain('resumeFichiers')
+    expect(setup).toContain("libelle: 'Prêt'")
+    expect(setup).toContain("libelle: 'À faire'")
+    expect(volet).toContain('volet-resume')
+    expect(volet).toContain('volet-pastille')
+  })
+
+  it('utilise `details`, pas un état React', () => {
+    // Le clavier, le lecteur d'écran et la recherche dans la page marchent
+    // sans qu'on ait à les rebrancher.
+    expect(volet).toContain('<details')
+    expect(volet).toContain('<summary>')
+  })
+
+  it('ne laisse plus de chevron en caractère', () => {
+    const css = lire('../app/globals.css')
+    expect(css).not.toContain("content: '▸'")
+    expect(volet).toContain('ChevronBas')
+  })
+})
+
 describe('les boutons des boutiques d’applications', () => {
   // Demande de Julien, 21 août 2026 : « ajoute les logos liés vers les
   // plateformes de téléchargement de l'app même si ce n'est pas encore en
