@@ -30,6 +30,10 @@ const envAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const url = envUrl || FALLBACK_URL
 const anonKey = envAnonKey || FALLBACK_ANON_KEY
 
+/** Adresse et clé publique du projet, pour un second client jetable (voir `lib/reauth.ts`). */
+export const supabaseUrl = url
+export const supabasePublishableKey = anonKey
+
 /** `true` quand le déploiement tourne sur le repli faute de variables d'environnement. */
 export const usingFallbackConfig = !envUrl || !envAnonKey
 

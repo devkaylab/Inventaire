@@ -521,6 +521,37 @@ fonction `admin_*`. **Si un écran mobile devait un jour en appeler une**, il
 faudrait d'abord y porter le parcours TOTP : sans lui, une session mobile est
 en `aal1` et serait refusée.
 
+## Changer son mot de passe exige l'ancien (21 août 2026)
+
+`updateUser({ password })` ne demande rien d'autre que d'être connecté. Un
+téléphone laissé déverrouillé, ou un poste resté ouvert, suffisait donc à
+changer le mot de passe et à s'approprier le compte — au moment même où l'on
+ajoutait un second facteur contre ce risque. **Le trou existait des deux
+côtés** : l'app l'a recopié du site en portant le formulaire. Relevé par Julien
+en test.
+
+Les deux formulaires (`web/app/account/page.tsx`, `src/app/(compte)/password.tsx`)
+demandent maintenant le mot de passe actuel, et offrent la sortie « mot de passe
+oublié » pour qui ne s'en souvient plus — c'est le parcours par e-mail qui
+vérifie alors l'identité, et c'est la bonne porte.
+
+**La vérification passe par un client Supabase jetable** (`lib/reauth.ts` des
+deux côtés) : `signInWithPassword` remplace la session du client qui l'appelle.
+Sur le client principal, vérifier ferait retomber la session en `aal1` et
+redemanderait le code de double authentification au milieu du formulaire.
+
+Deux conséquences à connaître :
+
+- la vérification laisse une **session serveur orpheline**, jamais rafraîchie.
+  Elle meurt par l'expiration pour inactivité posée plus haut ;
+- ⚠️ elle **dépend de « Single session per user » resté fermé**. Cette option ne
+  garde que la dernière connexion : vérifier son mot de passe déconnecterait de
+  l'app ou de l'onglet en cours. Le conseil de ne pas l'activer devient donc
+  porteur.
+
+Tests de garde : `web/tests/password.test.ts`, bloc « changement de mot de
+passe — l'ancien est exigé ».
+
 ## Expiration des sessions (posée en console le 21 août 2026)
 
 Constat de départ : `auth.sessions.not_after` est vide partout, et une session

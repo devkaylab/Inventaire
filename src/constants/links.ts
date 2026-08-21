@@ -15,3 +15,9 @@ export const PRIVACY_URL = 'https://devkaylab.github.io/Inventaire/privacy.html'
 // les builds déjà installés sur les téléphones la partagent encore.
 export const SITE_URL = 'https://quantinvo.vercel.app'
 export const COMPANY_REQUEST_URL = `${SITE_URL}/inscription`
+
+// « Mot de passe oublié » : le parcours vit sur le site (envoi du lien par
+// e-mail, puis /reinitialisation). C'est la porte de sortie de quelqu'un qui
+// ne se souvient plus de son mot de passe actuel et ne peut donc pas le
+// changer depuis l'app.
+export const PASSWORD_FORGOT_URL = `${SITE_URL}/mot-de-passe-oublie`

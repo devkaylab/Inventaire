@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -14,6 +15,9 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
+import { verifyCurrentPassword } from '@/lib/reauth'
+import { PASSWORD_FORGOT_URL } from '@/constants/links'
 import { friendlyPasswordError, passwordError, passwordSatisfies } from '@/lib/password'
 import { PasswordRules } from '@/components/PasswordRules'
 import { errorMessage } from '@/lib/errors'
@@ -22,6 +26,11 @@ import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 /**
  * Changer son mot de passe depuis l'app.
+ *
+ * **Le mot de passe actuel est exigé.** `updateUser({ password })` ne demande
+ * rien d'autre que d'être connecté : un téléphone laissé déverrouillé suffisait
+ * à s'approprier le compte. Qui ne s'en souvient plus passe par « mot de passe
+ * oublié », qui vérifie l'identité par l'e-mail — c'est la bonne porte.
  *
  * Il fallait jusqu'ici ouvrir le site. Les exigences sont celles de la console
  * Supabase, rejouées ici pour les énoncer en français avant l'envoi ; deux
@@ -32,13 +41,15 @@ import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 export default function PasswordScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const { session } = useAuth()
+  const [actuel, setActuel] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
 
   const conforme = passwordSatisfies(password)
   const identiques = password.length > 0 && password === confirm
-  const pretAEnvoyer = conforme && identiques && !busy
+  const pretAEnvoyer = actuel.length > 0 && conforme && identiques && !busy
 
   async function enregistrer() {
     const probleme = passwordError(password)
@@ -51,8 +62,22 @@ export default function PasswordScreen() {
       return
     }
 
+    const email = session?.user.email
+    if (!email) {
+      Alert.alert('Erreur', 'Votre session a expiré. Reconnectez-vous.')
+      return
+    }
+
     setBusy(true)
     try {
+      if (!(await verifyCurrentPassword(email, actuel))) {
+        Alert.alert(
+          'Mot de passe actuel incorrect',
+          'Vérifiez votre saisie. Si vous ne vous en souvenez plus, passez par « Mot de passe oublié ».',
+        )
+        return
+      }
+
       const { error } = await supabase.auth.updateUser({ password })
       if (error) {
         Alert.alert('Mot de passe refusé', friendlyPasswordError(error.message))
@@ -82,6 +107,22 @@ export default function PasswordScreen() {
               Le nouveau mot de passe remplace l&apos;ancien tout de suite, sur le téléphone comme
               sur le site.
             </Text>
+
+            <Text style={styles.label}>Mot de passe actuel</Text>
+            <TextInput
+              style={styles.input}
+              value={actuel}
+              onChangeText={setActuel}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              placeholder="Votre mot de passe d’aujourd’hui"
+              placeholderTextColor={theme.textMuted}
+            />
+            <Pressable style={styles.forgot} onPress={() => Linking.openURL(PASSWORD_FORGOT_URL)}>
+              <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+            </Pressable>
 
             <Text style={styles.label}>Nouveau mot de passe</Text>
             <TextInput
@@ -156,6 +197,8 @@ function makeStyles(t: Theme) {
       fontSize: 15, color: t.textPrimary, fontFamily: Font.regular,
     },
     mismatch: { fontSize: 12, color: t.danger, fontFamily: Font.medium, marginTop: Spacing.sm },
+    forgot: { alignSelf: 'flex-start', paddingVertical: Spacing.sm },
+    forgotText: { fontSize: 13, color: t.accent, fontFamily: Font.semibold },
     btn: {
       marginTop: Spacing.xl, backgroundColor: t.accent, borderRadius: Radius.md,
       paddingVertical: 14, alignItems: 'center', ...t.shadowButton,

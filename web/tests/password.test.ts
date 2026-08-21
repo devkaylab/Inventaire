@@ -115,8 +115,41 @@ describe('mot de passe — site et app', () => {
   })
 
   it('les deux écrans de l’app passent par ce module', () => {
-    const ecran = lire('../../src/app/(supervisor)/password.tsx')
+    const ecran = lire('../../src/app/(compte)/password.tsx')
     expect(ecran).toContain("from '@/lib/password'")
     expect(ecran).toContain('friendlyPasswordError')
+  })
+})
+
+// Relevé par Julien en test, 21 août 2026 : changer son mot de passe ne
+// demandait pas l'ancien. `updateUser({ password })` n'exige que d'être
+// connecté — un téléphone déverrouillé ou un poste laissé ouvert suffisait donc
+// à s'approprier le compte, au moment même où l'on ajoute un second facteur
+// contre ce risque. Le trou existait des deux côtés : l'app l'avait recopié du
+// site en portant le formulaire.
+describe('changement de mot de passe — l’ancien est exigé', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url))
+  const lire = (p: string) => readFileSync(path.join(here, p), 'utf8')
+
+  it('les deux formulaires vérifient le mot de passe actuel', () => {
+    for (const f of ['../app/account/page.tsx', '../../src/app/(compte)/password.tsx']) {
+      expect(lire(f)).toContain('verifyCurrentPassword')
+    }
+  })
+
+  it('les deux offrent la sortie « mot de passe oublié »', () => {
+    expect(lire('../app/account/page.tsx')).toContain('/mot-de-passe-oublie')
+    expect(lire('../../src/app/(compte)/password.tsx')).toContain('PASSWORD_FORGOT_URL')
+  })
+
+  it('la vérification passe par un client jetable, pas par la session en cours', () => {
+    // `signInWithPassword` remplace la session du client qui l'appelle : sur le
+    // client principal, vérifier ferait retomber la session en aal1 et
+    // redemanderait le code de double authentification au milieu du formulaire.
+    for (const f of ['../lib/reauth.ts', '../../src/lib/reauth.ts']) {
+      const m = lire(f)
+      expect(m).toContain('persistSession: false')
+      expect(m).toContain("scope: 'local'")
+    }
   })
 })

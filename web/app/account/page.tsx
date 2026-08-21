@@ -9,6 +9,7 @@
 // elle est, comment elle se protège, ce que nous détenons d'elle.
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard, type Profile } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
@@ -16,6 +17,7 @@ import { MfaPanel } from '@/components/MfaPanel'
 import { PasswordRules } from '@/components/PasswordRules'
 import { friendlyPasswordError, passwordError, passwordSatisfies } from '@/lib/password'
 import { getMyCompany, type Company } from '@/lib/account'
+import { verifyCurrentPassword } from '@/lib/reauth'
 
 export default function AccountPage() {
   const guard = useAuthGuard('auth')
@@ -106,7 +108,7 @@ export default function AccountPage() {
           Il fallait jusqu&apos;ici se déconnecter et passer par «&nbsp;mot de passe
           oublié&nbsp;». Vous pouvez le changer ici, en restant connecté.
         </p>
-        <ChangerMotDePasse />
+        <ChangerMotDePasse email={email} />
       </div>
 
       <MfaPanel />
@@ -190,8 +192,17 @@ function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () =>
  * des refus que seul le serveur peut prononcer (mot de passe issu d'une fuite,
  * réutilisation de l'ancien).
  */
-function ChangerMotDePasse() {
+/**
+ * Changer son mot de passe.
+ *
+ * **Le mot de passe actuel est exigé.** `updateUser({ password })` ne demande
+ * rien d'autre que d'être connecté : un poste laissé ouvert suffisait à
+ * s'approprier le compte. Qui ne s'en souvient plus passe par « mot de passe
+ * oublié », qui vérifie l'identité par l'e-mail.
+ */
+function ChangerMotDePasse({ email }: { email: string }) {
   const [ouvert, setOuvert] = useState(false)
+  const [actuel, setActuel] = useState('')
   const [mdp, setMdp] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -215,10 +226,15 @@ function ChangerMotDePasse() {
     if (probleme) { setErreur(probleme); return }
     if (mdp !== confirmation) { setErreur('Les deux saisies ne correspondent pas.'); return }
     setBusy(true)
+    if (!(await verifyCurrentPassword(email, actuel))) {
+      setBusy(false)
+      setErreur('Mot de passe actuel incorrect. Si vous ne vous en souvenez plus, passez par « mot de passe oublié ».')
+      return
+    }
     const { error } = await supabase.auth.updateUser({ password: mdp })
     setBusy(false)
     if (error) { setErreur(friendlyPasswordError(error.message)); return }
-    setMdp(''); setConfirmation(''); setErreur(null)
+    setActuel(''); setMdp(''); setConfirmation(''); setErreur(null)
     setOuvert(false); setFait(true)
   }
 
@@ -226,10 +242,20 @@ function ChangerMotDePasse() {
     <form onSubmit={enregistrer} style={{ marginTop: 14 }}>
       {erreur && <div className="error" role="alert">{erreur}</div>}
       <div className="field">
+        <label htmlFor="mdp-actuel">Mot de passe actuel</label>
+        <input
+          id="mdp-actuel" type="password" autoComplete="current-password" value={actuel}
+          onChange={(e) => { setActuel(e.target.value); setErreur(null) }} autoFocus
+        />
+        <p className="muted small" style={{ marginTop: 6 }}>
+          <Link href="/mot-de-passe-oublie">Mot de passe oublié&nbsp;?</Link>
+        </p>
+      </div>
+      <div className="field">
         <label htmlFor="mdp-nouveau">Nouveau mot de passe</label>
         <input
           id="mdp-nouveau" type="password" autoComplete="new-password" value={mdp}
-          onChange={(e) => { setMdp(e.target.value); setErreur(null) }} autoFocus
+          onChange={(e) => { setMdp(e.target.value); setErreur(null) }}
         />
         <PasswordRules password={mdp} />
       </div>
@@ -241,10 +267,10 @@ function ChangerMotDePasse() {
         />
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn btn-primary btn-sm" disabled={busy || !passwordSatisfies(mdp) || mdp !== confirmation}>
+        <button className="btn btn-primary btn-sm" disabled={busy || !actuel || !passwordSatisfies(mdp) || mdp !== confirmation}>
           {busy ? 'Enregistrement…' : 'Enregistrer'}
         </button>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setOuvert(false); setErreur(null); setMdp(''); setConfirmation('') }}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setOuvert(false); setErreur(null); setActuel(''); setMdp(''); setConfirmation('') }}>
           Annuler
         </button>
       </div>
