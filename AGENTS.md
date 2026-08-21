@@ -396,6 +396,21 @@ raison écrite : on peut y compter et lire le rapport, la clôture définitive e
 la réouverture appartiennent au créateur. Dire la règle par la mise en page
 évite de la découvrir au moment du refus.
 
+**Ajouter quelqu'un à un inventaire : on cherche, on ne saisit pas.** L'onglet
+Équipe d'un inventaire proposait, sur le site, un formulaire prénom / nom /
+e-mail qui appelait `invite-teammate` — la fonction qui **crée un compte pour
+l'entreprise**. Deux choses clochaient : ce n'est pas le geste attendu là
+(créer un compteur se fait depuis « Mon équipe »), et surtout **personne
+n'était ajouté à l'inventaire**. On remplissait le formulaire, l'équipe de
+l'inventaire ne bougeait pas.
+
+`AddSessionMember` cherche désormais dans l'équipe du magasin
+(`get_store_directory`), suggestions à la frappe, et appelle
+`invite-to-session` — la même edge function que l'app mobile, qui refuse les
+adresses sans compte. Les personnes déjà dans l'inventaire ne sont pas
+proposées. **`AddCounter` reste en place sur /equipe** : c'est là que créer un
+compte a un sens, ne pas confondre les deux.
+
 **L'app suit le même découpage** : l'écran d'accueil du superviseur
 (`(supervisor)/index.tsx`) sépare « Mes inventaires » et « Inventaires
 invités », avec la même explication. Le bloc « En cours » qui coiffait la liste

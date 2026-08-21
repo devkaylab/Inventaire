@@ -420,3 +420,47 @@ export function groupByStore(sessions: Session[]): { store: string; sessions: Se
 export function effectiveQty(a: ArticleAudit): number | null {
   return a.final_qty ?? a.qty_pass2 ?? a.qty_pass1 ?? null
 }
+
+// ── Ajouter quelqu'un à un inventaire ────────────────────────────────────────
+
+export type DirectoryEntry = { user_id: string; full_name: string; email: string; role: string }
+export type SessionRole = 'counter' | 'supervisor'
+
+/**
+ * L'équipe du magasin : les personnes qui ont déjà un compte et qu'on peut
+ * ajouter à un inventaire de ce magasin.
+ *
+ * Ajouter quelqu'un à un inventaire n'est pas créer un compte. Créer un compte
+ * se fait depuis « Mon équipe » ; ici on choisit parmi ceux qui existent.
+ */
+export async function getStoreDirectory(storeId: string): Promise<DirectoryEntry[]> {
+  const { data, error } = await supabase.rpc('get_store_directory', { p_store_id: storeId })
+  if (error) fail('getStoreDirectory', error)
+  return (data ?? []) as DirectoryEntry[]
+}
+
+/**
+ * Ajoute une personne à l'inventaire — ou l'invite si elle n'a pas de compte.
+ *
+ * Même edge function que l'application mobile (`invite-to-session`), qui refuse
+ * les adresses sans compte. Le site appelait jusqu'ici `invite-teammate`, qui
+ * crée un compte pour l'entreprise **sans rattacher personne à l'inventaire** :
+ * on remplissait le formulaire et l'équipe de l'inventaire ne bougeait pas.
+ */
+export async function inviteToSession(input: {
+  sessionId: string
+  fullName: string
+  email: string
+  role: SessionRole
+}): Promise<{ success: boolean; outcome?: 'added' | 'invited'; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('invite-to-session', {
+    body: {
+      sessionId: input.sessionId,
+      fullName: input.fullName.trim(),
+      email: input.email.trim().toLowerCase(),
+      role: input.role,
+    },
+  })
+  if (error) fail('inviteToSession', error)
+  return data as { success: boolean; outcome?: 'added' | 'invited'; error?: string }
+}

@@ -111,3 +111,38 @@ describe('mes inventaires et ceux auxquels je suis invité', () => {
     expect(page).toContain('groupByStore(miens)')
   })
 })
+
+describe('ajouter quelqu’un à un inventaire : on cherche, on ne saisit pas', () => {
+  // Relevé par Julien le 21 août 2026 : l'onglet Équipe d'un inventaire
+  // proposait un formulaire prénom / nom / e-mail appelant `invite-teammate`,
+  // la fonction qui crée un compte pour l'entreprise. Ce n'était pas le geste
+  // attendu — et surtout **personne n'était ajouté à l'inventaire**.
+  const ajout = lire('../components/dashboard/AddSessionMember.tsx')
+  const onglet = lire('../components/dashboard/tabs/EquipeTab.tsx')
+
+  it('l’onglet d’un inventaire ne crée plus de compte d’entreprise', () => {
+    expect(onglet).not.toContain('AddCounter')
+    expect(onglet).toContain('AddSessionMember')
+  })
+
+  it('on choisit dans l’équipe du magasin, avec suggestions à la frappe', () => {
+    expect(ajout).toContain('getStoreDirectory')
+    expect(ajout).toContain('suggestions')
+    expect(ajout).toContain('.slice(0, 8)')
+  })
+
+  it('l’ajout passe par la même fonction que l’app mobile', () => {
+    expect(ajout).toContain('inviteToSession')
+  })
+
+  it('les personnes déjà présentes ne sont pas proposées', () => {
+    // Les reproposer ferait découvrir le doublon au moment de l'envoi.
+    expect(ajout).toContain('exclus.has(d.user_id)')
+    expect(ajout).toContain('exclusMails.has')
+  })
+
+  it('« Mon équipe » garde son formulaire de création', () => {
+    // C'est là que créer un compteur a un sens — ne pas confondre les deux.
+    expect(lire('../app/equipe/page.tsx')).toContain('AddCounter')
+  })
+})

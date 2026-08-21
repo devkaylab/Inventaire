@@ -281,6 +281,7 @@ export default function SessionDashboardPage() {
                 members={data.members}
                 invitations={data.invitations}
                 isCreator={isCreator}
+                currentUserId={guard.profile.id}
                 onChanged={data.refreshMeta}
                 onDeleted={() => router.replace('/dashboard')}
               />

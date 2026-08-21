@@ -9,13 +9,15 @@ import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { AddCounter } from '@/components/dashboard/AddCounter'
+import { AddSessionMember } from '@/components/dashboard/AddSessionMember'
 
-export function EquipeTab({ session, members, invitations, isCreator, onChanged, onDeleted }: {
+export function EquipeTab({ session, members, invitations, isCreator, currentUserId, onChanged, onDeleted }: {
   session: Session
   members: Member[]
   invitations: SessionInvitation[]
   isCreator: boolean
+  /** Pour ne pas se proposer soi-même dans les suggestions. */
+  currentUserId: string
   onChanged: () => Promise<void> | void
   onDeleted: () => void
 }) {
@@ -96,7 +98,16 @@ export function EquipeTab({ session, members, invitations, isCreator, onChanged,
         style={{ margin: '28px 0 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
       >
         <span>Membres ({members.length})</span>
-        {!closed && <AddCounter onAdded={onChanged} />}
+        {!closed && (
+          <AddSessionMember
+            sessionId={session.id}
+            storeId={session.store_id}
+            members={members}
+            invitations={invitations}
+            currentUserId={currentUserId}
+            onAdded={onChanged}
+          />
+        )}
       </div>
       {members.length === 0 ? (
         <EmptyState
