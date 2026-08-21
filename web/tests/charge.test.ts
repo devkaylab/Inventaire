@@ -24,6 +24,9 @@ const presenceMobile = lire('../../src/lib/presence.ts')
 const presenceSite = lire('../lib/presence.ts')
 const migration = lire('../../supabase/migrations/20260821240001_totaux_comptage_serveur.sql')
 const live = lire('../hooks/useSessionLive.ts')
+const donnees = lire('../hooks/useSessionData.ts')
+const page = lire('../app/dashboard/[sessionId]/page.tsx')
+const offlineSync = lire('../../src/lib/offlineSync.ts')
 
 /**
  * Corps d'une fonction exportée, jusqu'à l'export suivant.
@@ -122,7 +125,14 @@ describe('cadence du tableau de bord', () => {
   it('applique la limite au scan comme au sondage', () => {
     // C'est tout l'intérêt : un jour de gros inventaire, les scans arrivent en
     // continu. Limiter le sondage sans limiter les scans ne changerait rien.
-    expect(live).toContain('const askRefresh = () => { if (!disposed) refresh() }')
+    // Le déclencheur passe donc par `refresh()`, qui porte la limite, et
+    // n'ajoute aucune temporisation qui lui soit propre — l'ancienne, de
+    // 750 ms, se reportait à chaque message et n'arrivait jamais à son terme
+    // sur un inventaire animé.
+    const bloc = live.slice(live.indexOf('const askRefresh'), live.indexOf('channel\n'))
+    expect(bloc).toContain('refresh()')
+    expect(bloc).not.toContain('setTimeout')
+    expect(live).not.toContain('SYNC_DEBOUNCE_MS')
   })
 
   it('laisse la personne passer outre', () => {
@@ -131,5 +141,49 @@ describe('cadence du tableau de bord', () => {
     // d'attente deviendrait une minute d'impuissance.
     expect(live).toContain('refresh: refreshNow')
     expect(live).toContain("document.visibilityState === 'visible') refresh(true)")
+  })
+})
+
+describe('repos quand rien ne se passe', () => {
+  const nombre = (nom: string) =>
+    Number(live.match(new RegExp(`const ${nom} = ([^\\n]+)`))?.[1]
+      .replace(/_/g, '').replace(/\s/g, '').split('//')[0]
+      .split('*').reduce((a, b) => a * Number(b), 1))
+
+  it('espace le sondage bien au-delà de la minute quand rien n’est signalé', () => {
+    expect(nombre('IDLE_MAX_MS')).toBeGreaterThan(nombre('AUTO_MIN_GAP_MS'))
+  })
+
+  it('ne s’endort jamais si le temps réel est tombé', () => {
+    // C'est la garde qui rend ce repos acceptable : sans signal *et* sans
+    // canal, l'écran resterait figé cinq minutes sans que rien ne l'explique.
+    expect(live).toContain('!channelReadyRef.current')
+  })
+
+  it('une file hors ligne qui remonte prévient le tableau de bord', () => {
+    // Sans ce signal, un retour de réserve verserait des centaines de
+    // comptages que le site, justement au repos, ne verrait pas venir.
+    expect(offlineSync).toContain('if (result.sent > 0) pingSession(')
+  })
+})
+
+describe('portée par section', () => {
+  it('le Rapport et l’Équipe ne font rien recalculer', () => {
+    expect(page).toMatch(/rapport:\s*'aucun'/)
+    expect(page).toMatch(/equipe:\s*'aucun'/)
+  })
+
+  it('le fil des derniers scans n’est chargé que par Suivi', () => {
+    expect(donnees).toContain("portee === 'suivi' ? getRecentCounts(sessionId)")
+  })
+
+  it('le premier chargement ignore la portée', () => {
+    // Sinon un lien direct vers le Rapport afficherait un bandeau de
+    // progression à zéro.
+    expect(donnees).toContain("await chargerLive('suivi')")
+  })
+
+  it('changer de section recharge tout de suite', () => {
+    expect(page).toContain('sectionPrecedente.current = tab')
   })
 })

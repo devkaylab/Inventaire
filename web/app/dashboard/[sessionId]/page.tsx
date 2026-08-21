@@ -1,11 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { useSessionData } from '@/hooks/useSessionData'
+import { useSessionData, type LiveScope } from '@/hooks/useSessionData'
 import { useSessionLive } from '@/hooks/useSessionLive'
 import { STATUS_LABELS } from '@/lib/inventory'
 import { relativeTime } from '@/lib/format'
@@ -31,6 +31,21 @@ const TABS: { key: Tab; label: string }[] = [
 
 const TAB_KEYS = new Set<string>(TABS.map(t => t.key))
 
+// Ce que chaque section a réellement besoin de voir se rafraîchir. Recalculer
+// l'avancement par zone et les totaux fait reparcourir à la base tous les
+// comptages de l'inventaire : le faire pour une section qui n'en montre rien
+// est du travail perdu, multiplié par le nombre de superviseurs connectés.
+//
+// Le Rapport est en `aucun` mais reste vivant : il recharge le sien à chaque
+// battement, et c'est bien ce qui est affiché à l'écran.
+const LIVE_SCOPES: Record<Tab, LiveScope> = {
+  suivi: 'suivi',
+  setup: 'zones',
+  ecarts: 'zones',
+  rapport: 'aucun',
+  equipe: 'aucun',
+}
+
 // Les anciens onglets « Zones & balises » et « Fichiers » vivent désormais
 // dans Set up : les liens enregistrés continuent d'arriver au bon endroit.
 const LEGACY_TABS: Record<string, Tab> = { zones: 'setup', fichiers: 'setup' }
@@ -41,8 +56,8 @@ export default function SessionDashboardPage() {
   const sessionId = params.sessionId
 
   const guard = useAuthGuard('supervisor')
-  const data = useSessionData(sessionId)
   const [tab, setTab] = useState<Tab>('suivi')
+  const data = useSessionData(sessionId, LIVE_SCOPES[tab])
 
   // L'onglet vit dans l'URL — lien profond, retour navigateur et rechargement
   // conservent la vue. On lit `location.search` plutôt que `useSearchParams`
@@ -70,6 +85,21 @@ export default function SessionDashboardPage() {
   useEffect(() => {
     if (data.notFound) router.replace('/dashboard')
   }, [data.notFound, router])
+
+  // Changer de section est un geste, pas un automatisme : on recharge tout de
+  // suite, sans passer par la limite d'une minute. Sans cela, arriver sur Suivi
+  // après un moment passé sur le Rapport montrerait un avancement figé — les
+  // rafraîchissements joués pendant ce temps n'avaient rien rechargé.
+  // Extrait de `live` plutôt que lu dessus : la présence change à chaque
+  // battement, donc dépendre de l'objet entier rechargerait l'inventaire à
+  // chaque appareil qui se signale. La fonction, elle, est stable.
+  const { refresh: rechargerMaintenant } = live
+  const sectionPrecedente = useRef(tab)
+  useEffect(() => {
+    if (sectionPrecedente.current === tab) return
+    sectionPrecedente.current = tab
+    rechargerMaintenant()
+  }, [tab, rechargerMaintenant])
 
   if (guard.status === 'loading' || data.loading) {
     return (

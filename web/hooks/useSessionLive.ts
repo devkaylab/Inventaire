@@ -55,6 +55,21 @@ const AUTO_MIN_GAP_MS = 60_000
 // rester deux minutes sans bouger.
 const POLL_MS = 15_000
 
+// ── Repos quand rien ne se passe ─────────────────────────────────────────────
+//
+// Un inventaire ouvert où personne ne scanne — la pause de midi, un magasin
+// préparé la veille — n'a aucune raison de faire recalculer ses agrégats
+// soixante fois par heure. Le mobile signale ses scans (battements `dirty`,
+// file hors ligne qui remonte) : sans aucun signal, le sondage se contente
+// d'une passe toutes les cinq minutes, de quoi rattraper ce qui aurait échappé
+// aux messages.
+//
+// **La sécurité tient dans la condition de repli** : ce repos ne s'applique que
+// si le canal est bien ouvert. Un tableau de bord dont le temps réel est tombé
+// ne reçoit plus aucun signal — s'endormir dans ce cas afficherait des chiffres
+// figés cinq minutes durant, sans que rien ne l'explique.
+const IDLE_MAX_MS = 5 * 60_000
+
 export type LiveState = {
   /** Une entrée par appareil connecté, indexée par clé de présence anonyme. */
   presence: Record<string, PresencePayload>
@@ -92,6 +107,11 @@ export function useSessionLive(
   // est consultée depuis des rappels créés une fois pour toutes (sondage,
   // messages du canal), qui ne verraient jamais un état plus récent.
   const lastRefreshRef = useRef(Date.now())
+  // « Le mobile m'a signalé quelque chose depuis le dernier rafraîchissement. »
+  const activityRef = useRef(false)
+  // L'état du canal, en référence : le sondage est créé une fois et ne verrait
+  // jamais un état plus récent.
+  const channelReadyRef = useRef(false)
 
   /**
    * Rafraîchit les agrégats de l'inventaire.
@@ -104,6 +124,10 @@ export function useSessionLive(
     if (inFlight.current) return
     if (!force && Date.now() - lastRefreshRef.current < AUTO_MIN_GAP_MS) return
     inFlight.current = true
+    // Remis à zéro **avant** l'appel, pas après : un scan qui arrive pendant le
+    // chargement ne sera pas dans les données reçues, et doit donc rester un
+    // signal en attente. L'effacer à la fin le perdrait.
+    activityRef.current = false
     setRefreshing(true)
     void Promise.resolve(refreshRef.current())
       .catch(err => console.error('[live] refresh', err))
@@ -185,7 +209,11 @@ export function useSessionLive(
      * n'arrivait jamais à son terme et ce déclencheur ne servait plus à rien
      * sans que cela se voie.
      */
-    const askRefresh = () => { if (!disposed) refresh() }
+    const askRefresh = () => {
+      if (disposed) return
+      activityRef.current = true
+      refresh()
+    }
 
     const readPresence = () => {
       if (disposed) return
@@ -226,21 +254,40 @@ export function useSessionLive(
       .on('broadcast', { event: SYNC_EVENT }, askRefresh)
       .subscribe((status) => {
         if (disposed) return
-        setChannelReady(status === 'SUBSCRIBED')
+        channelReadyRef.current = status === 'SUBSCRIBED'
+        setChannelReady(channelReadyRef.current)
       })
 
     return () => {
       disposed = true
       void supabase.removeChannel(channel)
+      channelReadyRef.current = false
       setChannelReady(false)
     }
   }, [sessionId, ready, refresh])
 
-  // ── Sondage, uniquement onglet visible ─────────────────────────────────────
+  // ── Sondage : onglet du navigateur visible, et section qui regarde ─────────
+  //
+  // `enabled` est faux sur les sections qui ne suivent pas l'inventaire en
+  // direct (Rapport, Équipe, Écarts…) : on y lit et on y agit, on n'y observe
+  // pas l'avancement. Y sonder ferait recalculer l'inventaire entier pour un
+  // écran qui n'en montre rien.
   useEffect(() => {
     if (!enabled || !sessionId) return
 
-    const tick = () => { if (document.visibilityState === 'visible') refresh() }
+    // Arriver sur la section doit montrer l'état réel, pas celui d'il y a dix
+    // minutes. Appel **limité** et non forcé : aller et venir entre deux
+    // sections ne doit pas devenir une façon de contourner la limite.
+    refresh()
+
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return
+      // Trois raisons de rafraîchir, et une seule suffit : le mobile a signalé
+      // du nouveau ; le canal est tombé, donc plus rien ne nous signalera quoi
+      // que ce soit ; ou il est temps de vérifier par nous-mêmes.
+      const tropVieux = Date.now() - lastRefreshRef.current >= IDLE_MAX_MS
+      if (activityRef.current || !channelReadyRef.current || tropVieux) refresh()
+    }
     const timer = setInterval(tick, pollMs)
 
     // Revenir sur l'onglet doit montrer l'état réel, pas celui d'il y a 20 min.

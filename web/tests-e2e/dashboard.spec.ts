@@ -110,6 +110,29 @@ test.describe('Suivi — activité agrégée, sans suivi nominatif', () => {
       .toBeGreaterThan(avant)
   })
 
+  test('ne recharge que ce que la section affiche', async ({ page }) => {
+    // Recalculer l'avancement par zone et les totaux fait reparcourir à la base
+    // tous les comptages de l'inventaire. Le faire pour une section qui n'en
+    // montre rien est du travail perdu, multiplié par le nombre de superviseurs
+    // connectés — c'est la troisième correction de charge du 21 août 2026.
+    await gotoDashboard(page, 'suivi')
+    const compte = (nom: string) => calls.rpc.filter(c => c.name === nom).length
+
+    // Le Rapport n'affiche ni l'avancement par zone ni les totaux : passer
+    // dessus ne doit rien recalculer d'autre que le rapport lui-même.
+    const zonesAvant = compte('get_zone_dashboard')
+    const totauxAvant = compte('get_session_count_totals')
+    await openTab(page, 'Rapport')
+    await expect.poll(() => compte('get_session_results')).toBeGreaterThan(0)
+    expect(compte('get_zone_dashboard')).toBe(zonesAvant)
+    expect(compte('get_session_count_totals')).toBe(totauxAvant)
+
+    // Revenir sur Suivi recharge tout de suite : sans cela, l'avancement
+    // resterait figé sur ce qu'il était avant le détour.
+    await openTab(page, 'Suivi')
+    await expect.poll(() => compte('get_zone_dashboard')).toBeGreaterThan(zonesAvant)
+  })
+
   test('résume l’avancement par zone, sans numéro de balise', async ({ page }) => {
     await gotoDashboard(page, 'suivi')
 

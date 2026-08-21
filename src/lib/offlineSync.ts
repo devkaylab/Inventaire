@@ -2,6 +2,7 @@ import * as q from '@/lib/queries'
 import type { Article, BaliseMode } from '@/lib/queries'
 import type { TablesInsert } from '@/types/database.types'
 import * as off from '@/lib/offline'
+import { pingSession } from '@/lib/presence'
 
 /**
  * Bascule serveur ↔ local, transparente pour les écrans.
@@ -217,6 +218,13 @@ export async function syncNow(sessionId: string): Promise<SyncOutcome> {
     setBalise: (s, c, m, o, a) => q.setBalise(s, c, m, o, a),
   })
   setOffline(result.interrupted)
+  // Une file qui remonte doit prévenir le tableau de bord, au même titre qu'un
+  // scan en direct. Sans cette ligne, un retour de réserve versait des
+  // centaines de comptages que le superviseur ne verrait qu'au prochain
+  // rafraîchissement de repli — le site espace justement les siens quand rien
+  // ne lui est signalé. Un seul signal pour toute la file : `pingSession`
+  // regroupe, et le site n'a besoin de savoir que « il y a du nouveau ».
+  if (result.sent > 0) pingSession(sessionId, 'count')
   return { ...result, balises: await off.pendingBalises(sessionId) }
 }
 

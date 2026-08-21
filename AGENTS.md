@@ -508,6 +508,39 @@ retenu : elle reportait l'appel à chaque message reçu, donc sur un inventaire
 animé — où les messages arrivent plus vite que ça — elle ne parvenait jamais à
 son terme. Ce déclencheur ne servait plus à rien, sans que cela se voie.
 
+**Chaque section ne recharge que ce qu'elle affiche.** `LIVE_SCOPES` (page du
+tableau de bord) donne la portée de `refreshLive` : `suivi` (avancement, totaux
+et fil des scans), `zones` (Set up, Écarts — sans le fil), `aucun` (Rapport,
+Équipe). Le Rapport reste vivant : il recharge le sien à chaque battement, et
+c'est bien ce qui est à l'écran — mais il ne fait plus recalculer l'avancement
+par zone dont sa page ne montre rien.
+
+Deux pièges déjà rencontrés, à ne pas réintroduire :
+
+- **Le premier chargement ignore la portée** (`chargerLive('suivi')` dans
+  `refreshAll`). Le bandeau de progression est visible sur toutes les sections :
+  s'en remettre à la portée afficherait un bandeau à zéro sur un lien direct
+  vers le Rapport.
+- **Changer de section recharge tout de suite**, sans passer par la limite. Les
+  rafraîchissements joués pendant un détour par le Rapport n'ont rien rechargé :
+  sans ce geste, revenir sur Suivi montrerait un avancement figé. Et extraire
+  `refresh` de l'objet `live` avant de le mettre en dépendance d'effet — la
+  présence change à chaque battement, dépendre de l'objet entier rechargerait
+  l'inventaire à chaque appareil qui se signale.
+
+**Le tableau de bord se repose quand rien n'est signalé.** Sur un inventaire
+ouvert où personne ne scanne, le sondage se contente d'une passe toutes les cinq
+minutes (`IDLE_MAX_MS`) au lieu d'une par minute. Le mobile signale ses scans
+(battements `dirty`, et **la file hors ligne qui remonte** — `syncNow` appelle
+`pingSession`, sans quoi un retour de réserve verserait des centaines de
+comptages sans prévenir).
+
+**La garde qui rend ce repos acceptable est `!channelReadyRef.current`** : le
+repos ne s'applique que si le canal est ouvert. Un tableau de bord dont le temps
+réel est tombé ne reçoit plus aucun signal — s'y endormir afficherait des
+chiffres figés cinq minutes sans que rien ne l'explique. Ne jamais retirer cette
+condition.
+
 ## Ce qu'il faut savoir avant d'y toucher
 
 - **La double écoute du site est temporaire et nécessaire.** `useSessionLive`
@@ -538,7 +571,8 @@ son terme. Ce déclencheur ne servait plus à rien, sans que cela se voie.
 
 - **Index manquant** sur `counts (session_id, zone, pass_number)` :
   `get_zone_dashboard` agrège tous les comptages de l'inventaire à chaque
-  battement.
+  rafraîchissement. Sans intérêt aux volumes actuels (quelques centaines de
+  lignes) ; à reprendre avec des chiffres sous les yeux, pas au jugé.
 - **Compute Micro** (`max_connections` = 60) : à monter le jour où le volume
   arrive. 20 000 compteurs à six scans/minute font ~2 000 écritures/s, une
   Micro en encaisse 200 à 400. C'est un curseur, pas un chantier.
