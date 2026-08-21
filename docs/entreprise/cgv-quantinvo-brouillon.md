@@ -97,17 +97,18 @@ par le Client** pour chaque magasin lors de sa demande. Elle est **acquise pour
 toute la période annuelle** : les variations de stock en cours d'année,
 notamment saisonnières, sont sans effet sur le prix déjà facturé.
 
-6.4 Le volume déclaré est **vérifié au premier import** du stock théorique dans
-le Service, qui en donne le nombre exact d'unités. Si ce nombre place le
-magasin dans une tranche supérieure à celle souscrite, au-delà d'une tolérance
-de [10] %, l'Éditeur en informe le Client et facture le complément au prorata
-de la période restant à courir ; le Client peut, dans les [trente] jours de
-cette information, préférer résilier la licence du magasin concerné et être
-remboursé au prorata. Si le nombre place le magasin dans une tranche
-inférieure, la différence est déduite du renouvellement suivant.
+6.4 Le Service ne mesure pas le stock total d'un magasin : le Client n'y
+importe que le périmètre qu'il choisit de compter — souvent une marque ou une
+zone — et l'import du stock théorique y est facultatif. Le volume déclaré ne
+peut donc être contredit que **par excès** : si le stock théorique importé sur
+un seul inventaire dépasse la tranche souscrite pour ce magasin, il établit que
+le magasin relève au moins de la tranche supérieure. L'Éditeur en informe alors
+le Client et facture le complément au prorata de la période restant à courir ;
+le Client peut, dans les [trente] jours de cette information, préférer résilier
+la licence du magasin concerné et être remboursé au prorata.
 
-6.5 La tranche applicable à chaque renouvellement est celle constatée au
-dernier inventaire réalisé dans le Service.
+6.5 La tranche est réexaminée à chaque renouvellement sur déclaration du
+Client, selon les mêmes règles.
 
 6.6 Retard de paiement : pénalités au taux de [trois fois le taux d'intérêt
 légal], exigibles sans rappel, et indemnité forfaitaire de recouvrement de
@@ -318,9 +319,11 @@ magasin, et non son nombre de références.
 4. Engagement de disponibilité chiffré : aucun pour l'instant, à prévoir si
    une enseigne le demande (et alors l'assortir de crédits plutôt que de
    pénalités).
-5. Tolérance de l'article 6.4 sur le volume déclaré : 10 % est un arbitrage de
-   départ, à confirmer — trop basse, elle déclenche des régularisations pour
-   rien ; trop haute, elle rend la déclaration facultative.
+5. Vérification du volume déclaré : le Service ne sait constater qu'un
+   **plancher** (article 6.4), jamais le stock total du magasin. Le vrai
+   garde-fou est donc commercial — établir le devis sur l'export de stock du
+   prospect, pas sur un chiffre annoncé. À trancher : faut-il en faire une
+   condition d'établissement du devis.
 6. Clause de référence commerciale : à garder ou non.
 7. Conditions d'un essai gratuit ou d'un inventaire pilote, si cette pratique
    commerciale est retenue.
