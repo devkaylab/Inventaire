@@ -11,7 +11,7 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTheme } from '@/lib/theme'
-import { SUPERVISOR_REQUEST_URL } from '@/constants/links'
+import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 /**
@@ -60,12 +60,16 @@ export default function SignupScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Vous êtes superviseur</Text>
               <Text style={styles.cardBody}>
-                Déposez une demande sur le site, accompagnée du code magasin remis par
-                l&apos;administrateur de votre entreprise. Après validation par Quantinvo, vous
-                recevez le lien de création de mot de passe.
+                Votre accès est ouvert par l&apos;administrateur de votre entreprise, depuis la
+                page Mon équipe du site. Il vous envoie une invitation par e-mail, avec le lien
+                de création de votre mot de passe.
               </Text>
-              <Pressable style={styles.button} onPress={() => Linking.openURL(SUPERVISOR_REQUEST_URL)}>
-                <Text style={styles.buttonText}>Déposer ma demande</Text>
+              <Text style={styles.cardBody}>
+                Vous n&apos;avez pas d&apos;administrateur d&apos;entreprise ? Écrivez-nous depuis
+                le site.
+              </Text>
+              <Pressable style={styles.button} onPress={() => Linking.openURL(SITE_URL)}>
+                <Text style={styles.buttonText}>Ouvrir le site</Text>
               </Pressable>
             </View>
 
