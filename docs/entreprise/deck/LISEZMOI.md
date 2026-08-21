@@ -25,8 +25,12 @@ sont, dans ~/Library/Fonts).
   blanc** pour tout document qu'on imprime, signe ou projette — voir la
   palette « Papier ». Ce deck est donc à refaire en blanc s'il est repris.
 - Les tarifs de la diapositive « L'offre » suivent la grille au volume de
-  stock, révisée le 21 août 2026 : 1 200 / 2 400 / 3 900 / 6 000 / 8 400 € par
-  an et par magasin, puis sur devis au-delà d'un million d'unités. Le volume se
+  stock, révisée le 21 août 2026 : 2 100 / 4 200 / 6 600 / 10 200 / 14 400 €
+  par an et par magasin, puis sur devis au-delà d'un million d'unités. Ces
+  montants sont les anciens (1 200 / 2 400 / 3 900 / 6 000 / 8 400) regonflés
+  de la fiscalité — voir la note de grille dans la mémoire du projet : ils
+  laissent le montant d'origine **net en poche**, une fois l'IS et la flat tax
+  payés. Le volume se
   compte en **unités** (pièces physiques), jamais en références. Cinq paliers
   au lieu de quatre : la diapositive porte donc cinq cartes, plus étroites.
 

@@ -174,9 +174,11 @@ describe('le tableau de bord Quantinvo', () => {
       .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
       .join('\n')
     expect(tdb).toContain('arr_cents')
-    expect(codeSeul).not.toMatch(/2\s?200/)
-    expect(codeSeul).not.toMatch(/220000/)
-    expect(codeSeul).not.toMatch(/8\s?800/)
+    // Le panier moyen (3 700 € depuis le regonflement fiscal du 21 août 2026)
+    // vit dans admin_business_overview, jamais ici.
+    expect(codeSeul).not.toMatch(/3\s?700/)
+    expect(codeSeul).not.toMatch(/370000/)
+    expect(codeSeul).not.toMatch(/14\s?800/)
   })
 
   it('annonce ce qui n’est qu’estimé', () => {

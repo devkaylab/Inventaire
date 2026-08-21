@@ -84,7 +84,7 @@ prévient l'Éditeur sans délai en cas de divulgation.
 6.1 Le prix est une **licence annuelle par magasin**, déterminée par la tranche
 de volume de stock du magasin. Le volume s'entend en **unités en stock** — le
 nombre de pièces physiques, et non le nombre de références — selon la grille en
-vigueur au jour du devis, reprise en annexe 2 [de 1 200 à 8 400 € HT par an et
+vigueur au jour du devis, reprise en annexe 2 [de 2 100 à 14 400 € HT par an et
 par magasin ; au-delà d'un million d'unités, prix sur devis]. Le prix est
 exprimé hors taxes ; la TVA s'ajoute au taux en vigueur.
 
@@ -300,11 +300,11 @@ magasin, et non son nombre de références.
 
 | Tranche de volume de stock du magasin | Licence annuelle HT |
 |---|---|
-| Jusqu'à 10 000 unités | 1 200 € |
-| De 10 001 à 50 000 unités | 2 400 € |
-| De 50 001 à 200 000 unités | 3 900 € |
-| De 200 001 à 500 000 unités | 6 000 € |
-| De 500 001 à 1 000 000 unités | 8 400 € |
+| Jusqu'à 10 000 unités | 2 100 € |
+| De 10 001 à 50 000 unités | 4 200 € |
+| De 50 001 à 200 000 unités | 6 600 € |
+| De 200 001 à 500 000 unités | 10 200 € |
+| De 500 001 à 1 000 000 unités | 14 400 € |
 | Au-delà de 1 000 000 unités | Sur devis |
 
 ---

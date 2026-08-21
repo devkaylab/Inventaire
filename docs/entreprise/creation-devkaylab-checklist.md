@@ -14,7 +14,7 @@ obligations qui en découlent, dans l'ordre où elles se débloquent.
 
 **SASU à l'impôt sur les sociétés**, dénomination sociale « Devkaylab », nom
 commercial « Quantinvo ». Raisons : le produit est déjà construit, la grille
-tarifaire (1 200 à 8 400 € HT par an et par magasin) vise des enseignes qui
+tarifaire (2 100 à 14 400 € HT par an et par magasin) vise des enseignes qui
 demanderont un Kbis, une RC pro et des CGV ; la société doit posséder la marque,
 le code et les contrats ; un associé ou un investisseur doit pouvoir entrer un
 jour sans tout refaire.

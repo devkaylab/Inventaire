@@ -363,11 +363,11 @@ async function main() {
     // magasin — c'est le seuil qui parle dans le métier.
     // Les bornes tiennent sur deux lignes pour que les cinq cartes s'alignent.
     const TIERS = [
-      ['Jusqu’à', '10 000', '1 200 €', false],
-      ['10 000 à', '50 000', '2 400 €', true],
-      ['50 000 à', '200 000', '3 900 €', false],
-      ['200 000 à', '500 000', '6 000 €', false],
-      ['500 000 à', '1 000 000', '8 400 €', false],
+      ['Jusqu’à', '10 000', '2 100 €', false],
+      ['10 000 à', '50 000', '4 200 €', true],
+      ['50 000 à', '200 000', '6 600 €', false],
+      ['200 000 à', '500 000', '10 200 €', false],
+      ['500 000 à', '1 000 000', '14 400 €', false],
     ]
     const CW = 2.21 // largeur de carte
     const CSTEP = 2.405 // pas horizontal : 5 cartes de 0,75 à 12,58
