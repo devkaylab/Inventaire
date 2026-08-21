@@ -82,6 +82,10 @@ export default function CompteLayout() {
     headerTintColor: theme.headerText,
     headerTitleStyle: { fontFamily: Font.bold, color: theme.headerText },
     contentStyle: { backgroundColor: theme.background },
+    // iOS reprend par défaut le titre de l'écran précédent — « Mon compte »,
+    // « Session »… Un seul mot, toujours le même, se lit plus vite qu'un
+    // libellé qui change à chaque écran, et ne risque pas d'être tronqué.
+    headerBackTitle: 'Retour',
   }
 
   const actionsRight = () => <HeaderActions />

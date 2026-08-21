@@ -54,6 +54,15 @@ describe('découpage de Mon compte', () => {
     expect(layout).toContain('mfaRequired')
   })
 
+  it('le bouton retour dit « Retour », pas le titre de l’écran précédent', () => {
+    // iOS reprend par défaut le titre précédent — « Mon compte », « Session »…
+    // Un seul mot, toujours le même, se lit plus vite et ne se fait pas
+    // tronquer par iOS quand la place manque.
+    for (const groupe of ['(compte)', '(supervisor)', '(employee)']) {
+      expect(lire(`app/${groupe}/_layout.tsx`)).toContain("headerBackTitle: 'Retour'")
+    }
+  })
+
   it('Mon compte porte son propre retour, la pile racine n’en fournissant pas', () => {
     // « Mon compte » est le premier écran de sa pile : la flèche native ne
     // s'affiche pas, alors qu'on arrive bien de Sessions ou de l'accueil.
