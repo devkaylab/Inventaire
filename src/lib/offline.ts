@@ -136,6 +136,29 @@ export function isNetworkError(e: unknown): boolean {
   )
 }
 
+/**
+ * Session d'authentification expirée ou absente.
+ *
+ * À traiter comme une panne réseau — l'opération est valide, c'est le droit
+ * d'écrire qui manque momentanément. Sans cette distinction, l'expiration de
+ * session rangerait des comptages parfaitement bons dans les échecs
+ * définitifs, et le compteur perdrait son travail au lieu de le voir repartir
+ * après reconnexion.
+ *
+ * Attention : un `42501` n'est **pas** listé ici. Refus de droits avec une
+ * session valide (retiré de l'inventaire, inventaire clôturé), c'est un refus
+ * définitif, qui doit rester visible.
+ */
+export function isAuthExpired(e: unknown): boolean {
+  const err = e as { code?: string; status?: number; name?: string; message?: string } | null
+  if (!err) return false
+  if (err.code === 'PGRST301' || err.status === 401) return true
+  if (err.name === 'AuthApiError' || err.name === 'AuthSessionMissingError') return true
+  return /jwt (expired|is expired|invalid)|invalid jwt|token is expired|session (missing|expired)/i.test(
+    err.message ?? '',
+  )
+}
+
 /** Conflit de clé primaire : la ligne est déjà passée, l'op est donc terminée. */
 function isDuplicate(e: unknown): boolean {
   const err = e as { code?: string; message?: string } | null
@@ -594,7 +617,7 @@ export async function flush(
           sent += 1
           continue
         }
-        if (isNetworkError(e)) {
+        if (isNetworkError(e) || isAuthExpired(e)) {
           interrupted = true
           remaining.push(op)
           continue

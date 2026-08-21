@@ -521,6 +521,52 @@ fonction `admin_*`. **Si un écran mobile devait un jour en appeler une**, il
 faudrait d'abord y porter le parcours TOTP : sans lui, une session mobile est
 en `aal1` et serait refusée.
 
+## Expiration des sessions (préparé le 21 août 2026, **pas encore activé**)
+
+Constat de départ : `auth.sessions.not_after` est vide partout, et une session
+de compteur ouverte le 18 juin vivait encore le 13 août. **Rien n'expire.** Un
+téléphone perdu reste connecté indéfiniment, sur un outil qui porte des données
+de stock et des noms de salariés.
+
+À savoir d'abord, parce que la question revient : **le code de double
+authentification n'est pas demandé périodiquement.** Le niveau `aal2` est
+stocké sur la ligne de session, pas seulement dans le jeton ; le
+rafraîchissement horaire le reconduit. On ne le ressaisit qu'à une nouvelle
+connexion. Un « se souvenir de cet appareil » maison est à écarter : on ne peut
+pas accorder `aal2` côté client, donc sauter l'écran laisserait la session en
+`aal1` — les fonctions `admin_*` refuseraient, et pour un superviseur ce serait
+une protection de façade.
+
+**Le code est prêt, la console ne l'est pas.** Réglage à poser dans
+Authentication → Sessions :
+
+- *Inactivity timeout* — la session meurt faute d'usage ;
+- *Time-box user sessions* — plafond absolu depuis la connexion.
+
+Valeurs proposées : **30 jours d'inactivité, 180 jours de plafond**. Qui compte
+régulièrement n'est jamais dérangé ; qui n'a pas ouvert l'app depuis un mois
+ressaisit son mot de passe une fois.
+
+**Ce qu'il fallait corriger avant d'activer, et qui l'est.** Une session
+expirée n'annule pas les comptages en attente :
+
+- `syncNow` ne tente rien sans session valide. Sinon la requête part en
+  anonyme, PostgREST répond « permission denied », et `flush()` rangeait des
+  comptages **valides** dans les échecs définitifs — le compteur perdait son
+  travail.
+- `isAuthExpired` (jeton périmé, 401, session absente) est traité comme une
+  coupure réseau : l'opération reste en file. **`42501` n'en fait pas partie** —
+  refus de droits avec session valide (retiré de l'inventaire, inventaire
+  clôturé), ça doit rester un échec visible.
+- Tests de garde : `tests/offline.test.ts`, blocs « une session expirée
+  conserve la file » et « un refus de droits reste un échec définitif ».
+
+**Le risque résiduel, à connaître avant de choisir des durées courtes** : si
+une session expire pendant un comptage hors ligne, la personne est renvoyée
+vers la connexion et ne peut pas se reconnecter sans réseau. Ses comptages sont
+conservés, mais elle ne peut plus compter. C'est ce qui plaide pour un plafond
+large plutôt que serré.
+
 ## Politique de mot de passe (console + code, 19 août 2026)
 
 La console applique désormais : **12 caractères minimum**, une minuscule, une

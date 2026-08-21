@@ -28,6 +28,7 @@ import {
   enqueueCount,
   failedOps,
   flush,
+  isAuthExpired,
   isNetworkError,
   migrateLegacy,
   newId,
@@ -242,6 +243,38 @@ describe('synchronisation', () => {
     expect((await pendingCounts(S)).map((c) => c.sku)).toEqual(['B', 'C'])
   })
 
+  it('une session expirée conserve la file au lieu de la jeter', async () => {
+    // Préparation de l'expiration de session (21 août 2026) : sans cette
+    // distinction, un jeton périmé pendant un inventaire rangeait des
+    // comptages valides dans les échecs définitifs — le compteur perdait son
+    // travail au lieu de le voir repartir après reconnexion.
+    await enqueueCount(S, count('A', '5375'))
+    await enqueueCount(S, count('B', '5375'))
+    const r = await flush(S, {
+      insertCount: async () => { throw { code: 'PGRST301', message: 'JWT expired' } },
+      setBalise: async () => {},
+    })
+    expect(r.interrupted).toBe(true)
+    expect(r.sent).toBe(0)
+    expect(r.failed).toBe(0)
+    expect((await pendingCounts(S)).map((c) => c.sku)).toEqual(['A', 'B'])
+    expect(await failedOps(S)).toHaveLength(0)
+  })
+
+  it('un refus de droits reste un échec définitif, lui', async () => {
+    // 42501 avec une session valide : retiré de l'inventaire, ou inventaire
+    // clôturé. Le masquer derrière une file d'attente ferait croire au
+    // compteur que son travail passera.
+    await enqueueCount(S, count('A', '5375'))
+    const r = await flush(S, {
+      insertCount: async () => { throw { code: '42501', message: 'row-level security policy' } },
+      setBalise: async () => {},
+    })
+    expect(r.interrupted).toBe(false)
+    expect(r.failed).toBe(1)
+    expect(await failedOps(S)).toHaveLength(1)
+  })
+
   it('ne renvoie pas ce qui est déjà passé après une coupure', async () => {
     for (const sku of ['A', 'B', 'C']) await enqueueCount(S, count(sku, '5375'))
     let n = 0
@@ -386,5 +419,21 @@ describe('reprise de l’ancienne file (v1)', () => {
     expect(bal).toHaveLength(1)
     expect(bal[0].code).toBe('5375')
     expect([...store.keys()].some((k) => k.startsWith('offline:v1:op:'))).toBe(false)
+  })
+})
+
+describe('isAuthExpired', () => {
+  it('reconnaît un jeton périmé ou absent', () => {
+    expect(isAuthExpired({ code: 'PGRST301', message: 'JWT expired' })).toBe(true)
+    expect(isAuthExpired({ status: 401 })).toBe(true)
+    expect(isAuthExpired({ name: 'AuthSessionMissingError' })).toBe(true)
+    expect(isAuthExpired({ message: 'invalid JWT: token is expired' })).toBe(true)
+  })
+
+  it('ne confond pas un refus de droits avec une session perdue', () => {
+    expect(isAuthExpired({ code: '42501', message: 'row-level security policy' })).toBe(false)
+    expect(isAuthExpired({ code: '23505', message: 'duplicate key value' })).toBe(false)
+    expect(isAuthExpired({ message: 'Network request failed' })).toBe(false)
+    expect(isAuthExpired(null)).toBe(false)
   })
 })

@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase'
 import * as q from '@/lib/queries'
 import type { Article, BaliseMode } from '@/lib/queries'
 import type { TablesInsert } from '@/types/database.types'
@@ -213,6 +214,24 @@ export type SyncOutcome = off.FlushResult & { balises: off.PendingBalise[] }
  * réseau elle s'arrête à la première opération et conserve tout le reste.
  */
 export async function syncNow(sessionId: string): Promise<SyncOutcome> {
+  // Sans session d'authentification, ne rien tenter.
+  //
+  // Un jeton absent ne vaut pas « erreur d'authentification » côté serveur : la
+  // requête part en tant qu'anonyme et PostgREST répond « permission denied »,
+  // que la file range dans les échecs **définitifs**. Une session expirée
+  // pendant un inventaire enverrait donc des comptages valides à la poubelle.
+  // On garde tout en attente jusqu'à la reconnexion.
+  const { data: { session: auth } } = await supabase.auth.getSession()
+  if (!auth) {
+    return {
+      sent: 0,
+      failed: 0,
+      interrupted: true,
+      balisesSent: [],
+      balises: await off.pendingBalises(sessionId),
+    }
+  }
+
   const result = await off.flush(sessionId, {
     insertCount: (c) => q.insertCount(c),
     setBalise: (s, c, m, o, a) => q.setBalise(s, c, m, o, a),
