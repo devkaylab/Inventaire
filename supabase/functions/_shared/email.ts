@@ -177,14 +177,14 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
 
       <!-- En-tête : bandeau encre, tuile et mot-symbole en blanc. Le filet
            de scan cyan fait la frontière avec le corps. -->
-      <tr><td bgcolor="${COULEURS.encre}" style="background:${COULEURS.encre};padding:24px 32px;border-radius:13px 13px 0 0;">
+      <tr><td bgcolor="${COULEURS.encre}" style="background:${COULEURS.encre};padding:26px 32px;border-radius:13px 13px 0 0;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
-            <td valign="middle" style="padding-right:12px;">
-              <img src="${logo}" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border:0;">
+            <td valign="middle" style="padding-right:14px;">
+              <img src="${logo}" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border:0;">
             </td>
             <td valign="middle">
-              <span style="font-size:18px;font-weight:800;letter-spacing:-0.4px;color:#ffffff;">Quantinvo</span>
+              <span style="font-size:24px;font-weight:800;letter-spacing:-0.6px;color:#ffffff;">Quantinvo</span>
             </td>
           </tr>
         </table>
