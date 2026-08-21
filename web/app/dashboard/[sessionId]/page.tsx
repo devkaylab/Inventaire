@@ -129,7 +129,7 @@ export default function SessionDashboardPage() {
 
   const session = data.session
   const closed = session.status === 'closed'
-  const isCreator = session.created_by === guard.profile.id
+  const isCreator = session.created_by === guard.profile.id || !!guard.profile.is_company_admin
   const visibleTabs = TABS
 
   return (
@@ -174,6 +174,7 @@ export default function SessionDashboardPage() {
           <SessionActionsMenu
             session={session}
             isCreator={isCreator}
+            canReopen={isCreator || !!guard.profile.is_company_admin}
             onChanged={data.refreshMeta}
             onDeleted={() => router.replace('/dashboard')}
           />
@@ -184,7 +185,10 @@ export default function SessionDashboardPage() {
         <div className="banner banner-info">
           Cet inventaire est <strong>clôturé</strong> : aucun comptage ne peut plus y être enregistré,
           y compris depuis un téléphone resté ouvert sur la session. Les données sont conservées et le
-          rapport reste téléchargeable. Vous pouvez le rouvrir depuis le menu « ••• » en haut de page.
+          rapport reste téléchargeable.{' '}
+          {isCreator || guard.profile.is_company_admin
+            ? 'Vous pouvez le rouvrir depuis le menu « ••• » en haut de page.'
+            : 'Seul son créateur peut le rouvrir.'}
         </div>
       )}
 

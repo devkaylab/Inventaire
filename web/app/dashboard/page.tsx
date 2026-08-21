@@ -52,13 +52,25 @@ export default function DashboardPage() {
       || s.inventory_number.toLowerCase().includes(q))
   }, [sessions, query])
 
-  const groups = useMemo(() => groupByStore(filtered), [filtered])
+  // Deux listes, pas une : ce qu'on a créé, et ce à quoi on a été invité.
+  // Un inventaire invité ne se rouvre pas et ne se supprime pas — le dire par
+  // la mise en page évite de le découvrir au moment du refus.
+  const profileIdListe = guard.status === 'ready' ? guard.profile.id : null
+  const miens = useMemo(
+    () => filtered.filter(s => !!profileIdListe && s.created_by === profileIdListe),
+    [filtered, profileIdListe],
+  )
+  const invites = useMemo(
+    () => filtered.filter(s => !profileIdListe || s.created_by !== profileIdListe),
+    [filtered, profileIdListe],
+  )
+  const groups = useMemo(() => groupByStore(miens), [miens])
 
   // Qui peut supprimer : le créateur de l'inventaire, et l'administrateur de
   // l'entreprise pour tous les siens. Même règle que la base depuis la
   // migration `20260821250001` — la case n'apparaît pas ailleurs, plutôt que
   // de laisser découvrir le refus après coup.
-  const profileId = guard.status === 'ready' ? guard.profile.id : null
+  const profileId = profileIdListe
   const adminEntreprise = guard.status === 'ready' && !!guard.profile.is_company_admin
   const peutSupprimer = useCallback(
     (s: Session) => adminEntreprise || (!!profileId && s.created_by === profileId),
@@ -220,11 +232,11 @@ export default function DashboardPage() {
         <div style={{ marginTop: 24 }}>
           <EmptyState
             title="Aucun inventaire pour l’instant"
-            hint="Vous verrez ici les inventaires que vous avez créés et ceux auxquels on vous a invité."
+            hint="Vous verrez ici les inventaires que vous avez créés, et plus bas ceux auxquels on vous a invité."
             action={<Link href="/dashboard/new" className="btn btn-primary">Créer mon premier inventaire</Link>}
           />
         </div>
-      ) : groups.length === 0 ? (
+      ) : groups.length === 0 && invites.length === 0 ? (
         <div style={{ marginTop: 24 }}>
           <EmptyState title="Aucun résultat" hint={`Rien ne correspond à « ${query} ».`} />
         </div>
@@ -268,6 +280,29 @@ export default function DashboardPage() {
             </section>
           )
         })
+      )}
+
+      {!loading && invites.length > 0 && (
+        <section className="dash-store">
+          <h2 className="dash-store-name">Inventaires invités</h2>
+          <p className="muted small" style={{ margin: '-4px 0 12px' }}>
+            Vous participez à ces inventaires sans les avoir créés. Vous pouvez y compter et
+            consulter le rapport ; leur clôture définitive et leur réouverture appartiennent à
+            leur créateur.
+          </p>
+          <div className="dash-grid">
+            {invites.map(s => (
+              <SessionCard
+                key={s.id} s={s}
+                live={s.status !== 'closed'}
+                deletable={peutSupprimer(s)}
+                selected={selection.includes(s.id)}
+                onToggle={() => basculer(s.id)}
+                onDelete={() => supprimer([s])}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </AppShell>
   )

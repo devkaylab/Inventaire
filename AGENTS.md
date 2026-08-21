@@ -375,6 +375,27 @@ laisser découvrir le refus après coup.
   une fois par inventaire et **on rapporte les échecs** au lieu d'annoncer un
   succès global. Sur dix inventaires, un refus ne doit pas passer inaperçu.
 
+**Un inventaire clôturé ne se rouvre que par son créateur** (ou l'administrateur
+d'entreprise). Migration `20260821250002`, qui referme deux trous de la même
+famille :
+
+- la policy UPDATE de `inventory_sessions` acceptait n'importe quel superviseur
+  participant : un invité pouvait rouvrir un inventaire clôturé, et un rapport
+  déjà exporté se remettait à bouger. La garde tient sur la **ligne existante**
+  (`status <> 'closed' or created_by = auth.uid() or is_company_admin(...)`) —
+  clôturer et préparer restent ouverts aux participants, ce sont des gestes de
+  terrain que le créateur peut défaire ;
+- la policy DELETE acceptait elle aussi tout participant, ce qui permettait de
+  **court-circuiter `delete_session`** en supprimant la ligne en direct, et de
+  laisser comptages, articles et audits orphelins. Elle est supprimée : la
+  suppression passe par la fonction, SECURITY DEFINER donc hors RLS.
+
+**La liste sépare les siens des invités.** `/dashboard` groupe par magasin les
+inventaires qu'on a créés, puis affiche « Inventaires invités » à part, avec la
+raison écrite : on peut y compter et lire le rapport, la clôture définitive et
+la réouverture appartiennent au créateur. Dire la règle par la mise en page
+évite de la découvrir au moment du refus.
+
 Tests de garde : `web/tests/suppression-inventaire.test.ts`.
 
 **Pas encore fait, décrit mais hors de ce chantier** : l'administrateur

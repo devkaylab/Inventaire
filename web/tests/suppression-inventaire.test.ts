@@ -13,7 +13,9 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const lire = (p: string) => readFileSync(path.join(here, p), 'utf8')
 
 const migration = lire('../../supabase/migrations/20260821250001_suppression_inventaire_createur_ou_admin_entreprise.sql')
+const policies = lire('../../supabase/migrations/20260821250002_inventaire_cloture_rouvert_par_son_createur.sql')
 const page = lire('../app/dashboard/page.tsx')
+const menu = lire('../components/dashboard/SessionActionsMenu.tsx')
 
 describe('qui peut supprimer un inventaire', () => {
   it('la base ne se contente plus d’un participant', () => {
@@ -71,5 +73,41 @@ describe('sélection multiple', () => {
   it('la tuile étant un lien, la case retient le clic', () => {
     expect(page).toContain('e.preventDefault()')
     expect(page).toContain('e.stopPropagation()')
+  })
+})
+
+describe('un inventaire clôturé ne se rouvre que par son créateur', () => {
+  // Règle posée par Julien le 21 août 2026 : un inventaire auquel on est
+  // simplement invité ne se rouvre pas. La policy UPDATE acceptait n'importe
+  // quel superviseur participant — un invité pouvait donc remettre en marche
+  // un rapport déjà exporté.
+  it('la ligne clôturée n’est modifiable que par son créateur ou l’administrateur', () => {
+    expect(policies).toContain("status <> 'closed'")
+    expect(policies).toContain('created_by = auth.uid()')
+    expect(policies).toContain('public.is_company_admin(company_id)')
+  })
+
+  it('la suppression directe de la ligne n’est plus possible', () => {
+    // Sans cela, un client contournait `delete_session` — et sa garde — en
+    // supprimant la ligne, laissant comptages et articles orphelins.
+    expect(policies).toContain('drop policy if exists sessions_supervisor_delete')
+    expect(policies).not.toMatch(/create policy sessions_supervisor_delete/)
+  })
+
+  it('l’écran ne propose pas une réouverture que la base refusera', () => {
+    expect(menu).toContain('canReopen')
+    expect(menu).toContain('Lui seul peut le rouvrir')
+  })
+})
+
+describe('mes inventaires et ceux auxquels je suis invité', () => {
+  it('la liste sépare les deux', () => {
+    expect(page).toContain('const miens = useMemo(')
+    expect(page).toContain('const invites = useMemo(')
+    expect(page).toContain('Inventaires invités')
+  })
+
+  it('le regroupement par magasin ne porte que sur les siens', () => {
+    expect(page).toContain('groupByStore(miens)')
   })
 })

@@ -17,9 +17,11 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
  * Les textes de confirmation sont repris tels quels — la suppression demande
  * toujours de recopier le numéro d'inventaire, ce qui est la vraie protection.
  */
-export function SessionActionsMenu({ session, isCreator, onChanged, onDeleted }: {
+export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, onDeleted }: {
   session: Session
   isCreator: boolean
+  /** Rouvrir appartient au créateur, ou à l'administrateur de l'entreprise. */
+  canReopen: boolean
   onChanged: () => Promise<void> | void
   onDeleted: () => void
 }) {
@@ -143,9 +145,20 @@ export function SessionActionsMenu({ session, isCreator, onChanged, onDeleted }:
 
       {ouvert && (
         <div className="dash-menu-pop" role="menu">
-          <button type="button" role="menuitem" className="dash-menu-item" onClick={closed ? onReopen : onClose}>
-            {closed ? 'Rouvrir l’inventaire' : 'Clôturer l’inventaire'}
-          </button>
+          {/* Un inventaire clôturé ne se rouvre que par son créateur : la base
+              le refuse (policy `sessions_supervisor_update`), l'écran ne le
+              propose donc pas. Clôturer reste ouvert aux participants, c'est un
+              geste de terrain que le créateur peut défaire. */}
+          {(!closed || canReopen) && (
+            <button type="button" role="menuitem" className="dash-menu-item" onClick={closed ? onReopen : onClose}>
+              {closed ? 'Rouvrir l’inventaire' : 'Clôturer l’inventaire'}
+            </button>
+          )}
+          {closed && !canReopen && (
+            <div className="dash-menu-note">
+              Cet inventaire a été clôturé par son créateur. Lui seul peut le rouvrir.
+            </div>
+          )}
           {isCreator && (
             <button type="button" role="menuitem" className="dash-menu-item dash-menu-danger" onClick={onDelete}>
               Supprimer définitivement
