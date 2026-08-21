@@ -40,7 +40,7 @@ export default function EmployeeLayout() {
 
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: 'Rejoindre une session', ...headerBase, headerRight: actionsProfileRight }} />
+      <Stack.Screen name="index" options={{ title: 'Rejoindre un inventaire', ...headerBase, headerRight: actionsProfileRight }} />
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Ma progression', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/counted" options={{ title: "Balises comptées", ...headerBase, headerRight: actionsRight }} />

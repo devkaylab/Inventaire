@@ -44,7 +44,7 @@ export default function NewSessionScreen() {
     try {
       const result = await createSession(name.trim(), storeId, securityCode.trim(), usesZones)
       if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Impossible de créer la session.')
+        Alert.alert('Erreur', result.error ?? 'Impossible de créer l’inventaire.')
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
@@ -75,7 +75,7 @@ export default function NewSessionScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.sectionTitle}>Informations de la session</Text>
+          <Text style={styles.sectionTitle}>Informations de l&apos;inventaire</Text>
 
           <Text style={styles.label}>{"Nom de l'inventaire"}</Text>
           <TextInput
@@ -146,7 +146,7 @@ export default function NewSessionScreen() {
           </View>
 
           <Pressable style={[styles.button, (loading || noStores) && styles.buttonDisabled]} onPress={handleCreate} disabled={loading || noStores}>
-            {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Créer la session</Text>}
+            {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Créer l&apos;inventaire</Text>}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

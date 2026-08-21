@@ -132,7 +132,7 @@ export default function SupervisorHomeScreen() {
       )}
 
       <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
-        <Text style={styles.fabText}>+ Nouvelle session</Text>
+        <Text style={styles.fabText}>+ Nouvel inventaire</Text>
       </Pressable>
     </SafeAreaView>
   )
