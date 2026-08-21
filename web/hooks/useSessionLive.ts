@@ -2,11 +2,11 @@
 
 // Une seule socket par tableau de bord, qui rend trois services :
 //
-//  1. la présence : qui est connecté, sur quelle balise, dans quel mode ;
-//  2. le déclenchement : l'application mobile émet un `sync` après un scan,
-//     le site rafraîchit ses agrégats ;
-//  3. le repli : un sondage à intervalle régulier, actif uniquement quand
-//     l'onglet est visible.
+//  1. la présence : combien d'appareils comptent, et dans quel mode ;
+//  2. le déclenchement : le mobile signale qu'il s'est passé quelque chose,
+//     le site rafraîchit ses agrégats — dans la limite fixée plus bas ;
+//  3. le repli : un sondage régulier, actif uniquement quand l'onglet est
+//     visible.
 //
 // Pourquoi pas `postgres_changes` ? Il faudrait publier `counts` dans
 // `supabase_realtime`, passer la table en REPLICA IDENTITY FULL pour que les
@@ -25,8 +25,35 @@ import {
   type PresencePayload,
 } from '@/lib/presence'
 
-const POLL_MS = 8_000
-const SYNC_DEBOUNCE_MS = 750
+// ── Cadence de rafraîchissement ──────────────────────────────────────────────
+//
+// Un rafraîchissement fait recalculer à la base l'avancement par zone et les
+// totaux de l'inventaire, c'est-à-dire un parcours de tous ses comptages.
+// Le coût est le même quel que soit le déclencheur — le sondage régulier ou un
+// scan qui vient d'arriver. **Le seul chiffre qui compte est donc : à quelle
+// fréquence un tableau de bord recalcule.** Poser une limite sur le sondage
+// sans la poser sur les scans ne changerait rien un jour de gros inventaire,
+// où les scans arrivent en continu.
+//
+// D'où une règle unique, `AUTO_MIN_GAP_MS` : au plus un rafraîchissement
+// automatique par minute, quelle qu'en soit la cause. À 200 magasins, cela
+// ramène la charge de ~50 calculs par seconde à moins de 7.
+//
+// Ce que ça ne ralentit pas, et c'est ce qui rend une minute acceptable :
+//   · la limite est à **seuil franchi**, pas à cadence fixe — sur un inventaire
+//     calme, le premier scan venu rafraîchit tout de suite ;
+//   · le bouton « Mis à jour… » de l'en-tête actualise à la demande, sans
+//     limite, et affiche l'âge des chiffres ;
+//   · revenir sur l'onglet actualise aussi ;
+//   · les compteurs d'appareils connectés ne passent pas par là : ils suivent
+//     les battements en direct.
+const AUTO_MIN_GAP_MS = 60_000
+
+// Le sondage bat plus vite que la limite : c'est lui qui rattrape un scan
+// arrivé pendant la minute de repos. Sans cela, un rafraîchissement déclenché
+// à la dixième seconde ferait sauter le sondage suivant, et l'écran pourrait
+// rester deux minutes sans bouger.
+const POLL_MS = 15_000
 
 export type LiveState = {
   /** Une entrée par appareil connecté, indexée par clé de présence anonyme. */
@@ -61,9 +88,21 @@ export function useSessionLive(
   const refreshRef = useRef(onRefresh)
   refreshRef.current = onRefresh
   const inFlight = useRef(false)
+  // Date du dernier rafraîchissement, en référence et non en état : la limite
+  // est consultée depuis des rappels créés une fois pour toutes (sondage,
+  // messages du canal), qui ne verraient jamais un état plus récent.
+  const lastRefreshRef = useRef(Date.now())
 
-  const refresh = useCallback(() => {
+  /**
+   * Rafraîchit les agrégats de l'inventaire.
+   *
+   * `force` est réservé à ce que la personne demande explicitement — le bouton
+   * de l'en-tête, le retour sur l'onglet. Tout le reste est automatique, et
+   * passe donc par la limite d'une minute.
+   */
+  const refresh = useCallback((force = false) => {
     if (inFlight.current) return
+    if (!force && Date.now() - lastRefreshRef.current < AUTO_MIN_GAP_MS) return
     inFlight.current = true
     setRefreshing(true)
     void Promise.resolve(refreshRef.current())
@@ -71,9 +110,13 @@ export function useSessionLive(
       .finally(() => {
         inFlight.current = false
         setRefreshing(false)
-        setLastRefreshAt(Date.now())
+        lastRefreshRef.current = Date.now()
+        setLastRefreshAt(lastRefreshRef.current)
       })
   }, [])
+
+  /** Ce que le bouton de l'en-tête appelle : sans limite, et tout de suite. */
+  const refreshNow = useCallback(() => refresh(true), [refresh])
 
   // ── Canal : battements v3 + présence v2 ────────────────────────────────────
   //
@@ -91,7 +134,6 @@ export function useSessionLive(
     if (!sessionId || !ready) return
 
     let disposed = false
-    let debounce: ReturnType<typeof setTimeout> | null = null
 
     // Canal **privé** : Realtime évalue alors les policies de
     // `realtime.messages`, qui n'autorisent le topic qu'aux participants de
@@ -133,11 +175,17 @@ export function useSessionLive(
       setUnknownVersions(legacy.unknownVersions + Object.keys(beatUnknown).length)
     }
 
-    /** Une rafale de scans ne doit produire qu'un seul rafraîchissement. */
-    const askRefresh = () => {
-      if (debounce) clearTimeout(debounce)
-      debounce = setTimeout(() => { if (!disposed) refresh() }, SYNC_DEBOUNCE_MS)
-    }
+    /**
+     * Un scan vient d'arriver.
+     *
+     * Aucune temporisation ici : c'est `refresh` qui porte la limite d'une
+     * minute, et il la porte pour tous les déclencheurs à la fois. La version
+     * précédente reportait l'appel de 750 ms à chaque message reçu — sur un
+     * inventaire animé, où les messages arrivent plus vite que ça, le report
+     * n'arrivait jamais à son terme et ce déclencheur ne servait plus à rien
+     * sans que cela se voie.
+     */
+    const askRefresh = () => { if (!disposed) refresh() }
 
     const readPresence = () => {
       if (disposed) return
@@ -183,7 +231,6 @@ export function useSessionLive(
 
     return () => {
       disposed = true
-      if (debounce) clearTimeout(debounce)
       void supabase.removeChannel(channel)
       setChannelReady(false)
     }
@@ -197,7 +244,8 @@ export function useSessionLive(
     const timer = setInterval(tick, pollMs)
 
     // Revenir sur l'onglet doit montrer l'état réel, pas celui d'il y a 20 min.
-    const onVisibility = () => { if (document.visibilityState === 'visible') refresh() }
+    // Sans limite, donc : c'est un geste de la personne, pas un automatisme.
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(true) }
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
@@ -207,6 +255,7 @@ export function useSessionLive(
   }, [enabled, sessionId, pollMs, refresh])
 
   return useMemo(() => ({
-    presence, unknownVersions, channelReady, lastRefreshAt, refreshing, refresh,
-  }), [presence, unknownVersions, channelReady, lastRefreshAt, refreshing, refresh])
+    presence, unknownVersions, channelReady, lastRefreshAt, refreshing,
+    refresh: refreshNow,
+  }), [presence, unknownVersions, channelReady, lastRefreshAt, refreshing, refreshNow])
 }

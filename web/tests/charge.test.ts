@@ -23,6 +23,7 @@ const inventaire = lire('../lib/inventory.ts')
 const presenceMobile = lire('../../src/lib/presence.ts')
 const presenceSite = lire('../lib/presence.ts')
 const migration = lire('../../supabase/migrations/20260821240001_totaux_comptage_serveur.sql')
+const live = lire('../hooks/useSessionLive.ts')
 
 /**
  * Corps d'une fonction exportée, jusqu'à l'export suivant.
@@ -98,5 +99,37 @@ describe('battements du mobile', () => {
     const hook = lire('../hooks/useSessionLive.ts')
     expect(hook).toContain('flattenPresence')
     expect(hook).toContain('readBeat')
+  })
+})
+
+describe('cadence du tableau de bord', () => {
+  const nombre = (nom: string) =>
+    Number(live.match(new RegExp(`const ${nom} = ([\\d_]+)`))?.[1].replace(/_/g, ''))
+
+  it('ne recalcule pas plus d’une fois par minute, automatiquement', () => {
+    // Un rafraîchissement fait reparcourir tous les comptages de l'inventaire.
+    // À 200 magasins, c'est ce chiffre qui décide de la charge.
+    expect(nombre('AUTO_MIN_GAP_MS')).toBe(60_000)
+  })
+
+  it('sonde plus vite que la limite, pour ne pas doubler l’attente', () => {
+    // Si le sondage battait à la même cadence que la limite, un
+    // rafraîchissement déclenché par un scan ferait sauter le sondage suivant
+    // et l'écran pourrait rester deux minutes sans bouger.
+    expect(nombre('POLL_MS')).toBeLessThan(nombre('AUTO_MIN_GAP_MS'))
+  })
+
+  it('applique la limite au scan comme au sondage', () => {
+    // C'est tout l'intérêt : un jour de gros inventaire, les scans arrivent en
+    // continu. Limiter le sondage sans limiter les scans ne changerait rien.
+    expect(live).toContain('const askRefresh = () => { if (!disposed) refresh() }')
+  })
+
+  it('laisse la personne passer outre', () => {
+    // Le bouton de l'en-tête et le retour sur l'onglet sont des gestes, pas
+    // des automatismes : ils actualisent tout de suite. Sans cela, une minute
+    // d'attente deviendrait une minute d'impuissance.
+    expect(live).toContain('refresh: refreshNow')
+    expect(live).toContain("document.visibilityState === 'visible') refresh(true)")
   })
 })

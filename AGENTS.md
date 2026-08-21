@@ -485,6 +485,29 @@ toutes les 5 s (une rafale de scans est regroupée — c'est ce qui remplace le
 parti à 90 s). L'identifiant d'appareil, que la présence portait comme clé de
 canal, voyage désormais dans la charge (`k`).
 
+**Le tableau de bord ne recalcule qu'une fois par minute.** Un
+rafraîchissement fait reparcourir tous les comptages de l'inventaire (zones et
+totaux) : le coût est le même que le déclencheur soit le sondage régulier ou un
+scan qui vient d'arriver. La limite `AUTO_MIN_GAP_MS` de `useSessionLive` vaut
+donc **pour tous les déclencheurs à la fois** — la poser sur le seul sondage ne
+changerait rien un jour de gros inventaire, où les scans arrivent en continu.
+À 200 magasins, cela ramène la charge de ~50 calculs par seconde à moins de 7.
+
+Ce qui rend une minute acceptable, et qu'il ne faut pas retirer : la limite est
+à **seuil franchi**, donc sur un inventaire calme le premier scan venu
+rafraîchit tout de suite ; le bouton « Mis à jour… » de l'en-tête et le retour
+sur l'onglet passent outre (`refresh(true)`) ; et les compteurs d'appareils
+connectés ne passent pas par là, ils suivent les battements en direct.
+
+Le sondage bat **plus vite** que la limite (15 s contre 60) : sinon un
+rafraîchissement déclenché à la dixième seconde ferait sauter le sondage
+suivant et l'écran pourrait rester deux minutes sans bouger.
+
+La temporisation de 750 ms qui précédait a été retirée, et le motif vaut d'être
+retenu : elle reportait l'appel à chaque message reçu, donc sur un inventaire
+animé — où les messages arrivent plus vite que ça — elle ne parvenait jamais à
+son terme. Ce déclencheur ne servait plus à rien, sans que cela se voie.
+
 ## Ce qu'il faut savoir avant d'y toucher
 
 - **La double écoute du site est temporaire et nécessaire.** `useSessionLive`

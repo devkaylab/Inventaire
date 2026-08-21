@@ -97,6 +97,19 @@ test.describe('Suivi — activité agrégée, sans suivi nominatif', () => {
     expect(calls.rpc.map(c => c.name)).toContain('get_session_count_totals')
   })
 
+  test('le bouton d’actualisation passe outre la limite d’une minute', async ({ page }) => {
+    // Le rafraîchissement automatique est plafonné à un par minute (charge
+    // serveur). Ce bouton est la soupape : sans lui, une minute d'attente
+    // deviendrait une minute d'impuissance.
+    await gotoDashboard(page, 'suivi')
+    const avant = calls.rpc.filter(c => c.name === 'get_session_count_totals').length
+
+    await page.locator('.refresh-btn').click()
+    await expect
+      .poll(() => calls.rpc.filter(c => c.name === 'get_session_count_totals').length)
+      .toBeGreaterThan(avant)
+  })
+
   test('résume l’avancement par zone, sans numéro de balise', async ({ page }) => {
     await gotoDashboard(page, 'suivi')
 
