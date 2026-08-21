@@ -9,12 +9,13 @@ import {
   Text,
   View,
 } from 'react-native'
-import { router } from 'expo-router'
+import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { cancelMyInvitation, getMyTeamByStore, type TeamCounter, type TeamInvite } from '@/lib/queries'
 import { SectionLabel } from '@/components/ui/MenuList'
 import { errorMessage } from '@/lib/errors'
+import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
@@ -42,6 +43,7 @@ function initials(name: string) {
 export default function TeamScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const { profile } = useAuth()
   const queryClient = useQueryClient()
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -76,6 +78,13 @@ export default function TeamScreen() {
       ],
     )
   }
+
+
+  // Ces trois écrans sont le travail du superviseur. Ils vivent dans la pile de
+  // « Mon compte » pour que la flèche de retour y ramène ; la garde de rôle,
+  // que portait le groupe `(supervisor)`, se pose donc ici. Les RPC refusent
+  // déjà un compteur côté serveur — ceci lui évite un écran en erreur.
+  if (profile?.role !== 'supervisor') return <Redirect href="/(compte)/account" />
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -132,7 +141,7 @@ export default function TeamScreen() {
               </View>
             )}
 
-            <Pressable style={styles.addBtn} onPress={() => router.push('/(supervisor)/new-member')}>
+            <Pressable style={styles.addBtn} onPress={() => router.push('/(compte)/new-member')}>
               <Text style={styles.addBtnText}>Ajouter un membre</Text>
             </Pressable>
           </>

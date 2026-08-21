@@ -18,9 +18,25 @@ describe('découpage de Mon compte', () => {
     expect(existsSync(src('app/(compte)/account.tsx'))).toBe(true)
   })
 
-  it('le travail du superviseur a ses écrans, à lui', () => {
-    for (const ecran of ['stores', 'team', 'tools']) {
-      expect(existsSync(src(`app/(supervisor)/${ecran}.tsx`))).toBe(true)
+  it('tout ce que Mon compte ouvre est dans sa pile de navigation', () => {
+    // Anomalie du 21 août 2026 : Magasins, Mon équipe et Boîte à outils
+    // vivaient dans le groupe `(supervisor)` alors qu'on les ouvre depuis
+    // `(compte)`. Traverser deux groupes fait repartir la pile de zéro, et
+    // **la flèche de retour disparaît**. Ce qu'un écran ouvre doit être dans
+    // sa pile.
+    for (const ecran of ['stores', 'team', 'tools', 'new-member']) {
+      expect(existsSync(src(`app/(compte)/${ecran}.tsx`))).toBe(true)
+      expect(existsSync(src(`app/(supervisor)/${ecran}.tsx`))).toBe(false)
+    }
+    // Et aucun lien ne doit ressortir du groupe.
+    for (const ecran of ['account', 'stores', 'team', 'tools', 'new-member']) {
+      expect(lire(`app/(compte)/${ecran}.tsx`)).not.toContain('/(supervisor)/')
+    }
+  })
+
+  it('les écrans de travail portent la garde de rôle que le groupe portait', () => {
+    for (const ecran of ['stores', 'team', 'tools', 'new-member']) {
+      expect(lire(`app/(compte)/${ecran}.tsx`)).toContain("profile?.role !== 'supervisor'")
     }
   })
 
@@ -36,6 +52,14 @@ describe('découpage de Mon compte', () => {
     const layout = lire('app/(compte)/_layout.tsx')
     expect(layout).not.toContain("role !== 'supervisor'")
     expect(layout).toContain('mfaRequired')
+  })
+
+  it('Mon compte porte son propre retour, la pile racine n’en fournissant pas', () => {
+    // « Mon compte » est le premier écran de sa pile : la flèche native ne
+    // s'affiche pas, alors qu'on arrive bien de Sessions ou de l'accueil.
+    const layout = lire('app/(compte)/_layout.tsx')
+    expect(layout).toContain('headerLeft')
+    expect(layout).toContain('router.canGoBack()')
   })
 
   it('les deux rôles ouvrent Mon compte par le bouton du bandeau', () => {
@@ -64,7 +88,7 @@ describe('découpage de Mon compte', () => {
   it('le nom du magasin n’est plus aligné à droite comme dans un tableau clé/valeur', () => {
     // Le style partagé portait `textAlign: 'right'`, ce qui envoyait le nom
     // du magasin d'un côté et son code de l'autre.
-    const magasins = lire('app/(supervisor)/stores.tsx')
+    const magasins = lire('app/(compte)/stores.tsx')
     expect(magasins).not.toContain("textAlign: 'right'")
   })
 })

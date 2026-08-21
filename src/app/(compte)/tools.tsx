@@ -1,6 +1,8 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Redirect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { BaliseCreator } from '@/components/BaliseCreator'
+import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
@@ -15,6 +17,14 @@ import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 export default function ToolsScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const { profile } = useAuth()
+
+
+  // Ces trois écrans sont le travail du superviseur. Ils vivent dans la pile de
+  // « Mon compte » pour que la flèche de retour y ramène ; la garde de rôle,
+  // que portait le groupe `(supervisor)`, se pose donc ici. Les RPC refusent
+  // déjà un compteur côté serveur — ceci lui évite un écran en erreur.
+  if (profile?.role !== 'supervisor') return <Redirect href="/(compte)/account" />
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>

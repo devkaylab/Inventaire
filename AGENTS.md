@@ -308,6 +308,20 @@ Boîte à outils) est conditionné au rôle superviseur. Les deux layouts,
 `(supervisor)` et `(employee)`, ouvrent le même écran par le bouton profil du
 bandeau.
 
+**Le groupe porte aussi les écrans de travail — et c'est la flèche de retour
+qui l'a imposé.** Magasins, Mon équipe, Boîte à outils et Ajouter un membre
+sont restés d'abord dans `(supervisor)` : les ouvrir depuis « Mon compte »
+traversait deux groupes de routes, la pile repartait de zéro et **le bouton
+retour disparaissait**. Règle à retenir : *ce qu'un écran ouvre doit être dans
+sa pile*. La garde de rôle que portait le groupe `(supervisor)` est donc posée
+dans chacun de ces quatre écrans (`profile?.role !== 'supervisor'` → retour à
+« Mon compte ») ; les RPC refusent déjà un compteur côté serveur, cette garde
+lui évite un écran en erreur.
+
+« Mon compte », lui, est le **premier** écran de sa pile : la flèche native ne
+s'affiche pas alors qu'on arrive bien de Sessions ou de l'accueil. D'où le
+`headerLeft` « Retour » du layout, conditionné à `router.canGoBack()`.
+
 Conséquence côté compteur : « Déconnexion » posé en haut de son accueil et le
 lien souligné « Supprimer mon compte » en pied ont disparu — les deux sont
 dans « Mon compte », comme pour le superviseur. `DeleteAccountButton` (le

@@ -11,15 +11,17 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { router } from 'expo-router'
+import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyAssignedStores, getMyCompany, inviteTeammate } from '@/lib/queries'
+import { useAuth } from '@/lib/auth'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function NewMemberScreen() {
+  const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
@@ -81,6 +83,10 @@ export default function NewMemberScreen() {
       setLoading(false)
     }
   }
+
+  // Même garde que Mon équipe, d'où il s'ouvre : le groupe `(supervisor)` la
+  // portait avant que cet écran ne rejoigne la pile de « Mon compte ».
+  if (profile?.role !== 'supervisor') return <Redirect href="/(compte)/account" />
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>

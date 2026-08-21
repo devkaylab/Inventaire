@@ -97,9 +97,9 @@ export default function AccountScreen() {
           <>
             <SectionLabel>Mon travail</SectionLabel>
             <MenuCard>
-              <MenuRow label="Mes magasins" onPress={() => router.push('/(supervisor)/stores')} />
-              <MenuRow label="Mon équipe" onPress={() => router.push('/(supervisor)/team')} />
-              <MenuRow label="Boîte à outils" onPress={() => router.push('/(supervisor)/tools')} last />
+              <MenuRow label="Mes magasins" onPress={() => router.push('/(compte)/stores')} />
+              <MenuRow label="Mon équipe" onPress={() => router.push('/(compte)/team')} />
+              <MenuRow label="Boîte à outils" onPress={() => router.push('/(compte)/tools')} last />
             </MenuCard>
           </>
         )}

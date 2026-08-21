@@ -36,10 +36,6 @@ export default function SupervisorLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Sessions', ...headerBase, headerRight: actionsProfileRight }} />
-      <Stack.Screen name="stores" options={{ title: 'Magasins', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="team" options={{ title: 'Mon équipe', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="tools" options={{ title: 'Boîte à outils', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="new-session" options={{ title: 'Nouvelle session', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Session', ...headerBase, headerRight: actionsProfileRight }} />
       <Stack.Screen name="[sessionId]/invite" options={{ title: 'Inviter une personne', ...headerBase, headerRight: actionsRight }} />
