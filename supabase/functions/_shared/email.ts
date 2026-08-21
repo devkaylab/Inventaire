@@ -8,9 +8,11 @@
 // Trois règles à connaître avant de le modifier :
 //
 // 1. C'est du HTML d'e-mail, pas du HTML de site : tableaux, styles en ligne,
-//    aucune classe CSS, aucune police distante, aucune image distante. Outlook
-//    ne connaît ni flexbox ni `border-radius` — la dégradation est prévue
-//    (coins droits, mêmes couleurs). Ne pas « moderniser » ce balisage.
+//    aucune classe CSS, aucune police distante. Une seule image, le logo,
+//    servi par le site — et le mot-symbole reste en texte à côté, pour les
+//    messageries qui coupent les images. Outlook ne connaît ni flexbox ni
+//    `border-radius` : la dégradation est prévue (coins droits, mêmes
+//    couleurs). Ne pas « moderniser » ce balisage.
 // 2. Fond blanc, palette « Papier » : un e-mail se lit, s'imprime et se
 //    transfère comme un document. La direction sombre du site n'a pas cours
 //    ici (règle de marque du 21 août 2026).
