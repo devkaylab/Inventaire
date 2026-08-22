@@ -259,8 +259,17 @@ export async function inviteTeammate(input: {
     alreadyInvited?: boolean
     emailError?: string
     error?: string
+    code?: string
   }
-  if (!res.success) throwSupabase('inviteTeammate', new Error(res.error ?? "Échec de l'ajout"))
+  if (!res.success) {
+    // Le code voyage avec l'erreur : sans lui, l'écran ne peut que titrer
+    // « Erreur » et recopier le texte. Certaines réponses ne sont pas des
+    // fautes de saisie — un compte qui appartient à une autre entreprise, par
+    // exemple — et se présentent autrement.
+    const err = new Error(res.error ?? "Échec de l'ajout") as Error & { code?: string }
+    err.code = res.code
+    throw err
+  }
   return res
 }
 

@@ -89,7 +89,16 @@ Deno.serve(async (req) => {
     )
   }
   if (found.company_id !== session.company_id) {
-    return json({ success: false, error: "Cette personne appartient à une autre entreprise." }, 409)
+    // Même situation que dans `invite-teammate`, même formulation : le compte
+    // existe, mais dans une autre entreprise. On ne dit pas laquelle.
+    return json({
+      success: false,
+      code: 'other_company',
+      error:
+        'Cette personne appartient déjà à une autre entreprise, et un compte ne peut être ' +
+        "rattaché qu'à une seule. Demandez à l'administrateur de votre entreprise de s'en " +
+        'occuper, ou ajoutez cette personne avec une autre adresse e-mail.',
+    }, 409)
   }
 
   // Ajout direct comme membre de l'inventaire.

@@ -77,9 +77,27 @@ Deno.serve(async (req) => {
   const found = Array.isArray(existing) && existing.length > 0 ? existing[0] : null
   if (found) {
     if (found.company_id === prof.company_id) {
-      return json({ success: false, error: 'Cette personne fait déjà partie de votre équipe.' })
+      return json({
+        success: false,
+        code: 'already_in_team',
+        error: 'Cette personne fait déjà partie de votre équipe.',
+      })
     }
-    return json({ success: false, error: 'Cette adresse est déjà utilisée dans une autre entreprise.' })
+    // Ce n'est pas une faute de saisie, c'est une situation à expliquer : le
+    // compte existe, mais ailleurs. Sans dire OÙ — nommer l'autre entreprise
+    // renseignerait le superviseur sur un client qui n'est pas le sien.
+    //
+    // Le `code` permet aux écrans de présenter cela comme une information et
+    // non comme une erreur ; le texte reste lisible tel quel pour un appelant
+    // qui l'ignorerait.
+    return json({
+      success: false,
+      code: 'other_company',
+      error:
+        'Cette personne appartient déjà à une autre entreprise, et un compte ne peut être ' +
+        "rattaché qu'à une seule. Demandez à l'administrateur de votre entreprise de s'en " +
+        'occuper, ou ajoutez cette personne avec une autre adresse e-mail.',
+    })
   }
 
   // Les magasins doivent appartenir au superviseur : sans ce filtre, un appel

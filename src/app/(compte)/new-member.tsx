@@ -73,12 +73,20 @@ export default function NewMemberScreen() {
       )
     } catch (e) {
       const msg = errorMessage(e)
-      Alert.alert(
-        'Erreur',
-        /duplicate|unique/i.test(msg)
-          ? 'Cette adresse e-mail est déjà invitée ou déjà utilisée.'
-          : msg,
-      )
+      const code = (e as { code?: string } | null)?.code
+      // Un compte qui appartient à une autre entreprise n'est pas une faute de
+      // saisie : rien à corriger dans le formulaire. On le dit comme un fait,
+      // avec la marche à suivre, et non sous un titre « Erreur ».
+      if (code === 'other_company') {
+        Alert.alert('Cette personne n’est pas de votre entreprise', msg, [{ text: 'J’ai compris' }])
+      } else {
+        Alert.alert(
+          'Erreur',
+          /duplicate|unique/i.test(msg)
+            ? 'Cette adresse e-mail est déjà invitée ou déjà utilisée.'
+            : msg,
+        )
+      }
     } finally {
       setLoading(false)
     }

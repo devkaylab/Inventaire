@@ -25,6 +25,11 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
+  // Un compte qui appartient à une autre entreprise n'est pas une faute de
+  // saisie : il n'y a rien à corriger dans le formulaire, et l'explication ne
+  // tient pas dans une notification qui s'efface. Elle reste sous le
+  // formulaire, le temps qu'on la lise.
+  const [horsEntreprise, setHorsEntreprise] = useState<string | null>(null)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,12 +40,17 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
     if (!mail.includes('@')) { toast.error('Adresse e-mail invalide.'); return }
 
     setBusy(true)
+    setHorsEntreprise(null)
     const { data, error } = await supabase.functions.invoke('invite-teammate', {
       body: { firstName: first, lastName: last, email: mail, storeIds: [] },
     })
     setBusy(false)
 
     if (error || !data?.success) {
+      if (data?.code === 'other_company') {
+        setHorsEntreprise(data.error as string)
+        return
+      }
       toast.error(data?.error ?? error?.message ?? 'Ajout impossible.')
       return
     }
@@ -65,6 +75,12 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
 
   return (
     <form className="panel" onSubmit={submit} style={{ marginTop: 12 }}>
+      {horsEntreprise && (
+        <div className="banner banner-warn" role="status">
+          <strong>Cette personne n’est pas de votre entreprise.</strong> {horsEntreprise}
+        </div>
+      )}
+
       <div className="field">
         <label htmlFor="counter-first">Prénom</label>
         <input id="counter-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Marie" />
@@ -75,7 +91,10 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
       </div>
       <div className="field">
         <label htmlFor="counter-email">Adresse e-mail</label>
-        <input id="counter-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.dupont@exemple.fr" />
+        <input
+          id="counter-email" type="email" value={email} placeholder="marie.dupont@exemple.fr"
+          onChange={(e) => { setEmail(e.target.value); setHorsEntreprise(null) }}
+        />
         <p className="field-hint">
           Elle recevra à cette adresse un lien personnel : elle y vérifiera son prénom et son nom,
           puis choisira son mot de passe.

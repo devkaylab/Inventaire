@@ -159,3 +159,54 @@ describe('test terrain — corrections', () => {
     expect(pageCompte).toMatch(/Administrateur d\\u2019entreprise|Administrateur d’entreprise/)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ajouter quelqu'un d'une autre entreprise (22 août 2026)
+//
+// Julien, capture à l'appui : « je viens d'essayer d'ajouter une personne
+// d'une autre entreprise dans mon équipe ; plutôt qu'un message d'erreur,
+// signale que cette personne fait partie d'une entreprise extérieure à
+// celle-ci, inviter à passer par l'admin de l'entreprise ». L'app titrait
+// « Erreur — Cette adresse est déjà utilisée dans une autre entreprise »,
+// sans dire quoi faire.
+
+describe('une personne d’une autre entreprise', () => {
+  const equipe = readFileSync(path.resolve(__dirname, '../../supabase/functions/invite-teammate/index.ts'), 'utf8')
+  const inventaire = readFileSync(path.resolve(__dirname, '../../supabase/functions/invite-to-session/index.ts'), 'utf8')
+  const ecranMobile = readFileSync(path.resolve(__dirname, '../../src/app/(compte)/new-member.tsx'), 'utf8')
+  const ecranSite = readFileSync(path.resolve(__dirname, '../components/dashboard/AddCounter.tsx'), 'utf8')
+  const requetes = readFileSync(path.resolve(__dirname, '../../src/lib/queries.ts'), 'utf8')
+
+  it('est annoncée par un code, pas seulement par une phrase', () => {
+    // Sans code, un écran ne peut que titrer « Erreur » et recopier le texte.
+    expect(equipe).toContain("code: 'other_company'")
+    expect(inventaire).toContain("code: 'other_company'")
+    expect(requetes).toContain('err.code = res.code')
+  })
+
+  it('dit quoi faire, et non seulement ce qui bloque', () => {
+    for (const fn of [equipe, inventaire]) {
+      expect(fn).toContain("l'administrateur de votre entreprise")
+      expect(fn).toContain('une autre adresse e-mail')
+    }
+  })
+
+  it('ne nomme jamais l’autre entreprise', () => {
+    // Le superviseur apprendrait quelque chose sur un client qui n'est pas le
+    // sien. Le message reste au fait : « une autre entreprise ».
+    for (const fn of [equipe, inventaire]) {
+      const bloc = fn.split("code: 'other_company'")[1]?.split('})')[0] ?? ''
+      expect(bloc).not.toMatch(/company\.name|found\.company_name|companyName/)
+    }
+  })
+
+  it('n’est plus présentée comme une erreur de saisie', () => {
+    expect(ecranMobile).toContain("code === 'other_company'")
+    expect(ecranMobile).toContain('n’est pas de votre entreprise')
+    expect(ecranSite).toContain("data?.code === 'other_company'")
+    // Sur le site, l'explication reste sous le formulaire au lieu de
+    // s'effacer avec une notification.
+    expect(ecranSite).toContain('horsEntreprise')
+    expect(ecranSite).toContain('banner banner-warn')
+  })
+})
