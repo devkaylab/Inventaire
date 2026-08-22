@@ -1858,28 +1858,34 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   côté). Procédure de mise à jour : `vendor/LISEZMOI.md`, outillage :
   `scripts/installer-sheetjs.mjs`.
 
-## Console Supabase — configuration des URL (fait le 19 août 2026)
+## Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
-La **Site URL** (Authentication → URL Configuration) vaut
-`https://quantinvo.vercel.app` — elle sortait d'usine à `http://localhost:3000`,
-ce qui envoyait vers localhost tout lien d'authentification retombé sur le
-repli. Les **Redirect URLs** déclarent `/reinitialisation` (destination des
-liens « mot de passe oublié ») en production et en preview :
-`https://quantinvo.vercel.app/reinitialisation` et
-`https://quantinvo-*-devkaylab.vercel.app/reinitialisation`.
+Le site vit sur **`https://www.quantinvo.com`** — c'est l'adresse canonique,
+choisie par Vercel à l'ajout du domaine : `quantinvo.com` redirige en 308
+vers `www`, et `quantinvo.vercel.app` reste servi en alias (les liens déjà
+envoyés par e-mail continuent de marcher). Le DNS est chez Vercel
+(`ns1/ns2.vercel-dns.com`) ; l'e-mail (ImprovMX pour `contact@`, Resend sur
+`send.quantinvo.com`) n'en dépend pas.
 
-**Le jour où le produit passera sur son propre domaine**, cette configuration
-ne suivra pas toute seule. À reprendre ce jour-là, en une passe :
+Ce qui a bougé dans le dépôt (commit `80d5e2b`) : tous les replis
+`https://quantinvo.vercel.app` — `src/constants/links.ts` (`SITE_URL`, app
+mobile, effectif au prochain build), `_shared/email.ts` (`SITE_PAR_DEFAUT`,
+donc l'adresse du logo PNG des e-mails), les quatorze fonctions edge, le pied
+du PDF de devis, l'écran « ordinateur requis », `docs/privacy.html`, les
+modèles de documents et le deck.
 
-- Console Supabase : la Site URL et chaque Redirect URL
-  (`/reinitialisation`, et les destinations d'invitation vers `/bienvenue`).
-- Variable `APP_PUBLIC_URL` des edge functions (`invite-supervisor`,
-  `invite-teammate`, `invite-to-session`, `submit-supervisor-request`) — leur
-  repli codé en dur est `https://quantinvo.vercel.app`.
-- `src/constants/links.ts` (`SITE_URL`, utilisé par l'app mobile, y compris le
-  texte de partage de `profile.tsx`).
-- `docs/privacy.html` et la page des mentions légales, qui citent
-  `quantinvo.vercel.app` nommément.
+**Les fonctions edge n'ont pas été redéployées pour ça** : elles lisent
+`APP_PUBLIC_URL` à l'exécution, la valeur écrite en dur n'est qu'un repli.
+Poser le secret suffit ; le repli ne sert qu'au prochain redéploiement de
+chaque fonction, quelle qu'en soit la raison.
+
+À tenir d'accord, en console Supabase (Authentication → URL Configuration) :
+**Site URL** `https://www.quantinvo.com`, et les **Redirect URLs**
+`https://www.quantinvo.com/reinitialisation` et `/bienvenue` — en gardant les
+anciennes (`https://quantinvo.vercel.app/…` et
+`https://quantinvo-*-devkaylab.vercel.app/reinitialisation`) tant qu'un e-mail
+déjà parti peut encore être cliqué. Secret edge `APP_PUBLIC_URL` =
+`https://www.quantinvo.com`.
 
 ## Double authentification (TOTP)
 
