@@ -441,17 +441,29 @@ describe('le balayage pour supprimer', () => {
     expect(racine).toContain('GestureHandlerRootView')
   })
 
-  it('n’apparaît que sur ce qu’on peut supprimer, et pas pendant une sélection', () => {
+  it('n’apparaît que s’il y a quelque chose à y faire, et pas pendant une sélection', () => {
     // Le geste entrerait en concurrence avec le défilement d'une liste qu'on
     // est en train de cocher.
-    expect(liste).toContain('if (!onDelete || selection) return carte')
+    expect(liste).toContain('if ((!onDelete && !onClose) || selection) return carte')
   })
 
-  it('ne supprime pas tout seul', () => {
-    // Il ouvre la même confirmation nommée que la corbeille : un inventaire
-    // emporte comptages, audits et référentiel.
+  it('n’agit pas tout seul', () => {
+    // Chaque volet ouvre la même confirmation nommée que son équivalent au
+    // clavier : un inventaire emporte comptages, audits et référentiel.
     expect(liste).toContain('balayage.current?.close(); onDelete()')
+    expect(liste).toContain('balayage.current?.close(); onClose()')
     expect(liste).toContain('renderRightActions')
+  })
+
+  it('propose la clôture, à qui participe et sur ce qui n’est pas clôturé', () => {
+    // Clôturer n'est pas réservé au créateur — c'est un geste de terrain que
+    // tout superviseur participant peut faire, et que le créateur peut
+    // défaire. La suppression, elle, reste au créateur.
+    expect(liste).toContain("onClose={item.session.status !== 'closed'")
+    expect(liste).toContain('confirmerCloture')
+    expect(liste).toContain('closeSession(s.id)')
+    // Le geste destructeur est le plus loin du doigt.
+    expect(liste.indexOf('balayageCloturer')).toBeLessThan(liste.indexOf('balayageSupprimer'))
   })
 
   it('n’ajoute aucune dépendance native', () => {

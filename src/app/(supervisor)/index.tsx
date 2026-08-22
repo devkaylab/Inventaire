@@ -6,7 +6,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { deleteSessionPermanently, getSessions } from '@/lib/queries'
+import { closeSession, deleteSessionPermanently, getSessions } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -30,6 +30,18 @@ function statusColors(t: Theme): Record<string, { fg: string; bg: string }> {
     counting: { fg: t.warning, bg: t.warningSoft },
     closed: { fg: t.textMuted, bg: t.accentSoft },
   }
+}
+
+/** Cadenas — la clôture ferme l'inventaire, elle ne le détruit pas. */
+function CadenasIcon({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24">
+      <Path
+        d="M7 11V8a5 5 0 0 1 10 0v3M5.5 11h13v9h-13z"
+        stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none"
+      />
+    </Svg>
+  )
 }
 
 /** Corbeille — un tracé, comme toutes les icônes de l'app. */
@@ -62,12 +74,14 @@ function Case({ coche, theme }: { coche: boolean; theme: Theme }) {
   )
 }
 
-function SessionCard({ session, theme, styles, onDelete, selection, coche, onToggle }: {
+function SessionCard({ session, theme, styles, onDelete, onClose, selection, coche, onToggle }: {
   session: Session
   theme: Theme
   styles: ReturnType<typeof makeStyles>
   /** Absent quand on n'a pas le droit de supprimer : la corbeille n'apparaît pas. */
   onDelete?: () => void
+  /** Absent sur un inventaire déjà clôturé : il n'y a plus rien à fermer. */
+  onClose?: () => void
   /** Vrai quand l'écran est en mode sélection. */
   selection?: boolean
   coche?: boolean
@@ -142,10 +156,10 @@ function SessionCard({ session, theme, styles, onDelete, selection, coche, onTog
     </Pressable>
   )
 
-  // Pas de balayage sur ce qu'on ne peut pas supprimer, ni pendant une
-  // sélection : le geste entrerait en concurrence avec le défilement d'une
-  // liste qu'on est en train de cocher.
-  if (!onDelete || selection) return carte
+  // Pas de balayage quand il n'y a rien à y faire, ni pendant une sélection :
+  // le geste entrerait en concurrence avec le défilement d'une liste qu'on est
+  // en train de cocher.
+  if ((!onDelete && !onClose) || selection) return carte
 
   return (
     <ReanimatedSwipeable
@@ -154,13 +168,28 @@ function SessionCard({ session, theme, styles, onDelete, selection, coche, onTog
       rightThreshold={40}
       overshootRight={false}
       renderRightActions={() => (
-        <Pressable
-          style={styles.balayageAction}
-          onPress={() => { balayage.current?.close(); onDelete() }}
-        >
-          <CorbeilleIcon color="#fff" />
-          <Text style={styles.balayageTexte}>Supprimer</Text>
-        </Pressable>
+        <View style={styles.balayageVolets}>
+          {/* Clôturer avant Supprimer : le geste destructeur est le plus loin
+              du doigt, il faut aller le chercher. */}
+          {onClose && (
+            <Pressable
+              style={[styles.balayageAction, styles.balayageCloturer]}
+              onPress={() => { balayage.current?.close(); onClose() }}
+            >
+              <CadenasIcon color="#fff" />
+              <Text style={styles.balayageTexte}>Clôturer</Text>
+            </Pressable>
+          )}
+          {onDelete && (
+            <Pressable
+              style={[styles.balayageAction, styles.balayageSupprimer]}
+              onPress={() => { balayage.current?.close(); onDelete() }}
+            >
+              <CorbeilleIcon color="#fff" />
+              <Text style={styles.balayageTexte}>Supprimer</Text>
+            </Pressable>
+          )}
+        </View>
       )}
     >
       {carte}
@@ -217,6 +246,36 @@ export default function SupervisorHomeScreen() {
               await queryClient.invalidateQueries({ queryKey: ['sessions'] })
             } catch (e) {
               Alert.alert('Suppression impossible', errorMessage(e))
+            }
+          },
+        },
+      ],
+    )
+  }, [queryClient])
+
+  /**
+   * Clôturer depuis la liste.
+   *
+   * N'est pas réservé au créateur, contrairement à la suppression : clôturer
+   * est un geste de terrain que tout superviseur participant peut faire, et
+   * que le créateur peut défaire. Même règle que la base et que le site. Un
+   * inventaire déjà clôturé n'a rien à fermer : l'action n'apparaît pas.
+   */
+  const confirmerCloture = useCallback((s: Session) => {
+    const nom = s.name || s.store_name
+    Alert.alert(
+      `Clôturer « ${nom} » ?`,
+      "L'inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.\n\nToutes les données sont conservées et le rapport reste disponible. Son créateur pourra le rouvrir.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Clôturer',
+          onPress: async () => {
+            try {
+              await closeSession(s.id)
+              await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+            } catch (e) {
+              Alert.alert('Clôture impossible', errorMessage(e))
             }
           },
         },
@@ -344,6 +403,7 @@ export default function SupervisorHomeScreen() {
                 theme={theme}
                 styles={styles}
                 onDelete={peutSupprimer(item.session) ? () => confirmerSuppression(item.session) : undefined}
+                onClose={item.session.status !== 'closed' ? () => confirmerCloture(item.session) : undefined}
                 selection={selection}
                 coche={coches.includes(item.session.id)}
                 onToggle={peutSupprimer(item.session) ? () => basculer(item.session.id) : undefined}
@@ -429,13 +489,15 @@ function makeStyles(t: Theme) {
     // emporte comptages, audits et référentiel, un geste de travers ne doit
     // pas suffire.
     balayageAction: {
-      // La liste espace ses éléments par `gap` : le volet doit donc faire
-      // exactement la hauteur de la carte, sans marge basse qui le
+      // La liste espace ses éléments par `gap` : les volets doivent donc faire
+      // exactement la hauteur de la carte, sans marge basse qui les
       // raccourcirait.
-      width: 104, marginLeft: Spacing.sm,
-      borderRadius: Radius.lg, backgroundColor: t.danger,
+      width: 96, borderRadius: Radius.lg,
       alignItems: 'center', justifyContent: 'center', gap: 4,
     },
+    balayageVolets: { flexDirection: 'row', gap: Spacing.sm, marginLeft: Spacing.sm },
+    balayageCloturer: { backgroundColor: t.warning },
+    balayageSupprimer: { backgroundColor: t.danger },
     balayageTexte: { color: '#fff', fontSize: 13, fontFamily: Font.semibold },
     cardSelected: { borderColor: t.accent, backgroundColor: t.accentSoft },
     // Ce qu'on ne peut pas supprimer reste lisible, mais s'efface : la

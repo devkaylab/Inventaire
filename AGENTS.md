@@ -526,13 +526,22 @@ Deux adaptations au doigt :
 Ce qui n'est pas sélectionnable (les inventaires invités) reste lisible mais
 s'efface, et sa case n'apparaît pas.
 
-**Le balayage vers la gauche** découvre un volet rouge « Supprimer », en plus
-de la corbeille (demande de Julien : « naturel pour l'user »). Trois points :
+**Le balayage vers la gauche** découvre deux volets — « Clôturer » (ambre) et
+« Supprimer » (rouge) — en plus de la corbeille (demande de Julien :
+« naturel pour l'user »). Quatre points :
 
-- il **ne supprime pas tout seul** : il ouvre la même confirmation nommée que
-  la corbeille. Un inventaire emporte comptages, stock théorique, audits,
-  membres et référentiel ; un geste de travers ne doit pas suffire ;
-- il n'existe **ni sur ce qu'on ne peut pas supprimer, ni pendant une
+- **les deux droits ne sont pas les mêmes**, et l'écran le respecte :
+  supprimer est réservé au créateur (ou à l'administrateur d'entreprise),
+  **clôturer est ouvert à tout superviseur participant** — c'est un geste de
+  terrain que le créateur peut défaire. Un inventaire déjà clôturé n'a plus
+  de volet « Clôturer » ;
+- **l'ordre compte** : Clôturer d'abord, Supprimer ensuite. Le geste
+  destructeur est le plus loin du doigt, il faut aller le chercher ;
+- ils **n'agissent pas tout seuls** : chaque volet ouvre la même confirmation
+  nommée que son équivalent au clavier. Un inventaire emporte comptages,
+  stock théorique, audits, membres et référentiel ; un geste de travers ne
+  doit pas suffire ;
+- ils n'existent **ni quand il n'y a rien à y faire, ni pendant une
   sélection** — le geste entrerait en concurrence avec le défilement d'une
   liste qu'on est en train de cocher ;
 - il a fallu poser un **`GestureHandlerRootView` à la racine** de
