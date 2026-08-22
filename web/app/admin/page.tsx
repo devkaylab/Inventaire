@@ -17,13 +17,11 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
+import {
+  type VenteEnCours, enAttenteCents, lienVente, lireVente, trierVentes,
+} from '@/lib/pipeline'
 
 type CompanyRef = { id: string; name: string }
-/** Une demande d'ajout de magasin encore en attente, tous clients confondus. */
-type StoreRequest = {
-  id: string; company_id: string; company_name: string; store_name: string
-  kind: 'add' | 'remove'; status: string
-}
 type IdleStore = { id: string; name: string; company_id: string; company_name: string; days: number | null }
 type Overview = {
   companies: number
@@ -47,21 +45,50 @@ const nb = (n: number) => n.toLocaleString('fr-FR')
 const euros = (cents: number) =>
   Math.round(cents / 100).toLocaleString('fr-FR') + ' €'
 
+/**
+ * Une vente en cours, sur une ligne : qui, à quelle étape, et le geste.
+ *
+ * La couleur dit à qui est le tour — alerte quand ça nous attend ou que ça
+ * traîne, neutre quand la balle est chez le client.
+ */
+function LigneVente({ vente }: { vente: VenteEnCours }) {
+  const l = lireVente(vente)
+  const quoi = vente.kind === 'company'
+    ? 'Inscription'
+    : vente.kind === 'store_removal' ? 'Suppression de magasin' : 'Ajout de magasin'
+  return (
+    <div className={`signal${l.tour === 'nous' || l.retard ? ' signal-alerte' : ''}`}>
+      <div className="signal-txt">
+        <strong>{vente.label}</strong>
+        <span className="muted"> · {quoi}{vente.kind !== 'company' ? ` · ${vente.detail}` : ` · ${vente.detail}`}</span>
+        <div className="muted small">
+          {l.etat}
+          {vente.quote_amount_cents != null && vente.status !== 'pending' && ` · ${euros(vente.quote_amount_cents)}`}
+          {vente.contact && ` · ${vente.contact}`}
+        </div>
+      </div>
+      <Link href={lienVente(vente)} className={`btn btn-sm ${l.tour === 'nous' ? 'btn-primary' : 'btn-ghost'}`}>
+        {l.geste}
+      </Link>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const guard = useAuthGuard('admin')
   const [vue, setVue] = useState<Overview | null>(null)
-  const [demandes, setDemandes] = useState<StoreRequest[]>([])
+  const [ventes, setVentes] = useState<VenteEnCours[]>([])
 
   const charger = useCallback(async () => {
-    // Deux appels plutôt qu'un : les demandes de magasin sont arrivées après
-    // `admin_business_overview`, et une vue d'affaires n'a pas à devenir la
-    // boîte de réception de tout ce qui attend.
-    const [apercu, dem] = await Promise.all([
+    // Deux appels plutôt qu'un : `admin_business_overview` est une vue
+    // d'affaires, `admin_pipeline` la file de ce qui attend — inscriptions et
+    // demandes de magasin, à toutes leurs étapes, pas seulement « pending ».
+    const [apercu, pipe] = await Promise.all([
       supabase.rpc('admin_business_overview'),
-      supabase.rpc('admin_list_store_requests'),
+      supabase.rpc('admin_pipeline'),
     ])
     if (apercu.data) setVue(apercu.data as Overview)
-    if (dem.data) setDemandes((dem.data as StoreRequest[]).filter((d) => d.status === 'pending'))
+    if (pipe.data) setVentes(trierVentes(pipe.data as VenteEnCours[]))
   }, [])
 
   useEffect(() => {
@@ -79,7 +106,10 @@ export default function AdminPage() {
     && v.idle_stores.length === 0
     && v.companies_without_admin === 0
     && v.pending_deletions === 0
-    && demandes.length === 0
+
+  const aNous = ventes.filter((x) => lireVente(x).tour === 'nous')
+  const auClient = ventes.filter((x) => lireVente(x).tour === 'client')
+  const attente = enAttenteCents(ventes)
 
   return (
     <AppShell profile={guard.profile}>
@@ -120,29 +150,41 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Les ventes en cours, d'un bout à l'autre : inscriptions et
+              demandes de magasin, à toutes leurs étapes. Ce qui nous attend
+              d'abord, ce qui attend le client ensuite — du revenu en route,
+              il passe avant les alertes d'usage. */}
+          <div className="dash-sub">
+            Ventes en cours
+            {attente > 0 && <span className="dash-sub-note"> · {euros(attente)} de devis en attente</span>}
+          </div>
+          {ventes.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-title">Aucune vente en cours</div>
+              <p className="empty-state-hint">
+                Les demandes d&apos;inscription et d&apos;ajout de magasin apparaissent ici dès qu&apos;elles arrivent, et y restent jusqu&apos;à la création.
+              </p>
+            </div>
+          ) : (
+            <div className="req-list">
+              {aNous.map((x) => <LigneVente key={`${x.kind}-${x.id}`} vente={x} />)}
+              {auClient.length > 0 && aNous.length > 0 && (
+                <div className="muted small" style={{ marginTop: 4 }}>En attente du client</div>
+              )}
+              {auClient.map((x) => <LigneVente key={`${x.kind}-${x.id}`} vente={x} />)}
+            </div>
+          )}
+
           <div className="dash-sub">À traiter</div>
           {rienASignaler ? (
             <div className="empty-state empty-state-ok">
               <div className="empty-state-title">Rien à signaler</div>
               <p className="empty-state-hint">
-                Chaque entreprise a au moins un magasin, tous comptent régulièrement, et aucune demande n&apos;attend.
+                Chaque entreprise a au moins un magasin, et tous comptent régulièrement.
               </p>
             </div>
           ) : (
             <div className="req-list">
-              {/* Une demande de magasin est du revenu qui attend : elle passe
-                  avant les alertes d'usage. */}
-              {demandes.map((d) => (
-                <div className="signal signal-alerte" key={`demande-${d.id}`}>
-                  <div className="signal-txt">
-                    <strong>{d.company_name}</strong> demande{' '}
-                    {d.kind === 'remove'
-                      ? <>la <b>suppression</b> du magasin « {d.store_name} ».</>
-                      : <>l&apos;ajout du magasin « {d.store_name} ».</>}
-                  </div>
-                  <Link href={`/admin/entreprise/${d.company_id}`} className="btn btn-ghost btn-sm">Ouvrir la fiche</Link>
-                </div>
-              ))}
               {v.companies_without_store.map((c) => (
                 <div className="signal signal-alerte" key={`sans-magasin-${c.id}`}>
                   <div className="signal-txt">

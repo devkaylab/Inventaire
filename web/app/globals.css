@@ -691,6 +691,10 @@ a { color: inherit; text-decoration: none; }
 .dash-store { margin-top: 40px; }
 .dash-store-name { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 16px; }
 .dash-sub { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); margin: 18px 0 10px; }
+/* Le chiffre à côté du titre de section — « 12 900 € de devis en attente » :
+   même ligne, casse normale, pour qu'il se lise comme un montant et non
+   comme un titre. */
+.dash-sub-note { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-2); }
 .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
 .dash-card {

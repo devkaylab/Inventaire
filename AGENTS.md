@@ -214,10 +214,49 @@ encaissement puis création acceptés, devis d'une suppression refusé. Puis sur
 une demande d'essai réelle, supprimée ensuite sans résidu : le PDF téléchargé
 (objet compris, relu à l'écran) et l'acceptation par l'edge publique.
 
-**Reste à faire** : poser `QUOTE_NOTIFY_EMAIL` dans les variables des edge
-functions pour recevoir l'avis d'acceptation, et brancher Stripe — **sur les
-deux tables** désormais, `company_requests` et `store_requests`, même
-transition `accepted → paid`.
+### Les ventes en cours, d'un bout à l'autre (même soir)
+
+Julien, une fois le devis envoyé : *« où passent les infos sur mon compte
+admin ? Je vois rien »* — puis *« je veux vraiment que tu penses au flow de A
+à Z »*. Le parcours déroulé étape par étape avait trois trous :
+
+1. **/admin ne voyait que `pending`** : une demande devisée, acceptée ou
+   encaissée disparaissait alors qu'elle attend un geste — et les inscriptions
+   d'entreprise n'y figuraient pas du tout ;
+2. **`admin_list_store_requests` perdait l'en-cours** : elle rendait `pending`
+   ou « traité depuis 90 jours », or `quoted` / `accepted` / `paid` n'ont pas
+   de `handled_at`. Une demande devisée n'apparaissait plus **nulle part**,
+   fiche entreprise comprise ;
+3. **l'acceptation ne remontait pas** : l'avis dépendait d'une variable
+   d'environnement jamais posée.
+
+Migration `20260822240001`. Règle à garder : **« en cours » veut dire « pas
+terminé », jamais « pending »**.
+
+- **`admin_pipeline`** rend tout ce qui n'est pas terminé dans les deux
+  tables, sous une forme unique (`kind` : `company` / `store` /
+  `store_removal`). Elle rend des faits ; le jugement — à qui le tour, depuis
+  combien de temps, quel geste — vit dans **`web/lib/pipeline.ts`**, testable
+  sans base (`SEUILS_VENTE` : deux jours pour deviser, sept avant de
+  relancer). Même partage que `lib/entreprise.ts`.
+- **Bloc « Ventes en cours »** sur /admin, avant « À traiter » : ce qui nous
+  attend (alerte, bouton plein) puis ce qui attend le client (neutre), le plus
+  ancien d'abord, avec le revenu en attente dans le titre. Chaque ligne mène
+  là où le geste se fait — la console pour une inscription, la fiche pour un
+  magasin.
+- **L'avis d'acceptation part aux administrateurs Quantinvo lus en base**
+  (`admin_notify_emails`, réservée à `service_role` parce qu'elle liste des
+  adresses). `QUOTE_NOTIFY_EMAIL` n'est plus nécessaire ; elle s'ajoute si
+  elle existe.
+
+Vérifié en base (transaction annulée, session admin) : une demande en
+`quoted` remonte dans `admin_pipeline` **et** dans `admin_list_store_requests`.
+Au navigateur par route jetable (retirée, `git status` propre) : les deux
+groupes, les boutons, le montant en attente.
+
+**Reste à faire** : brancher Stripe — sur les deux tables, même transition
+`accepted → paid`. Le tableau de bord suivra sans rien changer : `paid` y est
+déjà une étape.
 
 Tests de garde : `web/tests/devis.test.ts`.
 

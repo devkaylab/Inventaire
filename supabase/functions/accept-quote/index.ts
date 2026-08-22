@@ -11,8 +11,9 @@
 // rendra la bascule Stripe indolore, le webhook n'ayant qu'à jouer la
 // transition `accepted → paid`.
 //
-// Deux messages partent : l'accusé au client, et l'avis à Quantinvo (adresse
-// `QUOTE_NOTIFY_EMAIL`, sinon rien — on ne devine pas une adresse interne).
+// Deux messages partent : l'accusé au client, et l'avis aux administrateurs
+// Quantinvo — lus en base par `admin_notify_emails`, donc sans variable à
+// poser ; `QUOTE_NOTIFY_EMAIL` s'y ajoute si elle existe.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { emailQuantinvo } from '../_shared/email.ts'
 import { euros } from '../_shared/devis.ts'
@@ -25,11 +26,11 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-async function envoyer(cle: string, from: string, to: string, subject: string, html: string, text: string) {
+async function envoyer(cle: string, from: string, to: string | string[], subject: string, html: string, text: string) {
   const resp = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: [to], subject, html, text }),
+    body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text }),
   })
   if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`)
 }
@@ -65,6 +66,8 @@ Deno.serve(async (req) => {
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const prenom = (result.contact_first_name ?? '').trim()
   const entreprise = result.company_name ?? ''
+  const magasin = (result.store_name ?? '').trim()
+  const objet = magasin ? `l’ajout du magasin « ${magasin} »` : 'son inscription'
   const reference = result.reference || '—'
   const montant = typeof result.amount_cents === 'number' ? euros(result.amount_cents) : '—'
 
@@ -93,22 +96,36 @@ Deno.serve(async (req) => {
     // cause, et la page affiche déjà la confirmation.
   }
 
-  const interne = Deno.env.get('QUOTE_NOTIFY_EMAIL')?.trim()
-  if (interne) {
+  // L'avis part aux administrateurs Quantinvo — lus en base, pour qu'aucune
+  // variable ne soit à poser. `QUOTE_NOTIFY_EMAIL`, si elle existe, s'ajoute.
+  // C'est le moment le plus important du parcours : un accord qu'on découvre
+  // trois jours plus tard en rouvrant la console, c'est une facture en retard.
+  const destinatairesInternes = new Set<string>()
+  try {
+    const { data: admins } = await client.rpc('admin_notify_emails')
+    for (const a of (admins ?? []) as string[]) if (a) destinatairesInternes.add(a)
+  } catch {
+    // Sans conséquence pour le client ; la console montre le statut.
+  }
+  const force = Deno.env.get('QUOTE_NOTIFY_EMAIL')?.trim()
+  if (force) destinatairesInternes.add(force.toLowerCase())
+  const interne = [...destinatairesInternes]
+  if (interne.length > 0) {
     try {
       const avis = emailQuantinvo({
         titre: 'Un devis vient d’être accepté',
         apercu: `${entreprise} a accepté le devis ${reference}.`,
         paragraphes: [
-          `${entreprise} vient d’accepter le devis ${reference} pour ${montant} par an.`,
-          'Il reste à facturer, encaisser, puis créer l’entreprise depuis la console.',
+          `${entreprise} vient d’accepter le devis ${reference} pour ${objet} — ${montant} par an.`,
+          `Il reste à facturer, encaisser, puis ${magasin ? 'créer le magasin' : 'créer l’entreprise'} depuis le tableau de bord.`,
         ],
         details: [
           { intitule: 'Entreprise', valeur: entreprise },
+          ...(magasin ? [{ intitule: 'Magasin', valeur: magasin }] : []),
           { intitule: 'Référence', valeur: reference },
           { intitule: 'Montant annuel HT', valeur: montant },
         ],
-        bouton: { libelle: 'Ouvrir la console', lien: `${appUrl}/admin` },
+        bouton: { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
         raison: 'Vous recevez ce message parce que vous suivez les devis Quantinvo.',
         siteUrl: appUrl,
       })

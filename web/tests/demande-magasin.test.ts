@@ -149,9 +149,10 @@ describe('écrans', () => {
     expect(pageMagasins).not.toContain('Affectez-vous un magasin')
   })
 
-  it('la demande remonte dans « À traiter » et sur la fiche', () => {
-    expect(pageAdmin).toContain("rpc('admin_list_store_requests')")
-    expect(pageAdmin).toContain('demandes.length === 0')
+  it('la demande remonte dans « Ventes en cours » et sur la fiche', () => {
+    // Depuis le 22 août 2026 au soir, le tableau de bord lit `admin_pipeline`
+    // — toutes les étapes, pas seulement `pending` (voir pipeline.test.ts).
+    expect(pageAdmin).toContain("rpc('admin_pipeline')")
     expect(ficheEntreprise).toContain("'admin_fulfil_store_request'")
     expect(ficheEntreprise).toContain("'admin_reject_store_request'")
   })
@@ -289,12 +290,14 @@ describe('demander la suppression d’un magasin', () => {
   it('les deux genres se distinguent partout où ils s’affichent', () => {
     for (const page of [
       lire('../app/magasins/page.tsx'),
-      lire('../app/admin/page.tsx'),
       lire('../app/admin/entreprise/[companyId]/page.tsx'),
     ]) {
       expect(page).toContain("kind")
       expect(page).toContain("'remove'")
     }
+    // Le tableau de bord passe par `admin_pipeline`, qui renomme le genre
+    // (`store` / `store_removal`) pour le fondre avec les inscriptions.
+    expect(lire('../app/admin/page.tsx')).toContain("'store_removal'")
   })
 })
 
