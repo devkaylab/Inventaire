@@ -393,6 +393,40 @@ Vérifié après application sur « LA Bruket » : 101 lignes au lieu de 5, dont
 
 Tests de garde : `web/tests/charge.test.ts`, bloc « le rapport d'inventaire ».
 
+## Les autres totaux, vérifiés le 22 août 2026
+
+Recalculés en SQL indépendamment et comparés aux fonctions, sur les données
+réelles. **Rien d'autre n'est faux** — voici ce qui a été contrôlé et les deux
+limites trouvées, qui ne sont pas des défauts mais des choix.
+
+Contrôles passés :
+
+- **aucun comptage orphelin** : sur le seul inventaire en mode balises, les
+  32 pièces sont toutes rattachées à une zone existante (0 `zone is null`,
+  0 code inconnu). Le risque reste ouvert structurellement — rien n'interdit
+  un comptage sans zone —, il ne s'est simplement jamais produit ;
+- **la somme des totaux par zone égale le total global**, passe par passe ;
+- **la progression** est bien un pourcentage de **balises** (6 comptées sur
+  10 = 60 %, 2 auditées = 20 %), pas de pièces. En mode classique, elle
+  rapporte les pièces scannées au stock théorique attendu, et le dit quand
+  celui-ci vaut zéro ;
+- **l'onglet Écarts** : 4 écarts affichés sur « Test », 5 lignes arbitrées
+  exclues — conforme au calcul refait à la main.
+
+Deux limites à connaître :
+
+1. **En mode classique, un article compté mais jamais retrouvé à l'audit
+   n'apparaît pas dans les écarts.** Sa quantité d'audit est nulle, et rien ne
+   distingue « l'auditeur ne l'a pas trouvé » de « l'auditeur n'est pas encore
+   passé ». C'est un choix délibéré de `computeDiscrepancies` — pas de faux
+   positifs, au prix de ce silence. En mode balises le problème n'existe pas :
+   clôturer une balise dit « j'ai fini ici ». Sur « LA Bruket », 4 lignes sont
+   dans ce cas.
+2. **`counted_skus` n'est affiché nulle part** — il traverse la RPC, le hook et
+   les types sans jamais être rendu. À retirer ou à afficher, mais ne pas le
+   laisser croire utilisé. Au passage, il compterait les SKU dont le net est
+   nul (comptés puis corrigés à zéro) : 2 sur 25 pour « HV 200826 ».
+
 # Supprimer et retirer depuis l'app (22 août 2026)
 
 *« Dans la même logique que le site, rends possible la suppression
