@@ -274,6 +274,12 @@ publique (validation et limitation de débit inchangées), envoie l'accusé au
 prospect et l'avis aux administrateurs lus en base, magasins déclarés compris.
 La page retombe sur la RPC directe si l'edge est injoignable.
 
+**Même avis pour une demande de magasin** : `ca-request-store` envoie aussi
+« Nouvelle demande de magasin » aux administrateurs, avec l'entreprise, le
+demandeur et les volumes déclarés (pièces, m², pièces/m²). Le `service_role`
+n'y sert qu'**après** la RPC, pour lire les adresses — jamais pour écrire la
+demande ; le test de garde vérifie l'ordre.
+
 Stripe est branché : voir « Paiement : Stripe, en place ».
 
 Tests de garde : `web/tests/devis.test.ts`.

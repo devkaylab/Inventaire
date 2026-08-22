@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get('SUPABASE_URL')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   const caller = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } })
   const { data: userData, error: userErr } = await caller.auth.getUser()
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
   })
 
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
+  let accuse = true
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -107,9 +109,55 @@ Deno.serve(async (req) => {
         text,
       }),
     })
-    if (!resp.ok) return sansAccuse(`${resp.status} ${await resp.text()}`)
-    return json({ success: true, requested: true, emailed: true })
-  } catch (e) {
-    return sansAccuse(e instanceof Error ? e.message : String(e))
+    if (!resp.ok) accuse = false
+  } catch {
+    accuse = false
   }
+
+  // L'avis à Quantinvo : c'est du revenu qui attend, il doit se voir sans
+  // ouvrir le tableau de bord. Administrateurs lus en base, comme ailleurs.
+  // Le nom de l'entreprise vient du profil ; les volumes déclarés suivent.
+  try {
+    const admin = createClient(url, serviceKey)
+    const [{ data: admins }, { data: profil2 }] = await Promise.all([
+      admin.rpc('admin_notify_emails'),
+      admin.from('profiles').select('full_name, companies(name)').eq('id', userData.user.id).maybeSingle(),
+    ])
+    const dest = ((admins ?? []) as string[]).filter(Boolean)
+    if (dest.length > 0) {
+      const entreprise = ((profil2 as { companies?: { name?: string } | null } | null)?.companies?.name ?? '').trim()
+      const demandeur = ((profil2 as { full_name?: string } | null)?.full_name ?? '').trim() || email
+      const volume = [
+        units !== null ? `${nb(units)} pièces` : 'stock non déclaré',
+        sqm !== null ? `${nb(sqm)} m²` : null,
+        units !== null && sqm !== null && sqm > 0 ? `${nb(Math.round(units / sqm))} pièces/m²` : null,
+      ].filter(Boolean).join(' · ')
+      const avis = emailQuantinvo({
+        titre: 'Nouvelle demande de magasin',
+        apercu: `${entreprise || 'Une entreprise'} demande l’ajout de « ${name} ».`,
+        paragraphes: [
+          `${entreprise || 'Une entreprise cliente'} vient de demander l’ajout du magasin « ${name} ». Demande faite par ${demandeur}.`,
+          message ? `Son message : « ${message} »` : 'Pas de message joint.',
+          'Le devis s’établit depuis le tableau de bord — le recoupement stock / surface y est affiché.',
+        ],
+        details: [
+          ...(entreprise ? [{ intitule: 'Entreprise', valeur: entreprise }] : []),
+          { intitule: 'Magasin', valeur: name },
+          { intitule: 'Déclaré', valeur: volume },
+        ],
+        bouton: { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
+        raison: 'Vous recevez ce message parce que vous suivez les ventes Quantinvo.',
+        siteUrl: appUrl,
+      })
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: fromAddr, to: dest, subject: `Demande de magasin — ${name}`, html: avis.html, text: avis.text }),
+      })
+    }
+  } catch {
+    // Sans conséquence pour le client : le tableau de bord montre la demande.
+  }
+
+  return accuse ? json({ success: true, requested: true, emailed: true }) : sansAccuse('accusé non envoyé')
 })

@@ -333,9 +333,17 @@ describe('une demande aboutie quitte l’écran, et se dit par e-mail', () => {
     expect(edgeCreation).toContain("caller.rpc('admin_fulfil_store_request'")
     for (const src of [edgeDemande, edgeCreation]) {
       expect(src).toContain('Authorization: authHeader')
-      expect(src).not.toMatch(/createClient\(url, serviceKey\)/)
       expect(src).toContain('emailQuantinvo')
     }
+    // La création ne touche jamais au service_role. La demande, elle, s'en
+    // sert APRÈS la RPC, pour lire les adresses des administrateurs à
+    // prévenir — jamais pour écrire la demande elle-même.
+    expect(edgeCreation).not.toMatch(/createClient\(url, serviceKey\)/)
+    const avantRpc = edgeDemande.indexOf("caller.rpc('ca_request_store'")
+    const serviceRole = edgeDemande.indexOf('createClient(url, serviceKey)')
+    expect(serviceRole).toBeGreaterThan(avantRpc)
+    expect(edgeDemande).toContain("rpc('admin_notify_emails')")
+    expect(edgeDemande).toContain('Nouvelle demande de magasin')
   })
 
   it('le code d’accès du magasin ne part jamais par e-mail', () => {
