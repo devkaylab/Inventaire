@@ -22,7 +22,6 @@ import {
 } from '@/lib/pipeline'
 
 type CompanyRef = { id: string; name: string }
-type IdleStore = { id: string; name: string; company_id: string; company_name: string; days: number | null }
 type Overview = {
   companies: number
   companies_new_month: number
@@ -36,7 +35,6 @@ type Overview = {
   active_people_month: number
   companies_without_store: CompanyRef[]
   companies_without_admin: number
-  idle_stores: IdleStore[]
   pending_deletions: number
 }
 
@@ -108,7 +106,6 @@ export default function AdminPage() {
   const v = vue
   const rienASignaler = v
     && v.companies_without_store.length === 0
-    && v.idle_stores.length === 0
     && v.companies_without_admin === 0
     && v.pending_deletions === 0
 
@@ -180,12 +177,17 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* « À traiter » ne liste que ce qui appelle un geste de notre
+              part. Un magasin qui ne compte plus n'en est pas un : c'est un
+              rythme client, pas une anomalie (décision de Julien, 22 août
+              2026) — idle_stores reste rendu par la RPC mais n'est plus
+              affiché ici. */}
           <div className="dash-sub">À traiter</div>
           {rienASignaler ? (
             <div className="empty-state empty-state-ok">
               <div className="empty-state-title">Rien à signaler</div>
               <p className="empty-state-hint">
-                Chaque entreprise a au moins un magasin, et tous comptent régulièrement.
+                Chaque entreprise a au moins un magasin et un administrateur.
               </p>
             </div>
           ) : (
@@ -196,16 +198,6 @@ export default function AdminPage() {
                     <strong>{c.name}</strong> n&apos;a aucun magasin — donc aucune licence facturée.
                   </div>
                   <Link href={`/admin/entreprise/${c.id}`} className="btn btn-ghost btn-sm">Ouvrir la fiche</Link>
-                </div>
-              ))}
-              {v.idle_stores.map((s) => (
-                <div className="signal signal-alerte" key={`inactif-${s.id}`}>
-                  <div className="signal-txt">
-                    <strong>{s.name}</strong> ({s.company_name}) {s.days === null
-                      ? 'n’a jamais lancé d’inventaire.'
-                      : `n’a pas compté depuis ${s.days} jours.`}
-                  </div>
-                  <Link href={`/admin/entreprise/${s.company_id}`} className="btn btn-ghost btn-sm">Voir l&apos;entreprise</Link>
                 </div>
               ))}
               {v.companies_without_admin > 0 && (
