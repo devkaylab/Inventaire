@@ -1051,6 +1051,37 @@ publique, donc la sortie du composant a pu être vérifiée pour de vrai — mis
 page identique, et la tranche s'affiche toujours à la frappe (180 000 →
 « Grande surface — 50 001 à 200 000 · 6 600 € / an », total mis à jour).
 
+### Passe de finition, sur capture de Julien (« barre de saisie à revoir »)
+
+Le formulaire vu en production a montré quatre défauts, dont deux qui ne
+tenaient pas à cet écran :
+
+- **Le champ « nom du magasin » n'avait jamais eu d'habillage.** `.magasin-top
+  input` ne portait qu'un `flex: 1` : dans la carte de 520 px de /inscription
+  cela passait presque, dans l'espace connecté (1120 px) il devenait une barre
+  d'un autre monde que les deux champs juste dessous. Il reprend exactement
+  `.field input`.
+- **Les champs étaient de la couleur de leur carte** (`--bg` sur `--bg`) : ils
+  ne se lisaient que par leur filet. Ils passent à `--surface`, dans les deux
+  thèmes.
+- **Le formulaire prenait les 1120 px de l'espace connecté** — 150 caractères
+  par ligne pour l'introduction, 1700 px pour un nom de vingtaine de signes.
+  `.demande-magasin` le ramène à 560 px, la largeur utile de la carte
+  d'inscription dont il est repris.
+- **La pastille de rang a disparu quand il n'y a qu'un magasin** (`numero`
+  devient facultatif) : numéroter un élément unique n'apprend rien.
+
+Deux corrections systémiques au passage, valables pour tous les formulaires du
+site : un **anneau de focus** (`box-shadow`) là où seul le changement de
+bordure signalait le focus malgré `outline: none`, et la ligne de tranche
+passée de `--text-3` à `--text-2` — 2,9:1 sur le fond de la carte, sous le
+seuil AA, à l'endroit précis où l'on lit le prix. Les zones de texte ne se
+redimensionnent plus qu'en hauteur.
+
+Vérifié au navigateur, clair et sombre, par une **route jetable** rendant le
+formulaire hors session (`/tmp-polish`, retirée ensuite — vérifier au
+`git status` qu'elle n'est pas restée).
+
 **Non vu à l'écran** : `/magasins` et la console demandent une session
 connectée. Maquette validée avant codage :
 https://claude.ai/code/artifact/1b6dfbe0-6866-4af9-a5ab-c6e6b1188231

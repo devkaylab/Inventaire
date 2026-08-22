@@ -253,15 +253,13 @@ function DemandesMagasin() {
           </button>
         </div>
       ) : (
-        <form onSubmit={envoyer} className="panel" style={{ marginTop: 12 }}>
+        <form onSubmit={envoyer} className="panel demande-magasin" style={{ marginTop: 12 }}>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Le même formulaire qu&apos;à l&apos;inscription&nbsp;: la licence se tarife au volume de stock,
-            donc c&apos;est le stock qui donne le prix. Quantinvo crée le magasin et vous recontacte
-            pour le devis.
+            La licence se tarife au volume de stock&nbsp;: c&apos;est lui qui donne le prix.
+            Quantinvo crée le magasin et vous recontacte pour le devis.
           </p>
 
           <MagasinSaisie
-            numero={1}
             valeur={saisie}
             idPrefix={`${uid}-demande`}
             onChange={(champ, valeur) => setSaisie((v) => ({ ...v, [champ]: valeur }))}

@@ -27,8 +27,9 @@ const euros = (v: number) => v.toLocaleString('fr-FR') + ' €'
 export function MagasinSaisie({
   numero, valeur, onChange, onRetirer, idPrefix,
 }: {
-  /** Rang affiché dans la pastille. Une demande n'en porte qu'un : 1. */
-  numero: number
+  /** Rang affiché dans la pastille. Absent = pas de pastille : numéroter un
+      élément unique ne dit rien, la demande d'ajout n'en porte qu'un. */
+  numero?: number
   valeur: SaisieMagasin
   onChange: (champ: keyof SaisieMagasin, v: string) => void
   /** Absent = pas de croix : on ne retire pas la seule ligne d'un formulaire. */
@@ -42,12 +43,12 @@ export function MagasinSaisie({
   return (
     <div className="magasin">
       <div className="magasin-top">
-        <span className="magasin-no">{numero}</span>
+        {numero !== undefined && <span className="magasin-no">{numero}</span>}
         <input
           value={valeur.nom}
           onChange={(e) => onChange('nom', e.target.value)}
           placeholder="Nom du magasin — Lyon Part-Dieu"
-          aria-label={`Nom du magasin ${numero}`}
+          aria-label={numero === undefined ? 'Nom du magasin' : `Nom du magasin ${numero}`}
           maxLength={80}
         />
         {onRetirer && (
@@ -55,7 +56,7 @@ export function MagasinSaisie({
             type="button"
             className="magasin-kill"
             onClick={onRetirer}
-            aria-label={`Retirer le magasin ${numero}`}
+            aria-label={`Retirer le magasin ${numero ?? ''}`.trim()}
           >
             ×
           </button>
