@@ -106,6 +106,21 @@ describe('Fonctions edge — un seul gabarit', () => {
     .map((e) => ({ nom: e.name, source: readFileSync(path.join(dossier, e.name, 'index.ts'), 'utf8') }))
     .filter((f) => f.source.includes('api.resend.com'))
 
+  it('rend un lien secondaire sous le bouton, échappé, http(s) seulement', () => {
+    // La facture Stripe à côté de « Créer mon accès » : un lien, pas un second
+    // bouton. Un seul geste par message.
+    const { html, text } = emailQuantinvo({
+      titre: 'T', paragraphes: ['p'],
+      bouton: { libelle: 'Agir', lien: 'https://quantinvo.vercel.app/x' },
+      lienSecondaire: { libelle: 'Votre facture <F-1>', lien: 'https://invoice.stripe.com/i/abc' },
+    })
+    expect(html).toContain('href="https://invoice.stripe.com/i/abc"')
+    expect(html).toContain('Votre facture &lt;F-1&gt;')
+    expect(text).toContain('Votre facture <F-1> : https://invoice.stripe.com/i/abc')
+    const refus = emailQuantinvo({ titre: 'T', paragraphes: ['p'], lienSecondaire: { libelle: 'x', lien: 'javascript:alert(1)' } })
+    expect(refus.html).not.toContain('javascript:')
+  })
+
   it('trouve bien les fonctions qui envoient des e-mails', () => {
     expect(envoyeuses.length).toBeGreaterThanOrEqual(4)
   })

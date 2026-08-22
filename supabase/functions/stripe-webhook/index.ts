@@ -20,7 +20,7 @@
 // reçoit « votre magasin est créé ».
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { emailQuantinvo } from '../_shared/email.ts'
-import { verifierWebhook } from '../_shared/stripe.ts'
+import { lireFacture, verifierWebhook } from '../_shared/stripe.ts'
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -76,6 +76,13 @@ Deno.serve(async (req) => {
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const notes: string[] = []
 
+  // La facture Stripe, pour la donner dans nos messages. Lecture seule ; si
+  // la clé n'a pas ce droit ou que la facture tarde, on écrit sans.
+  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+  const facture = stripeKey && typeof session.invoice === 'string'
+    ? await lireFacture(stripeKey, session.invoice).catch(() => null)
+    : null
+
   if (result.kind === 'company' && result.invite?.email) {
     const inv = result.invite as { email: string; first_name: string; last_name: string }
     const { data: ok } = await client.rpc('invite_company_admin_after_payment', {
@@ -113,8 +120,10 @@ Deno.serve(async (req) => {
           details: [
             { intitule: 'Entreprise', valeur: result.company_name },
             ...stores.map((s) => ({ intitule: 'Magasin', valeur: s.name })),
+            ...(facture ? [{ intitule: 'Facture', valeur: facture.numero || 'disponible en ligne' }] : []),
           ],
           bouton: { libelle: 'Créer mon accès', lien: actionLink },
+          ...(facture ? { lienSecondaire: { libelle: `Voir et télécharger votre facture${facture.numero ? ` ${facture.numero}` : ''}`, lien: facture.url } } : {}),
           note: 'Ce lien est personnel et à usage unique. Les codes d’accès ne circulent pas par e-mail : ils se lisent une fois connecté.',
           raison: 'Vous recevez ce message parce que vous venez de régler votre licence Quantinvo.',
           siteUrl: appUrl,
@@ -144,8 +153,10 @@ Deno.serve(async (req) => {
       details: [
         { intitule: 'Magasin', valeur: n.store_name },
         { intitule: 'Entreprise', valeur: n.company_name },
+        ...(facture ? [{ intitule: 'Facture', valeur: facture.numero || 'disponible en ligne' }] : []),
       ],
       bouton: { libelle: 'Ouvrir la fiche du magasin', lien: `${appUrl}/magasins/${n.store_id}` },
+      ...(facture ? { lienSecondaire: { libelle: `Voir et télécharger votre facture${facture.numero ? ` ${facture.numero}` : ''}`, lien: facture.url } } : {}),
       note: 'Le code d’accès ne circule pas par e-mail : il se lit sur la fiche, une fois connecté.',
       raison: 'Vous recevez ce message parce que vous venez de régler l’ajout de ce magasin.',
       siteUrl: appUrl,

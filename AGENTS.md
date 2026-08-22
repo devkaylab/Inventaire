@@ -330,6 +330,16 @@ se relit** (`lireSessionCheckout`) au lieu de se recréer ; une session expirée
 se recrée avec un suffixe de tentative. `accept_quote_by_token` rend
 `checkout_session_id` pour ça.
 
+**La facture est dans notre e-mail.** Stripe la produit, mais ne l'envoie
+qu'à certaines conditions — en mode test, aux seuls membres du compte, et en
+live selon un réglage du tableau de bord qu'on ne peut pas vérifier depuis le
+code (constat de Julien : « le client pas de facture »). Le webhook relit
+donc la facture (`lireFacture`, page hébergée + numéro) et la pose en **lien
+secondaire** du message « Bienvenue » ou « Votre magasin est créé ». Le
+gabarit `email.ts` a gagné `lienSecondaire` pour ça : un lien sous le bouton,
+jamais un second bouton — un seul geste par message. Sans droit de lecture
+sur les factures, le message part sans le lien.
+
 ### Les clés (posées en mode test le 22 août 2026)
 
 Dans le tableau de bord Stripe (compte Devkaylab) — à refaire en `live` le

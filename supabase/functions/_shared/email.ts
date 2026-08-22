@@ -70,6 +70,12 @@ export type ContenuEmail = {
   details?: DetailEmail[]
   /** Bouton d'action principal. Le lien est aussi donné en clair dessous. */
   bouton?: BoutonEmail
+  /**
+   * Un second lien, sous le bouton, en texte : « Votre facture ». Pour ce qui
+   * accompagne l'action sans la concurrencer — la facture Stripe à côté de
+   * « Créer mon accès ». Jamais un second bouton : un seul geste par message.
+   */
+  lienSecondaire?: BoutonEmail
   /** Précision discrète sous le bouton (usage unique, expiration…). */
   note?: string
   /** Pourquoi cette personne reçoit ce message — affiché sous le bouton. */
@@ -152,6 +158,9 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
     ...contenu.paragraphes.map(paragraphe),
     contenu.details?.length ? encadreDetails(contenu.details) : '',
     contenu.bouton ? boutonHtml(contenu.bouton) : '',
+    contenu.lienSecondaire
+      ? `<p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:${COULEURS.encre2};"><a href="${echapper(lienSur(contenu.lienSecondaire.lien))}" style="color:${COULEURS.indigoProfond};text-decoration:underline;font-weight:600;">${echapper(contenu.lienSecondaire.libelle)}</a></p>`
+      : '',
     contenu.note
       ? `<p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">${echapper(contenu.note)}</p>`
       : '',
@@ -226,6 +235,7 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
     ...contenu.paragraphes,
     ...(contenu.details?.length ? ['', ...contenu.details.map((d) => `${d.intitule} : ${d.valeur}`)] : []),
     ...(contenu.bouton ? ['', `${contenu.bouton.libelle} : ${lienSur(contenu.bouton.lien)}`] : []),
+    ...(contenu.lienSecondaire ? [`${contenu.lienSecondaire.libelle} : ${lienSur(contenu.lienSecondaire.lien)}`] : []),
     ...(contenu.note ? ['', contenu.note] : []),
     ...(contenu.raison ? ['', contenu.raison] : []),
     '',

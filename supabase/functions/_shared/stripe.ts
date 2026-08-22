@@ -122,6 +122,24 @@ export async function lireSessionCheckout(cle: string, id: string): Promise<Sess
 }
 
 /**
+ * La facture hébergée par Stripe : sa page (avec le PDF) et son numéro.
+ *
+ * Pourquoi aller la chercher : en mode test, Stripe n'envoie ses e-mails de
+ * facture qu'aux membres du compte, et en live c'est un réglage du tableau de
+ * bord qu'on ne peut pas vérifier depuis le code. Mettre le lien dans notre
+ * propre message, c'est ne dépendre de rien.
+ */
+export async function lireFacture(cle: string, id: string): Promise<{ url: string; numero: string } | null> {
+  const resp = await fetch(`${API}/invoices/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${cle}` },
+  })
+  if (!resp.ok) return null
+  const data = await resp.json()
+  if (!data.hosted_invoice_url) return null
+  return { url: data.hosted_invoice_url, numero: data.number ?? '' }
+}
+
+/**
  * Vérifie la signature `Stripe-Signature` d'un webhook et rend l'événement.
  *
  * Schéma Stripe : `t=<horodatage>,v1=<hmac-sha256(secret, "<t>.<corps>")>`.
