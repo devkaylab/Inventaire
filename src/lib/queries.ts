@@ -281,6 +281,26 @@ export async function inviteTeammate(input: {
  * fonction porte la garde côté serveur. Un DELETE nu sur la table dépendait
  * d'une policy dont rien ne garantit qu'elle couvre ce cas.
  */
+/**
+ * Retire un compteur d'**un** magasin, pas de tous.
+ *
+ * Une même personne peut compter dans plusieurs magasins, supervisés par des
+ * personnes différentes : la retirer partout d'un seul geste ferait disparaître
+ * quelqu'un de l'équipe d'un collègue. La RPC vérifie côté serveur que le
+ * magasin est bien le sien, et refuse qu'on se retire soi-même.
+ */
+export async function removeCounterFromStore(userId: string, storeId: string) {
+  const { data, error } = await supabase.rpc('remove_counter_from_store', {
+    p_user: userId,
+    p_store_id: storeId,
+  })
+  if (error) throwSupabase('removeCounterFromStore', error)
+  const result = data as { success?: boolean; error?: string } | null
+  if (result && result.success === false) {
+    throwSupabase('removeCounterFromStore', new Error(result.error ?? 'Retrait impossible.'))
+  }
+}
+
 export async function cancelMyInvitation(id: string) {
   const { data, error } = await supabase.rpc('cancel_my_invitation', { p_id: id })
   if (error) throwSupabase('cancelMyInvitation', error)

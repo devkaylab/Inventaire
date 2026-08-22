@@ -301,3 +301,55 @@ describe('fiche d’un inventaire', () => {
       .toBeLessThan(feuille.indexOf('SectionLabel>Membres'))
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Supprimer un inventaire, retirer un membre — depuis l'app (22 août 2026)
+//
+// « Dans la même logique que le site, rends possible la suppression
+// d'inventaire ou de membres d'équipe sur l'app. » L'app savait déjà supprimer
+// un inventaire depuis l'inventaire lui-même, et annuler une invitation ; elle
+// ne savait ni supprimer depuis la liste, ni retirer un compteur.
+
+describe('supprimer et retirer depuis l’app', () => {
+  const liste = lire('app/(supervisor)/index.tsx')
+  const equipe = lire('app/(compte)/team.tsx')
+  const requetes = lire('lib/queries.ts')
+
+  it('la corbeille n’apparaît que sur ce qu’on peut supprimer', () => {
+    // Même règle que la base (`delete_session`) et que le site : le créateur,
+    // et l'administrateur d'entreprise pour tous les siens. Afficher partout
+    // ferait découvrir le refus après coup.
+    expect(liste).toContain('peutSupprimer')
+    expect(liste).toContain('is_company_admin')
+    expect(liste).toContain('onDelete={peutSupprimer(item.session)')
+  })
+
+  it('la confirmation nomme l’inventaire et signale s’il est en cours', () => {
+    // Sur un téléphone, une corbeille se touche vite.
+    expect(liste).toContain('Supprimer « ${nom} » ?')
+    expect(liste).toContain('n’est pas clôturé')
+    expect(liste).toContain("style: 'destructive'")
+  })
+
+  it('retirer un compteur vise UN magasin, pas tous', () => {
+    // Une même personne peut compter dans plusieurs magasins, supervisés par
+    // des personnes différentes.
+    expect(requetes).toContain("rpc('remove_counter_from_store'")
+    expect(requetes).toContain('p_store_id: storeId')
+    expect(equipe).toContain('removeCounterFromStore(counter.id, store.id)')
+    expect(equipe).toContain('store.name')
+  })
+
+  it('n’utilise aucun caractère en guise d’icône', () => {
+    // Règle du projet : des tracés, jamais un caractère ni un emoji. Le
+    // commentaire du composant cite le caractère pour expliquer le pourquoi :
+    // on ne regarde donc que le code.
+    const codeSeul = equipe
+      .split('\n')
+      .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*'))
+      .join('\n')
+    expect(codeSeul).not.toContain('\u2715')
+    expect(liste).toContain('CorbeilleIcon')
+    expect(equipe).toContain('CroixIcon')
+  })
+})

@@ -12,7 +12,11 @@ import {
 import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { cancelMyInvitation, getMyTeamByStore, type TeamCounter, type TeamInvite } from '@/lib/queries'
+import {
+  cancelMyInvitation, getMyTeamByStore, removeCounterFromStore,
+  type TeamCounter, type TeamInvite, type TeamStore,
+} from '@/lib/queries'
+import Svg, { Path } from 'react-native-svg'
 import { SectionLabel } from '@/components/ui/MenuList'
 import { errorMessage } from '@/lib/errors'
 import { useAuth } from '@/lib/auth'
@@ -52,6 +56,37 @@ export default function TeamScreen() {
   })
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
+
+  /**
+   * Retirer un compteur — d'un magasin, jamais de tous.
+   *
+   * Même règle que le site : une même personne peut compter dans plusieurs
+   * magasins, supervisés par des personnes différentes. La confirmation nomme
+   * donc la personne **et** le magasin, pour qu'on sache exactement ce qu'on
+   * retire.
+   */
+  const handleRemoveCounter = useCallback((counter: TeamCounter, store: TeamStore) => {
+    const nom = counter.full_name || counter.email || 'ce compteur'
+    Alert.alert(
+      `Retirer ${nom} ?`,
+      `${nom} n'aura plus accès aux inventaires de ${store.name}. Ses comptages déjà enregistrés sont conservés.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Retirer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeCounterFromStore(counter.id, store.id)
+              await queryClient.invalidateQueries({ queryKey: ['my-team'] })
+            } catch (e) {
+              Alert.alert('Retrait impossible', errorMessage(e))
+            }
+          },
+        },
+      ],
+    )
+  }, [queryClient])
 
   const stores = data?.stores ?? []
   const invitations = data?.invitations ?? []
@@ -125,7 +160,14 @@ export default function TeamScreen() {
                 {store.counters.length === 0 ? (
                   <Text style={styles.empty}>Aucun compteur pour ce magasin.</Text>
                 ) : (
-                  store.counters.map((c) => <CounterRow key={c.id} counter={c} styles={styles} />)
+                  store.counters.map((c) => (
+                    <CounterRow
+                      key={c.id}
+                      counter={c}
+                      styles={styles}
+                      onRemove={() => handleRemoveCounter(c, store)}
+                    />
+                  ))
                 )}
               </View>
             ))}
@@ -148,7 +190,7 @@ export default function TeamScreen() {
                       <Text style={styles.pendingBadgeText}>En attente</Text>
                     </View>
                     <Pressable style={styles.cancelBtn} onPress={() => handleCancelInvite(inv)} hitSlop={6}>
-                      <Text style={styles.cancelBtnText}>✕</Text>
+                      <CroixIcon color={theme.danger} />
                     </Pressable>
                   </View>
                 ))}
@@ -170,9 +212,11 @@ export default function TeamScreen() {
 function CounterRow({
   counter,
   styles,
+  onRemove,
 }: {
   counter: TeamCounter
   styles: ReturnType<typeof makeStyles>
+  onRemove: () => void
 }) {
   return (
     <View style={styles.row}>
@@ -192,7 +236,22 @@ function CounterRow({
           <Text style={styles.offBadgeText}>Accès retiré</Text>
         </View>
       )}
+      {/* « Accès retiré » dit un état, « Retirer » déclenche une action : même
+          distinction que sur la fiche d'un inventaire — l'étiquette est
+          neutre, l'action est du texte rouge. */}
+      <Pressable style={styles.removeBtn} onPress={onRemove} hitSlop={8}>
+        <Text style={styles.removeBtnText}>Retirer</Text>
+      </Pressable>
     </View>
+  )
+}
+
+/** Croix d'annulation — un tracé, jamais le caractère « ✕ ». */
+function CroixIcon({ color }: { color: string }) {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24">
+      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.4} strokeLinecap="round" fill="none" />
+    </Svg>
   )
 }
 
@@ -237,7 +296,8 @@ function makeStyles(t: Theme) {
       width: 28, height: 28, borderRadius: 14, backgroundColor: t.dangerSoft,
       alignItems: 'center', justifyContent: 'center',
     },
-    cancelBtnText: { fontSize: 12, color: t.danger, fontFamily: Font.bold },
+    removeBtn: { paddingHorizontal: 4, paddingVertical: 4 },
+    removeBtnText: { fontSize: 13, color: t.danger, fontFamily: Font.semibold },
 
     empty: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, lineHeight: 19, marginLeft: 2 },
 

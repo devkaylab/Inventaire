@@ -1,10 +1,12 @@
 import { useCallback, useMemo } from 'react'
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { getSessions } from '@/lib/queries'
+import { deleteSessionPermanently, getSessions } from '@/lib/queries'
+import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import type { Tables } from '@/types/database.types'
@@ -29,7 +31,25 @@ function statusColors(t: Theme): Record<string, { fg: string; bg: string }> {
   }
 }
 
-function SessionCard({ session, theme, styles }: { session: Session; theme: Theme; styles: ReturnType<typeof makeStyles> }) {
+/** Corbeille — un tracé, comme toutes les icônes de l'app. */
+function CorbeilleIcon({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24">
+      <Path
+        d="M4 7h16M10 7V5h4v2M6 7l1 12h10l1-12M10 11v5M14 11v5"
+        stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none"
+      />
+    </Svg>
+  )
+}
+
+function SessionCard({ session, theme, styles, onDelete }: {
+  session: Session
+  theme: Theme
+  styles: ReturnType<typeof makeStyles>
+  /** Absent quand on n'a pas le droit de supprimer : la corbeille n'apparaît pas. */
+  onDelete?: () => void
+}) {
   const sc = statusColors(theme)[session.status] ?? { fg: theme.textMuted, bg: theme.accentSoft }
   return (
     <Pressable
@@ -44,6 +64,14 @@ function SessionCard({ session, theme, styles }: { session: Session; theme: Them
             {STATUS_LABELS[session.status] ?? session.status}
           </Text>
         </View>
+        {/* Comme sur le site : la corbeille n'apparaît que sur ce qu'on peut
+            réellement supprimer, plutôt que de laisser découvrir le refus
+            après coup. */}
+        {onDelete && (
+          <Pressable style={styles.trashBtn} onPress={onDelete} hitSlop={10}>
+            <CorbeilleIcon color={theme.textMuted} />
+          </Pressable>
+        )}
       </View>
       <Text style={styles.storeName}>{session.store_name}</Text>
       <Text style={styles.meta}>
@@ -62,7 +90,50 @@ export default function SupervisorHomeScreen() {
     queryFn: getSessions,
   })
 
+  const queryClient = useQueryClient()
   const onRefresh = useCallback(() => { refetch() }, [refetch])
+
+  /**
+   * Qui peut supprimer : le créateur, et l'administrateur de l'entreprise pour
+   * tous les siens. Même règle que la base (`delete_session`) et que le site —
+   * la corbeille n'apparaît nulle part ailleurs.
+   */
+  const peutSupprimer = useCallback(
+    (s: Session) => !!profile?.is_company_admin || s.created_by === profile?.id,
+    [profile?.is_company_admin, profile?.id],
+  )
+
+  /**
+   * La confirmation **nomme** l'inventaire et signale s'il est encore en
+   * cours : sur un téléphone, une corbeille se touche vite, et la suppression
+   * emporte comptages, stock théorique, audits, membres et référentiel.
+   */
+  const confirmerSuppression = useCallback((s: Session) => {
+    const nom = s.name || s.store_name
+    const enCours = s.status !== 'closed'
+    Alert.alert(
+      `Supprimer « ${nom} » ?`,
+      [
+        enCours ? 'Cet inventaire n’est pas clôturé.' : null,
+        'Ses comptages, son stock théorique, ses audits, ses membres et son référentiel seront supprimés définitivement.',
+      ].filter(Boolean).join('\n\n'),
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSessionPermanently(s.id)
+              await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+            } catch (e) {
+              Alert.alert('Suppression impossible', errorMessage(e))
+            }
+          },
+        },
+      ],
+    )
+  }, [queryClient])
 
   /**
    * Deux listes, pas une : ce qu'on a créé, et ce à quoi on a été invité.
@@ -113,7 +184,12 @@ export default function SupervisorHomeScreen() {
                 {!!item.hint && <Text style={styles.sectionHint}>{item.hint}</Text>}
               </View>
             ) : (
-              <SessionCard session={item.session} theme={theme} styles={styles} />
+              <SessionCard
+                session={item.session}
+                theme={theme}
+                styles={styles}
+                onDelete={peutSupprimer(item.session) ? () => confirmerSuppression(item.session) : undefined}
+              />
             )
           }
           contentContainerStyle={styles.list}
@@ -152,6 +228,7 @@ function makeStyles(t: Theme) {
       backgroundColor: t.surface, borderRadius: Radius.lg, padding: 18,
       borderWidth: 1, borderColor: t.hairline, gap: Spacing.xs, ...t.shadowCard,
     },
+    trashBtn: { padding: 2, marginLeft: 2 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     sessionName: { flex: 1, fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2, marginRight: Spacing.sm },
     badge: {

@@ -346,6 +346,39 @@ et `DeletionPendingNote`.
 Maquette de référence :
 https://claude.ai/code/artifact/032d3ee8-ee0f-4b32-9b21-c6a5d278356c
 
+# Supprimer et retirer depuis l'app (22 août 2026)
+
+*« Dans la même logique que le site, rends possible la suppression
+d'inventaire ou de membres d'équipe sur l'app. »* L'app savait déjà supprimer
+un inventaire **depuis l'inventaire lui-même** et annuler une invitation ; il
+manquait la suppression **depuis la liste** et le retrait d'un compteur.
+
+Les règles du site sont reprises telles quelles, parce qu'elles portent la
+sûreté du geste :
+
+- **La corbeille n'apparaît que sur ce qu'on peut supprimer** — créateur, ou
+  administrateur de l'entreprise pour tous les siens, comme `delete_session`.
+  Les cartes d'« Inventaires invités » n'en ont pas. Afficher partout ferait
+  découvrir le refus après coup.
+- **La confirmation nomme l'inventaire** et signale s'il n'est pas clôturé.
+  Sur un téléphone une corbeille se touche vite, et la suppression emporte
+  comptages, stock théorique, audits, membres et référentiel.
+- **Retirer un compteur vise UN magasin**, jamais tous
+  (`remove_counter_from_store`, mêmes arguments que le site). Une même
+  personne peut compter dans plusieurs magasins supervisés par des personnes
+  différentes ; la confirmation nomme donc la personne **et** le magasin.
+
+Différence assumée avec le site : **pas de sélection multiple**. Les cases à
+cocher et la barre « Supprimer (N) » sont une affordance de bureau ; sur
+téléphone, une corbeille par carte avec confirmation nommée suffit et se
+touche mieux.
+
+Au passage, la croix d'annulation d'une invitation était le caractère « ✕» :
+c'est un tracé désormais, comme le reste des icônes.
+
+Tests de garde : `tests/compte.test.ts`, bloc « supprimer et retirer depuis
+l'app ».
+
 # Une personne d'une autre entreprise (22 août 2026)
 
 Ajouter à son équipe quelqu'un dont le compte appartient à une autre
