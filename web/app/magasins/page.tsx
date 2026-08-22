@@ -1,26 +1,35 @@
 'use client'
 
-// Magasins — les magasins d'un superviseur, leurs codes d'accès.
+// Magasins.
 //
-// Ce bloc vivait au milieu de « Mon compte », entre les inventaires et
-// l'équipe. Il a son écran : on y vient pour relever un code, pas en
-// passant.
+// Deux lectures, parce que ce ne sont pas les mêmes besoins :
 //
-// L'administrateur de l'entreprise y trouve en plus de quoi **demander
-// l'ajout d'un magasin**. Un magasin ne se crée pas depuis le produit — la
-// licence se facture par magasin, donc Quantinvo reste seul à créer. La
-// demande n'est qu'un signal ; elle n'ajoute rien.
+// · **Un superviseur** vient y relever un code d'accès. Une liste, des codes,
+//   rien d'autre — ce bloc vivait au milieu de « Mon compte », il a son écran.
+// · **L'administrateur d'entreprise** y trouve son patrimoine, à la façon de la
+//   page Entreprises de la console Quantinvo : une ligne par magasin, ce qui
+//   demande attention lisible sans ouvrir, et une fiche derrière chacune.
+//   Chaque magasin est un volet — replié par défaut, son nom en en-tête (22
+//   août 2026, demande de Julien : ces blocs occupaient tout le tableau de
+//   bord, ils appartiennent à cette page).
+//
+// Un magasin ne se crée pas depuis le produit — la licence se facture par
+// magasin, donc Quantinvo reste seul à créer. La demande n'est qu'un signal.
 
-import { useCallback, useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { Volet } from '@/components/ui/Volet'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
+import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
+import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } from '@/lib/entreprise'
 import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
+import { nb } from '@/lib/format'
 
 type StoreRequest = {
   id: string
@@ -41,34 +50,45 @@ const STATUT: Record<StoreRequest['status'], string> = {
   rejected: 'Refusée',
 }
 
-const nb = (n: number) => n.toLocaleString('fr-FR')
-
 /** Date courte, comme ailleurs dans l'espace connecté : « 22/08 ». */
 function jourCourt(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
 }
 
+/** Sans accents ni casse : « Élysée » se trouve en tapant « elysee ». */
+function normaliser(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
 export default function MagasinsPage() {
   const guard = useAuthGuard('supervisor')
   const [stores, setStores] = useState<Store[]>([])
+  const [vue, setVue] = useState<ApercuEntreprise | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [copie, setCopie] = useState<string | null>(null)
+  const [recherche, setRecherche] = useState('')
   const [pret, setPret] = useState(false)
 
-  const charger = useCallback(async () => {
-    const [s, c] = await Promise.all([
-      getMyStores().catch(() => [] as Store[]),
+  const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
+
+  const charger = useCallback(async (admin: boolean) => {
+    // L'administrateur lit son entreprise entière ; un superviseur, ses seuls
+    // magasins. Deux requêtes différentes pour deux besoins différents.
+    const [s, c, apercu] = await Promise.all([
+      admin ? Promise.resolve([] as Store[]) : getMyStores().catch(() => [] as Store[]),
       getMyCompany().catch(() => null),
+      admin ? supabase.rpc('ca_company_overview') : Promise.resolve({ data: null }),
     ])
     setStores(s)
     setCompany(c)
+    if (apercu?.data) setVue(apercu.data as ApercuEntreprise)
     setPret(true)
   }, [])
 
   useEffect(() => {
     if (guard.status !== 'ready') return
-    charger()
-  }, [guard.status, charger])
+    charger(!!guard.profile.is_company_admin)
+  }, [guard, charger])
 
   async function copier(code: string) {
     try {
@@ -78,69 +98,131 @@ export default function MagasinsPage() {
     } catch { /* sélection manuelle */ }
   }
 
+  // Recherche par fragments, comme la liste des entreprises de la console :
+  // « lyon part » trouve « Magasin Lyon Part-Dieu ».
+  const magasins = useMemo(() => vue?.stores ?? [], [vue])
+  const visibles = useMemo(() => {
+    const mots = normaliser(recherche).split(/\s+/).filter(Boolean)
+    if (mots.length === 0) return magasins
+    return magasins.filter((m) => {
+      const nom = normaliser(m.name)
+      return mots.every((mot) => nom.includes(mot))
+    })
+  }, [magasins, recherche])
+
   if (guard.status !== 'ready') {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
 
-  const estAdmin = !!guard.profile.is_company_admin
-
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
-        <h1 className="page-title">Magasins</h1>
+        <h1 className="page-title">
+          Magasins{estAdmin && magasins.length > 0 ? ` (${magasins.length})` : ''}
+        </h1>
       </div>
 
       {!pret ? (
         <p className="muted">Chargement…</p>
-      ) : (
+      ) : estAdmin ? (
         <>
-          {stores.length === 0 ? (
+          {magasins.length === 0 ? (
             <div className="empty-state">
-              {/* Un administrateur d'entreprise supervise tous les magasins de
-                  son entreprise : s'il n'en voit aucun, c'est qu'elle n'en a
-                  aucun. Lui parler d'affectation n'aurait aucun sens. */}
-              <div className="empty-state-title">
-                {estAdmin
-                  ? 'Votre entreprise n’a encore aucun magasin'
-                  : 'Vous n’êtes affecté à aucun magasin'}
-              </div>
+              <div className="empty-state-title">Votre entreprise n’a encore aucun magasin</div>
               <p className="empty-state-hint">
-                {estAdmin
-                  ? <>Demandez à Quantinvo d&apos;en ajouter un&nbsp;: la licence se tarife par magasin.</>
-                  : <>Contactez l&apos;administrateur de votre entreprise, ou Quantinvo si elle n&apos;en a pas encore.</>}
+                Demandez à Quantinvo d&apos;en ajouter un&nbsp;: la licence se tarife par magasin.
               </p>
             </div>
           ) : (
             <>
-              <div className="banner banner-info">
-                Le code d&apos;un magasin ouvre l&apos;accès à ses inventaires&nbsp;: transmettez-le à une personne, jamais à un groupe.
-              </div>
-              <div className="acc-inv-list">
-                {stores.map((s) => (
-                  <div className="acc-inv-row" key={s.id}>
-                    <div>
-                      <div className="acc-inv-name">{s.name}</div>
-                      <div className="cred-value" style={{ marginTop: 2 }}>{s.join_code ?? '—'}</div>
-                    </div>
-                    {s.join_code && (
-                      <button type="button" className="link-btn" onClick={() => copier(s.join_code!)}>
-                        {copie === s.join_code ? 'Copié' : 'Copier le code'}
-                      </button>
-                    )}
+              {magasins.length > 4 && (
+                <div className="toolbar">
+                  <div className="toolbar-grow">
+                    <input
+                      type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
+                      placeholder="Rechercher un magasin par son nom…"
+                      aria-label="Rechercher un magasin"
+                    />
                   </div>
-                ))}
-              </div>
-              <p className="muted small" style={{ marginTop: 14 }}>
-                Les magasins sont créés par Quantinvo&nbsp;: la licence est par magasin.
-                <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>Imprimer des balises</Link>
-              </p>
+                  {recherche.trim() !== '' && (
+                    <>
+                      <span className="muted small" aria-live="polite">
+                        {visibles.length} sur {magasins.length}
+                      </span>
+                      <button type="button" className="link-btn" onClick={() => setRecherche('')}>Effacer</button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {visibles.length === 0 ? (
+                <p className="muted">Aucun magasin ne correspond à « {recherche} ».</p>
+              ) : (
+                <div style={{ marginTop: 4 }}>
+                  {visibles.map((m) => <VoletMagasin key={m.id} store={m} />)}
+                </div>
+              )}
             </>
           )}
-
-          {estAdmin && <DemandesMagasin />}
+          <DemandesMagasin />
+        </>
+      ) : stores.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-title">Vous n&apos;êtes affecté à aucun magasin</div>
+          <p className="empty-state-hint">
+            Contactez l&apos;administrateur de votre entreprise, ou Quantinvo si elle n&apos;en a pas encore.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="banner banner-info">
+            Le code d&apos;un magasin ouvre l&apos;accès à ses inventaires&nbsp;: transmettez-le à une personne, jamais à un groupe.
+          </div>
+          <div className="acc-inv-list">
+            {stores.map((s) => (
+              <div className="acc-inv-row" key={s.id}>
+                <div>
+                  <div className="acc-inv-name">{s.name}</div>
+                  <div className="cred-value" style={{ marginTop: 2 }}>{s.join_code ?? '—'}</div>
+                </div>
+                {s.join_code && (
+                  <button type="button" className="link-btn" onClick={() => copier(s.join_code!)}>
+                    {copie === s.join_code ? 'Copié' : 'Copier le code'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="muted small" style={{ marginTop: 14 }}>
+            Les magasins sont créés par Quantinvo&nbsp;: la licence est par magasin.
+            <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>Imprimer des balises</Link>
+          </p>
         </>
       )}
     </AppShell>
+  )
+}
+
+/**
+ * Un magasin, replié.
+ *
+ * L'en-tête dit ce qu'il y a dedans — c'est ce qui sépare « replié » de
+ * « caché » : le résumé et la pastille suffisent à savoir où en est le magasin
+ * sans l'ouvrir, sinon on n'aurait fait que déplacer le mur.
+ */
+function VoletMagasin({ store }: { store: StoreBloc }) {
+  const alertes = alertesMagasin(store)
+  const etat = etatMagasin(store)
+  return (
+    <Volet
+      titre={store.name}
+      resume={resumeMagasin(store)}
+      etat={alertes.length > 0
+        ? { libelle: `${alertes.length} à surveiller`, ton: 'faire' }
+        : { libelle: etat?.libelle ?? 'À jour', ton: 'pret' }}
+    >
+      <CorpsMagasin store={store} />
+    </Volet>
   )
 }
 

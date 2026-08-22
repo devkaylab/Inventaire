@@ -1065,6 +1065,49 @@ ordinaires — d'où le `:not(.signal-alerte)`.
 **Non vu à l'écran** : les pages complètes `/entreprise`, `/journal` et
 `/equipe` demandent une session d'administrateur d'entreprise.
 
+## Second passage, le même jour
+
+Retour de Julien sur le premier jet : *« réduire la taille des tuiles pour que
+ça tienne sur une ligne, liste magasins collapsable nom magasin en en-tête et
+placer cette section dans page Magasins, bouton ouvrir le magasin mène à page
+du magasin en question — son profil — où on trouve son code, ses membres, ses
+inventaires, place activités récentes sous tableau de bord. La page magasins de
+l'admin entreprise doit s'inspirer de la page entreprises de l'admin
+Quantinvo. »*
+
+- **Le tableau de bord ne porte plus que deux blocs** : les cinq indicateurs
+  (`.dash-kpis-5`, qui rétrécit les tuiles au lieu de les casser sur deux
+  rangs — repasse à trois colonnes sous 1040 px) et l'activité récente.
+- **Les magasins ont déménagé sur `/magasins`**, chacun dans un `Volet` —
+  replié, nom en en-tête, résumé et pastille (« 2 à surveiller » / « À jour »).
+  Les règles du composant s'appliquent : rien ne s'ouvre tout seul, et
+  l'en-tête doit dire ce qu'il y a dedans, sinon on n'a fait que déplacer le
+  mur.
+- **La page reprend la figure de `/admin/entreprises`** : compte dans le titre,
+  recherche par fragments (« lyon part » trouve « Magasin Lyon Part-Dieu »),
+  une fiche derrière chaque ligne. ⚠️ **Elle garde deux lectures** : un
+  superviseur ordinaire y vient relever un code d'accès, il ne doit pas
+  hériter de la console.
+- **`/magasins/[storeId]`, la fiche d'un magasin** : son code, ses membres,
+  ses inventaires. `ca_store_detail` (migration `20260822170001`) rend
+  l'historique complet — la liste, elle, n'affiche que les inventaires ouverts
+  et le dernier clôturé. **L'activité d'un compteur y est celle de ce
+  magasin** : quelqu'un qui compte beaucoup ailleurs n'y est pas actif pour
+  autant. La garde porte sur l'entreprise **du magasin visé**, jamais sur un
+  paramètre de l'appelant.
+- `CorpsMagasin` est partagé par la liste et la fiche : deux écrans qui
+  montrent la même chose doivent la montrer de la même façon.
+
+Deux doublons évités au passage, et c'est le genre que Julien repère :
+`depuis()` refaisait `relativeTime()` de `lib/format` (avec un « il y a 3
+jours » là où le site dit « il y a 3 j »), et `nb()` était recopié dans quatre
+pages — il a rejoint `lib/format`.
+
+Vérifié au navigateur (route jetable, clair et sombre) : les cinq tuiles sur
+une ligne, les volets repliés, un volet ouvert. Un défaut corrigé ainsi —
+« Ouvrir le magasin » s'étirait sur toute la largeur, un bouton dans une
+colonne flex prenant toute la place.
+
 Tests de garde : `web/tests/espace-admin-entreprise.test.ts`.
 
 # L'administrateur d'entreprise supervise tous les magasins (22 août 2026)

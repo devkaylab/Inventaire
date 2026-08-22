@@ -48,6 +48,9 @@ export function fmtDateTime(iso: string): string {
   })
 }
 
+/** Un entier avec ses séparateurs de milliers : 18402 → « 18 402 ». */
+export const nb = (n: number) => n.toLocaleString('fr-FR')
+
 /**
  * « il y a 40 s », « il y a 12 min »… Utilisé partout où l'on montre une
  * dernière activité : le superviseur doit pouvoir juger d'un coup d'œil si

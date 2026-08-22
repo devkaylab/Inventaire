@@ -1,0 +1,205 @@
+'use client'
+
+// La fiche d'un magasin — son profil.
+//
+// Julien, 22 août 2026 : « bouton ouvrir le magasin mène à la page du magasin
+// en question, son profil, où on trouve son code, ses membres, ses
+// inventaires ». C'est le pendant, à l'échelle d'une entreprise, de la fiche
+// d'entreprise de la console Quantinvo.
+//
+// La liste des magasins n'en montre que l'essentiel — les inventaires ouverts
+// et le dernier clôturé. Ici, tout : `ca_store_detail` rend l'historique
+// complet et les personnes avec leur activité **dans ce magasin**.
+
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { AppShell } from '@/components/AppShell'
+import { getMyCompany, type Company } from '@/lib/account'
+import { LigneInventaire } from '@/components/magasin/CorpsMagasin'
+import { nb, relativeTime } from '@/lib/format'
+import type { SessionBloc } from '@/lib/entreprise'
+
+type Personne = {
+  id: string
+  full_name: string | null
+  email: string | null
+  is_active: boolean
+  is_company_admin?: boolean
+  last_count_at?: string | null
+  sessions_counted?: number
+}
+
+type Fiche = {
+  store: { id: string; name: string; join_code: string; created_at: string }
+  supervisors: Personne[]
+  counters: Personne[]
+  sessions: SessionBloc[]
+}
+
+export default function FicheMagasinPage() {
+  const guard = useAuthGuard('supervisor')
+  const params = useParams<{ storeId: string }>()
+  const storeId = params?.storeId
+  const [fiche, setFiche] = useState<Fiche | null>(null)
+  const [company, setCompany] = useState<Company | null>(null)
+  const [erreur, setErreur] = useState(false)
+  const [copie, setCopie] = useState(false)
+
+  const charger = useCallback(async () => {
+    if (!storeId) return
+    const [f, c] = await Promise.all([
+      supabase.rpc('ca_store_detail', { p_store_id: storeId }),
+      getMyCompany().catch(() => null),
+    ])
+    if (f.error || !f.data) { setErreur(true); return }
+    setFiche(f.data as Fiche)
+    setCompany(c)
+  }, [storeId])
+
+  useEffect(() => {
+    if (guard.status !== 'ready') return
+    if (!guard.profile.is_company_admin) { window.location.replace('/magasins'); return }
+    charger()
+  }, [guard, charger])
+
+  async function copier(code: string) {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopie(true)
+      setTimeout(() => setCopie(false), 2000)
+    } catch { /* sélection manuelle */ }
+  }
+
+  if (guard.status !== 'ready') {
+    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+  }
+
+  if (erreur) {
+    return (
+      <AppShell profile={guard.profile} companyName={company?.name}>
+        <p className="muted">Ce magasin n&apos;est pas accessible.</p>
+        <Link href="/magasins" className="btn btn-ghost" style={{ marginTop: 16 }}>← Tous les magasins</Link>
+      </AppShell>
+    )
+  }
+
+  if (!fiche) {
+    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+  }
+
+  const ouverts = fiche.sessions.filter((s) => s.status !== 'closed')
+  const clos = fiche.sessions.filter((s) => s.status === 'closed')
+
+  return (
+    <AppShell profile={guard.profile} companyName={company?.name}>
+      <Link href="/magasins" className="link-btn" style={{ display: 'inline-block', marginBottom: 14 }}>
+        ← Tous les magasins
+      </Link>
+
+      <div className="app-head">
+        <div>
+          <h1 className="page-title">{fiche.store.name}</h1>
+          <p className="page-sub">
+            {fiche.sessions.length} inventaire{fiche.sessions.length > 1 ? 's' : ''}
+            {' · '}{fiche.counters.length} compteur{fiche.counters.length > 1 ? 's' : ''}
+            {' · créé le '}{new Date(fiche.store.created_at).toLocaleDateString('fr-FR')}
+          </p>
+        </div>
+      </div>
+
+      <section className="admin-section">
+        <h2>Code d&apos;accès</h2>
+        <div className="banner banner-info">
+          Ce code ouvre l&apos;accès aux inventaires du magasin&nbsp;: transmettez-le à une personne,
+          jamais à un groupe.
+        </div>
+        <div className="acc-inv-row">
+          <div className="cred-value">{fiche.store.join_code}</div>
+          <button type="button" className="link-btn" onClick={() => copier(fiche.store.join_code)}>
+            {copie ? 'Copié' : 'Copier le code'}
+          </button>
+        </div>
+      </section>
+
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <h2>Membres ({fiche.supervisors.length + fiche.counters.length})</h2>
+          <Link href="/equipe" className="btn btn-ghost btn-sm">Gérer l&apos;équipe</Link>
+        </div>
+
+        <div className="dash-sub">Superviseurs</div>
+        {fiche.supervisors.length === 0 ? (
+          <p className="muted small">Aucun superviseur affecté à ce magasin.</p>
+        ) : (
+          <div className="req-list">
+            {fiche.supervisors.map((p) => (
+              <div className="req-row" key={p.id}>
+                <div>
+                  <div className="req-name">
+                    {p.full_name || 'Sans nom'}
+                    {p.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
+                  </div>
+                  <div className="muted small">{p.email}</div>
+                </div>
+                {!p.is_active && <span className="dash-badge dash-badge-counting"><span className="dash-dot" />Mot de passe à créer</span>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="dash-sub">Compteurs</div>
+        {fiche.counters.length === 0 ? (
+          <p className="muted small">Aucun compteur rattaché à ce magasin.</p>
+        ) : (
+          <div className="req-list">
+            {fiche.counters.map((p) => (
+              <div className="req-row" key={p.id}>
+                <div>
+                  <div className="req-name">{p.full_name || 'Sans nom'}</div>
+                  <div className="muted small">
+                    {p.email}
+                    {/* L'activité affichée est celle de ce magasin : quelqu'un
+                        qui compte beaucoup ailleurs n'y est pas actif ici. */}
+                    {p.sessions_counted
+                      ? ` · ${nb(p.sessions_counted)} inventaire${p.sessions_counted > 1 ? 's' : ''} ici · dernier comptage ${relativeTime(p.last_count_at)}`
+                      : ' · n’a pas encore compté ici'}
+                  </div>
+                </div>
+                {!p.is_active && <span className="dash-badge dash-badge-counting"><span className="dash-dot" />Mot de passe à créer</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>Inventaires ({fiche.sessions.length})</h2>
+        {fiche.sessions.length === 0 ? (
+          <p className="muted">Aucun inventaire n&apos;a encore été lancé sur ce magasin.</p>
+        ) : (
+          <>
+            {ouverts.length > 0 && (
+              <>
+                <div className="dash-sub">En cours</div>
+                <div className="req-list">
+                  {ouverts.map((s) => <LigneInventaire key={s.id} s={s} />)}
+                </div>
+              </>
+            )}
+            {clos.length > 0 && (
+              <>
+                <div className="dash-sub">Clôturés</div>
+                <div className="req-list">
+                  {clos.map((s) => <LigneInventaire key={s.id} s={s} />)}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </section>
+    </AppShell>
+  )
+}

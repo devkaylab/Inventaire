@@ -212,3 +212,92 @@ describe('ses écrans', () => {
     }
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Second passage, le même jour : « réduire la taille des tuiles pour que ça
+// tienne sur une ligne, liste magasins collapsable nom magasin en en-tête et
+// placer cette section dans page Magasins, bouton ouvrir le magasin mène à
+// page du magasin en question — son profil — où on trouve son code, ses
+// membres, ses inventaires, place activités récentes sous tableau de bord.
+// La page magasins de l'admin entreprise doit s'inspirer de la page
+// entreprises de l'admin Quantinvo. »
+
+describe('le tableau de bord ne porte plus les magasins', () => {
+  const pageMagasins = lire('../app/magasins/page.tsx')
+  const fiche = lire('../app/magasins/[storeId]/page.tsx')
+  const corps = lire('../components/magasin/CorpsMagasin.tsx')
+  const css = lire('../app/globals.css')
+  const migrationFiche = lire('../../supabase/migrations/20260822170001_fiche_magasin.sql')
+
+  it('il ne reste que les chiffres et l’activité', () => {
+    expect(pageEntreprise).toContain('Activité récente')
+    expect(pageEntreprise).not.toContain('Magasin par magasin')
+    expect(pageEntreprise).not.toContain('CorpsMagasin')
+  })
+
+  it('les cinq indicateurs tiennent sur une ligne', () => {
+    expect(pageEntreprise).toContain('dash-kpis dash-kpis-5')
+    expect(css).toContain('.dash-kpis-5 { grid-template-columns: repeat(5, minmax(0, 1fr))')
+  })
+
+  it('les magasins sont des volets, repliés, nom en en-tête', () => {
+    // La règle du composant : tout part replié, et l'en-tête dit ce qu'il y a
+    // dedans — sinon on n'aurait fait que déplacer le mur.
+    expect(pageMagasins).toContain('<Volet')
+    expect(pageMagasins).toContain('titre={store.name}')
+    expect(pageMagasins).toContain('resume={resumeMagasin(store)}')
+    expect(pageMagasins).not.toMatch(/<Volet[\s\S]{0,200}\bopen\b/)
+  })
+
+  it('la page s’inspire de la liste des entreprises de la console', () => {
+    // Recherche par fragments et compte dans le titre, comme /admin/entreprises.
+    expect(pageMagasins).toContain('normaliser')
+    expect(pageMagasins).toContain('mots.every((mot) => nom.includes(mot))')
+    expect(pageMagasins).toContain('Magasins{estAdmin && magasins.length > 0')
+  })
+
+  it('un superviseur ordinaire garde sa liste de codes', () => {
+    // La page a deux lectures : elle ne doit pas devenir la console de tout le
+    // monde. Un superviseur vient y relever un code.
+    expect(pageMagasins).toContain('getMyStores')
+    expect(pageMagasins).toContain('Copier le code')
+  })
+})
+
+describe('la fiche d’un magasin', () => {
+  const fiche = lire('../app/magasins/[storeId]/page.tsx')
+  const corps = lire('../components/magasin/CorpsMagasin.tsx')
+  const migrationFiche = lire('../../supabase/migrations/20260822170001_fiche_magasin.sql')
+  const corpsSql = migrationFiche.split('function public.ca_store_detail(')[1]?.split('$$;')[0] ?? ''
+
+  it('« Ouvrir le magasin » y mène', () => {
+    expect(corps).toContain('href={`/magasins/${store.id}`}')
+    expect(corps).toContain('Ouvrir le magasin')
+  })
+
+  it('porte le code, les membres et les inventaires', () => {
+    expect(fiche).toContain('Code d&apos;accès')
+    expect(fiche).toContain('Membres (')
+    expect(fiche).toContain('Inventaires (')
+    expect(fiche).toContain("rpc('ca_store_detail'")
+  })
+
+  it('la garde porte sur l’entreprise du magasin visé', () => {
+    // Jamais sur un paramètre fourni par l'appelant : c'est la règle de toutes
+    // les fonctions qui prennent un identifiant.
+    expect(corpsSql).toContain('select company_id into v_company from public.stores where id = p_store_id')
+    expect(corpsSql).toContain('public.is_company_admin(v_company)')
+    expect(migrationFiche).toMatch(/revoke all on function public\.ca_store_detail\(uuid\) from public, anon/)
+  })
+
+  it('l’activité d’un compteur y est celle de ce magasin', () => {
+    // Quelqu'un qui compte beaucoup ailleurs n'est pas actif ici pour autant.
+    expect(corpsSql).toContain('s2.store_id = p_store_id')
+    expect(corpsSql).toContain('s3.store_id = p_store_id')
+  })
+
+  it('elle refuse un superviseur ordinaire', () => {
+    expect(fiche).toContain('guard.profile.is_company_admin')
+    expect(fiche).toContain("window.location.replace('/magasins')")
+  })
+})

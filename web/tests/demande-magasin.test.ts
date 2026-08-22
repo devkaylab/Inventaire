@@ -114,7 +114,11 @@ describe('gardes de base', () => {
 
 describe('écrans', () => {
   it('le bouton n’existe que pour l’administrateur d’entreprise', () => {
-    expect(pageMagasins).toContain('estAdmin && <DemandesMagasin />')
+    // La page s'est scindée en deux lectures le 22 août : l'administrateur voit
+    // ses magasins en volets et la demande, un superviseur ne voit que ses
+    // codes. Le bloc de demande vit donc dans la seule branche `estAdmin`.
+    const branche = pageMagasins.split(') : estAdmin ? (')[1]?.split('      ) : stores.length === 0 ?')[0] ?? ''
+    expect(branche).toContain('<DemandesMagasin />')
     expect(pageMagasins).toContain('is_company_admin')
   })
 
@@ -132,10 +136,11 @@ describe('écrans', () => {
     // « affectez-vous un magasin » est devenu faux le 22 août 2026, quand
     // l'administrateur s'est mis à les avoir tous : s'il n'en voit aucun,
     // c'est que son entreprise n'en a aucun.
-    const vide = pageMagasins.split('className="empty-state"')[1]?.split('</div>\n          ) : (')[0] ?? ''
-    expect(vide).toContain('estAdmin')
-    expect(vide).toContain('Votre entreprise n’a encore aucun magasin')
-    expect(vide).toContain('Contactez l&apos;administrateur de votre entreprise')
+    // Deux états vides distincts depuis la scission de la page : celui de
+    // l'administrateur parle de son entreprise, celui du superviseur de son
+    // affectation. Aucun ne renvoie l'administrateur à lui-même.
+    expect(pageMagasins).toContain('Votre entreprise n’a encore aucun magasin')
+    expect(pageMagasins).toContain('Contactez l&apos;administrateur de votre entreprise')
     expect(pageMagasins).not.toContain('Affectez-vous un magasin')
   })
 
