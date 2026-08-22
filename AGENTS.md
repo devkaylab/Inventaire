@@ -544,6 +544,19 @@ s'efface, et sa case n'apparaît pas.
 - ils n'existent **ni quand il n'y a rien à y faire, ni pendant une
   sélection** — le geste entrerait en concurrence avec le défilement d'une
   liste qu'on est en train de cocher ;
+- **un volet ouvert se referme au premier contact ailleurs** (demande de
+  Julien) : sinon il reste ouvert dans le dos de la personne et son prochain
+  appui tombe sur un bouton rouge qu'elle ne regardait plus. Trois précautions
+  dans ce mécanisme :
+  · `onStartShouldSetResponderCapture` renvoie **`false`** — on referme sans
+    prendre le geste, donc l'élément touché reçoit quand même son appui ;
+  · la position du rang est **mesurée à l'ouverture** (`measureInWindow`) et
+    le point touché comparé à ce rectangle : sans cela on refermerait sous le
+    doigt de quelqu'un qui vise justement « Supprimer » ;
+  · un volet qui se ferme n'oublie l'enregistrement **que s'il est bien celui
+    qu'on avait noté**. Ouvrir un rang referme le précédent, dont la fermeture
+    effacerait sinon l'enregistrement du nouveau — qui resterait ouvert sans
+    que personne ne le sache. Faire défiler la liste referme également ;
 - il a fallu poser un **`GestureHandlerRootView` à la racine** de
   l'application (`src/app/_layout.tsx`), qui manquait : sans lui aucun geste
   n'est reçu. Ne pas le retirer en refactorant le layout.

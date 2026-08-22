@@ -466,6 +466,29 @@ describe('le balayage pour supprimer', () => {
     expect(liste.indexOf('balayageCloturer')).toBeLessThan(liste.indexOf('balayageSupprimer'))
   })
 
+  it('se referme dès qu’on touche ailleurs', () => {
+    // Demande de Julien, 22 août 2026. Un rang laissé ouvert dans le dos de la
+    // personne fait tomber son prochain appui sur un bouton rouge qu'elle ne
+    // regardait plus.
+    expect(liste).toContain('onStartShouldSetResponderCapture={auContact}')
+    // Sans prendre le geste : on renvoie `false`, l'élément touché reçoit
+    // quand même l'appui.
+    expect(liste).toMatch(/const auContact[\s\S]*?return false/)
+    // Mais pas sous le doigt de quelqu'un qui vise « Supprimer » : on compare
+    // le point touché au rectangle du volet ouvert.
+    expect(liste).toContain('measureInWindow')
+    expect(liste).toContain('const dedans =')
+    // Faire défiler referme aussi.
+    expect(liste).toContain('onScrollBeginDrag={fermerVolet}')
+  })
+
+  it('n’oublie pas le volet qui vient de s’ouvrir', () => {
+    // Ouvrir un rang referme le précédent ; si la fermeture effaçait
+    // l'enregistrement sans vérifier de qui il s'agit, le nouveau restait
+    // ouvert sans que personne ne le sache.
+    expect(liste).toContain('voletOuvert.current.methods === methods')
+  })
+
   it('n’ajoute aucune dépendance native', () => {
     // `react-native-gesture-handler` est déjà installé — une nouvelle
     // dépendance native imposerait un `pod install`, qui écrase le correctif

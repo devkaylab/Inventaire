@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { router } from 'expo-router'
@@ -13,6 +13,8 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import type { Tables } from '@/types/database.types'
 
 type Session = Tables<'inventory_sessions'>
+
+type Rect = { x: number; y: number; width: number; height: number }
 
 type Row =
   | { kind: 'header'; label: string; hint?: string }
@@ -74,7 +76,7 @@ function Case({ coche, theme }: { coche: boolean; theme: Theme }) {
   )
 }
 
-function SessionCard({ session, theme, styles, onDelete, onClose, selection, coche, onToggle }: {
+function SessionCard({ session, theme, styles, onDelete, onClose, selection, coche, onToggle, onVoletOuvert, onVoletFerme }: {
   session: Session
   theme: Theme
   styles: ReturnType<typeof makeStyles>
@@ -82,6 +84,9 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
   onDelete?: () => void
   /** Absent sur un inventaire déjà clôturé : il n'y a plus rien à fermer. */
   onClose?: () => void
+  /** Signale à l'écran quel volet est ouvert, et où il se trouve. */
+  onVoletOuvert?: (methods: SwipeableMethods, rect: Rect) => void
+  onVoletFerme?: (methods: SwipeableMethods | null) => void
   /** Vrai quand l'écran est en mode sélection. */
   selection?: boolean
   coche?: boolean
@@ -108,6 +113,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
    */
   const appuiLong = useRef(false)
   const balayage = useRef<SwipeableMethods | null>(null)
+  const conteneur = useRef<View | null>(null)
 
   const carte = (
     <Pressable
@@ -162,11 +168,25 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
   if ((!onDelete && !onClose) || selection) return carte
 
   return (
+    <View
+      ref={conteneur}
+      // Le rang est mesuré à l'ouverture : c'est ce qui permet à l'écran de
+      // distinguer « on touche ce volet » de « on touche ailleurs ».
+      collapsable={false}
+    >
     <ReanimatedSwipeable
       ref={r => { balayage.current = r }}
       friction={2}
       rightThreshold={40}
       overshootRight={false}
+      onSwipeableWillOpen={() => {
+        const m = balayage.current
+        if (!m) return
+        conteneur.current?.measureInWindow((x, y, width, height) => {
+          onVoletOuvert?.(m, { x, y, width, height })
+        })
+      }}
+      onSwipeableWillClose={() => onVoletFerme?.(balayage.current)}
       renderRightActions={() => (
         <View style={styles.balayageVolets}>
           {/* Clôturer avant Supprimer : le geste destructeur est le plus loin
@@ -194,6 +214,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
     >
       {carte}
     </ReanimatedSwipeable>
+    </View>
   )
 }
 
@@ -210,6 +231,62 @@ export default function SupervisorHomeScreen() {
   const onRefresh = useCallback(() => { refetch() }, [refetch])
   const [selection, setSelection] = useState(false)
   const [coches, setCoches] = useState<string[]>([])
+
+  /**
+   * Le volet ouvert, et où il est à l'écran.
+   *
+   * Un rang balayé doit se refermer dès qu'on touche ailleurs — sinon il reste
+   * ouvert dans le dos de la personne, et le prochain appui tombe sur un
+   * bouton rouge qu'elle ne regardait plus. On garde donc sa position mesurée
+   * à l'ouverture : c'est ce qui permet de distinguer « on touche ce volet »
+   * de « on touche ailleurs », et de ne pas fermer sous le doigt de quelqu'un
+   * qui vise justement « Supprimer ».
+   */
+  const voletOuvert = useRef<{ methods: SwipeableMethods; rect: Rect } | null>(null)
+
+  const fermerVolet = useCallback(() => {
+    voletOuvert.current?.methods.close()
+    voletOuvert.current = null
+  }, [])
+
+  const noterVolet = useCallback((methods: SwipeableMethods, rect: Rect) => {
+    // Un seul volet ouvert à la fois : ouvrir le suivant referme le précédent.
+    if (voletOuvert.current && voletOuvert.current.methods !== methods) {
+      voletOuvert.current.methods.close()
+    }
+    voletOuvert.current = { methods, rect }
+  }, [])
+
+  /**
+   * Un volet qui se ferme n'efface l'enregistrement que s'il est bien celui
+   * qu'on avait noté. Sans cette vérification, ouvrir un rang alors qu'un
+   * autre l'était refermait le premier — dont la fermeture effaçait aussitôt
+   * l'enregistrement du **nouveau**, qui restait alors ouvert sans que
+   * personne ne le sache.
+   */
+  const oublierVolet = useCallback((methods: SwipeableMethods | null) => {
+    if (voletOuvert.current && voletOuvert.current.methods === methods) {
+      voletOuvert.current = null
+    }
+  }, [])
+
+  /**
+   * Referme au premier contact hors du volet, **sans prendre le geste** :
+   * on renvoie `false`, donc l'élément touché reçoit quand même l'appui. Le
+   * `Capture` fait passer ce contrôle avant tout le monde, y compris avant le
+   * défilement de la liste.
+   */
+  const auContact = useCallback((e: GestureResponderEvent) => {
+    const o = voletOuvert.current
+    if (o) {
+      const { pageX, pageY } = e.nativeEvent
+      const dedans =
+        pageX >= o.rect.x && pageX <= o.rect.x + o.rect.width &&
+        pageY >= o.rect.y && pageY <= o.rect.y + o.rect.height
+      if (!dedans) fermerVolet()
+    }
+    return false
+  }, [fermerVolet])
 
   /**
    * Qui peut supprimer : le créateur, et l'administrateur de l'entreprise pour
@@ -382,7 +459,7 @@ export default function SupervisorHomeScreen() {
   }, [sessions, profile?.id])
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['bottom']} onStartShouldSetResponderCapture={auContact}>
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color={theme.accent} />
@@ -404,6 +481,8 @@ export default function SupervisorHomeScreen() {
                 styles={styles}
                 onDelete={peutSupprimer(item.session) ? () => confirmerSuppression(item.session) : undefined}
                 onClose={item.session.status !== 'closed' ? () => confirmerCloture(item.session) : undefined}
+                onVoletOuvert={noterVolet}
+                onVoletFerme={oublierVolet}
                 selection={selection}
                 coche={coches.includes(item.session.id)}
                 onToggle={peutSupprimer(item.session) ? () => basculer(item.session.id) : undefined}
@@ -411,6 +490,9 @@ export default function SupervisorHomeScreen() {
             )
           }
           contentContainerStyle={styles.list}
+          // Faire défiler la liste referme aussi : on ne laisse pas un volet
+          // ouvert disparaître vers le haut de l'écran.
+          onScrollBeginDrag={fermerVolet}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
             <View style={styles.listHeader}>
