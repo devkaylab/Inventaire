@@ -242,6 +242,8 @@ a { color: inherit; text-decoration: none; }
 }
 .card h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
 .card p { margin-top: 8px; color: var(--text-2); font-size: 15px; }
+/* Numéro des six raisons, dans le titre de chaque carte. */
+.raison-numero { color: var(--accent-light); font-variant-numeric: tabular-nums; }
 
 /* ── CTA band ───────────────────────────────────────────── */
 .cta-band {

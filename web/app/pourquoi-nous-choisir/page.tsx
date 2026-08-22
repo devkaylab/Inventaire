@@ -88,11 +88,10 @@ export default function PourquoiPage() {
           <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {RAISONS.map((r, i) => (
               <div className="card" data-reveal="0" style={{ padding: '30px 34px' }} key={r.title}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                  <div className="ico" style={{ marginBottom: 0 }}>{r.icon}</div>
-                  <span className="raison-numero">Raison {i + 1} sur {RAISONS.length}</span>
-                </div>
-                <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>{r.title}</h2>
+                <div className="ico">{r.icon}</div>
+                <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>
+                  <span className="raison-numero">{i + 1}.</span> {r.title}
+                </h2>
                 <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {r.points.map((p) => (
                     <p key={p.slice(0, 24)} style={{ margin: 0, fontSize: 15.5 }}>{p}</p>
