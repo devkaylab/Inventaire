@@ -103,12 +103,12 @@ export default function FicheMagasinPage() {
   async function demanderSuppression(nom: string) {
     const ok = await confirm({
       title: 'Demander la suppression de ce magasin ?',
-      message: 'Quantinvo traitera la demande et vous recontactera. Rien n’est supprimé tant qu’elle n’est pas honorée.',
+      message: 'Vous demandez la suppression, c’est Quantinvo qui l’effectue. D’ici là, le magasin continue de fonctionner normalement.',
       details: [
         nom,
         'Sa suppression effacera définitivement ses inventaires et leurs comptages.',
         'Sa licence cessera d’être facturée.',
-        'Vous pourrez annuler cette demande tant qu’elle est en attente.',
+        'Vous pouvez annuler la demande tant que Quantinvo ne l’a pas traitée.',
       ],
       confirmLabel: 'Demander la suppression',
       tone: 'danger',
@@ -275,7 +275,7 @@ export default function FicheMagasinPage() {
               <strong>Suppression demandée</strong>
               <div className="muted small">
                 Envoyée le {new Date(suppression.created_at).toLocaleDateString('fr-FR')} ·
-                {' '}Quantinvo vous recontacte. Rien n&apos;est supprimé tant que la demande n&apos;est pas honorée.
+                {' '}Quantinvo vous recontacte. Le magasin continue de fonctionner jusqu&apos;à sa suppression.
               </div>
             </div>
             <button type="button" className="link-btn" onClick={() => annulerSuppression(suppression)}>
