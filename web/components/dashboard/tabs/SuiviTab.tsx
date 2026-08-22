@@ -71,7 +71,9 @@ export function SuiviTab({
 
   return (
     <div>
-      <div className="dash-stats">
+      {/* Cinq tuiles : la grille de quatre laisserait la cinquième seule sur
+          une deuxième ligne. Voir `.dash-stats-5` dans globals.css. */}
+      <div className="dash-stats dash-stats-5">
         <Stat
           label="Appareils connectés"
           value={String(live.devices)}
@@ -83,7 +85,15 @@ export function SuiviTab({
         <Stat
           label="Pièces comptées"
           value={fmtQty(totals.counted)}
-          sub={`${fmtQty(totals.audited)} auditées`}
+          sub={plural(totals.audited, 'auditée', 'auditées')}
+        />
+        {/* Les pièces disent le volume, les références disent l'étendue :
+            300 pièces sur 4 références n'est pas le même inventaire que
+            300 pièces sur 250 références. */}
+        <Stat
+          label="Références comptées"
+          value={fmtQty(totals.countedSkus)}
+          sub={plural(totals.auditedSkus, 'auditée', 'auditées')}
         />
       </div>
 

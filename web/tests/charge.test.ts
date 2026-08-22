@@ -293,3 +293,26 @@ describe('le rapport d’inventaire', () => {
     expect(mobile).toContain("uncounted: 'Non compté'")
   })
 })
+
+describe('la tuile « Références comptées »', () => {
+  const suivi = readFileSync(path.resolve(__dirname, '../components/dashboard/tabs/SuiviTab.tsx'), 'utf8')
+
+  it('affiche enfin `counted_skus`, à droite des pièces', () => {
+    // Il traversait la RPC, le hook et les types sans jamais être rendu.
+    expect(suivi).toContain('Références comptées')
+    expect(suivi).toContain('totals.countedSkus')
+    expect(suivi.indexOf('Pièces comptées')).toBeLessThan(suivi.indexOf('Références comptées'))
+  })
+
+  it('accorde son sous-titre', () => {
+    // « 1 auditées » se lisait sur les deux tuiles.
+    expect(suivi).toContain("plural(totals.audited, 'auditée', 'auditées')")
+    expect(suivi).toContain("plural(totals.auditedSkus, 'auditée', 'auditées')")
+  })
+
+  it('tient sur une ligne à cinq tuiles', () => {
+    const css = readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8')
+    expect(suivi).toContain('dash-stats dash-stats-5')
+    expect(css).toContain('.dash-stats-5 { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); }')
+  })
+})

@@ -659,6 +659,9 @@ a { color: inherit; text-decoration: none; }
 }
 
 .dash-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+/* Cinq tuiles sur une ligne quand la place le permet, sans forcer : à quatre
+   colonnes fixes, la cinquième se retrouvait seule sur une deuxième ligne. */
+.dash-stats-5 { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); }
 .dash-stat { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px; box-shadow: var(--shadow-card); }
 .dash-stat-value { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
 .dash-stat-label { color: var(--text-2); font-size: 12px; margin-top: 4px; }

@@ -422,10 +422,22 @@ Deux limites à connaître :
    positifs, au prix de ce silence. En mode balises le problème n'existe pas :
    clôturer une balise dit « j'ai fini ici ». Sur « LA Bruket », 4 lignes sont
    dans ce cas.
-2. **`counted_skus` n'est affiché nulle part** — il traverse la RPC, le hook et
-   les types sans jamais être rendu. À retirer ou à afficher, mais ne pas le
-   laisser croire utilisé. Au passage, il compterait les SKU dont le net est
-   nul (comptés puis corrigés à zéro) : 2 sur 25 pour « HV 200826 ».
+2. **`counted_skus` n'était affiché nulle part** — il traversait la RPC, le
+   hook et les types sans jamais être rendu. Il l'est depuis le 22 août 2026 :
+   tuile « Références comptées », à droite de « Pièces comptées », avec les
+   références auditées en sous-titre. Les pièces disent le volume, les
+   références disent l'étendue — 300 pièces sur 4 références n'est pas le même
+   inventaire que 300 pièces sur 250.
+
+   À savoir : ce compte inclut les SKU dont le net est **nul** (comptés puis
+   corrigés à zéro) — 2 sur 25 pour « HV 200826 ». C'est défendable (l'article
+   a bien été traité) mais ce n'est pas « références en stock ».
+
+   La rangée passe à cinq tuiles : `.dash-stats-5` remplace la grille de
+   quatre colonnes fixes par `auto-fit` à 116 px minimum, faute de quoi la
+   cinquième se retrouvait seule sur une deuxième ligne entre 900 et 1100 px
+   de large. Sous 900 px, la règle générale à deux colonnes reprend la main —
+   elle est plus bas dans la feuille, donc elle gagne.
 
 # Supprimer et retirer depuis l'app (22 août 2026)
 
