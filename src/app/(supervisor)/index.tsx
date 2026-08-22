@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { router } from 'expo-router'
@@ -43,20 +43,55 @@ function CorbeilleIcon({ color }: { color: string }) {
   )
 }
 
-function SessionCard({ session, theme, styles, onDelete }: {
+/** Case à cocher — dessinée, pour ne pas dépendre d'un caractère. */
+function Case({ coche, theme }: { coche: boolean; theme: Theme }) {
+  return (
+    <View style={{
+      width: 22, height: 22, borderRadius: 6, borderWidth: 1.6,
+      borderColor: coche ? theme.accent : theme.borderStrong,
+      backgroundColor: coche ? theme.accent : 'transparent',
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      {coche && (
+        <Svg width={14} height={14} viewBox="0 0 24 24">
+          <Path d="M5 13l4 4L19 7" stroke={theme.onAccent} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </Svg>
+      )}
+    </View>
+  )
+}
+
+function SessionCard({ session, theme, styles, onDelete, selection, coche, onToggle }: {
   session: Session
   theme: Theme
   styles: ReturnType<typeof makeStyles>
   /** Absent quand on n'a pas le droit de supprimer : la corbeille n'apparaît pas. */
   onDelete?: () => void
+  /** Vrai quand l'écran est en mode sélection. */
+  selection?: boolean
+  coche?: boolean
+  /** Absent = cet inventaire n'est pas sélectionnable (on ne peut pas le supprimer). */
+  onToggle?: () => void
 }) {
   const sc = statusColors(theme)[session.status] ?? { fg: theme.textMuted, bg: theme.accentSoft }
+  // En mode sélection, toucher la carte coche au lieu d'ouvrir : on ne veut pas
+  // quitter l'écran au milieu d'une sélection.
+  const selectionnable = selection && !!onToggle
   return (
     <Pressable
-      style={styles.card}
-      onPress={() => router.push(`/(supervisor)/${session.id}`)}
+      style={[styles.card, coche && styles.cardSelected, selection && !selectionnable && styles.cardDimmed]}
+      onPress={selection ? (onToggle ?? (() => {})) : () => router.push(`/(supervisor)/${session.id}`)}
+      onLongPress={!selection && onToggle ? onToggle : undefined}
+      delayLongPress={350}
     >
       <View style={styles.cardHeader}>
+        {selection && (
+          <View style={{ marginRight: 10 }}>
+            {selectionnable
+              ? <Case coche={!!coche} theme={theme} />
+              : <View style={{ width: 22, height: 22 }} />}
+          </View>
+        )}
         <Text style={styles.sessionName} numberOfLines={1}>{session.name || session.store_name}</Text>
         <View style={[styles.badge, { backgroundColor: sc.bg }]}>
           <View style={[styles.badgeDot, { backgroundColor: sc.fg }]} />
@@ -67,7 +102,7 @@ function SessionCard({ session, theme, styles, onDelete }: {
         {/* Comme sur le site : la corbeille n'apparaît que sur ce qu'on peut
             réellement supprimer, plutôt que de laisser découvrir le refus
             après coup. */}
-        {onDelete && (
+        {onDelete && !selection && (
           <Pressable style={styles.trashBtn} onPress={onDelete} hitSlop={10}>
             <CorbeilleIcon color={theme.textMuted} />
           </Pressable>
@@ -92,6 +127,8 @@ export default function SupervisorHomeScreen() {
 
   const queryClient = useQueryClient()
   const onRefresh = useCallback(() => { refetch() }, [refetch])
+  const [selection, setSelection] = useState(false)
+  const [coches, setCoches] = useState<string[]>([])
 
   /**
    * Qui peut supprimer : le créateur, et l'administrateur de l'entreprise pour
@@ -134,6 +171,72 @@ export default function SupervisorHomeScreen() {
       ],
     )
   }, [queryClient])
+
+  const selectionnables = useMemo(
+    () => (sessions ?? []).filter(peutSupprimer).map(s => s.id),
+    [sessions, peutSupprimer],
+  )
+  const toutCoche = selectionnables.length > 0 && coches.length === selectionnables.length
+
+  const basculer = useCallback((id: string) => {
+    setSelection(true)
+    setCoches(c => (c.includes(id) ? c.filter(x => x !== id) : [...c, id]))
+  }, [])
+
+  const quitterSelection = useCallback(() => { setSelection(false); setCoches([]) }, [])
+
+  /**
+   * Suppression groupée — il n'existe pas de RPC pour cela.
+   *
+   * On appelle `delete_session` une fois par inventaire et **on rapporte les
+   * échecs** au lieu d'annoncer un succès global : sur dix inventaires, un
+   * refus ne doit pas passer inaperçu. Même règle que le site.
+   */
+  const supprimerSelection = useCallback(() => {
+    const choisis = (sessions ?? []).filter(s => coches.includes(s.id))
+    if (choisis.length === 0) return
+    const noms = choisis.map(s => s.name || s.store_name)
+    // La confirmation nomme ce qu'on supprime — huit au plus, sinon la boîte
+    // de dialogue devient illisible sur un téléphone.
+    const liste = noms.slice(0, 8).map(n => `• ${n}`).join('\n')
+    const reste = noms.length > 8 ? `\n• et ${noms.length - 8} autre${noms.length - 8 > 1 ? 's' : ''}` : ''
+    const enCours = choisis.filter(s => s.status !== 'closed').length
+    Alert.alert(
+      choisis.length === 1 ? 'Supprimer cet inventaire ?' : `Supprimer ces ${choisis.length} inventaires ?`,
+      [
+        liste + reste,
+        enCours > 0
+          ? `${enCours} d'entre eux ${enCours > 1 ? 'ne sont pas clôturés' : "n'est pas clôturé"}.`
+          : null,
+        'Comptages, stock théorique, audits, membres et référentiel seront supprimés définitivement.',
+      ].filter(Boolean).join('\n\n'),
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            const echecs: string[] = []
+            for (const s of choisis) {
+              try {
+                await deleteSessionPermanently(s.id)
+              } catch (e) {
+                echecs.push(`${s.name || s.store_name} : ${errorMessage(e)}`)
+              }
+            }
+            await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+            quitterSelection()
+            if (echecs.length > 0) {
+              Alert.alert(
+                echecs.length === choisis.length ? 'Suppression impossible' : 'Suppression partielle',
+                `${choisis.length - echecs.length} sur ${choisis.length} supprimé${choisis.length - echecs.length > 1 ? 's' : ''}.\n\n${echecs.join('\n')}`,
+              )
+            }
+          },
+        },
+      ],
+    )
+  }, [sessions, coches, queryClient, quitterSelection])
 
   /**
    * Deux listes, pas une : ce qu'on a créé, et ce à quoi on a été invité.
@@ -189,6 +292,9 @@ export default function SupervisorHomeScreen() {
                 theme={theme}
                 styles={styles}
                 onDelete={peutSupprimer(item.session) ? () => confirmerSuppression(item.session) : undefined}
+                selection={selection}
+                coche={coches.includes(item.session.id)}
+                onToggle={peutSupprimer(item.session) ? () => basculer(item.session.id) : undefined}
               />
             )
           }
@@ -197,6 +303,14 @@ export default function SupervisorHomeScreen() {
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
+              {/* Le mode sélection s'ouvre aussi par un appui long sur une
+                  carte ; ce bouton le rend découvrable, l'appui long ne
+                  s'invente pas. */}
+              {selectionnables.length > 0 && !selection && (
+                <Pressable style={styles.selBtn} onPress={() => setSelection(true)} hitSlop={8}>
+                  <Text style={styles.selBtnText}>Sélectionner</Text>
+                </Pressable>
+              )}
             </View>
           }
           ListEmptyComponent={
@@ -207,9 +321,38 @@ export default function SupervisorHomeScreen() {
         />
       )}
 
-      <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
-        <Text style={styles.fabText}>+ Nouvel inventaire</Text>
-      </Pressable>
+      {selection ? (
+        <View style={styles.barre}>
+          <View style={styles.barreRangee}>
+            <Text style={styles.barreCompte} numberOfLines={1}>
+              {coches.length === 0
+                ? 'Rien de sélectionné'
+                : `${coches.length} sélectionné${coches.length > 1 ? 's' : ''}`}
+            </Text>
+            <Pressable hitSlop={8} onPress={() => setCoches(toutCoche ? [] : selectionnables)}>
+              <Text style={styles.barreLien}>{toutCoche ? 'Tout décocher' : 'Tout sélectionner'}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.barreRangee}>
+            <Pressable hitSlop={8} onPress={quitterSelection} style={{ paddingHorizontal: Spacing.sm }}>
+              <Text style={styles.barreLien}>Annuler</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.barreSuppr, coches.length === 0 && styles.barreSupprOff]}
+              disabled={coches.length === 0}
+              onPress={supprimerSelection}
+            >
+              <Text style={styles.barreSupprText}>
+                Supprimer{coches.length > 0 ? ` (${coches.length})` : ''}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
+          <Text style={styles.fabText}>+ Nouvel inventaire</Text>
+        </Pressable>
+      )}
     </SafeAreaView>
   )
 }
@@ -229,6 +372,28 @@ function makeStyles(t: Theme) {
       borderWidth: 1, borderColor: t.hairline, gap: Spacing.xs, ...t.shadowCard,
     },
     trashBtn: { padding: 2, marginLeft: 2 },
+    cardSelected: { borderColor: t.accent, backgroundColor: t.accentSoft },
+    // Ce qu'on ne peut pas supprimer reste lisible, mais s'efface : la
+    // sélection ne le concerne pas.
+    cardDimmed: { opacity: 0.55 },
+    // Deux rangées, pas une : à quatre éléments sur la largeur d'un téléphone,
+    // « 1 sélectionné » se cassait sur trois lignes.
+    barre: {
+      position: 'absolute', left: 0, right: 0, bottom: 0, gap: Spacing.md,
+      paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.xxl,
+      backgroundColor: t.surface, borderTopWidth: 1, borderTopColor: t.hairline,
+    },
+    barreRangee: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+    barreCompte: { flex: 1, fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
+    barreLien: { fontSize: 14, fontFamily: Font.semibold, color: t.accent },
+    barreSuppr: {
+      flex: 1, height: 44, borderRadius: Radius.md,
+      backgroundColor: t.danger, alignItems: 'center', justifyContent: 'center',
+    },
+    barreSupprText: { fontSize: 14, fontFamily: Font.bold, color: '#fff' },
+    barreSupprOff: { opacity: 0.4 },
+    selBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
+    selBtnText: { fontSize: 14, fontFamily: Font.semibold, color: t.accent },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     sessionName: { flex: 1, fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2, marginRight: Spacing.sm },
     badge: {

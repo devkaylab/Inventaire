@@ -368,10 +368,25 @@ sûreté du geste :
   personne peut compter dans plusieurs magasins supervisés par des personnes
   différentes ; la confirmation nomme donc la personne **et** le magasin.
 
-Différence assumée avec le site : **pas de sélection multiple**. Les cases à
-cocher et la barre « Supprimer (N) » sont une affordance de bureau ; sur
-téléphone, une corbeille par carte avec confirmation nommée suffit et se
-touche mieux.
+**La sélection multiple existe aussi sur l'app** (ajoutée le même jour, à la
+demande de Julien). Elle reprend les trois précautions du site — « Tout
+sélectionner » ne porte que sur ce qui est sélectionnable, la confirmation
+**nomme** les inventaires (huit au plus, puis « et N autres ») et signale ceux
+encore en cours, et la suppression appelle `delete_session` **une fois par
+inventaire** en rapportant les échecs (« Suppression partielle : 7 sur 10 »).
+
+Deux adaptations au doigt :
+
+- on y entre par **appui long** sur une carte *ou* par le bouton
+  « Sélectionner » de l'en-tête — l'appui long ne s'invente pas, il ne peut
+  pas être le seul chemin ;
+- la barre d'action est sur **deux rangées**. À quatre éléments sur la largeur
+  d'un téléphone, « 1 sélectionné » se cassait sur trois lignes (constaté au
+  simulateur). Elle remplace le bouton « + Nouvel inventaire » le temps de la
+  sélection.
+
+Ce qui n'est pas sélectionnable (les inventaires invités) reste lisible mais
+s'efface, et sa case n'apparaît pas.
 
 Au passage, la croix d'annulation d'une invitation était le caractère « ✕» :
 c'est un tracé désormais, comme le reste des icônes.

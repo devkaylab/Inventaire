@@ -353,3 +353,37 @@ describe('supprimer et retirer depuis l’app', () => {
     expect(equipe).toContain('CroixIcon')
   })
 })
+
+describe('sélection multiple sur l’app', () => {
+  const liste = lire('app/(supervisor)/index.tsx')
+
+  it('ne coche que ce qu’on peut supprimer', () => {
+    // Sur le site, la case n'apparaît que là où la suppression est permise.
+    expect(liste).toContain('selectionnables')
+    expect(liste).toContain('onToggle={peutSupprimer(item.session)')
+  })
+
+  it('« Tout sélectionner » ne porte que sur ce qui est sélectionnable', () => {
+    expect(liste).toContain('setCoches(toutCoche ? [] : selectionnables)')
+  })
+
+  it('la confirmation nomme les inventaires, huit au plus', () => {
+    // Au-delà, la boîte de dialogue devient illisible sur un téléphone.
+    expect(liste).toContain('noms.slice(0, 8)')
+    expect(liste).toContain('et ${noms.length - 8} autre')
+    expect(liste).toContain('clôturé')
+  })
+
+  it('supprime un par un et rapporte les échecs', () => {
+    // Il n'existe pas de RPC de suppression groupée : sur dix inventaires, un
+    // refus ne doit pas passer inaperçu derrière un succès global.
+    expect(liste).toContain('const echecs: string[] = []')
+    expect(liste).toContain('Suppression partielle')
+    expect(liste).not.toContain('delete_sessions')
+  })
+
+  it('reste atteignable sans deviner l’appui long', () => {
+    expect(liste).toContain('Sélectionner')
+    expect(liste).toContain('onLongPress')
+  })
+})
