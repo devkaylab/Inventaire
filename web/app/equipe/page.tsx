@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { AddCounter } from '@/components/dashboard/AddCounter'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { getMyCompany, type Company } from '@/lib/account'
 
 type Store = { id: string; name: string }
@@ -65,6 +66,7 @@ function BadgeEnAttente() {
 
 export default function EquipePage() {
   const guard = useAuthGuard('supervisor')
+  const confirm = useConfirm()
   const [company, setCompany] = useState<Company | null>(null)
   const [ca, setCa] = useState<TeamCA | null>(null)
   const [sup, setSup] = useState<TeamSup | null>(null)
@@ -123,6 +125,36 @@ export default function EquipePage() {
     rafraichir()
   }
 
+  /**
+   * Supprimer un compte de l'entreprise — administrateur d'entreprise seulement.
+   *
+   * « Retirer les accès » et « Supprimer le compte » sont voisins à l'écran et
+   * n'ont rien de commun : le premier laisse le compte en vie, le second
+   * l'efface. D'où la recopie du nom — un clic de travers ne doit pas suffire.
+   *
+   * Ce qui est dit dans la confirmation est ce que fait vraiment `ca_delete_user` :
+   * les comptages sont conservés mais détachés, donc le rapport d'un inventaire
+   * passé ne dira plus qui a compté ces lignes.
+   */
+  async function supprimerCompte(p: { id: string; full_name: string | null; email: string | null }) {
+    const nom = (p.full_name ?? '').trim()
+    const ok = await confirm({
+      title: 'Supprimer définitivement ce compte ?',
+      message: 'Cette action est irréversible et ne peut pas être annulée.',
+      details: [
+        `${nom || 'Sans nom'} — ${p.email ?? 'adresse inconnue'}`,
+        'La personne perd l’accès à Quantinvo immédiatement.',
+        'Ses comptages sont conservés, mais son nom en disparaît : les rapports des inventaires passés ne diront plus qui a compté ces lignes.',
+        'Ses invitations en cours sont annulées.',
+      ],
+      confirmLabel: 'Supprimer définitivement',
+      tone: 'danger',
+      requireText: nom || p.email || 'SUPPRIMER',
+    })
+    if (!ok) return
+    appliquer('ca_delete_user', { p_user: p.id })
+  }
+
   if (guard.status !== 'ready') {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
@@ -130,6 +162,13 @@ export default function EquipePage() {
   const storeById: Record<string, Store> = {}
   for (const s of ca?.stores ?? []) storeById[s.id] = s
   const superviseurs = (ca?.members ?? []).filter((m) => m.role === 'supervisor')
+  // Les compteurs de l'entreprise que la liste par magasin ne montre pas :
+  // l'administrateur ne supervise pas forcément les magasins où ils comptent,
+  // et son droit de suppression, lui, porte sur toute l'entreprise.
+  const vusParMagasin = new Set((sup?.stores ?? []).flatMap((s) => s.counters.map((c) => c.id)))
+  const autresCompteurs = estAdmin
+    ? (ca?.members ?? []).filter((m) => m.role !== 'supervisor' && !vusParMagasin.has(m.id))
+    : []
 
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
@@ -162,14 +201,26 @@ export default function EquipePage() {
                       {!m.is_active && <BadgeEnAttente />}
                       <div className="muted small">{m.email}</div>
                     </div>
+                    {/* Sa propre ligne et celle d'un autre administrateur n'ont
+                        aucune action : ces comptes-là restent chez Quantinvo. */}
                     {!m.is_company_admin && (
-                      <button
-                        className="link-btn danger-link"
-                        onClick={() => {
-                          if (!confirm(`Retirer tous les accès de ${m.full_name || 'cette personne'} ?\n\nSon compte n'est pas supprimé, mais il n'aura plus accès à aucun magasin.`)) return
-                          appliquer('ca_remove_supervisor', { p_user: m.id })
-                        }}
-                      >Retirer les accès</button>
+                      <div className="req-actions">
+                        <button
+                          className="link-btn"
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: 'Retirer tous les accès ?',
+                              message: `${m.full_name || 'Cette personne'} garde son compte, mais n’aura plus accès à aucun magasin.`,
+                              confirmLabel: 'Retirer les accès',
+                            })
+                            if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
+                          }}
+                        >Retirer les accès</button>
+                        <span className="action-sep" />
+                        <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
+                          Supprimer le compte
+                        </button>
+                      </div>
                     )}
                   </div>
                   <div className="store-sup">
@@ -243,21 +294,68 @@ export default function EquipePage() {
                         {c.last_count_at && ` · dernier le ${jourCourt(c.last_count_at)}`}
                       </div>
                     </div>
-                    {/* Le geste quotidien du superviseur : un saisonnier part,
-                        il le retire de SON magasin — pas de partout. */}
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => {
-                        if (!confirm(`Retirer ${c.full_name || 'cette personne'} du magasin ${s.name} ?\n\nSon compte n'est pas supprimé : elle n'aura simplement plus accès aux inventaires de ce magasin.`)) return
-                        appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
-                      }}
-                    >Retirer</button>
+                    <div className="req-actions">
+                      {/* Le geste quotidien du superviseur : un saisonnier part,
+                          il le retire de SON magasin — pas de partout. */}
+                      <button
+                        className="link-btn"
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: `Retirer du magasin ${s.name} ?`,
+                            message: `${c.full_name || 'Cette personne'} garde son compte : elle n’aura simplement plus accès aux inventaires de ce magasin.`,
+                            confirmLabel: 'Retirer du magasin',
+                          })
+                          if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
+                        }}
+                      >Retirer du magasin</button>
+                      {estAdmin && (
+                        <>
+                          <span className="action-sep" />
+                          <button className="link-btn danger-link" onClick={() => supprimerCompte(c)}>
+                            Supprimer le compte
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
         ))
+      )}
+
+      {/* ── Compteurs de l'entreprise hors des magasins supervisés ──
+          L'administrateur peut supprimer un compte de toute son entreprise ;
+          sans ce bloc, il ne verrait jamais ceux qui comptent ailleurs. Le
+          retrait d'un magasin, lui, reste le geste de leur superviseur. ── */}
+      {autresCompteurs.length > 0 && (
+        <>
+          <div className="dash-sub">Compteurs · autres magasins</div>
+          <div className="req-list">
+            {autresCompteurs.map((m) => (
+              <div className="req-row" key={m.id}>
+                <div>
+                  <div className="req-name">
+                    {m.full_name || 'Sans nom'}
+                    {!m.is_active && <BadgeEnAttente />}
+                  </div>
+                  <div className="muted small">
+                    {m.email}
+                    {m.store_ids.length > 0
+                      ? ` · ${m.store_ids.map((sid) => storeById[sid]?.name || 'Magasin').join(', ')}`
+                      : ' · aucun magasin'}
+                  </div>
+                </div>
+                <div className="req-actions">
+                  <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
+                    Supprimer le compte
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* ── Invitations en cours ── */}
@@ -281,9 +379,14 @@ export default function EquipePage() {
                     mal tapée doit pouvoir se rattraper. */}
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    if (!confirm(`Annuler l'invitation de ${i.first_name} ${i.last_name} ?`)) return
-                    appliquer(estAdmin ? 'ca_cancel_invitation' : 'cancel_my_invitation', { p_id: i.id })
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Annuler cette invitation ?',
+                      message: `${i.first_name} ${i.last_name} ne recevra plus l’accès. Vous pourrez l’inviter à nouveau.`,
+                      confirmLabel: 'Annuler l’invitation',
+                      cancelLabel: 'Revenir',
+                    })
+                    if (ok) appliquer(estAdmin ? 'ca_cancel_invitation' : 'cancel_my_invitation', { p_id: i.id })
                   }}
                 >Annuler</button>
               </div>

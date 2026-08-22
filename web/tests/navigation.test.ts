@@ -426,8 +426,14 @@ describe('un superviseur gère vraiment son équipe', () => {
 
   it('le bouton Retirer n’est réservé à personne', () => {
     const bloc = equipe.split('Compteurs · ')[1]?.split('Invitations en cours')[0] ?? ''
-    expect(bloc).toContain('>Retirer</button>')
-    expect(bloc, 'le retrait ne doit pas être conditionné au rôle').not.toContain('estAdmin &&')
+    expect(bloc).toContain('>Retirer du magasin</button>')
+    // Amendé le 22 août 2026 : la ligne porte désormais une seconde action,
+    // « Supprimer le compte », qui elle est réservée à l'administrateur
+    // d'entreprise. La garde porte donc sur ce qui précède : le retrait d'un
+    // magasin, lui, ne doit être conditionné à aucun rôle.
+    const avantLaSuppression = bloc.split('{estAdmin && (')[0]
+    expect(avantLaSuppression).toContain('remove_counter_from_store')
+    expect(avantLaSuppression, 'le retrait ne doit pas être conditionné au rôle').not.toContain('estAdmin')
   })
 
   it('le retrait vise UN magasin, pas tous', () => {

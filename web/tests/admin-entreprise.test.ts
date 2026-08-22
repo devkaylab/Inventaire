@@ -210,3 +210,79 @@ describe('une personne d’une autre entreprise', () => {
     expect(ecranSite).toContain('banner banner-warn')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L'administrateur d'entreprise supprime les comptes de son entreprise
+// (décision de Julien, 22 août 2026).
+//
+// Ce que ces tests empêchent de défaire : les trois bornes du droit (pas
+// soi-même, pas un autre administrateur, pas une autre entreprise), la trace
+// au journal, et la confirmation délibérée à l'écran — « Supprimer le compte »
+// est à deux centimètres de « Retirer les accès ».
+
+describe('supprimer un compte de son entreprise', () => {
+  const mSupp = lire('../../supabase/migrations/20260822120001_ca_supprimer_un_compte.sql')
+  const corps = mSupp.split('function public.ca_delete_user(')[1]?.split('$$;')[0] ?? ''
+
+  it('n’est ouverte qu’à l’administrateur d’entreprise', () => {
+    expect(corps).toContain('if not public.is_company_admin() then')
+    // La garde porte l'exigence aal2 conditionnelle : une session au mot de
+    // passe seul est refusée par le serveur, pas seulement par l'écran.
+    expect(corps.indexOf('is_company_admin()')).toBeLessThan(corps.indexOf('delete from auth.users'))
+  })
+
+  it('refuse son propre compte et celui d’un autre administrateur', () => {
+    expect(corps).toContain('if p_user = auth.uid() then')
+    expect(corps).toContain('v_target.is_company_admin or coalesce(v_target.is_admin, false)')
+  })
+
+  it('ne sort jamais de son entreprise', () => {
+    expect(corps).toContain('where id = p_user and company_id = v_company')
+  })
+
+  it('fige l’identité avant de supprimer, et journalise', () => {
+    // Après le delete, ni le profil ni l'adresse n'existent : le journal
+    // n'aurait plus qu'un identifiant à afficher dans un an.
+    expect(corps.indexOf('into v_label, v_email')).toBeLessThan(corps.indexOf('delete from auth.users'))
+    expect(corps).toContain("log_company_action(v_company, 'compte_supprime'")
+  })
+
+  it('conserve les comptages au lieu de les détruire', () => {
+    // Le résultat d'un inventaire clôturé appartient à l'entreprise : on
+    // détache, on n'efface pas.
+    expect(corps).toContain('update public.counts             set counted_by = null')
+    expect(corps).not.toMatch(/delete from public\.counts/)
+  })
+
+  it('n’est pas exécutable par anon', () => {
+    expect(mSupp).toMatch(/revoke all on function public\.ca_delete_user\(uuid\) from public, anon/)
+    expect(mSupp).toMatch(/grant execute on function public\.ca_delete_user\(uuid\) to authenticated/)
+  })
+
+  it('exige un geste délibéré à l’écran', () => {
+    const fn = pageEquipe.split('async function supprimerCompte(')[1]?.split('\n  }')[0] ?? ''
+    expect(fn).toContain('requireText')
+    expect(fn).toContain("tone: 'danger'")
+    expect(fn).toContain("appliquer('ca_delete_user'")
+  })
+
+  it('dit ce que la suppression fait aux rapports déjà produits', () => {
+    // C'est la conséquence que personne ne devine : les chiffres restent,
+    // le nom disparaît.
+    expect(pageEquipe).toContain('ne diront plus qui a compté ces lignes')
+  })
+
+  it('ne propose jamais de supprimer un administrateur', () => {
+    // Le bouton vit dans la branche `!m.is_company_admin`, celle qui porte
+    // déjà le retrait des accès.
+    const bloc = pageEquipe.split('{!m.is_company_admin && (')[1]?.split('store-sup')[0] ?? ''
+    expect(bloc).toContain('supprimerCompte(m)')
+  })
+
+  it('montre aussi les compteurs des magasins que l’administrateur ne supervise pas', () => {
+    // Sans ce bloc, le droit serait décoratif : un administrateur de siège ne
+    // supervise aucun magasin et ne verrait donc aucun compteur.
+    expect(pageEquipe).toContain('autresCompteurs')
+    expect(pageEquipe).toContain('Compteurs · autres magasins')
+  })
+})
