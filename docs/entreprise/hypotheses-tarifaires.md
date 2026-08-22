@@ -9,8 +9,12 @@ par compteur (écartée).
 
 > **Décision du 21 août 2026 — c'est la tarification au volume de stock qui est
 > retenue** (hypothèse 1). Le prix fixe par magasin a été chiffré puis écarté.
-> Ce document reste pour garder la trace du raisonnement : si la question
-> revient, elle repart d'ici plutôt que de zéro.
+>
+> **Rouvert le 22 août 2026** : la grille au volume ne se contrôle pas, et le
+> prix de l'offre concurrente (≈ 10 000 € par magasin et par an) montre que le
+> prix fixe avait été calé deux fois trop bas. Voir la « Reprise du 22 août »
+> en fin de document — recommandation : **6 900 € par magasin**, décision en
+> attente sur le sort de la boutique indépendante.
 
 > Comme la check-list de création, ce document est une grille de travail, pas
 > un conseil comptable. Les taux d'imposition utilisés sont ceux connus début
@@ -79,7 +83,11 @@ devis, une clause de régularisation, et un recoupement fait à la main.
 
 ---
 
-## Hypothèse 2 — prix fixe par magasin (écartée le 21 août 2026)
+## Hypothèse 2 — prix fixe par magasin (écartée le 21 août, ROUVERTE le 22)
+
+> **Lire la « Reprise du 22 août 2026 » en fin de document avant celle-ci.**
+> Le prix de l'offre concurrente, appris depuis, montre que cette hypothèse
+> avait été écartée sur un mauvais calage — 4 800 € était deux fois trop bas.
 
 Un seul prix, quelle que soit la taille du magasin.
 
@@ -370,3 +378,89 @@ consenti devient la référence pour tous les suivants.
 **Le seul emprunt à faire tout de suite** est la dégressivité par nombre de
 magasins de l'hypothèse 3 (−10 / −20 / −30 %), qui manque à la grille retenue
 et qui servira au premier prospect à plusieurs magasins.
+
+---
+
+## Reprise du 22 août 2026 — l'hypothèse 2, recalée sur le prix du marché
+
+Constat de Julien : la grille au volume ne se contrôle pas, le modèle au
+compteur est trop compliqué à expliquer au client, et **l'offre entreprise
+comparable se vend autour de 10 000 € par an et par magasin**, quel que soit
+le volume de stock et le nombre de compteurs, terminaux durcis en supplément.
+
+Ce chiffre est **confidentiel** : il vient du métier de Julien et n'est pas
+publié. Il sert à caler notre prix, il ne se recopie ni dans un devis, ni dans
+le deck, ni sur le site.
+
+Présentation chiffrée en artifact :
+https://claude.ai/code/artifact/f73e19e1-ebca-48bb-b18f-53e93727379c
+
+**Il change la conclusion du 21 août.** Le prix fixe avait été chiffré à
+4 800 € et écarté parce qu'il bradait le haut de marché — mais ce chiffre
+venait de nulle part, faute de prix public en face. Avec l'ancre à 10 000 €,
+4 800 € n'était pas trop cher pour les petits : **il était deux fois trop bas
+pour le marché**. Ce n'est pas le modèle qui était mauvais, c'est son calage.
+
+### Prix recommandé
+
+**6 900 € HT par an et par magasin, jusqu'à 500 000 unités, sur devis au-delà.**
+Soit 4 106 € nets, 575 € par mois à l'oral, et 31 % sous le repère du marché —
+sans terminal à acheter, ce qui creuse encore l'écart de coût total pour le
+client.
+
+Le chiffre n'est pas arbitraire : **c'est le prix de la grande surface dans la
+grille au volume** (6 600 €), donc le magasin médian de la cible. On ne change
+pas de niveau de prix, on cesse de le faire dépendre d'une déclaration
+invérifiable.
+
+| Prix unique | Net | Par mois | Face au repère | Qui achète |
+|---|---|---|---|---|
+| 3 500 € | 2 083 € | 292 € | −65 % | tout le monde, mais on se place en entrée de gamme |
+| 4 800 € | 2 856 € | 400 € | −52 % | le calage du 21 août : sous le marché, et déjà trop cher pour la boutique |
+| **6 900 €** | **4 106 €** | **575 €** | **−31 %** | **recommandé** — magasin de chaîne et grande surface |
+| 8 400 € | 4 998 € | 700 € | −16 % | même cible, mais l'écart ne se voit plus assez |
+
+### Ce que ça change en revenu
+
+Panier moyen de 3 700 € (grille au volume) contre 6 900 € : **il faut deux
+fois moins de clients**. 28 magasins pour 100 000 € nets, contre 51. Et un
+client de vingt magasins, remise réseau de 20 % comprise, rapporte 110 400 € —
+soit exactement ce que la grille au volume aurait facturé au même parc, sans
+une seule déclaration à vérifier.
+
+Les nets par magasin sont calculés au coefficient marginal 0,525 (IS à 25 % au-delà de
+42 500 € de bénéfice, puis flat tax), pas à 0,595 : à ces volumes de clients,
+c'est celui qui s'applique.
+
+### La borne haute ne ramène pas le problème du contrôle
+
+C'est l'objection à traiter, puisque 500 000 unités reste un volume. La
+différence est décisive : dans la grille au volume, **chaque client** déclare
+son stock et une erreur coûte une tranche à chaque fois. Avec une borne unique,
+la déclaration ne concerne que les rares magasins géants — et **un magasin d'un
+million de pièces ne peut pas se cacher**. La borne ne tarife pas, elle ouvre
+une conversation avec les cinq pour cent qui la dépassent.
+
+### Ce qu'il reste à décider : la boutique indépendante
+
+Un prix unique n'est simple que si on ne fait **aucune** exception, et le
+premier prospect à un seul magasin testera la règle. Deux réponses tenables,
+à choisir maintenant plutôt qu'en rendez-vous :
+
+- **un seul chiffre** — 6 900 €, cible assumée sur le magasin de chaîne et la
+  grande surface ;
+- **deux chiffres** — 3 500 € pour l'enseigne indépendante à un seul magasin,
+  6 900 € au-delà. La condition « un seul magasin » se vérifie à l'œil,
+  contrairement à un volume de stock.
+
+### Conséquences produit si ce chemin est retenu
+
+- `stores.annual_price_cents` reste utile (remises réseau, cas particuliers),
+  mais le panier moyen d'estimation d'`admin_business_overview` passe de
+  2 200 € au prix unique.
+- Le **stock théorique du formulaire de demande** (`MagasinSaisie`, migration
+  `20260822140001`) ne sert plus à deviser. Ne pas retirer le champ pour
+  autant : il reste utile au dimensionnement et à la conversation sur la borne
+  haute — mais son texte doit cesser d'annoncer une tranche tarifaire.
+- Les articles 5.1, 6.3, 6.4 et 6.5 des CGV (déclaration et régularisation du
+  volume) se réduisent à une phrase sur la borne.
