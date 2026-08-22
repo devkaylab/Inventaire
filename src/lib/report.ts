@@ -3,11 +3,15 @@ import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 import type { SessionResultRow, SessionDetailRow } from '@/lib/queries'
 
+// À garder identique à `AUDIT_STATUS_LABELS` du site (web/lib/inventory.ts).
+// `uncounted` désigne un article attendu au stock théorique et jamais scanné :
+// il n'a pas de ligne d'audit, donc pas de statut d'audit.
 const STATUS_LABELS: Record<string, string> = {
   validated: 'Validé',
   resolved: 'Arbitré',
   failed: 'Écart de comptage',
   pending: 'En attente',
+  uncounted: 'Non compté',
 }
 
 export type ExportResult = { shared: boolean; uri: string; filename: string }

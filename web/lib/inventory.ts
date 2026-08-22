@@ -398,9 +398,18 @@ export const STATUS_LABELS: Record<string, string> = {
   open: 'Ouverte', counting: 'En cours', closed: 'Clôturée',
 }
 
-/** Libellés des statuts d'une ligne d'audit — identiques à l'export mobile. */
+/**
+ * Libellés des statuts d'une ligne du rapport — identiques à l'export mobile.
+ *
+ * `uncounted` n'est pas un statut d'audit : c'est un article **attendu au
+ * stock théorique et jamais scanné**. Il n'a donc aucune ligne d'audit, et ne
+ * peut pas porter l'un des quatre autres statuts. Il n'entre pas non plus dans
+ * le décompte « articles présentant encore un écart », qui ne vise que les
+ * écarts d'audit.
+ */
 export const AUDIT_STATUS_LABELS: Record<string, string> = {
   validated: 'Validé', resolved: 'Arbitré', failed: 'Écart de comptage', pending: 'En attente',
+  uncounted: 'Non compté',
 }
 
 /** Regroupe des inventaires par magasin, triés par nom de magasin. */
