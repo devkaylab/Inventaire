@@ -11,13 +11,14 @@
 // licence se facture par magasin, donc Quantinvo reste seul à créer. La
 // demande n'est qu'un signal ; elle n'ajoute rien.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
 
@@ -25,6 +26,8 @@ type StoreRequest = {
   id: string
   store_name: string
   message: string
+  units: number | null
+  sqm: number | null
   status: 'pending' | 'created' | 'rejected'
   requested_label: string
   admin_note: string
@@ -37,6 +40,8 @@ const STATUT: Record<StoreRequest['status'], string> = {
   created: 'Magasin créé',
   rejected: 'Refusée',
 }
+
+const nb = (n: number) => n.toLocaleString('fr-FR')
 
 /** Date courte, comme ailleurs dans l'espace connecté : « 22/08 ». */
 function jourCourt(iso: string) {
@@ -146,9 +151,13 @@ function DemandesMagasin() {
   const confirm = useConfirm()
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
   const [ouvert, setOuvert] = useState(false)
-  const [nom, setNom] = useState('')
+  const [saisie, setSaisie] = useState<SaisieMagasin>({ nom: '', stock: '', surface: '' })
   const [mot, setMot] = useState('')
   const [busy, setBusy] = useState(false)
+  const uid = useId()
+
+  const stock = nombreOuNull(saisie.stock)
+  const surface = nombreOuNull(saisie.surface)
 
   const charger = useCallback(async () => {
     const { data, error } = await supabase.rpc('ca_list_store_requests')
@@ -157,19 +166,30 @@ function DemandesMagasin() {
 
   useEffect(() => { charger() }, [charger])
 
+  function fermer() {
+    setOuvert(false)
+    setSaisie({ nom: '', stock: '', surface: '' })
+    setMot('')
+  }
+
   async function envoyer(e: React.FormEvent) {
     e.preventDefault()
-    const n = nom.trim()
-    if (!n) return
+    const n = saisie.nom.trim()
+    if (!n || !stock) return
     setBusy(true)
-    const { data, error } = await supabase.rpc('ca_request_store', { p_name: n, p_message: mot.trim() })
+    const { data, error } = await supabase.rpc('ca_request_store', {
+      p_name: n,
+      p_message: mot.trim(),
+      p_units: Math.round(stock),
+      p_sqm: surface === null ? null : Math.round(surface),
+    })
     setBusy(false)
     if (error || !data?.success) {
       toast.error(data?.error ?? error?.message ?? 'Demande impossible pour le moment.')
       return
     }
     toast.success('Demande envoyée. Quantinvo vous recontacte.')
-    setNom(''); setMot(''); setOuvert(false)
+    fermer()
     charger()
   }
 
@@ -205,7 +225,10 @@ function DemandesMagasin() {
                   </span>
                 </div>
                 <div className="muted small">
-                  Demandé le {jourCourt(d.created_at)}
+                  {d.units !== null && `${nb(d.units)} pièces`}
+                  {d.sqm !== null && ` · ${nb(d.sqm)} m²`}
+                  {d.units !== null && ' · '}
+                  demandé le {jourCourt(d.created_at)}
                   {d.requested_label && ` par ${d.requested_label}`}
                   {d.status === 'pending' && ' · Quantinvo vous recontacte'}
                 </div>
@@ -232,38 +255,41 @@ function DemandesMagasin() {
       ) : (
         <form onSubmit={envoyer} className="panel" style={{ marginTop: 12 }}>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Quantinvo crée le magasin et vous recontacte pour le devis&nbsp;: un magasin de plus est une licence de plus.
+            Le même formulaire qu&apos;à l&apos;inscription&nbsp;: la licence se tarife au volume de stock,
+            donc c&apos;est le stock qui donne le prix. Quantinvo crée le magasin et vous recontacte
+            pour le devis.
           </p>
-          <div className="field">
-            <label htmlFor="magasin-nom">Nom du magasin</label>
-            <input
-              id="magasin-nom"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-              placeholder="Lyon Bellecour"
-              maxLength={80}
-              autoFocus
-            />
-          </div>
-          <div className="field">
+
+          <MagasinSaisie
+            numero={1}
+            valeur={saisie}
+            idPrefix={`${uid}-demande`}
+            onChange={(champ, valeur) => setSaisie((v) => ({ ...v, [champ]: valeur }))}
+          />
+
+          <div className="field" style={{ marginTop: 14 }}>
             <label htmlFor="magasin-mot">Précision pour Quantinvo (facultatif)</label>
             <textarea
               id="magasin-mot"
               value={mot}
               onChange={(e) => setMot(e.target.value)}
-              placeholder="Date d'ouverture, volume de stock…"
+              placeholder="Date d'ouverture, contraintes particulières…"
               maxLength={500}
               rows={3}
             />
           </div>
+
           <div className="inline-form">
-            <button className="btn btn-primary" disabled={busy || !nom.trim()}>Envoyer la demande</button>
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => { setOuvert(false); setNom(''); setMot('') }}
-            >Annuler</button>
+            <button className="btn btn-primary" disabled={busy || !saisie.nom.trim() || !stock}>
+              Envoyer la demande
+            </button>
+            <button type="button" className="link-btn" onClick={fermer}>Annuler</button>
           </div>
+          {!stock && saisie.nom.trim() !== '' && (
+            <p className="field-hint" style={{ marginTop: 10 }}>
+              Le stock théorique est nécessaire&nbsp;: sans lui, aucun devis n&apos;est possible.
+            </p>
+          )}
         </form>
       )}
     </>

@@ -10,12 +10,24 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
-const migration = lire('../../supabase/migrations/20260822130001_demande_ajout_magasin.sql')
+const m1 = lire('../../supabase/migrations/20260822130001_demande_ajout_magasin.sql')
+// Le formulaire est passé à celui de /inscription le même jour : la demande
+// porte le volume de stock, sans quoi Quantinvo ne peut pas deviser.
+const m2 = lire('../../supabase/migrations/20260822140001_demande_magasin_volume.sql')
+const migration = m1 + '\n' + m2
 const pageMagasins = lire('../app/magasins/page.tsx')
+const pageInscription = lire('../app/inscription/page.tsx')
 const pageAdmin = lire('../app/admin/page.tsx')
 const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
 
-const corpsDe = (fn: string) => migration.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+/** La définition qui fait foi : la plus récente. */
+const corpsDe = (fn: string) => {
+  for (const src of [m2, m1]) {
+    const corps = src.split(`function public.${fn}(`)[1]?.split('$$;')[0]
+    if (corps) return corps
+  }
+  return ''
+}
 
 describe('la demande ne crée pas le magasin', () => {
   it('ca_request_store n’insère que dans store_requests', () => {
@@ -69,7 +81,7 @@ describe('gardes de base', () => {
 
   it('anon n’exécute aucune des six fonctions', () => {
     for (const sig of [
-      'ca_request_store\\(text, text\\)',
+      'ca_request_store\\(text, text, integer, integer\\)',
       'ca_list_store_requests\\(\\)',
       'ca_cancel_store_request\\(uuid\\)',
       'admin_list_store_requests\\(\\)',
@@ -127,5 +139,53 @@ describe('écrans', () => {
     expect(pageAdmin).toContain('demandes.length === 0')
     expect(ficheEntreprise).toContain("'admin_fulfil_store_request'")
     expect(ficheEntreprise).toContain("'admin_reject_store_request'")
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le formulaire de demande est celui de l'inscription (22 août 2026).
+//
+// Julien, capture à l'appui : « c'est ça qu'il faut comme formulaire de
+// demande ». Le premier jet ne demandait qu'un nom — or la licence se tarife
+// au volume de stock : une demande sans stock est un aller-retour de plus.
+
+describe('le formulaire porte le volume', () => {
+  it('le stock est exigé, la surface non', () => {
+    const corps = corpsDe('ca_request_store')
+    expect(corps).toContain('if p_units is null or p_units <= 0 then')
+    expect(corps).not.toMatch(/if p_sqm is null[\s\S]{0,60}return json_build_object\('success', false/)
+  })
+
+  it('ne laisse pas cohabiter deux signatures', () => {
+    // Postgres garderait les deux fonctions, et un appel à deux arguments
+    // deviendrait ambigu.
+    expect(m2).toContain('drop function if exists public.ca_request_store(text, text)')
+  })
+
+  it('les deux écrans partagent la même carte de saisie', () => {
+    // Une seule définition : les libellés, les unités et la tranche affichée
+    // ne doivent pas diverger entre l'inscription et la demande.
+    for (const page of [pageMagasins, pageInscription]) {
+      expect(page).toContain("from '@/components/MagasinSaisie'")
+      expect(page).toContain('<MagasinSaisie')
+    }
+  })
+
+  it('la demande transporte le stock et la surface', () => {
+    expect(pageMagasins).toContain('p_units')
+    expect(pageMagasins).toContain('p_sqm')
+    for (const fn of ['ca_list_store_requests', 'admin_list_store_requests']) {
+      expect(corpsDe(fn), fn).toContain("'units', r.units")
+    }
+  })
+
+  it('la console affiche la tranche, le client la voit à la frappe', () => {
+    // Le prix se lit là où l'on devise. Le recoupement stock / surface, lui,
+    // ne sort pas de la console : il indiquerait au client quel chiffre
+    // ajuster pour changer de tranche.
+    expect(ficheEntreprise).toContain('trancheDe')
+    expect(ficheEntreprise).toContain('densite')
+    expect(pageMagasins).not.toContain('densite')
+    expect(lire('../components/MagasinSaisie.tsx')).toContain('trancheDe')
   })
 })

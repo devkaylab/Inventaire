@@ -1009,13 +1009,47 @@ Côté écrans :
 - **La fiche entreprise** porte « Créer le magasin » et « Refuser », juste
   au-dessus des magasins : une demande précède la création.
 
+## Le formulaire de demande est celui de l'inscription
+
+Correction du même jour, capture de /inscription à l'appui : *« c'est ça qu'il
+faut comme formulaire de demande »*. Le premier jet ne demandait qu'un nom — or
+**la licence se tarife au volume de stock**. Une demande sans stock est une
+demande que Quantinvo ne peut pas deviser, donc un aller-retour de plus.
+
+La carte de saisie (nom, stock théorique, surface, **tranche tarifaire affichée
+à la frappe**) est sortie de `/inscription` dans
+`web/components/MagasinSaisie.tsx` et sert aux deux écrans. Une seule
+définition : les libellés, les unités et la tranche affichée ne doivent pas
+diverger entre le parcours d'inscription et la demande. Migration
+`20260822140001` (colonnes `units` / `sqm`).
+
+Trois points :
+
+- **Le stock est exigé, la surface non** : le premier donne le prix, la seconde
+  ne sert qu'au recoupement.
+- **Le recoupement stock / surface ne sort pas de la console.** Comme sur la
+  fiche d'une demande d'entreprise : affiché au client, il lui indiquerait quel
+  chiffre ajuster pour changer de tranche. La fiche entreprise montre donc
+  pièces, m², pièces/m², tranche et prix ; l'écran du client ne montre que la
+  tranche de ce qu'il vient de saisir.
+- **L'ancienne signature `ca_request_store(text, text)` est supprimée**, pas
+  laissée à côté de la nouvelle : Postgres garderait les deux et un appel à deux
+  arguments deviendrait ambigu.
+
 Vérifié en base le 22 août 2026, sessions simulées par `request.jwt.claims`,
 **tout en transactions annulées** : demande créée, les trois refus de saisie
 (doublon de demande, doublon de magasin, nom vide), refus opposé au superviseur
 ordinaire comme aux deux fonctions Quantinvo, création réelle du magasin avec
 son code, statut `created` relié au magasin, journaux des deux côtés, rejeu
 refusé, et le motif de refus bien visible côté client. Aucune ligne résiduelle,
-`anon` refusé sur les six fonctions.
+`anon` refusé sur les six fonctions. Le volume voyage bien (180 000 pièces,
+1 200 m²), le stock manquant, nul ou absurde est refusé, et il ne reste qu'une
+seule signature de `ca_request_store`.
+
+**La carte de saisie, elle, a été vue au navigateur** : /inscription est
+publique, donc la sortie du composant a pu être vérifiée pour de vrai — mise en
+page identique, et la tranche s'affiche toujours à la frappe (180 000 →
+« Grande surface — 50 001 à 200 000 · 6 600 € / an », total mis à jour).
 
 **Non vu à l'écran** : `/magasins` et la console demandent une session
 connectée. Maquette validée avant codage :

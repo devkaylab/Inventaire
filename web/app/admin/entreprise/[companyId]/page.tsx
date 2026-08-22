@@ -18,6 +18,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
+import { densite, trancheDe } from '@/lib/tarifs'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = {
@@ -36,12 +37,41 @@ type Invitation = {
 type Detail = { company: Company; stores: Store[]; members: Member[]; invitations: Invitation[] }
 type StoreRequest = {
   id: string; company_id: string; store_name: string; message: string
+  units: number | null; sqm: number | null
   status: 'pending' | 'created' | 'rejected'
   requested_label: string; created_at: string
 }
 
 function frDate(s: string) {
   return new Date(s).toLocaleDateString('fr-FR')
+}
+
+const nb = (n: number) => n.toLocaleString('fr-FR')
+
+/**
+ * Ce qu'il faut pour deviser, sur une ligne : la tranche, son prix, et le
+ * recoupement stock / surface.
+ *
+ * Ce repère ne s'affiche que dans la console — sur le formulaire du client il
+ * lui indiquerait quel chiffre ajuster pour changer de tranche. Et ce n'est pas
+ * un détecteur de mensonge : stock et surface viennent de la même personne. Il
+ * attrape l'erreur d'ordre de grandeur, un zéro oublié.
+ */
+function VolumeDemande({ units, sqm }: { units: number | null; sqm: number | null }) {
+  const tranche = trancheDe(units)
+  const d = densite(units, sqm)
+  return (
+    <div className="muted small">
+      {units === null ? 'Stock non déclaré' : `${nb(units)} pièces`}
+      {sqm !== null && ` · ${nb(sqm)} m²`}
+      {d !== null && ` · ${nb(Math.round(d))} pièces/m²`}
+      {tranche && (
+        <> · <b>{tranche.profil}</b> — {tranche.prixEuros === null
+          ? 'sur devis'
+          : `${nb(tranche.prixEuros)} € / an`}</>
+      )}
+    </div>
+  )
 }
 
 export default function AdminCompanyPage() {
@@ -183,6 +213,7 @@ export default function AdminCompanyPage() {
               <div className="req-row" key={d.id}>
                 <div>
                   <div className="req-name">{d.store_name}</div>
+                  <VolumeDemande units={d.units} sqm={d.sqm} />
                   <div className="muted small">
                     Demandé le {frDate(d.created_at)}
                     {d.requested_label && ` par ${d.requested_label}`}

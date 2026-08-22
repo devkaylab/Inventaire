@@ -6,7 +6,8 @@ import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
-import { libelleTranche, totalAnnuel, trancheDe } from '@/lib/tarifs'
+import { totalAnnuel } from '@/lib/tarifs'
+import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/registre'
 
 /**
@@ -32,12 +33,9 @@ import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/regist
  * gamme n'en publie.
  */
 
-interface MagasinSaisi {
-  cle: number
-  nom: string
-  stock: string
-  surface: string
-}
+// La carte de saisie vit dans `components/MagasinSaisie` : la demande d'ajout
+// de magasin (espace connecté) présente exactement le même formulaire.
+type MagasinSaisi = SaisieMagasin & { cle: number }
 
 /** Au-delà, saisir ligne à ligne n'a plus de sens : on propose un tableau. */
 const SEUIL_RESEAU = 6
@@ -63,11 +61,6 @@ const SIREN_EXEMPLE = '123 456 789'
  * `useId()` et de l'index — stables par construction.
  */
 const PREMIER_MAGASIN: MagasinSaisi = { cle: 0, nom: '', stock: '', surface: '' }
-
-function nombreOuNull(saisie: string): number | null {
-  const n = Number.parseFloat(saisie.replace(/\s/g, '').replace(',', '.'))
-  return Number.isFinite(n) ? n : null
-}
 
 const euros = (v: number) => v.toLocaleString('fr-FR') + ' €'
 
@@ -348,76 +341,16 @@ export default function CompanyRequestPage() {
               </span>
             </div>
 
-            {magasins.map((m, i) => {
-              const tranche = trancheDe(nombreOuNull(m.stock))
-              return (
-                <div className="magasin" key={m.cle}>
-                  <div className="magasin-top">
-                    <span className="magasin-no">{i + 1}</span>
-                    <input
-                      value={m.nom}
-                      onChange={(e) => modifier(m.cle, 'nom', e.target.value)}
-                      placeholder="Nom du magasin — Lyon Part-Dieu"
-                      aria-label={`Nom du magasin ${i + 1}`}
-                    />
-                    {magasins.length > 1 && (
-                      <button
-                        type="button"
-                        className="magasin-kill"
-                        onClick={() => retirer(m.cle)}
-                        aria-label={`Retirer le magasin ${i + 1}`}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="field-duo">
-                    <div className="field">
-                      <label htmlFor={`${uid}-stock-${i}`}>Stock théorique</label>
-                      <input
-                        id={`${uid}-stock-${i}`}
-                        type="number"
-                        min={0}
-                        step={1000}
-                        value={m.stock}
-                        onChange={(e) => modifier(m.cle, 'stock', e.target.value)}
-                        placeholder="180 000"
-                      />
-                      <p className="field-hint">En pièces, toutes marques confondues.</p>
-                    </div>
-                    <div className="field">
-                      <label htmlFor={`${uid}-surface-${i}`}>Surface de vente</label>
-                      <input
-                        id={`${uid}-surface-${i}`}
-                        type="number"
-                        min={0}
-                        step={10}
-                        value={m.surface}
-                        onChange={(e) => modifier(m.cle, 'surface', e.target.value)}
-                        placeholder="1 200"
-                      />
-                      <p className="field-hint">En m², réserve comprise.</p>
-                    </div>
-                  </div>
-
-                  <div className="magasin-tranche">
-                    {tranche ? (
-                      <>
-                        <span className="magasin-tranche-nom">
-                          <b>{tranche.profil}</b> — {tranche.bornes}
-                        </span>
-                        <span className="magasin-tranche-prix">
-                          {tranche.prixEuros === null ? 'Sur devis' : `${euros(tranche.prixEuros)} / an`}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="magasin-tranche-vide">Indiquez le stock pour voir la tranche</span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+            {magasins.map((m, i) => (
+              <MagasinSaisie
+                key={m.cle}
+                numero={i + 1}
+                valeur={m}
+                idPrefix={`${uid}-${i}`}
+                onChange={(champ, valeur) => modifier(m.cle, champ, valeur)}
+                onRetirer={magasins.length > 1 ? () => retirer(m.cle) : undefined}
+              />
+            ))}
 
             <button type="button" className="magasin-add" onClick={ajouter}>
               + Ajouter un magasin
