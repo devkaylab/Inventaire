@@ -1087,6 +1087,24 @@ condition.
   qui réussit ne prouve donc pas que le message est arrivé : si le tableau de
   bord n'affiche aucun appareil alors que les téléphones comptent, chercher du
   côté des droits sur l'inventaire, pas du réseau.
+- **Un téléphone, une clé, un émetteur** (corrigé le 22 août 2026). La clé
+  d'appareil était tirée dans `useSessionPresence`, donc **à chaque montage**.
+  Or deux écrans montent ce hook en même temps : l'écran de l'inventaire reste
+  monté dans la pile sous l'écran de comptage. Un seul téléphone comptait pour
+  deux appareils dès qu'on ouvrait le comptage — constat de Julien, capture à
+  l'appui. La clé est maintenant un `const` de module (`DEVICE_KEY`), tiré une
+  fois par lancement de l'application ; **ne jamais la redescendre dans le
+  composant**.
+
+  Corollaire : les écrans s'inscrivent dans une **pile** (`holders`), calquée
+  sur la navigation — le dernier monté donne le mode — et il n'y a plus qu'un
+  émetteur (`engine`). Le même défaut cassait `pingSession` en silence : le
+  second montage écrasait la référence de l'émetteur, et son démontage la
+  remettait à `null` alors que le premier écran vivait toujours, si bien que
+  les scans ne réveillaient plus le tableau de bord. Changer d'écran dans le
+  même inventaire **ne redémarre pas** l'émetteur (sinon l'appareil clignote),
+  mais déclenche un `markDirty` — sans lui, fermer le comptage laisserait
+  l'appareil affiché « en comptage » pendant trente secondes.
 - Les deux modules `presence.ts` (site et mobile) restent **dupliqués
   volontairement** et doivent bouger ensemble. Tests de garde :
   `web/tests/charge.test.ts` et `web/tests/presence-summary.test.ts`.

@@ -71,7 +71,7 @@
 // Rien à configurer côté serveur : le broadcast passe par le service Realtime
 // et ne touche pas à la réplication logique de Postgres.
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 
@@ -107,14 +107,50 @@ function newDeviceKey(): string {
 }
 
 /**
- * Émetteur courant, pour que `pingSession` puisse le joindre depuis n'importe où.
+ * Une clé par **lancement de l'application**, pas par montage de composant.
  *
- * Le scanner signale ses scans par un appel de module, pas par une prop : c'est
- * un fichier de plus de mille lignes qu'on ne veut pas retoucher pour ça. On
- * garde donc ici une référence vers l'émetteur monté.
+ * Anomalie relevée par Julien le 22 août 2026 : « j'ai 1 appareil connecté
+ * physiquement, quand il passe en comptage ou en audit le nombre passe à 2 ».
+ * La clé était tirée dans `useMemo` à chaque montage du hook — or **deux
+ * écrans le montent en même temps** : l'écran de l'inventaire reste monté dans
+ * la pile sous l'écran de comptage. Deux clés, deux appareils à l'écran du
+ * superviseur, pour un seul téléphone. Ne jamais la redescendre au niveau du
+ * composant.
+ *
+ * Elle ne survit pas au redémarrage de l'application et n'est reliée à aucun
+ * compte : c'est ce qui distingue « compter des appareils » de « suivre des
+ * personnes ».
  */
-type Emitter = { sessionId: string; markDirty: () => void }
-let currentEmitter: Emitter | null = null
+const DEVICE_KEY = newDeviceKey()
+
+/**
+ * Les écrans qui déclarent une activité, dans l'ordre où ils se sont montés.
+ *
+ * C'est une pile, comme la navigation : **le dernier monté donne le mode**.
+ * Ouvrir le comptage par-dessus l'écran de l'inventaire fait donc passer
+ * l'appareil en « comptage » ; le refermer le rend à « rien », sans qu'aucun
+ * message de départ ne parte entre-temps.
+ */
+type Holder = { id: number; sessionId: string; mode: PresenceMode }
+let holders: Holder[] = []
+let nextHolderId = 1
+
+/** L'écran du dessus, celui dont le mode fait foi. */
+function top(): Holder | undefined {
+  return holders[holders.length - 1]
+}
+
+/**
+ * L'émetteur unique de l'appareil.
+ *
+ * Un seul canal, un seul battement, une seule clé — quel que soit le nombre
+ * d'écrans montés. Avant, chaque écran avait le sien, ce qui multipliait les
+ * appareils vus par le superviseur **et** cassait `pingSession` : le second
+ * montage écrasait `currentEmitter`, et son démontage le remettait à `null`
+ * alors que le premier écran vivait toujours.
+ */
+type Engine = { sessionId: string; markDirty: () => void; stop: () => void }
+let engine: Engine | null = null
 
 /**
  * Signale au site qu'il y a du nouveau (scan enregistré, balise ouverte…).
@@ -123,15 +159,126 @@ let currentEmitter: Emitter | null = null
  * message à chaque scan, il marque l'appareil « il s'est passé quelque chose »
  * et laisse le prochain battement le dire. C'est tout l'intérêt de la v3 —
  * en v2, cent compteurs produisaient un millier de messages par seconde à eux
- * seuls. Le tableau de bord sonde par ailleurs toutes les huit secondes : rien
- * ne se perd, tout arrive au plus tard au battement suivant.
+ * seuls. Le tableau de bord sonde par ailleurs : rien ne se perd, tout arrive
+ * au plus tard au battement suivant.
  *
  * `kind` n'est plus transmis : le site rafraîchit ses agrégats de la même
  * manière quel que soit l'événement. Le paramètre reste dans la signature pour
  * ne pas retoucher le scanner.
  */
 export function pingSession(sessionId: string, _kind: 'count' | 'balise'): void {
-  if (currentEmitter?.sessionId === sessionId) currentEmitter.markDirty()
+  if (engine?.sessionId === sessionId) engine.markDirty()
+}
+
+/** Démarre l'émetteur pour un inventaire. Un seul à la fois. */
+function startEngine(sessionId: string): Engine {
+  // Canal **privé**, mais jamais `subscribe()` : on ne s'en sert que comme
+  // adresse d'envoi. `supabase.channel()` n'ouvre aucune connexion tant qu'on
+  // ne s'abonne pas — c'est ce qui fait disparaître les milliers de sockets.
+  // Le drapeau `private` est lu par `httpSend`, qui le transmet au service :
+  // les policies de `realtime.messages` sont donc bien évaluées.
+  const channel = supabase.channel(presenceTopic(sessionId), {
+    config: { private: true },
+  })
+
+  let disposed = false
+  let dirty = false
+  // Daté au démarrage, et non à zéro : le premier message est celui qu'envoie
+  // la mise en place du jeton, juste en dessous. Sans cela, un scan survenu
+  // dans la première seconde partirait avant que le jeton soit posé, donc
+  // pour rien.
+  let lastSentAt = Date.now()
+  let gapTimer: ReturnType<typeof setTimeout> | null = null
+
+  const emit = (gone = false) => {
+    lastSentAt = Date.now()
+    const payload = {
+      v: BEAT_V,
+      k: DEVICE_KEY,
+      // Le mode vient de l'écran du dessus, lu à l'émission — jamais figé au
+      // démarrage de l'émetteur, qui survit aux changements d'écran.
+      mode: gone ? null : (top()?.mode ?? null),
+      beat: lastSentAt,
+      ...(dirty ? { dirty: true } : {}),
+      ...(gone ? { gone: true } : {}),
+    }
+    // Le drapeau est consommé à l'émission, qu'elle aboutisse ou non : si le
+    // réseau est coupé, le scan est de toute façon en file locale et le
+    // tableau de bord le verra à la synchronisation.
+    dirty = false
+    // Émission au mieux : un battement perdu ne se rejoue pas, le suivant
+    // arrive au plus tard dans trente secondes. Surtout, ne jamais laisser
+    // cette promesse échouer bruyamment — le comptage ne dépend pas d'elle.
+    void channel.httpSend(BEAT_EVENT, payload).catch(() => {})
+  }
+
+  /** Émet maintenant si l'intervalle minimal est écoulé, sinon le programme. */
+  const emitThrottled = () => {
+    if (disposed || gapTimer) return
+    const wait = Math.max(0, MIN_GAP_MS - (Date.now() - lastSentAt))
+    if (wait === 0) { emit(); return }
+    gapTimer = setTimeout(() => {
+      gapTimer = null
+      if (!disposed) emit()
+    }, wait)
+  }
+
+  // Le jeton d'accès du service Realtime est posé par supabase-js à la
+  // connexion et à chaque renouvellement. On le redemande une fois au
+  // démarrage pour le cas où l'émetteur parte avant que ce soit fait : sans
+  // jeton, l'envoi sur un canal privé serait refusé.
+  void supabase.realtime.setAuth().catch(() => {}).then(() => {
+    if (!disposed) emit()
+  })
+
+  const beat = setInterval(() => { if (!disposed) emit() }, BEAT_MS)
+
+  return {
+    sessionId,
+    markDirty: () => { dirty = true; emitThrottled() },
+    stop: () => {
+      disposed = true
+      clearInterval(beat)
+      if (gapTimer) clearTimeout(gapTimer)
+      // Dernier mot : l'appareil disparaît tout de suite de l'écran du
+      // superviseur, au lieu d'y rester quatre-vingt-dix secondes.
+      emit(true)
+      void supabase.removeChannel(channel)
+    },
+  }
+}
+
+/**
+ * Aligne l'émetteur sur la pile des écrans.
+ *
+ * Appelé à chaque montage, démontage et changement de mode. Il ne redémarre
+ * que si l'inventaire change : passer de l'écran d'un inventaire à son écran
+ * de comptage ne coupe rien, ne renvoie pas de message de départ, et ne fait
+ * pas clignoter l'appareil sur le tableau de bord.
+ */
+let lastTopId: number | null = null
+
+function syncEngine(): void {
+  const holder = top()
+  if (!holder) {
+    engine?.stop()
+    engine = null
+    lastTopId = null
+    return
+  }
+  const change = holder.id !== lastTopId
+  lastTopId = holder.id
+  if (engine && engine.sessionId === holder.sessionId) {
+    // Même inventaire, écran différent : on ne redémarre rien, mais le mode
+    // vient de changer. Sans ce rappel, fermer le comptage laisserait
+    // l'appareil affiché « en comptage » jusqu'au battement suivant, soit
+    // trente secondes. `markDirty` regroupe : un aller-retour rapide entre
+    // deux écrans ne produit pas deux messages.
+    if (change) engine.markDirty()
+    return
+  }
+  engine?.stop()
+  engine = startEngine(holder.sessionId)
 }
 
 /**
@@ -142,109 +289,48 @@ export function pingSession(sessionId: string, _kind: 'count' | 'balise'): void 
  * l'inventaire ou le profil manquent : l'appel est donc sûr en tête de
  * composant.
  *
- * Le mode passe par une ref mise à jour *dans* un effet, jamais pendant le
- * rendu : la charge est construite au moment de l'émission (battement ou
- * changement de mode), pas au moment du rendu.
+ * Plusieurs écrans peuvent l'appeler en même temps — c'est même le cas normal,
+ * l'écran de comptage se montant par-dessus celui de l'inventaire. Ils
+ * s'inscrivent alors dans une pile, et seul le dernier donne le mode ; il n'y
+ * a toujours qu'un émetteur et qu'une clé d'appareil.
  */
 export function useSessionPresence(sessionId: string | undefined, activity: PresenceActivity) {
   const { profile } = useAuth()
   const userId = profile?.id
-  // Une clé par montage : un appareil qui se reconnecte n'est pas compté deux
-  // fois, et rien ne relie cette clé au compte.
-  const deviceKey = useMemo(() => newDeviceKey(), [])
-  const activityRef = useRef(activity)
+  const idRef = useRef<number | null>(null)
 
-  useEffect(() => { activityRef.current = activity }, [activity])
-
-  // ── Émetteur : reconstruit seulement si l'inventaire ou l'utilisateur change ──
+  // Inscription dans la pile. `mode` n'est pas dans les dépendances : il est
+  // mis à jour par l'effet suivant, sans réinscrire l'écran — se réinscrire
+  // le ferait passer au-dessus de l'écran de comptage ouvert par-dessus lui.
   useEffect(() => {
     if (!sessionId || !userId) return
-
-    // Canal **privé**, mais jamais `subscribe()` : on ne s'en sert que comme
-    // adresse d'envoi. `supabase.channel()` n'ouvre aucune connexion tant qu'on
-    // ne s'abonne pas — c'est ce qui fait disparaître les milliers de sockets.
-    // Le drapeau `private` est lu par `httpSend`, qui le transmet au service :
-    // les policies de `realtime.messages` sont donc bien évaluées.
-    const channel = supabase.channel(presenceTopic(sessionId), {
-      config: { private: true },
-    })
-
-    let disposed = false
-    let dirty = false
-    // Daté au montage, et non à zéro : le premier message est celui qu'envoie
-    // la mise en place du jeton, juste en dessous. Sans cela, un scan survenu
-    // dans la première seconde partirait avant que le jeton soit posé, donc
-    // pour rien.
-    let lastSentAt = Date.now()
-    let gapTimer: ReturnType<typeof setTimeout> | null = null
-
-    const emit = (gone = false) => {
-      lastSentAt = Date.now()
-      const payload = {
-        v: BEAT_V,
-        k: deviceKey,
-        mode: gone ? null : activityRef.current.mode,
-        beat: lastSentAt,
-        ...(dirty ? { dirty: true } : {}),
-        ...(gone ? { gone: true } : {}),
-      }
-      // Le drapeau est consommé à l'émission, qu'elle aboutisse ou non : si le
-      // réseau est coupé, le scan est de toute façon en file locale et le
-      // tableau de bord le verra à la synchronisation.
-      dirty = false
-      // Émission au mieux : un battement perdu ne se rejoue pas, le suivant
-      // arrive au plus tard dans trente secondes. Surtout, ne jamais laisser
-      // cette promesse échouer bruyamment — le comptage ne dépend pas d'elle.
-      void channel.httpSend(BEAT_EVENT, payload).catch(() => {})
-    }
-
-    /** Émet maintenant si l'intervalle minimal est écoulé, sinon le programme. */
-    const emitThrottled = () => {
-      if (disposed || gapTimer) return
-      const wait = Math.max(0, MIN_GAP_MS - (Date.now() - lastSentAt))
-      if (wait === 0) { emit(); return }
-      gapTimer = setTimeout(() => {
-        gapTimer = null
-        if (!disposed) emit()
-      }, wait)
-    }
-
-    // Le jeton d'accès du service Realtime est posé par supabase-js à la
-    // connexion et à chaque renouvellement. On le redemande une fois au montage
-    // pour le cas où l'émetteur démarre avant que ce soit fait : sans jeton,
-    // l'envoi sur un canal privé serait refusé.
-    void supabase.realtime.setAuth().catch(() => {}).then(() => {
-      if (!disposed) emit()
-    })
-
-    const beat = setInterval(() => { if (!disposed) emit() }, BEAT_MS)
-    currentEmitter = { sessionId, markDirty: () => { dirty = true; emitThrottled() } }
-
+    const id = nextHolderId++
+    idRef.current = id
+    holders = [...holders, { id, sessionId, mode: activityRefMode(activity) }]
+    syncEngine()
     return () => {
-      disposed = true
-      clearInterval(beat)
-      if (gapTimer) clearTimeout(gapTimer)
-      if (currentEmitter?.sessionId === sessionId) currentEmitter = null
-      // Dernier mot : l'appareil disparaît tout de suite de l'écran du
-      // superviseur, au lieu d'y rester quatre-vingt-dix secondes.
-      emit(true)
-      void supabase.removeChannel(channel)
+      holders = holders.filter(h => h.id !== id)
+      idRef.current = null
+      syncEngine()
     }
-  }, [sessionId, userId, deviceKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, userId])
 
-  // ── Changement de mode : republication ─────────────────────────────────────
-  //
-  // Passer de comptage à audit doit se voir. On repasse par `pingSession` pour
-  // profiter du regroupement : un aller-retour rapide entre deux modes ne
-  // produit pas deux messages.
-  //
-  // La comparaison au mode précédent évite d'émettre au montage — le premier
-  // battement est déjà parti, et un message de plus par ouverture d'écran se
-  // multiplierait par le nombre de compteurs.
-  const lastModeRef = useRef(activity.mode)
+  // Changement de mode : on met à jour l'entrée et on prévient tout de suite.
+  // Passer de comptage à audit doit se voir ; `markDirty` regroupe, donc un
+  // aller-retour rapide entre deux modes ne produit pas deux messages.
   useEffect(() => {
-    if (lastModeRef.current === activity.mode) return
-    lastModeRef.current = activity.mode
-    if (sessionId) pingSession(sessionId, 'count')
-  }, [sessionId, activity.mode])
+    const id = idRef.current
+    if (id == null) return
+    const h = holders.find(x => x.id === id)
+    if (!h || h.mode === activity.mode) return
+    h.mode = activity.mode
+    if (h.id === top()?.id) engine?.markDirty()
+  }, [activity.mode])
 }
+
+/** Lecture défensive : un appelant peut passer un objet sans `mode`. */
+function activityRefMode(activity: PresenceActivity): PresenceMode {
+  return activity?.mode ?? null
+}
+

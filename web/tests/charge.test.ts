@@ -37,9 +37,63 @@ const offlineSync = lire('../../src/lib/offlineSync.ts')
 function corps(source: string, nom: string): string {
   const debut = source.search(new RegExp(`export (async )?function ${nom}\\b`))
   expect(debut, `${nom} introuvable`).toBeGreaterThan(-1)
-  const suite = source.indexOf('\nexport ', debut + 1)
-  return source.slice(debut, suite === -1 ? undefined : suite)
+  // On s'arrête à l'accolade fermante de la fonction, en colonne zéro, et non
+  // au prochain `export` : une fonction interne glissée entre les deux faisait
+  // déborder l'extrait sur la suivante, et le test lisait ce qu'il ne visait
+  // pas (constaté le 22 août 2026 sur `pingSession`).
+  // Une ligne qui ne contient qu'une accolade fermante : c'est la fin du
+  // corps. Pas `\n}` seul — un type de retour sur plusieurs lignes se termine
+  // par `}>`, et l'extrait s'arrêtait avant même la première ligne de code.
+  const fin = source.indexOf('\n}\n', debut)
+  return source.slice(debut, fin === -1 ? undefined : fin + 3)
 }
+
+describe('un téléphone ne compte que pour un appareil', () => {
+  // Anomalie relevée par Julien le 22 août 2026, capture à l'appui : « j'ai
+  // 1 appareil connecté physiquement, quand il passe en comptage ou en audit
+  // le nombre passe à 2 ».
+  //
+  // Cause : la clé d'appareil était tirée dans le hook, à chaque montage. Or
+  // **deux écrans le montent en même temps** — l'écran de l'inventaire reste
+  // monté dans la pile sous l'écran de comptage. Deux clés, donc deux
+  // appareils à l'écran du superviseur, pour un seul téléphone.
+
+  it('tire sa clé une fois par lancement, pas par écran', () => {
+    expect(presenceMobile).toContain('const DEVICE_KEY = newDeviceKey()')
+    // Rien ne doit recréer une clé à l'intérieur du hook.
+    const hook = corps(presenceMobile, 'useSessionPresence')
+    expect(hook).not.toContain('newDeviceKey')
+    expect(hook).not.toContain('useMemo')
+  })
+
+  it('n’a qu’un émetteur, quel que soit le nombre d’écrans montés', () => {
+    // Un émetteur par écran multipliait les battements et, surtout, cassait
+    // `pingSession` : le second montage écrasait la référence, et son
+    // démontage la remettait à `null` alors que le premier écran vivait
+    // toujours — les scans ne réveillaient plus le tableau de bord.
+    expect(presenceMobile).toContain('let engine: Engine | null = null')
+    expect(presenceMobile).toContain('function syncEngine()')
+    expect(corps(presenceMobile, 'pingSession')).toContain('engine.markDirty()')
+  })
+
+  it('laisse l’écran du dessus donner le mode', () => {
+    // La pile des écrans est celle de la navigation : ouvrir le comptage
+    // par-dessus l'inventaire met l'appareil en « comptage », le refermer le
+    // rend à « rien » — sans message de départ entre les deux.
+    expect(presenceMobile).toContain('let holders: Holder[] = []')
+    expect(presenceMobile).toMatch(/mode: gone \? null : \(top\(\)\?\.mode \?\? null\)/)
+  })
+
+  it('ne coupe pas l’émission en changeant d’écran du même inventaire', () => {
+    // Redémarrer l'émetteur enverrait un message de départ : l'appareil
+    // clignoterait sur le tableau de bord à chaque ouverture du scanner.
+    expect(presenceMobile).toContain('if (engine && engine.sessionId === holder.sessionId)')
+    // Mais le changement d'écran doit se voir tout de suite : sans ce rappel,
+    // fermer le comptage laisserait l'appareil « en comptage » jusqu'au
+    // battement suivant, soit trente secondes.
+    expect(presenceMobile).toContain('if (change) engine.markDirty()')
+  })
+})
 
 describe('totaux du tableau de bord', () => {
   it('demande l’addition au serveur', () => {
