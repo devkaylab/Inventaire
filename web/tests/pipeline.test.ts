@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  SEUILS_VENTE, type VenteEnCours, enAttenteCents, lienVente, lireVente, trierVentes,
+  SEUILS_VENTE, type VenteEnCours, alerteDensite, enAttenteCents, lienVente, lireVente, trierVentes,
 } from '../lib/pipeline'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
@@ -139,5 +139,48 @@ describe('la base et les écrans', () => {
     expect(corps('admin_notify_emails')).toContain('p.is_admin')
     expect(migration).toContain('revoke all on function public.admin_notify_emails() from public, anon, authenticated')
     expect(edgeAccept).toContain("rpc('admin_notify_emails')")
+  })
+})
+
+describe('le stock déclaré qui surprend remonte sur la ligne', () => {
+  // Julien : « un grand magasin mettrait un stock théorique à 1 000 pièces
+  // pour une surface de 10 000 m² = fraudeur ». Le repère doit se voir avant
+  // d'envoyer le devis, pas après avoir ouvert la fiche.
+  const magasinGeneraliste = { ...base, ape: '47.19Z' }
+
+  it('signale 1 000 pièces sur 10 000 m², et nomme le magasin', () => {
+    const v: VenteEnCours = { ...magasinGeneraliste, stores: [{ name: 'Grand Magasin', units: 1000, sqm: 10000 }] }
+    const a = alerteDensite(v)
+    expect(a).not.toBeNull()
+    expect(a).toContain('Grand Magasin')
+    expect(a).toContain('très faible')
+    // Jamais le mot « fraude » : deux déclarations de la même personne ne se
+    // contrôlent pas l'une l'autre, c'est un appel à passer.
+    expect(a!.toLowerCase()).not.toContain('fraud')
+  })
+
+  it('se tait sur une densité plausible, ou quand un chiffre manque', () => {
+    expect(alerteDensite({ ...magasinGeneraliste, stores: [{ name: 'A', units: 120_000, sqm: 1200 }] })).toBeNull()
+    expect(alerteDensite({ ...magasinGeneraliste, stores: [{ name: 'A', units: 1000, sqm: null }] })).toBeNull()
+    expect(alerteDensite({ ...base, kind: 'store_removal', stores: [{ name: 'A', units: 1, sqm: 10000 }] })).toBeNull()
+  })
+
+  it('dit quand le secteur est inconnu, pour qu’un silence ne vaille pas vérification', () => {
+    const v: VenteEnCours = { ...base, ape: null, stores: [{ name: 'A', units: 10, sqm: 10000 }] }
+    expect(alerteDensite(v)).toContain('secteur inconnu')
+  })
+
+  it('vaut aussi pour un ajout de magasin, que la RPC remonte comme un magasin déclaré', () => {
+    const v: VenteEnCours = { ...base, kind: 'store', stores: [{ name: 'Annexe', units: 50, sqm: 5000 }] }
+    expect(alerteDensite(v)).toContain('Annexe')
+    expect(migration + lire('../../supabase/migrations/20260822260001_pipeline_densite.sql'))
+      .toContain("json_build_object('name', s.store_name, 'units', s.units, 'sqm', s.sqm)")
+  })
+
+  it('passe en tête du tableau de bord tant que le devis n’est pas parti', () => {
+    const douteux: VenteEnCours = { ...magasinGeneraliste, id: 'd', created_at: le('22').toISOString(), stores: [{ name: 'X', units: 1000, sqm: 10000 }] }
+    const ancien: VenteEnCours = { ...base, id: 'o', created_at: le('10').toISOString() }
+    expect(trierVentes([ancien, douteux], le('22')).map((v) => v.id)).toEqual(['d', 'o'])
+    expect(pageAdmin).toContain('alerteDensite(vente)')
   })
 })

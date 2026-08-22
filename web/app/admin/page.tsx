@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import {
-  type VenteEnCours, enAttenteCents, lienVente, lireVente, trierVentes,
+  type VenteEnCours, alerteDensite, enAttenteCents, lienVente, lireVente, trierVentes,
 } from '@/lib/pipeline'
 
 type CompanyRef = { id: string; name: string }
@@ -53,6 +53,7 @@ const euros = (cents: number) =>
  */
 function LigneVente({ vente }: { vente: VenteEnCours }) {
   const l = lireVente(vente)
+  const densite = alerteDensite(vente)
   const quoi = vente.kind === 'company'
     ? 'Inscription'
     : vente.kind === 'store_removal' ? 'Suppression de magasin' : 'Ajout de magasin'
@@ -60,12 +61,16 @@ function LigneVente({ vente }: { vente: VenteEnCours }) {
     <div className={`signal${l.tour === 'nous' || l.retard ? ' signal-alerte' : ''}`}>
       <div className="signal-txt">
         <strong>{vente.label}</strong>
-        <span className="muted"> · {quoi}{vente.kind !== 'company' ? ` · ${vente.detail}` : ` · ${vente.detail}`}</span>
+        <span className="muted"> · {quoi} · {vente.detail}</span>
         <div className="muted small">
           {l.etat}
           {vente.quote_amount_cents != null && vente.status !== 'pending' && ` · ${euros(vente.quote_amount_cents)}`}
           {vente.contact && ` · ${vente.contact}`}
         </div>
+        {/* Le recoupement stock / surface, avant d'envoyer le devis. Ce n'est
+            pas une preuve — deux déclarations de la même personne —, c'est
+            un appel à passer avant de chiffrer. */}
+        {densite && <div className="signal-densite">{densite}</div>}
       </div>
       <Link href={lienVente(vente)} className={`btn btn-sm ${l.tour === 'nous' ? 'btn-primary' : 'btn-ghost'}`}>
         {l.geste}

@@ -8,6 +8,12 @@
 
 export type EtapeVente = 'pending' | 'quoted' | 'accepted' | 'paid'
 
+import { densite } from '@/lib/tarifs'
+import { densiteAttendue, secteurReconnu } from '@/lib/secteurs'
+
+/** Un magasin déclaré au formulaire, tel que la RPC le remonte. */
+export type MagasinDeclare = { name?: string | null; units?: number | null; sqm?: number | null }
+
 export type VenteEnCours = {
   /** Inscription d'une entreprise, ajout d'un magasin, ou suppression. */
   kind: 'company' | 'store' | 'store_removal'
@@ -27,6 +33,10 @@ export type VenteEnCours = {
   quote_expires_at: string | null
   accepted_at: string | null
   paid_at: string | null
+  /** Code APE de l'entreprise, pour la fourchette de densité du secteur. */
+  ape?: string | null
+  /** Les magasins déclarés, avec leur stock et leur surface. */
+  stores?: MagasinDeclare[] | null
 }
 
 /** Les seuils se discutent, ils ne se devinent pas. En jours. */
@@ -141,7 +151,10 @@ export function lireVente(v: VenteEnCours, maintenant = new Date()): LectureVent
 export function trierVentes(ventes: VenteEnCours[], maintenant = new Date()): VenteEnCours[] {
   const poids = (v: VenteEnCours) => {
     const l = lireVente(v, maintenant)
-    return (l.tour === 'nous' ? 0 : 10) + (l.retard ? 0 : 5)
+    // Un stock déclaré douteux passe en tête : c'est de l'argent qui se
+    // décide au moment d'envoyer le devis, pas après.
+    const densite = alerteDensite(v) && v.status === 'pending' ? -100 : 0
+    return densite + (l.tour === 'nous' ? 0 : 10) + (l.retard ? 0 : 5)
   }
   return [...ventes].sort((a, b) => {
     const pa = poids(a), pb = poids(b)
@@ -161,4 +174,40 @@ export function enAttenteCents(ventes: VenteEnCours[]): number {
   return ventes
     .filter((v) => v.kind !== 'store_removal' && (v.status === 'quoted' || v.status === 'accepted'))
     .reduce((s, v) => s + (v.quote_amount_cents ?? 0), 0)
+}
+
+/**
+ * Le recoupement stock / surface, pour la ligne du tableau de bord.
+ *
+ * Julien : « un grand magasin mettrait un stock théorique à 1 000 pièces pour
+ * une surface de 10 000 m² = fraudeur ». Le repère existait sur la fiche ; il
+ * doit se voir avant d'ouvrir le détail, là où on décide d'envoyer le devis.
+ *
+ * Ce que ce repère fait et ne fait pas est écrit dans `lib/secteurs.ts` : il
+ * attrape l'erreur d'ordre de grandeur, il ne prouve pas un mensonge — stock et
+ * surface viennent de la même personne. D'où la formulation : « à vérifier »,
+ * jamais « fraude ».
+ *
+ * Rendu : `null` si rien ne surprend, sinon une phrase courte. Un seul magasin
+ * douteux suffit — c'est sur lui qu'on appellera.
+ */
+export function alerteDensite(v: VenteEnCours): string | null {
+  if (v.kind === 'store_removal') return null
+  const magasins = (v.stores ?? []).filter((m) => m.units != null && m.sqm != null)
+  const douteux: string[] = []
+  let secteurInconnu = false
+  for (const m of magasins) {
+    const d = densite(m.units, m.sqm)
+    const r = densiteAttendue(d, v.ape)
+    if (!r) continue
+    if (!secteurReconnu(r.secteur)) secteurInconnu = true
+    if (!r.plausible) {
+      const nom = (m.name ?? '').trim() || 'un magasin'
+      const sens = d! < r.secteur.min ? 'très faible' : 'très élevé'
+      douteux.push(`${nom} : ${Math.round(d!).toLocaleString('fr-FR')} pièces/m², ${sens} pour ${r.secteur.nom.toLowerCase()}`)
+    }
+  }
+  if (douteux.length === 0) return null
+  const tete = douteux.length === 1 ? douteux[0] : `${douteux.length} magasins à vérifier — ${douteux[0]}`
+  return `Stock déclaré à vérifier — ${tete}${secteurInconnu ? ' (secteur inconnu, fourchette large)' : ''}`
 }

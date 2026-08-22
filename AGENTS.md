@@ -254,9 +254,27 @@ Vérifié en base (transaction annulée, session admin) : une demande en
 Au navigateur par route jetable (retirée, `git status` propre) : les deux
 groupes, les boutons, le montant en attente.
 
-**Reste à faire** : brancher Stripe — sur les deux tables, même transition
-`accepted → paid`. Le tableau de bord suivra sans rien changer : `paid` y est
-déjà une étape.
+**Le stock déclaré qui surprend remonte sur la ligne** (migration
+`20260822260001`). Julien : *« un grand magasin mettrait un stock théorique à
+1 000 pièces pour une surface de 10 000 m² = fraudeur »*. Le recoupement
+stock / surface existait sur la fiche ; `admin_pipeline` rend maintenant les
+magasins déclarés et le code APE, `alerteDensite` (`lib/pipeline.ts`) en tire
+une phrase — « Stock déclaré à vérifier — Grand Magasin : 0 pièces/m², très
+faible pour … » — affichée sous l'état de la vente, et la demande passe **en
+tête** tant que le devis n'est pas parti. Le jugement reste celui de
+`lib/secteurs.ts` ; la phrase dit « à vérifier », jamais « fraude » : deux
+déclarations de la même personne ne se contrôlent pas l'une l'autre. Le devis
+reste manuel — c'est le point de contrôle.
+
+**Une demande d'inscription prévient tout le monde** (`submit-company-request`,
+déployée sans JWT comme tout formulaire public). Julien : *« il faut que je
+puisse recevoir un mail de demande d'inscription »* — ce n'était pas prévu,
+/inscription écrivait en base et personne ne le savait. L'edge appelle la RPC
+publique (validation et limitation de débit inchangées), envoie l'accusé au
+prospect et l'avis aux administrateurs lus en base, magasins déclarés compris.
+La page retombe sur la RPC directe si l'edge est injoignable.
+
+Stripe est branché : voir « Paiement : Stripe, en place ».
 
 Tests de garde : `web/tests/devis.test.ts`.
 

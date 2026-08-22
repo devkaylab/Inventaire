@@ -210,22 +210,35 @@ export default function CompanyRequestPage() {
     }
 
     setLoading(true)
-    const { data, error: rpcError } = await supabase.rpc('submit_company_request', {
-      p_company_name: companyName,
-      p_first_name: firstName,
-      p_last_name: lastName,
-      p_email: email,
-      p_phone: phone,
-      p_store_count: magasins.length,
-      p_message: message,
-      p_siren: normaliserSiren(siren),
-      p_ape: ape,
-      p_stores: magasins.map((m) => ({
-        name: m.nom,
-        units: m.stock === '' ? null : nombreOuNull(m.stock),
-        sqm: m.surface === '' ? null : nombreOuNull(m.surface),
-      })),
+    const stores = magasins.map((m) => ({
+      name: m.nom,
+      units: m.stock === '' ? null : nombreOuNull(m.stock),
+      sqm: m.surface === '' ? null : nombreOuNull(m.surface),
+    }))
+    // Par l'edge function, qui prévient le prospect et Quantinvo ; repli sur
+    // la RPC directe si elle est injoignable — la demande passe alors sans
+    // e-mail, plutôt que de ne pas passer.
+    let { data, error: rpcError } = await supabase.functions.invoke('submit-company-request', {
+      body: {
+        companyName, firstName, lastName, email, phone,
+        storeCount: magasins.length, message,
+        siren: normaliserSiren(siren), ape, stores,
+      },
     })
+    if (rpcError) {
+      ;({ data, error: rpcError } = await supabase.rpc('submit_company_request', {
+        p_company_name: companyName,
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_email: email,
+        p_phone: phone,
+        p_store_count: magasins.length,
+        p_message: message,
+        p_siren: normaliserSiren(siren),
+        p_ape: ape,
+        p_stores: stores,
+      }))
+    }
     setLoading(false)
     if (rpcError) {
       setError('Envoi impossible. Vérifiez votre connexion, puis réessayez.')

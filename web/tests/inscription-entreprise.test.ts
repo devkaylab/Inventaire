@@ -169,3 +169,29 @@ describe('Kbis', () => {
     expect(page.toLowerCase()).not.toMatch(/joindre|téléverser|téléchargez votre/)
   })
 })
+
+describe('une demande d’inscription prévient tout le monde (22 août 2026)', () => {
+  // Julien : « il faut que je puisse recevoir un mail de demande
+  // d'inscription ». Ce n'était pas prévu : /inscription écrivait en base et
+  // personne ne le savait — ni Quantinvo, ni le prospect.
+  const edge = readFileSync(join(racine, 'supabase/functions/submit-company-request/index.ts'), 'utf8')
+  const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
+
+  it('l’edge appelle la RPC publique, puis écrit l’accusé et l’avis interne', () => {
+    expect(edge).toContain("rpc('submit_company_request'")
+    expect(edge).toContain("rpc('admin_notify_emails')")
+    expect(edge).toContain('Votre demande est bien reçue')
+    expect(edge).toContain('Nouvelle demande d’inscription')
+    expect(edge).toContain('emailQuantinvo')
+  })
+
+  it('un e-mail qui ne part pas n’annule pas la demande', () => {
+    expect(edge).toContain('emailed')
+    expect(edge).toContain("if (!resendKey) return json({ success: true, emailed: false })")
+  })
+
+  it('la page retombe sur la RPC directe si l’edge est injoignable', () => {
+    expect(page).toContain("functions.invoke('submit-company-request'")
+    expect(page).toContain("supabase.rpc('submit_company_request'")
+  })
+})

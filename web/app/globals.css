@@ -1509,6 +1509,9 @@ a { color: inherit; text-decoration: none; }
 }
 .signal-alerte { border-color: color-mix(in srgb, var(--warning) 35%, transparent); background: var(--warning-soft); }
 .signal-txt { font-size: 14px; }
+/* Le stock déclaré qui surprend : une ligne à part, en couleur d'alerte et
+   en gras — elle ne doit pas se fondre dans l'état de la vente. */
+.signal-densite { margin-top: 5px; font-size: 13px; font-weight: 600; color: var(--warning-text); }
 .kpi-note { color: var(--text-3); font-size: 12px; margin-top: 6px; }
 
 @media (max-width: 900px) {
