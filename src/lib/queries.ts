@@ -64,14 +64,42 @@ export async function getMyCounts(sessionId: string, passNumber: number) {
   return data
 }
 
-export async function getSessionCounts(sessionId: string) {
-  const { data, error } = await supabase
-    .from('counts')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false })
-  if (error) throwSupabase('getSessionCounts', error)
-  return data
+/**
+ * Totaux de pièces d'un inventaire — additionnés **sur le serveur**.
+ *
+ * Remplace un `select` sur `counts` qui rapatriait toutes les lignes de
+ * l'inventaire sur le téléphone pour n'en tirer que deux nombres. Sur un vrai
+ * inventaire cela fait des milliers de lignes par ouverture d'écran, et le
+ * total dépendait du plafond de lignes que l'API peut imposer — il aurait
+ * baissé sans rien dire. Même correctif que le site (voir la note « Tenue en
+ * charge » d'AGENTS.md) : **ne jamais y remettre un `select` sur `counts`**.
+ */
+export async function getSessionCountTotals(sessionId: string) {
+  const { data, error } = await supabase.rpc('get_session_count_totals', { p_session_id: sessionId })
+  if (error) throwSupabase('getSessionCountTotals', error)
+  const row = (Array.isArray(data) ? data[0] : data) as
+    { counted?: number; audited?: number; counted_skus?: number; audited_skus?: number } | null
+  return {
+    counted: Number(row?.counted ?? 0),
+    audited: Number(row?.audited ?? 0),
+    countedSkus: Number(row?.counted_skus ?? 0),
+    auditedSkus: Number(row?.audited_skus ?? 0),
+  }
+}
+
+/**
+ * Ce que **cette personne** a compté, additionné sur le serveur.
+ *
+ * `getMyCounts` ne filtre pas sur l'utilisateur : c'est la policy
+ * `counts_select_own` qui limite un compteur à ses lignes. Un superviseur, lui,
+ * verrait toute l'équipe — et l'écran présente ce nombre comme son travail à
+ * lui. La fonction, elle, ne compte que `auth.uid()` quel que soit le rôle.
+ */
+export async function getMyCountTotals(sessionId: string) {
+  const { data, error } = await supabase.rpc('get_my_count_totals', { p_session_id: sessionId })
+  if (error) throwSupabase('getMyCountTotals', error)
+  const row = (Array.isArray(data) ? data[0] : data) as { counted?: number; audited?: number } | null
+  return { counted: Number(row?.counted ?? 0), audited: Number(row?.audited ?? 0) }
 }
 
 export async function resolveArticle(sessionId: string, value: string): Promise<Article | null> {

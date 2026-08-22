@@ -3,7 +3,7 @@ import Svg, { Path } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMyCounts, leaveSession } from '@/lib/queries'
+import { getMyCountTotals, leaveSession } from '@/lib/queries'
 import { getSession } from '@/lib/offlineSync'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -27,15 +27,14 @@ export default function EmployeeProgressScreen() {
     queryFn: () => getSession(sessionId),
   })
 
-  // Comptage (étape 1) et audit (étape 2) — totaux remontés sur le serveur.
-  const { data: countRows, isLoading: countsLoading } = useQuery({
-    queryKey: ['my-counts', sessionId, 1],
-    queryFn: () => getMyCounts(sessionId, 1),
-    enabled: !!session,
-  })
-  const { data: auditRows } = useQuery({
-    queryKey: ['my-counts', sessionId, 2],
-    queryFn: () => getMyCounts(sessionId, 2),
+  // Comptage (étape 1) et audit (étape 2) — additionnés **sur le serveur**,
+  // et pour cette personne seulement. La requête d'avant ne filtrait pas sur
+  // l'utilisateur : elle s'en remettait à la sécurité en base, qui rend ses
+  // propres lignes à un compteur mais **toute l'équipe** à un superviseur —
+  // présentées ici comme son travail à lui.
+  const { data: mesTotaux, isLoading: countsLoading } = useQuery({
+    queryKey: ['my-count-totals', sessionId],
+    queryFn: () => getMyCountTotals(sessionId),
     enabled: !!session,
   })
 
@@ -72,8 +71,8 @@ export default function EmployeeProgressScreen() {
     )
   }
 
-  const countedPieces = (countRows ?? []).reduce((sum, c) => sum + c.qty, 0)
-  const auditedPieces = (auditRows ?? []).reduce((sum, c) => sum + c.qty, 0)
+  const countedPieces = mesTotaux?.counted ?? 0
+  const auditedPieces = mesTotaux?.audited ?? 0
   const isLoading = sessionLoading || countsLoading
 
   return (

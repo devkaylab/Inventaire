@@ -387,3 +387,35 @@ describe('sélection multiple sur l’app', () => {
     expect(liste).toContain('onLongPress')
   })
 })
+
+describe('les totaux de l’app viennent du serveur', () => {
+  // Vérification demandée le 22 août 2026. Les deux écrans additionnaient des
+  // lignes téléchargées sur le téléphone.
+  const superviseur = lire('app/(supervisor)/[sessionId]/index.tsx')
+  const compteur = lire('app/(employee)/[sessionId]/index.tsx')
+  const requetes = lire('lib/queries.ts')
+
+  it('ne rapatrie plus tous les comptages pour additionner deux nombres', () => {
+    // Même règle que le site : ne jamais remettre un `select` sur `counts`
+    // pour en tirer un total. Le volume est celui de l'inventaire entier, et
+    // un plafond de lignes côté API raboterait le total en silence.
+    expect(requetes).not.toContain('getSessionCounts')
+    expect(superviseur).toContain('getSessionCountTotals')
+    expect(superviseur).not.toMatch(/for \(const c of counts/)
+  })
+
+  it('l’écran du compteur ne compte que ses propres pièces', () => {
+    // `getMyCounts` ne filtrait pas sur l'utilisateur : c'est la policy qui
+    // limitait un compteur à ses lignes, mais un superviseur aurait vu toute
+    // l'équipe, présentée comme son travail à lui.
+    expect(compteur).toContain('getMyCountTotals')
+    expect(compteur).not.toContain('getMyCounts(sessionId, 1)')
+  })
+
+  it('la fonction ne compte que l’appelant, et refuse anon', () => {
+    const migration = lire('../supabase/migrations/20260822110001_totaux_du_compteur.sql')
+    expect(migration).toContain('c.counted_by = auth.uid()')
+    expect(migration).toContain('if auth.uid() is null then')
+    expect(migration).toMatch(/revoke all on function public\.get_my_count_totals\(uuid\) from public, anon/)
+  })
+})

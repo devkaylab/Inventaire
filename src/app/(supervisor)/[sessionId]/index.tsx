@@ -4,7 +4,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { closeSession, deleteSessionInvitation, deleteSessionPermanently, getSession, getSessionCounts, getSessionInvitations, getSessionMembers, getZoneDashboard, leaveSession, removeSessionMember, reopenSession } from '@/lib/queries'
+import { closeSession, deleteSessionInvitation, deleteSessionPermanently, getSession, getSessionCountTotals, getSessionInvitations, getSessionMembers, getZoneDashboard, leaveSession, removeSessionMember, reopenSession } from '@/lib/queries'
 import { useAuth } from '@/lib/auth'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { errorMessage } from '@/lib/errors'
@@ -80,9 +80,12 @@ export default function SessionDetailScreen() {
     queryKey: ['session-invitations', sessionId],
     queryFn: () => getSessionInvitations(sessionId),
   })
-  const { data: counts, isFetching: countsFetching } = useQuery({
+  // Les totaux viennent du serveur : télécharger tous les comptages pour
+  // additionner deux nombres coûtait des milliers de lignes par ouverture
+  // d'écran, et un plafond de lignes côté API les aurait rabotés en silence.
+  const { data: totaux, isFetching: countsFetching } = useQuery({
     queryKey: ['session-counts', sessionId],
-    queryFn: () => getSessionCounts(sessionId),
+    queryFn: () => getSessionCountTotals(sessionId),
   })
   const { data: zoneRows, isFetching: zonesFetching } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
@@ -261,12 +264,8 @@ export default function SessionDetailScreen() {
   }
 
   // Pièces (unités) scannées par étape — pass 1 = comptage, pass 2 = audit.
-  let countedPieces = 0
-  let auditedPieces = 0
-  for (const c of counts ?? []) {
-    if (c.pass_number === 2) auditedPieces += c.qty
-    else if (c.pass_number === 1) countedPieces += c.qty
-  }
+  const countedPieces = totaux?.counted ?? 0
+  const auditedPieces = totaux?.audited ?? 0
 
   const zones = zoneRows ?? []
   const zoneTotal = zones.length

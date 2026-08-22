@@ -1166,6 +1166,13 @@ export type Database = {
         }[]
       }
       get_my_company: { Args: never; Returns: string }
+      get_my_count_totals: {
+        Args: { p_session_id: string }
+        Returns: {
+          audited: number
+          counted: number
+        }[]
+      }
       get_my_role: { Args: never; Returns: string }
       get_my_stores: {
         Args: never

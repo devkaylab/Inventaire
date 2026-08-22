@@ -393,6 +393,37 @@ Vérifié après application sur « LA Bruket » : 101 lignes au lieu de 5, dont
 
 Tests de garde : `web/tests/charge.test.ts`, bloc « le rapport d'inventaire ».
 
+## Les totaux de l'app, vérifiés le 22 août 2026
+
+Deux écrans additionnaient des lignes **téléchargées sur le téléphone**, et
+les deux sont passés au serveur.
+
+- **Écran d'un inventaire (superviseur)** : `getSessionCounts` rapatriait
+  *toutes* les lignes de `counts` de l'inventaire, toutes colonnes, à chaque
+  ouverture et à chaque rafraîchissement — pour en tirer deux nombres. C'est
+  le motif que le site avait retiré pour la tenue en charge, resté en place
+  côté mobile. Il appelle maintenant `get_session_count_totals`. La fonction
+  `getSessionCounts` n'existe plus : **ne pas la réintroduire**.
+- **Écran d'un compteur** : `getMyCounts` ne filtre pas sur l'utilisateur —
+  c'est la policy `counts_select_own` qui limite un compteur à ses lignes.
+  Un **superviseur** relève de `counts_select_supervisor` et aurait vu *toute
+  l'équipe*, affichée comme son travail à lui. Le groupe `(employee)` ne
+  vérifie que la présence d'un profil, pas le rôle, donc rien ne l'en
+  empêchait ; c'est le routage par rôle qui l'évitait en pratique. Nouvelle
+  fonction `get_my_count_totals` (migration `20260822110001`), qui ne compte
+  que `auth.uid()` quel que soit le rôle. `getMyCounts` reste utilisé par
+  `CountedBalisesList`, qui a besoin des lignes et non d'un total.
+
+Le risque commun aux deux : au-delà d'un certain nombre de lignes, l'API peut
+en rendre moins que demandé, et le total baisse **sans rien signaler**. Aucun
+inventaire actuel n'est assez gros pour l'observer — c'est précisément
+pourquoi il fallait le corriger avant.
+
+Vérifié depuis le site avec une session réelle : `get_session_count_totals`
+rend 70 / 11 / 5 / 1 sur « LA Bruket », `get_my_count_totals` rend 1 / 11 pour
+le compte connecté — conforme à la base. Et depuis le simulateur non connecté,
+les deux répondent `42501` : `anon` est bien refusé.
+
 ## Les autres totaux, vérifiés le 22 août 2026
 
 Recalculés en SQL indépendamment et comparés aux fonctions, sur les données
