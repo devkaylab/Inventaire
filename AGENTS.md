@@ -526,6 +526,23 @@ Deux adaptations au doigt :
 Ce qui n'est pas sélectionnable (les inventaires invités) reste lisible mais
 s'efface, et sa case n'apparaît pas.
 
+**Le balayage vers la gauche** découvre un volet rouge « Supprimer », en plus
+de la corbeille (demande de Julien : « naturel pour l'user »). Trois points :
+
+- il **ne supprime pas tout seul** : il ouvre la même confirmation nommée que
+  la corbeille. Un inventaire emporte comptages, stock théorique, audits,
+  membres et référentiel ; un geste de travers ne doit pas suffire ;
+- il n'existe **ni sur ce qu'on ne peut pas supprimer, ni pendant une
+  sélection** — le geste entrerait en concurrence avec le défilement d'une
+  liste qu'on est en train de cocher ;
+- il a fallu poser un **`GestureHandlerRootView` à la racine** de
+  l'application (`src/app/_layout.tsx`), qui manquait : sans lui aucun geste
+  n'est reçu. Ne pas le retirer en refactorant le layout.
+
+Aucune dépendance native ajoutée — `react-native-gesture-handler` était déjà
+installé, donc **pas de `pod install`**, donc pas de correctif du chemin avec
+espace à réappliquer.
+
 Au passage, la croix d'annulation d'une invitation était le caractère « ✕» :
 c'est un tracé désormais, comme le reste des icônes.
 

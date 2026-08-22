@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { View } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
@@ -46,7 +46,10 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+          {/* Racine des gestes : sans elle, le balayage d'une tuile
+              d'inventaire ne recevrait rien. Elle doit envelopper toute
+              l'application, pas seulement l'écran concerné. */}
+          <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
             {/* Header bar is near-black in both themes → light status bar text */}
             <StatusBar style="light" />
             {/* Au-dessus de la pile : le bandeau doit coiffer l'en-tête de
@@ -62,7 +65,7 @@ export default function RootLayout() {
               <Stack.Screen name="(employee)" />
             </Stack>
             {showSplash && <SplashAnimation onFinish={() => setShowSplash(false)} />}
-          </View>
+          </GestureHandlerRootView>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -431,3 +431,35 @@ describe('les totaux de l’app viennent du serveur', () => {
     expect(migration).toMatch(/revoke all on function public\.get_my_count_totals\(uuid\) from public, anon/)
   })
 })
+
+describe('le balayage pour supprimer', () => {
+  const liste = lire('app/(supervisor)/index.tsx')
+  const racine = lire('app/_layout.tsx')
+
+  it('a sa racine de gestes, sinon rien ne se passerait', () => {
+    // Elle doit envelopper toute l'application, pas seulement l'écran.
+    expect(racine).toContain('GestureHandlerRootView')
+  })
+
+  it('n’apparaît que sur ce qu’on peut supprimer, et pas pendant une sélection', () => {
+    // Le geste entrerait en concurrence avec le défilement d'une liste qu'on
+    // est en train de cocher.
+    expect(liste).toContain('if (!onDelete || selection) return carte')
+  })
+
+  it('ne supprime pas tout seul', () => {
+    // Il ouvre la même confirmation nommée que la corbeille : un inventaire
+    // emporte comptages, audits et référentiel.
+    expect(liste).toContain('balayage.current?.close(); onDelete()')
+    expect(liste).toContain('renderRightActions')
+  })
+
+  it('n’ajoute aucune dépendance native', () => {
+    // `react-native-gesture-handler` est déjà installé — une nouvelle
+    // dépendance native imposerait un `pod install`, qui écrase le correctif
+    // du chemin avec espace.
+    const pkg = lire('../package.json')
+    expect(pkg).toContain('react-native-gesture-handler')
+    expect(liste).toContain("from 'react-native-gesture-handler/ReanimatedSwipeable'")
+  })
+})

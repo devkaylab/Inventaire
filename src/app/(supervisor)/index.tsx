@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -92,8 +93,9 @@ function SessionCard({ session, theme, styles, onDelete, selection, coche, onTog
    * mange pas le geste suivant.
    */
   const appuiLong = useRef(false)
+  const balayage = useRef<SwipeableMethods | null>(null)
 
-  return (
+  const carte = (
     <Pressable
       style={[styles.card, coche && styles.cardSelected, selection && !selectionnable && styles.cardDimmed]}
       onPressIn={() => { appuiLong.current = false }}
@@ -138,6 +140,31 @@ function SessionCard({ session, theme, styles, onDelete, selection, coche, onTog
         {session.inventory_number} · {new Date(session.created_at).toLocaleDateString('fr-FR')}
       </Text>
     </Pressable>
+  )
+
+  // Pas de balayage sur ce qu'on ne peut pas supprimer, ni pendant une
+  // sélection : le geste entrerait en concurrence avec le défilement d'une
+  // liste qu'on est en train de cocher.
+  if (!onDelete || selection) return carte
+
+  return (
+    <ReanimatedSwipeable
+      ref={r => { balayage.current = r }}
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+      renderRightActions={() => (
+        <Pressable
+          style={styles.balayageAction}
+          onPress={() => { balayage.current?.close(); onDelete() }}
+        >
+          <CorbeilleIcon color="#fff" />
+          <Text style={styles.balayageTexte}>Supprimer</Text>
+        </Pressable>
+      )}
+    >
+      {carte}
+    </ReanimatedSwipeable>
   )
 }
 
@@ -397,6 +424,19 @@ function makeStyles(t: Theme) {
       borderWidth: 1, borderColor: t.hairline, gap: Spacing.xs, ...t.shadowCard,
     },
     trashBtn: { padding: 2, marginLeft: 2 },
+    // Le volet rouge découvert par le balayage. Il ne supprime pas tout seul :
+    // il ouvre la même confirmation nommée que la corbeille — un inventaire
+    // emporte comptages, audits et référentiel, un geste de travers ne doit
+    // pas suffire.
+    balayageAction: {
+      // La liste espace ses éléments par `gap` : le volet doit donc faire
+      // exactement la hauteur de la carte, sans marge basse qui le
+      // raccourcirait.
+      width: 104, marginLeft: Spacing.sm,
+      borderRadius: Radius.lg, backgroundColor: t.danger,
+      alignItems: 'center', justifyContent: 'center', gap: 4,
+    },
+    balayageTexte: { color: '#fff', fontSize: 13, fontFamily: Font.semibold },
     cardSelected: { borderColor: t.accent, backgroundColor: t.accentSoft },
     // Ce qu'on ne peut pas supprimer reste lisible, mais s'efface : la
     // sélection ne le concerne pas.
