@@ -8,7 +8,9 @@
 // entreprises, dérouler chaque carte rendait la page illisible et lançait
 // deux requêtes par entreprise au chargement.
 //
-// Une seule requête ici : admin_company_detail rend l'ensemble.
+// Deux requêtes ici : admin_company_detail rend l'ensemble de la fiche, et
+// admin_list_store_requests les demandes d'ajout de magasin — arrivées après,
+// et volontairement lues à part pour n'avoir pas à rouvrir la première.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
@@ -32,6 +34,11 @@ type Invitation = {
   first_name: string | null; last_name: string | null; created_at: string
 }
 type Detail = { company: Company; stores: Store[]; members: Member[]; invitations: Invitation[] }
+type StoreRequest = {
+  id: string; company_id: string; store_name: string; message: string
+  status: 'pending' | 'created' | 'rejected'
+  requested_label: string; created_at: string
+}
 
 function frDate(s: string) {
   return new Date(s).toLocaleDateString('fr-FR')
@@ -46,12 +53,17 @@ export default function AdminCompanyPage() {
   const [erreur, setErreur] = useState<string | null>(null)
   const [storeName, setStoreName] = useState('')
   const [copie, setCopie] = useState<string | null>(null)
+  const [demandes, setDemandes] = useState<StoreRequest[]>([])
 
   const charger = useCallback(async () => {
     if (!companyId) return
-    const { data, error } = await supabase.rpc('admin_company_detail', { p_company_id: companyId })
-    if (error) { setErreur(error.message); return }
-    setDetail(data as Detail)
+    const [fiche, dem] = await Promise.all([
+      supabase.rpc('admin_company_detail', { p_company_id: companyId }),
+      supabase.rpc('admin_list_store_requests'),
+    ])
+    if (fiche.error) { setErreur(fiche.error.message); return }
+    setDetail(fiche.data as Detail)
+    setDemandes(((dem.data ?? []) as StoreRequest[]).filter((d) => d.company_id === companyId))
   }, [companyId])
 
   useEffect(() => {
@@ -83,6 +95,19 @@ export default function AdminCompanyPage() {
     navigator.clipboard?.writeText(code)
     setCopie(code)
     setTimeout(() => setCopie(null), 2000)
+  }
+
+  async function creerDepuisDemande(d: StoreRequest) {
+    appel('admin_fulfil_store_request', { p_id: d.id })
+  }
+
+  async function refuserDemande(d: StoreRequest) {
+    // Le motif est facultatif mais il est repris tel quel sur l'écran du
+    // client : « Refusée » tout court laisserait l'administrateur d'entreprise
+    // sans rien à faire de l'information.
+    const note = prompt(`Refuser la demande du magasin « ${d.store_name} ».\n\nMotif transmis au client (facultatif) :`, '')
+    if (note === null) return
+    appel('admin_reject_store_request', { p_id: d.id, p_note: note })
   }
 
   async function ajouterMagasin(e: React.FormEvent) {
@@ -146,6 +171,35 @@ export default function AdminCompanyPage() {
           onChanged={charger}
         />
       </section>
+
+      {/* Une demande précède la création : elle se lit juste avant les
+          magasins, et « Créer le magasin » fait exactement ce que fait le
+          formulaire d'à côté. */}
+      {demandes.filter((d) => d.status === 'pending').length > 0 && (
+        <section className="admin-section">
+          <h2>Demandes de magasin</h2>
+          <div className="req-list">
+            {demandes.filter((d) => d.status === 'pending').map((d) => (
+              <div className="req-row" key={d.id}>
+                <div>
+                  <div className="req-name">{d.store_name}</div>
+                  <div className="muted small">
+                    Demandé le {frDate(d.created_at)}
+                    {d.requested_label && ` par ${d.requested_label}`}
+                  </div>
+                  {d.message && <div className="muted small">« {d.message} »</div>}
+                </div>
+                <div className="req-actions">
+                  <button className="btn btn-primary btn-sm" onClick={() => creerDepuisDemande(d)}>
+                    Créer le magasin
+                  </button>
+                  <button className="link-btn danger-link" onClick={() => refuserDemande(d)}>Refuser</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="admin-section">
         <div className="admin-section-head">

@@ -878,10 +878,9 @@ sur chaque tuile.
 Tests de garde : `web/tests/suppression-inventaire.test.ts` et
 `tests/compte.test.ts` (bloc « accueil superviseur »).
 
-**Pas encore fait, décrit mais hors de ce chantier** : **il n'existe aucun
-parcours de demande d'ajout de magasin** vers l'administrateur Quantinvo.
-(La suppression des comptes par l'administrateur d'entreprise, elle, a été
-tranchée et construite le 22 août 2026 — section suivante.)
+(Les deux droits qui manquaient ici — suppression des comptes par
+l'administrateur d'entreprise, demande d'ajout de magasin — ont été tranchés
+et construits le 22 août 2026 : voir les deux sections suivantes.)
 
 # L'administrateur d'entreprise supprime les comptes de son entreprise (22 août 2026)
 
@@ -953,6 +952,76 @@ compte de son entreprise ». Le test de `navigation.test.ts` qui vérifiait que
 « Retirer » n'est réservé à personne a été **amendé, pas affaibli** : la garde
 porte désormais sur ce qui précède la suppression, le retrait d'un magasin
 restant ouvert à tout superviseur.
+
+# Demander l'ajout d'un magasin (22 août 2026)
+
+Un client ouvre un magasin. Il n'avait **aucun moyen de le dire depuis le
+produit** : seul Quantinvo crée un magasin (`admin_add_store`, gardée par
+`is_admin()`), parce que **la licence se facture par magasin**. Il fallait
+téléphoner. Demande de Julien : un bouton.
+
+**La règle qui porte tout le reste : une demande ne crée pas de magasin.**
+`ca_request_store` n'insère que dans `store_requests` ; un test échoue si elle
+touche un jour à `stores`. La création reste chez Quantinvo, et le devis reste
+une conversation — comme pour une nouvelle entreprise.
+
+Migration `20260822130001`, table `store_requests` (RLS lecture pour
+l'administrateur Quantinvo et celui de l'entreprise, **aucune policy
+d'écriture**), et six fonctions :
+
+- côté client, gardées par `is_company_admin()` : `ca_request_store`,
+  `ca_list_store_requests`, `ca_cancel_store_request` ;
+- côté Quantinvo, gardées par `is_admin()` : `admin_list_store_requests`,
+  `admin_fulfil_store_request`, `admin_reject_store_request`.
+
+Points à ne pas défaire :
+
+- **`admin_fulfil_store_request` appelle `admin_add_store`**, il ne recopie pas
+  la génération du code d'accès. Deux chemins de création divergeraient un
+  jour, et le magasin né d'une demande ne serait plus tout à fait un magasin.
+  Effet visible et voulu : deux lignes au journal Quantinvo
+  (`magasin_ajoute` puis `demande_magasin_creee`).
+- **Les deux doublons sont refusés à la saisie** — un magasin qui porte déjà ce
+  nom, une demande déjà en cours pour ce nom (comparaison en minuscules, nom
+  détouré). Sans cela la même demande arrive trois fois et c'est Quantinvo qui
+  fait le tri.
+- **Une demande traitée ne se rejoue ni ne s'annule** : `admin_fulfil` refuse
+  ce qui n'est plus `pending`, `ca_cancel` ne supprime que du `pending`. Une
+  demande traitée est une trace, pas un brouillon.
+- **Le motif de refus est repris tel quel sur l'écran du client.** « Refusée »
+  tout court laisse l'administrateur d'entreprise sans rien à faire de
+  l'information.
+- **Purge à un an**, dans `purge_expired_data` comme le reste — mais seulement
+  ce qui est traité (`handled_at is not null`) : une demande en attente attend.
+
+Côté écrans :
+
+- **`/magasins`** porte le bouton, pour le seul administrateur d'entreprise, et
+  la liste de ses demandes (sans cela la même demande part trois fois). ⚠️ Son
+  **état vide a été récrit** : « contactez l'administrateur de votre
+  entreprise » s'adressait à l'administrateur de l'entreprise — le piège déjà
+  rencontré côté mobile. Il renvoie maintenant vers /equipe, où il peut
+  s'affecter un magasin lui-même.
+- **`/admin`** fait remonter les demandes en tête de « À traiter » : c'est du
+  revenu qui attend, ça passe avant les alertes d'usage. Deux appels au
+  chargement plutôt qu'un — `admin_business_overview` est une vue d'affaires,
+  pas une boîte de réception.
+- **La fiche entreprise** porte « Créer le magasin » et « Refuser », juste
+  au-dessus des magasins : une demande précède la création.
+
+Vérifié en base le 22 août 2026, sessions simulées par `request.jwt.claims`,
+**tout en transactions annulées** : demande créée, les trois refus de saisie
+(doublon de demande, doublon de magasin, nom vide), refus opposé au superviseur
+ordinaire comme aux deux fonctions Quantinvo, création réelle du magasin avec
+son code, statut `created` relié au magasin, journaux des deux côtés, rejeu
+refusé, et le motif de refus bien visible côté client. Aucune ligne résiduelle,
+`anon` refusé sur les six fonctions.
+
+**Non vu à l'écran** : `/magasins` et la console demandent une session
+connectée. Maquette validée avant codage :
+https://claude.ai/code/artifact/1b6dfbe0-6866-4af9-a5ab-c6e6b1188231
+
+Tests de garde : `web/tests/demande-magasin.test.ts`.
 
 # Conformité RGPD / sécurité
 

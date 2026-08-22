@@ -19,6 +19,8 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 
 type CompanyRef = { id: string; name: string }
+/** Une demande d'ajout de magasin encore en attente, tous clients confondus. */
+type StoreRequest = { id: string; company_id: string; company_name: string; store_name: string; status: string }
 type IdleStore = { id: string; name: string; company_id: string; company_name: string; days: number | null }
 type Overview = {
   companies: number
@@ -45,10 +47,18 @@ const euros = (cents: number) =>
 export default function AdminPage() {
   const guard = useAuthGuard('admin')
   const [vue, setVue] = useState<Overview | null>(null)
+  const [demandes, setDemandes] = useState<StoreRequest[]>([])
 
   const charger = useCallback(async () => {
-    const { data } = await supabase.rpc('admin_business_overview')
-    if (data) setVue(data as Overview)
+    // Deux appels plutôt qu'un : les demandes de magasin sont arrivées après
+    // `admin_business_overview`, et une vue d'affaires n'a pas à devenir la
+    // boîte de réception de tout ce qui attend.
+    const [apercu, dem] = await Promise.all([
+      supabase.rpc('admin_business_overview'),
+      supabase.rpc('admin_list_store_requests'),
+    ])
+    if (apercu.data) setVue(apercu.data as Overview)
+    if (dem.data) setDemandes((dem.data as StoreRequest[]).filter((d) => d.status === 'pending'))
   }, [])
 
   useEffect(() => {
@@ -66,6 +76,7 @@ export default function AdminPage() {
     && v.idle_stores.length === 0
     && v.companies_without_admin === 0
     && v.pending_deletions === 0
+    && demandes.length === 0
 
   return (
     <AppShell profile={guard.profile}>
@@ -116,6 +127,16 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="req-list">
+              {/* Une demande de magasin est du revenu qui attend : elle passe
+                  avant les alertes d'usage. */}
+              {demandes.map((d) => (
+                <div className="signal signal-alerte" key={`demande-${d.id}`}>
+                  <div className="signal-txt">
+                    <strong>{d.company_name}</strong> demande l&apos;ajout du magasin « {d.store_name} ».
+                  </div>
+                  <Link href={`/admin/entreprise/${d.company_id}`} className="btn btn-ghost btn-sm">Ouvrir la fiche</Link>
+                </div>
+              ))}
               {v.companies_without_store.map((c) => (
                 <div className="signal signal-alerte" key={`sans-magasin-${c.id}`}>
                   <div className="signal-txt">
