@@ -56,7 +56,7 @@ const STATUT: Record<StoreRequest['status'], string> = {
   pending: 'Demande envoyée',
   quoted: 'Devis reçu',
   accepted: 'Devis accepté',
-  paid: 'Facture réglée',
+  paid: 'Paiement reçu',
   created: 'Magasin créé',
   removed: 'Magasin supprimé',
   rejected: 'Refusée',
@@ -356,13 +356,17 @@ function DemandesMagasin() {
                     · <a href={`/devis/${d.quote_token}`}>voir et accepter</a>
                   </div>
                 )}
-                {d.status === 'accepted' && (
+                {d.status === 'accepted' && d.quote_token && (
+                  // Le paiement passe par Stripe : un client qui a fermé la page
+                  // de paiement doit pouvoir y revenir d'ici, pas seulement
+                  // depuis l'e-mail. La page du devis rouvre la même session.
                   <div className="muted small">
-                    Accord enregistré. Votre facture arrive ; le magasin est créé dès son règlement.
+                    Accord enregistré. Il reste à régler la licence : le magasin est créé dès le paiement.{' '}
+                    · <a href={`/devis/${d.quote_token}`}>Régler en ligne</a>
                   </div>
                 )}
                 {d.status === 'paid' && (
-                  <div className="muted small">Facture réglée. Le magasin est créé sous peu.</div>
+                  <div className="muted small">Paiement reçu. Le magasin est créé dans la minute.</div>
                 )}
                 {d.status === 'rejected' && d.admin_note && (
                   <div className="muted small">« {d.admin_note} »</div>

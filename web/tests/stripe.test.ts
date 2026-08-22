@@ -137,3 +137,27 @@ describe('payé, donc créé', () => {
     expect(webhook).toContain("session.payment_status !== 'paid'")
   })
 })
+
+describe('trous trouvés au test complet du parcours (22 août 2026)', () => {
+  const m2 = lire('../../supabase/migrations/20260822270001_prix_paye_sur_le_magasin.sql')
+  const corps2 = (fn: string) => m2.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+
+  it('le prix payé se reporte sur le magasin créé', () => {
+    // Les magasins nés du webhook n'avaient pas de prix : le tableau de bord
+    // les estimait au panier moyen alors qu'on connaît le montant exact.
+    const c = corps2('fulfil_paid_request')
+    expect(c).toContain("(v_ligne ->> 'prixCents')::bigint")
+    expect(c).toContain('insert into public.stores (company_id, name, join_code, annual_price_cents)')
+    expect(c).toContain('values (v_sto.company_id, v_sto.store_name, v_store_code, v_sto.quote_amount_cents)')
+    // Et le rattrapage de l'existant.
+    expect(m2).toContain("set annual_price_cents = (l ->> 'prixCents')::bigint")
+  })
+
+  it('le client retrouve le lien de paiement depuis ses magasins', () => {
+    // Un client qui a fermé Stripe sans régler n'avait plus d'issue depuis
+    // son espace : le texte annonçait une facture qui n'existe plus.
+    const magasins = lire('../app/magasins/page.tsx')
+    expect(magasins).toContain('Régler en ligne')
+    expect(magasins).not.toContain('Votre facture arrive')
+  })
+})

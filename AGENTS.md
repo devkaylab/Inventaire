@@ -364,6 +364,36 @@ gabarit `email.ts` a gagné `lienSecondaire` pour ça : un lien sous le bouton,
 jamais un second bouton — un seul geste par message. Sans droit de lecture
 sur les factures, le message part sans le lien.
 
+### Test complet des deux parcours (22 août 2026, au soir)
+
+Julien : *« fais un test complet du parcours, création entreprise et ajout
+de nouveau magasin, vois s'il y a des trous »*. Déroulé en vrai, étape par
+étape — demande par l'edge publique, devis (RPC avec session admin simulée
+en base, l'edge exigeant un vrai jeton), PDF et acceptation par les edges
+publiques, paiement par la carte de test, webhook, puis la même entreprise
+demandant un magasin, devisé, accepté, payé. Deux trous, fermés :
+
+1. **Le prix payé n'était pas reporté sur le magasin** — `annual_price_cents`
+   nul sur tout ce que le webhook créait, donc un revenu annuel estimé au
+   panier moyen dès le premier client. Migration `20260822270001` : la ligne
+   du devis donne le prix de chaque magasin (à défaut, le total réparti) ;
+   rattrapage de l'existant compris.
+2. **Pas de lien de paiement sur /magasins** pour une demande `accepted` : le
+   texte annonçait « votre facture arrive », d'avant Stripe. Un client qui
+   avait fermé Checkout n'avait plus d'issue depuis son espace. Le lien
+   « Régler en ligne » rouvre la page du devis, donc la même session.
+
+Contrôlés sans défaut : l'admin invité est bien affecté à tous les magasins,
+y compris celui ajouté ensuite (déclencheur `stores`) ; un devis expiré se
+refuse et la page le dit ; un devis renvoyé tue l'ancien lien ; l'annulation
+ne vaut que sur `pending`, comme le bouton. Données d'essai supprimées,
+zéro résidu contrôlé.
+
+**À savoir pour rejouer ce test** : simuler une session en base cache les
+lignes à un `select` direct (RLS, aucune policy sur `company_requests`) — il
+faut lire l'`id` avant de basculer le rôle. Ce n'est pas un trou : la console
+passe par `admin_list_company_requests`, en SECURITY DEFINER.
+
 ### Les clés (posées en mode test le 22 août 2026)
 
 Dans le tableau de bord Stripe (compte Devkaylab) — à refaire en `live` le
