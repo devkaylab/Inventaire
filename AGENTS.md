@@ -315,14 +315,25 @@ paie), relancé passé sept jours ; `paid` sans `created` est une anomalie
 et « Réglé hors Stripe » restent en secours, en liens discrets, pour un
 paiement reçu par un autre canal — la création reste alors à faire à la main.
 
-Vérifié en base (transaction annulée) : paiement → `created`, deux magasins
-aux noms du devis, facture liée, invitation `company_admin`, deux lignes de
-journal « Stripe » ; rejeu → `already`, session inconnue → erreur. Le webhook
-en ligne refuse tout tant que le secret n'est pas posé.
+**Vérifié de bout en bout le 22 août 2026, clés de test posées par Julien**
+(clé restreinte : Checkout Sessions, Customers, Invoices, Products, Prices en
+écriture, rien d'autre) : devis accepté → Checkout → carte `4242` →
+webhook → `created`, entreprise avec son code, deux magasins aux noms du
+devis, facture Stripe liée, contact devenu administrateur d'entreprise
+affecté aux deux magasins, journal signé « Stripe ». Données d'essai
+supprimées ensuite ; le journal est conservé.
 
-### ⚠️ À FAIRE par Julien — les clés
+Un défaut trouvé ainsi : `expires_at` calculé à l'appel changeait à chaque
+seconde, et Stripe refuse une clé d'idempotence rejouée avec d'autres
+paramètres — le second clic n'avait plus d'URL. **Une session encore ouverte
+se relit** (`lireSessionCheckout`) au lieu de se recréer ; une session expirée
+se recrée avec un suffixe de tentative. `accept_quote_by_token` rend
+`checkout_session_id` pour ça.
 
-Dans le tableau de bord Stripe (compte Devkaylab), **en mode test d'abord** :
+### Les clés (posées en mode test le 22 août 2026)
+
+Dans le tableau de bord Stripe (compte Devkaylab) — à refaire en `live` le
+jour venu, mêmes variables, nouvelles valeurs :
 
 1. **Developers → API keys** : copier la clé secrète (`sk_test_…`).
 2. **Developers → Webhooks → Add endpoint** :

@@ -57,6 +57,9 @@ export async function creerSessionCheckout(
     reference: string
     successUrl: string
     cancelUrl: string
+    /** Change quand la session précédente est expirée : sinon la clé
+        d'idempotence rendrait la session morte. */
+    tentative?: number
   },
 ): Promise<SessionCheckout> {
   const corps = formulaire({
@@ -85,20 +88,36 @@ export async function creerSessionCheckout(
     cancel_url: p.cancelUrl,
     locale: 'fr',
     billing_address_collection: 'required',
-    // Le devis vaut 30 jours ; une session Checkout, 24 h au plus (limite Stripe).
-    expires_at: Math.floor(Date.now() / 1000) + 23 * 3600,
+    // Pas d'`expires_at` calculé ici : il changerait à chaque seconde, et
+    // Stripe refuse une clé d'idempotence rejouée avec d'autres paramètres.
+    // Le défaut de Stripe (24 h) convient ; la session se relit par son
+    // identifiant tant qu'elle est ouverte (`lireSessionCheckout`).
   })
   const resp = await fetch(`${API}/checkout/sessions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${cle}`,
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Idempotency-Key': `checkout-${p.kind}-${p.requestId}`,
+      'Idempotency-Key': `checkout-${p.kind}-${p.requestId}-${p.tentative ?? 0}`,
     },
     body: corps,
   })
   const data = await resp.json()
   if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+  return { id: data.id, url: data.url, customer: data.customer ?? null }
+}
+
+/**
+ * Relit une session Checkout. Rend son adresse si elle est encore ouverte,
+ * `null` si elle est expirée ou déjà réglée — il faudra en ouvrir une autre.
+ */
+export async function lireSessionCheckout(cle: string, id: string): Promise<SessionCheckout | null> {
+  const resp = await fetch(`${API}/checkout/sessions/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${cle}` },
+  })
+  if (!resp.ok) return null
+  const data = await resp.json()
+  if (data.status !== 'open' || !data.url) return null
   return { id: data.id, url: data.url, customer: data.customer ?? null }
 }
 

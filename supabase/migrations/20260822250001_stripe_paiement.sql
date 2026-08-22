@@ -282,6 +282,7 @@ begin
     if v_req.status in ('accepted', 'paid', 'created') then
       return json_build_object('success', true, 'already', true, 'kind', 'company',
         'request_id', v_req.id, 'status', v_req.status,
+        'checkout_session_id', v_req.stripe_checkout_session_id,
         'accepted_at', v_req.accepted_at, 'company_name', v_req.company_name,
         'reference', v_req.quote_reference, 'amount_cents', v_req.quote_amount_cents,
         'contact_email', v_req.contact_email, 'contact_first_name', v_req.contact_first_name);
@@ -325,6 +326,7 @@ begin
   if v_sto.status in ('accepted', 'paid', 'created') then
     return json_build_object('success', true, 'already', true, 'kind', 'store',
       'request_id', v_sto.id, 'status', v_sto.status,
+      'checkout_session_id', v_sto.stripe_checkout_session_id,
       'accepted_at', v_sto.accepted_at, 'company_name', coalesce(v_company, ''),
       'store_name', v_sto.store_name,
       'reference', v_sto.quote_reference, 'amount_cents', v_sto.quote_amount_cents,

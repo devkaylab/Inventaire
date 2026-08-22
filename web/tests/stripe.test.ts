@@ -79,7 +79,12 @@ describe('la session Checkout', () => {
   it('est idempotente par demande, et fait produire la facture par Stripe', () => {
     // Un devis accepté deux fois ne se paie pas deux fois ; et c'est Stripe
     // qui facture — il n'y a pas de RIB.
-    expect(stripe).toContain("'Idempotency-Key': `checkout-${p.kind}-${p.requestId}`")
+    expect(stripe).toContain("'Idempotency-Key': `checkout-${p.kind}-${p.requestId}-${p.tentative ?? 0}`")
+    // Et une session encore ouverte se relit plutôt que de se recréer : Stripe
+    // refuse une clé d'idempotence rejouée avec d'autres paramètres (vu en
+    // test : `expires_at` changeait à chaque seconde).
+    expect(stripe).not.toContain('expires_at:')
+    expect(accept).toContain('lireSessionCheckout(')
     expect(stripe).toContain('invoice_creation')
     expect(stripe).toContain("payment_method_types: ['card', 'sepa_debit']")
   })

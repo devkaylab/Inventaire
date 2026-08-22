@@ -17,7 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { emailQuantinvo } from '../_shared/email.ts'
 import { euros } from '../_shared/devis.ts'
-import { creerSessionCheckout } from '../_shared/stripe.ts'
+import { creerSessionCheckout, lireSessionCheckout } from '../_shared/stripe.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -72,12 +72,20 @@ Deno.serve(async (req) => {
   if (stripeKey && requestId && typeof result.amount_cents === 'number' && result.amount_cents > 0
       && result.status !== 'paid' && result.status !== 'created') {
     try {
+      // Une session déjà ouverte pour cette demande se réutilise telle quelle :
+      // un second clic ramène au même Checkout. Expirée ou réglée, on en
+      // ouvre une autre — `creerSessionCheckout` change alors de clé
+      // d'idempotence par son compteur.
+      const existante = typeof result.checkout_session_id === 'string'
+        ? await lireSessionCheckout(stripeKey, result.checkout_session_id)
+        : null
       const objet = kind === 'store'
         ? `Licence annuelle — ${result.store_name}`
         : `Licence annuelle — ${result.company_name}`
-      const session = await creerSessionCheckout(stripeKey, {
+      const session = existante ?? await creerSessionCheckout(stripeKey, {
         requestId,
         kind,
+        tentative: typeof result.checkout_session_id === 'string' ? Date.now() : 0,
         amountCents: result.amount_cents,
         label: objet,
         description: `Devis ${result.reference} · Quantinvo, l’outil d’inventaire pour le commerce`,
@@ -86,9 +94,11 @@ Deno.serve(async (req) => {
         successUrl: `${appUrl}/devis/${jeton}?paiement=ok`,
         cancelUrl: `${appUrl}/devis/${jeton}`,
       })
-      await client.rpc('attach_checkout_session', {
-        p_kind: kind, p_id: requestId, p_session_id: session.id, p_customer_id: session.customer,
-      })
+      if (!existante) {
+        await client.rpc('attach_checkout_session', {
+          p_kind: kind, p_id: requestId, p_session_id: session.id, p_customer_id: session.customer,
+        })
+      }
       paymentUrl = session.url
     } catch (e) {
       // L'accord tient ; le paiement se retentera depuis la page (même session,
