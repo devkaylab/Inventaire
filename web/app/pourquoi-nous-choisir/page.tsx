@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
@@ -86,9 +86,12 @@ export default function PourquoiPage() {
 
         <section className="section" style={{ paddingTop: 8 }}>
           <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {RAISONS.map((r) => (
+            {RAISONS.map((r, i) => (
               <div className="card" data-reveal="0" style={{ padding: '30px 34px' }} key={r.title}>
-                <div className="ico">{r.icon}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                  <div className="ico" style={{ marginBottom: 0 }}>{r.icon}</div>
+                  <span className="raison-numero">Raison {i + 1} sur {RAISONS.length}</span>
+                </div>
                 <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>{r.title}</h2>
                 <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {r.points.map((p) => (
@@ -108,7 +111,7 @@ export default function PourquoiPage() {
                 Déposez votre demande : nous revenons vers vous avec un devis au volume de
                 votre stock, puis vos codes entreprise et magasins.
               </p>
-              <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
+              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
             </div>
           </div>
         </section>

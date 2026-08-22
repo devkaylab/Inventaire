@@ -21,6 +21,7 @@ export function SiteHeader() {
           <span>Quantinvo</span>
         </Link>
         <nav className="nav-links">
+          <Link href="/">Accueil</Link>
           <Link href="/pourquoi-nous-choisir">Pourquoi nous choisir ?</Link>
           <Link href="/inventaire">L&apos;inventaire</Link>
           <Link href="/#fonctionnalites">Fonctionnalités</Link>

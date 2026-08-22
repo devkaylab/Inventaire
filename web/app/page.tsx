@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { AuthLink } from '@/components/AuthLink'
+import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
@@ -43,7 +43,7 @@ export default function Home() {
               vous suivez l&apos;avancement en direct, et l&apos;écart se voit avant de coûter.
             </p>
             <div className="cta" data-reveal="4">
-              <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
+              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
               <AuthLink className="btn btn-ghost" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
             </div>
           </div>
@@ -114,7 +114,7 @@ export default function Home() {
                 vos codes entreprise et magasins. Votre entreprise utilise déjà Quantinvo ?
                 Son administrateur vous ouvre l&apos;accès depuis son espace.
               </p>
-              <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
+              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
             </div>
           </div>
         </section>
