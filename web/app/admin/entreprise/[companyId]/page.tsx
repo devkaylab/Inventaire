@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { densite, trancheDe } from '@/lib/tarifs'
+import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = {
@@ -39,8 +40,10 @@ type StoreRequest = {
   id: string; company_id: string; store_id: string | null; store_name: string; message: string
   units: number | null; sqm: number | null
   kind: 'add' | 'remove'
-  status: 'pending' | 'created' | 'removed' | 'rejected'
+  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected'
   requested_label: string; created_at: string
+  quote_reference?: string
+  quote_amount_cents?: number | null
 }
 
 function frDate(s: string) {
@@ -58,6 +61,95 @@ const nb = (n: number) => n.toLocaleString('fr-FR')
  * un détecteur de mensonge : stock et surface viennent de la même personne. Il
  * attrape l'erreur d'ordre de grandeur, un zéro oublié.
  */
+/**
+ * Les statuts d'une demande de magasin, tels qu'ils se lisent en console.
+ *
+ * Le parcours est celui d'une inscription depuis le 22 août 2026 :
+ * pending → quoted → accepted → paid → created. La licence se facture par
+ * magasin, un magasin ajouté est une ligne de revenu.
+ */
+const STATUT_DEMANDE: Record<StoreRequest['status'], string> = {
+  pending: 'À deviser',
+  quoted: 'Devis envoyé',
+  accepted: 'Devis accepté',
+  paid: 'Facture encaissée',
+  created: 'Magasin créé',
+  removed: 'Magasin supprimé',
+  rejected: 'Refusée',
+}
+
+/** Ce qui attend encore un geste de Quantinvo. */
+const enCours = (d: StoreRequest) =>
+  d.status === 'pending' || d.status === 'quoted' || d.status === 'accepted' || d.status === 'paid'
+
+/**
+ * Le panneau qui établit le devis d'un magasin — même figure que celui des
+ * demandes d'inscription, sur une seule ligne : un magasin, une licence.
+ *
+ * Le montant proposé vient de la grille et du volume déclaré ; il reste
+ * modifiable, c'est la ligne saisie qui part dans le PDF.
+ */
+function PanneauDevisMagasin({
+  demande, busy, onEnvoyer,
+}: {
+  demande: StoreRequest
+  busy: boolean
+  onEnvoyer: (reference: string, cents: number) => void
+}) {
+  const lignes = lignesProposees([{ name: demande.store_name, units: demande.units, sqm: demande.sqm }], 1)
+  const propose = totalProposeCents(lignes)
+  const [reference, setReference] = useState(
+    demande.quote_reference || referenceProposee(new Date().getFullYear(), demande.id),
+  )
+  const [montant, setMontant] = useState(
+    ((demande.quote_amount_cents ?? propose.cents) / 100).toFixed(2).replace('.', ','),
+  )
+
+  const cents = Math.round(Number(montant.replace(/\s/g, '').replace(',', '.')) * 100)
+  const valide = reference.trim() !== '' && Number.isFinite(cents) && cents >= 0
+
+  return (
+    <div className="devis-panneau">
+      <div className="devis-panneau-lignes">
+        {lignes.map((l, i) => (
+          <div className="devis-panneau-ligne" key={i}>
+            <span>{l.libelle}</span>
+            <span className="muted">{l.unites == null ? '—' : `${nb(l.unites)} pièces`}</span>
+            <span className="muted">{l.tranche || '—'}</span>
+            <span className="n">
+              {l.prixCents == null
+                ? 'sur devis'
+                : (l.prixCents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="devis-panneau-champs">
+        <label>
+          Référence
+          <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={40} />
+        </label>
+        <label>
+          Montant annuel HT
+          <input value={montant} onChange={(e) => setMontant(e.target.value)} inputMode="decimal" />
+        </label>
+      </div>
+      <div className="devis-panneau-actions">
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={busy || !valide}
+          onClick={() => valide && onEnvoyer(reference.trim(), cents)}
+        >
+          {busy ? 'Envoi…' : 'Envoyer le devis'}
+        </button>
+        <span className="muted small">
+          Le PDF est fabriqué et joint à l&apos;envoi, avec le lien d&apos;acceptation.
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function VolumeDemande({ units, sqm }: { units: number | null; sqm: number | null }) {
   const tranche = trancheDe(units)
   const d = densite(units, sqm)
@@ -85,6 +177,12 @@ export default function AdminCompanyPage() {
   const [storeName, setStoreName] = useState('')
   const [copie, setCopie] = useState<string | null>(null)
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
+  // Un seul panneau de devis ouvert à la fois : deux montants côte à côte, ce
+  // sont deux montants qu'on confond.
+  const [devisOuvert, setDevisOuvert] = useState<string | null>(null)
+  // La demande en cours de traitement : ses boutons se désactivent le temps de
+  // l'aller-retour, sinon un double clic envoie deux devis.
+  const [busy, setBusy] = useState<string | null>(null)
 
   const charger = useCallback(async () => {
     if (!companyId) return
@@ -126,6 +224,39 @@ export default function AdminCompanyPage() {
     navigator.clipboard?.writeText(code)
     setCopie(code)
     setTimeout(() => setCopie(null), 2000)
+  }
+
+  /** Envoyer le devis d'un magasin — même edge que les inscriptions. */
+  async function envoyerDevisMagasin(d: StoreRequest, reference: string, cents: number) {
+    const lignes = lignesProposees([{ name: d.store_name, units: d.units, sqm: d.sqm }], 1)
+    setBusy(d.id)
+    const { data, error } = await supabase.functions.invoke('admin-send-quote', {
+      body: { requestId: d.id, reference, amountCents: cents, lines: lignes, target: 'store' },
+    })
+    setBusy(null)
+    if (!error && data?.success) {
+      setDevisOuvert(null)
+      if (data.emailed === false) {
+        alert(`Devis enregistré, mais l'e-mail n'a pas pu partir : ${data.error ?? 'raison inconnue'}`)
+      }
+      await charger()
+      return
+    }
+    if (error) {
+      if (await appel('admin_quote_store_request', {
+        p_id: d.id, p_reference: reference, p_amount_cents: cents, p_note: '', p_lines: lignes,
+      })) {
+        alert("Devis enregistré, mais l'envoi automatique n'a pas répondu : le client n'a rien reçu.")
+        setDevisOuvert(null)
+      }
+      return
+    }
+    alert('Erreur : ' + (data?.error ?? 'inconnue'))
+  }
+
+  /** Accord du client, puis encaissement — déclarés à la main pour l'instant. */
+  async function statutDemande(d: StoreRequest, statut: 'accepted' | 'paid') {
+    await appel('admin_set_store_request_status', { p_id: d.id, p_status: statut, p_note: '' })
   }
 
   async function creerDepuisDemande(d: StoreRequest) {
@@ -250,11 +381,11 @@ export default function AdminCompanyPage() {
       {/* Une demande précède la création : elle se lit juste avant les
           magasins, et « Créer le magasin » fait exactement ce que fait le
           formulaire d'à côté. */}
-      {demandes.filter((d) => d.status === 'pending').length > 0 && (
+      {demandes.filter(enCours).length > 0 && (
         <section className="admin-section">
           <h2>Demandes de magasin</h2>
           <div className="req-list">
-            {demandes.filter((d) => d.status === 'pending').map((d) => (
+            {demandes.filter(enCours).map((d) => (
               <div className="req-row" key={d.id}>
                 <div>
                   <div className="req-name">
@@ -269,6 +400,21 @@ export default function AdminCompanyPage() {
                     {d.requested_label && ` par ${d.requested_label}`}
                   </div>
                   {d.message && <div className="muted small">« {d.message} »</div>}
+                  {d.quote_reference && (
+                    <div className="muted small">
+                      Devis {d.quote_reference} — {d.quote_amount_cents == null
+                        ? '—'
+                        : (d.quote_amount_cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                      {' · '}{STATUT_DEMANDE[d.status]}
+                    </div>
+                  )}
+                  {devisOuvert === d.id && d.kind === 'add' && (
+                    <PanneauDevisMagasin
+                      demande={d}
+                      busy={busy === d.id}
+                      onEnvoyer={(reference, cents) => envoyerDevisMagasin(d, reference, cents)}
+                    />
+                  )}
                 </div>
                 <div className="req-actions">
                   {d.kind === 'remove' ? (
@@ -276,9 +422,37 @@ export default function AdminCompanyPage() {
                       Supprimer le magasin
                     </button>
                   ) : (
-                    <button className="btn btn-primary btn-sm" onClick={() => creerDepuisDemande(d)}>
-                      Créer le magasin
-                    </button>
+                    <>
+                      {(d.status === 'pending' || d.status === 'quoted') && (
+                        <button
+                          className={`btn btn-sm ${d.status === 'pending' ? 'btn-primary' : 'btn-ghost'}`}
+                          disabled={busy === d.id}
+                          onClick={() => setDevisOuvert(devisOuvert === d.id ? null : d.id)}
+                        >
+                          {devisOuvert === d.id
+                            ? 'Fermer'
+                            : d.status === 'pending' ? 'Établir le devis' : 'Renvoyer le devis'}
+                        </button>
+                      )}
+                      {d.status === 'quoted' && (
+                        <button className="btn btn-primary btn-sm" disabled={busy === d.id}
+                          onClick={() => statutDemande(d, 'accepted')}>
+                          Devis accepté
+                        </button>
+                      )}
+                      {d.status === 'accepted' && (
+                        <button className="btn btn-primary btn-sm" disabled={busy === d.id}
+                          onClick={() => statutDemande(d, 'paid')}>
+                          Facture encaissée
+                        </button>
+                      )}
+                      {d.status === 'paid' && (
+                        <button className="btn btn-success btn-sm" disabled={busy === d.id}
+                          onClick={() => creerDepuisDemande(d)}>
+                          Créer le magasin
+                        </button>
+                      )}
+                    </>
                   )}
                   <button className="link-btn danger-link" onClick={() => refuserDemande(d)}>Refuser</button>
                 </div>

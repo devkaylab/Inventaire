@@ -36,10 +36,14 @@ Deno.serve(async (req) => {
   if (!data?.found) return new Response('Devis introuvable', { status: 404, headers: cors })
 
   const lignes: LigneDevis[] = Array.isArray(data.lines) ? data.lines : []
+  // Le même objet que le PDF joint à l'e-mail : les deux doivent être le même
+  // document, sinon le client compare et s'inquiète.
+  const magasin = (data.store_name ?? '').trim()
   try {
     const octets = await devisEnPdf({
       reference: data.reference || 'DEVIS',
       entreprise: data.company_name ?? '',
+      objet: data.kind === 'store' && magasin ? `Ajout du magasin ${magasin}` : undefined,
       contact: data.contact_name ?? data.contact_first_name ?? '',
       siren: data.siren ?? null,
       lignes,

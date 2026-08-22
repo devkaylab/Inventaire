@@ -51,6 +51,12 @@ export type LigneDevis = {
 export type Devis = {
   reference: string
   entreprise: string
+  /**
+   * Objet du devis, quand il ne se déduit pas des lignes — « Ajout du magasin
+   * Lyon Part-Dieu ». Une inscription n'en a pas besoin : ses lignes sont les
+   * magasins eux-mêmes.
+   */
+  objet?: string
   contact: string
   siren?: string | null
   lignes: LigneDevis[]
@@ -179,6 +185,11 @@ export function elementsDevis(devis: Devis): Element[] {
   if (devis.siren) {
     y += 5
     e.push({ type: 'texte', x: marge, y, texte: `SIREN ${devis.siren}`, taille: 9, couleur: C.ardoise })
+  }
+
+  if (devis.objet) {
+    y += 7
+    e.push({ type: 'texte', x: marge, y, texte: devis.objet, taille: 9.5, gras: true, couleur: C.indigoProfond })
   }
 
   // Tableau

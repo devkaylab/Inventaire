@@ -1,5 +1,9 @@
 // Edge function : Quantinvo envoie le devis (22 août 2026).
 //
+// Elle sert **les deux parcours** : l'inscription d'une entreprise et l'ajout
+// d'un magasin à une entreprise existante (`target`). Deux fonctions auraient
+// voulu dire deux mises en page du même document.
+//
 // Elle enchaîne ce qui se faisait à la main : la RPC `admin_quote_company_request`
 // (appelée **avec le jeton de l'administrateur**, donc gardée par is_admin() et
 // sa double authentification), la fabrication du PDF, et l'envoi par Resend avec
@@ -30,7 +34,15 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ success: false, error: 'Non authentifié' }, 401)
 
-  let payload: { requestId?: string; reference?: string; amountCents?: number; note?: string; lines?: LigneDevis[] }
+  let payload: {
+    requestId?: string
+    reference?: string
+    amountCents?: number
+    note?: string
+    lines?: LigneDevis[]
+    /** 'company' (inscription) ou 'store' (ajout de magasin). */
+    target?: 'company' | 'store'
+  }
   try {
     payload = await req.json()
   } catch {
@@ -40,6 +52,7 @@ Deno.serve(async (req) => {
   const reference = (payload.reference ?? '').trim()
   const amountCents = typeof payload.amountCents === 'number' ? Math.round(payload.amountCents) : null
   const lines = Array.isArray(payload.lines) ? payload.lines : []
+  const target = payload.target === 'store' ? 'store' : 'company'
   if (!requestId) return json({ success: false, error: 'Demande absente.' }, 400)
   if (amountCents === null || amountCents < 0) return json({ success: false, error: 'Montant invalide.' }, 400)
 
@@ -50,7 +63,8 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await caller.auth.getUser()
   if (userErr || !userData?.user) return json({ success: false, error: 'Session expirée.' }, 401)
 
-  const { data: result, error: rErr } = await caller.rpc('admin_quote_company_request', {
+  const rpc = target === 'store' ? 'admin_quote_store_request' : 'admin_quote_company_request'
+  const { data: result, error: rErr } = await caller.rpc(rpc, {
     p_id: requestId,
     p_reference: reference,
     p_amount_cents: amountCents,
@@ -77,12 +91,15 @@ Deno.serve(async (req) => {
   const prenom = (q.contact_first_name ?? '').trim()
   const nomComplet = `${prenom} ${(q.contact_last_name ?? '').trim()}`.trim()
   const lignes: LigneDevis[] = Array.isArray(q.lines) ? q.lines : []
+  const magasins = lignes.length || q.store_count || 0
+  const magasin = (q.store_name ?? '').trim()
 
   let piece: string
   try {
     const octets = await devisEnPdf({
       reference: q.reference || 'DEVIS',
       entreprise: q.company_name ?? '',
+      objet: magasin ? `Ajout du magasin ${magasin}` : undefined,
       contact: nomComplet,
       siren: q.siren ?? null,
       lignes,
@@ -95,23 +112,28 @@ Deno.serve(async (req) => {
     return sansEnvoi(`PDF impossible à produire : ${e instanceof Error ? e.message : String(e)}`)
   }
 
-  const magasins = lignes.length || q.store_count || 0
   const { html, text } = emailQuantinvo({
-    titre: 'Votre devis Quantinvo',
-    apercu: `Devis ${q.reference} pour ${q.company_name}.`,
+    titre: magasin ? `Votre devis pour ${magasin}` : 'Votre devis Quantinvo',
+    apercu: `Devis ${q.reference} pour ${magasin || q.company_name}.`,
     salutation: prenom ? `Bonjour ${prenom},` : 'Bonjour,',
     paragraphes: [
-      `Voici votre devis pour l’équipement de ${magasins > 1 ? `vos ${nombre(magasins)} magasins` : 'votre magasin'}. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`,
+      magasin
+        ? `Voici votre devis pour l’ajout du magasin « ${magasin} » à votre licence. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`
+        : `Voici votre devis pour l’équipement de ${magasins > 1 ? `vos ${nombre(magasins)} magasins` : 'votre magasin'}. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`,
       `Il est valable jusqu’au ${jour(expireLe)}. Une question sur une ligne ou sur un volume déclaré ? Répondez simplement à ce message.`,
     ],
     details: [
       { intitule: 'Référence', valeur: q.reference || '—' },
       { intitule: 'Entreprise', valeur: q.company_name ?? '' },
-      { intitule: 'Magasins', valeur: nombre(magasins) },
+      ...(magasin
+        ? [{ intitule: 'Magasin', valeur: magasin }]
+        : [{ intitule: 'Magasins', valeur: nombre(magasins) }]),
       { intitule: 'Montant annuel HT', valeur: euros(amountCents) },
     ],
     bouton: { libelle: 'Voir et accepter le devis', lien },
-    note: 'L’acceptation vaut bon pour accord. Vos accès sont ouverts après règlement de la facture.',
+    note: magasin
+      ? 'L’acceptation vaut bon pour accord. Le magasin est créé, avec son code d’accès, après règlement de la facture.'
+      : 'L’acceptation vaut bon pour accord. Vos accès sont ouverts après règlement de la facture.',
     raison: 'Vous recevez ce message parce que vous avez demandé un devis Quantinvo.',
     siteUrl: appUrl,
   })
@@ -124,7 +146,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: fromAddr,
         to: [destinataire],
-        subject: `Votre devis Quantinvo — ${q.reference || q.company_name}`,
+        subject: magasin
+          ? `Votre devis Quantinvo — ${magasin}`
+          : `Votre devis Quantinvo — ${q.reference || q.company_name}`,
         html,
         text,
         attachments: [{ filename: `devis-${(q.reference || 'quantinvo').replace(/[^\w-]/g, '')}.pdf`, content: piece }],

@@ -175,8 +175,49 @@ supprimée (aucun résidu, contrôlé en base) : le PDF servi par `quote-pdf`
 navigateur — clair, sombre, et 375 px, où la mise en page des lignes a dû être
 reprise (le prix se retrouvait au milieu du rang).
 
+### Un magasin ne se crée plus sans devis (même jour, une heure plus tard)
+
+Julien : *« pourquoi j'ai pu créer deux magasins à l'instant sans qu'un devis
+ne soit envoyé ? »* Le journal le confirmait : `admin_fulfil_store_request`
+menait une demande de `pending` à `created` d'un seul geste. Le devis
+automatique ne couvrait que l'inscription.
+
+Migration `20260822230001` : **une demande d'ajout suit le parcours d'une
+inscription** — `pending → quoted → accepted → paid → created` — et la
+création **exige `paid`**, exactement comme `admin_fulfil_company_request`.
+Les trois RPC nouvelles (`admin_quote_store_request`,
+`admin_set_store_request_status`, et la garde sur `admin_fulfil_store_request`)
+sont le miroir de celles des entreprises.
+
+Points à connaître :
+
+- **Une demande de suppression (`kind = 'remove'`) n'a pas de devis** et reste
+  `pending → removed`. Les trois fonctions la refusent nommément — sans cela
+  on facturerait un client pour lui retirer un magasin.
+- **Un jeton, une page.** `quote_by_token` et `accept_quote_by_token` cherchent
+  dans les deux tables et rendent `kind` : `/devis/<jeton>` et `quote-pdf`
+  servent les deux parcours. `admin-send-quote` aussi, par `target`. Deux
+  pages auraient voulu dire deux mises en page à tenir d'accord. Le devis d'un
+  magasin porte un **objet** (« Ajout du magasin Lyon Part-Dieu ») au-dessus
+  du tableau, parce que sa ligne unique ne dit pas à elle seule de quoi il
+  s'agit.
+- **Le devis en attente reste sous les yeux du client** sur /magasins, avec
+  son lien « voir et accepter » : c'est justement ce sur quoi il peut agir. La
+  règle « une demande aboutie quitte l'écran » ne vaut que pour `created` et
+  `removed`.
+- Le bouton « Ajouter un magasin » de la fiche entreprise reste direct : c'est
+  nous, en interne, et le journal le trace.
+
+Vérifié en base, session simulée, **en transaction annulée** : créer sans
+devis refusé, créer après devis refusé, sauter l'accord refusé, accord puis
+encaissement puis création acceptés, devis d'une suppression refusé. Puis sur
+une demande d'essai réelle, supprimée ensuite sans résidu : le PDF téléchargé
+(objet compris, relu à l'écran) et l'acceptation par l'edge publique.
+
 **Reste à faire** : poser `QUOTE_NOTIFY_EMAIL` dans les variables des edge
-functions pour recevoir l'avis d'acceptation, et brancher Stripe.
+functions pour recevoir l'avis d'acceptation, et brancher Stripe — **sur les
+deux tables** désormais, `company_requests` et `store_requests`, même
+transition `accepted → paid`.
 
 Tests de garde : `web/tests/devis.test.ts`.
 

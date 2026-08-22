@@ -39,21 +39,32 @@ type StoreRequest = {
   message: string
   units: number | null
   sqm: number | null
-  status: 'pending' | 'created' | 'removed' | 'rejected'
+  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected'
   requested_label: string
   admin_note: string
   created_at: string
   handled_at: string | null
+  quote_reference?: string
+  quote_amount_cents?: number | null
+  quote_token?: string | null
+  quote_expires_at?: string | null
 }
 
 /** Le statut se lit différemment selon ce qu'on a demandé : « créé » ne veut
     rien dire pour une suppression. */
 const STATUT: Record<StoreRequest['status'], string> = {
   pending: 'Demande envoyée',
+  quoted: 'Devis reçu',
+  accepted: 'Devis accepté',
+  paid: 'Facture réglée',
   created: 'Magasin créé',
   removed: 'Magasin supprimé',
   rejected: 'Refusée',
 }
+
+/** Montant du devis, en euros. */
+const euros = (cents: number) =>
+  (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
 
 /** Date courte, comme ailleurs dans l'espace connecté : « 22/08 ». */
 function jourCourt(iso: string) {
@@ -339,6 +350,20 @@ function DemandesMagasin() {
                   {d.requested_label && ` par ${d.requested_label}`}
                   {d.status === 'pending' && ' · Quantinvo vous recontacte'}
                 </div>
+                {d.status === 'quoted' && d.quote_token && (
+                  <div className="muted small">
+                    Devis {d.quote_reference} — {d.quote_amount_cents == null ? '—' : euros(d.quote_amount_cents)}{' '}
+                    · <a href={`/devis/${d.quote_token}`}>voir et accepter</a>
+                  </div>
+                )}
+                {d.status === 'accepted' && (
+                  <div className="muted small">
+                    Accord enregistré. Votre facture arrive ; le magasin est créé dès son règlement.
+                  </div>
+                )}
+                {d.status === 'paid' && (
+                  <div className="muted small">Facture réglée. Le magasin est créé sous peu.</div>
+                )}
                 {d.status === 'rejected' && d.admin_note && (
                   <div className="muted small">« {d.admin_note} »</div>
                 )}

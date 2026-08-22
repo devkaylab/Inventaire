@@ -150,7 +150,10 @@ describe('envoyer, lire et accepter', () => {
   it('les trois fonctions edge gardent leur place', () => {
     // L'envoi est authentifié (jeton administrateur) ; la lecture du PDF et
     // l'acceptation sont publiques, protégées par le jeton du lien.
-    expect(edgeEnvoi).toContain("caller.rpc('admin_quote_company_request'")
+    // Une seule fonction pour les deux parcours (inscription, ajout de
+    // magasin), donc la RPC est choisie par `target`.
+    expect(edgeEnvoi).toContain('caller.rpc(rpc,')
+    expect(edgeEnvoi).toContain("'admin_quote_store_request' : 'admin_quote_company_request'")
     expect(edgeEnvoi).toContain('Authorization: authHeader')
     expect(edgeEnvoi).toContain('attachments')
     expect(edgeAccept).toContain("rpc('accept_quote_by_token'")
@@ -177,5 +180,56 @@ describe('envoyer, lire et accepter', () => {
     expect(pageDevis).not.toContain('<AppShell')
     expect(pageDevis).toContain("rpc('quote_by_token'")
     expect(pageDevis).toContain("functions.invoke('accept-quote'")
+  })
+})
+
+
+describe('un magasin ne se crée plus sans devis (22 août 2026)', () => {
+  const m = lire('../../supabase/migrations/20260822230001_devis_demande_magasin.sql')
+  const corps = (fn: string) => m.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+
+  it('la création exige l’encaissement', () => {
+    // Constat de Julien : deux magasins créés sans qu'aucun devis ne parte.
+    // `admin_fulfil_store_request` menait pending → created d'un seul geste.
+    expect(corps('admin_fulfil_store_request')).toContain("v_req.status <> 'paid'")
+    expect(corps('admin_fulfil_store_request')).toContain('admin_add_store')
+  })
+
+  it('une demande de suppression ne se devise pas', () => {
+    // Sans cette garde, on facturerait un client pour lui retirer un magasin.
+    expect(corps('admin_quote_store_request')).toContain("v_req.kind <> 'add'")
+    expect(corps('admin_set_store_request_status')).toContain("kind = 'add'")
+    expect(corps('accept_quote_by_token')).toContain("v_sto.kind <> 'add'")
+  })
+
+  it('les transitions ne se sautent pas', () => {
+    const st = corps('admin_set_store_request_status')
+    expect(st).toContain("when 'accepted' then array['quoted']")
+    expect(st).toContain("when 'paid'     then array['accepted']")
+  })
+
+  it('un jeton, une page : les deux parcours se lisent au même endroit', () => {
+    // Deux pages auraient voulu dire deux mises en page à tenir d'accord.
+    const lecture = corps('quote_by_token')
+    expect(lecture).toContain('from public.company_requests')
+    expect(lecture).toContain('from public.store_requests')
+    expect(lecture).toContain("'kind', 'store'")
+  })
+
+  it('le devis en attente reste sous les yeux du client', () => {
+    // C'est justement ce sur quoi il peut agir : seules les demandes abouties
+    // quittent l'écran.
+    const liste = corps('ca_list_store_requests')
+    expect(liste).toContain("r.status in ('pending', 'quoted', 'accepted', 'paid')")
+    expect(liste).toContain('quote_token')
+  })
+
+  it('la console suit le parcours, et le client voit son devis', () => {
+    const fiche = lire('../app/admin/entreprise/[companyId]/page.tsx')
+    expect(fiche).toContain("target: 'store'")
+    expect(fiche).toContain("statutDemande(d, 'accepted')")
+    expect(fiche).toContain("statutDemande(d, 'paid')")
+    const magasins = lire('../app/magasins/page.tsx')
+    expect(magasins).toContain('voir et accepter')
   })
 })
