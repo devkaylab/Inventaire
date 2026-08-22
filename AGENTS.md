@@ -364,6 +364,34 @@ gabarit `email.ts` a gagné `lienSecondaire` pour ça : un lien sous le bouton,
 jamais un second bouton — un seul geste par message. Sans droit de lecture
 sur les factures, le message part sans le lien.
 
+### Le client peut décliner (22 août 2026, au soir)
+
+Julien : *« dans le parcours où le devis est décliné, il n'y a pas le
+bouton, il n'y a que j'accepte ou télécharger »*. Un client qui ne voulait
+pas du devis n'avait rien à cliquer : il fermait l'onglet, et la vente
+restait « en attente du client » sept jours avant une relance pour rien.
+
+Migration `20260822280001`, statut **`declined`** sur les deux tables, edge
+publique `decline-quote` (même surface que `accept-quote` : jeton, limitation
+de débit partagée). Sur la page, un lien en retrait — « Je ne souhaite pas
+donner suite » — ouvre un motif **facultatif** ; on ne force pas la raison,
+mais si elle est donnée, elle arrive dans l'avis à Quantinvo et se lit en
+console. Le client reçoit un accusé qui promet l'absence de relance.
+
+Trois règles :
+- **seul un devis `quoted` se décline** — accepté, il se paie ou expire ; la
+  renonciation après accord est une conversation ;
+- **décliner n'est pas définitif** : `admin_quote_*` accepte `declined` comme
+  point de départ (« Nouveau devis » en console), et efface la trace du refus
+  au renvoi ;
+- la vente **sort de « Ventes en cours »** (`admin_pipeline` ne rend pas
+  `declined`) mais reste dans les listes, motif compris, 30 jours côté client.
+
+Vérifié par l'edge publique (refus avec motif, second clic → `already`,
+acceptation après refus → refusée), en console (hors pipeline, motif lisible,
+nouveau devis → `quoted` avec nouveau jeton) et au navigateur (lien, panneau,
+état « Vous avez décliné »). Données d'essai supprimées.
+
 ### Test complet des deux parcours (22 août 2026, au soir)
 
 Julien : *« fais un test complet du parcours, création entreprise et ajout

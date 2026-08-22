@@ -1644,6 +1644,22 @@ a { color: inherit; text-decoration: none; }
 .devis-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .devis-actions .btn { flex: 1 1 auto; text-align: center; }
 .devis-note { margin-top: 16px; font-size: 12px; color: var(--text-3); line-height: 1.55; }
+/* Décliner : un lien sous les boutons, pas un troisième bouton. */
+.devis-decliner { display: block; margin: 14px auto 0; font-size: 13px; color: var(--text-3); }
+.devis-decliner-panneau {
+  margin-top: 14px; padding: 14px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--hairline);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.devis-decliner-panneau label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.devis-decliner-panneau textarea {
+  width: 100%; resize: vertical; background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14px; color: var(--text);
+}
+.devis-decliner-panneau textarea:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
 
 /* ── Console : le panneau qui établit le devis ───────────────────────────
    Il vit dans la carte d'une demande, sous les magasins déclarés : on lit ce

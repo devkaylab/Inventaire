@@ -17,8 +17,10 @@ export type CompanyRequest = {
   contact_phone: string
   store_count: number
   message: string
-  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'rejected'
+  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'rejected' | 'declined'
   quote_reference: string
+  decline_reason?: string | null
+  declined_at?: string | null
   quote_amount_cents: number | null
   admin_note: string
   company_id: string | null
@@ -42,6 +44,7 @@ const STATUS_LABEL: Record<CompanyRequest['status'], string> = {
   paid: 'Facture encaissée',
   created: 'Entreprise créée',
   rejected: 'Refusée',
+  declined: 'Déclinée par le client',
 }
 
 function euros(cents: number | null) {
@@ -382,6 +385,11 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
             {r.quote_reference && (
               <div className="muted small">Devis {r.quote_reference} — {euros(r.quote_amount_cents)}</div>
             )}
+            {r.status === 'declined' && (
+              <div className="muted small">
+                Déclinée par le client{r.decline_reason ? ` : « ${r.decline_reason} »` : ', sans motif'}.
+              </div>
+            )}
             {r.message && <div className="muted small">« {r.message} »</div>}
             <MagasinsDeclares stores={r.stores} ape={r.ape} />
             {devisOuvert === r.id && (
@@ -401,6 +409,17 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
                 onClick={() => setDevisOuvert(devisOuvert === r.id ? null : r.id)}
               >
                 {devisOuvert === r.id ? 'Fermer' : 'Établir le devis'}
+              </button>
+            )}
+            {r.status === 'declined' && (
+              // Décliner n'est pas définitif : une seconde proposition est
+              // une conversation, et elle repart d'ici.
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={busy === r.id}
+                onClick={() => setDevisOuvert(devisOuvert === r.id ? null : r.id)}
+              >
+                {devisOuvert === r.id ? 'Fermer' : 'Nouveau devis'}
               </button>
             )}
             {r.status === 'quoted' && (

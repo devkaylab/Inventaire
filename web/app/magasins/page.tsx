@@ -39,7 +39,7 @@ type StoreRequest = {
   message: string
   units: number | null
   sqm: number | null
-  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected'
+  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected' | 'declined'
   requested_label: string
   admin_note: string
   created_at: string
@@ -60,6 +60,7 @@ const STATUT: Record<StoreRequest['status'], string> = {
   created: 'Magasin créé',
   removed: 'Magasin supprimé',
   rejected: 'Refusée',
+  declined: 'Devis décliné',
 }
 
 /** Montant du devis, en euros. */
@@ -338,7 +339,7 @@ function DemandesMagasin() {
                   {d.kind === 'remove' && (
                     <span className="pill pill-refus" style={{ marginLeft: 8 }}>Suppression</span>
                   )}
-                  <span className={`pill ${d.status === 'pending' ? 'pill-attente' : d.status === 'rejected' ? 'pill-refus' : ''}`} style={{ marginLeft: 8 }}>
+                  <span className={`pill ${d.status === 'pending' ? 'pill-attente' : d.status === 'rejected' || d.status === 'declined' ? 'pill-refus' : ''}`} style={{ marginLeft: 8 }}>
                     {STATUT[d.status]}
                   </span>
                 </div>

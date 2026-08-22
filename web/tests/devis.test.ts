@@ -233,3 +233,48 @@ describe('un magasin ne se crée plus sans devis (22 août 2026)', () => {
     expect(magasins).toContain('voir et accepter')
   })
 })
+
+describe('le client peut décliner (22 août 2026)', () => {
+  // Julien : « dans le parcours où le devis est décliné, il n'y a pas le
+  // bouton ». Un client qui ne veut pas du devis n'avait rien à cliquer, et
+  // on le relançait sept jours plus tard pour rien.
+  const m = lire('../../supabase/migrations/20260822280001_devis_decline.sql')
+  const corps = (fn: string) => m.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+  const edge = lire('../../supabase/functions/decline-quote/index.ts')
+
+  it('seul un devis en attente se décline, par le jeton, sous limitation de débit', () => {
+    const c = corps('decline_quote_by_token')
+    expect(c).toContain("v_req.status <> 'quoted'")
+    expect(c).toContain("v_sto.status <> 'quoted'")
+    expect(c).toContain('rate_limit_ok')
+    expect(m).toContain('grant execute on function public.decline_quote_by_token(uuid, text) to anon')
+  })
+
+  it('décliner n’est pas définitif : un nouveau devis repart de declined', () => {
+    expect(corps('admin_quote_company_request')).toContain("status in ('pending', 'quoted', 'declined')")
+    expect(corps('admin_quote_store_request')).toContain("status not in ('pending', 'quoted', 'declined')")
+    expect(corps('admin_quote_company_request')).toContain("declined_at = null, decline_reason = ''")
+  })
+
+  it('la vente déclinée sort des ventes en cours mais reste lisible, motif compris', () => {
+    // admin_pipeline ne rend que pending/quoted/accepted/paid : rien à changer.
+    expect(corps('admin_list_store_requests')).toContain("'decline_reason', r.decline_reason")
+    expect(corps('admin_list_company_requests')).toContain('r.decline_reason, r.declined_at')
+    expect(console_).toContain("r.status === 'declined'")
+    expect(console_).toContain('Nouveau devis')
+  })
+
+  it('la page porte le bouton, en retrait, avec un motif facultatif', () => {
+    expect(pageDevis).toContain('Je ne souhaite pas donner suite')
+    expect(pageDevis).toContain("functions.invoke('decline-quote'")
+    expect(pageDevis).toContain("rpc('decline_quote_by_token'")
+    expect(pageDevis).toContain('Vous avez décliné ce devis')
+  })
+
+  it('Quantinvo reçoit le motif, le client un accusé sans relance', () => {
+    expect(edge).toContain("rpc('decline_quote_by_token'")
+    expect(edge).toContain("rpc('admin_notify_emails')")
+    expect(edge).toContain('Un devis vient d’être décliné')
+    expect(edge).toContain('vous ne recevrez pas de relance')
+  })
+})

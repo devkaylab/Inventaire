@@ -43,10 +43,11 @@ type Devis = {
   reference?: string
   amount_cents?: number | null
   lines?: Ligne[]
-  status?: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'rejected'
+  status?: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'rejected' | 'declined'
   sent_at?: string
   expires_at?: string
   accepted_at?: string | null
+  declined_at?: string | null
   expired?: boolean
 }
 
@@ -78,6 +79,10 @@ function DevisContenu() {
   const [chargement, setChargement] = useState(true)
   const [busy, setBusy] = useState(false)
   const [erreur, setErreur] = useState('')
+  // Le refus : un panneau discret, un motif facultatif. On ne force pas la
+  // raison — mais s'il la donne, Quantinvo la lit.
+  const [declinerOuvert, setDeclinerOuvert] = useState(false)
+  const [motif, setMotif] = useState('')
 
   const charger = useCallback(async () => {
     if (!token) return
@@ -122,6 +127,30 @@ function DevisContenu() {
     await charger()
   }
 
+  async function decliner() {
+    setBusy(true)
+    setErreur('')
+    let ok = false
+    let message = ''
+    const { data, error } = await supabase.functions.invoke('decline-quote', { body: { token, reason: motif.trim() } })
+    if (!error && data?.success) {
+      ok = true
+    } else if (error) {
+      const direct = await supabase.rpc('decline_quote_by_token', { p_token: token, p_reason: motif.trim() })
+      ok = !direct.error && direct.data?.success
+      message = direct.data?.error ?? direct.error?.message ?? ''
+    } else {
+      message = data?.error ?? ''
+    }
+    setBusy(false)
+    if (!ok) {
+      setErreur(message || 'La réponse n’a pas pu être enregistrée. Réessayez, ou répondez à notre e-mail.')
+      return
+    }
+    setDeclinerOuvert(false)
+    await charger()
+  }
+
   const pdfUrl = token
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/quote-pdf?token=${encodeURIComponent(token)}`
     : '#'
@@ -153,6 +182,7 @@ function DevisContenu() {
 
   const accepte = devis.status === 'accepted' || devis.status === 'paid' || devis.status === 'created'
   const refuse = devis.status === 'rejected'
+  const decline = devis.status === 'declined'
   const perime = !accepte && devis.expired
   const lignes = devis.lines ?? []
 
@@ -196,13 +226,23 @@ function DevisContenu() {
             </span>
           </div>
         )}
+        {decline && (
+          <div className="devis-etat">
+            <strong>Vous avez décliné ce devis</strong>
+            <span>
+              C’est noté{devis.declined_at ? ` le ${jour(devis.declined_at)}` : ''}, vous ne recevrez pas de relance. Si
+              le montant ou le périmètre ne convenait pas, répondez à notre e-mail : une nouvelle proposition est
+              toujours possible.
+            </span>
+          </div>
+        )}
         {refuse && (
           <div className="devis-etat">
             <strong>Ce devis n’est plus d’actualité</strong>
             <span>Répondez à notre e-mail si vous souhaitez une nouvelle proposition.</span>
           </div>
         )}
-        {perime && !refuse && (
+        {perime && !refuse && !decline && (
           <div className="devis-etat">
             <strong>Ce devis a expiré</strong>
             <span>Écrivez-nous&nbsp;: nous vous en établissons un nouveau, aux tarifs en vigueur.</span>
@@ -234,7 +274,7 @@ function DevisContenu() {
         {erreur && <div className="error">{erreur}</div>}
 
         <div className="devis-actions">
-          {!accepte && !perime && !refuse && (
+          {!accepte && !perime && !refuse && !decline && (
             <button type="button" className="btn btn-primary" onClick={accepter} disabled={busy}>
               {busy ? 'Enregistrement…' : 'J’accepte ce devis'}
             </button>
@@ -248,6 +288,36 @@ function DevisContenu() {
           )}
           <a className="btn btn-ghost" href={pdfUrl}>Télécharger le PDF</a>
         </div>
+
+        {/* Décliner : en retrait des deux boutons, parce que ce n'est pas le
+            geste qu'on attend — mais il doit exister. Un client qui ne veut
+            pas du devis n'a sinon rien à cliquer, et on le relance pour rien. */}
+        {devis.status === 'quoted' && !perime && !declinerOuvert && (
+          <button type="button" className="link-btn devis-decliner" onClick={() => setDeclinerOuvert(true)} disabled={busy}>
+            Je ne souhaite pas donner suite
+          </button>
+        )}
+        {devis.status === 'quoted' && !perime && declinerOuvert && (
+          <div className="devis-decliner-panneau">
+            <label htmlFor="motif">Pouvez-vous nous dire pourquoi&nbsp;? (facultatif)</label>
+            <textarea
+              id="motif"
+              rows={3}
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+              placeholder="Trop cher, pas le bon moment, un autre outil retenu…"
+              maxLength={500}
+            />
+            <div className="devis-actions">
+              <button type="button" className="btn btn-ghost" onClick={decliner} disabled={busy}>
+                {busy ? 'Enregistrement…' : 'Confirmer : je décline'}
+              </button>
+              <button type="button" className="link-btn" onClick={() => setDeclinerOuvert(false)} disabled={busy}>
+                Revenir
+              </button>
+            </div>
+          </div>
+        )}
 
         <p className="devis-note">
           Licence annuelle par magasin, comptages et compteurs illimités. L’acceptation vaut bon pour

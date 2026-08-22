@@ -40,10 +40,11 @@ type StoreRequest = {
   id: string; company_id: string; store_id: string | null; store_name: string; message: string
   units: number | null; sqm: number | null
   kind: 'add' | 'remove'
-  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected'
+  status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected' | 'declined'
   requested_label: string; created_at: string
   quote_reference?: string
   quote_amount_cents?: number | null
+  decline_reason?: string | null
 }
 
 function frDate(s: string) {
@@ -76,11 +77,13 @@ const STATUT_DEMANDE: Record<StoreRequest['status'], string> = {
   created: 'Magasin créé',
   removed: 'Magasin supprimé',
   rejected: 'Refusée',
+  declined: 'Déclinée par le client',
 }
 
 /** Ce qui attend encore un geste de Quantinvo. */
 const enCours = (d: StoreRequest) =>
   d.status === 'pending' || d.status === 'quoted' || d.status === 'accepted' || d.status === 'paid'
+  || d.status === 'declined'
 
 /**
  * Le panneau qui établit le devis d'un magasin — même figure que celui des
@@ -400,6 +403,11 @@ export default function AdminCompanyPage() {
                     {d.requested_label && ` par ${d.requested_label}`}
                   </div>
                   {d.message && <div className="muted small">« {d.message} »</div>}
+                  {d.status === 'declined' && (
+                    <div className="muted small">
+                      Déclinée par le client{d.decline_reason ? ` : « ${d.decline_reason} »` : ', sans motif'}.
+                    </div>
+                  )}
                   {d.quote_reference && (
                     <div className="muted small">
                       Devis {d.quote_reference} — {d.quote_amount_cents == null
@@ -423,7 +431,7 @@ export default function AdminCompanyPage() {
                     </button>
                   ) : (
                     <>
-                      {(d.status === 'pending' || d.status === 'quoted') && (
+                      {(d.status === 'pending' || d.status === 'quoted' || d.status === 'declined') && (
                         <button
                           className={`btn btn-sm ${d.status === 'pending' ? 'btn-primary' : 'btn-ghost'}`}
                           disabled={busy === d.id}
@@ -431,7 +439,8 @@ export default function AdminCompanyPage() {
                         >
                           {devisOuvert === d.id
                             ? 'Fermer'
-                            : d.status === 'pending' ? 'Établir le devis' : 'Renvoyer le devis'}
+                            : d.status === 'pending' ? 'Établir le devis'
+                            : d.status === 'declined' ? 'Nouveau devis' : 'Renvoyer le devis'}
                         </button>
                       )}
                       {d.status === 'quoted' && (
