@@ -98,14 +98,14 @@ export function alertesMagasin(store: StoreBloc, maintenant = Date.now()): Alert
       if (age !== null && age >= 1) {
         alertes.push({
           cle: `vide-${s.id}`,
-          titre: 'Aucun scan depuis son ouverture',
+          titre: 'Personne n’a encore compté',
           detail: s.name,
         })
       }
     } else if (dernier !== null && dernier >= SEUILS.sansScan) {
       alertes.push({
         cle: `arret-${s.id}`,
-        titre: `Aucun scan depuis ${jours(dernier)}`,
+        titre: `Personne n’a compté depuis ${jours(dernier)}`,
         detail: s.name,
       })
     }
@@ -114,10 +114,10 @@ export function alertesMagasin(store: StoreBloc, maintenant = Date.now()): Alert
   if (store.sessions.length === 0 && store.last_session_at === null) {
     alertes.push({
       cle: `jamais-${store.id}`,
-      titre: 'Ce magasin n’a jamais lancé d’inventaire',
+      titre: 'Aucun inventaire n’a jamais été lancé ici',
       detail: store.counters > 0
-        ? `${store.counters} compteur${store.counters > 1 ? 's' : ''} rattaché${store.counters > 1 ? 's' : ''}`
-        : 'Aucun compteur rattaché',
+        ? `${store.counters} compteur${store.counters > 1 ? 's' : ''} y ${store.counters > 1 ? 'sont rattachés' : 'est rattaché'}`
+        : 'Aucun compteur n’y est rattaché',
     })
   } else if (ouverts.length === 0) {
     const depuis = joursDepuis(store.last_session_at, maintenant)
@@ -125,7 +125,7 @@ export function alertesMagasin(store: StoreBloc, maintenant = Date.now()): Alert
       alertes.push({
         cle: `dormant-${store.id}`,
         titre: `Aucun inventaire depuis ${jours(depuis)}`,
-        detail: 'Le dernier remonte à plus de trois mois',
+        detail: 'Le dernier date de plus de trois mois',
       })
     }
   }

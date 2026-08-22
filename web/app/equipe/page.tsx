@@ -144,11 +144,11 @@ export default function EquipePage() {
     const nom = (p.full_name ?? '').trim()
     const ok = await confirm({
       title: 'Supprimer définitivement ce compte ?',
-      message: 'Cette action est irréversible et ne peut pas être annulée.',
+      message: 'Cette suppression est définitive.',
       details: [
         `${nom || 'Sans nom'} — ${p.email ?? 'adresse inconnue'}`,
         'La personne perd l’accès à Quantinvo immédiatement.',
-        'Ses comptages sont conservés, mais son nom en disparaît : les rapports des inventaires passés ne diront plus qui a compté ces lignes.',
+        'Ses comptages restent, mais son nom disparaît des rapports déjà faits.',
         'Ses invitations en cours sont annulées.',
       ],
       confirmLabel: 'Supprimer définitivement',
@@ -193,8 +193,8 @@ export default function EquipePage() {
 
       {estAdmin && !mfaEnrolled && (
         <div className="banner banner-warn">
-          Votre compte administre les accès de l&apos;entreprise&nbsp;: activez la double
-          authentification depuis <Link href="/account" style={{ textDecoration: 'underline' }}>Mon compte</Link>.
+          Vous gérez les accès de l&apos;entreprise&nbsp;: protégez votre compte avec la double
+          authentification, depuis <Link href="/account" style={{ textDecoration: 'underline' }}>Mon compte</Link>.
         </div>
       )}
 
@@ -244,12 +244,12 @@ export default function EquipePage() {
                   <div className="store-sup">
                     {m.is_company_admin ? (
                       <span className="muted small">
-                        Affecté à tous les magasins de l&apos;entreprise
+                        Tous les magasins de l&apos;entreprise
                         {m.store_ids.length > 0 && ` (${m.store_ids.length})`}
                       </span>
                     ) : (
                       <>
-                        {m.store_ids.length === 0 && <span className="muted small">Aucun magasin affecté</span>}
+                        {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
                         {m.store_ids.map((sid) => (
                           <span className="chip" key={sid}>
                             {storeById[sid]?.name || 'Magasin'}
@@ -355,7 +355,7 @@ export default function EquipePage() {
                                 onClick={async () => {
                                   const ok = await confirm({
                                     title: `Retirer du magasin ${storeById[sid]?.name || ''} ?`,
-                                    message: `${m.full_name || 'Cette personne'} garde son compte : elle n’aura simplement plus accès aux inventaires de ce magasin.`,
+                                    message: `${m.full_name || 'Cette personne'} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.`,
                                     confirmLabel: 'Retirer du magasin',
                                   })
                                   if (ok) appliquer('remove_counter_from_store', { p_user: m.id, p_store_id: sid })
@@ -413,7 +413,7 @@ export default function EquipePage() {
                         onClick={async () => {
                           const ok = await confirm({
                             title: `Retirer du magasin ${s.name} ?`,
-                            message: `${c.full_name || 'Cette personne'} garde son compte : elle n’aura simplement plus accès aux inventaires de ce magasin.`,
+                            message: `${c.full_name || 'Cette personne'} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.`,
                             confirmLabel: 'Retirer du magasin',
                           })
                           if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
@@ -452,7 +452,7 @@ export default function EquipePage() {
                   onClick={async () => {
                     const ok = await confirm({
                       title: 'Annuler cette invitation ?',
-                      message: `${i.first_name} ${i.last_name} ne recevra plus l’accès. Vous pourrez l’inviter à nouveau.`,
+                      message: `${i.first_name} ${i.last_name} ne recevra pas d’accès. Vous pourrez l’inviter à nouveau.`,
                       confirmLabel: 'Annuler l’invitation',
                       cancelLabel: 'Revenir',
                     })
@@ -518,7 +518,7 @@ function InviteForm({
       </button>
       <p className="muted small" style={{ marginTop: 10 }}>
         La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.
-        Sans magasin coché, vous pourrez l&apos;affecter plus tard.
+        Vous pourrez lui donner un magasin plus tard.
       </p>
     </form>
   )

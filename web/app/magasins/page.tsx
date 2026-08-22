@@ -135,7 +135,7 @@ export default function MagasinsPage() {
             <div className="empty-state">
               <div className="empty-state-title">Votre entreprise n’a encore aucun magasin</div>
               <p className="empty-state-hint">
-                Demandez à Quantinvo d&apos;en ajouter un&nbsp;: la licence se tarife par magasin.
+                Seul Quantinvo peut créer un magasin&nbsp;: demandez-lui d&apos;en ajouter un.
               </p>
             </div>
           ) : (
@@ -173,7 +173,7 @@ export default function MagasinsPage() {
         </>
       ) : stores.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-title">Vous n&apos;êtes affecté à aucun magasin</div>
+          <div className="empty-state-title">Vous n&apos;avez accès à aucun magasin</div>
           <p className="empty-state-hint">
             Contactez l&apos;administrateur de votre entreprise, ou Quantinvo si elle n&apos;en a pas encore.
           </p>
@@ -199,7 +199,7 @@ export default function MagasinsPage() {
             ))}
           </div>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Les magasins sont créés par Quantinvo&nbsp;: la licence est par magasin.
+            Seul Quantinvo peut créer un magasin.
             <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>Imprimer des balises</Link>
           </p>
         </>
@@ -224,7 +224,7 @@ function VoletMagasin({ store }: { store: StoreBloc }) {
       resume={resumeMagasin(store)}
       etat={alertes.length > 0
         ? { libelle: `${alertes.length} à surveiller`, ton: 'faire' }
-        : { libelle: etat?.libelle ?? 'À jour', ton: 'pret' }}
+        : { libelle: etat?.libelle ?? 'Rien à signaler', ton: 'pret' }}
     >
       <CorpsMagasin store={store} />
     </Volet>
@@ -288,7 +288,7 @@ function DemandesMagasin() {
   async function annuler(d: StoreRequest) {
     const ok = await confirm({
       title: 'Annuler cette demande ?',
-      message: `La demande d’ajout du magasin « ${d.store_name} » ne sera plus transmise à Quantinvo.`,
+      message: `Quantinvo ne recevra plus votre demande pour « ${d.store_name} ».`,
       confirmLabel: 'Annuler la demande',
       cancelLabel: 'Revenir',
     })
@@ -350,8 +350,8 @@ function DemandesMagasin() {
       ) : (
         <form onSubmit={envoyer} className="panel demande-magasin" style={{ marginTop: 12 }}>
           <p className="muted small" style={{ marginTop: 0 }}>
-            La licence se tarife au volume de stock&nbsp;: c&apos;est lui qui donne le prix.
-            Quantinvo crée le magasin et vous recontacte pour le devis.
+            Le prix dépend du volume de stock&nbsp;: indiquez-le pour qu&apos;on puisse vous faire
+            un devis. Quantinvo crée ensuite le magasin.
           </p>
 
           <MagasinSaisie
@@ -380,7 +380,7 @@ function DemandesMagasin() {
           </div>
           {!stock && saisie.nom.trim() !== '' && (
             <p className="field-hint" style={{ marginTop: 10 }}>
-              Le stock théorique est nécessaire&nbsp;: sans lui, aucun devis n&apos;est possible.
+              Sans le stock, nous ne pouvons pas vous faire de devis.
             </p>
           )}
         </form>

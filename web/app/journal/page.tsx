@@ -101,7 +101,7 @@ export default function JournalPage() {
             ))}
           </div>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Les 200 dernières actions. Le journal est conservé un an, puis effacé.
+            Les 200 dernières actions. Elles sont conservées un an.
           </p>
         </div>
       )}

@@ -47,14 +47,14 @@ export function LigneInventaire({ s }: { s: SessionBloc }) {
             ? <>clôturé {relativeTime(s.closed_at)} · {nb(s.pieces)} pièces</>
             : <>
                 {s.members} personne{s.members > 1 ? 's' : ''} · {nb(s.pieces)} pièces ·
-                {' '}dernier scan {relativeTime(s.last_count_at)}
+                {' '}dernier comptage {relativeTime(s.last_count_at)}
               </>}
           {s.created_by_label && ` · créé par ${s.created_by_label}`}
         </div>
       </div>
       <div className="req-actions">
         {pct !== null && !clos && (
-          <span className="mag-prog" title={`${nb(s.pieces)} sur ${nb(s.expected)} attendues`}>
+          <span className="mag-prog" title={`${nb(s.pieces)} pièces comptées sur ${nb(s.expected)} attendues`}>
             <i style={{ width: `${pct}%` }} />
           </span>
         )}
@@ -103,7 +103,7 @@ export function CorpsMagasin({ store, lienFiche = true }: { store: StoreBloc; li
         <div className="mag-lab">Équipe</div>
         <div className="mag-equipe">
           {store.supervisors.length === 0 ? (
-            <span className="jeton">Aucun superviseur affecté</span>
+            <span className="jeton">Aucun superviseur</span>
           ) : (
             store.supervisors.map((p) => (
               <span className="jeton" key={p.id}><b>{p.full_name || 'Sans nom'}</b> · superviseur</span>
@@ -112,8 +112,8 @@ export function CorpsMagasin({ store, lienFiche = true }: { store: StoreBloc; li
           <span className="jeton"><b>{nb(store.counters)}</b> compteur{store.counters > 1 ? 's' : ''}</span>
           <span className="jeton">
             {store.counters_active > 0
-              ? <><b>{nb(store.counters_active)}</b> actif{store.counters_active > 1 ? 's' : ''} ce mois</>
-              : 'aucun actif ce mois'}
+              ? <><b>{nb(store.counters_active)}</b> {store.counters_active > 1 ? 'ont' : 'a'} compté ce mois</>
+              : 'personne n’a compté ce mois'}
           </span>
         </div>
       </div>

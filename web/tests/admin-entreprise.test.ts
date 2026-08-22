@@ -268,8 +268,8 @@ describe('supprimer un compte de son entreprise', () => {
 
   it('dit ce que la suppression fait aux rapports déjà produits', () => {
     // C'est la conséquence que personne ne devine : les chiffres restent,
-    // le nom disparaît.
-    expect(pageEquipe).toContain('ne diront plus qui a compté ces lignes')
+    // le nom disparaît. (Phrase raccourcie à la relecture du 22 août.)
+    expect(pageEquipe).toContain('son nom disparaît des rapports déjà faits')
   })
 
   it('ne propose jamais de supprimer un administrateur', () => {
@@ -330,7 +330,7 @@ describe('l’administrateur d’entreprise a tous les magasins', () => {
 
   it('« Mon équipe » ne montre ni croix ni sélecteur sur sa ligne', () => {
     // Une croix qui ne marche pas est pire que pas de croix.
-    expect(pageEquipe).toContain('Affecté à tous les magasins de l&apos;entreprise')
+    expect(pageEquipe).toContain('Tous les magasins de l&apos;entreprise')
     const rail = pageEquipe.split('className="store-sup"')[1]?.split('</div>')[0] ?? ''
     expect(rail).toContain('m.is_company_admin ?')
   })

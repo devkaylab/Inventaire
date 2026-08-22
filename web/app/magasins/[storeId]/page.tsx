@@ -198,7 +198,7 @@ export default function FicheMagasinPage() {
 
         <div className="dash-sub">Superviseurs</div>
         {fiche.supervisors.length === 0 ? (
-          <p className="muted small">Aucun superviseur affecté à ce magasin.</p>
+          <p className="muted small">Aucun superviseur sur ce magasin.</p>
         ) : (
           <div className="req-list">
             {fiche.supervisors.map((p) => (
@@ -218,7 +218,7 @@ export default function FicheMagasinPage() {
 
         <div className="dash-sub">Compteurs</div>
         {fiche.counters.length === 0 ? (
-          <p className="muted small">Aucun compteur rattaché à ce magasin.</p>
+          <p className="muted small">Aucun compteur sur ce magasin.</p>
         ) : (
           <div className="req-list">
             {fiche.counters.map((p) => (
@@ -285,9 +285,9 @@ export default function FicheMagasinPage() {
         ) : (
           <>
             <p className="muted">
-              Un magasin ne se supprime pas depuis le produit&nbsp;: la licence se facture par magasin,
-              donc Quantinvo s&apos;en charge — comme pour la création. Sa suppression effacera ses
-              inventaires et leurs comptages.
+              Vous ne pouvez pas supprimer un magasin vous-même&nbsp;: Quantinvo s&apos;en charge,
+              comme pour la création. La suppression effacera ses inventaires et tous leurs
+              comptages.
             </p>
             <button
               type="button"

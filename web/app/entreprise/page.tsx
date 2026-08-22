@@ -77,7 +77,7 @@ export default function EntreprisePage() {
               <div className="dash-kpi-label">Magasins</div>
               {t.store_requests > 0 && (
                 <div className="kpi-note">
-                  {nb(t.store_requests)} demande{t.store_requests > 1 ? 's' : ''} en cours
+                  {nb(t.store_requests)} demande{t.store_requests > 1 ? 's' : ''} en attente chez Quantinvo
                 </div>
               )}
             </div>
@@ -95,11 +95,11 @@ export default function EntreprisePage() {
             </div>
             <div className="dash-kpi">
               <div className="dash-kpi-value">{nb(t.active_today)}</div>
-              <div className="dash-kpi-label">Actives aujourd&apos;hui</div>
+              <div className="dash-kpi-label">Ont compté aujourd&apos;hui</div>
               <div className="kpi-note">
                 {t.never_signed_in > 0
-                  ? `${nb(t.never_signed_in)} compte${t.never_signed_in > 1 ? 's' : ''} jamais activé${t.never_signed_in > 1 ? 's' : ''}`
-                  : 'Tous les comptes sont actifs'}
+                  ? `${nb(t.never_signed_in)} ${t.never_signed_in > 1 ? 'personnes n’ont' : 'personne n’a'} pas encore choisi son mot de passe`
+                  : 'Tout le monde s’est déjà connecté'}
               </div>
             </div>
             <div className="dash-kpi">

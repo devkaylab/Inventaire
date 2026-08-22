@@ -113,7 +113,7 @@ describe('les alertes d’un magasin', () => {
 
   it('signale un inventaire à l’arrêt', () => {
     const store = { ...base, last_session_at: ilYA(4), sessions: [session({ created_at: ilYA(4), last_count_at: ilYA(4) })] }
-    expect(alertesMagasin(store, maintenant).some((a) => a.titre.startsWith('Aucun scan depuis 4'))).toBe(true)
+    expect(alertesMagasin(store, maintenant).some((a) => a.titre.startsWith('Personne n’a compté depuis 4'))).toBe(true)
   })
 
   it('ne crie pas sur un inventaire ouvert il y a une heure', () => {
@@ -123,7 +123,7 @@ describe('les alertes d’un magasin', () => {
   })
 
   it('signale un magasin qui n’a jamais compté, et un magasin dormant', () => {
-    expect(alertesMagasin(base, maintenant)[0].titre).toContain('jamais lancé')
+    expect(alertesMagasin(base, maintenant)[0].titre).toContain('jamais été lancé')
     const dormant = { ...base, last_session_at: ilYA(120), sessions: [] }
     // `sessions` vide mais `last_session_at` renseigné : les inventaires
     // clôturés anciens ne remontent pas, seule la date reste.
