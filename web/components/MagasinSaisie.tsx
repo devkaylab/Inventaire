@@ -1,7 +1,6 @@
 'use client'
 
-// La carte « un magasin » — nom, stock théorique, surface, et la tranche
-// tarifaire qui s'affiche à la frappe.
+// La carte « un magasin » — nom, stock théorique, surface.
 //
 // Elle est née sur /inscription, où le prospect déclare ses magasins. Elle sert
 // aussi à l'administrateur d'entreprise qui demande l'ajout d'un magasin : dans
@@ -9,10 +8,18 @@
 // tarife au volume de stock, donc une demande sans stock est une demande que
 // Quantinvo ne peut pas deviser.
 //
+// ⚠️ **Aucun prix ni aucune tranche ne s'affiche ici** (décision de Julien,
+// 22 août 2026). La carte montrait la tranche et son tarif à la frappe : cela
+// disait au prospect, pendant qu'il saisissait, quel chiffre baisser pour payer
+// moins. Or le stock est **déclaré et invérifiable** — l'import du stock
+// théorique est facultatif et rattaché à un inventaire, pas au magasin. Afficher
+// le prix en face du champ, c'était fournir le mode d'emploi de la minoration.
+// Le montant ne se lit plus que sur le devis, établi par Quantinvo, et dans la
+// console (`CompanyRequests`, fiche d'une entreprise) où l'on devise.
+// Ne pas le réintroduire — un test monte la garde.
+//
 // Une seule définition, donc. Les deux écrans ne doivent pas se mettre à
-// diverger sur les libellés, les unités ou la tranche affichée.
-
-import { trancheDe } from '@/lib/tarifs'
+// diverger sur les libellés ou les unités.
 
 export type SaisieMagasin = { nom: string; stock: string; surface: string }
 
@@ -21,8 +28,6 @@ export function nombreOuNull(saisie: string): number | null {
   const n = Number.parseFloat(saisie.replace(/\s/g, '').replace(',', '.'))
   return Number.isFinite(n) ? n : null
 }
-
-const euros = (v: number) => v.toLocaleString('fr-FR') + ' €'
 
 export function MagasinSaisie({
   numero, valeur, onChange, onRetirer, idPrefix,
@@ -38,8 +43,6 @@ export function MagasinSaisie({
       le bon champ quand la carte est répétée. */
   idPrefix: string
 }) {
-  const tranche = trancheDe(nombreOuNull(valeur.stock))
-
   return (
     <div className="magasin">
       <div className="magasin-top">
@@ -90,21 +93,6 @@ export function MagasinSaisie({
           />
           <p className="field-hint">En m², réserve comprise.</p>
         </div>
-      </div>
-
-      <div className="magasin-tranche">
-        {tranche ? (
-          <>
-            <span className="magasin-tranche-nom">
-              <b>{tranche.profil}</b> — {tranche.bornes}
-            </span>
-            <span className="magasin-tranche-prix">
-              {tranche.prixEuros === null ? 'Sur devis' : `${euros(tranche.prixEuros)} / an`}
-            </span>
-          </>
-        ) : (
-          <span className="magasin-tranche-vide">Indiquez le stock pour voir la tranche</span>
-        )}
       </div>
     </div>
   )

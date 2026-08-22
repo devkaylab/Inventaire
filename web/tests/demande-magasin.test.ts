@@ -189,14 +189,31 @@ describe('le formulaire porte le volume', () => {
     }
   })
 
-  it('la console affiche la tranche, le client la voit à la frappe', () => {
-    // Le prix se lit là où l'on devise. Le recoupement stock / surface, lui,
-    // ne sort pas de la console : il indiquerait au client quel chiffre
-    // ajuster pour changer de tranche.
+  it('le prix ne se lit que dans la console, jamais côté client', () => {
+    // Décision de Julien, 22 août 2026. La carte de saisie montrait la tranche
+    // et son tarif à la frappe, et /inscription totalisait le tout : cela
+    // disait au prospect, pendant qu'il déclarait un stock invérifiable, de
+    // combien le baisser pour payer moins. Même motif que le recoupement
+    // stock / surface, qui ne sort pas non plus de la console.
     expect(ficheEntreprise).toContain('trancheDe')
     expect(ficheEntreprise).toContain('densite')
-    expect(pageMagasins).not.toContain('densite')
-    expect(lire('../components/MagasinSaisie.tsx')).toContain('trancheDe')
+
+    const saisie = lire('../components/MagasinSaisie.tsx')
+    for (const [nom, source] of [
+      ['la carte de saisie', saisie],
+      ['la demande de magasin', pageMagasins],
+      ['le formulaire d’inscription', pageInscription],
+    ] as const) {
+      expect(source, `${nom} ne calcule pas de tranche`).not.toContain('trancheDe')
+      expect(source, `${nom} ne totalise pas de licences`).not.toContain('totalAnnuel')
+      expect(source, `${nom} ne recoupe pas la densité`).not.toContain('densite')
+    }
+
+    // Et aucun montant de la grille écrit en dur pour contourner les fonctions.
+    for (const montant of ['2 100', '4 200', '6 600', '10 200', '14 400']) {
+      expect(pageInscription, `${montant} € sur /inscription`).not.toContain(montant)
+      expect(saisie, `${montant} € dans la carte de saisie`).not.toContain(montant)
+    }
   })
 })
 

@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
-import { totalAnnuel } from '@/lib/tarifs'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/registre'
 
@@ -28,9 +27,13 @@ import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/regist
  *   il reviendrait à soupçonner le prospect avant le devis, et surtout à lui
  *   indiquer quel chiffre ajuster. Il vit dans la console d'administration.
  *
- * Le tarif, lui, s'affiche (décision du 21 août 2026) : le prospect se qualifie
- * seul, et un prix annoncé est un argument là où aucun concurrent du haut de
- * gamme n'en publie.
+ * ⚠️ **Le tarif ne s'affiche plus** (décision de Julien, 22 août 2026, qui
+ * renverse celle du 21). La page montrait la tranche de chaque magasin à la
+ * frappe et une estimation annuelle en pied de formulaire. C'était indiquer au
+ * prospect, pendant qu'il déclarait un chiffre invérifiable, exactement de
+ * combien le baisser pour changer de tranche — le même raisonnement qui tient
+ * le recoupement stock / surface hors de cette page, appliqué au prix lui-même.
+ * Le montant se lit sur le devis, établi par Quantinvo.
  */
 
 // La carte de saisie vit dans `components/MagasinSaisie` : la demande d'ajout
@@ -62,7 +65,6 @@ const SIREN_EXEMPLE = '123 456 789'
  */
 const PREMIER_MAGASIN: MagasinSaisi = { cle: 0, nom: '', stock: '', surface: '' }
 
-const euros = (v: number) => v.toLocaleString('fr-FR') + ' €'
 
 /**
  * Ce que le registre public répond, sous le champ SIREN.
@@ -177,11 +179,6 @@ export default function CompanyRequestPage() {
     // consultation à chaque frappe dans le champ du nom.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siren, sirenOk])
-
-  const total = useMemo(
-    () => totalAnnuel(magasins.map((m) => nombreOuNull(m.stock))),
-    [magasins],
-  )
 
   function ajouter() {
     const cle = cleSuivante.current
@@ -367,25 +364,13 @@ export default function CompanyRequestPage() {
             <p className="field-hint">Un code d&apos;accès sera généré pour chaque magasin.</p>
           </div>
 
-          {total.chiffres > 0 && (
-            <div className="estimation">
-              <div className="estimation-row">
-                <span className="estimation-lab">Estimation annuelle</span>
-                <span className="estimation-val">
-                  {euros(total.euros)}
-                  {total.surDevis > 0 ? ' + devis' : ''}
-                </span>
-              </div>
-              <p className="estimation-note">
-                Montants hors taxes, à confirmer sur le devis.{' '}
-                {total.surDevis > 0
-                  ? total.surDevis > 1
-                    ? `${total.surDevis} magasins dépassent le million d’unités : leur prix est établi au cas par cas.`
-                    : 'Un magasin dépasse le million d’unités : son prix est établi au cas par cas.'
-                  : 'Comptages et compteurs illimités.'}
-              </p>
-            </div>
-          )}
+          {/* Pas d'estimation chiffrée : voir l'en-tête de `MagasinSaisie`. Le
+              montant se lit sur le devis, pas en face du champ qui le
+              détermine. */}
+          <p className="devis-note">
+            Votre devis est établi à partir de ces informations. La licence est annuelle,
+            par magasin, comptages et compteurs illimités.
+          </p>
 
           <div className="field">
             <label htmlFor="message">Votre besoin (facultatif)</label>
