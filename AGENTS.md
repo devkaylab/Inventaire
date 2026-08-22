@@ -1304,6 +1304,37 @@ formulaire hors session (`/tmp-polish`, retirée ensuite — vérifier au
 connectée. Maquette validée avant codage :
 https://claude.ai/code/artifact/1b6dfbe0-6866-4af9-a5ab-c6e6b1188231
 
+## Demander la suppression d'un magasin (même jour)
+
+*« Sur page magasin ajouter bouton de demande de suppression. »* Symétrique de
+l'ajout, et pour la même raison : la licence se facture par magasin, donc
+Quantinvo reste seul à supprimer comme il est seul à créer. Le bouton vit en
+bas de la fiche d'un magasin, la demande s'annule tant qu'elle est en attente.
+
+**Même table**, distinguée par `kind` (`add` / `remove`) : une seule boîte de
+réception, une seule purge, un seul écran côté console. Le statut gagne
+`removed` — « créé » ne se dit pas d'une suppression. Migration
+`20260822180001`.
+
+⚠️ **Un piège trouvé en l'écrivant, et qui existait avant :
+`admin_delete_store` échouait.** Elle ne faisait qu'un `delete from stores`, or
+`inventory_sessions.store_id` référence `stores` en **NO ACTION** — la
+suppression partait donc en violation de clé étrangère dès que le magasin avait
+connu un inventaire. **Le bouton « Supprimer » de la fiche entreprise était
+cassé pour tout magasin ayant servi**, et une demande de suppression impossible
+à honorer aurait été pire. Vérifié à la source : la suppression nue répond
+`violates foreign key constraint "inventory_sessions_store_id_fkey"`.
+
+La fonction supprime maintenant les inventaires du magasin d'abord — comme
+`admin_delete_company` le fait pour une entreprise — et **les deux écrans le
+disent avant** : « Ses inventaires et tous leurs comptages seront effacés. »
+Ne pas retirer cette phrase : c'est elle qui rend le geste honnête.
+
+Vérifié en base, en transactions annulées : demande créée, doublon refusé,
+suppression honorée sur un magasin **portant un inventaire et des comptages**
+(magasin parti, inventaires partis, demande en `removed` et détachée du magasin
+disparu, journaux des deux côtés).
+
 Tests de garde : `web/tests/demande-magasin.test.ts`.
 
 # Conformité RGPD / sécurité

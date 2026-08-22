@@ -32,6 +32,7 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
   compte_supprime: (c) => `supprimé le compte de ${c}`,
   magasin_demande: (c) => `demandé l’ajout du magasin « ${c} »`,
   magasin_demande_annulee: (c) => `annulé la demande du magasin « ${c} »`,
+  magasin_suppression_demandee: (c) => `demandé la suppression du magasin « ${c} »`,
 }
 
 /**

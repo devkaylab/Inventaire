@@ -36,9 +36,10 @@ type Invitation = {
 }
 type Detail = { company: Company; stores: Store[]; members: Member[]; invitations: Invitation[] }
 type StoreRequest = {
-  id: string; company_id: string; store_name: string; message: string
+  id: string; company_id: string; store_id: string | null; store_name: string; message: string
   units: number | null; sqm: number | null
-  status: 'pending' | 'created' | 'rejected'
+  kind: 'add' | 'remove'
+  status: 'pending' | 'created' | 'removed' | 'rejected'
   requested_label: string; created_at: string
 }
 
@@ -131,6 +132,13 @@ export default function AdminCompanyPage() {
     appel('admin_fulfil_store_request', { p_id: d.id })
   }
 
+  async function supprimerDepuisDemande(d: StoreRequest) {
+    // Même avertissement que la suppression directe : supprimer un magasin
+    // emporte ses inventaires, et c'est irréversible.
+    if (!confirm(`Supprimer le magasin « ${d.store_name} » ?\n\nSes inventaires et tous leurs comptages seront effacés. Cette action est irréversible.`)) return
+    appel('admin_fulfil_store_removal', { p_id: d.id })
+  }
+
   async function refuserDemande(d: StoreRequest) {
     // Le motif est facultatif mais il est repris tel quel sur l'écran du
     // client : « Refusée » tout court laisserait l'administrateur d'entreprise
@@ -148,7 +156,10 @@ export default function AdminCompanyPage() {
   }
 
   async function supprimerMagasin(s: Store) {
-    if (!confirm(`Supprimer le magasin « ${s.name} » ?`)) return
+    // Texte complété le 22 août 2026 : `admin_delete_store` supprime désormais
+    // les inventaires du magasin — elle échouait avant sur la clé étrangère.
+    // Ce que ça emporte doit se lire avant, pas se découvrir après.
+    if (!confirm(`Supprimer le magasin « ${s.name} » ?\n\nSes inventaires et tous leurs comptages seront effacés. Cette action est irréversible.`)) return
     appel('admin_delete_store', { p_store_id: s.id })
   }
 
@@ -212,8 +223,13 @@ export default function AdminCompanyPage() {
             {demandes.filter((d) => d.status === 'pending').map((d) => (
               <div className="req-row" key={d.id}>
                 <div>
-                  <div className="req-name">{d.store_name}</div>
-                  <VolumeDemande units={d.units} sqm={d.sqm} />
+                  <div className="req-name">
+                    {d.store_name}
+                    {d.kind === 'remove' && (
+                      <span className="pill pill-refus" style={{ marginLeft: 8 }}>Suppression</span>
+                    )}
+                  </div>
+                  {d.kind === 'add' && <VolumeDemande units={d.units} sqm={d.sqm} />}
                   <div className="muted small">
                     Demandé le {frDate(d.created_at)}
                     {d.requested_label && ` par ${d.requested_label}`}
@@ -221,9 +237,15 @@ export default function AdminCompanyPage() {
                   {d.message && <div className="muted small">« {d.message} »</div>}
                 </div>
                 <div className="req-actions">
-                  <button className="btn btn-primary btn-sm" onClick={() => creerDepuisDemande(d)}>
-                    Créer le magasin
-                  </button>
+                  {d.kind === 'remove' ? (
+                    <button className="btn btn-danger btn-sm" onClick={() => supprimerDepuisDemande(d)}>
+                      Supprimer le magasin
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary btn-sm" onClick={() => creerDepuisDemande(d)}>
+                      Créer le magasin
+                    </button>
+                  )}
                   <button className="link-btn danger-link" onClick={() => refuserDemande(d)}>Refuser</button>
                 </div>
               </div>

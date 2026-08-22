@@ -18,6 +18,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { getMyCompany, type Company } from '@/lib/account'
+import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { LigneInventaire } from '@/components/magasin/CorpsMagasin'
 import { nb, relativeTime } from '@/lib/format'
 import type { SessionBloc } from '@/lib/entreprise'
@@ -39,6 +41,17 @@ type Fiche = {
   sessions: SessionBloc[]
 }
 
+/** Une demande d'ajout ou de suppression, telle que la rend `ca_list_store_requests`. */
+type Demande = {
+  id: string
+  kind: 'add' | 'remove'
+  store_id: string | null
+  store_name: string
+  status: 'pending' | 'created' | 'removed' | 'rejected'
+  admin_note: string
+  created_at: string
+}
+
 export default function FicheMagasinPage() {
   const guard = useAuthGuard('supervisor')
   const params = useParams<{ storeId: string }>()
@@ -47,16 +60,22 @@ export default function FicheMagasinPage() {
   const [company, setCompany] = useState<Company | null>(null)
   const [erreur, setErreur] = useState(false)
   const [copie, setCopie] = useState(false)
+  const [suppression, setSuppression] = useState<Demande | null>(null)
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const charger = useCallback(async () => {
     if (!storeId) return
-    const [f, c] = await Promise.all([
+    const [f, c, d] = await Promise.all([
       supabase.rpc('ca_store_detail', { p_store_id: storeId }),
       getMyCompany().catch(() => null),
+      supabase.rpc('ca_list_store_requests'),
     ])
     if (f.error || !f.data) { setErreur(true); return }
     setFiche(f.data as Fiche)
     setCompany(c)
+    const demandes = (d.data ?? []) as Demande[]
+    setSuppression(demandes.find((x) => x.kind === 'remove' && x.status === 'pending' && x.store_id === storeId) ?? null)
   }, [storeId])
 
   useEffect(() => {
@@ -71,6 +90,53 @@ export default function FicheMagasinPage() {
       setCopie(true)
       setTimeout(() => setCopie(false), 2000)
     } catch { /* sélection manuelle */ }
+  }
+
+  /**
+   * Demander la fermeture du magasin.
+   *
+   * Une demande, pas une suppression : la licence se facture par magasin, donc
+   * Quantinvo reste seul à supprimer — comme il est seul à créer. Ce qui n'est
+   * pas une raison de l'annoncer à la légère : la suppression emportera les
+   * inventaires du magasin et leurs comptages, et la confirmation le dit.
+   */
+  async function demanderSuppression(nom: string) {
+    const ok = await confirm({
+      title: 'Demander la suppression de ce magasin ?',
+      message: 'Quantinvo traitera la demande et vous recontactera. Rien n’est supprimé tant qu’elle n’est pas honorée.',
+      details: [
+        nom,
+        'Sa suppression effacera définitivement ses inventaires et leurs comptages.',
+        'Sa licence cessera d’être facturée.',
+        'Vous pourrez annuler cette demande tant qu’elle est en attente.',
+      ],
+      confirmLabel: 'Demander la suppression',
+      tone: 'danger',
+    })
+    if (!ok) return
+    const { data, error } = await supabase.rpc('ca_request_store_removal', { p_store_id: storeId })
+    if (error || !data?.success) {
+      toast.error(data?.error ?? error?.message ?? 'Demande impossible pour le moment.')
+      return
+    }
+    toast.success('Demande envoyée. Quantinvo vous recontacte.')
+    charger()
+  }
+
+  async function annulerSuppression(d: Demande) {
+    const ok = await confirm({
+      title: 'Annuler cette demande ?',
+      message: `Le magasin « ${d.store_name} » ne sera pas supprimé.`,
+      confirmLabel: 'Annuler la demande',
+      cancelLabel: 'Revenir',
+    })
+    if (!ok) return
+    const { data, error } = await supabase.rpc('ca_cancel_store_request', { p_id: d.id })
+    if (error || !data?.success) {
+      toast.error(data?.error ?? error?.message ?? 'Annulation impossible.')
+      return
+    }
+    charger()
   }
 
   if (guard.status !== 'ready') {
@@ -197,6 +263,39 @@ export default function FicheMagasinPage() {
                 </div>
               </>
             )}
+          </>
+        )}
+      </section>
+
+      <section className="admin-section">
+        <h2>Fermer ce magasin</h2>
+        {suppression ? (
+          <div className="signal signal-alerte">
+            <div className="signal-txt">
+              <strong>Suppression demandée</strong>
+              <div className="muted small">
+                Envoyée le {new Date(suppression.created_at).toLocaleDateString('fr-FR')} ·
+                {' '}Quantinvo vous recontacte. Rien n&apos;est supprimé tant que la demande n&apos;est pas honorée.
+              </div>
+            </div>
+            <button type="button" className="link-btn" onClick={() => annulerSuppression(suppression)}>
+              Annuler la demande
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="muted">
+              Un magasin ne se supprime pas depuis le produit&nbsp;: la licence se facture par magasin,
+              donc Quantinvo s&apos;en charge — comme pour la création. Sa suppression effacera ses
+              inventaires et leurs comptages.
+            </p>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => demanderSuppression(fiche.store.name)}
+            >
+              Demander la suppression
+            </button>
           </>
         )}
       </section>

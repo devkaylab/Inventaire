@@ -199,3 +199,79 @@ describe('le formulaire porte le volume', () => {
     expect(lire('../components/MagasinSaisie.tsx')).toContain('trancheDe')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Demander la suppression d'un magasin (22 août 2026).
+//
+// Symétrique de l'ajout, et pour la même raison : la licence se facture par
+// magasin, donc Quantinvo reste seul à supprimer comme il est seul à créer.
+
+describe('demander la suppression d’un magasin', () => {
+  const m3 = lire('../../supabase/migrations/20260822180001_demande_suppression_magasin.sql')
+  const corpsM3 = (fn: string) => m3.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+  const fiche = lire('../app/magasins/[storeId]/page.tsx')
+
+  it('la demande ne supprime rien', () => {
+    // Le jour où cette fonction toucherait à `stores`, un client fermerait un
+    // magasin — et une licence — tout seul.
+    const corps = corpsM3('ca_request_store_removal')
+    expect(corps).toContain('insert into public.store_requests')
+    expect(corps).not.toMatch(/delete from public\.stores/)
+    expect(corps).toContain("'remove'")
+  })
+
+  it('la garde porte sur l’entreprise du magasin visé', () => {
+    const corps = corpsM3('ca_request_store_removal')
+    expect(corps).toContain('select s.company_id, s.name into v_company, v_name')
+    expect(corps).toContain('public.is_company_admin(v_company)')
+  })
+
+  it('une seule demande de suppression à la fois par magasin', () => {
+    expect(corpsM3('ca_request_store_removal')).toContain("r.kind = 'remove' and r.status = 'pending'")
+  })
+
+  it('seul Quantinvo l’honore, par le chemin de suppression existant', () => {
+    const corps = corpsM3('admin_fulfil_store_removal')
+    expect(corps).toContain('if not public.is_admin() then')
+    expect(corps).toContain('public.admin_delete_store(v_req.store_id)')
+    expect(corps).toContain("if v_req.kind <> 'remove' then")
+    expect(corps).toContain("if v_req.status <> 'pending' then")
+  })
+
+  it('supprimer un magasin emporte ses inventaires — et ne casse plus', () => {
+    // `inventory_sessions.store_id` référence `stores` en NO ACTION : la
+    // suppression échouait sur une violation de contrainte dès que le magasin
+    // avait connu un inventaire. Le bouton de la console était cassé pour tout
+    // magasin ayant servi.
+    const corps = corpsM3('admin_delete_store')
+    expect(corps).toContain('delete from public.inventory_sessions where store_id = p_store_id')
+    expect(corps).toContain('log_admin_action')
+    // Et l'écran le dit avant, plutôt que de le faire découvrir après.
+    const console = lire('../app/admin/entreprise/[companyId]/page.tsx')
+    expect(console).toContain('Ses inventaires et tous leurs comptages seront effacés')
+  })
+
+  it('« créé » ne se dit pas d’une suppression', () => {
+    expect(m3).toContain("check (status in ('pending', 'created', 'removed', 'rejected'))")
+    expect(m3).toContain("status = 'removed'")
+  })
+
+  it('le bouton vit sur la fiche du magasin, et s’annule', () => {
+    expect(fiche).toContain("rpc('ca_request_store_removal'")
+    expect(fiche).toContain('Demander la suppression')
+    expect(fiche).toContain("rpc('ca_cancel_store_request'")
+    // Ce que la suppression emportera se lit dans la confirmation, pas après.
+    expect(fiche).toContain('effacera définitivement ses inventaires et leurs comptages')
+  })
+
+  it('les deux genres se distinguent partout où ils s’affichent', () => {
+    for (const page of [
+      lire('../app/magasins/page.tsx'),
+      lire('../app/admin/page.tsx'),
+      lire('../app/admin/entreprise/[companyId]/page.tsx'),
+    ]) {
+      expect(page).toContain("kind")
+      expect(page).toContain("'remove'")
+    }
+  })
+})

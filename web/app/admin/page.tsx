@@ -20,7 +20,10 @@ import { AppShell } from '@/components/AppShell'
 
 type CompanyRef = { id: string; name: string }
 /** Une demande d'ajout de magasin encore en attente, tous clients confondus. */
-type StoreRequest = { id: string; company_id: string; company_name: string; store_name: string; status: string }
+type StoreRequest = {
+  id: string; company_id: string; company_name: string; store_name: string
+  kind: 'add' | 'remove'; status: string
+}
 type IdleStore = { id: string; name: string; company_id: string; company_name: string; days: number | null }
 type Overview = {
   companies: number
@@ -132,7 +135,10 @@ export default function AdminPage() {
               {demandes.map((d) => (
                 <div className="signal signal-alerte" key={`demande-${d.id}`}>
                   <div className="signal-txt">
-                    <strong>{d.company_name}</strong> demande l&apos;ajout du magasin « {d.store_name} ».
+                    <strong>{d.company_name}</strong> demande{' '}
+                    {d.kind === 'remove'
+                      ? <>la <b>suppression</b> du magasin « {d.store_name} ».</>
+                      : <>l&apos;ajout du magasin « {d.store_name} ».</>}
                   </div>
                   <Link href={`/admin/entreprise/${d.company_id}`} className="btn btn-ghost btn-sm">Ouvrir la fiche</Link>
                 </div>

@@ -33,20 +33,25 @@ import { nb } from '@/lib/format'
 
 type StoreRequest = {
   id: string
+  kind: 'add' | 'remove'
+  store_id: string | null
   store_name: string
   message: string
   units: number | null
   sqm: number | null
-  status: 'pending' | 'created' | 'rejected'
+  status: 'pending' | 'created' | 'removed' | 'rejected'
   requested_label: string
   admin_note: string
   created_at: string
   handled_at: string | null
 }
 
+/** Le statut se lit différemment selon ce qu'on a demandé : « créé » ne veut
+    rien dire pour une suppression. */
 const STATUT: Record<StoreRequest['status'], string> = {
   pending: 'Demande envoyée',
   created: 'Magasin créé',
+  removed: 'Magasin supprimé',
   rejected: 'Refusée',
 }
 
@@ -307,6 +312,9 @@ function DemandesMagasin() {
               <div>
                 <div className="req-name">
                   {d.store_name}
+                  {d.kind === 'remove' && (
+                    <span className="pill pill-refus" style={{ marginLeft: 8 }}>Suppression</span>
+                  )}
                   <span className={`pill ${d.status === 'pending' ? 'pill-attente' : d.status === 'rejected' ? 'pill-refus' : ''}`} style={{ marginLeft: 8 }}>
                     {STATUT[d.status]}
                   </span>

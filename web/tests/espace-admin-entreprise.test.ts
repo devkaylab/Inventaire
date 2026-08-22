@@ -171,8 +171,10 @@ describe('le journal se lit en français', () => {
     // Le garde-fou : ajouter un `log_company_action` sans son libellé se voit.
     const ecrites = [...lire('../../supabase/migrations/20260820190003_fonctions_admin_entreprise.sql')
       .matchAll(/log_company_action\([^,]+,\s*'([a-z_]+)'/g)].map((m) => m[1])
-    const magasins = [...lire('../../supabase/migrations/20260822130001_demande_ajout_magasin.sql')
-      .matchAll(/log_company_action\([^,]+,\s*'([a-z_]+)'/g)].map((m) => m[1])
+    const magasins = [
+      '../../supabase/migrations/20260822130001_demande_ajout_magasin.sql',
+      '../../supabase/migrations/20260822180001_demande_suppression_magasin.sql',
+    ].flatMap((f) => [...lire(f).matchAll(/log_company_action\([^,]+,\s*'([a-z_]+)'/g)].map((m) => m[1]))
     for (const action of new Set([...ecrites, ...magasins])) {
       expect(ACTIONS[action], `${action} n'a pas de libellé`).toBeDefined()
     }
