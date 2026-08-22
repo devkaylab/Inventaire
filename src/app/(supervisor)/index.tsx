@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { router } from 'expo-router'
@@ -77,11 +77,36 @@ function SessionCard({ session, theme, styles, onDelete, selection, coche, onTog
   // En mode sélection, toucher la carte coche au lieu d'ouvrir : on ne veut pas
   // quitter l'écran au milieu d'une sélection.
   const selectionnable = selection && !!onToggle
+
+  /**
+   * L'appui long a déjà fait son travail — le relâchement ne doit rien faire.
+   *
+   * Anomalie relevée par Julien le 22 août 2026 : « la tuile est sélectionnée
+   * puis elle se désélectionne ». L'appui long cochait la carte et faisait
+   * passer l'écran en mode sélection ; au relâchement, `onPress` partait — et
+   * comme l'écran était désormais en sélection, il **décochait**. Deux
+   * bascules pour un seul geste.
+   *
+   * Le drapeau est remis à faux à chaque nouvel appui : si la plateforme
+   * n'envoie pas `onPress` après un appui long, il ne reste pas armé et ne
+   * mange pas le geste suivant.
+   */
+  const appuiLong = useRef(false)
+
   return (
     <Pressable
       style={[styles.card, coche && styles.cardSelected, selection && !selectionnable && styles.cardDimmed]}
-      onPress={selection ? (onToggle ?? (() => {})) : () => router.push(`/(supervisor)/${session.id}`)}
-      onLongPress={!selection && onToggle ? onToggle : undefined}
+      onPressIn={() => { appuiLong.current = false }}
+      onLongPress={() => {
+        if (!onToggle) return
+        appuiLong.current = true
+        onToggle()
+      }}
+      onPress={() => {
+        if (appuiLong.current) { appuiLong.current = false; return }
+        if (selection) onToggle?.()
+        else router.push(`/(supervisor)/${session.id}`)
+      }}
       delayLongPress={350}
     >
       <View style={styles.cardHeader}>

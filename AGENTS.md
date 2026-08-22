@@ -512,7 +512,12 @@ Deux adaptations au doigt :
 
 - on y entre par **appui long** sur une carte *ou* par le bouton
   « Sélectionner » de l'en-tête — l'appui long ne s'invente pas, il ne peut
-  pas être le seul chemin ;
+  pas être le seul chemin. ⚠️ **L'appui long doit se garder du relâchement** :
+  il coche la carte *et* fait passer l'écran en mode sélection, si bien que le
+  `onPress` du relâchement décochait aussitôt (relevé par Julien le 22 août
+  2026 : « elle est sélectionnée puis elle se désélectionne »). Un drapeau
+  `appuiLong`, remis à faux à chaque `onPressIn`, avale ce `onPress` — et ne
+  reste pas armé si la plateforme ne l'envoie pas ;
 - la barre d'action est sur **deux rangées**. À quatre éléments sur la largeur
   d'un téléphone, « 1 sélectionné » se cassait sur trois lignes (constaté au
   simulateur). Elle remplace le bouton « + Nouvel inventaire » le temps de la

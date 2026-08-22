@@ -386,6 +386,18 @@ describe('sélection multiple sur l’app', () => {
     expect(liste).toContain('Sélectionner')
     expect(liste).toContain('onLongPress')
   })
+
+  it('un appui long ne bascule qu’une fois', () => {
+    // Anomalie de Julien, 22 août 2026 : « la tuile est sélectionnée puis elle
+    // se désélectionne ». L'appui long cochait et faisait passer en mode
+    // sélection ; au relâchement `onPress` partait et, l'écran étant désormais
+    // en sélection, décochait. Deux bascules pour un geste.
+    expect(liste).toContain('const appuiLong = useRef(false)')
+    expect(liste).toContain('if (appuiLong.current) { appuiLong.current = false; return }')
+    // Remis à faux à chaque appui : si la plateforme n'envoie pas `onPress`
+    // après un appui long, le drapeau ne mange pas le geste suivant.
+    expect(liste).toContain('onPressIn={() => { appuiLong.current = false }}')
+  })
 })
 
 describe('les totaux de l’app viennent du serveur', () => {
