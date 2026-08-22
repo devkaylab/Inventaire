@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
   if (error) return json({ success: false, error: error.message }, 500)
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Acceptation impossible.' }, 400)
 
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
 
   // ── Le paiement, par Stripe Checkout ─────────────────────────────────────
   // Dès l'accord, on ouvre la session et on rend son adresse : la page y

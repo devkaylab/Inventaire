@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
   if (!Deno.env.get('RESEND_API_KEY')) return sansAvis('Resend non configuré')
 
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   // Le refus invite à discuter : il faut une adresse où le faire. La
   // personne qui refuse est l'administrateur connecté — c'est elle qu'on met
   // en réponse, à défaut de CONTACT_EMAIL.

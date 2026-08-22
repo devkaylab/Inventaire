@@ -13,7 +13,7 @@ export const PRIVACY_URL = 'https://devkaylab.github.io/Inventaire/privacy.html'
 // `SUPERVISOR_REQUEST_URL` a été retiré le 21 août 2026 avec le formulaire
 // public de demande d'accès. La page /superviseur, elle, doit rester en ligne :
 // les builds déjà installés sur les téléphones la partagent encore.
-export const SITE_URL = 'https://quantinvo.vercel.app'
+export const SITE_URL = 'https://www.quantinvo.com'
 export const COMPANY_REQUEST_URL = `${SITE_URL}/inscription`
 
 // « Mot de passe oublié » : le parcours vit sur le site (envoi du lien par

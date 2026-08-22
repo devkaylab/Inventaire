@@ -263,7 +263,7 @@ function EcranOrdinateur({
       <h1>Cet espace se pilote depuis un ordinateur</h1>
       <p>
         Le tableau de bord montre des tableaux d’articles, des imports de fichiers et
-        des rapports à télécharger. Ouvrez <strong>quantinvo.vercel.app</strong> sur un
+        des rapports à télécharger. Ouvrez <strong>www.quantinvo.com</strong> sur un
         ordinateur — ou agrandissez cette fenêtre.
       </p>
 

@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 
   if (!Deno.env.get('RESEND_API_KEY')) return sansEnvoi('Resend non configuré')
 
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   // Celui qui envoie le devis est celui à qui on répond.
   const contact = adresseDeContact(userData.user.email ?? null)
   const lien = `${appUrl}/devis/${result.token}`

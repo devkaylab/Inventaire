@@ -8,7 +8,7 @@ const exemple = {
   salutation: 'Bonjour Camille,',
   paragraphes: ['Premier paragraphe.', 'Second paragraphe.'],
   details: [{ intitule: 'Magasin', valeur: 'Lyon Part-Dieu' }],
-  bouton: { libelle: 'Finaliser mon compte', lien: 'https://quantinvo.vercel.app/bienvenue?token=abc' },
+  bouton: { libelle: 'Finaliser mon compte', lien: 'https://www.quantinvo.com/bienvenue?token=abc' },
   note: 'Ce lien est personnel et à usage unique.',
   raison: 'Vous recevez ce message parce que…',
 }
@@ -64,14 +64,14 @@ describe('Gabarit d’e-mail — charte', () => {
     expect(html).toContain('Lyon Part-Dieu')
     // Le lien apparaît deux fois : sur le bouton, et en clair pour les
     // messageries qui n'affichent pas les boutons.
-    expect(html.split('quantinvo.vercel.app/bienvenue?token=abc').length - 1).toBeGreaterThanOrEqual(2)
+    expect(html.split('www.quantinvo.com/bienvenue?token=abc').length - 1).toBeGreaterThanOrEqual(2)
   })
 
   it('accompagne le HTML d’une version texte complète', () => {
     const { text } = emailQuantinvo(exemple)
     expect(text).toContain('QUANTINVO')
     expect(text).toContain('Magasin : Lyon Part-Dieu')
-    expect(text).toContain('https://quantinvo.vercel.app/bienvenue?token=abc')
+    expect(text).toContain('https://www.quantinvo.com/bienvenue?token=abc')
     expect(text).not.toMatch(/<[a-z]/i)
   })
 })
@@ -89,8 +89,8 @@ describe('Gabarit d’e-mail — sûreté', () => {
   })
 
   it('refuse un lien qui n’est pas http(s)', () => {
-    expect(lienSur('javascript:alert(1)')).toBe('https://quantinvo.vercel.app')
-    expect(lienSur('data:text/html,<b>x</b>')).toBe('https://quantinvo.vercel.app')
+    expect(lienSur('javascript:alert(1)')).toBe('https://www.quantinvo.com')
+    expect(lienSur('data:text/html,<b>x</b>')).toBe('https://www.quantinvo.com')
     expect(lienSur('https://exemple.fr/ok')).toBe('https://exemple.fr/ok')
   })
 
@@ -111,7 +111,7 @@ describe('Fonctions edge — un seul gabarit', () => {
     // bouton. Un seul geste par message.
     const { html, text } = emailQuantinvo({
       titre: 'T', paragraphes: ['p'],
-      bouton: { libelle: 'Agir', lien: 'https://quantinvo.vercel.app/x' },
+      bouton: { libelle: 'Agir', lien: 'https://www.quantinvo.com/x' },
       lienSecondaire: { libelle: 'Votre facture <F-1>', lien: 'https://invoice.stripe.com/i/abc' },
     })
     expect(html).toContain('href="https://invoice.stripe.com/i/abc"')

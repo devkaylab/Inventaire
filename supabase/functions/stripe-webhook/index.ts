@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   if (result.already) return json({ received: true, already: true })
 
   // À partir d'ici tout est créé. Les e-mails se tentent, ils ne défont rien.
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const resendKey = Deno.env.get('RESEND_API_KEY')
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const notes: string[] = []

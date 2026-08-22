@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Refus' }, 403)
 
   const admin = createClient(url, serviceKey)
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const redirectTo = `${appUrl}/bienvenue`
   const fullName = `${result.first_name} ${result.last_name}`.trim()
   const metadata = {

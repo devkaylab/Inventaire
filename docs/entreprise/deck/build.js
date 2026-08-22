@@ -144,7 +144,7 @@ async function main() {
       x: 3.16, y: 4.55, w: 7, h: 0.8, align: 'center',
       fontFace: FONT, fontSize: 14, color: TEXT2, margin: 0,
     })
-    s.addText('Devkaylab  ·  août 2026  ·  quantinvo.vercel.app', {
+    s.addText('Devkaylab  ·  août 2026  ·  www.quantinvo.com', {
       x: 0, y: 6.7, w: W, h: 0.35, align: 'center',
       fontFace: FONT, fontSize: 11, color: TEXT3, margin: 0,
     })
@@ -426,7 +426,7 @@ async function main() {
       x: W / 2 - 1.7, y: 4.7, w: 3.4, h: 0.62, align: 'center', valign: 'middle',
       fontFace: FONT, fontSize: 13, bold: true, color: 'FFFFFF', margin: 0,
     })
-    s.addText('quantinvo.vercel.app   ·   jthiongkay@gmail.com', {
+    s.addText('www.quantinvo.com   ·   jthiongkay@gmail.com', {
       x: 0, y: 5.75, w: W, h: 0.4, align: 'center',
       fontFace: FONT, fontSize: 13, color: LAVENDER, margin: 0,
     })

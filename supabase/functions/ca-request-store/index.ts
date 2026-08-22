@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     .maybeSingle()
   const prenom = (profil?.first_name ?? '').trim()
 
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const details: { intitule: string; valeur: string }[] = [{ intitule: 'Magasin', valeur: name }]
   if (units !== null) details.push({ intitule: 'Stock théorique', valeur: `${nb(units)} pièces` })
   if (sqm !== null) details.push({ intitule: 'Surface de vente', valeur: `${nb(sqm)} m²` })

@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) return sansAvis('Resend non configuré')
 
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const magasin = (notify.store_name ?? '').trim()
   const prenom = (notify.first_name ?? '').trim()
   const lien = notify.store_id ? `${appUrl}/magasins/${notify.store_id}` : `${appUrl}/magasins`

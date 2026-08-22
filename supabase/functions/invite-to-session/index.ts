@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
   let emailError: string | null = null
   const resendKey = Deno.env.get('RESEND_API_KEY')
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   if (resendKey) {
     const greeting = fullName ? `Bonjour ${fullName},` : 'Bonjour,'
     const { html, text } = emailQuantinvo({

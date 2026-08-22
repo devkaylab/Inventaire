@@ -58,7 +58,7 @@ complément.
 |---|---|
 | `heabesqvlinzarqenymj.supabase.co` | Données, authentification, synchronisation temps réel (HTTPS et WebSocket) |
 | `exp.host` | Obtention du jeton de notification, au premier lancement |
-| `quantinvo.vercel.app` | Liens d'invitation reçus par e-mail |
+| `www.quantinvo.com` | Liens d'invitation reçus par e-mail |
 
 Les services de notification d'Apple (APNs) et de Google (FCM) sont également
 utilisés ; ils sont ouverts par défaut dans la plupart des réseaux.

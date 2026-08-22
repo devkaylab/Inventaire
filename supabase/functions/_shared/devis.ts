@@ -255,7 +255,7 @@ export function elementsDevis(devis: Devis): Element[] {
   e.push({ type: 'texte', x: marge, y: yPied, texte: 'Quantinvo', taille: 9, gras: true, couleur: C.encre })
   e.push({
     type: 'texte', x: droite, y: yPied, alignement: 'droite', taille: 8.5, couleur: C.ardoise,
-    texte: 'Devis établi par Quantinvo · quantinvo.vercel.app',
+    texte: 'Devis établi par Quantinvo · www.quantinvo.com',
   })
 
   return e

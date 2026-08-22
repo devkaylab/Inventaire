@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
   if (!Deno.env.get('RESEND_API_KEY')) return json({ success: true, already: false, emailed: false })
 
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   // L'adresse de contact : celle qui reçoit les réponses. Lue avant d'écrire,
   // pour que le texte ne promette une réponse que si elle est possible.
   const { data: admins } = await client.rpc('admin_notify_emails')

@@ -41,7 +41,7 @@ const POLICE =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
 
 /** Adresse du site, reprise du pied de page et des liens légaux. */
-export const SITE_PAR_DEFAUT = 'https://quantinvo.vercel.app'
+export const SITE_PAR_DEFAUT = 'https://www.quantinvo.com'
 export const POLITIQUE_URL = 'https://devkaylab.github.io/Inventaire/privacy.html'
 /**
  * Le logo est servi par le site (`web/public/email/`), en PNG : Gmail retire

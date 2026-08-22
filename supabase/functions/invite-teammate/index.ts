@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
   // Supabase est fortement limité en débit et conviendrait mal à
   // l'onboarding d'une équipe entière le jour d'un inventaire. Repli sur
   // l'envoi Supabase si Resend n'est pas configuré.
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const redirectTo = `${appUrl}/bienvenue`
   const metadata = { first_name: firstName, last_name: lastName, full_name: fullName, role: 'employee' }
   const resendKey = Deno.env.get('RESEND_API_KEY')
