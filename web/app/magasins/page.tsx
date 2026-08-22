@@ -269,12 +269,24 @@ function DemandesMagasin() {
     const n = saisie.nom.trim()
     if (!n || !stock) return
     setBusy(true)
-    const { data, error } = await supabase.rpc('ca_request_store', {
-      p_name: n,
-      p_message: mot.trim(),
-      p_units: Math.round(stock),
-      p_sqm: surface === null ? null : Math.round(surface),
-    })
+    // Par l'edge function : même RPC, appelée avec ce jeton, plus l'accusé de
+    // réception par e-mail. Repli sur la RPC directe si elle est injoignable —
+    // la demande passe alors sans accusé, plutôt que de ne pas passer.
+    const corps = {
+      name: n,
+      message: mot.trim(),
+      units: Math.round(stock),
+      sqm: surface === null ? null : Math.round(surface),
+    }
+    let { data, error } = await supabase.functions.invoke('ca-request-store', { body: corps })
+    if (error) {
+      ;({ data, error } = await supabase.rpc('ca_request_store', {
+        p_name: corps.name,
+        p_message: corps.message,
+        p_units: corps.units,
+        p_sqm: corps.sqm,
+      }))
+    }
     setBusy(false)
     if (error || !data?.success) {
       toast.error(data?.error ?? error?.message ?? 'Demande impossible pour le moment.')

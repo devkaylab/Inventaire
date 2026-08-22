@@ -1304,6 +1304,49 @@ formulaire hors session (`/tmp-polish`, retirée ensuite — vérifier au
 connectée. Maquette validée avant codage :
 https://claude.ai/code/artifact/1b6dfbe0-6866-4af9-a5ab-c6e6b1188231
 
+### Une demande aboutie quitte l'écran du client, et se dit par e-mail
+
+Constat de Julien, capture à l'appui : « Alltricks — Magasin créé » restait
+affiché sous « Demandes de magasin », alors que le magasin avait été créé puis
+supprimé (c'était un essai). La liste montrait une trace sans objet, sous un
+titre qui annonce des demandes en cours.
+
+Règle posée (migration `20260822200001`) : **la liste du client ne garde que ce
+sur quoi il peut encore agir** — les demandes en attente, qu'il annule, et les
+refusées récentes, dont il doit lire le motif. Les demandes abouties
+(`created`, `removed`) sortent de l'écran : le magasin apparu — ou disparu —
+dans la liste juste au-dessus est la confirmation. **La trace ne bouge pas** :
+la ligne reste en base, visible 90 jours dans la console Quantinvo, purgée à un
+an comme les journaux. On cesse d'afficher, on n'efface pas.
+
+Deux e-mails accompagnent le parcours, par deux fonctions edge :
+
+- `ca-request-store` — accusé de réception, à l'envoi de la demande ;
+- `admin-fulfil-store-request` — « votre magasin est créé », quand Quantinvo
+  crée.
+
+Quatre points à ne pas défaire :
+
+- **Elles n'ajoutent aucun droit.** Chacune appelle sa RPC **avec le jeton de
+  l'appelant** (`is_company_admin()` / `is_admin()`, exigence aal2 comprise).
+  Une création jouée en `service_role` contournerait toute la garde.
+- **Le code d'accès du magasin ne part jamais par e-mail** : il ouvre l'entrée
+  dans le magasin. Le message renvoie vers la fiche, où il se lit derrière une
+  session. `admin_fulfil_store_request` ne le met pas non plus dans son objet
+  `notify`.
+- **Un e-mail qui ne part pas n'annule rien.** La ligne est déjà écrite quand
+  on envoie : l'échec se dit (`emailed: false`), il ne fait pas croire que
+  rien n'a été fait.
+- **Les deux écrans retombent sur la RPC directe** si l'edge est injoignable —
+  une demande qui passe sans accusé vaut mieux qu'une demande qui ne passe pas.
+
+Le refus, lui, n'envoie pas d'e-mail : son motif s'affiche sur l'écran du
+client, qui garde la demande refusée trente jours.
+
+Tests de garde : `web/tests/demande-magasin.test.ts`, bloc « une demande
+aboutie quitte l'écran ». Les deux fonctions edge **sont déployées** (22 août
+2026) ; toute modification demande un redéploiement, le dépôt ne déploie rien.
+
 ## Demander la suppression d'un magasin (même jour)
 
 *« Sur page magasin ajouter bouton de demande de suppression. »* Symétrique de

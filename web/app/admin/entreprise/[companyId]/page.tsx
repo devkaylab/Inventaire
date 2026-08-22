@@ -129,7 +129,25 @@ export default function AdminCompanyPage() {
   }
 
   async function creerDepuisDemande(d: StoreRequest) {
-    appel('admin_fulfil_store_request', { p_id: d.id })
+    // Par l'edge function : elle appelle la même RPC avec ce jeton, puis
+    // prévient le demandeur par e-mail. Repli sur la RPC directe si elle est
+    // injoignable — un magasin créé sans e-mail vaut mieux qu'un magasin non
+    // créé, et le journal garde la trace des deux côtés.
+    const { data, error } = await supabase.functions.invoke('admin-fulfil-store-request', {
+      body: { requestId: d.id },
+    })
+    if (!error && data?.success) {
+      if (data.emailed === false) {
+        alert(`Magasin créé, mais l'e-mail n'a pas pu partir : ${data.error ?? 'raison inconnue'}`)
+      }
+      await charger()
+      return
+    }
+    if (error) {
+      await appel('admin_fulfil_store_request', { p_id: d.id })
+      return
+    }
+    alert('Erreur : ' + (data?.error ?? 'inconnue'))
   }
 
   async function supprimerDepuisDemande(d: StoreRequest) {

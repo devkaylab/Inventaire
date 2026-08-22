@@ -14,7 +14,10 @@ const m1 = lire('../../supabase/migrations/20260822130001_demande_ajout_magasin.
 // Le formulaire est passé à celui de /inscription le même jour : la demande
 // porte le volume de stock, sans quoi Quantinvo ne peut pas deviser.
 const m2 = lire('../../supabase/migrations/20260822140001_demande_magasin_volume.sql')
-const migration = m1 + '\n' + m2
+// Une demande aboutie sort de l'écran du client, et le demandeur est prévenu
+// par e-mail (22 août 2026, second passage).
+const m4 = lire('../../supabase/migrations/20260822200001_demandes_abouties_et_notifications.sql')
+const migration = m1 + '\n' + m2 + '\n' + m4
 const pageMagasins = lire('../app/magasins/page.tsx')
 const pageInscription = lire('../app/inscription/page.tsx')
 const pageAdmin = lire('../app/admin/page.tsx')
@@ -22,7 +25,7 @@ const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
 
 /** La définition qui fait foi : la plus récente. */
 const corpsDe = (fn: string) => {
-  for (const src of [m2, m1]) {
+  for (const src of [m4, m2, m1]) {
     const corps = src.split(`function public.${fn}(`)[1]?.split('$$;')[0]
     if (corps) return corps
   }
@@ -290,5 +293,66 @@ describe('demander la suppression d’un magasin', () => {
       expect(page).toContain("kind")
       expect(page).toContain("'remove'")
     }
+  })
+})
+
+
+describe('une demande aboutie quitte l’écran, et se dit par e-mail', () => {
+  const edgeDemande = lire('../../supabase/functions/ca-request-store/index.ts')
+  const edgeCreation = lire('../../supabase/functions/admin-fulfil-store-request/index.ts')
+
+  it('la liste du client ne garde que ce sur quoi il peut agir', () => {
+    // Constat de Julien : « Alltricks — Magasin créé » restait affiché sous
+    // « Demandes de magasin », alors que le magasin était créé puis supprimé.
+    // Une demande aboutie n'est plus une demande.
+    const corps = corpsDe('ca_list_store_requests')
+    expect(corps).toContain("r.status = 'pending'")
+    expect(corps).toContain("r.status = 'rejected'")
+    // L'ancienne règle montrait tout ce qui avait été traité depuis 30 jours,
+    // statut compris : c'est elle qui affichait « Magasin créé ».
+    expect(corps).not.toMatch(/or r\.handled_at > now\(\) - interval '30 days'/)
+  })
+
+  it('la trace reste en base et dans la console', () => {
+    // On cesse d'afficher, on n'efface pas : la console Quantinvo garde 90
+    // jours, et la purge à un an ne bouge pas.
+    expect(corpsDe('admin_list_store_requests')).toContain("interval '90 days'")
+    expect(corpsDe('ca_list_store_requests')).not.toContain('delete from')
+  })
+
+  it('les deux e-mails passent par des fonctions edge, avec le jeton de l’appelant', () => {
+    // Ni l'une ni l'autre n'ajoute de droit : la garde reste celle de la RPC
+    // (is_company_admin / is_admin, double authentification comprise). Une
+    // création appelée en service_role contournerait tout.
+    expect(edgeDemande).toContain("caller.rpc('ca_request_store'")
+    expect(edgeCreation).toContain("caller.rpc('admin_fulfil_store_request'")
+    for (const src of [edgeDemande, edgeCreation]) {
+      expect(src).toContain('Authorization: authHeader')
+      expect(src).not.toMatch(/createClient\(url, serviceKey\)/)
+      expect(src).toContain('emailQuantinvo')
+    }
+  })
+
+  it('le code d’accès du magasin ne part jamais par e-mail', () => {
+    // Il ouvre l'entrée dans le magasin. L'e-mail renvoie vers la fiche, où il
+    // se lit derrière une session.
+    expect(edgeCreation).not.toContain('join_code')
+    expect(corpsDe('admin_fulfil_store_request')).not.toMatch(/'join_code',/)
+  })
+
+  it('un e-mail qui ne part pas n’annule ni la demande ni le magasin', () => {
+    // La ligne est déjà écrite quand on envoie : un échec Resend doit se dire,
+    // pas faire croire que rien n'a été fait.
+    expect(edgeDemande).toContain('sansAccuse')
+    expect(edgeDemande).toContain('success: true, requested: true, emailed: false')
+    expect(edgeCreation).toContain('sansAvis')
+    expect(edgeCreation).toContain('emailed: false')
+  })
+
+  it('les deux écrans retombent sur la RPC si l’edge est injoignable', () => {
+    expect(pageMagasins).toContain("functions.invoke('ca-request-store'")
+    expect(pageMagasins).toContain("supabase.rpc('ca_request_store'")
+    expect(ficheEntreprise).toContain("functions.invoke('admin-fulfil-store-request'")
+    expect(ficheEntreprise).toContain("appel('admin_fulfil_store_request'")
   })
 })
