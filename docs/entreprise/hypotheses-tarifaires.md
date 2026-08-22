@@ -155,6 +155,9 @@ marché, et elle tient en une ligne sur le site.
 
 ## Hypothèse 3 — par magasin et par compteur, à tranches (22 août 2026)
 
+Présentation chiffrée en artifact :
+https://claude.ai/code/artifact/6c91f361-6778-4032-b2f1-857b435cf41f
+
 Deux variables au lieu d'une : un **socle annuel par magasin**, dégressif selon
 le nombre de magasins sous licence, et un **supplément par tranche de
 compteurs** sur chaque magasin. Le volume de stock ne sert plus à rien.
