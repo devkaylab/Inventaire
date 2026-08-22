@@ -429,9 +429,18 @@ Deux limites à connaître :
    références disent l'étendue — 300 pièces sur 4 références n'est pas le même
    inventaire que 300 pièces sur 250.
 
-   À savoir : ce compte inclut les SKU dont le net est **nul** (comptés puis
-   corrigés à zéro) — 2 sur 25 pour « HV 200826 ». C'est défendable (l'article
-   a bien été traité) mais ce n'est pas « références en stock ».
+   **Le décompte ne retient que les références dont il reste quelque chose**
+   (décision de Julien, migration `20260822100001`). `counts` est append-only :
+   une correction est une ligne négative, donc un article scanné puis
+   entièrement corrigé avait des lignes mais un net nul, et gonflait le
+   chiffre — « 25 références comptées » là où il n'en restait que 23 avec du
+   stock. Le décompte porte sur le **net par SKU, strictement positif** ; un
+   net négatif est exclu par la même condition. Même règle pour les références
+   auditées, les deux se lisant côte à côte.
+
+   **Les totaux de pièces ne bougent pas** : sommer par SKU puis additionner
+   donne le même résultat que sommer directement — vérifié après application
+   sur les cinq inventaires.
 
    La rangée passe à cinq tuiles : `.dash-stats-5` remplace la grille de
    quatre colonnes fixes par `auto-fit` à 116 px minimum, faute de quoi la

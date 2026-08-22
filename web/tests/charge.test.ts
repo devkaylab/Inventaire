@@ -310,6 +310,23 @@ describe('la tuile « Références comptées »', () => {
     expect(suivi).toContain("plural(totals.auditedSkus, 'auditée', 'auditées')")
   })
 
+  it('ne compte que les références dont il reste quelque chose', () => {
+    // `counts` est append-only : une correction est une ligne négative. Un
+    // article scanné puis entièrement corrigé a des lignes mais un net nul —
+    // il gonflait le décompte. Un `count(distinct sku)` sec le réintroduirait.
+    const migration = readFileSync(
+      path.resolve(__dirname, '../../supabase/migrations/20260822100001_references_comptees_net_positif.sql'),
+      'utf8',
+    )
+    expect(migration).toContain('count(*) filter (where p.net_comptage > 0)')
+    expect(migration).toContain('count(*) filter (where p.net_audit > 0)')
+    expect(migration).not.toContain('count(distinct c.sku)')
+    // Les totaux de pièces, eux, ne doivent pas changer.
+    expect(migration).toContain('coalesce(sum(p.net_comptage), 0)')
+    // Et les droits sont reposés, `create or replace` les ayant rendus à PUBLIC.
+    expect(migration).toMatch(/revoke all on function public\.get_session_count_totals\(uuid\) from public, anon/)
+  })
+
   it('tient sur une ligne à cinq tuiles', () => {
     const css = readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8')
     expect(suivi).toContain('dash-stats dash-stats-5')
