@@ -938,6 +938,33 @@ change réellement — le dépôt ne déploie rien tout seul.
 Tests de garde : `web/tests/admin-entreprise.test.ts`, bloc « une personne
 d'une autre entreprise ».
 
+# Lint du site : `next lint`, jamais `eslint` à la main (22 août 2026)
+
+Le site se vérifie avec **`npx next lint`** depuis `web/`, qui lit
+`web/.eslintrc.json`. Lancer `npx eslint …` directement depuis `web/` donne
+de faux résultats : ESLint remonte l'arborescence et charge
+`eslint.config.js` à la **racine du dépôt** — la configuration de
+l'application mobile (Expo), qui porte des règles React récentes
+(`react-hooks/set-state-in-effect`, `react-hooks/refs`) étrangères au site.
+On croit alors voir une trentaine d'erreurs (« setState dans un useEffect »
+sur chaque page qui charge ses données au montage) là où `next lint` ne
+signale rien. Constaté le 22 août 2026 : une fausse erreur a été annoncée à
+Julien, puis une désactivation de règle inutile a été écrite et retirée.
+
+Conséquence : **ne rien désactiver dans `.eslintrc.json` sur la foi d'un
+`eslint` lancé à la main** — vérifier d'abord avec `next lint`.
+
+## « À traiter » sur /admin : des gestes, pas des constats (22 août 2026)
+
+Julien : *« pas besoin d'avoir ce genre de message, qui ne sont pas en
+réalité des alertes »* — à propos de « n'a jamais lancé d'inventaire » et
+« n'a pas compté depuis 64 jours ». Un magasin qui ne compte pas suit son
+rythme, ce n'est pas une anomalie à corriger. Le bloc ne liste plus que ce
+qui appelle un geste de Quantinvo : entreprise sans magasin (donc sans
+licence facturée), entreprises sans administrateur, demandes de suppression
+de compte. `admin_business_overview` rend toujours `idle_stores` ; la page
+l'ignore. Ne pas réafficher ces lignes.
+
 # Le site est un outil d'ordinateur (21 août 2026)
 
 Sous **720 px de large**, l'espace connecté ne s'ouvre pas : il affiche « Cet
