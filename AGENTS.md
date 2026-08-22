@@ -1340,8 +1340,13 @@ Quatre points à ne pas défaire :
 - **Les deux écrans retombent sur la RPC directe** si l'edge est injoignable —
   une demande qui passe sans accusé vaut mieux qu'une demande qui ne passe pas.
 
-Le refus, lui, n'envoie pas d'e-mail : son motif s'affiche sur l'écran du
-client, qui garde la demande refusée trente jours.
+**Le refus part aussi par e-mail**, motif compris (ajouté dans la foulée, à la
+demande de Julien) : `admin-reject-store-request`, et l'objet `notify` sur
+`admin_reject_store_request` (migration `20260822210001`). Deux points : le
+motif **voyage tel quel** — c'est déjà la règle de l'écran, « Refusée » tout
+court ne dit pas quoi faire — et `kind` voyage avec lui, parce qu'un refus
+d'ajout et un refus de suppression ne se disent pas de la même façon. La
+demande refusée reste par ailleurs trente jours sur l'écran du client.
 
 Tests de garde : `web/tests/demande-magasin.test.ts`, bloc « une demande
 aboutie quitte l'écran ». Les deux fonctions edge **sont déployées** (22 août

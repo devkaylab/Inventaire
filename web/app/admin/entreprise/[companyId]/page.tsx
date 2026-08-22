@@ -161,9 +161,25 @@ export default function AdminCompanyPage() {
     // Le motif est facultatif mais il est repris tel quel sur l'écran du
     // client : « Refusée » tout court laisserait l'administrateur d'entreprise
     // sans rien à faire de l'information.
-    const note = prompt(`Refuser la demande du magasin « ${d.store_name} ».\n\nMotif transmis au client (facultatif) :`, '')
+    // Le motif part aussi par e-mail depuis le 22 août 2026 : le client n'a plus
+    // à retourner sur /magasins pour apprendre que sa demande est refusée.
+    const note = prompt(`Refuser la demande du magasin « ${d.store_name} ».\n\nMotif transmis au client, par e-mail et à l'écran (facultatif) :`, '')
     if (note === null) return
-    appel('admin_reject_store_request', { p_id: d.id, p_note: note })
+    const { data, error } = await supabase.functions.invoke('admin-reject-store-request', {
+      body: { requestId: d.id, note },
+    })
+    if (!error && data?.success) {
+      if (data.emailed === false) {
+        alert(`Demande refusée, mais l'e-mail n'a pas pu partir : ${data.error ?? 'raison inconnue'}`)
+      }
+      await charger()
+      return
+    }
+    if (error) {
+      await appel('admin_reject_store_request', { p_id: d.id, p_note: note })
+      return
+    }
+    alert('Erreur : ' + (data?.error ?? 'inconnue'))
   }
 
   async function ajouterMagasin(e: React.FormEvent) {

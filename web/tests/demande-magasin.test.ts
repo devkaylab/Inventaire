@@ -17,7 +17,9 @@ const m2 = lire('../../supabase/migrations/20260822140001_demande_magasin_volume
 // Une demande aboutie sort de l'écran du client, et le demandeur est prévenu
 // par e-mail (22 août 2026, second passage).
 const m4 = lire('../../supabase/migrations/20260822200001_demandes_abouties_et_notifications.sql')
-const migration = m1 + '\n' + m2 + '\n' + m4
+// Le refus se dit aussi par e-mail, motif compris (même jour).
+const m5 = lire('../../supabase/migrations/20260822210001_refus_demande_magasin_email.sql')
+const migration = m1 + '\n' + m2 + '\n' + m4 + '\n' + m5
 const pageMagasins = lire('../app/magasins/page.tsx')
 const pageInscription = lire('../app/inscription/page.tsx')
 const pageAdmin = lire('../app/admin/page.tsx')
@@ -25,7 +27,7 @@ const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
 
 /** La définition qui fait foi : la plus récente. */
 const corpsDe = (fn: string) => {
-  for (const src of [m4, m2, m1]) {
+  for (const src of [m5, m4, m2, m1]) {
     const corps = src.split(`function public.${fn}(`)[1]?.split('$$;')[0]
     if (corps) return corps
   }
@@ -354,5 +356,28 @@ describe('une demande aboutie quitte l’écran, et se dit par e-mail', () => {
     expect(pageMagasins).toContain("supabase.rpc('ca_request_store'")
     expect(ficheEntreprise).toContain("functions.invoke('admin-fulfil-store-request'")
     expect(ficheEntreprise).toContain("appel('admin_fulfil_store_request'")
+    expect(ficheEntreprise).toContain("functions.invoke('admin-reject-store-request'")
+    expect(ficheEntreprise).toContain("appel('admin_reject_store_request'")
+  })
+
+  it('un refus part avec son motif, sans jamais nommer autre chose', () => {
+    // Demande de Julien : le client n'a pas à revenir sur /magasins pour
+    // apprendre que sa demande est refusée. Le motif voyage tel quel — c'est
+    // déjà la règle de l'écran — et le gabarit l'échappe.
+    const corps = corpsDe('admin_reject_store_request')
+    expect(corps).toContain("'note', v_note")
+    expect(corps).toContain("'kind', v_req.kind")
+    expect(corps).toContain('auth.users')
+
+    const edgeRefus = lire('../../supabase/functions/admin-reject-store-request/index.ts')
+    expect(edgeRefus).toContain("caller.rpc('admin_reject_store_request'")
+    expect(edgeRefus).toContain('Authorization: authHeader')
+    expect(edgeRefus).not.toMatch(/createClient\(url, serviceKey\)/)
+    expect(edgeRefus).toContain('emailQuantinvo')
+    // Un refus d'ajout et un refus de suppression ne se disent pas pareil.
+    expect(edgeRefus).toContain("notify.kind === 'remove'")
+    // Et rien du magasin n'a de raison de partir : ni code d'accès, ni
+    // identifiant de fiche, puisque le magasin n'existe pas.
+    expect(edgeRefus).not.toContain('join_code')
   })
 })
