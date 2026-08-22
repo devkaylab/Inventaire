@@ -55,14 +55,24 @@ export default function DashboardPage() {
   // Deux listes, pas une : ce qu'on a créé, et ce à quoi on a été invité.
   // Un inventaire invité ne se rouvre pas et ne se supprime pas — le dire par
   // la mise en page évite de le découvrir au moment du refus.
+  //
+  // Sauf pour l'administrateur d'entreprise : depuis le 22 août 2026 il voit
+  // tous les inventaires de son entreprise et les gère tous. La distinction
+  // « les miens / ceux où l'on m'a invité » n'a plus d'objet pour lui — ce sont
+  // ceux de son entreprise, rangés par magasin.
   const profileIdListe = guard.status === 'ready' ? guard.profile.id : null
+  const adminEntreprise = guard.status === 'ready' && !!guard.profile.is_company_admin
   const miens = useMemo(
-    () => filtered.filter(s => !!profileIdListe && s.created_by === profileIdListe),
-    [filtered, profileIdListe],
+    () => (adminEntreprise
+      ? filtered
+      : filtered.filter(s => !!profileIdListe && s.created_by === profileIdListe)),
+    [filtered, profileIdListe, adminEntreprise],
   )
   const invites = useMemo(
-    () => filtered.filter(s => !profileIdListe || s.created_by !== profileIdListe),
-    [filtered, profileIdListe],
+    () => (adminEntreprise
+      ? []
+      : filtered.filter(s => !profileIdListe || s.created_by !== profileIdListe)),
+    [filtered, profileIdListe, adminEntreprise],
   )
   const groups = useMemo(() => groupByStore(miens), [miens])
 
@@ -71,7 +81,6 @@ export default function DashboardPage() {
   // migration `20260821250001` — la case n'apparaît pas ailleurs, plutôt que
   // de laisser découvrir le refus après coup.
   const profileId = profileIdListe
-  const adminEntreprise = guard.status === 'ready' && !!guard.profile.is_company_admin
   const peutSupprimer = useCallback(
     (s: Session) => adminEntreprise || (!!profileId && s.created_by === profileId),
     [adminEntreprise, profileId],

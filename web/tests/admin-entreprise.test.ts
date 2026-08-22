@@ -279,11 +279,16 @@ describe('supprimer un compte de son entreprise', () => {
     expect(bloc).toContain('supprimerCompte(m)')
   })
 
-  it('montre aussi les compteurs des magasins que l’administrateur ne supervise pas', () => {
-    // Sans ce bloc, le droit serait décoratif : un administrateur de siège ne
-    // supervise aucun magasin et ne verrait donc aucun compteur.
-    expect(pageEquipe).toContain('autresCompteurs')
-    expect(pageEquipe).toContain('Compteurs · autres magasins')
+  it('liste tous les compteurs de l’entreprise, pas seulement les siens', () => {
+    // Sans cela le droit serait décoratif : un administrateur de siège ne
+    // supervise aucun magasin et ne verrait donc aucun compteur. Le bloc
+    // « autres magasins » du matin a été remplacé le jour même par une liste
+    // personne par personne, qui couvre toute l'entreprise.
+    expect(pageEquipe).toContain("(ca?.members ?? []).filter((m) => m.role !== 'supervisor')")
+    expect(pageEquipe).not.toContain('Compteurs · autres magasins')
+    // Et elle répond à « qui fait quoi » : dernier comptage, inventaires comptés.
+    expect(pageEquipe).toContain('last_count_at')
+    expect(pageEquipe).toContain('sessions_counted')
   })
 })
 

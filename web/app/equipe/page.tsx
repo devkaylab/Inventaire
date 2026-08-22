@@ -31,6 +31,8 @@ type Member = {
   email: string | null
   is_active: boolean
   store_ids: string[]
+  last_count_at: string | null
+  sessions_counted: number
 }
 type Invitation = {
   id: string
@@ -72,6 +74,8 @@ export default function EquipePage() {
   const [sup, setSup] = useState<TeamSup | null>(null)
   const [mfaEnrolled, setMfaEnrolled] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [filtre, setFiltre] = useState('')
+  const [magasinFiltre, setMagasinFiltre] = useState('')
 
   const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
 
@@ -165,10 +169,20 @@ export default function EquipePage() {
   // Les compteurs de l'entreprise que la liste par magasin ne montre pas :
   // l'administrateur ne supervise pas forcément les magasins où ils comptent,
   // et son droit de suppression, lui, porte sur toute l'entreprise.
-  const vusParMagasin = new Set((sup?.stores ?? []).flatMap((s) => s.counters.map((c) => c.id)))
-  const autresCompteurs = estAdmin
-    ? (ca?.members ?? []).filter((m) => m.role !== 'supervisor' && !vusParMagasin.has(m.id))
+  // Pour l'administrateur, l'équipe se lit **personne par personne** : il doit
+  // pouvoir répondre à « où travaille Sofia, et quand a-t-elle compté pour la
+  // dernière fois ? ». Un rangement par magasin ne répond jamais à ça, et il
+  // laissait hors de vue les compteurs des magasins qu'il ne supervise pas.
+  const compteurs = estAdmin
+    ? (ca?.members ?? []).filter((m) => m.role !== 'supervisor')
     : []
+  const recherche = filtre.trim().toLowerCase()
+  const compteursFiltres = compteurs.filter((m) => {
+    if (magasinFiltre && !m.store_ids.includes(magasinFiltre)) return false
+    if (!recherche) return true
+    return (m.full_name ?? '').toLowerCase().includes(recherche)
+      || (m.email ?? '').toLowerCase().includes(recherche)
+  })
 
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
@@ -278,8 +292,92 @@ export default function EquipePage() {
         </>
       )}
 
-      {/* ── Compteurs, rangés par magasin ── */}
-      {(sup?.stores ?? []).length === 0 ? (
+      {/* ── Compteurs ──
+          L'administrateur les lit personne par personne (il les a tous) ;
+          un superviseur les lit magasin par magasin, parce que c'est ainsi
+          qu'il travaille : un saisonnier part d'un magasin, pas de tous.
+          Le bloc « autres magasins » du matin n'a plus d'objet — cette liste
+          couvre toute l'entreprise. ── */}
+      {estAdmin ? (
+        <>
+          <div className="dash-sub">Compteurs ({compteurs.length})</div>
+          {compteurs.length === 0 ? (
+            <p className="muted">Aucun compteur dans votre entreprise.</p>
+          ) : (
+            <>
+              <div className="toolbar" style={{ marginTop: 0, marginBottom: 12 }}>
+                <div className="toolbar-grow">
+                  <input
+                    type="search" value={filtre} onChange={(e) => setFiltre(e.target.value)}
+                    placeholder="Rechercher une personne…"
+                    aria-label="Rechercher une personne"
+                  />
+                </div>
+                <select
+                  className="store-sup-select"
+                  value={magasinFiltre}
+                  onChange={(e) => setMagasinFiltre(e.target.value)}
+                  aria-label="Filtrer par magasin"
+                >
+                  <option value="">Tous les magasins</option>
+                  {(ca?.stores ?? []).map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {compteursFiltres.length === 0 ? (
+                <p className="muted small">Personne ne correspond à cette recherche.</p>
+              ) : (
+                <div className="req-list">
+                  {compteursFiltres.map((m) => (
+                    <div className="req-row req-row-block" key={m.id}>
+                      <div>
+                        <div className="req-name">
+                          {m.full_name || 'Sans nom'}
+                          {!m.is_active && <BadgeEnAttente />}
+                        </div>
+                        <div className="muted small">
+                          {m.email}
+                          {m.sessions_counted > 0
+                            ? ` · a compté ${m.sessions_counted} inventaire${m.sessions_counted > 1 ? 's' : ''}`
+                            : ' · pas encore de comptage'}
+                          {m.last_count_at && ` · dernier le ${jourCourt(m.last_count_at)}`}
+                        </div>
+                        <div className="store-sup" style={{ marginTop: 6 }}>
+                          {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
+                          {m.store_ids.map((sid) => (
+                            <span className="chip" key={sid}>
+                              {storeById[sid]?.name || 'Magasin'}
+                              <button
+                                className="chip-x"
+                                aria-label={`Retirer du magasin ${storeById[sid]?.name || ''}`}
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: `Retirer du magasin ${storeById[sid]?.name || ''} ?`,
+                                    message: `${m.full_name || 'Cette personne'} garde son compte : elle n’aura simplement plus accès aux inventaires de ce magasin.`,
+                                    confirmLabel: 'Retirer du magasin',
+                                  })
+                                  if (ok) appliquer('remove_counter_from_store', { p_user: m.id, p_store_id: sid })
+                                }}
+                              >×</button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="req-actions">
+                        <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
+                          Supprimer le compte
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      ) : (sup?.stores ?? []).length === 0 ? (
         <>
           <div className="dash-sub">Compteurs</div>
           <p className="muted">Vous n&apos;êtes affecté à aucun magasin.</p>
@@ -321,14 +419,6 @@ export default function EquipePage() {
                           if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
                         }}
                       >Retirer du magasin</button>
-                      {estAdmin && (
-                        <>
-                          <span className="action-sep" />
-                          <button className="link-btn danger-link" onClick={() => supprimerCompte(c)}>
-                            Supprimer le compte
-                          </button>
-                        </>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -336,39 +426,6 @@ export default function EquipePage() {
             )}
           </div>
         ))
-      )}
-
-      {/* ── Compteurs de l'entreprise hors des magasins supervisés ──
-          L'administrateur peut supprimer un compte de toute son entreprise ;
-          sans ce bloc, il ne verrait jamais ceux qui comptent ailleurs. Le
-          retrait d'un magasin, lui, reste le geste de leur superviseur. ── */}
-      {autresCompteurs.length > 0 && (
-        <>
-          <div className="dash-sub">Compteurs · autres magasins</div>
-          <div className="req-list">
-            {autresCompteurs.map((m) => (
-              <div className="req-row" key={m.id}>
-                <div>
-                  <div className="req-name">
-                    {m.full_name || 'Sans nom'}
-                    {!m.is_active && <BadgeEnAttente />}
-                  </div>
-                  <div className="muted small">
-                    {m.email}
-                    {m.store_ids.length > 0
-                      ? ` · ${m.store_ids.map((sid) => storeById[sid]?.name || 'Magasin').join(', ')}`
-                      : ' · aucun magasin'}
-                  </div>
-                </div>
-                <div className="req-actions">
-                  <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
-                    Supprimer le compte
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       {/* ── Invitations en cours ── */}

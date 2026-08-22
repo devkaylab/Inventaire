@@ -37,18 +37,26 @@ export function ongletsPour(profile: Profile): Onglet[] {
   }
   const superviseur = profile.role === 'supervisor'
   if (!superviseur) return []
-  const travail: Onglet[] = [
+  // L'administrateur d'entreprise a la charpente d'une console : l'état de
+  // l'entreprise, puis son patrimoine, ses personnes, le travail, la trace.
+  // Compter n'est pas son métier — les inventaires sont ceux de ses
+  // superviseurs, et « Boîte à outils » descend sous son avatar : imprimer des
+  // balises est un geste de terrain, occasionnel pour lui.
+  if (profile.is_company_admin) {
+    return [
+      { href: '/entreprise', label: 'Tableau de bord' },
+      { href: '/magasins', label: 'Magasins' },
+      { href: '/equipe', label: 'Équipe' },
+      { href: '/dashboard', label: 'Inventaires' },
+      { href: '/journal', label: 'Journal' },
+    ]
+  }
+  return [
     { href: '/dashboard', label: 'Inventaires' },
     { href: '/equipe', label: 'Mon équipe' },
     { href: '/magasins', label: 'Magasins' },
     { href: '/outils', label: 'Boîte à outils' },
   ]
-  // Un administrateur d'entreprise ouvre le site pour gérer ses accès :
-  // l'inventaire descend après ses magasins et sa boîte à outils.
-  if (profile.is_company_admin) {
-    return [travail[1], travail[2], travail[3], travail[0]]
-  }
-  return travail
 }
 
 /**
@@ -201,6 +209,14 @@ export function AppShell({
                 <Link href="/account" role="menuitem" className="who-menu-item" onClick={() => setMenuOuvert(false)}>
                   Mon compte
                 </Link>
+                {/* La boîte à outils a quitté la barre de l'administrateur
+                    d'entreprise : imprimer des balises est un geste de terrain,
+                    occasionnel pour lui. Elle reste atteignable d'un clic. */}
+                {profile.is_company_admin && (
+                  <Link href="/outils" role="menuitem" className="who-menu-item" onClick={() => setMenuOuvert(false)}>
+                    Boîte à outils
+                  </Link>
+                )}
                 <button type="button" role="menuitem" className="who-menu-item who-menu-sortie" onClick={partir}>
                   Se déconnecter
                 </button>

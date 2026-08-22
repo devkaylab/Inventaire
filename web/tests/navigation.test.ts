@@ -136,15 +136,35 @@ describe('les onglets suivent le rôle', () => {
   })
 
   it('le superviseur ouvre sur ses inventaires', () => {
-    // Le premier onglet dit ce pour quoi on ouvre le site.
-    const i = onglets.indexOf("'/dashboard'")
-    const j = onglets.indexOf("'/equipe'")
+    // Le premier onglet dit ce pour quoi on ouvre le site. La comparaison porte
+    // sur la branche du superviseur seule : celle de l'administrateur la
+    // précède dans le fichier et porte un autre ordre, voulu.
+    // [2] et non [1] : le premier `return [` est celui de l'administrateur.
+    const superviseur = onglets.split('profile.is_company_admin')[1]?.split('return [')[2] ?? ''
+    const i = superviseur.indexOf("'/dashboard'")
+    const j = superviseur.indexOf("'/equipe'")
     expect(i).toBeGreaterThan(-1)
     expect(i).toBeLessThan(j)
   })
 
-  it('l’administrateur d’entreprise ouvre sur son équipe', () => {
+  it('l’administrateur d’entreprise ouvre sur son entreprise', () => {
+    // Sa barre est celle d'une console : l'état de l'entreprise d'abord, les
+    // inventaires en quatrième — ils sont le travail de ses superviseurs.
+    const admin = onglets.split('profile.is_company_admin')[1]?.split('return [')[0] ?? ''
     expect(onglets).toContain('is_company_admin')
+    expect(admin + onglets).toContain("'/entreprise'")
+    expect(admin + onglets).toContain("'/journal'")
+    const branche = onglets.split("if (profile.is_company_admin)")[1]?.split(']')[0] ?? ''
+    expect(branche.indexOf("'/entreprise'")).toBeLessThan(branche.indexOf("'/dashboard'"))
+  })
+
+  it('la boîte à outils quitte sa barre sans disparaître', () => {
+    // Imprimer des balises est un geste de terrain, occasionnel pour lui : le
+    // lien descend sous son avatar plutôt que d'occuper un sixième onglet.
+    const branche = onglets.split("if (profile.is_company_admin)")[1]?.split(']')[0] ?? ''
+    expect(branche).not.toContain("'/outils'")
+    expect(shell).toContain('profile.is_company_admin && (')
+    expect(shell).toContain('href="/outils"')
   })
 })
 

@@ -66,10 +66,10 @@ export default function LoginPage() {
   async function goToSpace(userId: string) {
     const { data: prof } = await supabase
       .from('profiles')
-      .select('role, is_admin')
+      .select('role, is_admin, is_company_admin')
       .eq('id', userId)
       .maybeSingle()
-    router.replace(homePathForRole(prof as { role: string | null; is_admin: boolean | null } | null))
+    router.replace(homePathForRole(prof as { role: string | null; is_admin: boolean | null; is_company_admin: boolean | null } | null))
   }
 
   async function handleSubmit(e: React.FormEvent) {

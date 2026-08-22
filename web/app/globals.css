@@ -564,6 +564,59 @@ a { color: inherit; text-decoration: none; }
 }
 .store-sup-select:focus { border-color: var(--accent); }
 
+/* ── Tableau de bord d'entreprise : un bloc par magasin ──
+   Même figure que la fiche entreprise de la console Quantinvo : l'administrateur
+   pense magasin par magasin, l'écran est rangé comme sa tête. */
+.mag-liste { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.mag {
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden;
+}
+.mag-tete {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--hairline);
+}
+.mag-nom { font-size: 17px; font-weight: 700; }
+.mag-code {
+  font-size: 13px; letter-spacing: 0.06em; color: var(--text-2);
+  background: var(--bg); padding: 3px 9px; border-radius: 8px;
+}
+.mag-droite { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.mag-corps { padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; }
+.mag-part { display: flex; flex-direction: column; gap: 8px; }
+.mag-lab {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-3);
+}
+/* Les lignes d'un bloc se posent sur le fond, pas sur la surface : sans quoi
+   elles disparaîtraient dans la carte qui les porte. */
+/* `:not(.signal-alerte)` n'est pas un raffinement : `.mag .signal` est plus
+   spécifique que `.signal-alerte`, et sans cette exception l'ambre de l'alerte
+   était écrasé — les alertes se lisaient comme des lignes ordinaires. */
+.mag .req-row, .mag .signal:not(.signal-alerte) { background: var(--bg); }
+.mag-equipe { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.jeton {
+  font-size: 13px; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--hairline); background: var(--bg); color: var(--text-2);
+}
+.jeton b { color: var(--text); font-weight: 600; }
+/* L'avancement n'est montré que lorsqu'un stock théorique le rend calculable. */
+.mag-prog { width: 90px; height: 5px; border-radius: 999px; background: var(--hairline); overflow: hidden; flex: none; }
+.mag-prog i { display: block; height: 100%; background: var(--accent); }
+
+/* ── Journal : une ligne, une phrase ─────────────────────── */
+.journal { display: flex; flex-direction: column; }
+.journal-l {
+  display: flex; gap: 14px; align-items: baseline;
+  padding: 9px 0; border-bottom: 1px solid var(--hairline); font-size: 14px;
+}
+.journal-l:last-child { border-bottom: 0; }
+.journal-q {
+  color: var(--text-3); font-size: 12.5px; white-space: nowrap;
+  font-variant-numeric: tabular-nums; min-width: 108px;
+}
+.journal-a { color: var(--text); }
+
 /* ── Badges de statut d'inventaire ──────────────────────── */
 .dash-badge {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
