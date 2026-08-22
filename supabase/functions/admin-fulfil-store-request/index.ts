@@ -12,7 +12,7 @@
 // La console retombe sur la RPC directe si cette fonction est injoignable : le
 // magasin est créé sans e-mail, plutôt que pas créé du tout.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: fromAddr,
+        from: fromAddr, reply_to: adresseDeContact() ?? undefined,
         to: [notify.email],
         subject: `Votre magasin ${magasin} est créé`,
         html,

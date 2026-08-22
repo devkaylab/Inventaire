@@ -19,7 +19,7 @@
 // invitations) et reçoit ses codes ; pour un ajout de magasin, le demandeur
 // reçoit « votre magasin est créé ».
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 import { lireFacture, verifierWebhook } from '../_shared/stripe.ts'
 
 const json = (body: unknown, status = 200) =>
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         const resp = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: fromAddr, to: [inv.email], subject: `Bienvenue sur Quantinvo — ${result.company_name}`, html, text }),
+          body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [inv.email], subject: `Bienvenue sur Quantinvo — ${result.company_name}`, html, text }),
         })
         if (!resp.ok) notes.push(`e-mail de bienvenue : ${resp.status}`)
       }
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [n.email], subject: `Votre magasin ${n.store_name} est créé`, html, text }),
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [n.email], subject: `Votre magasin ${n.store_name} est créé`, html, text }),
     })
     if (!resp.ok) notes.push(`e-mail magasin : ${resp.status}`)
   }
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: fromAddr, to: dest, subject: `Paiement reçu — ${result.company_name}`, html, text }),
+          body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: dest, subject: `Paiement reçu — ${result.company_name}`, html, text }),
         })
       }
     } catch {

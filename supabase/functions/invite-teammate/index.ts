@@ -3,7 +3,7 @@
 // - Pré-inscrit l'e-mail (team_invitations) dans son entreprise.
 // - Crée l'utilisateur auth et envoie le lien de finalisation.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [email], subject: 'Finalisez votre compte Quantinvo', html, text }),
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [email], subject: 'Finalisez votre compte Quantinvo', html, text }),
     })
     const bodyText = await resp.text()
     if (!resp.ok) {

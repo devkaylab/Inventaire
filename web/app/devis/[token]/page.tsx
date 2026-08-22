@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
+import { CONTACT_EMAIL } from '@/lib/contact'
 
 /**
  * Le devis, vu par le prospect — et accepté sans compte.
@@ -121,7 +122,7 @@ function DevisContenu() {
     }
     setBusy(false)
     if (!ok) {
-      setErreur(message || 'L’acceptation n’a pas abouti. Réessayez, ou répondez à notre e-mail.')
+      setErreur(message || `L’acceptation n’a pas abouti. Réessayez${CONTACT_EMAIL ? `, ou écrivez-nous à ${CONTACT_EMAIL}` : ''}.`)
       return
     }
     await charger()
@@ -144,7 +145,7 @@ function DevisContenu() {
     }
     setBusy(false)
     if (!ok) {
-      setErreur(message || 'La réponse n’a pas pu être enregistrée. Réessayez, ou répondez à notre e-mail.')
+      setErreur(message || `La réponse n’a pas pu être enregistrée. Réessayez${CONTACT_EMAIL ? `, ou écrivez-nous à ${CONTACT_EMAIL}` : ''}.`)
       return
     }
     setDeclinerOuvert(false)
@@ -172,7 +173,7 @@ function DevisContenu() {
             <h1>Ce lien n’est plus valable</h1>
             <p className="sub">
               Le devis a peut-être été renvoyé depuis&nbsp;: dans ce cas, seul le lien du dernier
-              e-mail fonctionne. Répondez à notre message et nous vous le renvoyons.
+              e-mail fonctionne.{CONTACT_EMAIL ? <> Écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> et nous vous le renvoyons.</> : ''}
             </p>
           </div>
         </div>
@@ -230,16 +231,17 @@ function DevisContenu() {
           <div className="devis-etat">
             <strong>Vous avez décliné ce devis</strong>
             <span>
-              C’est noté{devis.declined_at ? ` le ${jour(devis.declined_at)}` : ''}, vous ne recevrez pas de relance. Si
-              le montant ou le périmètre ne convenait pas, répondez à notre e-mail : une nouvelle proposition est
-              toujours possible.
+              C’est noté{devis.declined_at ? ` le ${jour(devis.declined_at)}` : ''}, vous ne recevrez pas de relance.
+              {CONTACT_EMAIL
+                ? <> Si le montant ou le périmètre ne convenait pas, écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>&nbsp;: une nouvelle proposition est toujours possible.</>
+                : ' Une nouvelle proposition reste toujours possible.'}
             </span>
           </div>
         )}
         {refuse && (
           <div className="devis-etat">
             <strong>Ce devis n’est plus d’actualité</strong>
-            <span>Répondez à notre e-mail si vous souhaitez une nouvelle proposition.</span>
+            <span>{CONTACT_EMAIL ? <>Écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> si vous souhaitez une nouvelle proposition.</> : 'Une nouvelle proposition reste possible.'}</span>
           </div>
         )}
         {perime && !refuse && !decline && (

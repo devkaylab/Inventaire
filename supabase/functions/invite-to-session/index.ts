@@ -5,7 +5,7 @@
 //   d'inconnus.
 // - Envoie un e-mail (Resend, si configuré) + une notification push (Expo).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: fromAddr,
+          from: fromAddr, reply_to: adresseDeContact() ?? undefined,
           to: [email],
           subject: `Invitation à un inventaire — ${sessionLabel}`,
           html,

@@ -250,3 +250,69 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
 
   return { html, text }
 }
+
+// ── L'envoi lui-même ────────────────────────────────────────────────────────
+// Un seul point pour parler à Resend. Ce qui vit ici, et nulle part ailleurs :
+//
+// · **`reply_to`** — l'adresse qui reçoit les réponses. Les messages partent
+//   d'une adresse d'envoi (`INVITE_FROM_EMAIL`) qui ne lit rien ; plusieurs
+//   d'entre eux disent pourtant « répondez à ce message ». Constat de Julien
+//   le 22 août 2026 : « on ne peut pas y répondre ». `CONTACT_EMAIL` règle
+//   ça, à défaut l'adresse des administrateurs lue en base par l'appelant.
+//   Sans l'un ni l'autre, la promesse est fausse : `adresseDeContact()` rend
+//   alors `null`, et les textes qui l'affichent doivent se taire.
+// · l'en-tête `from`, au même endroit pour les douze fonctions ;
+// · l'erreur Resend, relevée en clair.
+//
+// Ce bloc lit `Deno.env` : il est donc **hors de la partie testée par le
+// site**, et c'est voulu — les tests vérifient le gabarit, pas l'envoi.
+
+export type EnvoiEmail = {
+  to: string | string[]
+  subject: string
+  html: string
+  text: string
+  /** Pièces jointes au format Resend (`filename`, `content` en base64). */
+  attachments?: { filename: string; content: string }[]
+  /** Adresse de réponse explicite. À défaut, `adresseDeContact()`. */
+  replyTo?: string | null
+}
+
+/**
+ * L'adresse à laquelle un client peut écrire. `CONTACT_EMAIL` d'abord ; sinon
+ * ce que l'appelant a pu lire en base (`admin_notify_emails`) ; sinon rien —
+ * et « rien » doit se voir dans le texte, pas devenir une promesse vide.
+ */
+export function adresseDeContact(repli?: string | string[] | null): string | null {
+  // deno-lint-ignore no-explicit-any
+  const env = (globalThis as any).Deno?.env?.get?.('CONTACT_EMAIL') as string | undefined
+  const explicite = (env ?? '').trim()
+  if (explicite) return explicite
+  const liste = Array.isArray(repli) ? repli : repli ? [repli] : []
+  const premiere = liste.map((a) => (a ?? '').trim()).find(Boolean)
+  return premiere ?? null
+}
+
+/** Envoie par Resend. Lève en cas d'échec, avec le statut et le corps. */
+export async function envoyerEmail(e: EnvoiEmail): Promise<void> {
+  // deno-lint-ignore no-explicit-any
+  const env = (globalThis as any).Deno?.env
+  const cle = env?.get?.('RESEND_API_KEY') as string | undefined
+  if (!cle) throw new Error('Resend non configuré')
+  const from = ((env?.get?.('INVITE_FROM_EMAIL') as string | undefined) ?? '').trim() || 'Quantinvo <onboarding@resend.dev>'
+  const replyTo = e.replyTo === undefined ? adresseDeContact() : e.replyTo
+  const resp = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from,
+      to: Array.isArray(e.to) ? e.to : [e.to],
+      subject: e.subject,
+      html: e.html,
+      text: e.text,
+      ...(replyTo ? { reply_to: replyTo } : {}),
+      ...(e.attachments?.length ? { attachments: e.attachments } : {}),
+    }),
+  })
+  if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`)
+}

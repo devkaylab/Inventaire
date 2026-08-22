@@ -12,7 +12,7 @@
 // La console retombe sur la RPC directe si cette fonction est injoignable : la
 // demande est refusée sans e-mail, et le motif reste lisible sur /magasins.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo, envoyerEmail } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -68,10 +68,13 @@ Deno.serve(async (req) => {
   const notify = (result.notify ?? null) as Notify | null
   if (!notify?.email) return sansAvis('demandeur sans compte ou sans adresse')
 
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return sansAvis('Resend non configuré')
+  if (!Deno.env.get('RESEND_API_KEY')) return sansAvis('Resend non configuré')
 
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  // Le refus invite à discuter : il faut une adresse où le faire. La
+  // personne qui refuse est l'administrateur connecté — c'est elle qu'on met
+  // en réponse, à défaut de CONTACT_EMAIL.
+  const contact = adresseDeContact(userData.user.email ?? null)
   const magasin = (notify.store_name ?? '').trim()
   const prenom = (notify.first_name ?? '').trim()
   const motif = (notify.note ?? '').trim()
@@ -86,8 +89,12 @@ Deno.serve(async (req) => {
   ]
   paragraphes.push(
     motif
-      ? 'Vous trouverez ci-dessous le motif transmis par notre équipe. Si vous souhaitez en discuter ou refaire une demande, répondez simplement à ce message.'
-      : 'Pour en connaître la raison, ou refaire une demande, répondez simplement à ce message.',
+      ? (contact
+          ? `Vous trouverez ci-dessous le motif transmis par notre équipe. Pour en discuter ou refaire une demande, écrivez-nous à ${contact}.`
+          : 'Vous trouverez ci-dessous le motif transmis par notre équipe. Vous pouvez refaire une demande depuis vos magasins.')
+      : (contact
+          ? `Pour en connaître la raison, ou refaire une demande, écrivez-nous à ${contact}.`
+          : 'Vous pouvez refaire une demande depuis vos magasins.'),
   )
 
   const details = [
@@ -107,20 +114,8 @@ Deno.serve(async (req) => {
     siteUrl: appUrl,
   })
 
-  const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: fromAddr,
-        to: [notify.email],
-        subject: `Votre demande — ${magasin}`,
-        html,
-        text,
-      }),
-    })
-    if (!resp.ok) return sansAvis(`${resp.status} ${await resp.text()}`)
+    await envoyerEmail({ to: notify.email, subject: `Votre demande — ${magasin}`, html, text, replyTo: contact })
     return json({ ...result, emailed: true })
   } catch (e) {
     return sansAvis(e instanceof Error ? e.message : String(e))

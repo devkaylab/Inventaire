@@ -15,7 +15,7 @@
 // Le site retombe sur la RPC directe si l'edge est injoignable — la demande
 // passe alors sans e-mail, plutôt que de ne pas passer.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +33,7 @@ async function envoyer(cle: string, from: string, to: string | string[], subject
   const resp = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text }),
+    body: JSON.stringify({ from, reply_to: adresseDeContact() ?? undefined, to: Array.isArray(to) ? to : [to], subject, html, text }),
   })
   if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`)
 }

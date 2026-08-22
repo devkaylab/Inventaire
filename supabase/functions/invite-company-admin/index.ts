@@ -9,7 +9,7 @@
 //     la RPC, l'utilisateur auth est créé ici et le lien de finalisation
 //     envoyé. handle_new_user créera le profil (role supervisor + drapeau).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [result.email], subject: 'Votre accès administrateur Quantinvo', html, text }),
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [result.email], subject: 'Votre accès administrateur Quantinvo', html, text }),
     })
     if (!resp.ok) return sendFailed(`${resp.status} ${await resp.text()}`)
     return json({ success: true, mode: 'invited', email: result.email, via: 'resend' })

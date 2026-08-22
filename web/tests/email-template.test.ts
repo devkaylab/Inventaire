@@ -121,6 +121,26 @@ describe('Fonctions edge — un seul gabarit', () => {
     expect(refus.html).not.toContain('javascript:')
   })
 
+  it('aucun message ne promet une réponse sans adresse pour la recevoir', () => {
+    // Julien, 22 août 2026 : « tu dis “dites-le nous en répondant à ce
+    // message”, sauf qu'on ne peut pas y répondre ». Les messages partent
+    // d'une adresse d'envoi qui ne lit rien. Deux règles : tout envoi pose un
+    // `reply_to` (CONTACT_EMAIL, ou un repli lu par l'appelant), et un texte
+    // qui invite à écrire donne l'adresse — ou se tait.
+    const racine = path.resolve(__dirname, '../../supabase/functions')
+    const fonctions = readdirSync(racine).filter((d) => !d.startsWith('_'))
+    for (const f of fonctions) {
+      const src = readFileSync(path.join(racine, f, 'index.ts'), 'utf8')
+      if (!src.includes('api.resend.com') && !src.includes('envoyerEmail(')) continue
+      expect(src, `${f} : un envoi sans reply_to`).toMatch(/reply_to|envoyerEmail\(/)
+      expect(src, `${f} : promet une réponse à un message qui ne se lit pas`)
+        .not.toMatch(/répond(ez|re|ant) (simplement )?(à|a) (ce|notre) (message|e-mail)/i)
+    }
+    const page = readFileSync(path.resolve(__dirname, '../app/devis/[token]/page.tsx'), 'utf8')
+    expect(page).not.toMatch(/répondez à notre/i)
+    expect(page).toContain("from '@/lib/contact'")
+  })
+
   it('trouve bien les fonctions qui envoient des e-mails', () => {
     expect(envoyeuses.length).toBeGreaterThanOrEqual(4)
   })

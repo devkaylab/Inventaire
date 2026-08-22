@@ -496,6 +496,30 @@ un inventaire) : https://claude.ai/code/artifact/c5dc05ae-7500-4455-8c9f-3ae600b
 **Les fonctions edge modifiées doivent être redéployées** pour que le nouveau
 gabarit parte réellement : le dépôt ne déploie rien tout seul.
 
+## On peut répondre aux messages (22 août 2026)
+
+Julien : *« tu dis “dites-le nous en répondant à ce message”, sauf qu'on ne
+peut pas y répondre »*. Les messages partent d'une adresse d'envoi
+(`INVITE_FROM_EMAIL`) qui ne lit rien, et quatre textes promettaient une
+réponse. Deux règles, gardées par `web/tests/email-template.test.ts` qui
+balaie toutes les fonctions :
+
+- **tout envoi pose un `reply_to`** — `CONTACT_EMAIL` d'abord, sinon un repli
+  que l'appelant a sous la main (l'adresse de l'administrateur qui envoie le
+  devis ou refuse, celle du client sur un avis interne — on répond alors au
+  prospect directement depuis sa boîte). `_shared/email.ts` porte
+  `adresseDeContact()` et `envoyerEmail()` ; les fonctions les plus récentes
+  passent par ce dernier, les autres injectent `reply_to` dans leur appel ;
+- **un texte qui invite à écrire donne l'adresse, ou se tait**. Jamais
+  « répondez à ce message ». Côté site, `lib/contact.ts` lit
+  `NEXT_PUBLIC_CONTACT_EMAIL` et `/devis` s'en sert de la même façon.
+
+⚠️ **À poser par Julien** : `CONTACT_EMAIL` dans les secrets des fonctions
+edge, et `NEXT_PUBLIC_CONTACT_EMAIL` dans les variables Vercel — la même
+adresse, celle qu'il lit. Sans elles, les fonctions sans repli n'ont pas de
+`reply_to` et les textes ne promettent rien : c'est le comportement de
+secours, pas le comportement voulu.
+
 **Les templates hébergés par Resend ont été examinés puis écartés**
 (21 août 2026, décision de Julien). Ils existent bien — `template: { id,
 variables }` à l'envoi, éditeur et historique côté tableau de bord — et ils

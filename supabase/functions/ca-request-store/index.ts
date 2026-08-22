@@ -10,7 +10,7 @@
 // demande passe alors sans accusé, plutôt que de ne pas passer du tout. Même
 // choix que pour `submit-supervisor-request`.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: fromAddr,
+        from: fromAddr, reply_to: adresseDeContact() ?? undefined,
         to: [email],
         subject: `Demande reçue — ${name}`,
         html,
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: fromAddr, to: dest, subject: `Demande de magasin — ${name}`, html: avis.html, text: avis.text }),
+        body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: dest, subject: `Demande de magasin — ${name}`, html: avis.html, text: avis.text }),
       })
     }
   } catch {

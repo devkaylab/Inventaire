@@ -6,7 +6,7 @@
 // Quantinvo avec le motif — un refus est une information aussi utile qu'un
 // accord, et c'est la seule façon de ne pas relancer pour rien.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo, envoyerEmail } from '../_shared/email.ts'
 import { euros } from '../_shared/devis.ts'
 
 const cors = {
@@ -16,15 +16,6 @@ const cors = {
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
-
-async function envoyer(cle: string, from: string, to: string | string[], subject: string, html: string, text: string) {
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text }),
-  })
-  if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`)
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -49,11 +40,14 @@ Deno.serve(async (req) => {
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Refus impossible.' }, 400)
   if (result.already) return json({ success: true, already: true })
 
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return json({ success: true, already: false, emailed: false })
+  if (!Deno.env.get('RESEND_API_KEY')) return json({ success: true, already: false, emailed: false })
 
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
-  const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
+  // L'adresse de contact : celle qui reçoit les réponses. Lue avant d'écrire,
+  // pour que le texte ne promette une réponse que si elle est possible.
+  const { data: admins } = await client.rpc('admin_notify_emails')
+  const dest = ((admins ?? []) as string[]).filter(Boolean)
+  const contact = adresseDeContact(dest)
   const prenom = (result.contact_first_name ?? '').trim()
   const entreprise = result.company_name ?? ''
   const magasin = (result.store_name ?? '').trim()
@@ -69,7 +63,9 @@ Deno.serve(async (req) => {
       salutation: prenom ? `Bonjour ${prenom},` : 'Bonjour,',
       paragraphes: [
         `Vous avez décliné le devis ${reference} pour ${objet}. C’est noté, et vous ne recevrez pas de relance.`,
-        'Si le montant ou le périmètre ne convenait pas, dites-le nous en répondant à ce message : une nouvelle proposition est toujours possible.',
+        contact
+          ? `Si le montant ou le périmètre ne convenait pas, écrivez-nous à ${contact} : une nouvelle proposition est toujours possible.`
+          : 'Si le montant ou le périmètre ne convenait pas, une nouvelle proposition est toujours possible.',
       ],
       details: [
         { intitule: 'Référence', valeur: reference },
@@ -79,7 +75,7 @@ Deno.serve(async (req) => {
       siteUrl: appUrl,
     })
     if (result.contact_email) {
-      await envoyer(resendKey, fromAddr, result.contact_email, `Devis ${reference} — réponse enregistrée`, accuse.html, accuse.text)
+      await envoyerEmail({ to: result.contact_email, subject: `Devis ${reference} — réponse enregistrée`, html: accuse.html, text: accuse.text, replyTo: contact })
       emailed = true
     }
   } catch {
@@ -87,8 +83,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { data: admins } = await client.rpc('admin_notify_emails')
-    const dest = ((admins ?? []) as string[]).filter(Boolean)
     if (dest.length > 0) {
       const avis = emailQuantinvo({
         titre: 'Un devis vient d’être décliné',
@@ -109,7 +103,7 @@ Deno.serve(async (req) => {
         raison: 'Vous recevez ce message parce que vous suivez les devis Quantinvo.',
         siteUrl: appUrl,
       })
-      await envoyer(resendKey, fromAddr, dest, `Devis décliné — ${entreprise}`, avis.html, avis.text)
+      await envoyerEmail({ to: dest, subject: `Devis décliné — ${entreprise}`, html: avis.html, text: avis.text, replyTo: result.contact_email ?? null })
     }
   } catch {
     // Sans conséquence pour le client.

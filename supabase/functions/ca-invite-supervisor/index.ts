@@ -6,7 +6,7 @@
 // sont contrôlés par la RPC : impossible d'y glisser le magasin d'une autre
 // entreprise.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [result.email], subject: 'Votre accès superviseur Quantinvo', html, text }),
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [result.email], subject: 'Votre accès superviseur Quantinvo', html, text }),
     })
     if (!resp.ok) return sendFailed(`${resp.status} ${await resp.text()}`)
     return json({ success: true, email: result.email, via: 'resend' })

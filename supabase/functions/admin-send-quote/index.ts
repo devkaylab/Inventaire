@@ -15,7 +15,7 @@
 // La console retombe sur la RPC directe si cette fonction est injoignable : le
 // devis est alors enregistré sans partir, et l'écran le dit.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo, envoyerEmail } from '../_shared/email.ts'
 import { type LigneDevis, euros, jour, nombre } from '../_shared/devis.ts'
 import { devisEnPdf, enBase64 } from '../_shared/devisPdf.ts'
 
@@ -81,10 +81,11 @@ Deno.serve(async (req) => {
   const destinataire = (q.contact_email ?? '').trim()
   if (!destinataire) return sansEnvoi('aucune adresse de contact sur la demande')
 
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return sansEnvoi('Resend non configuré')
+  if (!Deno.env.get('RESEND_API_KEY')) return sansEnvoi('Resend non configuré')
 
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  // Celui qui envoie le devis est celui à qui on répond.
+  const contact = adresseDeContact(userData.user.email ?? null)
   const lien = `${appUrl}/devis/${result.token}`
   const emisLe = new Date(q.sent_at ?? Date.now())
   const expireLe = new Date(q.expires_at ?? Date.now())
@@ -120,7 +121,9 @@ Deno.serve(async (req) => {
       magasin
         ? `Voici votre devis pour l’ajout du magasin « ${magasin} » à votre licence. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`
         : `Voici votre devis pour l’équipement de ${magasins > 1 ? `vos ${nombre(magasins)} magasins` : 'votre magasin'}. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`,
-      `Il est valable jusqu’au ${jour(expireLe)}. Une question sur une ligne ou sur un volume déclaré ? Répondez simplement à ce message.`,
+      contact
+        ? `Il est valable jusqu’au ${jour(expireLe)}. Une question sur une ligne ou sur un volume déclaré ? Écrivez-nous à ${contact}.`
+        : `Il est valable jusqu’au ${jour(expireLe)}.`,
     ],
     details: [
       { intitule: 'Référence', valeur: q.reference || '—' },
@@ -138,23 +141,17 @@ Deno.serve(async (req) => {
     siteUrl: appUrl,
   })
 
-  const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: fromAddr,
-        to: [destinataire],
-        subject: magasin
-          ? `Votre devis Quantinvo — ${magasin}`
-          : `Votre devis Quantinvo — ${q.reference || q.company_name}`,
-        html,
-        text,
-        attachments: [{ filename: `devis-${(q.reference || 'quantinvo').replace(/[^\w-]/g, '')}.pdf`, content: piece }],
-      }),
+    await envoyerEmail({
+      to: destinataire,
+      subject: magasin
+        ? `Votre devis Quantinvo — ${magasin}`
+        : `Votre devis Quantinvo — ${q.reference || q.company_name}`,
+      html,
+      text,
+      attachments: [{ filename: `devis-${(q.reference || 'quantinvo').replace(/[^\w-]/g, '')}.pdf`, content: piece }],
+      replyTo: contact,
     })
-    if (!resp.ok) return sansEnvoi(`${resp.status} ${await resp.text()}`)
     return json({ ...result, emailed: true, sentTo: destinataire })
   } catch (e) {
     return sansEnvoi(e instanceof Error ? e.message : String(e))

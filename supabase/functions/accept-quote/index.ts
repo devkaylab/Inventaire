@@ -15,7 +15,7 @@
 // Quantinvo — lus en base par `admin_notify_emails`, donc sans variable à
 // poser ; `QUOTE_NOTIFY_EMAIL` s'y ajoute si elle existe.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 import { euros } from '../_shared/devis.ts'
 import { creerSessionCheckout, lireSessionCheckout } from '../_shared/stripe.ts'
 
@@ -31,7 +31,7 @@ async function envoyer(cle: string, from: string, to: string | string[], subject
   const resp = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, text }),
+    body: JSON.stringify({ from, reply_to: adresseDeContact() ?? undefined, to: Array.isArray(to) ? to : [to], subject, html, text }),
   })
   if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`)
 }
