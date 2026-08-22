@@ -17,6 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { emailQuantinvo } from '../_shared/email.ts'
 import { euros } from '../_shared/devis.ts'
+import { creerSessionCheckout } from '../_shared/stripe.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -56,13 +57,52 @@ Deno.serve(async (req) => {
   if (error) return json({ success: false, error: error.message }, 500)
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Acceptation impossible.' }, 400)
 
+  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+
+  // ── Le paiement, par Stripe Checkout ─────────────────────────────────────
+  // Dès l'accord, on ouvre la session et on rend son adresse : la page y
+  // envoie le client. Un second clic (`already`) rend la même session, grâce à
+  // la clé d'idempotence — un devis accepté deux fois ne se paie pas deux fois.
+  // Sans clé Stripe (pas encore posée), l'accord est enregistré et la page le
+  // dit : « votre facture arrive », comme avant.
+  let paymentUrl: string | null = null
+  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+  const kind: 'company' | 'store' = result.kind === 'store' ? 'store' : 'company'
+  const requestId = result.request_id as string | undefined
+  if (stripeKey && requestId && typeof result.amount_cents === 'number' && result.amount_cents > 0
+      && result.status !== 'paid' && result.status !== 'created') {
+    try {
+      const objet = kind === 'store'
+        ? `Licence annuelle — ${result.store_name}`
+        : `Licence annuelle — ${result.company_name}`
+      const session = await creerSessionCheckout(stripeKey, {
+        requestId,
+        kind,
+        amountCents: result.amount_cents,
+        label: objet,
+        description: `Devis ${result.reference} · Quantinvo, l’outil d’inventaire pour le commerce`,
+        customerEmail: result.contact_email,
+        reference: result.reference ?? '',
+        successUrl: `${appUrl}/devis/${jeton}?paiement=ok`,
+        cancelUrl: `${appUrl}/devis/${jeton}`,
+      })
+      await client.rpc('attach_checkout_session', {
+        p_kind: kind, p_id: requestId, p_session_id: session.id, p_customer_id: session.customer,
+      })
+      paymentUrl = session.url
+    } catch (e) {
+      // L'accord tient ; le paiement se retentera depuis la page (même session,
+      // même clé d'idempotence). On le dit dans la réponse.
+      paymentUrl = null
+      console.error('Stripe', e instanceof Error ? e.message : e)
+    }
+  }
+
   // Un second clic ne renvoie pas les messages : l'accord est déjà enregistré.
-  if (result.already) return json({ success: true, already: true, emailed: false })
+  if (result.already) return json({ success: true, already: true, emailed: false, paymentUrl })
 
   const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return json({ success: true, already: false, emailed: false })
-
-  const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://quantinvo.vercel.app'
+  if (!resendKey) return json({ success: true, already: false, emailed: false, paymentUrl })
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const prenom = (result.contact_first_name ?? '').trim()
   const entreprise = result.company_name ?? ''
@@ -79,13 +119,16 @@ Deno.serve(async (req) => {
       salutation: prenom ? `Bonjour ${prenom},` : 'Bonjour,',
       paragraphes: [
         'Merci : nous avons bien enregistré votre accord sur le devis ci-dessous.',
-        'Votre facture vous parvient sous 48 heures. Vos accès — l’entreprise, ses magasins et leurs codes — sont créés dès son règlement, et nous vous écrivons à ce moment-là.',
+        paymentUrl
+          ? 'Il ne reste qu’à régler la licence, par carte ou par prélèvement SEPA. Vos accès sont créés dans la minute qui suit le paiement, et la facture vous est envoyée automatiquement.'
+          : 'Votre facture vous parvient sous 48 heures. Vos accès sont créés dès son règlement, et nous vous écrivons à ce moment-là.',
       ],
       details: [
         { intitule: 'Référence', valeur: reference },
         { intitule: 'Entreprise', valeur: entreprise },
         { intitule: 'Montant annuel HT', valeur: montant },
       ],
+      ...(paymentUrl ? { bouton: { libelle: 'Régler la licence', lien: paymentUrl } } : {}),
       raison: 'Vous recevez ce message parce que vous venez d’accepter un devis Quantinvo.',
       siteUrl: appUrl,
     })
@@ -117,7 +160,9 @@ Deno.serve(async (req) => {
         apercu: `${entreprise} a accepté le devis ${reference}.`,
         paragraphes: [
           `${entreprise} vient d’accepter le devis ${reference} pour ${objet} — ${montant} par an.`,
-          `Il reste à facturer, encaisser, puis ${magasin ? 'créer le magasin' : 'créer l’entreprise'} depuis le tableau de bord.`,
+          paymentUrl
+            ? 'Le paiement Stripe lui est proposé dans la foulée ; la création se fera toute seule à réception.'
+            : `Il reste à facturer, encaisser, puis ${magasin ? 'créer le magasin' : 'créer l’entreprise'} depuis le tableau de bord.`,
         ],
         details: [
           { intitule: 'Entreprise', valeur: entreprise },
@@ -135,5 +180,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ success: true, already: false, emailed })
+  return json({ success: true, already: false, emailed, paymentUrl })
 })

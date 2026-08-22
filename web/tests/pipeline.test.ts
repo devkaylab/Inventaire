@@ -60,11 +60,21 @@ describe('à chaque étape, qui attend quoi', () => {
     expect(l.etat).toContain('expiré')
   })
 
-  it('accepté = à facturer, encaissé = à créer', () => {
+  it('accepté = le client paie chez Stripe ; on le relance passé le seuil', () => {
+    // Plus de « Facturer » : le paiement passe par Stripe dès l'accord.
     const acc = lireVente({ ...base, status: 'accepted', accepted_at: le('21').toISOString() }, le('21'))
-    expect(acc.tour).toBe('nous')
-    expect(acc.geste).toBe('Facturer')
+    expect(acc.tour).toBe('client')
+    expect(acc.etat).toContain('en attente du paiement')
+    const tard = lireVente({ ...base, status: 'accepted', accepted_at: le('10').toISOString() }, le('21'))
+    expect(tard.tour).toBe('nous')
+    expect(tard.geste).toBe('Relancer')
+  })
+
+  it('payé sans créé, c’est un webhook qui n’est pas passé : à nous', () => {
+    // Le webhook crée dans la foulée du paiement. Ce cas ne devrait jamais
+    // durer ; s'il dure, le bouton de création manuelle reste là.
     const paye = lireVente({ ...base, status: 'paid', paid_at: le('21').toISOString() }, le('21'))
+    expect(paye.tour).toBe('nous')
     expect(paye.geste).toBe('Créer l’entreprise')
     const mag = lireVente({ ...base, kind: 'store', status: 'paid', paid_at: le('21').toISOString() }, le('21'))
     expect(mag.geste).toBe('Créer le magasin')

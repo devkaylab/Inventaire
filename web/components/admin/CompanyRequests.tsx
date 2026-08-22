@@ -412,14 +412,19 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
                 >
                   {devisOuvert === r.id ? 'Fermer' : 'Renvoyer le devis'}
                 </button>
-                <button className="btn btn-primary btn-sm" disabled={busy === r.id} onClick={() => setStatus(r, 'accepted')}>
-                  Devis accepté
+                {/* Le client accepte en ligne ; ce lien est le secours, pour
+                    un accord reçu par un autre canal. */}
+                <button className="link-btn" disabled={busy === r.id} onClick={() => setStatus(r, 'accepted')}>
+                  Marquer accepté
                 </button>
               </>
             )}
             {r.status === 'accepted' && (
-              <button className="btn btn-primary btn-sm" disabled={busy === r.id} onClick={() => setStatus(r, 'paid')}>
-                Facture encaissée
+              // Le paiement passe par Stripe, qui crée tout seul. Ce bouton
+              // est le secours — un virement hors Stripe — et il le dit.
+              <button className="link-btn" disabled={busy === r.id}
+                onClick={() => setStatus(r, 'paid', 'Marquer ce devis comme réglé hors Stripe ?\n\nÀ n’utiliser que pour un paiement reçu par un autre canal. La création restera à faire à la main.')}>
+                Réglé hors Stripe
               </button>
             )}
             {r.status === 'paid' && (

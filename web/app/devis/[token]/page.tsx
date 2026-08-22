@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -19,9 +19,14 @@ import { supabase } from '@/lib/supabaseClient'
  * e-mail du contact — un lien transféré ne doit rien apprendre de plus que le
  * devis lui-même.
  *
- * L'acceptation passe par l'edge `accept-quote` (qui écrit les deux e-mails),
- * avec repli sur la RPC directe : mieux vaut un accord enregistré sans accusé
- * qu'un bouton qui ne répond pas.
+ * L'acceptation passe par l'edge `accept-quote`, qui écrit les deux e-mails
+ * **et ouvre la session Stripe Checkout** : la réponse porte `paymentUrl`, et
+ * la page y envoie le client dans la foulée. Le repli sur la RPC directe
+ * enregistre l'accord sans paiement — mieux qu'un bouton qui ne répond pas.
+ *
+ * Au retour de Stripe (`?paiement=ok`), le webhook a le plus souvent déjà
+ * créé l'entreprise ou le magasin : la page relit le devis et le dit. Sinon
+ * elle l'annonce comme imminent — le paiement SEPA, lui, met quelques jours.
  */
 
 type Ligne = {
@@ -55,9 +60,20 @@ const nb = (n?: number | null) => (n == null ? '—' : n.toLocaleString('fr-FR')
 const jour = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
 
+// `useSearchParams` impose une frontière Suspense au rendu statique.
 export default function DevisPage() {
+  return (
+    <Suspense fallback={<div className="auth-wrap"><div className="auth-card"><p className="sub">Chargement du devis…</p></div></div>}>
+      <DevisContenu />
+    </Suspense>
+  )
+}
+
+function DevisContenu() {
   const params = useParams<{ token: string }>()
   const token = typeof params?.token === 'string' ? params.token : ''
+  const search = useSearchParams()
+  const retourPaiement = search?.get('paiement') === 'ok'
   const [devis, setDevis] = useState<Devis | null>(null)
   const [chargement, setChargement] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -85,6 +101,11 @@ export default function DevisPage() {
     const { data, error } = await supabase.functions.invoke('accept-quote', { body: { token } })
     if (!error && data?.success) {
       ok = true
+      if (typeof data.paymentUrl === 'string' && data.paymentUrl) {
+        // Stripe prend la main : la page est quittée ici.
+        window.location.assign(data.paymentUrl)
+        return
+      }
     } else if (error) {
       // Edge injoignable : la RPC porte les mêmes gardes.
       const direct = await supabase.rpc('accept_quote_by_token', { p_token: token })
@@ -147,12 +168,31 @@ export default function DevisPage() {
           </p>
         </div>
 
-        {accepte && (
+        {(devis.status === 'paid' || devis.status === 'created') && (
+          <div className="devis-etat devis-etat-ok">
+            <strong>Paiement reçu — merci</strong>
+            <span>
+              {devis.status === 'created'
+                ? 'Tout est en place. Vous recevez par e-mail le lien pour créer votre accès, et la facture Stripe.'
+                : 'Vos accès sont en cours de création : l’e-mail arrive dans la minute.'}
+            </span>
+          </div>
+        )}
+        {devis.status === 'accepted' && retourPaiement && (
+          <div className="devis-etat devis-etat-ok">
+            <strong>Paiement en cours de confirmation</strong>
+            <span>
+              Stripe nous confirme le règlement d’ici quelques instants — quelques jours pour un prélèvement
+              SEPA. Vos accès sont créés à ce moment-là, et vous recevez un e-mail.
+            </span>
+          </div>
+        )}
+        {devis.status === 'accepted' && !retourPaiement && (
           <div className="devis-etat devis-etat-ok">
             <strong>Devis accepté</strong>
             <span>
-              Votre accord est enregistré{devis.accepted_at ? ` le ${jour(devis.accepted_at)}` : ''}. Votre facture
-              vous parvient sous 48&nbsp;heures, et vos accès sont créés dès son règlement.
+              Votre accord est enregistré{devis.accepted_at ? ` le ${jour(devis.accepted_at)}` : ''}. Il ne reste
+              qu’à régler la licence : vos accès sont créés dès le paiement.
             </span>
           </div>
         )}
@@ -199,12 +239,20 @@ export default function DevisPage() {
               {busy ? 'Enregistrement…' : 'J’accepte ce devis'}
             </button>
           )}
+          {devis.status === 'accepted' && !retourPaiement && (
+            // Même appel : sur un devis déjà accepté, l'edge rend la même
+            // session Checkout (clé d'idempotence) — jamais une seconde.
+            <button type="button" className="btn btn-primary" onClick={accepter} disabled={busy}>
+              {busy ? 'Ouverture du paiement…' : 'Régler la licence'}
+            </button>
+          )}
           <a className="btn btn-ghost" href={pdfUrl}>Télécharger le PDF</a>
         </div>
 
         <p className="devis-note">
           Licence annuelle par magasin, comptages et compteurs illimités. L’acceptation vaut bon pour
-          accord&nbsp;; la facture suit, et vos accès sont ouverts dès son règlement.
+          accord&nbsp;; le règlement se fait en ligne, par carte ou prélèvement SEPA, et vos accès sont créés
+          dès réception. La facture vous est envoyée automatiquement.
         </p>
       </div>
     </div>

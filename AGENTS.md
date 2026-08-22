@@ -260,37 +260,84 @@ déjà une étape.
 
 Tests de garde : `web/tests/devis.test.ts`.
 
-## Paiement : Stripe à terme
+## Paiement : Stripe, en place (22 août 2026)
 
-L'encaissement est aujourd'hui déclaré à la main par l'administrateur. **Le
-paiement passera vraisemblablement par Stripe** : le modèle a été conçu pour
-que la bascule tienne en un seul point.
+Julien : *« on ne fournit pas de RIB, le paiement doit passer par Stripe »*,
+puis *« crée automatiquement une fois payé »*. Migration `20260822250001`,
+fonctions edge `accept-quote` (modifiée) et `stripe-webhook` (nouvelle).
 
-Le seul point d'accroche est la transition `accepted → paid` de
-`admin_set_company_request_status`. Un webhook Stripe
-(`checkout.session.completed`) appellera cette même RPC en `service_role` : ni
-la séquence des statuts, ni `admin_fulfil_company_request`, ni la génération
-des codes ne changent.
+**Le parcours** : devis accepté → `accept-quote` ouvre une session Stripe
+Checkout et y envoie le client → paiement par carte ou prélèvement SEPA,
+**facture produite et envoyée par Stripe** (`invoice_creation`) →
+`checkout.session.completed` → `stripe-webhook` → `fulfil_paid_request` :
+`paid`, création de l'entreprise et de ses magasins (ou du magasin), journal
+signé « Stripe », et invitation du contact comme **administrateur de son
+entreprise** (même lien `/bienvenue` que les autres invitations).
 
-Quand ce sera au programme :
+Les règles fixées quand Stripe n'était qu'un projet sont tenues : un seul
+point d'accroche (`accepted → paid`), la création derrière le paiement et
+jamais déclenchée par le client, la ré-émission traitée comme un cas normal.
 
-- Ajouter les colonnes de corrélation sur `company_requests`
-  (`stripe_checkout_session_id`, `stripe_customer_id`, référence de facture) —
-  volontairement absentes tant que le fournisseur n'est pas arrêté.
-- Écrire l'edge function du webhook **avec vérification de la signature**
-  Stripe, et la déployer en `verify_jwt: false` (Stripe n'envoie pas de JWT) —
-  c'est la seule fonction du projet dans ce cas, d'où l'importance de la
-  signature.
-- Garder la création d'entreprise **derrière** le paiement, jamais déclenchée
-  par le client : le webhook écrit `paid`, l'administrateur (ou un
-  enchaînement serveur) crée ensuite. Ne pas exposer
-  `admin_fulfil_company_request` au rôle `anon`.
-- Traiter la ré-émission : Stripe rejoue ses webhooks. La garde de transition
-  empêche déjà le double effet (`paid` n'est accepté que depuis `accepted`),
-  mais elle **répond en erreur**, pas en succès. Le webhook doit donc traiter
-  « transition impossible alors que la demande est déjà `paid` ou au-delà »
-  comme un cas normal, sous peine de faire échouer la livraison et de
-  déclencher des relances Stripe en boucle.
+Points à ne pas défaire :
+
+- **La signature est la seule porte.** Le webhook est déployé en
+  `verify_jwt: false` (Stripe n'envoie pas de JWT) ; `verifierWebhook`
+  (`_shared/stripe.ts`) vérifie l'HMAC sur le **corps brut**, avec cinq
+  minutes de tolérance et une comparaison en temps constant, **avant toute
+  lecture**. Un test la passe avec un vrai HMAC, et refuse un corps trafiqué.
+- **Le webhook n'a pas de session** : `auth.uid()` est nul, donc ni
+  `is_admin()` ni `log_admin_action`. D'où `fulfil_paid_request`,
+  `attach_checkout_session`, `log_system_action` et
+  `invite_company_admin_after_payment`, exécutables par le **seul
+  `service_role`**. Elles ne doivent jamais être ouvertes à `authenticated`.
+- **Rejeu** : Stripe renvoie un événement tant qu'il n'a pas reçu 200.
+  `fulfil_paid_request` répond `already: true` sur une session déjà traitée
+  (index unique sur `stripe_checkout_session_id`), et la fonction répond
+  **200**. Une session inconnue répond 500 — c'est un vrai problème, Stripe
+  doit réessayer. Ce qui n'est pas `checkout.session.completed` avec
+  `payment_status = paid` répond 200 sans rien faire.
+- **Une session Checkout par demande** : clé d'idempotence
+  `checkout-<kind>-<id>`. Un devis accepté deux fois — ou « Régler la
+  licence » cliqué deux fois — rouvre la même session, jamais une seconde.
+  `accept_quote_by_token` rend désormais `request_id` et `status` pour ça.
+- **Pas de SDK Stripe** : deux appels HTTP et une signature, dans
+  `_shared/stripe.ts`, lisibles en entier. Le SDK pèse lourd en edge et
+  n'apporterait rien ici.
+- **Sans clé Stripe**, l'acceptation fonctionne comme avant : accord
+  enregistré, « votre facture arrive ». C'est ce qui permet de déployer le
+  code avant de poser les clés.
+
+Côté écrans : `/devis/<jeton>` suit `paymentUrl` dès l'accord, propose
+« Régler la licence » sur un devis accepté non payé, et lit `?paiement=ok` au
+retour de Stripe. Dans `lib/pipeline.ts`, `accepted` attend le **client** (il
+paie), relancé passé sept jours ; `paid` sans `created` est une anomalie
+(webhook non passé) et nous revient. Les boutons manuels « Marquer accepté »
+et « Réglé hors Stripe » restent en secours, en liens discrets, pour un
+paiement reçu par un autre canal — la création reste alors à faire à la main.
+
+Vérifié en base (transaction annulée) : paiement → `created`, deux magasins
+aux noms du devis, facture liée, invitation `company_admin`, deux lignes de
+journal « Stripe » ; rejeu → `already`, session inconnue → erreur. Le webhook
+en ligne refuse tout tant que le secret n'est pas posé.
+
+### ⚠️ À FAIRE par Julien — les clés
+
+Dans le tableau de bord Stripe (compte Devkaylab), **en mode test d'abord** :
+
+1. **Developers → API keys** : copier la clé secrète (`sk_test_…`).
+2. **Developers → Webhooks → Add endpoint** :
+   `https://heabesqvlinzarqenymj.supabase.co/functions/v1/stripe-webhook`,
+   événement `checkout.session.completed` (et
+   `checkout.session.async_payment_succeeded` pour le SEPA — à brancher dans
+   le webhook le jour où un client paie ainsi). Copier le secret de signature
+   (`whsec_…`).
+3. Dans Supabase → Edge Functions → Secrets, poser `STRIPE_SECRET_KEY` et
+   `STRIPE_WEBHOOK_SECRET`. **Les clés ne se collent jamais dans une
+   conversation ni dans le dépôt.**
+4. Essayer avec la carte de test `4242 4242 4242 4242`, puis passer les deux
+   clés en `live` le jour venu — mêmes variables, nouvelles valeurs.
+
+Tests de garde : `web/tests/stripe.test.ts`.
 
 # E-mails transactionnels : un seul gabarit
 

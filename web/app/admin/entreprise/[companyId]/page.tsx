@@ -435,15 +435,17 @@ export default function AdminCompanyPage() {
                         </button>
                       )}
                       {d.status === 'quoted' && (
-                        <button className="btn btn-primary btn-sm" disabled={busy === d.id}
+                        <button className="link-btn" disabled={busy === d.id}
                           onClick={() => statutDemande(d, 'accepted')}>
-                          Devis accepté
+                          Marquer accepté
                         </button>
                       )}
                       {d.status === 'accepted' && (
-                        <button className="btn btn-primary btn-sm" disabled={busy === d.id}
-                          onClick={() => statutDemande(d, 'paid')}>
-                          Facture encaissée
+                        // Secours : un paiement reçu hors Stripe. Le chemin
+                        // normal est le webhook, qui crée tout seul.
+                        <button className="link-btn" disabled={busy === d.id}
+                          onClick={() => { if (confirm('Marquer ce devis comme réglé hors Stripe ?\n\nÀ n’utiliser que pour un paiement reçu par un autre canal.')) statutDemande(d, 'paid') }}>
+                          Réglé hors Stripe
                         </button>
                       )}
                       {d.status === 'paid' && (

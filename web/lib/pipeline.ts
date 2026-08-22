@@ -106,19 +106,27 @@ export function lireVente(v: VenteEnCours, maintenant = new Date()): LectureVent
       }
     }
     case 'accepted': {
+      // Le paiement passe par Stripe : après l'accord, c'est au client de
+      // régler. Passé le seuil, on le relance — un accord sans paiement est
+      // une vente qui refroidit.
       const d = v.accepted_at ? jours(v.accepted_at, maintenant) : 0
+      const traine = d >= SEUILS_VENTE.relancerApres
       return {
-        tour: 'nous',
-        etat: v.accepted_at ? `Accepté le ${jourCourt(v.accepted_at)} — à facturer` : 'Accepté — à facturer',
-        geste: 'Facturer',
-        retard: d >= SEUILS_VENTE.deviserSous,
+        tour: traine ? 'nous' : 'client',
+        etat: v.accepted_at
+          ? `Accepté le ${jourCourt(v.accepted_at)} — ${traine ? `paiement attendu depuis ${d} j` : 'en attente du paiement'}`
+          : 'Accepté — en attente du paiement',
+        geste: traine ? 'Relancer' : 'Voir',
+        retard: traine,
       }
     }
     case 'paid': {
+      // Le webhook crée dans la foulée du paiement. Voir `paid` sans `created`
+      // plus de quelques minutes, c'est un webhook qui n'est pas passé.
       const d = v.paid_at ? jours(v.paid_at, maintenant) : 0
       return {
         tour: 'nous',
-        etat: v.paid_at ? `Encaissé le ${jourCourt(v.paid_at)} — à créer` : 'Encaissé — à créer',
+        etat: v.paid_at ? `Payé le ${jourCourt(v.paid_at)} — création en attente` : 'Payé — création en attente',
         geste: v.kind === 'company' ? 'Créer l’entreprise' : 'Créer le magasin',
         retard: d >= 1,
       }
