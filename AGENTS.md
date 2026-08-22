@@ -1879,7 +1879,11 @@ modèles de documents et le deck.
 Poser le secret suffit ; le repli ne sert qu'au prochain redéploiement de
 chaque fonction, quelle qu'en soit la raison.
 
-À tenir d'accord, en console Supabase (Authentication → URL Configuration) :
+**Posé le 22 août 2026 par Julien**, et vérifié pour l'edge par un envoi réel
+(l'accusé d'une demande d'essai chargeait déjà son logo depuis le nouveau
+domaine, fonction non redéployée) : le secret `APP_PUBLIC_URL`, qui n'avait
+**jamais existé** avant ce jour — toutes les fonctions tournaient sur leur
+repli —, et la console Supabase (Authentication → URL Configuration) :
 **Site URL** `https://www.quantinvo.com`, et les **Redirect URLs**
 `https://www.quantinvo.com/reinitialisation` et `/bienvenue` — en gardant les
 anciennes (`https://quantinvo.vercel.app/…` et
