@@ -96,12 +96,17 @@ export default function MagasinsPage() {
         <>
           {stores.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-title">Vous n&apos;êtes affecté à aucun magasin</div>
+              {/* Un administrateur d'entreprise supervise tous les magasins de
+                  son entreprise : s'il n'en voit aucun, c'est qu'elle n'en a
+                  aucun. Lui parler d'affectation n'aurait aucun sens. */}
+              <div className="empty-state-title">
+                {estAdmin
+                  ? 'Votre entreprise n’a encore aucun magasin'
+                  : 'Vous n’êtes affecté à aucun magasin'}
+              </div>
               <p className="empty-state-hint">
                 {estAdmin
-                  // Lui écrire « contactez votre administrateur » le renverrait
-                  // à lui-même : il s'affecte un magasin depuis Mon équipe.
-                  ? <>Affectez-vous un magasin depuis <Link href="/equipe" style={{ color: 'var(--accent)' }}>Mon équipe</Link>, ou demandez à Quantinvo d&apos;en ajouter un.</>
+                  ? <>Demandez à Quantinvo d&apos;en ajouter un&nbsp;: la licence se tarife par magasin.</>
                   : <>Contactez l&apos;administrateur de votre entreprise, ou Quantinvo si elle n&apos;en a pas encore.</>}
               </p>
             </div>

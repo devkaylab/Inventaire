@@ -96,12 +96,11 @@ export default function StoresScreen() {
           <View style={styles.card}>
             <Text style={styles.emptyTitle}>Aucun magasin</Text>
             <Text style={styles.emptyText}>
-              {/* L'administrateur d'entreprise est lui-même un superviseur : il
-                  peut s'affecter un magasin. Lui dire de s'adresser à
-                  « l'administrateur de votre entreprise » le renverrait à
-                  lui-même. */}
+              {/* Un administrateur d'entreprise supervise tous les magasins de
+                  son entreprise : s'il n'en voit aucun, c'est qu'elle n'en a
+                  aucun. Lui parler d'affectation le renverrait à lui-même. */}
               {profile?.is_company_admin
-                ? 'Vous n’êtes affecté à aucun magasin. Vous administrez cette entreprise : affectez-vous un magasin depuis la page Mon équipe du site, et il apparaîtra ici.'
+                ? 'Votre entreprise n’a encore aucun magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.'
                 : 'Vous n’êtes affecté à aucun magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'}
             </Text>
           </View>

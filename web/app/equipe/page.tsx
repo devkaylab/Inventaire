@@ -223,36 +223,49 @@ export default function EquipePage() {
                       </div>
                     )}
                   </div>
+                  {/* Un administrateur d'entreprise a tous les magasins, par
+                      construction (déclencheurs de la migration 20260822150001).
+                      Ses affectations ne se modifient donc pas : une croix qui
+                      ne marche pas est pire que pas de croix. */}
                   <div className="store-sup">
-                    {m.store_ids.length === 0 && <span className="muted small">Aucun magasin affecté</span>}
-                    {m.store_ids.map((sid) => (
-                      <span className="chip" key={sid}>
-                        {storeById[sid]?.name || 'Magasin'}
-                        <button
-                          className="chip-x"
-                          aria-label="Retirer ce magasin"
-                          onClick={() => appliquer('ca_set_supervisor_stores', {
-                            p_user: m.id, p_store_ids: m.store_ids.filter((x) => x !== sid),
-                          })}
-                        >×</button>
+                    {m.is_company_admin ? (
+                      <span className="muted small">
+                        Affecté à tous les magasins de l&apos;entreprise
+                        {m.store_ids.length > 0 && ` (${m.store_ids.length})`}
                       </span>
-                    ))}
-                    {(ca?.stores ?? []).some((s) => !m.store_ids.includes(s.id)) && (
-                      <select
-                        className="store-sup-select"
-                        value=""
-                        onChange={(e) => {
-                          if (!e.target.value) return
-                          appliquer('ca_set_supervisor_stores', {
-                            p_user: m.id, p_store_ids: [...m.store_ids, e.target.value],
-                          })
-                        }}
-                      >
-                        <option value="">+ Affecter un magasin</option>
-                        {(ca?.stores ?? []).filter((s) => !m.store_ids.includes(s.id)).map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
+                    ) : (
+                      <>
+                        {m.store_ids.length === 0 && <span className="muted small">Aucun magasin affecté</span>}
+                        {m.store_ids.map((sid) => (
+                          <span className="chip" key={sid}>
+                            {storeById[sid]?.name || 'Magasin'}
+                            <button
+                              className="chip-x"
+                              aria-label="Retirer ce magasin"
+                              onClick={() => appliquer('ca_set_supervisor_stores', {
+                                p_user: m.id, p_store_ids: m.store_ids.filter((x) => x !== sid),
+                              })}
+                            >×</button>
+                          </span>
                         ))}
-                      </select>
+                        {(ca?.stores ?? []).some((s) => !m.store_ids.includes(s.id)) && (
+                          <select
+                            className="store-sup-select"
+                            value=""
+                            onChange={(e) => {
+                              if (!e.target.value) return
+                              appliquer('ca_set_supervisor_stores', {
+                                p_user: m.id, p_store_ids: [...m.store_ids, e.target.value],
+                              })
+                            }}
+                          >
+                            <option value="">+ Affecter un magasin</option>
+                            {(ca?.stores ?? []).filter((s) => !m.store_ids.includes(s.id)).map((s) => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

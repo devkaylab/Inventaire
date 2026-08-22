@@ -148,7 +148,7 @@ export default function TeamScreen() {
                     comprendre pourquoi. */}
                 {sansMagasin
                   ? profile?.is_company_admin
-                    ? 'Aucun magasin ne vous est affecté, votre équipe se lit donc magasin par magasin depuis le site. Vous administrez cette entreprise : affectez-vous un magasin depuis la page Mon équipe du site pour la retrouver ici.'
+                    ? 'Votre entreprise n’a encore aucun magasin, et une équipe se lit magasin par magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.'
                     : 'Aucun magasin ne vous est affecté. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'
                   : 'Personne dans votre équipe pour l’instant. Ajoutez un compteur : il recevra une invitation par e-mail.'}
               </Text>

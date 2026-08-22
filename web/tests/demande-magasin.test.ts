@@ -127,11 +127,16 @@ describe('écrans', () => {
   })
 
   it('ne renvoie pas l’administrateur à lui-même quand il n’a aucun magasin', () => {
-    // Piège déjà rencontré côté mobile : « contactez l'administrateur de votre
-    // entreprise » écrit à l'administrateur de l'entreprise.
-    const vide = pageMagasins.split('empty-state-hint')[1]?.split('</p>')[0] ?? ''
+    // Deux pièges successifs. « Contactez l'administrateur de votre
+    // entreprise » s'adressait à l'administrateur de l'entreprise ; puis
+    // « affectez-vous un magasin » est devenu faux le 22 août 2026, quand
+    // l'administrateur s'est mis à les avoir tous : s'il n'en voit aucun,
+    // c'est que son entreprise n'en a aucun.
+    const vide = pageMagasins.split('className="empty-state"')[1]?.split('</div>\n          ) : (')[0] ?? ''
     expect(vide).toContain('estAdmin')
-    expect(vide).toContain('/equipe')
+    expect(vide).toContain('Votre entreprise n’a encore aucun magasin')
+    expect(vide).toContain('Contactez l&apos;administrateur de votre entreprise')
+    expect(pageMagasins).not.toContain('Affectez-vous un magasin')
   })
 
   it('la demande remonte dans « À traiter » et sur la fiche', () => {

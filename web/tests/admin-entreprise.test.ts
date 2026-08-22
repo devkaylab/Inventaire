@@ -286,3 +286,57 @@ describe('supprimer un compte de son entreprise', () => {
     expect(pageEquipe).toContain('Compteurs · autres magasins')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L'administrateur d'entreprise est affecté à tous les magasins (22 août 2026).
+//
+// Précision de Julien, capture à l'appui : son écran Magasins annonçait
+// « Vous n'êtes affecté à aucun magasin » et l'invitait à s'en affecter un.
+// C'était la lecture inverse de la règle — il les a tous, par construction.
+
+describe('l’administrateur d’entreprise a tous les magasins', () => {
+  const mTous = lire('../../supabase/migrations/20260822150001_admin_entreprise_tous_les_magasins.sql')
+  const pageMagasins = lire('../app/magasins/page.tsx')
+  const appMagasins = lire('../../src/app/(compte)/stores.tsx')
+  const appEquipe = lire('../../src/app/(compte)/team.tsx')
+
+  it('l’invariant tient par déclencheur, pas par affichage', () => {
+    // Tout ce que voit un superviseur se lit dans store_supervisors : c'est
+    // l'affectation qu'on rend vraie, une fois, plutôt qu'une condition
+    // « ou bien il est administrateur » à recopier dans chaque écran.
+    expect(mTous).toContain('after insert on public.stores')
+    expect(mTous).toContain('after insert or update of is_company_admin, company_id on public.profiles')
+    expect(mTous).toContain('when (new.is_company_admin and new.company_id is not null)')
+    // Et le rattrapage de l'existant, sans quoi l'invariant ne vaudrait que
+    // pour les magasins créés après la migration.
+    expect(mTous).toMatch(/insert into public\.store_supervisors[\s\S]*?where p\.is_company_admin/)
+  })
+
+  it('ses affectations ne se retirent ni côté client ni côté Quantinvo', () => {
+    // Les déclencheurs ne réparent pas un retrait : ils ne se réveillent qu'à
+    // la création d'un magasin ou à la nomination. Sans ces deux refus,
+    // l'invariant deviendrait faux en silence.
+    const ca = mTous.split('function public.ca_set_supervisor_stores(')[1]?.split('$$;')[0] ?? ''
+    expect(ca).toContain("'Un administrateur d''entreprise est affecté à tous les magasins.'")
+    const quantinvo = mTous.split('function public.admin_unassign_supervisor(')[1]?.split('$$;')[0] ?? ''
+    expect(quantinvo).toContain('is_company_admin')
+    expect(quantinvo).toContain(`Retirez-lui d''abord ce rôle`)
+  })
+
+  it('« Mon équipe » ne montre ni croix ni sélecteur sur sa ligne', () => {
+    // Une croix qui ne marche pas est pire que pas de croix.
+    expect(pageEquipe).toContain('Affecté à tous les magasins de l&apos;entreprise')
+    const rail = pageEquipe.split('className="store-sup"')[1]?.split('</div>')[0] ?? ''
+    expect(rail).toContain('m.is_company_admin ?')
+  })
+
+  it('aucun écran ne lui parle plus d’affectation', () => {
+    // S'il ne voit aucun magasin, c'est que son entreprise n'en a aucun.
+    for (const [nom, source] of [
+      ['site', pageMagasins], ['app · magasins', appMagasins], ['app · équipe', appEquipe],
+    ] as const) {
+      expect(source, nom).toContain('Votre entreprise n’a encore aucun magasin')
+      expect(source, nom).not.toMatch(/affectez-vous un magasin/i)
+    }
+  })
+})
