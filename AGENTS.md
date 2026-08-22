@@ -1067,7 +1067,10 @@ tenaient pas à cet écran :
 - **Le formulaire prenait les 1120 px de l'espace connecté** — 150 caractères
   par ligne pour l'introduction, 1700 px pour un nom de vingtaine de signes.
   `.demande-magasin` le ramène à 560 px, la largeur utile de la carte
-  d'inscription dont il est repris.
+  d'inscription dont il est repris, **centré dans la page** (demande de Julien).
+  La liste des demandes en cours, elle, reste alignée à gauche sur toute la
+  largeur : c'est une liste d'enregistrements, comme celle des magasins
+  au-dessus.
 - **La pastille de rang a disparu quand il n'y a qu'un magasin** (`numero`
   devient facultatif) : numéroter un élément unique n'apprend rien.
 
