@@ -514,11 +514,21 @@ balaie toutes les fonctions :
   « répondez à ce message ». Côté site, `lib/contact.ts` lit
   `NEXT_PUBLIC_CONTACT_EMAIL` et `/devis` s'en sert de la même façon.
 
-⚠️ **À poser par Julien** : `CONTACT_EMAIL` dans les secrets des fonctions
-edge, et `NEXT_PUBLIC_CONTACT_EMAIL` dans les variables Vercel — la même
-adresse, celle qu'il lit. Sans elles, les fonctions sans repli n'ont pas de
-`reply_to` et les textes ne promettent rien : c'est le comportement de
-secours, pas le comportement voulu.
+**Posé le 22 août 2026** : `CONTACT_EMAIL` (secret edge) et
+`NEXT_PUBLIC_CONTACT_EMAIL` (Vercel, environnement Production) valent
+`contact@quantinvo.com`. Vérifié sur la page publique du devis. Sans ces
+variables, les fonctions sans repli n'auraient pas de `reply_to` et les
+textes ne promettraient rien : c'est le comportement de secours.
+
+**La boîte `contact@quantinvo.com`** : redirection ImprovMX (gratuit) vers
+`devkaylab@gmail.com` — MX `mx1/mx2.improvmx.com`, SPF
+`include:spf.improvmx.com` et DMARC `p=none` (rapports sur contact@) posés
+sur la racine, dans Vercel → Domains. Gmail « envoie en tant que » contact@
+par `smtp.gmail.com` avec un mot de passe d'application (le SMTP d'ImprovMX
+est payant) : un client qui reçoit une réponse voit Quantinvo, pas Gmail.
+Resend reste sur `send.quantinvo.com`, aucun conflit. Un mail envoyé à
+soi-même via l'alias peut tomber en spam — c'est propre à ce cas, ImprovMX
+l'explique ; tester depuis une autre adresse.
 
 **Les templates hébergés par Resend ont été examinés puis écartés**
 (21 août 2026, décision de Julien). Ils existent bien — `template: { id,
