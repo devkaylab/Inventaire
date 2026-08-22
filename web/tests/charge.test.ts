@@ -241,3 +241,55 @@ describe('portée par section', () => {
     expect(page).toContain('sectionPrecedente.current = tab')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le rapport recense l'attendu, pas seulement le compté (22 août 2026)
+
+describe('le rapport d’inventaire', () => {
+  const migration = readFileSync(
+    path.resolve(__dirname, '../../supabase/migrations/20260822090001_rapport_articles_attendus.sql'),
+    'utf8',
+  )
+  const corpsFn = migration.split('$function$')[1] ?? ''
+
+  it('part de l’attendu ET du compté, pas du seul compté', () => {
+    // Un article présent au stock théorique et jamais scanné n'avait aucune
+    // ligne : son théorique n'était pas additionné et son manque n'entrait pas
+    // dans l'écart. L'inventaire ne montrait donc pas la démarque.
+    expect(corpsFn).toContain('from public.theoretical_stock t')
+    expect(corpsFn).toMatch(/union\s+select l\.s from lignes l/)
+  })
+
+  it('se réduit aux SKU comptés quand aucun théorique n’est fourni', () => {
+    // Règle de Julien : sans stock théorique, seuls les SKU comptés
+    // apparaissent. C'est l'union qui le fait d'elle-même — un `from
+    // theoretical_stock` seul viderait le rapport des inventaires sans
+    // fichier attendu, et une jointure interne ferait de même.
+    const univers = corpsFn.split('univers as (')[1]?.split(')')[0] ?? ''
+    expect(univers, 'les deux branches doivent être là').toContain('theoretical_stock')
+    expect(univers).toContain('from lignes l')
+    expect(corpsFn).toContain('left join lignes l on l.s = u.s')
+    expect(corpsFn, 'les lignes comptées ne doivent jamais être filtrées par le théorique')
+      .not.toContain('inner join public.theoretical_stock')
+  })
+
+  it('ne touche pas aux règles d’audit', () => {
+    // La quantité qui fait foi et la priorité des statuts restent celles
+    // d'avant : `uncounted` ne s'applique qu'aux SKU sans ligne d'audit.
+    expect(corpsFn).toContain('coalesce(a.final_qty, a.qty_pass2, a.qty_pass1, 0)')
+    expect(corpsFn).toContain("when bool_or(a.status = 'failed') then 'failed'")
+    expect(corpsFn).toContain("coalesce(l.statut, 'uncounted')")
+  })
+
+  it('repose les droits que `create or replace` avait rendus à PUBLIC', () => {
+    expect(migration).toMatch(/revoke all on function public\.get_session_results\(uuid\) from public, anon/)
+    expect(migration).toContain('grant execute on function public.get_session_results(uuid) to authenticated')
+  })
+
+  it('le statut « Non compté » a son libellé des deux côtés', () => {
+    const site = readFileSync(path.resolve(__dirname, '../lib/inventory.ts'), 'utf8')
+    const mobile = readFileSync(path.resolve(__dirname, '../../src/lib/report.ts'), 'utf8')
+    expect(site).toContain("uncounted: 'Non compté'")
+    expect(mobile).toContain("uncounted: 'Non compté'")
+  })
+})

@@ -346,6 +346,53 @@ et `DeletionPendingNote`.
 Maquette de référence :
 https://claude.ai/code/artifact/032d3ee8-ee0f-4b32-9b21-c6a5d278356c
 
+# Le rapport recense l'attendu, pas seulement le compté (22 août 2026)
+
+Deux écrans du même inventaire se contredisaient : sur « Test », l'onglet
+Set up annonçait **1 015 pièces attendues** quand le Rapport en affichait
+**395**, sur 11 lignes alors que le fichier théorique en compte 21.
+
+`get_session_results` partait de `article_audit`, qui ne contient une ligne
+que pour un SKU **déjà scanné**. Un article attendu et jamais trouvé n'avait
+donc aucune ligne : son théorique n'était pas additionné, et son manque
+n'entrait pas dans l'écart — les quatre tuiles du haut étant calculées en
+additionnant les lignes affichées. **L'inventaire ne montrait pas la démarque
+qu'il est censé révéler.**
+
+Règle donnée par Julien : **le fichier qui fait foi est le stock théorique,
+pas le référentiel**. Sans stock théorique, seuls les SKU comptés
+apparaissent ; avec, tout l'attendu apparaît.
+
+D'où l'**union** de `theoretical_stock` et des SKU comptés (migration
+`20260822090001`), qui couvre les deux règles sans condition : quand aucun
+fichier théorique n'est importé, l'union se réduit d'elle-même aux SKU
+comptés. Ne pas la remplacer par un `from theoretical_stock` sec, ni par une
+jointure interne — le rapport des inventaires sans fichier attendu se
+viderait.
+
+**Les règles d'audit ne bougent pas**, et c'est délibéré : la quantité qui
+fait foi reste `final_qty → qty_pass2 → qty_pass1` (une quantité arbitrée
+l'emporte sur l'audit, qui l'emporte sur le comptage), et la priorité des
+statuts reste `failed > pending > resolved > validated`. Le seul ajout est
+`uncounted` (« Non compté »), qui ne peut jamais écraser un statut d'audit :
+il ne s'applique qu'aux SKU **sans aucune ligne d'audit**, donc jamais
+comptés. Il n'entre pas dans le décompte « articles présentant encore un
+écart ».
+
+Un article compté mais **absent** du fichier théorique garde sa ligne, en
+écart positif : c'est un surplus, le cacher serait l'erreur inverse.
+
+Ordre de mise en ligne, à respecter si le sujet est repris : **les libellés
+d'abord, la base ensuite** — sans `uncounted: 'Non compté'` dans
+`web/lib/inventory.ts` et `src/lib/report.ts`, ces lignes s'affichent avec le
+mot technique brut. Les builds mobiles antérieurs le montreront dans leur
+export jusqu'au prochain build : c'est la contrepartie assumée.
+
+Vérifié après application sur « LA Bruket » : 101 lignes au lieu de 5, dont 96
+« Non compté », stock théorique 719 (contre 328) et écart −650 (contre −259).
+
+Tests de garde : `web/tests/charge.test.ts`, bloc « le rapport d'inventaire ».
+
 # Supprimer et retirer depuis l'app (22 août 2026)
 
 *« Dans la même logique que le site, rends possible la suppression
