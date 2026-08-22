@@ -1581,3 +1581,95 @@ a { color: inherit; text-decoration: none; }
   .ordinateur-requis-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 26px; width: min(100%, 260px); }
   .ordinateur-requis-qui { color: var(--text-3); font-size: 12.5px; margin-top: 26px; max-width: 32ch; }
 }
+
+/* ── Devis reçu par e-mail, accepté sans compte ──────────────────────────
+   Page publique (/devis/<jeton>), donc hors de la coquille : elle s'ouvre le
+   plus souvent sur un téléphone, depuis la messagerie du prospect. */
+.devis-card { max-width: 560px; }
+.devis-etat {
+  border: 1px solid var(--hairline); background: var(--bg); border-radius: 12px;
+  padding: 13px 15px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 4px;
+  font-size: 13.5px; color: var(--text-2); line-height: 1.55;
+}
+.devis-etat strong { color: var(--text); font-size: 14.5px; }
+.devis-etat-ok { background: var(--accent-soft); border-color: transparent; }
+.devis-etat-ok strong { color: var(--accent-light); }
+
+.devis-lignes { display: flex; flex-direction: column; }
+.devis-ligne {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 10px 16px; align-items: baseline;
+  padding: 9px 0; border-bottom: 1px solid var(--hairline); font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.devis-ligne .n { text-align: right; white-space: nowrap; }
+.devis-ligne .muted { color: var(--text-3); font-size: 13px; }
+.devis-ligne-tete {
+  font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600;
+}
+/* Sur un téléphone, trois colonnes écrasent le nom du magasin. Le nom et le
+   prix gardent leur ligne — c'est ce qu'on lit —, le stock déclaré passe
+   dessous en petit. Sans les zones nommées, le prix se retrouvait au milieu
+   du rang (vu au simulateur, 375 px). */
+@media (max-width: 460px) {
+  .devis-ligne {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "nom prix" "stock stock";
+    gap: 2px 12px;
+  }
+  .devis-ligne > :nth-child(1) { grid-area: nom; }
+  .devis-ligne > :nth-child(2) { grid-area: stock; text-align: left; }
+  .devis-ligne > :nth-child(3) { grid-area: prix; }
+  .devis-ligne-tete > :nth-child(2) { display: none; }
+}
+
+.devis-total {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  flex-wrap: wrap; margin: 18px 0; padding: 14px 16px; border-radius: 13px;
+  background: var(--accent-soft); font-size: 14px; color: var(--text-2);
+}
+.devis-total b {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.devis-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.devis-actions .btn { flex: 1 1 auto; text-align: center; }
+.devis-note { margin-top: 16px; font-size: 12px; color: var(--text-3); line-height: 1.55; }
+
+/* ── Console : le panneau qui établit le devis ───────────────────────────
+   Il vit dans la carte d'une demande, sous les magasins déclarés : on lit ce
+   qui est déclaré, puis on chiffre, sans changer d'écran. */
+.devis-panneau {
+  margin-top: 12px; padding: 14px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--hairline);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.devis-panneau-lignes { display: flex; flex-direction: column; }
+.devis-panneau-ligne {
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px 14px;
+  align-items: baseline; padding: 6px 0; font-size: 13px;
+  border-bottom: 1px solid var(--hairline); font-variant-numeric: tabular-nums;
+}
+.devis-panneau-ligne .n { text-align: right; white-space: nowrap; font-weight: 600; }
+.devis-panneau-total { border-bottom: none; border-top: 2px solid var(--hairline); font-weight: 700; }
+@media (max-width: 620px) {
+  .devis-panneau-ligne { grid-template-columns: 1fr auto; }
+  .devis-panneau-ligne .muted { display: none; }
+}
+
+.devis-panneau-champs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .devis-panneau-champs { grid-template-columns: 1fr; } }
+.devis-panneau-champs label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--text-2);
+}
+.devis-panneau-champs input {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px;
+  padding: 10px 12px; font-family: inherit; font-size: 14px; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.devis-panneau-champs input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.devis-panneau-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

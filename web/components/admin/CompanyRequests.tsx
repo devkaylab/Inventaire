@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { densite, trancheDe } from '@/lib/tarifs'
 import { type Secteur, densiteAttendue, secteurReconnu } from '@/lib/secteurs'
 import { formaterSiren } from '@/lib/siren'
+import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
+import { nb } from '@/lib/format'
 
 export type CompanyRequest = {
   id: string
@@ -148,6 +150,86 @@ function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ap
  * n'a pas été accepté, ni créer l'entreprise avant encaissement. Cet écran ne
  * fait donc qu'exposer l'action suivante, jamais un choix libre.
  */
+/**
+ * Le panneau qui établit le devis : deux champs et un bouton.
+ *
+ * Le montant est **proposé** depuis la grille et les volumes déclarés, et
+ * reste modifiable — un devis se négocie, et c'est la ligne saisie qui part
+ * dans le PDF. La référence est proposée de façon stable pour une demande
+ * donnée : rouvrir le panneau ne la change pas.
+ */
+function PanneauDevis({
+  requete, busy, onEnvoyer,
+}: {
+  requete: CompanyRequest
+  busy: boolean
+  onEnvoyer: (reference: string, cents: number) => void
+}) {
+  const lignes = lignesProposees(requete.stores, requete.store_count)
+  const propose = totalProposeCents(lignes)
+  const [reference, setReference] = useState(
+    requete.quote_reference || referenceProposee(new Date().getFullYear(), requete.id),
+  )
+  const [montant, setMontant] = useState(
+    ((requete.quote_amount_cents ?? propose.cents) / 100).toFixed(2).replace('.', ','),
+  )
+
+  const cents = Math.round(Number(montant.replace(/\s/g, '').replace(',', '.')) * 100)
+  const valide = reference.trim() !== '' && Number.isFinite(cents) && cents >= 0
+
+  return (
+    <div className="devis-panneau">
+      <div className="devis-panneau-lignes">
+        {lignes.map((l, i) => (
+          <div className="devis-panneau-ligne" key={i}>
+            <span>{l.libelle}</span>
+            <span className="muted">{l.unites == null ? '—' : `${nb(l.unites)} pièces`}</span>
+            <span className="muted">{l.tranche || '—'}</span>
+            <span className="n">{l.prixCents == null ? 'sur devis' : euros(l.prixCents)}</span>
+          </div>
+        ))}
+        <div className="devis-panneau-ligne devis-panneau-total">
+          <span>Proposition de la grille</span>
+          <span />
+          <span />
+          <span className="n">{euros(propose.cents)}</span>
+        </div>
+      </div>
+
+      {propose.surDevis > 0 && (
+        <div className="muted small">
+          {propose.surDevis} magasin{propose.surDevis > 1 ? 's dépassent' : ' dépasse'} le million
+          d&apos;unités : leur prix se fait au cas par cas, ils ne sont pas dans la proposition.
+        </div>
+      )}
+
+      <div className="devis-panneau-champs">
+        <label>
+          Référence
+          <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={40} />
+        </label>
+        <label>
+          Montant annuel HT
+          <input value={montant} onChange={(e) => setMontant(e.target.value)} inputMode="decimal" />
+        </label>
+      </div>
+
+      <div className="devis-panneau-actions">
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={busy || !valide}
+          onClick={() => valide && onEnvoyer(reference.trim(), cents)}
+        >
+          {busy ? 'Envoi…' : 'Envoyer le devis'}
+        </button>
+        <span className="muted small">
+          Le PDF est fabriqué et joint à l&apos;envoi, avec le lien d&apos;acceptation.
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => void }) {
   const [rows, setRows] = useState<CompanyRequest[]>([])
   const [busy, setBusy] = useState<string | null>(null)
@@ -158,6 +240,10 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Le panneau de devis n'est ouvert que sur une demande à la fois : deux
+  // formulaires ouverts côte à côte, ce sont deux montants qu'on confond.
+  const [devisOuvert, setDevisOuvert] = useState<string | null>(null)
 
   // `supabase.rpc` renvoie un builder « thenable », pas une vraie Promise :
   // on le type en PromiseLike pour pouvoir l'attendre sans le dénaturer.
@@ -175,18 +261,45 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
     return true
   }
 
-  async function quote(r: CompanyRequest) {
-    const reference = prompt(`Référence du devis pour « ${r.company_name} » :`, r.quote_reference || '')
-    if (reference === null) return
-    const amount = prompt('Montant TTC en euros :', r.quote_amount_cents ? String(r.quote_amount_cents / 100) : '')
-    if (amount === null) return
-    const cents = Math.round(Number(amount.replace(',', '.')) * 100)
-    if (!Number.isFinite(cents) || cents < 0) { alert('Montant invalide.'); return }
-    await run(r.id, () =>
-      supabase.rpc('admin_quote_company_request', {
-        p_id: r.id, p_reference: reference, p_amount_cents: cents, p_note: '',
-      }),
-    )
+  /**
+   * Envoyer le devis : la RPC l'enregistre, l'edge fabrique le PDF et l'envoie.
+   *
+   * Le montant part **tel qu'il est saisi**, jamais recalculé à l'envoi : la
+   * grille propose, l'administrateur dispose — un devis se négocie. Les lignes
+   * partent avec lui, pour que le PDF dise d'où vient le total.
+   *
+   * Repli sur la RPC directe si l'edge est injoignable : le devis est alors
+   * enregistré sans partir, et l'écran le dit plutôt que de laisser croire
+   * qu'il est parti.
+   */
+  async function envoyerDevis(r: CompanyRequest, reference: string, cents: number) {
+    const lignes = lignesProposees(r.stores, r.store_count)
+    setBusy(r.id)
+    const { data, error } = await supabase.functions.invoke('admin-send-quote', {
+      body: { requestId: r.id, reference, amountCents: cents, lines: lignes },
+    })
+    setBusy(null)
+    if (!error && data?.success) {
+      setDevisOuvert(null)
+      if (data.emailed === false) {
+        alert(`Devis enregistré, mais l'e-mail n'a pas pu partir : ${data.error ?? 'raison inconnue'}`)
+      }
+      await load()
+      return
+    }
+    if (error) {
+      const ok = await run(r.id, () =>
+        supabase.rpc('admin_quote_company_request', {
+          p_id: r.id, p_reference: reference, p_amount_cents: cents, p_note: '', p_lines: lignes,
+        }),
+      )
+      if (ok) {
+        alert("Devis enregistré, mais l'envoi automatique n'a pas répondu : le client n'a rien reçu.")
+        setDevisOuvert(null)
+      }
+      return
+    }
+    alert('Erreur : ' + (data?.error ?? 'inconnue'))
   }
 
   async function setStatus(r: CompanyRequest, status: string, confirmText?: string) {
@@ -271,18 +384,33 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
             )}
             {r.message && <div className="muted small">« {r.message} »</div>}
             <MagasinsDeclares stores={r.stores} ape={r.ape} />
+            {devisOuvert === r.id && (
+              <PanneauDevis
+                requete={r}
+                busy={busy === r.id}
+                onEnvoyer={(reference, cents) => envoyerDevis(r, reference, cents)}
+              />
+            )}
           </div>
 
           <div className="req-actions">
             {r.status === 'pending' && (
-              <button className="btn btn-primary btn-sm" disabled={busy === r.id} onClick={() => quote(r)}>
-                Émettre un devis
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={busy === r.id}
+                onClick={() => setDevisOuvert(devisOuvert === r.id ? null : r.id)}
+              >
+                {devisOuvert === r.id ? 'Fermer' : 'Établir le devis'}
               </button>
             )}
             {r.status === 'quoted' && (
               <>
-                <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => quote(r)}>
-                  Modifier le devis
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={busy === r.id}
+                  onClick={() => setDevisOuvert(devisOuvert === r.id ? null : r.id)}
+                >
+                  {devisOuvert === r.id ? 'Fermer' : 'Renvoyer le devis'}
                 </button>
                 <button className="btn btn-primary btn-sm" disabled={busy === r.id} onClick={() => setStatus(r, 'accepted')}>
                   Devis accepté

@@ -118,6 +118,68 @@ Bénéfice de sécurité : l'oracle d'énumération d'e-mails que défendait tou
 travail du constat M3 (réponse uniforme, limitation de débit) n'a plus d'objet
 — la surface publique elle-même a disparu.
 
+## Le devis part tout seul, et s'accepte en ligne (22 août 2026)
+
+*« Fais les trois, il ne restera plus qu'à brancher Stripe. »* Jusque-là :
+l'administrateur saisissait référence et montant dans deux `prompt()`,
+fabriquait le PDF à la main depuis `docs/entreprise/modeles/devis.html`, et
+l'envoyait de sa messagerie. Le statut passait à `quoted` sans que rien ne
+parte, et l'acceptation se déclarait à la main.
+
+Migration `20260822220001`, maquette validée avant codage :
+https://claude.ai/code/artifact/fa94384a-84d5-4eea-a0ab-0cc0192b357b
+
+**Le parcours** : la console établit le devis (référence proposée, montant
+calculé depuis la grille et les volumes déclarés, lignes affichées) →
+`admin-send-quote` enregistre, **fabrique le PDF** et l'envoie en pièce jointe
+avec un lien → le client ouvre `/devis/<jeton>`, télécharge le PDF, accepte →
+`accept-quote` pose le statut et écrit deux messages (accusé au client, avis à
+Quantinvo si `QUOTE_NOTIFY_EMAIL` est posée).
+
+Points à ne pas défaire :
+
+- **Le PDF est généré, jamais déposé.** `_shared/devis.ts` calcule les lignes
+  *et* décrit la mise en page (des éléments à des millimètres) ;
+  `_shared/devisPdf.ts` est le seul à connaître pdf-lib. Cette séparation rend
+  la mise en page **testable** par vitest, qui ne sait pas résoudre les imports
+  esm.sh — et elle évite deux dessins du même document. Le PDF joint à l'e-mail
+  et le PDF téléchargé sortent du même module : c'est pourquoi `quote_by_token`
+  rend le nom complet et le SIREN, qui figurent de toute façon sur le document
+  que ce même jeton télécharge.
+- **Le montant part tel qu'il est saisi**, jamais recalculé à l'envoi : la
+  grille propose, l'administrateur dispose — un devis se négocie. `web/lib/devis.ts`
+  est la **copie volontaire** du calcul de `_shared/devis.ts` (npm d'un côté,
+  esm.sh de l'autre), et `web/tests/devis.test.ts` compare les deux grilles
+  tranche par tranche.
+- **Le prospect n'a pas de compte** — c'est tout l'objet du parcours. `/devis/<jeton>`
+  est donc publique et **hors de la coquille `AppShell`** (elle s'ouvre depuis
+  une messagerie, souvent au téléphone), `quote_by_token` et
+  `accept_quote_by_token` sont ouvertes à `anon`, et **le jeton tient lieu de
+  clé** : uuid aléatoire, aucune adresse e-mail rendue par la lecture, et la
+  limitation de débit de `rate_limit_ok`. `quote-pdf` et `accept-quote` sont
+  déployées en `verify_jwt: false` — deux fonctions publiques de plus, avec
+  `submit-supervisor-request`.
+- **Un nouvel envoi change le jeton** : renvoyer un devis invalide l'ancien
+  lien, qui porterait un montant périmé. Un devis expiré (30 jours) ne
+  s'accepte plus.
+- **L'acceptation ne crée rien.** Elle pose une date et un statut ; la création
+  de l'entreprise reste derrière `paid`. C'est ce point qui rendra la bascule
+  Stripe indolore — le webhook n'aura qu'à jouer `accepted → paid`, comme la
+  section suivante le prévoit. Un second clic répond `already: true` plutôt
+  qu'une erreur, exactement ce qu'il faudra à Stripe qui rejoue ses webhooks.
+
+**Vérifié pour de vrai** le 22 août 2026, sur une demande d'essai créée puis
+supprimée (aucun résidu, contrôlé en base) : le PDF servi par `quote-pdf`
+(2,8 ko, rendu à l'écran et relu), l'acceptation par l'edge publique
+(`success/already/lien invalide` selon le cas), et la page `/devis/<jeton>` au
+navigateur — clair, sombre, et 375 px, où la mise en page des lignes a dû être
+reprise (le prix se retrouvait au milieu du rang).
+
+**Reste à faire** : poser `QUOTE_NOTIFY_EMAIL` dans les variables des edge
+functions pour recevoir l'avis d'acceptation, et brancher Stripe.
+
+Tests de garde : `web/tests/devis.test.ts`.
+
 ## Paiement : Stripe à terme
 
 L'encaissement est aujourd'hui déclaré à la main par l'administrateur. **Le
