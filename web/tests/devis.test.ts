@@ -278,3 +278,31 @@ describe('le client peut décliner (22 août 2026)', () => {
     expect(edge).toContain('vous ne recevrez pas de relance')
   })
 })
+
+describe('une demande refusée peut être supprimée (23 août 2026)', () => {
+  const migration = lire('../../supabase/migrations/20260823160001_supprimer_demande_entreprise.sql')
+
+  it('refuse ce qui a créé une entreprise ou porte un paiement', () => {
+    expect(migration).toContain("v_req.status = 'created'")
+    expect(migration).toContain("v_req.status = 'paid'")
+    expect(migration).toContain("v_req.status = 'accepted' and v_req.stripe_checkout_session_id is not null")
+    expect(migration).toContain('delete from public.company_requests where id = p_id')
+  })
+
+  it('est réservée à Quantinvo et journalisée', () => {
+    expect(migration).toContain('if not public.is_admin()')
+    expect(migration).toContain("log_admin_action('demande_entreprise_supprimee'")
+    expect(migration).toMatch(/revoke all on function public\.admin_delete_company_request\(uuid\) from public, anon/)
+  })
+
+  it('ne propose le geste que sur une demande refusée ou déclinée', () => {
+    expect(console_).toContain("(r.status === 'rejected' || r.status === 'declined') && (")
+    expect(console_).toContain("supabase.rpc('admin_delete_company_request', { p_id: r.id })")
+    // Une confirmation avant un geste irréversible.
+    expect(console_).toMatch(/async function supprimer[\s\S]*?confirm\(/)
+  })
+
+  it('a son libellé au journal', () => {
+    expect(lire('../components/admin/AuditLog.tsx')).toContain("demande_entreprise_supprimee: 'Demande d’inscription supprimée'")
+  })
+})

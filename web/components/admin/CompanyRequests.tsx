@@ -312,6 +312,17 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
     )
   }
 
+  /**
+   * Supprimer une demande qui n'a rien produit — refusée, déclinée, ou un
+   * essai. La base refuse ce qui a créé une entreprise ou porte un paiement ;
+   * l'écran ne propose le geste que sur les deux états terminaux, pour ne pas
+   * faire découvrir le refus après coup.
+   */
+  async function supprimer(r: CompanyRequest) {
+    if (!confirm(`Supprimer définitivement la demande de « ${r.company_name} » ?\n\nElle disparaîtra de la console ; le journal garde la trace.`)) return
+    await run(r.id, () => supabase.rpc('admin_delete_company_request', { p_id: r.id }))
+  }
+
   async function fulfil(r: CompanyRequest) {
     // Les noms déclarés au formulaire sont proposés tels quels : dans la
     // plupart des cas il n'y a plus qu'à valider. Le tarif de chaque magasin
@@ -458,6 +469,11 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
                 onClick={() => setStatus(r, 'rejected', `Refuser la demande de « ${r.company_name} » ?`)}
               >
                 Refuser
+              </button>
+            )}
+            {(r.status === 'rejected' || r.status === 'declined') && (
+              <button className="link-btn" disabled={busy === r.id} onClick={() => supprimer(r)}>
+                Supprimer
               </button>
             )}
           </div>

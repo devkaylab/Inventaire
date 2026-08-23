@@ -35,6 +35,7 @@ const ACTION_LABEL: Record<string, string> = {
   compte_supprime: 'Compte supprimé',
   devis_envoye: 'Devis envoyé',
   statut_demande_entreprise: 'Statut de demande modifié',
+  demande_entreprise_supprimee: 'Demande d’inscription supprimée',
 }
 
 const STATUT_FR: Record<string, string> = {

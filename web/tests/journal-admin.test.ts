@@ -32,6 +32,7 @@ const FONCTIONS_INSTRUMENTEES = [
   'admin_fulfil_company_request',
   'admin_rename_company',
   'admin_rename_store',
+  'admin_delete_company_request',
 ]
 
 describe('journal des actions admin (migration)', () => {
