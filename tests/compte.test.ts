@@ -599,3 +599,37 @@ describe('les six impasses du premier lancement (23 août 2026)', () => {
     expect(plist).toContain('balises de zone')
   })
 })
+
+describe('un superviseur a une entreprise et au moins un magasin (23 août 2026)', () => {
+  // Règle posée par Julien. Elle n'était pas garantie : trois chemins
+  // laissaient un superviseur sans magasin — donc quelqu'un qui se connecte,
+  // ne voit rien et ne peut rien créer.
+  const migration = readFileSync(
+    path.join(here, '..', 'supabase', 'migrations', '20260823100001_superviseur_au_moins_un_magasin.sql'),
+    'utf8',
+  )
+
+  it('les trois portes refusent un superviseur sans magasin', () => {
+    expect(migration).toContain('ca_invite_supervisor')
+    expect(migration).toContain('ca_set_supervisor_stores')
+    expect(migration).toContain('admin_unassign_supervisor')
+    // Deux gardes sur liste vide, une sur le dernier magasin.
+    expect(migration.match(/array_length\(v_ids, 1\), 0\) = 0/g)?.length).toBe(2)
+    expect(migration).toContain('v_restants = 0')
+  })
+
+  it('l’administrateur d’entreprise reste hors de la règle', () => {
+    // Il supervise tous les magasins par construction : le lui refuser
+    // n'aurait pas de sens, et les deux fonctions le disaient déjà.
+    expect(migration).toContain('est affecté à tous les magasins')
+  })
+
+  it('le mode balises est le défaut, et reste un choix', () => {
+    const nouvelInventaire = lire('app/(supervisor)/new-session.tsx')
+    expect(nouvelInventaire).toContain('useState(true)')
+    // L'interrupteur existe toujours : c'est le choix du superviseur.
+    expect(nouvelInventaire).toContain('setUsesZones')
+    // Plus de défaut trompeur dans la signature — le site l'exige déjà.
+    expect(lire('lib/queries.ts')).toContain('usesZones: boolean)')
+  })
+})

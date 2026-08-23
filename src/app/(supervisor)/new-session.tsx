@@ -19,7 +19,10 @@ export default function NewSessionScreen() {
   const [name, setName] = useState('')
   const [storeId, setStoreId] = useState<string | null>(null)
   const [securityCode, setSecurityCode] = useState(generateCode())
-  const [usesZones, setUsesZones] = useState(false)
+  // Le comptage par balises est le mode par défaut (décision du 23 août 2026),
+  // comme sur le site — l'app était le seul écran à partir sans. Le
+  // superviseur reste libre de l'éteindre : c'est son choix, pas une règle.
+  const [usesZones, setUsesZones] = useState(true)
   const [loading, setLoading] = useState(false)
 
   const { data: stores, isLoading: storesLoading } = useQuery({

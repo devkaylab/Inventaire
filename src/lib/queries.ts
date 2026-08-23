@@ -134,7 +134,7 @@ export async function insertCount(count: TablesInsert<'counts'>) {
   return data
 }
 
-export async function createSession(name: string, storeId: string, securityCode: string, usesZones = false) {
+export async function createSession(name: string, storeId: string, securityCode: string, usesZones: boolean) {
   const { data, error } = await supabase.rpc('create_session', {
     p_name: name,
     p_store_id: storeId,
