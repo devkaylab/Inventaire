@@ -3,7 +3,6 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { mfaPending } from '@/lib/mfa'
 import { friendlySignInError } from '@/lib/errors'
-import { registerForPushNotifications } from '@/lib/push'
 import { cacheProfile, getCachedProfile } from '@/lib/offline'
 import type { Tables } from '@/types/database.types'
 
@@ -94,7 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(data)
       void cacheProfile(data)
       setLoading(false)
-      void registerForPushNotifications()
+      // ⚠️ La demande de notifications partait ICI, donc la boîte système
+      // s'ouvrait juste après la connexion — avant même que la personne ait
+      // vu un écran, et sans un mot d'explication. Elle part désormais quand
+      // on ouvre un inventaire : c'est là qu'elle a un objet.
       return
     }
 

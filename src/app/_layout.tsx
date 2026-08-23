@@ -12,7 +12,8 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter'
-import { AuthProvider } from '@/lib/auth'
+import { AuthProvider, useAuth } from '@/lib/auth'
+import { useNotificationRouting } from '@/lib/push'
 import { ThemeProvider } from '@/lib/theme'
 import { SplashAnimation } from '@/components/SplashAnimation'
 import { OfflineTopBanner } from '@/components/OfflineTopBanner'
@@ -23,6 +24,18 @@ SplashScreen.preventAutoHideAsync()
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 2, staleTime: 30_000 } },
 })
+
+/**
+ * Toucher « Nouvel inventaire » ouvrait l'accueil : rien n'écoutait la
+ * réponse aux notifications. Le branchement vit ici, sous AuthProvider —
+ * c'est le seul endroit monté en permanence qui connaisse le rôle, et le rôle
+ * décide de la pile à ouvrir.
+ */
+function RoutageNotifications() {
+  const { profile } = useAuth()
+  useNotificationRouting(profile?.role)
+  return null
+}
 
 export default function RootLayout() {
   // Load Inter; render nothing until ready so we never flash the system font.
@@ -55,6 +68,7 @@ export default function RootLayout() {
             {/* Au-dessus de la pile : le bandeau doit coiffer l'en-tête de
                 chaque écran, et rester visible quelle que soit la page. */}
             <OfflineTopBanner />
+            <RoutageNotifications />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="login" />

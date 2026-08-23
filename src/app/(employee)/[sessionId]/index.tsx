@@ -11,9 +11,13 @@ import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
+import { useNotificationsSurInventaire } from '@/lib/push'
 import { baliseSummary } from '@/components/OfflineBanner'
 
 export default function EmployeeProgressScreen() {
+  // Les notifications se demandent ici : ouvrir un inventaire est le geste
+  // qui leur donne un objet.
+  useNotificationsSurInventaire()
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const theme = useTheme()
   const styles = makeStyles(theme)

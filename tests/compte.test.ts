@@ -545,3 +545,57 @@ describe('connexion — le message est en français, et la sortie existe', () =>
     expect(login).toContain('styles.erreurBox')
   })
 })
+
+describe('les six impasses du premier lancement (23 août 2026)', () => {
+  const auth = lire('lib/auth.tsx')
+  const push = lire('lib/push.ts')
+  const scanner = lire('components/scanner.tsx')
+  const son = lire('lib/scanSound.ts')
+  const accueilSup = lire('app/(supervisor)/index.tsx')
+
+  it('les notifications ne se demandent plus à la connexion', () => {
+    // Elles s'ouvraient juste après le mot de passe, avant le moindre écran.
+    expect(auth).not.toContain('registerForPushNotifications')
+    expect(lire('app/(employee)/[sessionId]/index.tsx')).toContain('useNotificationsSurInventaire()')
+    expect(lire('app/(supervisor)/[sessionId]/index.tsx')).toContain('useNotificationsSurInventaire()')
+  })
+
+  it('toucher la notification ouvre l’inventaire', () => {
+    expect(push).toContain('useLastNotificationResponse')
+    expect(lire('app/_layout.tsx')).toContain('useNotificationRouting')
+  })
+
+  it('une permission refusée définitivement n’est pas redemandée', () => {
+    // Sur iOS la boîte ne revient jamais : redemander est inerte et laisse
+    // la personne devant un bouton mort.
+    expect(push).toContain('canAskAgain')
+    expect(scanner).toMatch(/status === 'undetermined' && permission\.canAskAgain/)
+  })
+
+  it('un refus de caméra mène aux Réglages et garde un repli clavier', () => {
+    expect(scanner).toContain('Linking.openSettings()')
+    expect(scanner).toContain('AppState.addEventListener')
+    expect(scanner).toContain('Passer en saisie manuelle')
+  })
+
+  it('le bip s’entend même en silencieux, sans couper la musique', () => {
+    expect(son).toContain('playsInSilentMode: true')
+    expect(son).toContain("interruptionMode: 'mixWithOthers'")
+  })
+
+  it('le superviseur sans magasin l’apprend sur son accueil', () => {
+    expect(accueilSup).toContain('getMyAssignedStores')
+    expect(accueilSup).toContain('sansMagasin')
+    // Un échec de chargement n'est pas une liste vide.
+    expect(accueilSup).toContain('magasinsEnErreur')
+  })
+
+  it('le texte iOS de la caméra parle des balises, en app.json ET en natif', () => {
+    const appJson = readFileSync(path.join(here, '..', 'app.json'), 'utf8')
+    const plist = readFileSync(path.join(here, '..', 'ios', 'Inventaire', 'Info.plist'), 'utf8')
+    // C'est le plist qui part dans un build Xcode : l'oublier ne changerait
+    // rien à ce que voit la personne.
+    expect(appJson).toContain('balises de zone')
+    expect(plist).toContain('balises de zone')
+  })
+})

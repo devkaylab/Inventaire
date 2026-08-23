@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react'
 import { Alert, Platform } from 'react-native'
+import { router } from 'expo-router'
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
@@ -33,9 +35,13 @@ export async function registerForPushNotifications(): Promise<void> {
       return
     }
 
-    const { status: existing } = await Notifications.getPermissionsAsync()
-    let status = existing
-    if (existing !== 'granted') {
+    const perm = await Notifications.getPermissionsAsync()
+    let status = perm.status
+    if (status !== 'granted') {
+      // Même règle que la caméra : après un refus définitif, iOS ne rouvre
+      // plus la boîte. Redemander serait inerte — et masquerait le fait que
+      // seul un passage par les Réglages peut débloquer.
+      if (!perm.canAskAgain) return
       const req = await Notifications.requestPermissionsAsync()
       status = req.status
     }
@@ -67,4 +73,44 @@ export async function registerForPushNotifications(): Promise<void> {
       Alert.alert('Push — erreur', e instanceof Error ? e.message : String(e))
     }
   }
+}
+
+/**
+ * Demande les notifications au moment où elles ont un objet : l'ouverture
+ * d'un inventaire. Avant, la boîte système partait juste après la connexion,
+ * sans explication et avant le moindre écran.
+ *
+ * L'appel est sans effet s'il a déjà eu lieu, si l'autorisation est acquise,
+ * ou si le système ne veut plus poser la question.
+ */
+export function useNotificationsSurInventaire() {
+  useEffect(() => {
+    void registerForPushNotifications()
+  }, [])
+}
+
+/**
+ * Toucher la notification « Nouvel inventaire » ouvrait l'accueil : rien
+ * n'écoutait la réponse. `useLastNotificationResponse` couvre les deux cas —
+ * l'app réveillée et l'app lancée depuis la notification.
+ *
+ * Le rôle décide de la pile : un compteur et un superviseur n'ouvrent pas le
+ * même écran pour le même inventaire.
+ */
+export function useNotificationRouting(role: string | null | undefined) {
+  const reponse = Notifications.useLastNotificationResponse()
+  const dejaOuvert = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!role || !reponse) return
+    const data = reponse.notification.request.content.data as { sessionId?: string } | undefined
+    const sessionId = typeof data?.sessionId === 'string' ? data.sessionId : null
+    if (!sessionId) return
+    // Sans ce garde, revenir sur l'app rejouerait la dernière réponse et
+    // rouvrirait l'inventaire alors qu'on venait d'en sortir.
+    if (dejaOuvert.current === reponse.notification.request.identifier) return
+    dejaOuvert.current = reponse.notification.request.identifier
+    const groupe = role === 'supervisor' ? '(supervisor)' : '(employee)'
+    router.push(`/${groupe}/${sessionId}` as never)
+  }, [reponse, role])
 }

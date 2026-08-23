@@ -12,6 +12,7 @@ import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { PendingBalisesRow } from '@/components/PendingBalisesRow'
+import { useNotificationsSurInventaire } from '@/lib/push'
 import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
@@ -53,6 +54,9 @@ function RefreshGlyph({ spinning, onPress, theme }: { spinning: boolean; onPress
 }
 
 export default function SessionDetailScreen() {
+  // Les notifications se demandent ici : ouvrir un inventaire est le geste
+  // qui leur donne un objet.
+  useNotificationsSurInventaire()
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const { profile } = useAuth()
   const queryClient = useQueryClient()
