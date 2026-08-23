@@ -88,18 +88,3 @@ export function sinceDuration(ms: number): string {
 export function plural(n: number, singular: string, plural?: string): string {
   return `${n} ${n > 1 ? (plural ?? `${singular}s`) : singular}`
 }
-
-/**
- * Octets en unité lisible — binaire (1 Ko = 1024 o), comme les systèmes de
- * fichiers qui produisent ces chiffres. Les mélanger avec le décimal des
- * disquiers ferait un écart de 7 % sur un Go, silencieux et faux.
- */
-export function octets(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  const unites = ['o', 'ko', 'Mo', 'Go', 'To']
-  let n = Math.abs(v)
-  let i = 0
-  while (n >= 1024 && i < unites.length - 1) { n /= 1024; i += 1 }
-  const arrondi = n < 10 && i > 0 ? Math.round(n * 10) / 10 : Math.round(n)
-  return `${arrondi.toLocaleString('fr-FR')} ${unites[i]}`
-}
