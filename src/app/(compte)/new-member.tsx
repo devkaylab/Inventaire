@@ -61,7 +61,13 @@ export default function NewMemberScreen() {
         email: mail,
         storeIds: multiStore ? selectedStores : [],
       })
-      await queryClient.invalidateQueries({ queryKey: ['team-invitations'] })
+      // ⚠️ **La clé de « Mon équipe », pas une autre.** C'était
+      // `['team-invitations']` — la clé d'une requête supprimée le 21 août
+      // 2026 avec l'ancien écran de profil. Rien n'était donc rechargé :
+      // l'écran d'où l'on vient affichait toujours « Personne dans votre
+      // équipe », et le superviseur recommençait (constat de Julien,
+      // 23 août 2026). Le cache tient 30 s, un retour ne suffit pas.
+      await queryClient.invalidateQueries({ queryKey: ['my-team'] })
       Alert.alert(
         'Compteur ajouté',
         res.emailSent

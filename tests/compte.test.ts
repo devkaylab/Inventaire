@@ -711,6 +711,37 @@ describe('onboarding (23 août 2026)', () => {
  * et le démarrage du superviseur pour objet : générer ses balises, constituer
  * son équipe, créer son premier inventaire.
  */
+/**
+ * Inviter un compteur, et le voir (23 août 2026). Constat de Julien : après
+ * l'envoi de l'invitation, « Mon équipe » restait vide — de quoi recommencer.
+ */
+describe('une personne invitée apparaît tout de suite', () => {
+  const equipe = lire('app/(compte)/team.tsx')
+  const ajout = lire('app/(compte)/new-member.tsx')
+
+  it('l’ajout recharge la liste de « Mon équipe »', () => {
+    // `['team-invitations']` était la clé d'une requête supprimée le 21 août
+    // avec l'ancien écran de profil : plus rien ne l'écoutait.
+    expect(ajout).toContain("queryKey: ['my-team']")
+    expect(ajout).not.toContain("queryKey: ['team-invitations']")
+  })
+
+  it('« pas encore connecté » ne se dit pas « accès retiré »', () => {
+    // `is_active` veut dire « s'est déjà connecté ». Une personne retirée n'a
+    // plus de ligne du tout. Même libellé que le site.
+    expect(equipe).toContain('Mot de passe à créer')
+    // Il n'en reste que la trace dans le commentaire qui dit pourquoi.
+    expect(equipe).not.toContain('>Accès retiré<')
+    expect(equipe).not.toContain('offBadge')
+    expect(lire('../web/app/equipe/page.tsx')).toContain('Mot de passe à créer')
+  })
+
+  it('la ligne montre l’adresse tant que la personne n’a pas ouvert l’app', () => {
+    // C'est là qu'est parti le lien : c'est ce qu'on veut relire.
+    expect(equipe).toContain("? counter.email ?? 'Invitation envoyée'")
+  })
+})
+
 describe('le bandeau de démarrage', () => {
   const bandeau = lire('components/BandeauDemarrage.tsx')
   const accueil = lire('app/(supervisor)/index.tsx')

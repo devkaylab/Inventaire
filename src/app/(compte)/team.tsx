@@ -225,20 +225,34 @@ function CounterRow({
       </View>
       <View style={styles.rowText}>
         <Text style={styles.name}>{counter.full_name || counter.email || 'Sans nom'}</Text>
-        <Text style={styles.meta}>
-          {counter.sessions_counted > 0
-            ? `${counter.sessions_counted} inventaire${counter.sessions_counted > 1 ? 's' : ''} compté${counter.sessions_counted > 1 ? 's' : ''}`
-            : 'Compteur'}
+        {/* Tant que la personne n'a pas ouvert l'application, c'est son
+            adresse qui compte : c'est là qu'est parti le lien, et c'est ce
+            qu'on veut relire pour vérifier qu'on ne s'est pas trompé. Une
+            fois qu'elle compte, son activité est plus utile. */}
+        <Text style={styles.meta} numberOfLines={1}>
+          {!counter.is_active
+            ? counter.email ?? 'Invitation envoyée'
+            : counter.sessions_counted > 0
+              ? `${counter.sessions_counted} inventaire${counter.sessions_counted > 1 ? 's' : ''} compté${counter.sessions_counted > 1 ? 's' : ''}`
+              : 'Compteur'}
         </Text>
+        {/* ⚠️ **`is_active` veut dire « s'est déjà connecté »**, rien d'autre :
+            une personne retirée n'a plus de ligne du tout, elle disparaît de
+            la liste. Le badge disait « Accès retiré » — un contresens, et sur
+            le cas le plus courant : quelqu'un qu'on vient d'inviter. Même
+            libellé que le site (`BadgeEnAttente`, /equipe), pour la même chose.
+            Il se pose **sous le nom**, pas à côté : sur la largeur d'un
+            téléphone, la rangée nom + pastille + « Retirer » cassait le nom sur
+            deux lignes et tronquait l'adresse. */}
+        {!counter.is_active && (
+          <View style={[styles.pendingBadge, styles.pendingBadgeSous]}>
+            <Text style={styles.pendingBadgeText}>Mot de passe à créer</Text>
+          </View>
+        )}
       </View>
-      {!counter.is_active && (
-        <View style={styles.offBadge}>
-          <Text style={styles.offBadgeText}>Accès retiré</Text>
-        </View>
-      )}
-      {/* « Accès retiré » dit un état, « Retirer » déclenche une action : même
-          distinction que sur la fiche d'un inventaire — l'étiquette est
-          neutre, l'action est du texte rouge. */}
+      {/* Le badge dit un état, « Retirer » déclenche une action : même
+          distinction que sur la fiche d'un inventaire — l'étiquette est une
+          pastille, l'action est du texte rouge. */}
       <Pressable style={styles.removeBtn} onPress={onRemove} hitSlop={8}>
         <Text style={styles.removeBtnText}>Retirer</Text>
       </Pressable>
@@ -273,16 +287,12 @@ function makeStyles(t: Theme) {
       backgroundColor: t.warningSoft, borderRadius: Radius.pill,
       paddingHorizontal: Spacing.sm, paddingVertical: 3,
     },
+    // Dans la colonne de texte : la pastille ne prend que sa largeur.
+    pendingBadgeSous: { alignSelf: 'flex-start', marginTop: 5 },
     pendingBadgeText: {
       fontSize: 10, fontFamily: Font.bold, color: t.warning,
       textTransform: 'uppercase', letterSpacing: 0.4,
     },
-    offBadge: {
-      backgroundColor: t.accentSoft, borderRadius: Radius.pill,
-      paddingHorizontal: Spacing.sm, paddingVertical: 3,
-    },
-    offBadgeText: { fontSize: 10, fontFamily: Font.bold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
-
     cancelBtn: {
       width: 28, height: 28, borderRadius: 14, backgroundColor: t.dangerSoft,
       alignItems: 'center', justifyContent: 'center',
