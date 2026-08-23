@@ -8,7 +8,14 @@ let error: PlayerEntry | null = null
 
 export async function loadScanSound() {
   try {
-    await setAudioModeAsync({ playsInSilentMode: false })
+    // Le bip est un retour de travail, pas un son d'agrément : une douchette
+    // de magasin bipe, silencieux ou non. Avec `false`, un téléphone en
+    // silencieux ne confirmait plus rien à l'oreille — et en rayon bruyant,
+    // l'haptique seule passe inaperçue.
+    //
+    // `mixWithOthers` pour ne pas couper la musique ou le podcast de qui
+    // compte pendant des heures : notre bip se superpose, il n'exproprie pas.
+    await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' })
     beep  = { player: createAudioPlayer(require('../../assets/sounds/beep.wav')) }
     error = { player: createAudioPlayer(require('../../assets/sounds/error.wav')) }
   } catch {

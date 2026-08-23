@@ -6,7 +6,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { closeSession, deleteSessionPermanently, getSessions } from '@/lib/queries'
+import { closeSession, deleteSessionPermanently, getMyAssignedStores, getSessions } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -226,6 +226,15 @@ export default function SupervisorHomeScreen() {
     queryKey: ['sessions'],
     queryFn: getSessions,
   })
+
+  // Sans magasin affecté, un superviseur ne peut rien créer. Il ne le
+  // découvrait qu'après « Nouvel inventaire », deux écrans plus loin : on le
+  // lui dit ici, là où il attend quelque chose.
+  const { data: magasins, isError: magasinsEnErreur } = useQuery({
+    queryKey: ['mes-magasins'],
+    queryFn: getMyAssignedStores,
+  })
+  const sansMagasin = !magasinsEnErreur && magasins !== undefined && magasins.length === 0
 
   const queryClient = useQueryClient()
   const onRefresh = useCallback(() => { refetch() }, [refetch])
@@ -508,9 +517,27 @@ export default function SupervisorHomeScreen() {
             </View>
           }
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyText}>Aucun inventaire pour l&apos;instant</Text>
-            </View>
+            sansMagasin ? (
+              <View style={styles.videCard}>
+                <Text style={styles.videTitre}>
+                  {profile?.is_company_admin
+                    ? 'Votre entreprise n’a encore aucun magasin'
+                    : 'Aucun magasin ne vous est affecté'}
+                </Text>
+                <Text style={styles.videTexte}>
+                  {/* Même piège que sur l'écran Magasins : un administrateur
+                      d'entreprise supervise tous les magasins des siens. Lui
+                      parler d'affectation le renverrait à lui-même. */}
+                  {profile?.is_company_admin
+                    ? 'Un inventaire se rattache à un magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.'
+                    : 'Un inventaire se rattache à un magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.center}>
+                <Text style={styles.emptyText}>Aucun inventaire pour l&apos;instant</Text>
+              </View>
+            )
           }
         />
       )}
@@ -615,6 +642,10 @@ function makeStyles(t: Theme) {
     meta: { fontSize: 12, color: t.textMuted, ...tabular },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
     emptyText: { color: t.textMuted, fontSize: 15, fontFamily: Font.regular },
+    videCard: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: Radius.lg,
+      padding: Spacing.xl, marginHorizontal: Spacing.lg, marginTop: Spacing.lg, gap: Spacing.sm },
+    videTitre: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },
+    videTexte: { color: t.textSecondary, fontSize: 14, fontFamily: Font.regular, lineHeight: 20 },
     fab: {
       position: 'absolute', bottom: Spacing.xxl, left: Spacing.xxl, right: Spacing.xxl,
       backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg,
