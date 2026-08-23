@@ -141,8 +141,11 @@ describe('connexion — le sablier ne doit pas rester allumé', () => {
     expect(login).toMatch(/if \(await mfaPending\(\)\) \{\s*\n\s*setLoading\(false\)/)
   })
 
-  it('un échec de connexion sort de la fonction au lieu de poursuivre', () => {
-    expect(login).toMatch(/Alert\.alert\('Connexion échouée', error\)\s*\n\s*return/)
+  it('un échec de connexion éteint le sablier et sort de la fonction', () => {
+    // L'alerte modale a laissé place à un message sous le formulaire
+    // (23 août 2026) ; l'invariant gardé reste le même, et gagne le
+    // `setLoading(false)` que l'ancienne version ne vérifiait pas.
+    expect(login).toMatch(/setLoading\(false\)\s*\n\s*setErreur\(error\)\s*\n\s*return/)
   })
 
   it('l’écran du code dit de quel compte il s’agit', () => {
@@ -496,5 +499,49 @@ describe('le balayage pour supprimer', () => {
     const pkg = lire('../package.json')
     expect(pkg).toContain('react-native-gesture-handler')
     expect(liste).toContain("from 'react-native-gesture-handler/ReanimatedSwipeable'")
+  })
+})
+
+describe('connexion — le message est en français, et la sortie existe', () => {
+  // Impasse relevée le 23 août 2026 : l'app affichait `error.message` de
+  // Supabase tel quel — « Invalid login credentials » — à un compteur
+  // saisonnier, et n'offrait aucun « mot de passe oublié ».
+  const login = lire('app/login.tsx')
+  const auth = lire('lib/auth.tsx')
+  const errors = lire('lib/errors.ts')
+
+  it('signIn traduit avant de rendre l’erreur', () => {
+    // On borne à signIn : signUp voisine dans le fichier et rend encore le
+    // message brut (il n'est plus appelé — plus d'auto-inscription).
+    const debut = auth.indexOf('async function signIn')
+    const corps = auth.slice(debut, auth.indexOf('async function signUp', debut))
+    expect(debut).toBeGreaterThan(-1)
+    expect(corps).toContain('friendlySignInError(error)')
+    expect(corps).not.toContain('error?.message')
+  })
+
+  it('le réseau se distingue des identifiants', () => {
+    expect(errors).toContain('AuthRetryableFetchError')
+    expect(errors).toContain('Impossible de joindre le serveur')
+  })
+
+  it('un compte inconnu ne se distingue pas d’un mot de passe faux', () => {
+    // Constat M3 : deux textes distincts rouvriraient l'oracle
+    // d'énumération d'adresses. Le repli couvre les deux cas.
+    // On ne regarde que le code : le commentaire, lui, a le droit d'énoncer
+    // la règle qu'il explique.
+    const code = errors.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    expect(code).not.toMatch(/n.existe pas|compte inconnu|utilisateur introuvable/i)
+    expect(code).toContain('Adresse e-mail ou mot de passe incorrect.')
+  })
+
+  it('l’écran offre une sortie à qui a oublié son mot de passe', () => {
+    expect(login).toContain('PASSWORD_FORGOT_URL')
+    expect(login).toContain('Mot de passe oublié ?')
+  })
+
+  it('l’erreur se lit sous le formulaire, pas dans une alerte', () => {
+    expect(login).not.toContain("Alert.alert('Connexion échouée'")
+    expect(login).toContain('styles.erreurBox')
   })
 })
