@@ -12,7 +12,6 @@
  * qui change de téléphone retrouve ses repères.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useFocusEffect } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export type Repere =
@@ -24,6 +23,34 @@ export type Repere =
   | 'balayage'           // le geste caché de la liste d'inventaires
 
 const cle = (repere: Repere, userId: string) => `repere.${repere}.${userId}`
+
+/* ─── Ce qui change le stockage prévient les écrans ────────────────────────
+ *
+ * Un écran lit le stockage à son montage. Sans cet avertissement, il garde
+ * cet état tant qu'il vit : « Revoir les repères », déclenché depuis « Mon
+ * compte », effaçait bien les clés mais l'accueil ne les relisait qu'au
+ * prochain lancement de l'application — on appuyait, rien ne se passait, et
+ * le bouton semblait cassé (constat du 23 août 2026).
+ *
+ * ⚠️ **On prévient APRÈS l'écriture, jamais avant** : les écrans vont relire
+ * le stockage, il doit déjà être à jour. C'est aussi ce qui évite qu'un
+ * repère tout juste fermé réapparaisse.
+ *
+ * Cela remplace une relecture au retour sur l'écran (`useFocusEffect`), qui
+ * aurait laissé de côté le seul appelant qui n'est pas un écran : la porte de
+ * bienvenue, posée en surcouche du layout racine — donc précisément l'écran
+ * que « Revoir les repères » nomme en premier.
+ */
+const abonnes = new Set<() => void>()
+
+function prevenir() {
+  for (const relire of [...abonnes]) relire()
+}
+
+function sAbonner(relire: () => void) {
+  abonnes.add(relire)
+  return () => { abonnes.delete(relire) }
+}
 
 export async function repereVu(repere: Repere, userId: string): Promise<boolean> {
   try {
@@ -41,6 +68,7 @@ export async function marquerRepereVu(repere: Repere, userId: string): Promise<v
   } catch {
     // Sans effet : au pire le repère se remontrera une fois.
   }
+  prevenir()
 }
 
 /** Oublie tous les repères d'un compte — « Revoir les repères », Mon compte. */
@@ -51,6 +79,7 @@ export async function oublierReperes(userId: string): Promise<void> {
   } catch {
     // Idem : sans conséquence.
   }
+  prevenir()
 }
 
 /**
@@ -59,28 +88,39 @@ export async function oublierReperes(userId: string): Promise<void> {
  * `pret` distingue « pas encore lu le stockage » de « déjà vu » : sans lui,
  * l'écran afficherait le repère un instant à chaque montage, puis le
  * retirerait — un clignotement à chaque ouverture.
+ *
+ * Lecture au montage, **et à chaque fois que le stockage change** : c'est ce
+ * qui rend « Revoir les repères » visible tout de suite.
  */
 export function useRepere(repere: Repere, userId: string | null | undefined) {
-  const [pret, setPret] = useState(false)
-  const [aVoir, setAVoir] = useState(false)
+  // ⚠️ **L'état porte le compte qu'il décrit** (`uid`). Sans cela il faudrait
+  // le remettre à zéro dans l'effet, à chaque changement de compte — c'est
+  // exactement le `setState` synchrone que React déconseille, et l'état d'une
+  // personne s'afficherait un instant à la suivante.
+  const [etat, setEtat] = useState<{ uid: string | null; lu: boolean; vu: boolean }>(
+    { uid: null, lu: false, vu: false },
+  )
 
-  useEffect(() => {
+  const relire = useCallback(() => {
+    if (!userId) return
     let vivant = true
-    if (!userId) { setPret(false); setAVoir(false); return }
     void repereVu(repere, userId).then(vu => {
-      if (!vivant) return
-      setAVoir(!vu)
-      setPret(true)
+      if (vivant) setEtat({ uid: userId, lu: true, vu })
     })
     return () => { vivant = false }
   }, [repere, userId])
 
+  useEffect(relire, [relire])
+  useEffect(() => sAbonner(relire), [relire])
+
   const marquerVu = useCallback(() => {
-    setAVoir(false)
-    if (userId) void marquerRepereVu(repere, userId)
+    if (!userId) return
+    setEtat({ uid: userId, lu: true, vu: true })
+    void marquerRepereVu(repere, userId)
   }, [repere, userId])
 
-  return { aVoir: pret && aVoir, pret, marquerVu }
+  const pret = !!userId && etat.uid === userId && etat.lu
+  return { aVoir: pret && !etat.vu, pret, marquerVu }
 }
 
 /* ─── Les jalons : un fait que la base ne garde pas ────────────────────────
@@ -119,32 +159,37 @@ export async function poserJalon(jalon: Jalon, userId: string): Promise<void> {
   } catch {
     // Sans effet : au pire l'étape reste à faire.
   }
+  prevenir()
 }
 
 /**
- * Le jalon d'un écran, **relu à chaque retour dessus**.
+ * Le jalon d'un écran, **relu dès qu'il est posé**.
  *
- * C'est tout l'intérêt du `useFocusEffect` : on revient précisément de
- * l'écran qui vient de poser le jalon (la boîte à outils, pour les balises).
- * Une lecture au seul montage laisserait le bandeau afficher l'étape 1 après
- * qu'elle a été faite.
+ * L'accueil du superviseur reste monté pendant qu'on imprime ses balises
+ * depuis la boîte à outils : une lecture au seul montage lui laisserait
+ * afficher l'étape 1 après qu'elle a été faite. Il s'abonne donc, comme les
+ * repères — un seul mécanisme pour les deux, et aucune dépendance à la
+ * navigation.
  */
 export function useJalon(jalon: Jalon, userId: string | null | undefined) {
-  const [pret, setPret] = useState(false)
-  const [pose, setPose] = useState(false)
+  // Même forme que `useRepere`, et pour la même raison : l'état porte le
+  // compte qu'il décrit.
+  const [etat, setEtat] = useState<{ uid: string | null; lu: boolean; pose: boolean }>(
+    { uid: null, lu: false, pose: false },
+  )
 
   const relire = useCallback(() => {
+    if (!userId) return
     let vivant = true
-    if (!userId) { setPret(false); setPose(false); return }
-    void jalonPose(jalon, userId).then(v => {
-      if (!vivant) return
-      setPose(v)
-      setPret(true)
+    void jalonPose(jalon, userId).then(pose => {
+      if (vivant) setEtat({ uid: userId, lu: true, pose })
     })
     return () => { vivant = false }
   }, [jalon, userId])
 
-  useFocusEffect(relire)
+  useEffect(relire, [relire])
+  useEffect(() => sAbonner(relire), [relire])
 
-  return { pose, pret }
+  const pret = !!userId && etat.uid === userId && etat.lu
+  return { pose: pret && etat.pose, pret }
 }

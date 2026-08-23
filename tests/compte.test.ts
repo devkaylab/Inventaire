@@ -650,8 +650,10 @@ describe('onboarding (23 août 2026)', () => {
   })
 
   it('la bienvenue attend d’avoir lu le stockage avant de s’afficher', () => {
-    // Sans ce garde, l'écran clignoterait à chaque lancement.
-    expect(reperes).toContain('return { aVoir: pret && aVoir, pret, marquerVu }')
+    // Sans ce garde, l'écran clignoterait à chaque lancement. `pret` veut dire
+    // « lu, et pour CE compte » : l'état porte l'identifiant qu'il décrit.
+    expect(reperes).toContain('const pret = !!userId && etat.uid === userId && etat.lu')
+    expect(reperes).toContain('return { aVoir: pret && !etat.vu, pret, marquerVu }')
   })
 
   it('la bienvenue ne s’affiche pas à moitié authentifié', () => {
@@ -686,6 +688,21 @@ describe('onboarding (23 août 2026)', () => {
   it('les repères restent retrouvables', () => {
     expect(lire('app/(compte)/account.tsx')).toContain('Revoir les repères')
     expect(reperes).toContain('oublierReperes')
+  })
+
+  it('« Revoir les repères » se voit tout de suite', () => {
+    // Le bouton vit dans « Mon compte » ; les écrans qui affichent les repères
+    // sont ailleurs et n'ont lu le stockage qu'à leur montage. Sans cet
+    // avertissement, ils gardaient leur état jusqu'au prochain lancement — on
+    // appuyait, rien ne se passait.
+    expect(reperes).toContain('const abonnes = new Set<() => void>()')
+    expect(reperes).toContain('useEffect(() => sAbonner(relire), [relire])')
+    // ⚠️ Prévenir APRÈS l'écriture : les écrans relisent le stockage.
+    const oubli = reperes.slice(reperes.indexOf('export async function oublierReperes'))
+    const efface = oubli.indexOf('multiRemove')
+    const avertit = oubli.indexOf('prevenir()')
+    expect(efface).toBeGreaterThan(-1)
+    expect(avertit).toBeGreaterThan(efface)
   })
 })
 
@@ -752,9 +769,15 @@ describe('le bandeau de démarrage', () => {
     expect(accueil).toContain("useJalon('balises-imprimees', profile?.id)")
   })
 
-  it('le jalon se relit au retour sur l’écran, pas au seul montage', () => {
-    // On revient précisément de la boîte à outils qui vient de le poser.
-    expect(reperes).toContain('useFocusEffect(relire)')
+  it('le jalon se relit dès qu’il est posé, pas au seul montage', () => {
+    // L'accueil reste monté pendant qu'on imprime depuis la boîte à outils :
+    // il s'abonne, comme les repères.
+    expect(reperes).toContain('useEffect(() => sAbonner(relire), [relire])')
+    expect(createur).toContain('void poserJalon')  // posé depuis BaliseCreator
+    // Plus de dépendance à la navigation dans ce module : il n'en reste que
+    // la trace dans le commentaire qui explique pourquoi.
+    expect(reperes).not.toMatch(/^import .*useFocusEffect/m)
+    expect(reperes).not.toContain('useFocusEffect(')
   })
 
   it('« Revoir les repères » ne défait pas ce qui a été fait', () => {

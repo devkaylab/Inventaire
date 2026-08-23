@@ -87,13 +87,42 @@ la seconde rendait la première étape inutilisable.
    plus une `Modal`** mais un voile posé sur la carte qui l'accueille. Plus
    rien n'est présenté, donc plus de conflit. Ne pas la remettre en `Modal`.
 
+## Ce qui change le stockage prévient les écrans
+
+Dans la foulée, « Revoir les repères » (Mon compte) : il effaçait bien les
+clés, mais les écrans qui affichent les repères ne relisaient le stockage
+qu'à leur montage. On appuyait, **rien ne se passait**, et les repères ne
+revenaient qu'au prochain lancement — un bouton qui a l'air cassé.
+
+`lib/reperes.ts` porte donc un **avertissement** : `marquerRepereVu`,
+`oublierReperes` et `poserJalon` préviennent les hooks abonnés, **après
+l'écriture, jamais avant** (les écrans vont relire le stockage, il doit déjà
+être à jour — c'est aussi ce qui évite qu'un repère tout juste fermé
+réapparaisse).
+
+Pourquoi pas une relecture au retour sur l'écran (`useFocusEffect`), qui
+était le premier réflexe : **la porte de bienvenue n'est pas un écran**, elle
+est posée en surcouche du layout racine (`_layout.tsx`), hors de la pile de
+navigation. Elle n'aurait donc rien relu — et c'est précisément ce que
+l'alerte nomme en premier. L'avertissement, lui, ne dépend d'aucune
+navigation, et sert les repères comme les jalons : **un seul mécanisme**.
+`useJalon` n'utilise plus `useFocusEffect`.
+
+Au passage, l'état des deux hooks **porte le compte qu'il décrit**
+(`{ uid, lu, … }`). L'ancienne forme le remettait à zéro dans l'effet — le
+`setState` synchrone que React déconseille, et l'état d'une personne
+s'affichait un instant à la suivante.
+
 Vérifié au simulateur le 23 août 2026, clair et sombre : le bandeau à
 « 1 sur 3 », l'impression jusqu'au PDF (`balises_1-900`, 1,2 Mo, feuille de
 partage avec Imprimer et Enregistrer), le jalon qui fait passer le bandeau à
-« 2 sur 3 » au retour, les deux flèches de retour, la croix qui masque, et
-l'application qui répond après la fermeture du partage.
+« 2 sur 3 » au retour, les deux flèches de retour, la croix qui masque,
+l'application qui répond après la fermeture du partage, et « Revoir les
+repères » qui **ramène la bienvenue et le bandeau sans relancer l'app** — le
+jalon des balises, lui, reste posé (« 2 sur 3 »), comme prévu.
 
-Tests de garde : `tests/compte.test.ts`, bloc « le bandeau de démarrage ».
+Tests de garde : `tests/compte.test.ts`, bloc « le bandeau de démarrage » et
+« Revoir les repères » se voit tout de suite ».
 
 # Parcours d'inscription
 
