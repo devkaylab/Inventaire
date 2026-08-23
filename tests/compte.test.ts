@@ -766,3 +766,26 @@ describe('audit du 23 août : ce que le typage et les tests ne voyaient pas', ()
     expect(scanner).toContain('const scans = recentScansRef.current')
   })
 })
+
+describe('création d’inventaire : le magasin ne bloque plus (23 août 2026)', () => {
+  // Trouvé en pilotant le simulateur : « Créer l'inventaire » répondait
+  // « Choisissez un magasin » alors que le magasin s'affichait à l'écran. La
+  // liste ne présélectionnait rien, et un superviseur a désormais toujours au
+  // moins un magasin — le cas était donc la règle, sur la PREMIÈRE étape de
+  // son onboarding.
+  const ecran = lire('app/(supervisor)/new-session.tsx')
+
+  it('un magasin unique est choisi tout seul', () => {
+    expect(ecran).toContain('stores?.length === 1) setStoreId(stores[0].id)')
+  })
+
+  it('l’alerte a disparu au profit du libellé', () => {
+    expect(ecran).not.toContain("Alert.alert('Erreur', 'Choisissez un magasin.')")
+    expect(ecran).toContain("choixAttendu ? 'Choisissez un magasin' : 'Magasin'")
+  })
+
+  it('le bouton reste inactif tant que le choix n’est pas fait', () => {
+    expect(ecran).toContain('choixAttendu = !storeId && (stores?.length ?? 0) > 1')
+    expect(ecran).toContain('disabled={loading || noStores || choixAttendu}')
+  })
+})

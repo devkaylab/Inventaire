@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -35,10 +35,8 @@ export default function NewSessionScreen() {
       Alert.alert('Erreur', "Donnez un nom à l'inventaire.")
       return
     }
-    if (!storeId) {
-      Alert.alert('Erreur', 'Choisissez un magasin.')
-      return
-    }
+    // Le bouton est déjà inactif dans ce cas : garde silencieuse, pas d'alerte.
+    if (!storeId) return
     if (securityCode.trim().length < 4) {
       Alert.alert('Erreur', 'Le code de sécurité doit comporter au moins 4 caractères.')
       return
@@ -74,6 +72,21 @@ export default function NewSessionScreen() {
 
   const noStores = !storesLoading && (stores?.length ?? 0) === 0
 
+  // ⚠️ Un seul magasin : il n'y a rien à choisir, on le choisit.
+  //
+  // Sans cela, la liste affichait le magasin comme un champ déjà rempli — mais
+  // rien n'était sélectionné, et « Créer l'inventaire » répondait « Choisissez
+  // un magasin » en le montrant à l'écran. Bloquant, et c'est la PREMIÈRE
+  // étape de l'onboarding d'un superviseur (constaté au simulateur le 23 août
+  // 2026). Un superviseur a désormais toujours au moins un magasin, donc le
+  // cas est la règle, pas l'exception.
+  useEffect(() => {
+    if (!storeId && stores?.length === 1) setStoreId(stores[0].id)
+  }, [stores, storeId])
+
+  /** Plusieurs magasins et aucun retenu : il reste un geste à faire. */
+  const choixAttendu = !storeId && (stores?.length ?? 0) > 1
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -89,7 +102,12 @@ export default function NewSessionScreen() {
             placeholderTextColor={theme.textMuted}
           />
 
-          <Text style={styles.label}>Magasin</Text>
+          {/* Le libellé porte la consigne plutôt qu'une alerte après coup :
+              « Magasin » ne dit pas qu'il y a un geste à faire. Avec un seul
+              magasin il est déjà choisi, donc le titre reste neutre. */}
+          <Text style={[styles.label, choixAttendu && styles.labelConsigne]}>
+            {choixAttendu ? 'Choisissez un magasin' : 'Magasin'}
+          </Text>
           {storesLoading ? (
             <ActivityIndicator color={theme.accent} style={{ marginVertical: Spacing.md }} />
           ) : noStores ? (
@@ -148,7 +166,7 @@ export default function NewSessionScreen() {
             />
           </View>
 
-          <Pressable style={[styles.button, (loading || noStores) && styles.buttonDisabled]} onPress={handleCreate} disabled={loading || noStores}>
+          <Pressable style={[styles.button, (loading || noStores || choixAttendu) && styles.buttonDisabled]} onPress={handleCreate} disabled={loading || noStores || choixAttendu}>
             {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Créer l&apos;inventaire</Text>}
           </Pressable>
         </ScrollView>
@@ -170,6 +188,7 @@ function makeStyles(t: Theme) {
     storeName: { fontSize: 15, color: t.textPrimary, fontFamily: Font.medium },
     storeNameActive: { color: t.accent, fontFamily: Font.bold },
     storeCheck: { fontSize: 16, color: t.accent, fontFamily: Font.bold },
+    labelConsigne: { color: t.accent },
     emptyStores: { fontSize: 14, color: t.textMuted, fontFamily: Font.regular, lineHeight: 20, backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, padding: Spacing.lg },
     codeRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
     regenBtn: { backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
