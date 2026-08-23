@@ -276,6 +276,16 @@ export default function SessionDetailScreen() {
   const zoneCounted = zones.filter((z) => z.count_status === 'done').length
   const zoneAudited = zones.filter((z) => z.audit_status === 'done').length
   const zoneMissing = zones.filter((z) => z.count_status !== 'done')
+  // ⚠️ **« Manquantes » veut dire « pas encore comptées ».** Sur un inventaire
+  // qui vient d'être préparé, cela vaut pour toutes : le bandeau ambre
+  // annonçait donc « 10 balises manquantes » à la minute où les 10 venaient
+  // d'être définies, et personne n'avait encore compté. Un superviseur qui
+  // découvre l'app y lit une perte et part chercher ce qui manque. Même règle
+  // que sur /admin le 22 août 2026 : un travail qui n'a pas commencé n'est pas
+  // une anomalie. Le bandeau n'a de sens qu'une fois le comptage entamé.
+  const comptageCommence = zoneCounted > 0
+  const montrerManquantes = comptageCommence && zoneMissing.length > 0
+  const toutCompte = comptageCommence && zoneMissing.length === 0
   const auditPct = zoneTotal > 0 ? Math.round((zoneAudited / zoneTotal) * 100) : 0
   const countPct = zoneTotal > 0 ? Math.round((zoneCounted / zoneTotal) * 100) : 0
 
@@ -314,18 +324,22 @@ export default function SessionDetailScreen() {
 
             {zoneTotal === 0 ? (
               <Text style={styles.zoneEmpty}>Aucune balise affectée. Ouvrez « Zones & balises » depuis le panneau infos.</Text>
-            ) : zoneMissing.length > 0 ? (
+            ) : montrerManquantes ? (
               <Pressable style={styles.missingRow} onPress={() => router.push(`/(supervisor)/${sessionId}/missing`)}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.missingCount}>{zoneMissing.length} balise{zoneMissing.length > 1 ? 's' : ''} manquante{zoneMissing.length > 1 ? 's' : ''}</Text>
+                  <Text style={styles.missingCount}>{zoneMissing.length} balise{zoneMissing.length > 1 ? 's' : ''} pas encore comptée{zoneMissing.length > 1 ? 's' : ''}</Text>
                   <Text style={styles.missingHint}>Voir les emplacements concernés</Text>
                 </View>
                 <ChevronIcon color={theme.warning} />
               </Pressable>
-            ) : (
+            ) : toutCompte ? (
               <View style={styles.missingDoneRow}>
-                <Text style={styles.missingDone}>✓ Toutes les balises ont été comptées</Text>
+                <Text style={styles.missingDone}>Toutes les balises ont été comptées</Text>
               </View>
+            ) : (
+              <Text style={styles.zoneEmpty}>
+                {zoneTotal} balise{zoneTotal > 1 ? 's' : ''} prête{zoneTotal > 1 ? 's' : ''} à être comptée{zoneTotal > 1 ? 's' : ''}.
+              </Text>
             )}
 
             <PendingBalisesRow sessionId={sessionId} target={`/(supervisor)/${sessionId}/pending`} />

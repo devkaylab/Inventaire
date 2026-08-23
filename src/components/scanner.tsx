@@ -29,6 +29,7 @@ import { resolveArticle, setBalise } from '@/lib/offlineSync'
 import { parseBalise } from '@/lib/balises'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
+import { CroixIcon, TorcheIcon } from '@/components/ui/Icones'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -191,7 +192,7 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
             />
 
             <Text style={styles.illNote}>
-              {"💡 Cet article sera ajouté au référentiel de la session avec un prix d'achat à 0 €."}
+              {"Cet article sera ajouté au référentiel de l'inventaire avec un prix d'achat à 0 €."}
             </Text>
           </ScrollView>
 
@@ -730,8 +731,8 @@ export function Scanner({
 
   const totalScanned = recentScans.reduce((s, e) => s + e.qty, 0)
   const triggerLabel = balisePhase
-    ? (barcodeReady ? '📷  Scanner la balise' : 'Visez une balise…')
-    : (barcodeReady ? '📷  Scanner maintenant' : 'En attente d\'un code…')
+    ? (barcodeReady ? 'Scanner la balise' : 'Visez une balise…')
+    : (barcodeReady ? 'Scanner maintenant' : 'En attente d\'un code…')
   const camHint = resolving
     ? 'Enregistrement…'
     : barcodeReady
@@ -761,7 +762,7 @@ export function Scanner({
                     disabled={!!activeBalise}
                   >
                     <Text style={[styles.zoneModeText, active && { color: m === 'audit' ? AUDIT_ON : '#fff', fontFamily: Font.bold }, !!activeBalise && !active && { opacity: 0.4 }]}>
-                      {m === 'count' ? '🔢 Comptage' : '🔍 Audit'}
+                      {m === 'count' ? 'Comptage' : 'Audit'}
                     </Text>
                   </Pressable>
                 )
@@ -824,7 +825,7 @@ export function Scanner({
           {(['camera', 'manual', 'hardware'] as const).map(m => (
             <Pressable key={m} style={[styles.modeBtn, mode === m && styles.modeBtnActive]} onPress={() => setMode(m)}>
               <Text style={[styles.modeBtnText, mode === m && styles.modeBtnTextActive]}>
-                {m === 'camera' ? '📷 Caméra' : m === 'manual' ? '⌨️ Manuel' : '🔫 Douchette'}
+                {m === 'camera' ? 'Caméra' : m === 'manual' ? 'Manuel' : 'Douchette'}
               </Text>
             </Pressable>
           ))}
@@ -834,7 +835,7 @@ export function Scanner({
       {/* Auto-scan toggle — articles, caméra */}
       {!balisePhase && mode === 'camera' && (
         <Pressable style={styles.autoScanRow} onPress={() => setAutoScan(v => !v)}>
-          <Text style={styles.autoScanLabel}>⚡ Scan automatique</Text>
+          <Text style={styles.autoScanLabel}>Scan automatique</Text>
           <View style={[styles.autoScanPill, autoScan && styles.autoScanPillOn]}>
             <Text style={[styles.autoScanPillText, autoScan && styles.autoScanPillTextOn]}>
               {autoScan ? 'ON' : 'OFF'}
@@ -877,7 +878,7 @@ export function Scanner({
                 onPress={() => setTorch(v => !v)}
                 hitSlop={8}
               >
-                <Text style={styles.torchIcon}>🔦</Text>
+                <TorcheIcon color={torch ? '#111' : '#fff'} />
               </Pressable>
               {resolving && (
                 <View style={styles.overlay}>
@@ -1162,7 +1163,7 @@ function ScanRow({ entry, onIncrement, onDecrement, onDelete }: ScanRowProps) {
         </Pressable>
       </View>
       <Pressable style={styles.deleteBtn} onPress={onDelete} hitSlop={6}>
-        <Text style={styles.deleteBtnText}>✕</Text>
+        <CroixIcon color={theme.danger} />
       </Pressable>
     </View>
   )
@@ -1261,7 +1262,6 @@ function makeStyles(t: Theme) {
       borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
     },
     torchBtnOn: { backgroundColor: '#F5C518', borderColor: '#F5C518' },
-    torchIcon: { fontSize: 18 },
     cooldownBar: {
       position: 'absolute', bottom: 28, left: 0, height: 3,
       backgroundColor: FRAME_COLOR_READY, borderRadius: 2,
@@ -1359,7 +1359,6 @@ function makeStyles(t: Theme) {
     stepQty: { minWidth: 32, textAlign: 'center', fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, paddingHorizontal: 4, ...tabular },
 
     deleteBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: t.dangerSoft, alignItems: 'center', justifyContent: 'center' },
-    deleteBtnText: { fontSize: 13, color: t.danger, fontFamily: Font.bold },
 
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 

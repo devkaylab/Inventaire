@@ -31,14 +31,17 @@ export default function NewSessionScreen() {
   })
 
   async function handleCreate() {
+    // ⚠️ Une saisie incomplète n'est pas une erreur : on dit ce qu'il manque,
+    // sans titrer « Erreur ». C'est le premier inventaire de quelqu'un qui
+    // découvre l'app — le ton compte.
     if (!name.trim()) {
-      Alert.alert('Erreur', "Donnez un nom à l'inventaire.")
+      Alert.alert('Nom manquant', "Donnez un nom à l'inventaire.")
       return
     }
     // Le bouton est déjà inactif dans ce cas : garde silencieuse, pas d'alerte.
     if (!storeId) return
     if (securityCode.trim().length < 4) {
-      Alert.alert('Erreur', 'Le code de sécurité doit comporter au moins 4 caractères.')
+      Alert.alert('Code trop court', 'Le code de sécurité doit comporter au moins 4 caractères.')
       return
     }
     setLoading(true)
@@ -52,7 +55,7 @@ export default function NewSessionScreen() {
       // Enchaînement guidé : (zones si activées) → import des fichiers → suivi.
       const sid = result.session_id
       Alert.alert(
-        'Session créée',
+        'Inventaire créé',
         `N° d'inventaire : ${result.inventory_number}\nCode inventaire : ${result.security_code ?? securityCode}\n\n${usesZones ? 'Étape suivante : définissez vos zones, puis importez les fichiers.' : 'Étape suivante : importez le catalogue et le stock théorique.'}`,
         [{
           text: 'Continuer',

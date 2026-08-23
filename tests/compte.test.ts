@@ -789,3 +789,134 @@ describe('création d’inventaire : le magasin ne bloque plus (23 août 2026)',
     expect(ecran).toContain('disabled={loading || noStores || choixAttendu}')
   })
 })
+
+/**
+ * Le parcours d'onboarding, exercé écran par écran dans le simulateur le
+ * 23 août 2026 — et non plus seulement typé et testé. Six défauts que ni le
+ * typage, ni le lint, ni les 129 tests précédents ne voyaient.
+ */
+describe('le parcours du superviseur, vu à l’écran (23 août 2026)', () => {
+  const accueil = lire('app/(supervisor)/index.tsx')
+  const zones = lire('app/(supervisor)/[sessionId]/zones.tsx')
+  const importEcran = lire('app/(supervisor)/[sessionId]/import.tsx')
+  const invite = lire('app/(supervisor)/[sessionId]/invite.tsx')
+  const fiche = lire('app/(supervisor)/[sessionId]/index.tsx')
+  const nouveau = lire('app/(supervisor)/new-session.tsx')
+  const requetes = lire('lib/queries.ts')
+
+  // ── Le guide masquait l'inventaire qu'on venait de créer ────────────────
+  //
+  // Il occupait l'écran entier tant qu'il durait. Bloqué à « 2 sur 4 », le
+  // superviseur n'avait plus aucun chemin vers son inventaire : le seul lien
+  // restant, « Masquer ce guide », se lit « je ne veux pas d'aide ».
+  it('le guide ne prend tout l’écran que s’il n’y a aucun inventaire', () => {
+    expect(accueil).toContain('const guidePleinEcran = montrerGuide && mesInventaires.length === 0')
+  })
+
+  it('le guide se pose au-dessus de la liste dès qu’un inventaire existe', () => {
+    expect(accueil).toContain('{montrerGuide && carteGuide}')
+  })
+
+  // ── Le guide « coché par les faits » ne se cochait jamais ───────────────
+  //
+  // Aucun des écrans qui font avancer la checklist n'invalidait la requête
+  // « preparation » : l'étape des zones restait à faire alors qu'une plage
+  // venait d'être affectée, et l'import ne cochait rien non plus.
+  it('affecter une plage recharge la préparation', () => {
+    expect(zones).toContain("queryKey: ['preparation', sessionId]")
+  })
+
+  it('importer un fichier recharge la préparation', () => {
+    expect(importEcran).toContain("queryKey: ['preparation', sessionId]")
+  })
+
+  it('ajouter une personne recharge la préparation', () => {
+    expect(invite).toContain("queryKey: ['preparation', sessionId]")
+  })
+
+  it('tirer pour rafraîchir recharge aussi le guide', () => {
+    expect(accueil).toContain("queryClient.invalidateQueries({ queryKey: ['preparation', inventaireGuide.id] })")
+  })
+
+  // ── L'étape « compteurs » se cochait sur le créateur lui-même ───────────
+  //
+  // Il est inscrit dans `session_members` à la création : la checklist
+  // affichait « 1 membre » et se cochait avant que personne n'ait été ajouté.
+  it('le créateur ne compte pas comme un compteur ajouté', () => {
+    expect(requetes).toContain('if (createurId) q = q.neq(\'user_id\', createurId)')
+    expect(accueil).toContain('getPreparation(inventaireGuide!.id, profile?.id)')
+  })
+
+  // ── « 10 balises manquantes » sur un inventaire à 0 % ───────────────────
+  //
+  // « Manquante » veut dire « pas encore comptée » : sur un inventaire qui
+  // vient d'être préparé, cela vaut pour toutes. Le bandeau ambre annonçait
+  // une perte à la minute où les balises venaient d'être définies.
+  it('le bandeau d’alerte attend que le comptage ait commencé', () => {
+    expect(fiche).toContain('const comptageCommence = zoneCounted > 0')
+    expect(fiche).toContain('const montrerManquantes = comptageCommence && zoneMissing.length > 0')
+  })
+
+  it('les balises non comptées ne sont plus dites « manquantes »', () => {
+    expect(fiche).toContain('pas encore comptée')
+    expect(fiche).not.toContain('} manquante{')
+  })
+
+  // ── Le ton des alertes de saisie ────────────────────────────────────────
+  //
+  // Une saisie incomplète n'est pas une erreur — surtout au premier
+  // inventaire de quelqu'un qui découvre l'app.
+  it('une saisie incomplète ne se titre pas « Erreur »', () => {
+    expect(nouveau).not.toContain("Alert.alert('Erreur', \"Donnez un nom à l'inventaire.\")")
+    expect(nouveau).toContain("Alert.alert('Nom manquant'")
+    expect(zones).toContain("Alert.alert('Plage incomplète'")
+  })
+
+  it('le vocabulaire reste « inventaire », jamais « session »', () => {
+    expect(nouveau).toContain("'Inventaire créé'")
+    expect(nouveau).not.toContain("'Session créée'")
+  })
+
+  // ── Le bouton qui fait avancer ne se confond plus avec les autres ───────
+  it('le bouton de suite des zones se distingue comme celui de l’import', () => {
+    expect(zones).toContain('nextBtn: { backgroundColor: t.success')
+    expect(importEcran).toContain('startBtn: { backgroundColor: t.success')
+  })
+})
+
+/**
+ * Les emoji : un tracé, jamais un caractère dessiné par le système. La règle
+ * valait déjà pour la croix d'annulation d'une invitation ; l'étude du
+ * 23 août l'avait relevée sur le scanner (« impasse 6 ») sans la traiter.
+ */
+describe('aucun emoji dans les écrans du parcours', () => {
+  const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u
+
+  // Seules les lignes de code comptent : les commentaires en emploient pour
+  // signaler un piège (« ⚠️ »), et c'est une convention du dépôt.
+  const codeSeul = (source: string) =>
+    source
+      .split('\n')
+      .filter(l => {
+        const t = l.trim()
+        return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*')
+      })
+      .join('\n')
+
+  for (const fichier of [
+    'components/scanner.tsx',
+    'app/(supervisor)/[sessionId]/zones.tsx',
+    'app/(supervisor)/[sessionId]/import.tsx',
+  ]) {
+    it(`${fichier} n’en affiche aucun`, () => {
+      expect(EMOJI.test(codeSeul(lire(fichier)))).toBe(false)
+    })
+  }
+
+  it('les icônes partagées vivent en un seul endroit', () => {
+    const icones = lire('components/ui/Icones.tsx')
+    for (const nom of ['CorbeilleIcon', 'AlerteIcon', 'AstuceIcon', 'FichierIcon', 'TorcheIcon', 'CocheIcon']) {
+      expect(icones).toContain(`export function ${nom}`)
+    }
+  })
+})

@@ -263,7 +263,7 @@ export default function SupervisorHomeScreen() {
 
   const { data: preparation } = useQuery({
     queryKey: ['preparation', inventaireGuide?.id],
-    queryFn: () => getPreparation(inventaireGuide!.id),
+    queryFn: () => getPreparation(inventaireGuide!.id, profile?.id),
     enabled: !!inventaireGuide && montrerGuide,
   })
   const etapes = useMemo(
@@ -274,8 +274,33 @@ export default function SupervisorHomeScreen() {
     [preparation, inventaireGuide],
   )
 
+  // Le guide prend tout l'écran tant qu'il n'y a rien d'autre à afficher.
+  const guidePleinEcran = montrerGuide && mesInventaires.length === 0
+
+  const carteGuide = montrerGuide ? (
+    <PourDemarrer
+      etapes={etapes}
+      onMasquer={masquerGuide}
+      onAction={(cle) => {
+        const id = inventaireGuide?.id
+        if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
+        if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
+        else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
+        else router.push(`/(supervisor)/${id}/invite`)
+      }}
+    />
+  ) : null
+
   const queryClient = useQueryClient()
-  const onRefresh = useCallback(() => { refetch() }, [refetch])
+  // ⚠️ Tirer pour rafraîchir doit aussi recharger la préparation : sans elle,
+  // le guide gardait l'état qu'il avait au premier affichage, et le geste
+  // naturel pour « débloquer » un écran figé ne débloquait rien.
+  const onRefresh = useCallback(() => {
+    refetch()
+    if (inventaireGuide) {
+      queryClient.invalidateQueries({ queryKey: ['preparation', inventaireGuide.id] })
+    }
+  }, [refetch, inventaireGuide, queryClient])
   const [selection, setSelection] = useState(false)
   const [coches, setCoches] = useState<string[]>([])
 
@@ -511,22 +536,19 @@ export default function SupervisorHomeScreen() {
         <View style={styles.center}>
           <ActivityIndicator color={theme.accent} />
         </View>
-      ) : montrerGuide ? (
-        // Comme dans la maquette, le guide **est** l'écran tant qu'il dure :
-        // pas une carte flottant dans une liste vide. La liste revient dès
-        // qu'il est terminé ou masqué.
+      ) : guidePleinEcran ? (
+        // Tant qu'aucun inventaire n'existe, le guide **est** l'écran : il n'y
+        // a rien d'autre à montrer, et une carte flottant dans une liste vide
+        // se lirait mal.
+        //
+        // ⚠️ **Dès qu'un inventaire existe, il doit rester atteignable.** Le
+        // guide occupait l'écran entier tant qu'il durait — donc, l'inventaire
+        // qu'on venait de créer n'apparaissait plus nulle part et ne pouvait
+        // plus s'ouvrir. Vu au simulateur le 23 août 2026 : bloqué à « 2 sur
+        // 4 », le seul chemin restant était « Masquer ce guide », qui se lit
+        // « je ne veux pas d'aide », pas « accéder à mes inventaires ».
         <ScrollView contentContainerStyle={styles.guidePlein}>
-          <PourDemarrer
-            etapes={etapes}
-            onMasquer={masquerGuide}
-            onAction={(cle) => {
-              const id = inventaireGuide?.id
-              if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
-              if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
-              else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
-              else router.push(`/(supervisor)/${id}/invite`)
-            }}
-          />
+          {carteGuide}
         </ScrollView>
       ) : (
         <FlatList
@@ -560,6 +582,10 @@ export default function SupervisorHomeScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
             <View style={styles.listHeader}>
+              {/* Le guide se pose au-dessus de la liste, il ne la remplace
+                  plus : on garde le repère de ce qu'il reste à faire *et*
+                  l'accès à l'inventaire en cours de préparation. */}
+              {montrerGuide && carteGuide}
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
               {/* Le mode sélection s'ouvre aussi par un appui long sur une
                   carte ; ce bouton le rend découvrable, l'appui long ne

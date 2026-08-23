@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, router, useLocalSearchParams } from 'expo-router'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
+import { AlerteIcon, AstuceIcon, CocheIcon, FichierIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
 type Step = 'catalog' | 'stock'
@@ -50,6 +52,7 @@ export default function ImportScreen() {
   const styles = makeStyles(theme)
   const [catalog, setCatalog] = useState<StepState>(initialState)
   const [stock, setStock] = useState<StepState>(initialState)
+  const queryClient = useQueryClient()
 
   const set = (step: Step) => (step === 'catalog' ? setCatalog : setStock)
 
@@ -78,6 +81,10 @@ export default function ImportScreen() {
         uploaded: result.uploaded,
         errors: result.errors,
       }))
+      // La checklist « Pour démarrer » compte les lignes importées : sans
+      // cette invalidation, l'étape des fichiers restait à faire après un
+      // import réussi.
+      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     } catch (e: unknown) {
       console.error('[import screen]', step, e)
       set(step)(s => ({
@@ -97,12 +104,15 @@ export default function ImportScreen() {
         <Text style={styles.cardDesc}>{description}</Text>
 
         {state.fileName && (
-          <Text style={styles.fileName}>📄 {state.fileName}</Text>
+          <View style={styles.fileRow}>
+            <FichierIcon color={theme.textSecondary} size={15} />
+            <Text style={styles.fileName} numberOfLines={1}>{state.fileName}</Text>
+          </View>
         )}
 
         {state.phase === 'parsing' && (
           <View style={styles.statusRow}>
-            <Text style={styles.statusText}>⏳ Lecture du fichier…</Text>
+            <Text style={styles.statusText}>Lecture du fichier…</Text>
           </View>
         )}
 
@@ -112,8 +122,9 @@ export default function ImportScreen() {
 
         {state.phase === 'done' && (
           <View style={styles.successBanner}>
+            <CocheIcon color={theme.success} size={15} />
             <Text style={styles.successText}>
-              ✓ {state.uploaded.toLocaleString()} lignes importées
+              {state.uploaded.toLocaleString()} lignes importées
             </Text>
           </View>
         )}
@@ -150,15 +161,19 @@ export default function ImportScreen() {
         </Text>
 
         <View style={styles.warningBanner}>
+          <AlerteIcon color={theme.warning} size={16} />
           <Text style={styles.warningText}>
-            ⚠️  Chaque SKU doit être unique dans chaque fichier.
+            Chaque SKU doit être unique dans chaque fichier.
           </Text>
         </View>
 
         <View style={styles.infoBanner}>
-          <Text style={styles.infoBannerText}>
-            💡 Le scan reconnaît vos articles dans tous les cas, même si un code commence par un zéro.
-          </Text>
+          <View style={styles.infoBannerHead}>
+            <AstuceIcon color={theme.accent} size={16} />
+            <Text style={styles.infoBannerText}>
+              Le scan reconnaît vos articles dans tous les cas, même si un code commence par un zéro.
+            </Text>
+          </View>
           <Text style={styles.infoBannerSub}>
             {"Astuce : pour que ces codes apparaissent à l'identique dans le rapport, gardez le format « Texte » sur les colonnes des codes."}
           </Text>
@@ -196,17 +211,19 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     container: { padding: Spacing.lg, gap: Spacing.lg },
     info: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
-    warningBanner: { backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, borderLeftWidth: 3, borderLeftColor: t.warning },
-    warningText: { fontSize: 13, color: t.warning, fontFamily: Font.semibold, lineHeight: 19 },
+    warningBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, borderLeftWidth: 3, borderLeftColor: t.warning },
+    warningText: { flex: 1, fontSize: 13, color: t.warning, fontFamily: Font.semibold, lineHeight: 19 },
 
     infoBanner: { backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline, gap: 4 },
-    infoBannerText: { fontSize: 13, color: t.textPrimary, fontFamily: Font.semibold, lineHeight: 19 },
+    infoBannerHead: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+    infoBannerText: { flex: 1, fontSize: 13, color: t.textPrimary, fontFamily: Font.semibold, lineHeight: 19 },
     infoBannerSub: { fontSize: 12, color: t.textSecondary, fontFamily: Font.regular, lineHeight: 17 },
 
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.sm, ...t.shadowCard },
     cardTitle: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
     cardDesc: { fontSize: 13, color: t.textSecondary, fontFamily: Font.regular },
-    fileName: { fontSize: 13, color: t.textMuted, fontStyle: 'italic' },
+    fileRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    fileName: { flex: 1, fontSize: 13, color: t.textMuted, fontStyle: 'italic' },
 
     statusRow: { paddingVertical: Spacing.xs },
     statusText: { fontSize: 13, color: t.textSecondary },
@@ -216,7 +233,7 @@ function makeStyles(t: Theme) {
     progressFill: { height: 8, borderRadius: 4, backgroundColor: t.accent },
     progressText: { fontSize: 12, color: t.textSecondary, ...tabular },
 
-    successBanner: { backgroundColor: t.successSoft, borderRadius: Radius.sm, padding: 10 },
+    successBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.successSoft, borderRadius: Radius.sm, padding: 10 },
     successText: { color: t.success, fontFamily: Font.semibold, fontSize: 13, ...tabular },
 
     errorBox: { backgroundColor: t.dangerSoft, borderRadius: Radius.sm, padding: 10, gap: 4 },

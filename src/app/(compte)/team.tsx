@@ -16,11 +16,11 @@ import {
   cancelMyInvitation, getMyTeamByStore, removeCounterFromStore,
   type TeamCounter, type TeamInvite, type TeamStore,
 } from '@/lib/queries'
-import Svg, { Path } from 'react-native-svg'
 import { SectionLabel } from '@/components/ui/MenuList'
 import { errorMessage } from '@/lib/errors'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
+import { CroixIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 /**
@@ -243,15 +243,6 @@ function CounterRow({
         <Text style={styles.removeBtnText}>Retirer</Text>
       </Pressable>
     </View>
-  )
-}
-
-/** Croix d'annulation — un tracé, jamais le caractère « ✕ ». */
-function CroixIcon({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24">
-      <Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2.4} strokeLinecap="round" fill="none" />
-    </Svg>
   )
 }
 

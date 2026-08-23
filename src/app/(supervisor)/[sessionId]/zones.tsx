@@ -19,6 +19,7 @@ import { defineZoneRange, deleteZone, getSession, getZoneDashboard } from '@/lib
 import type { ZoneDashboardRow } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { BaliseCreator } from '@/components/BaliseCreator'
+import { CorbeilleIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -84,6 +85,10 @@ export default function ZonesScreen() {
       setStart('')
       setEnd('')
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      // La checklist « Pour démarrer » se coche sur ce compte : sans cette
+      // ligne, l'étape des zones restait à faire alors qu'elle venait d'être
+      // faite (constat au simulateur, 23 août 2026).
+      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     },
     onError: (e) => Alert.alert('Erreur', errorMessage(e)),
   })
@@ -96,6 +101,10 @@ export default function ZonesScreen() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      // La checklist « Pour démarrer » se coche sur ce compte : sans cette
+      // ligne, l'étape des zones restait à faire alors qu'elle venait d'être
+      // faite (constat au simulateur, 23 août 2026).
+      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     },
     onError: (e) => Alert.alert('Erreur', errorMessage(e)),
   })
@@ -103,9 +112,10 @@ export default function ZonesScreen() {
   function onAssign() {
     const s = parseInt(start, 10)
     const e = parseInt(end, 10)
-    if (!name.trim()) { Alert.alert('Erreur', 'Le nom de l’emplacement est requis.'); return }
-    if (isNaN(s) || isNaN(e)) { Alert.alert('Erreur', 'Saisissez une balise de début et de fin.'); return }
-    if (s > e) { Alert.alert('Erreur', 'La balise de début doit être inférieure ou égale à celle de fin.'); return }
+    // Saisie incomplète : on dit ce qu'il manque, on ne titre pas « Erreur ».
+    if (!name.trim()) { Alert.alert('Nom manquant', 'Donnez un nom à l’emplacement.'); return }
+    if (isNaN(s) || isNaN(e)) { Alert.alert('Plage incomplète', 'Saisissez une balise de début et de fin.'); return }
+    if (s > e) { Alert.alert('Plage à revoir', 'La balise de début doit être inférieure ou égale à celle de fin.'); return }
     assign.mutate()
   }
 
@@ -191,7 +201,7 @@ export default function ZonesScreen() {
                 </View>
                 {!closed && (
                   <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(g.name)} disabled={busy} hitSlop={6}>
-                    <Text style={styles.deleteBtnText}>🗑</Text>
+                    <CorbeilleIcon color={theme.danger} />
                   </Pressable>
                 )}
               </View>
@@ -253,9 +263,12 @@ function makeStyles(t: Theme) {
     progressDot: { width: 8, height: 8, borderRadius: 4 },
     progressText: { fontSize: 13, color: t.textPrimary, fontFamily: Font.semibold, ...tabular },
     deleteBtn: { width: 40, height: 40, borderRadius: Radius.md, backgroundColor: t.dangerSoft, alignItems: 'center', justifyContent: 'center' },
-    deleteBtnText: { fontSize: 18 },
     empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
-    nextBtn: { backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
-    nextBtnText: { color: t.onAccent, fontFamily: Font.bold, fontSize: 16 },
+    // ⚠️ **Le bouton qui fait avancer ne se confond pas avec les actions de
+    // l'écran.** Il était violet plein comme « Créer et imprimer des balises »
+    // et « Affecter » : trois boutons identiques, dont un seul mène ailleurs.
+    // L'écran d'import distingue déjà le sien en vert — on suit la même règle.
+    nextBtn: { backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    nextBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },
   })
 }

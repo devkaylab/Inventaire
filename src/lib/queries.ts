@@ -877,8 +877,11 @@ export type PreparationInventaire = {
   membres: number
 }
 
-export async function getPreparation(sessionId: string): Promise<PreparationInventaire> {
-  const compte = async (table: 'zones' | 'articles' | 'theoretical_stock' | 'session_members') => {
+export async function getPreparation(
+  sessionId: string,
+  createurId?: string | null,
+): Promise<PreparationInventaire> {
+  const compte = async (table: 'zones' | 'articles' | 'theoretical_stock') => {
     const { count, error } = await supabase
       .from(table)
       .select('*', { count: 'exact', head: true })
@@ -886,8 +889,23 @@ export async function getPreparation(sessionId: string): Promise<PreparationInve
     if (error) return 0
     return count ?? 0
   }
+  // ⚠️ **Le créateur ne compte pas comme un compteur ajouté.** Il est inscrit
+  // dans `session_members` à la création de l'inventaire : l'étape « Ajouter
+  // vos compteurs » se cochait donc toute seule, avec « 1 membre », avant que
+  // personne n'ait été ajouté. Constat au simulateur le 23 août 2026 — c'est
+  // exactement le mensonge qu'une checklist cochée par les faits doit éviter.
+  const compteMembres = async () => {
+    let q = supabase
+      .from('session_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+    if (createurId) q = q.neq('user_id', createurId)
+    const { count, error } = await q
+    if (error) return 0
+    return count ?? 0
+  }
   const [zones, articles, stockTheorique, membres] = await Promise.all([
-    compte('zones'), compte('articles'), compte('theoretical_stock'), compte('session_members'),
+    compte('zones'), compte('articles'), compte('theoretical_stock'), compteMembres(),
   ])
   return { zones, articles, stockTheorique, membres }
 }

@@ -96,6 +96,8 @@ export default function InviteToSessionScreen() {
       )
       await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
       await queryClient.invalidateQueries({ queryKey: ['session-invitations', sessionId] })
+      // Idem : la checklist compte les membres de l'inventaire.
+      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     } catch (e) {
       Alert.alert('Erreur', errorMessage(e))
     } finally {
