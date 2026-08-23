@@ -11,6 +11,8 @@ finit souvent par sortir, et il vaut mieux savoir lequel.
 | Document | Destinataire chez le client | Quand |
 |---|---|---|
 | [`deck/`](deck/LISEZMOI.md) — présentation commerciale | Direction, achats | Avant-vente |
+| [`deck/`](deck/LISEZMOI.md) — dossier technique (`Quantinvo-dossier-DSI.pptx`) | Direction informatique, RSSI | Avant-vente, dès que la DSI entre dans la boucle |
+| [`deck/`](deck/LISEZMOI.md) — guide de prise en main (`Quantinvo-prise-en-main.pptx`) | Superviseurs, compteurs | Après signature, avant le premier inventaire |
 | [`../conformite/synthese-audit-2026-08.pptx`](../conformite/LISEZMOI-synthese.md) — synthèse RGPD et sécurité | Direction, DPO | Avant-vente, dès que la question de la conformité arrive |
 | [`modeles/devis.html`](modeles/LISEZMOI.md) — devis | Achats | Proposition |
 | [`cgv-quantinvo-brouillon.md`](cgv-quantinvo-brouillon.md) — conditions générales | Juridique | Signature. **Encore un brouillon : à faire relire.** |
@@ -42,9 +44,9 @@ https://claude.ai/code/artifact/c8e58fd2-4fd3-49b7-ba9d-547bce0cce43
 
 ## Ce qui manque encore
 
-- **Un guide de prise en main**, côté compteur et côté superviseur. Rien
-  n'existe : le tutoriel intégré a été retiré de l'application et l'onboarding
-  sera repris à zéro. C'est le document qu'un client demandera en premier.
+- ~~Un guide de prise en main~~ — **fait le 23 août 2026**
+  (`deck/Quantinvo-prise-en-main.pptx`), avec le dossier technique pour la
+  DSI (`deck/Quantinvo-dossier-DSI.pptx`).
 - **Un questionnaire de sécurité pré-rempli.** Toute DSI d'une enseigne un peu
   grande en envoie un avant signature (hébergement, chiffrement, sauvegardes,
   réversibilité, sous-traitants). Les réponses existent, éparpillées entre la
