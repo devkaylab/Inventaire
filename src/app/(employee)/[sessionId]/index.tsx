@@ -12,12 +12,19 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import { useNotificationsSurInventaire } from '@/lib/push'
+import { useRepere } from '@/lib/reperes'
+import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
 
 export default function EmployeeProgressScreen() {
   // Les notifications se demandent ici : ouvrir un inventaire est le geste
   // qui leur donne un objet.
   useNotificationsSurInventaire()
+  // Rien n'expliquait la différence entre les deux passages à un
+  // saisonnier. Deux lignes sous les boutons, tant qu'il n'a rien compté :
+  // l'information est à côté du geste, jamais dans une modale.
+  const { profile } = useAuth()
+  const { aVoir: expliquer } = useRepere('compter-auditer', profile?.id)
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -131,9 +138,19 @@ export default function EmployeeProgressScreen() {
               <Pressable style={styles.countBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=count`)}>
                 <Text style={styles.countBtnText}>Compter des articles</Text>
               </Pressable>
+              {expliquer && (
+                <Text style={styles.aide}>
+                  Premier passage : vous scannez une balise, puis les articles du rayon.
+                </Text>
+              )}
               <Pressable style={styles.auditBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=audit`)}>
                 <Text style={styles.auditBtnText}>Auditer des articles</Text>
               </Pressable>
+              {expliquer && (
+                <Text style={styles.aide}>
+                  Second passage, pour vérifier un rayon déjà compté. Votre superviseur vous dira quand.
+                </Text>
+              )}
               <Pressable style={styles.leaveBtn} onPress={confirmLeave}>
                 <Text style={styles.leaveBtnText}>{"Quitter l'inventaire"}</Text>
               </Pressable>
@@ -184,6 +201,7 @@ function makeStyles(t: Theme) {
     countBtnText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
     auditBtn: { backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowElevated },
     auditBtnText: { color: AUDIT_ON, fontSize: 16, fontFamily: Font.bold },
+    aide: { color: t.textSecondary, fontSize: 12.5, fontFamily: Font.regular, textAlign: 'center', lineHeight: 17, marginTop: Spacing.xs, marginBottom: Spacing.sm, paddingHorizontal: Spacing.sm },
     leaveBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
     leaveBtnText: { color: t.danger, fontSize: 14, fontFamily: Font.semibold },
   })

@@ -633,3 +633,64 @@ describe('un superviseur a une entreprise et au moins un magasin (23 août 2026)
     expect(lire('lib/queries.ts')).toContain('usesZones: boolean)')
   })
 })
+
+describe('onboarding (23 août 2026)', () => {
+  const reperes = lire('lib/reperes.ts')
+  const porte = lire('components/PorteBienvenue.tsx')
+  const demarrer = lire('components/PourDemarrer.tsx')
+  const scanner = lire('components/scanner.tsx')
+
+  it('aucun drapeau global : une clé par repère, portant le compte', () => {
+    // La règle du projet interdit de recréer firstRun.ts. Chaque repère a sa
+    // clé ; aucun n'en réveille un autre.
+    expect(existsSync(src('lib/firstRun.ts'))).toBe(false)
+    expect(reperes).toMatch(/repere\.\$\{repere\}\.\$\{userId\}/)
+    expect(reperes).toContain("'bienvenue'")
+    expect(reperes).toContain("'premiere-balise'")
+  })
+
+  it('la bienvenue attend d’avoir lu le stockage avant de s’afficher', () => {
+    // Sans ce garde, l'écran clignoterait à chaque lancement.
+    expect(reperes).toContain('return { aVoir: pret && aVoir, pret, marquerVu }')
+  })
+
+  it('la bienvenue ne s’affiche pas à moitié authentifié', () => {
+    expect(porte).toContain('mfaRequired')
+  })
+
+  it('la checklist se coche sur des faits, jamais à la main', () => {
+    expect(demarrer).toContain('faite: opts.inventaireExiste')
+    expect(demarrer).toContain('faite: p.zones > 0')
+    expect(demarrer).toContain('faite: p.articles > 0')
+    expect(demarrer).toContain('faite: p.membres > 0')
+    // Imprimer une planche ne laisse rien en base : pas d'étape à part.
+    expect(demarrer).not.toMatch(/titre: 'Imprimer vos balises'/)
+  })
+
+  it('créer un inventaire vient avant les zones et l’import', () => {
+    // Les plages s'affectent DANS un inventaire, et le référentiel y est
+    // rattaché (theoretical_stock.session_id).
+    const i = demarrer.indexOf("cle: 'inventaire'")
+    const z = demarrer.indexOf("cle: 'zones'")
+    const f = demarrer.indexOf("cle: 'fichiers'")
+    expect(i).toBeGreaterThan(-1)
+    expect(i).toBeLessThan(z)
+    expect(z).toBeLessThan(f)
+  })
+
+  it('l’étape « membres » dit que l’équipe du magasin ne suffit pas', () => {
+    expect(demarrer).toContain('Être dans l’équipe du magasin ne suffit pas')
+  })
+
+  it('la caméra est amorcée avant la boîte système', () => {
+    expect(scanner).toContain('amorceNecessaire')
+    expect(scanner).toContain('La caméra lit les balises et les codes-barres')
+    // Le bouton n'est pas « Autoriser » : il précède la demande.
+    expect(scanner).toContain('Continuer</Text>')
+  })
+
+  it('les repères restent retrouvables', () => {
+    expect(lire('app/(compte)/account.tsx')).toContain('Revoir les repères')
+    expect(reperes).toContain('oublierReperes')
+  })
+})

@@ -17,6 +17,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyScanEntries, getZoneDashboard, insertArticle } from '@/lib/queries'
@@ -28,6 +29,8 @@ import { resolveArticle, setBalise } from '@/lib/offlineSync'
 import { parseBalise } from '@/lib/balises'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
+import { useRepere } from '@/lib/reperes'
+import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
@@ -283,6 +286,13 @@ export function Scanner({
 
   // ── Zone mode : balise actuellement ouverte ────────────────────────────────
   const [activeBalise, setActiveBaliseState] = useState<{ code: string; name: string | null } | null>(null)
+  // Les deux repères du premier scan : ce qui vient de se passer, et ce qui
+  // vient ensuite. Chacun sa clé, chacun vu une fois — jamais une chaîne.
+  const { profile } = useAuth()
+  const repereOuverture = useRepere('premiere-balise', profile?.id)
+  const repereCloture = useRepere('balise-terminee', profile?.id)
+  const [volet, setVolet] = useState<null | { genre: 'ouverte'; code: string; nom: string | null }
+    | { genre: 'terminee'; code: string; nom: string | null; pieces: number; refs: number }>(null)
   // Refs miroir : resolveAndRecord est capturé par un callback mémoïsé et doit
   // lire les valeurs courantes (mode, balise active) sans closure périmée.
   const activeBaliseRef = useRef<{ code: string; name: string | null } | null>(null)
@@ -373,11 +383,10 @@ export function Scanner({
   // `permission`. Sur iOS, après un refus, la boîte système ne revient jamais :
   // l'appel était inerte, l'écran restait sans issue, et on tournait à vide.
   // On ne demande donc que tant que le système accepte encore la question.
-  useEffect(() => {
-    if (permission?.status === 'undetermined' && permission.canAskAgain) {
-      void requestPermission()
-    }
-  }, [permission?.status, permission?.canAskAgain, requestPermission])
+  // ⚠️ On ne demande plus rien tout seul. La boîte système partait au montage,
+  // sans un mot : un refus à cet instant est définitif sur iOS. Elle attend
+  // désormais le bouton de l'écran d'amorce ci-dessous.
+  const amorceNecessaire = permission?.status === 'undetermined' && permission.canAskAgain
 
   // Retour des Réglages : sans cette relecture, l'écran resterait sur
   // « refusé » alors que l'autorisation vient d'être accordée.
@@ -530,6 +539,10 @@ export function Scanner({
       }
       ignoreBaliseRef.current = result.code ?? code
       setActiveBalise({ code: result.code ?? code, name: result.name ?? null })
+      if (repereOuverture.aVoir) {
+        setVolet({ genre: 'ouverte', code: result.code ?? code, nom: result.name ?? null })
+        repereOuverture.marquerVu()
+      }
       queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
       pingSession(sessionId, 'balise')
       playScanSound()
@@ -548,6 +561,16 @@ export function Scanner({
       if (!result.success) {
         Alert.alert('Balise', result.error ?? 'Clôture impossible.')
         return
+      }
+      if (repereCloture.aVoir) {
+        // La célébration est une ligne de fait, pas une fanfare : ce sont les
+        // chiffres qui font plaisir, et ils viennent de la liste à l'écran.
+        const pieces = recentScans.reduce((n, e) => n + e.qty, 0)
+        setVolet({
+          genre: 'terminee', code: active.code, nom: active.name,
+          pieces, refs: recentScans.length,
+        })
+        repereCloture.marquerVu()
       }
       ignoreBaliseRef.current = active.code
       setActiveBalise(null)
@@ -670,6 +693,32 @@ export function Scanner({
 
   if (!permission) {
     return <View style={styles.center}><ActivityIndicator color={theme.accent} /></View>
+  }
+
+  // L'amorce : une phrase dans notre charte, un bouton qui n'est pas
+  // « Autoriser », puis seulement la boîte iOS. C'est ce qui fait passer
+  // l'acceptation de ~35 % à ~89 % (étude Cluster), et surtout ce qui évite
+  // un refus pris sans comprendre — irréversible sans passer par les Réglages.
+  if (amorceNecessaire) {
+    return (
+      <View style={styles.amorce}>
+        <View style={styles.amorceViseur}>
+          <View style={[styles.coin, styles.coinHG]} />
+          <View style={[styles.coin, styles.coinHD]} />
+          <View style={[styles.coin, styles.coinBG]} />
+          <View style={[styles.coin, styles.coinBD]} />
+        </View>
+        <Text style={styles.amorceTitre}>La caméra lit les balises et les codes-barres</Text>
+        <Text style={styles.amorceTexte}>
+          Pour compter, vous scannez d&apos;abord l&apos;étiquette collée sur le rayon,
+          puis les articles. Aucune photo n&apos;est enregistrée.
+        </Text>
+        <Pressable style={styles.amorceBtn} onPress={() => { void requestPermission() }}>
+          <Text style={styles.amorceBtnText}>Continuer</Text>
+        </Pressable>
+        <Text style={styles.amorceNote}>Votre téléphone vous demandera ensuite l&apos;autorisation.</Text>
+      </View>
+    )
   }
 
   const totalScanned = recentScans.reduce((s, e) => s + e.qty, 0)
@@ -1021,6 +1070,56 @@ export function Scanner({
           onCancel={() => setIllisibleCode(null)}
         />
       )}
+
+      {/* Les deux repères du premier scan. Un volet, pas une alerte système :
+          il dit ce qui vient de se passer ET ce qui vient ensuite, dans la
+          charte, avec un seul geste. Il ne reviendra pas. */}
+      {volet && (
+        <Modal transparent animationType="slide" onRequestClose={() => setVolet(null)}>
+          <Pressable style={styles.voletFond} onPress={() => setVolet(null)}>
+            <Pressable style={styles.volet} onPress={() => {}}>
+              <View style={styles.voletPoignee} />
+              <View style={[styles.voletIcone, volet.genre === 'terminee' && styles.voletIconeOk]}>
+                <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
+                     stroke={volet.genre === 'terminee' ? theme.success : '#38C9FF'} strokeWidth={2.2}>
+                  <Path d="M5 12l4 4L19 6" />
+                </Svg>
+              </View>
+              {volet.genre === 'ouverte' ? (
+                <>
+                  <Text style={styles.voletTitre}>Balise {volet.code} ouverte</Text>
+                  {volet.nom && <Text style={styles.voletSous}>{volet.nom}</Text>}
+                  <Text style={styles.voletTexte}>
+                    Scannez maintenant les articles de ce rayon. Chaque lecture ajoute une pièce ;
+                    la quantité s&apos;ajuste dans la liste. Quand le rayon est fini, touchez
+                    <Text style={styles.voletFort}> Clôturer</Text>.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.voletTitre}>Première balise terminée</Text>
+                  <Text style={styles.voletTexte}>
+                    Balise {volet.code}{volet.nom ? ` · ${volet.nom}` : ''} —{' '}
+                    <Text style={styles.voletFort}>{volet.pieces} pièce{volet.pieces > 1 ? 's' : ''}</Text>
+                    {' '}sur {volet.refs} référence{volet.refs > 1 ? 's' : ''}.
+                    Elles sont déjà sur le tableau de bord de votre superviseur.
+                  </Text>
+                  <View style={styles.voletFilet} />
+                  <Text style={styles.voletNote}>
+                    Rendez-vous au rayon suivant et scannez sa balise. Si vous perdez le réseau,
+                    le comptage continue et s&apos;envoie tout seul au retour.
+                  </Text>
+                </>
+              )}
+              <Pressable style={styles.voletBtn} onPress={() => setVolet(null)}>
+                <Text style={styles.voletBtnText}>
+                  {volet.genre === 'ouverte' ? 'Compris' : 'Balise suivante'}
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
     </KeyboardAvoidingView>
   )
 }
@@ -1177,6 +1276,31 @@ function makeStyles(t: Theme) {
     triggerBtnText: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary },
 
     permBox: { alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
+    voletFond: { flex: 1, backgroundColor: 'rgba(5,7,13,0.55)', justifyContent: 'flex-end' },
+    volet: { backgroundColor: t.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: Spacing.xl, paddingBottom: Spacing.xxxl, gap: Spacing.sm },
+    voletPoignee: { width: 36, height: 4, borderRadius: 4, backgroundColor: t.borderStrong, alignSelf: 'center', marginBottom: Spacing.md },
+    voletIcone: { width: 52, height: 52, borderRadius: Radius.lg, backgroundColor: 'rgba(56,201,255,0.12)', borderWidth: 1, borderColor: 'rgba(56,201,255,0.35)', alignItems: 'center', justifyContent: 'center' },
+    voletIconeOk: { backgroundColor: t.successSoft, borderColor: t.success },
+    voletTitre: { color: t.textPrimary, fontSize: 21, fontFamily: Font.bold, letterSpacing: -0.4, marginTop: Spacing.sm },
+    voletSous: { color: t.textSecondary, fontSize: 13.5, fontFamily: Font.regular },
+    voletTexte: { color: t.textSecondary, fontSize: 14, fontFamily: Font.regular, lineHeight: 20, marginTop: Spacing.xs },
+    voletFort: { color: t.textPrimary, fontFamily: Font.semibold },
+    voletFilet: { height: 1, backgroundColor: t.border, marginVertical: Spacing.md },
+    voletNote: { color: t.textMuted, fontSize: 13, fontFamily: Font.regular, lineHeight: 18 },
+    voletBtn: { height: 48, borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
+    voletBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
+    amorce: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.md, backgroundColor: t.background },
+    amorceViseur: { width: 96, height: 96, marginBottom: Spacing.xl },
+    coin: { position: 'absolute', width: 26, height: 26, borderColor: '#38C9FF', borderWidth: 2.5, borderRadius: 4 },
+    coinHG: { left: 0, top: 0, borderRightWidth: 0, borderBottomWidth: 0 },
+    coinHD: { right: 0, top: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
+    coinBG: { left: 0, bottom: 0, borderRightWidth: 0, borderTopWidth: 0 },
+    coinBD: { right: 0, bottom: 0, borderLeftWidth: 0, borderTopWidth: 0 },
+    amorceTitre: { color: t.textPrimary, fontSize: 22, fontFamily: Font.bold, textAlign: 'center', lineHeight: 29, letterSpacing: -0.4 },
+    amorceTexte: { color: t.textSecondary, fontSize: 14.5, fontFamily: Font.regular, textAlign: 'center', lineHeight: 21 },
+    amorceBtn: { height: 48, alignSelf: 'stretch', borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
+    amorceBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
+    amorceNote: { color: t.textMuted, fontSize: 12.5, fontFamily: Font.regular, textAlign: 'center' },
     permTitre: { color: t.textPrimary, fontSize: 17, textAlign: 'center', fontFamily: Font.semibold },
     permText: { color: t.textSecondary, fontSize: 15, textAlign: 'center', fontFamily: Font.regular },
     permAide: { color: t.textMuted, fontSize: 13, textAlign: 'center', fontFamily: Font.regular, lineHeight: 18 },

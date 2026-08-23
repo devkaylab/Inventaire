@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { getMyCompany } from '@/lib/queries'
 import { verifiedTotpFactor } from '@/lib/mfa'
+import { oublierReperes } from '@/lib/reperes'
 import { DeletionPendingNote, useAccountDeletion } from '@/components/AccountDeletion'
 import { MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 import { useTheme } from '@/lib/theme'
@@ -65,6 +66,29 @@ export default function AccountScreen() {
     ? 'Administrateur'
     : superviseur ? 'Superviseur' : 'Compteur'
 
+  /** Remet à zéro les repères de ce compte sur cet appareil. */
+
+  function confirmerReperes() {
+
+    Alert.alert(
+
+      'Revoir les repères',
+
+      'L’écran de bienvenue et les explications du premier scan réapparaîtront une fois, sur ce téléphone.',
+
+      [
+
+        { text: 'Annuler', style: 'cancel' },
+
+        { text: 'Revoir', onPress: () => { if (profile?.id) void oublierReperes(profile.id) } },
+
+      ],
+
+    )
+
+  }
+
+
   function confirmSignOut() {
     Alert.alert('Se déconnecter', 'Vous devrez ressaisir votre mot de passe.', [
       { text: 'Annuler', style: 'cancel' },
@@ -119,6 +143,10 @@ export default function AccountScreen() {
         <MenuCard>
           <MenuRow label="Modifier mon nom" onPress={() => router.push('/(compte)/name')} />
           <MenuRow label="Télécharger mes données" onPress={() => router.push('/(compte)/my-data')} />
+          {/* Les repères d'onboarding ne se montrent qu'une fois. Ils doivent
+              rester retrouvables (règle Apple HIG, Things 3) — sans quoi une
+              personne qui a touché « Plus tard » n'a plus aucun moyen d'y revenir. */}
+          <MenuRow label="Revoir les repères" onPress={confirmerReperes} />
           <MenuRow label="Se déconnecter" onPress={confirmSignOut} />
           {!suppression.pending && (
             <MenuRow label="Supprimer mon compte" onPress={suppression.confirm} danger last />
