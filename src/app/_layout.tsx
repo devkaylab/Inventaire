@@ -17,6 +17,7 @@ import { useNotificationRouting } from '@/lib/push'
 import { ThemeProvider } from '@/lib/theme'
 import { SplashAnimation } from '@/components/SplashAnimation'
 import { OfflineTopBanner } from '@/components/OfflineTopBanner'
+import { PorteBienvenue } from '@/components/PorteBienvenue'
 
 // Hold the native splash until fonts are ready; our animated splash takes over from there.
 SplashScreen.preventAutoHideAsync()
@@ -78,6 +79,10 @@ export default function RootLayout() {
               <Stack.Screen name="(supervisor)" />
               <Stack.Screen name="(employee)" />
             </Stack>
+            {/* Au-dessus de la pile, sous le splash : l'écran de bienvenue
+                couvre l'atterrissage le temps d'être lu, une fois par
+                appareil et par compte. */}
+            <PorteBienvenue />
             {showSplash && <SplashAnimation onFinish={() => setShowSplash(false)} />}
           </GestureHandlerRootView>
         </AuthProvider>

@@ -858,3 +858,36 @@ export async function getMyTeamByStore(): Promise<TeamByStore> {
   const r = (data ?? {}) as Partial<TeamByStore>
   return { stores: r.stores ?? [], invitations: r.invitations ?? [] }
 }
+
+/**
+ * L'état de préparation d'un inventaire, pour la checklist « Pour démarrer ».
+ *
+ * ⚠️ **Rien ici ne se coche à la main.** Chaque ligne est un fait lu en base
+ * (règle Shopify / Intercom, reprise dans la maquette du 23 août 2026). C'est
+ * aussi pourquoi « imprimer les balises » n'y figure pas seul : une planche
+ * est produite sur le téléphone et **ne laisse aucune trace** — ce sont les
+ * zones, elles, qui se vérifient.
+ *
+ * Quatre `head: true` : on ne descend aucune ligne, seulement des comptes.
+ */
+export type PreparationInventaire = {
+  zones: number
+  articles: number
+  stockTheorique: number
+  membres: number
+}
+
+export async function getPreparation(sessionId: string): Promise<PreparationInventaire> {
+  const compte = async (table: 'zones' | 'articles' | 'theoretical_stock' | 'session_members') => {
+    const { count, error } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+    if (error) return 0
+    return count ?? 0
+  }
+  const [zones, articles, stockTheorique, membres] = await Promise.all([
+    compte('zones'), compte('articles'), compte('theoretical_stock'), compte('session_members'),
+  ])
+  return { zones, articles, stockTheorique, membres }
+}

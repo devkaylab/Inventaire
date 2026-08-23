@@ -6,7 +6,9 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { closeSession, deleteSessionPermanently, getMyAssignedStores, getSessions } from '@/lib/queries'
+import { closeSession, deleteSessionPermanently, getMyAssignedStores, getPreparation, getSessions } from '@/lib/queries'
+import { PourDemarrer, etapesDemarrage } from '@/components/PourDemarrer'
+import { useRepere } from '@/lib/reperes'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -235,6 +237,31 @@ export default function SupervisorHomeScreen() {
     queryFn: getMyAssignedStores,
   })
   const sansMagasin = !magasinsEnErreur && magasins !== undefined && magasins.length === 0
+
+  // ── « Pour démarrer » ──────────────────────────────────────────────
+  // Le guide porte sur le dernier inventaire ouvert : c'est celui que le
+  // superviseur prépare. Une fois les quatre étapes vraies, le composant se
+  // retire de lui-même — rien à cocher, rien à fermer.
+  const [guideMasque, setGuideMasque] = useState(false)
+  const inventaireEnCours = useMemo(
+    () => (sessions ?? []).find(s => s.status !== 'closed') ?? null,
+    [sessions],
+  )
+  const { data: preparation } = useQuery({
+    queryKey: ['preparation', inventaireEnCours?.id],
+    queryFn: () => getPreparation(inventaireEnCours!.id),
+    enabled: !!inventaireEnCours && !guideMasque && !sansMagasin,
+  })
+  const etapes = useMemo(
+    () => etapesDemarrage(preparation, {
+      inventaireExiste: !!inventaireEnCours,
+      utiliseZones: inventaireEnCours?.uses_zones ?? true,
+    }),
+    [preparation, inventaireEnCours],
+  )
+  // Le guide ne s'affiche pas à quelqu'un qui n'a pas de magasin : l'écran lui
+  // dit déjà l'obstacle, et aucune de ces étapes ne lui est accessible.
+  const montrerGuide = !guideMasque && !sansMagasin && sessions !== undefined
 
   const queryClient = useQueryClient()
   const onRefresh = useCallback(() => { refetch() }, [refetch])
@@ -504,6 +531,20 @@ export default function SupervisorHomeScreen() {
           onScrollBeginDrag={fermerVolet}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
+            <>
+            {montrerGuide && (
+              <PourDemarrer
+                etapes={etapes}
+                onMasquer={() => setGuideMasque(true)}
+                onAction={(cle) => {
+                  const id = inventaireEnCours?.id
+                  if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
+                  if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
+                  else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
+                  else router.push(`/(supervisor)/${id}/invite`)
+                }}
+              />
+            )}
             <View style={styles.listHeader}>
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
               {/* Le mode sélection s'ouvre aussi par un appui long sur une
@@ -515,6 +556,7 @@ export default function SupervisorHomeScreen() {
                 </Pressable>
               )}
             </View>
+            </>
           }
           ListEmptyComponent={
             sansMagasin ? (

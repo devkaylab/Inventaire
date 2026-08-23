@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import Svg, { Path, Rect } from 'react-native-svg'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
@@ -97,7 +98,41 @@ export default function EmployeeHomeScreen() {
                 </Pressable>
               ))}
             </>
-          ) : null}
+          ) : (
+            // ⚠️ Avant : ce bloc était rendu `null` et le compteur tombait
+            // directement sur un formulaire « N° + code » qu'il n'a pas.
+            // L'état vide dit le fait, nomme qui débloque, et donne le mode
+            // d'emploi — qui disparaît dès qu'un inventaire arrive.
+            <>
+              <View style={styles.videCard}>
+                <View style={styles.videIcone}>
+                  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth={1.8}>
+                    <Rect x="4" y="3" width="16" height="18" rx="2" />
+                    <Path d="M8 8h8M8 12h8M8 16h5" />
+                  </Svg>
+                </View>
+                <Text style={styles.videTitre}>Aucun inventaire pour l&apos;instant</Text>
+                <Text style={styles.videTexte}>
+                  Votre superviseur vous ajoutera à un inventaire. Il apparaîtra ici,
+                  et vous serez prévenu.
+                </Text>
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>En attendant, comment ça se passe</Text>
+                {[
+                  'Scannez la balise du rayon',
+                  'Scannez les articles',
+                  'Terminez la balise, passez à la suivante',
+                ].map((texte, i) => (
+                  <View key={texte} style={[styles.pasRang, i > 0 && styles.pasRangSep]}>
+                    <View style={styles.pasNum}><Text style={styles.pasNumText}>{i + 1}</Text></View>
+                    <Text style={styles.pasTexte}>{texte}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
@@ -154,6 +189,15 @@ function makeStyles(t: Theme) {
     badge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.successSoft, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
     badgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: t.success },
     badgeText: { fontSize: 11, fontFamily: Font.semibold, color: t.success },
+    videCard: { alignItems: 'center', paddingTop: Spacing.xxxl, paddingHorizontal: Spacing.lg, gap: Spacing.sm },
+    videIcone: { width: 64, height: 64, borderRadius: Radius.xl, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs },
+    videTitre: { color: t.textPrimary, fontSize: 18, fontFamily: Font.semibold, textAlign: 'center' },
+    videTexte: { color: t.textSecondary, fontSize: 14, fontFamily: Font.regular, lineHeight: 20, textAlign: 'center' },
+    pasRang: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md },
+    pasRangSep: { borderTopWidth: 1, borderTopColor: t.border },
+    pasNum: { width: 28, height: 28, borderRadius: Radius.sm, borderWidth: 1, borderColor: t.borderStrong, alignItems: 'center', justifyContent: 'center' },
+    pasNumText: { color: t.textMuted, fontSize: 13, fontFamily: Font.semibold },
+    pasTexte: { color: t.textPrimary, fontSize: 14, fontFamily: Font.medium, flex: 1 },
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.xl, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md, ...t.shadowCard },
     cardTitle: { fontSize: 18, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
     cardDesc: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
