@@ -905,6 +905,55 @@ a { color: inherit; text-decoration: none; }
 .usage-axe span:nth-child(1), .usage-axe span:nth-child(2) { flex: 0 0 33.33%; }
 .usage-axe span:nth-child(3) { flex: 1; color: var(--text-2); font-weight: 600; }
 
+/* Page /admin/capacite — un plafond par rangée.
+   L'état ne se dit pas par une pastille colorée mais par la jauge et le mot :
+   la donnée porte son propre verdict. Le filet de gauche ne colore que ce qui
+   appelle un geste — sur cinq lignes vertes il ne dirait plus rien. */
+.cap-liste { display: flex; flex-direction: column; gap: 2px; margin-top: 18px; }
+.cap-ligne {
+  padding: 16px 18px; border-radius: 12px; border: 1px solid transparent;
+  border-left: 3px solid transparent;
+}
+.cap-ligne:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.cap-surveiller { border-left-color: var(--warning); background: var(--warning-soft); }
+.cap-agir { border-left-color: var(--danger); background: var(--danger-soft); }
+.cap-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.cap-nom { font-size: 15px; font-weight: 600; }
+.cap-etat { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.cap-surveiller .cap-etat { color: var(--warning-text); font-weight: 600; }
+.cap-agir .cap-etat { color: var(--danger-text); font-weight: 600; }
+.cap-inconnu .cap-nom { color: var(--text-2); }
+.cap-mesure { display: flex; align-items: center; gap: 14px; margin-top: 9px; }
+.cap-piste {
+  position: relative; flex: 1; height: 8px; border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.cap-part {
+  position: absolute; left: 0; top: 0; height: 8px;
+  border-radius: 4px; background: var(--accent);
+}
+.cap-surveiller .cap-part { background: var(--warning); }
+.cap-agir .cap-part { background: var(--danger); }
+/* `margin-left: auto` pour que les chiffres restent alignés à droite même
+   quand la piste n'est pas dessinée (lignes non mesurées) : sans lui ils se
+   collaient à gauche et la colonne se cassait. */
+.cap-chiffres {
+  flex: none; margin-left: auto; font-size: 13.5px; color: var(--text-2);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.cap-chiffres b { color: var(--text); font-weight: 600; }
+.cap-pct { margin-left: 10px; font-weight: 600; color: var(--text); }
+.cap-note { font-size: 12.5px; color: var(--text-3); margin-top: 8px; max-width: 84ch; }
+/* La provenance devant la phrase : trois fraîcheurs différentes cohabitent,
+   et une estimation posée à côté d'une mesure se lirait comme une mesure. */
+.cap-source {
+  display: inline-block; margin-right: 8px; padding: 1px 7px;
+  border-radius: 999px; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.2px; text-transform: uppercase;
+  background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--text-2);
+}
+.cap-quand { display: block; font-size: 11.5px; color: var(--text-3); }
+
 .usage-champ { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); }
 .usage-champ select, .usage-champ input {
   font-family: inherit; font-size: 14px; padding: 9px 11px; border-radius: 10px;

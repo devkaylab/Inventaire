@@ -35,6 +35,8 @@ export function ongletsPour(profile: Profile): Onglet[] {
       // Ce que les clients font du produit, tout le parc d'un coup. Distinct
       // des entreprises : on n'y entre pas par un client, on y cherche.
       { href: '/admin/usage', label: 'Usage' },
+      // L'état de la machine, à côté de ce que les clients en font.
+      { href: '/admin/capacite', label: 'Capacité' },
       { href: '/admin/console', label: 'Console' },
     ]
   }
