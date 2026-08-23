@@ -624,7 +624,7 @@ export default function SupervisorHomeScreen() {
             </Pressable>
           </View>
         </View>
-      ) : (
+      ) : montrerGuide ? null : (
         <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
           <Text style={styles.fabText}>+ Nouvel inventaire</Text>
         </Pressable>
@@ -697,7 +697,7 @@ function makeStyles(t: Theme) {
     meta: { fontSize: 12, color: t.textMuted, ...tabular },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
     emptyText: { color: t.textMuted, fontSize: 15, fontFamily: Font.regular },
-    guidePlein: { flexGrow: 1, justifyContent: 'center', paddingBottom: Spacing.xxxl },
+    guidePlein: { flexGrow: 1, paddingTop: Spacing.sm, paddingBottom: Spacing.xxxl },
     videCard: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: Radius.lg,
       padding: Spacing.xl, marginHorizontal: Spacing.lg, marginTop: Spacing.lg, gap: Spacing.sm },
     videTitre: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },
