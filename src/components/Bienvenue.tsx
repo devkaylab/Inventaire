@@ -84,12 +84,18 @@ function contenu(role: RoleBienvenue, magasin: string | null, entreprise: string
 }
 
 export function Bienvenue({
-  prenom, role, magasin, entreprise, onCommencer, onPlusTard,
+  prenom, role, magasin, entreprise, action, onCommencer, onPlusTard,
 }: {
   prenom: string | null
   role: RoleBienvenue
   magasin: string | null
   entreprise: string | null
+  /**
+   * Le libellé du bouton vient de l'appelant : lui seul sait si la personne
+   * démarre vraiment. « Préparer mon premier inventaire » à quelqu'un qui en
+   * a déjà deux est un mensonge — constaté par Julien le 23 août 2026.
+   */
+  action: string
   onCommencer: () => void
   onPlusTard: () => void
 }) {
@@ -125,7 +131,7 @@ export function Bienvenue({
 
       <View style={styles.pied}>
         <Pressable style={styles.btn} onPress={onCommencer}>
-          <Text style={styles.btnText}>{c.action}</Text>
+          <Text style={styles.btnText}>{action}</Text>
         </Pressable>
         <Pressable style={styles.lien} onPress={onPlusTard}>
           <Text style={styles.lienText}>Plus tard</Text>

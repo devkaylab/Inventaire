@@ -726,3 +726,43 @@ describe('le guide « Pour démarrer » ne s’adresse qu’à qui démarre', ()
     expect(bienvenue).not.toMatch(/safe: \{ flex: 1,/)
   })
 })
+
+describe('audit du 23 août : ce que le typage et les tests ne voyaient pas', () => {
+  const porte = lire('components/PorteBienvenue.tsx')
+  const bienvenue = lire('components/Bienvenue.tsx')
+  const inventaireCompteur = lire('app/(employee)/[sessionId]/index.tsx')
+  const scanner = lire('components/scanner.tsx')
+
+  it('le bouton de la bienvenue mène quelque part', () => {
+    // Il se contentait de refermer la porte : « Préparer mon premier
+    // inventaire » retombait sur la liste, sans rien préparer.
+    expect(porte).toContain("router.push('/(supervisor)/new-session')")
+    expect(porte).toContain('onCommencer={() => { marquerVu(); aller() }}')
+  })
+
+  it('le libellé ne promet pas un premier inventaire à qui en a déjà', () => {
+    expect(porte).toContain('miennes.length === 0')
+    expect(porte).toContain('Voir mes inventaires')
+    // Le libellé vient de l'appelant, pas d'une constante par rôle.
+    expect(bienvenue).toContain('<Text style={styles.btnText}>{action}</Text>')
+  })
+
+  it('la bienvenue attend ses données avant de s’afficher', () => {
+    // Sinon : « Vous supervisez un magasin. » puis le vrai nom, et un bouton
+    // qui change de libellé sous le doigt.
+    expect(porte).toContain('isPending')
+  })
+
+  it('les explications Compter / Auditer finissent par disparaître', () => {
+    // `marquerVu` était laissé de côté : elles restaient pour toujours.
+    expect(inventaireCompteur).toContain('marquerVu: expliqueVu')
+    expect(inventaireCompteur).toContain('expliqueVu();')
+  })
+
+  it('la célébration compte les vraies pièces, pas celles d’un ancien rendu', () => {
+    // closeBalise est atteint depuis un callback mémoïsé sur [barcodeReady] :
+    // lire recentScans directement y donnerait 0.
+    expect(scanner).toContain('recentScansRef')
+    expect(scanner).toContain('const scans = recentScansRef.current')
+  })
+})

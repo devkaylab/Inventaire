@@ -24,7 +24,10 @@ export default function EmployeeProgressScreen() {
   // saisonnier. Deux lignes sous les boutons, tant qu'il n'a rien compté :
   // l'information est à côté du geste, jamais dans une modale.
   const { profile } = useAuth()
-  const { aVoir: expliquer } = useRepere('compter-auditer', profile?.id)
+  // ⚠️ `marquerVu` était laissé de côté : les deux lignes restaient donc
+  // affichées pour toujours. Elles s'effacent au premier « Compter » —
+  // la personne a lu, elle agit, l'explication a fait son travail.
+  const { aVoir: expliquer, marquerVu: expliqueVu } = useRepere('compter-auditer', profile?.id)
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -135,7 +138,7 @@ export default function EmployeeProgressScreen() {
 
           {session && session.status !== 'closed' && (
             <View style={styles.footer}>
-              <Pressable style={styles.countBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=count`)}>
+              <Pressable style={styles.countBtn} onPress={() => { expliqueVu(); router.push(`/(employee)/${sessionId}/scan?mode=count`) }}>
                 <Text style={styles.countBtnText}>Compter des articles</Text>
               </Pressable>
               {expliquer && (
@@ -143,7 +146,7 @@ export default function EmployeeProgressScreen() {
                   Premier passage : vous scannez une balise, puis les articles du rayon.
                 </Text>
               )}
-              <Pressable style={styles.auditBtn} onPress={() => router.push(`/(employee)/${sessionId}/scan?mode=audit`)}>
+              <Pressable style={styles.auditBtn} onPress={() => { expliqueVu(); router.push(`/(employee)/${sessionId}/scan?mode=audit`) }}>
                 <Text style={styles.auditBtnText}>Auditer des articles</Text>
               </Pressable>
               {expliquer && (

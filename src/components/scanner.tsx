@@ -301,6 +301,12 @@ export function Scanner({
   // Code de la balise venant d'être ouverte/fermée : ignoré tant qu'il reste
   // dans le champ (évite de re-fermer/ré-ouvrir aussitôt le même sticker).
   const ignoreBaliseRef = useRef<string | null>(null)
+  // ⚠️ Miroir obligatoire : `closeBalise` est atteint depuis
+  // `handleBarcodeDetected`, mémoïsé sur [barcodeReady] seul. Lire
+  // `recentScans` directement y donnerait la valeur d'un ancien rendu —
+  // donc « 0 pièce » dans le volet de première clôture.
+  const recentScansRef = useRef<ScanEntry[]>([])
+  useEffect(() => { recentScansRef.current = recentScans }, [recentScans])
   useEffect(() => { zoneModeRef.current = zoneMode }, [zoneMode])
   useEffect(() => { baliseModeRef.current = baliseMode }, [baliseMode])
 
@@ -565,10 +571,11 @@ export function Scanner({
       if (repereCloture.aVoir) {
         // La célébration est une ligne de fait, pas une fanfare : ce sont les
         // chiffres qui font plaisir, et ils viennent de la liste à l'écran.
-        const pieces = recentScans.reduce((n, e) => n + e.qty, 0)
+        const scans = recentScansRef.current
+        const pieces = scans.reduce((n, e) => n + e.qty, 0)
         setVolet({
           genre: 'terminee', code: active.code, nom: active.name,
-          pieces, refs: recentScans.length,
+          pieces, refs: scans.length,
         })
         repereCloture.marquerVu()
       }
