@@ -1135,16 +1135,19 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     expect(compteurs).toContain("d.role !== 'supervisor'")
   })
 
-  // Le guide masquait « Nouvel inventaire » tant qu'il durait, pour éviter le
-  // doublon — et une fois son étape 1 cochée, plus aucun chemin ne menait à la
-  // création. Le bandeau, lui, ne l'efface que dans le seul cas où il ferait
-  // vraiment doublon : son étape est la création ET la liste est vide, donc
-  // rien ne peut le faire défiler hors de l'écran.
-  it('« Nouvel inventaire » ne se masque que s’il ferait doublon', () => {
+  // ⚠️ **« Nouvel inventaire » ne se masque jamais.** Il l'a été deux fois, et
+  // deux fois cela a laissé quelqu'un sans rien à toucher : d'abord tant que le
+  // guide durait, puis quand le bandeau en était à l'étape de création et que
+  // la liste était vide (constat de Julien, 23 août 2026 : un bandeau, une
+  // salutation, « Aucun inventaire pour l'instant », et c'est tout). Le chevron
+  // d'un bandeau ne se lit pas comme un bouton.
+  it('« Nouvel inventaire » est toujours là', () => {
     const accueil = lire('app/(supervisor)/index.tsx')
-    expect(accueil).toContain("const fabDoublon = montrerGuide && etape?.cle === 'inventaire' && rows.length === 0")
-    expect(accueil).toContain('fabDoublon ? null : (')
+    expect(accueil).not.toContain('fabDoublon')
+    expect(accueil).not.toContain('guideOffreCreation')
     expect(accueil).not.toContain('montrerGuide ? null : (')
+    // Le seul cas où la barre remplace le bouton reste la sélection multiple.
+    expect(accueil).toContain('{selection ? (')
   })
 
   it('l’autre voie — numéro et code — est sur la page', () => {

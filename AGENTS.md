@@ -52,10 +52,16 @@ Points à ne pas défaire :
 - **Le bandeau ne remplace jamais la liste.** Le guide qui l'a précédé prenait
   l'écran entier et masquait l'inventaire qu'on venait de créer ; à 76 px la
   question ne se pose plus. `guidePleinEcran` a disparu.
-- **« + Nouvel inventaire » ne s'efface que s'il ferait vraiment doublon** :
-  étape en cours = la création **et** liste vide. Élargir la condition
-  ramènerait le défaut inverse — le bandeau part vers le haut dès qu'on fait
-  défiler, et le bouton était alors le seul chemin restant.
+- **⚠️ « + Nouvel inventaire » ne se masque JAMAIS.** Il l'a été deux fois,
+  et deux fois cela a laissé quelqu'un sans rien à toucher : tant que le guide
+  pleine page durait, puis — première version de ce bandeau — quand l'étape en
+  cours était la création et que la liste était vide. Julien, le 23 août 2026,
+  capture à l'appui : un bandeau, une salutation, « Aucun inventaire pour
+  l'instant », et c'est tout. **Le chevron d'un bandeau ne se lit pas comme un
+  bouton.** Ce n'est pas non plus le doublon d'autrefois : le guide pleine page
+  portait un bouton violet au même libellé, une rangée de 76 px et un bouton
+  d'action ne se confondent pas. La seule chose qui remplace encore ce bouton
+  est la barre de sélection multiple.
 - `getPreparation` et les invalidations `['preparation', …]` de Zones, Import
   et Inviter ont été **retirées** : plus personne ne les lit.
 

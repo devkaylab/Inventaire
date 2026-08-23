@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { closeSession, deleteSessionPermanently, getMyAssignedStores, getMyTeamByStore, getSessions } from '@/lib/queries'
-import { BandeauDemarrage, etapeCourante, etapesDemarrage } from '@/components/BandeauDemarrage'
+import { BandeauDemarrage, etapesDemarrage } from '@/components/BandeauDemarrage'
 import { useJalon, useRepere } from '@/lib/reperes'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -288,7 +288,6 @@ export default function SupervisorHomeScreen() {
     }),
     [balisesImprimees, equipeConstituee, mesInventaires.length],
   )
-  const etape = etapeCourante(etapes)
 
   const carteGuide = montrerGuide ? (
     <BandeauDemarrage
@@ -539,19 +538,6 @@ export default function SupervisorHomeScreen() {
     return out
   }, [sessions, profile?.id])
 
-  /**
-   * « + Nouvel inventaire » et le bandeau ne se répètent que dans un seul cas :
-   * le bandeau en est à l'étape de création **et** la liste est vide. Là, et
-   * là seulement, le bouton s'efface — le bandeau est sous les yeux, il n'y a
-   * rien à faire défiler.
-   *
-   * ⚠️ Ne pas élargir la condition à `montrerGuide` seul : le bandeau part
-   * vers le haut dès qu'on fait défiler une liste, et le bouton était alors le
-   * seul chemin restant vers la création (défaut vu au simulateur le 23 août
-   * 2026, sur le guide qui l'a précédé).
-   */
-  const fabDoublon = montrerGuide && etape?.cle === 'inventaire' && rows.length === 0
-
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']} onStartShouldSetResponderCapture={auContact}>
       {isLoading ? (
@@ -659,7 +645,19 @@ export default function SupervisorHomeScreen() {
             </Pressable>
           </View>
         </View>
-      ) : fabDoublon ? null : (
+      ) : (
+        /* ⚠️ **« + Nouvel inventaire » ne se masque jamais.**
+         *
+         * Il l'était quand le bandeau en était à l'étape de création et que la
+         * liste était vide — pour éviter un doublon. Vu par Julien le 23 août
+         * 2026 : l'écran ne portait plus qu'un bandeau, une salutation et
+         * « Aucun inventaire pour l'instant ». Le chevron d'un bandeau **ne se
+         * lit pas comme un bouton** : on ne sait plus quoi faire.
+         *
+         * Ce n'est pas non plus le doublon d'autrefois — le guide pleine page
+         * portait un bouton violet portant le même libellé. Une rangée de
+         * 76 px et un bouton d'action ne se confondent pas.
+         */
         <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
           <Text style={styles.fabText}>+ Nouvel inventaire</Text>
         </Pressable>
