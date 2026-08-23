@@ -274,11 +274,13 @@ describe('supprimer un compte de son entreprise', () => {
     expect(pageEquipe).toContain('son nom disparaît des rapports déjà faits')
   })
 
-  it('ne propose jamais de supprimer un administrateur', () => {
-    // Le bouton vit dans la branche `!m.is_company_admin`, celle qui porte
-    // déjà le retrait des accès.
-    const bloc = pageEquipe.split('{!m.is_company_admin && (')[1]?.split('store-sup')[0] ?? ''
-    expect(bloc).toContain('supprimerCompte(m)')
+  it('ne propose jamais de supprimer un administrateur, ni soi-même', () => {
+    // Depuis la refonte du 23 août la liste est unique : c'est `intouchable`
+    // qui porte la garde, et une ligne intouchable n'affiche aucune action.
+    expect(pageEquipe).toContain('const intouchable = m.is_company_admin || m.id === guard.profile.id')
+    const bloc = pageEquipe.split('{intouchable ? (')[1]?.split(') : (')[0] ?? ''
+    expect(bloc).toContain('Géré par Quantinvo')
+    expect(bloc).not.toContain('supprimerCompte')
   })
 
   it('liste tous les compteurs de l’entreprise, pas seulement les siens', () => {
@@ -286,7 +288,10 @@ describe('supprimer un compte de son entreprise', () => {
     // supervise aucun magasin et ne verrait donc aucun compteur. Le bloc
     // « autres magasins » du matin a été remplacé le jour même par une liste
     // personne par personne, qui couvre toute l'entreprise.
-    expect(pageEquipe).toContain("(ca?.members ?? []).filter((m) => m.role !== 'supervisor')")
+    // Refonte du 23 août : une seule liste, tirée de `ca_list_team`, qui rend
+    // tous les profils de l'entreprise. Le rôle est devenu un filtre.
+    expect(pageEquipe).toContain('const membres = estAdmin ? (ca?.members ?? []) : []')
+    expect(pageEquipe).toContain("<option value=\"employee\">Compteurs</option>")
     expect(pageEquipe).not.toContain('Compteurs · autres magasins')
     // Et elle répond à « qui fait quoi » : dernier comptage, inventaires comptés.
     expect(pageEquipe).toContain('last_count_at')
@@ -331,10 +336,11 @@ describe('l’administrateur d’entreprise a tous les magasins', () => {
   })
 
   it('« Mon équipe » ne montre ni croix ni sélecteur sur sa ligne', () => {
-    // Une croix qui ne marche pas est pire que pas de croix.
-    expect(pageEquipe).toContain('Tous les magasins de l&apos;entreprise')
-    const rail = pageEquipe.split('className="store-sup"')[1]?.split('</div>')[0] ?? ''
-    expect(rail).toContain('m.is_company_admin ?')
+    // Une croix qui ne marche pas est pire que pas de croix : le rail des
+    // magasins n'est rendu que pour les non-administrateurs, et sa ligne dit
+    // en toutes lettres qu'il les a tous.
+    expect(pageEquipe).toContain('tous les magasins de l’entreprise')
+    expect(pageEquipe).toContain('{!m.is_company_admin && (\n            <div className="store-sup"')
   })
 
   it('aucun écran ne lui parle plus d’affectation', () => {
@@ -396,8 +402,10 @@ describe('changer le rôle d’un membre (23 août 2026)', () => {
   })
 
   it('l’écran porte les deux gestes, dans les deux listes', () => {
-    expect(pageEquipe).toContain("changerRole(m, 'employee')")
-    expect(pageEquipe).toContain("changerRole(m, 'supervisor')")
+    // Une seule ligne pour les deux rôles depuis la refonte : le geste bascule
+    // avec le rôle plutôt que d'exister en deux exemplaires.
+    expect(pageEquipe).toContain("changerRole(m, superviseur ? 'employee' : 'supervisor')")
+    expect(pageEquipe).toContain("{superviseur ? 'Passer compteur' : 'Passer superviseur'}")
     expect(pageEquipe).toContain("appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })")
   })
 
@@ -408,5 +416,74 @@ describe('changer le rôle d’un membre (23 août 2026)', () => {
     expect(bloc).toContain('mais en tant que superviseur')
     expect(bloc).toContain('Elle ne pourra plus créer ni clôturer d’inventaire')
     expect(bloc).not.toContain('requireText')
+  })
+})
+
+describe('refonte de « Mon équipe » (23 août 2026)', () => {
+  // Maquette validée avant codage :
+  // https://claude.ai/code/artifact/33d0abae-d861-425c-baa4-4517abc7a914
+  const mMagasins = lire('../../supabase/migrations/20260823130001_ca_magasins_du_compteur.sql')
+
+  it('une seule porte pour ajouter, le rôle se choisit dedans', () => {
+    // Il y en avait deux, à deux endroits, sous deux formes : un bouton dans
+    // l'en-tête pour les compteurs, un formulaire déplié au milieu de la page
+    // pour les superviseurs.
+    expect(pageEquipe).toContain('+ Ajouter une personne')
+    expect(pageEquipe).toContain('function AjouterPersonne({')
+    expect(pageEquipe).not.toContain('function InviteForm(')
+    expect(pageEquipe).not.toContain('Inviter un superviseur</div>')
+  })
+
+  it('⚠️ les magasins voyagent aussi pour un compteur', () => {
+    // Le défaut réel de l'ancienne page : `AddCounter` envoyait `storeIds: []`,
+    // et une liste vide veut dire « tous les magasins ». Chaque compteur ajouté
+    // par un administrateur recevait donc l'entreprise entière.
+    const bloc = pageEquipe.split('async function inviterCompteur')[1]?.split('}\n')[0] ?? ''
+    expect(bloc).toContain('body: { firstName, lastName, email, storeIds }')
+    // Et l'obligation du superviseur se dit avant l'envoi, pas après le refus.
+    expect(pageEquipe).toContain("const magasinManquant = role === 'supervisor' && selected.length === 0")
+  })
+
+  it('les invitations passent en tête, et n’y restent pas quand il n’y en a plus', () => {
+    const avantMembres = pageEquipe.split('Membres\n')[0]
+    expect(avantMembres).toContain('Invitations en attente')
+    expect(pageEquipe).toContain('{invitations.length > 0 && (')
+    // Le bloc du bas ne sert plus qu'au superviseur ordinaire.
+    expect(pageEquipe).toContain('{!estAdmin && (sup?.invitations ?? []).length > 0 && (')
+  })
+
+  it('une seule liste, le rôle en pastille et en filtre', () => {
+    expect(pageEquipe).toContain('const membres = estAdmin ? (ca?.members ?? []) : []')
+    expect(pageEquipe).toContain("pill pill-role")
+    expect(pageEquipe).toContain('aria-label="Filtrer par type de profil"')
+    expect(pageEquipe).toContain('aria-label="Filtrer par magasin"')
+  })
+
+  it('⚠️ le filtre par magasin ne cache pas les administrateurs', () => {
+    // Ils les ont tous par construction : les retirer d'une liste filtrée
+    // laisserait croire qu'ils n'y travaillent pas.
+    expect(pageEquipe).toContain('if (magasinFiltre && !m.is_company_admin && !m.store_ids.includes(magasinFiltre)) return false')
+  })
+
+  it('le compte dit « x sur y » dès qu’un filtre est actif, et propose d’en sortir', () => {
+    expect(pageEquipe).toContain('${membresFiltres.length} sur ${membres.length}')
+    expect(pageEquipe).toContain('Effacer les filtres')
+  })
+
+  it('on peut enfin affecter un magasin à un compteur', () => {
+    // Il n'existait que `remove_counter_from_store` : un compteur retiré de son
+    // dernier magasin devenait invisible partout, et impossible à promouvoir.
+    expect(mMagasins).toContain('function public.ca_set_counter_stores(')
+    expect(mMagasins).toContain("role = 'employee'")
+    // Un compteur sans magasin reste un état normal : la liste vide passe.
+    expect(mMagasins).not.toContain('au moins un magasin')
+    // L'écran choisit la bonne table selon le rôle, avec le même geste.
+    expect(pageEquipe).toContain("m.role === 'supervisor' ? 'ca_set_supervisor_stores' : 'ca_set_counter_stores'")
+  })
+
+  it('le superviseur ordinaire garde son rangement magasin par magasin', () => {
+    // C'est ainsi qu'il travaille : un saisonnier part d'un magasin, pas de tous.
+    expect(pageEquipe).toContain('<div className="dash-sub">Compteurs · {s.name}</div>')
+    expect(pageEquipe).toContain("appliquer('remove_counter_from_store'")
   })
 })

@@ -27,6 +27,7 @@ export type LigneJournal = {
 export const ACTIONS: Record<string, (cible: string) => string> = {
   superviseur_invite: (c) => `invité ${c} comme superviseur`,
   superviseur_magasins_modifies: (c) => `modifié les magasins de ${c}`,
+  compteur_magasins_modifies: (c) => `modifié les magasins de ${c}`,
   acces_retires: (c) => `retiré tous les accès de ${c}`,
   promu_superviseur: (c) => `promu ${c} superviseur`,
   retrograde_compteur: (c) => `passé ${c} en compteur`,

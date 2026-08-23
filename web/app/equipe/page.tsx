@@ -76,6 +76,8 @@ export default function EquipePage() {
   const [busy, setBusy] = useState(false)
   const [filtre, setFiltre] = useState('')
   const [magasinFiltre, setMagasinFiltre] = useState('')
+  const [profilFiltre, setProfilFiltre] = useState('')
+  const [ajoutOuvert, setAjoutOuvert] = useState(false)
 
   const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
 
@@ -116,6 +118,36 @@ export default function EquipePage() {
       return false
     }
     alert(`Invitation envoyée. ${data.email} reçoit un e-mail pour créer son mot de passe.`)
+    await rafraichir()
+    return true
+  }
+
+  /**
+   * Ajouter un compteur — même edge function que l'application mobile.
+   *
+   * ⚠️ **Les magasins voyagent maintenant.** Le bloc « Ajouter un compteur »
+   * du haut de page n'en proposait aucun, et une liste vide veut dire « tous
+   * les magasins du superviseur ». Pour un administrateur d'entreprise, chaque
+   * compteur ajouté d'ici recevait donc l'entreprise entière sans qu'on l'ait
+   * décidé.
+   */
+  async function inviterCompteur(firstName: string, lastName: string, email: string, storeIds: string[]) {
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke('invite-teammate', {
+      body: { firstName, lastName, email, storeIds },
+    })
+    setBusy(false)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
+      return false
+    }
+    alert(
+      data.emailSent
+        ? `Invitation envoyée. ${firstName} ${lastName} reçoit un e-mail pour créer son mot de passe.`
+        : data.alreadyInvited
+          ? `${firstName} ${lastName} avait déjà été invité : le lien reçu précédemment reste valable.`
+          : `${firstName} ${lastName} a été ajouté, mais l’e-mail n’a pas pu partir (${data.emailError ?? 'raison inconnue'}).`,
+    )
     await rafraichir()
     return true
   }
@@ -198,36 +230,175 @@ export default function EquipePage() {
     appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })
   }
 
+  /**
+   * Les magasins d'une personne, quel que soit son rôle.
+   *
+   * ⚠️ **Deux tables, donc deux fonctions.** Un superviseur est rattaché par
+   * `store_supervisors`, un compteur par `store_team`. Côté écran c'est le même
+   * geste — des pastilles et un menu — et il doit le rester.
+   *
+   * Affecter un magasin à un compteur n'existait pas : on ne pouvait que lui en
+   * retirer. Un compteur retiré de son dernier magasin devenait donc invisible
+   * partout, et impossible à promouvoir.
+   */
+  function changerMagasins(m: Member, ids: string[]) {
+    appliquer(
+      m.role === 'supervisor' ? 'ca_set_supervisor_stores' : 'ca_set_counter_stores',
+      { p_user: m.id, p_store_ids: ids },
+    )
+  }
+
   if (guard.status !== 'ready') {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
 
   const storeById: Record<string, Store> = {}
   for (const s of ca?.stores ?? []) storeById[s.id] = s
-  const superviseurs = (ca?.members ?? []).filter((m) => m.role === 'supervisor')
-  // Les compteurs de l'entreprise que la liste par magasin ne montre pas :
-  // l'administrateur ne supervise pas forcément les magasins où ils comptent,
-  // et son droit de suppression, lui, porte sur toute l'entreprise.
-  // Pour l'administrateur, l'équipe se lit **personne par personne** : il doit
-  // pouvoir répondre à « où travaille Sofia, et quand a-t-elle compté pour la
-  // dernière fois ? ». Un rangement par magasin ne répond jamais à ça, et il
-  // laissait hors de vue les compteurs des magasins qu'il ne supervise pas.
-  const compteurs = estAdmin
-    ? (ca?.members ?? []).filter((m) => m.role !== 'supervisor')
-    : []
+
+  /**
+   * Pour l'administrateur, l'équipe se lit **personne par personne**, dans une
+   * seule liste.
+   *
+   * Elle était coupée en deux — « Superviseurs » en cartes, « Compteurs » en
+   * lignes — avec un formulaire d'invitation coincé entre les deux et une
+   * recherche qui ne couvrait que les compteurs. Le rôle est devenu une
+   * pastille sur la ligne et un filtre au-dessus : c'est ce qui distingue les
+   * gens, pas ce qui doit les séparer en deux pages.
+   *
+   * Un superviseur ordinaire garde son rangement magasin par magasin : c'est
+   * ainsi qu'il travaille, un saisonnier part d'un magasin et pas de tous.
+   */
+  const membres = estAdmin ? (ca?.members ?? []) : []
   const recherche = filtre.trim().toLowerCase()
-  const compteursFiltres = compteurs.filter((m) => {
-    if (magasinFiltre && !m.store_ids.includes(magasinFiltre)) return false
+  const membresFiltres = membres.filter((m) => {
+    if (profilFiltre && m.role !== profilFiltre) return false
+    // ⚠️ Le filtre par magasin ne cache pas les administrateurs : ils les ont
+    // tous par construction, les retirer d'une liste filtrée laisserait croire
+    // qu'ils n'y travaillent pas.
+    if (magasinFiltre && !m.is_company_admin && !m.store_ids.includes(magasinFiltre)) return false
     if (!recherche) return true
     return (m.full_name ?? '').toLowerCase().includes(recherche)
       || (m.email ?? '').toLowerCase().includes(recherche)
   })
+  const filtreActif = !!recherche || !!magasinFiltre || !!profilFiltre
+  const effacerFiltres = () => { setFiltre(''); setMagasinFiltre(''); setProfilFiltre('') }
+  const invitations = (estAdmin ? ca?.invitations : sup?.invitations) ?? []
+
+  /** Une ligne de membre — la même pour tout le monde, seules les actions changent. */
+  const rangMembre = (m: Member) => {
+    const superviseur = m.role === 'supervisor'
+    // Sa propre ligne et celle d'un autre administrateur n'ont aucune action :
+    // ces comptes-là restent chez Quantinvo.
+    const intouchable = m.is_company_admin || m.id === guard.profile.id
+    return (
+      <div className="req-row req-row-block" key={m.id}>
+        <div>
+          <div className="req-name">
+            {m.full_name || 'Sans nom'}
+            {m.is_company_admin && <span className="pill">Admin</span>}
+            {!m.is_company_admin && (
+              <span className="pill pill-role">{superviseur ? 'Superviseur' : 'Compteur'}</span>
+            )}
+            {m.id === guard.profile.id && <span className="pill pill-vous">Vous</span>}
+            {!m.is_active && <BadgeEnAttente />}
+          </div>
+          <div className="muted small">
+            {m.email}
+            {m.is_company_admin
+              ? ` · tous les magasins de l’entreprise${m.store_ids.length > 0 ? ` (${m.store_ids.length})` : ''}`
+              : superviseur
+                ? ` · ${m.store_ids.length} magasin${m.store_ids.length > 1 ? 's' : ''}`
+                : m.sessions_counted > 0
+                  ? ` · a compté ${m.sessions_counted} inventaire${m.sessions_counted > 1 ? 's' : ''}${m.last_count_at ? ` · dernier le ${jourCourt(m.last_count_at)}` : ''}`
+                  : ' · pas encore de comptage'}
+          </div>
+          {/* Un administrateur a tous les magasins par construction : ses
+              affectations ne se modifient pas, une croix qui ne marche pas
+              est pire que pas de croix. */}
+          {!m.is_company_admin && (
+            <div className="store-sup" style={{ marginTop: 6 }}>
+              {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
+              {m.store_ids.map((sid) => (
+                <span className="chip" key={sid}>
+                  {storeById[sid]?.name || 'Magasin'}
+                  <button
+                    className="chip-x"
+                    aria-label={`Retirer du magasin ${storeById[sid]?.name || ''}`}
+                    onClick={() => changerMagasins(m, m.store_ids.filter((x) => x !== sid))}
+                  >×</button>
+                </span>
+              ))}
+              {(ca?.stores ?? []).some((s) => !m.store_ids.includes(s.id)) && (
+                <select
+                  className="store-sup-select"
+                  value=""
+                  aria-label={`Affecter un magasin à ${m.full_name || 'cette personne'}`}
+                  onChange={(e) => {
+                    if (!e.target.value) return
+                    changerMagasins(m, [...m.store_ids, e.target.value])
+                  }}
+                >
+                  <option value="">+ Affecter un magasin</option>
+                  {(ca?.stores ?? []).filter((s) => !m.store_ids.includes(s.id)).map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="req-actions">
+          {intouchable ? (
+            <span className="muted small">Géré par Quantinvo</span>
+          ) : (
+            <>
+              <button className="link-btn" onClick={() => changerRole(m, superviseur ? 'employee' : 'supervisor')}>
+                {superviseur ? 'Passer compteur' : 'Passer superviseur'}
+              </button>
+              <span className="action-sep" />
+              {superviseur && (
+                <>
+                  <button
+                    className="link-btn"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Retirer tous les accès ?',
+                        message: `${m.full_name || 'Cette personne'} garde son compte, mais n’aura plus accès à aucun magasin.`,
+                        confirmLabel: 'Retirer les accès',
+                      })
+                      if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
+                    }}
+                  >Retirer les accès</button>
+                  <span className="action-sep" />
+                </>
+              )}
+              <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
+                Supprimer
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
         <h1 className="page-title">Mon équipe</h1>
-        <AddCounter onAdded={rafraichir} />
+        {/* Une seule porte pour l'administrateur : le rôle se choisit dans le
+            panneau. Un superviseur ordinaire n'ajoute que des compteurs. */}
+        {estAdmin ? (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => setAjoutOuvert((v) => !v)}
+          >
+            {ajoutOuvert ? 'Fermer' : '+ Ajouter une personne'}
+          </button>
+        ) : (
+          <AddCounter onAdded={rafraichir} />
+        )}
       </div>
 
       {estAdmin && !mfaEnrolled && (
@@ -237,191 +408,115 @@ export default function EquipePage() {
         </div>
       )}
 
-      {/* ── Superviseurs : administrateur d'entreprise seulement ── */}
-      {estAdmin && (
-        <>
-          <div className="dash-sub">Superviseurs</div>
-          {superviseurs.length === 0 ? (
-            <p className="muted">Aucun superviseur pour l&apos;instant.</p>
-          ) : (
-            <div className="store-blocks">
-              {superviseurs.map((m) => (
-                <div className="store-block" key={m.id}>
-                  <div className="store-block-head">
-                    <div>
-                      <span className="store-block-name">{m.full_name || 'Sans nom'}</span>
-                      {m.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
-                      {!m.is_active && <BadgeEnAttente />}
-                      <div className="muted small">{m.email}</div>
-                    </div>
-                    {/* Sa propre ligne et celle d'un autre administrateur n'ont
-                        aucune action : ces comptes-là restent chez Quantinvo. */}
-                    {!m.is_company_admin && (
-                      <div className="req-actions">
-                        <button
-                          className="link-btn"
-                          onClick={async () => {
-                            const ok = await confirm({
-                              title: 'Retirer tous les accès ?',
-                              message: `${m.full_name || 'Cette personne'} garde son compte, mais n’aura plus accès à aucun magasin.`,
-                              confirmLabel: 'Retirer les accès',
-                            })
-                            if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
-                          }}
-                        >Retirer les accès</button>
-                        <span className="action-sep" />
-                        <button className="link-btn" onClick={() => changerRole(m, 'employee')}>
-                          Passer compteur
-                        </button>
-                        <span className="action-sep" />
-                        <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
-                          Supprimer le compte
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {/* Un administrateur d'entreprise a tous les magasins, par
-                      construction (déclencheurs de la migration 20260822150001).
-                      Ses affectations ne se modifient donc pas : une croix qui
-                      ne marche pas est pire que pas de croix. */}
-                  <div className="store-sup">
-                    {m.is_company_admin ? (
-                      <span className="muted small">
-                        Tous les magasins de l&apos;entreprise
-                        {m.store_ids.length > 0 && ` (${m.store_ids.length})`}
-                      </span>
-                    ) : (
-                      <>
-                        {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
-                        {m.store_ids.map((sid) => (
-                          <span className="chip" key={sid}>
-                            {storeById[sid]?.name || 'Magasin'}
-                            <button
-                              className="chip-x"
-                              aria-label="Retirer ce magasin"
-                              onClick={() => appliquer('ca_set_supervisor_stores', {
-                                p_user: m.id, p_store_ids: m.store_ids.filter((x) => x !== sid),
-                              })}
-                            >×</button>
-                          </span>
-                        ))}
-                        {(ca?.stores ?? []).some((s) => !m.store_ids.includes(s.id)) && (
-                          <select
-                            className="store-sup-select"
-                            value=""
-                            onChange={(e) => {
-                              if (!e.target.value) return
-                              appliquer('ca_set_supervisor_stores', {
-                                p_user: m.id, p_store_ids: [...m.store_ids, e.target.value],
-                              })
-                            }}
-                          >
-                            <option value="">+ Affecter un magasin</option>
-                            {(ca?.stores ?? []).filter((s) => !m.store_ids.includes(s.id)).map((s) => (
-                              <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
-                          </select>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="dash-sub">Inviter un superviseur</div>
-          <InviteForm stores={ca?.stores ?? []} busy={busy} onInvite={inviterSuperviseur} />
-        </>
+      {estAdmin && ajoutOuvert && (
+        <AjouterPersonne
+          stores={ca?.stores ?? []}
+          busy={busy}
+          onCompteur={inviterCompteur}
+          onSuperviseur={inviterSuperviseur}
+          onFermer={() => setAjoutOuvert(false)}
+        />
       )}
 
-      {/* ── Compteurs ──
-          L'administrateur les lit personne par personne (il les a tous) ;
-          un superviseur les lit magasin par magasin, parce que c'est ainsi
-          qu'il travaille : un saisonnier part d'un magasin, pas de tous.
-          Le bloc « autres magasins » du matin n'a plus d'objet — cette liste
-          couvre toute l'entreprise. ── */}
       {estAdmin ? (
         <>
-          <div className="dash-sub">Compteurs ({compteurs.length})</div>
-          {compteurs.length === 0 ? (
-            <p className="muted">Aucun compteur dans votre entreprise.</p>
-          ) : (
+          {/* ── Invitations en attente, en tête ──
+              C'est la seule chose de cette page qui attend un geste : elle passe
+              devant, comme « Ventes en cours » sur la console. Quand il n'y en a
+              aucune, la section disparaît et la page s'ouvre sur les filtres. */}
+          {invitations.length > 0 && (
             <>
-              <div className="toolbar" style={{ marginTop: 0, marginBottom: 12 }}>
-                <div className="toolbar-grow">
-                  <input
-                    type="search" value={filtre} onChange={(e) => setFiltre(e.target.value)}
-                    placeholder="Rechercher une personne…"
-                    aria-label="Rechercher une personne"
-                  />
-                </div>
-                <select
-                  className="store-sup-select"
-                  value={magasinFiltre}
-                  onChange={(e) => setMagasinFiltre(e.target.value)}
-                  aria-label="Filtrer par magasin"
-                >
-                  <option value="">Tous les magasins</option>
-                  {(ca?.stores ?? []).map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+              <div className="dash-sub dash-sub-compte">
+                Invitations en attente <span className="dash-sub-n">{invitations.length}</span>
               </div>
-
-              {compteursFiltres.length === 0 ? (
-                <p className="muted small">Personne ne correspond à cette recherche.</p>
-              ) : (
-                <div className="req-list">
-                  {compteursFiltres.map((m) => (
-                    <div className="req-row req-row-block" key={m.id}>
-                      <div>
-                        <div className="req-name">
-                          {m.full_name || 'Sans nom'}
-                          {!m.is_active && <BadgeEnAttente />}
-                        </div>
-                        <div className="muted small">
-                          {m.email}
-                          {m.sessions_counted > 0
-                            ? ` · a compté ${m.sessions_counted} inventaire${m.sessions_counted > 1 ? 's' : ''}`
-                            : ' · pas encore de comptage'}
-                          {m.last_count_at && ` · dernier le ${jourCourt(m.last_count_at)}`}
-                        </div>
+              <div className="req-list">
+                {invitations.map((i) => (
+                  <div className="req-row req-row-block req-row-attente" key={i.id}>
+                    <div>
+                      <div className="req-name">
+                        {i.first_name} {i.last_name}
+                        <span className="pill pill-role">
+                          {i.role === 'company_admin' ? 'Admin' : i.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
+                        </span>
+                      </div>
+                      <div className="muted small">
+                        {i.email} · envoyée le {jourCourt(i.created_at)}
+                        {i.store_ids.length > 0 && ` · ${i.store_ids.length} magasin${i.store_ids.length > 1 ? 's' : ''}`}
+                      </div>
+                      {i.store_ids.length > 0 && (
                         <div className="store-sup" style={{ marginTop: 6 }}>
-                          {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
-                          {m.store_ids.map((sid) => (
-                            <span className="chip" key={sid}>
-                              {storeById[sid]?.name || 'Magasin'}
-                              <button
-                                className="chip-x"
-                                aria-label={`Retirer du magasin ${storeById[sid]?.name || ''}`}
-                                onClick={async () => {
-                                  const ok = await confirm({
-                                    title: `Retirer du magasin ${storeById[sid]?.name || ''} ?`,
-                                    message: `${m.full_name || 'Cette personne'} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.`,
-                                    confirmLabel: 'Retirer du magasin',
-                                  })
-                                  if (ok) appliquer('remove_counter_from_store', { p_user: m.id, p_store_id: sid })
-                                }}
-                              >×</button>
-                            </span>
+                          {i.store_ids.map((sid) => (
+                            <span className="chip" key={sid}>{storeById[sid]?.name || 'Magasin'}</span>
                           ))}
                         </div>
-                      </div>
-                      <div className="req-actions">
-                        <button className="link-btn" onClick={() => changerRole(m, 'supervisor')}>
-                          Passer superviseur
-                        </button>
-                        <span className="action-sep" />
-                        <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
-                          Supprimer le compte
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="req-actions">
+                      <button
+                        className="link-btn danger-link"
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: 'Annuler cette invitation ?',
+                            message: `${i.first_name} ${i.last_name} ne pourra plus créer son compte avec le lien reçu.`,
+                            confirmLabel: 'Annuler l’invitation',
+                            tone: 'danger',
+                          })
+                          if (ok) appliquer('ca_cancel_invitation', { p_id: i.id })
+                        }}
+                      >Annuler l&apos;invitation</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
+          )}
+
+          {/* ── Membres : une seule liste, le rôle en pastille ── */}
+          <div className="dash-sub dash-sub-compte">
+            Membres
+            <span className="dash-sub-n">
+              {filtreActif ? `${membresFiltres.length} sur ${membres.length}` : membres.length}
+            </span>
+            {filtreActif && (
+              <button className="link-btn" onClick={effacerFiltres}>Effacer les filtres</button>
+            )}
+          </div>
+
+          <div className="toolbar">
+            <div className="toolbar-grow">
+              <input
+                type="search" value={filtre} onChange={(e) => setFiltre(e.target.value)}
+                placeholder="Rechercher une personne…"
+                aria-label="Rechercher une personne"
+              />
+            </div>
+            <select
+              value={magasinFiltre}
+              onChange={(e) => setMagasinFiltre(e.target.value)}
+              aria-label="Filtrer par magasin"
+            >
+              <option value="">Tous les magasins</option>
+              {(ca?.stores ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <select
+              value={profilFiltre}
+              onChange={(e) => setProfilFiltre(e.target.value)}
+              aria-label="Filtrer par type de profil"
+            >
+              <option value="">Tous les profils</option>
+              <option value="supervisor">Superviseurs</option>
+              <option value="employee">Compteurs</option>
+            </select>
+          </div>
+
+          {membres.length === 0 ? (
+            <p className="muted">Personne dans votre entreprise pour l&apos;instant.</p>
+          ) : membresFiltres.length === 0 ? (
+            <p className="muted small">Personne ne correspond à cette recherche.</p>
+          ) : (
+            <div className="req-list">{membresFiltres.map(rangMembre)}</div>
           )}
         </>
       ) : (sup?.stores ?? []).length === 0 ? (
@@ -475,12 +570,14 @@ export default function EquipePage() {
         ))
       )}
 
-      {/* ── Invitations en cours ── */}
-      {((estAdmin ? ca?.invitations : sup?.invitations) ?? []).length > 0 && (
+      {/* ── Invitations en cours ──
+          Pour le superviseur ordinaire seulement : celles de l'administrateur
+          sont passées en tête de page, là où elles attendent un geste. ── */}
+      {!estAdmin && (sup?.invitations ?? []).length > 0 && (
         <>
           <div className="dash-sub">Invitations en cours</div>
           <div className="req-list">
-            {((estAdmin ? ca?.invitations : sup?.invitations) ?? []).map((i) => (
+            {(sup?.invitations ?? []).map((i) => (
               <div className="req-row" key={i.id}>
                 <div>
                   <div className="req-name">
@@ -503,7 +600,7 @@ export default function EquipePage() {
                       confirmLabel: 'Annuler l’invitation',
                       cancelLabel: 'Revenir',
                     })
-                    if (ok) appliquer(estAdmin ? 'ca_cancel_invitation' : 'cancel_my_invitation', { p_id: i.id })
+                    if (ok) appliquer('cancel_my_invitation', { p_id: i.id })
                   }}
                 >Annuler</button>
               </div>
@@ -515,13 +612,28 @@ export default function EquipePage() {
   )
 }
 
-function InviteForm({
-  stores, busy, onInvite,
+/**
+ * Ajouter une personne — une seule porte pour les deux rôles.
+ *
+ * Il y avait deux chemins : un bouton « Ajouter un compteur » dans l'en-tête,
+ * et un formulaire « Inviter un superviseur » déplié en permanence au milieu de
+ * la page, entre les deux listes qu'il séparait. Mêmes champs, deux formes,
+ * deux endroits — et rien qui dise pourquoi.
+ *
+ * Le rôle se choisit sur deux cartes plutôt que dans un menu : ce n'est pas un
+ * réglage parmi d'autres, c'est ce qui décide de tout le reste — de la fonction
+ * appelée jusqu'à l'obligation d'un magasin.
+ */
+function AjouterPersonne({
+  stores, busy, onCompteur, onSuperviseur, onFermer,
 }: {
   stores: Store[]
   busy: boolean
-  onInvite: (firstName: string, lastName: string, email: string, storeIds: string[]) => Promise<boolean>
+  onCompteur: (firstName: string, lastName: string, email: string, storeIds: string[]) => Promise<boolean>
+  onSuperviseur: (firstName: string, lastName: string, email: string, storeIds: string[]) => Promise<boolean>
+  onFermer: () => void
 }) {
+  const [role, setRole] = useState<'employee' | 'supervisor'>('employee')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -531,41 +643,95 @@ function InviteForm({
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
+  // Un superviseur a toujours au moins un magasin — la base le refuse sinon
+  // (migration 20260823100001). Le dire avant l'envoi vaut mieux qu'après.
+  const magasinManquant = role === 'supervisor' && selected.length === 0
+  const incomplet = !firstName.trim() || !lastName.trim() || !email.trim() || magasinManquant
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) return
-    const ok = await onInvite(firstName.trim(), lastName.trim(), email.trim(), selected)
-    if (ok) { setFirstName(''); setLastName(''); setEmail(''); setSelected([]) }
+    if (incomplet) return
+    const envoyer = role === 'supervisor' ? onSuperviseur : onCompteur
+    const ok = await envoyer(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), selected)
+    if (ok) { setFirstName(''); setLastName(''); setEmail(''); setSelected([]); onFermer() }
   }
 
   return (
-    <form onSubmit={submit} className="panel" style={{ marginTop: 0 }}>
-      <div className="inline-form" style={{ flexWrap: 'wrap', marginBottom: 14 }}>
-        <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" style={{ minWidth: 140 }} />
-        <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" style={{ minWidth: 140 }} />
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" type="email" style={{ minWidth: 220 }} />
+    <form onSubmit={submit} className="panel">
+      <h3>Ajouter une personne</h3>
+
+      <div className="role-choix" style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className={`role-carte${role === 'employee' ? ' on' : ''}`}
+          aria-pressed={role === 'employee'}
+          onClick={() => setRole('employee')}
+        >
+          <span className="role-radio" />
+          <span>
+            <span className="role-nom">Compteur</span>
+            <span className="role-quoi" style={{ display: 'block' }}>
+              Scanne sur le terrain, depuis l&apos;application.
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`role-carte${role === 'supervisor' ? ' on' : ''}`}
+          aria-pressed={role === 'supervisor'}
+          onClick={() => setRole('supervisor')}
+        >
+          <span className="role-radio" />
+          <span>
+            <span className="role-nom">Superviseur</span>
+            <span className="role-quoi" style={{ display: 'block' }}>
+              Prépare les inventaires, gère les compteurs de ses magasins.
+            </span>
+          </span>
+        </button>
       </div>
+
+      <div style={{ marginTop: 18 }}>
+        <div className="champ-label">Identité</div>
+        <div className="inline-form" style={{ flexWrap: 'wrap' }}>
+          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" style={{ minWidth: 140 }} />
+          <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" style={{ minWidth: 140 }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" type="email" style={{ minWidth: 220 }} />
+        </div>
+      </div>
+
       {stores.length > 0 && (
-        <div className="chips" style={{ marginBottom: 14 }}>
-          {stores.map((s) => (
-            <label key={s.id} className="chip" style={{ cursor: 'pointer', gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={selected.includes(s.id)}
-                onChange={() => toggle(s.id)}
-                style={{ accentColor: 'var(--accent)' }}
-              />
-              {s.name}
-            </label>
-          ))}
+        <div style={{ marginTop: 18 }}>
+          <div className="champ-label">
+            Magasins{role === 'supervisor' && <span className="obligatoire"> · au moins un</span>}
+          </div>
+          <div className="chips" style={{ marginBottom: 0 }}>
+            {stores.map((s) => (
+              <label key={s.id} className="chip" style={{ cursor: 'pointer', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(s.id)}
+                  onChange={() => toggle(s.id)}
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                {s.name}
+              </label>
+            ))}
+          </div>
         </div>
       )}
-      <button className="btn btn-primary" disabled={busy || !firstName.trim() || !lastName.trim() || !email.trim()}>
-        Envoyer l&apos;invitation
-      </button>
-      <p className="muted small" style={{ marginTop: 10 }}>
-        La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.
-        Vous pourrez lui donner un magasin plus tard.
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 18 }}>
+        <button className="btn btn-primary" disabled={busy || incomplet}>
+          Envoyer l&apos;invitation
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={onFermer}>Annuler</button>
+      </div>
+
+      <p className="muted small" style={{ marginTop: 12 }}>
+        {role === 'supervisor'
+          ? 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Un superviseur a toujours au moins un magasin.'
+          : 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Sans magasin coché, elle aura accès à tous ceux de l’entreprise.'}
       </p>
     </form>
   )

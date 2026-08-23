@@ -462,6 +462,11 @@ a { color: inherit; text-decoration: none; }
    la couleur d'accent, qui dit « fait » partout ailleurs. */
 .pill-attente { color: var(--warning-text); background: var(--warning-soft); }
 .pill-refus { color: var(--danger-text); background: var(--danger-soft); }
+/* Dans une liste unique, le rôle est ce qui distingue les gens : il doit se
+   repérer d'un coup d'œil. Pastille neutre, pour ne voler la vedette ni à
+   « Admin » (accent) ni à « Mot de passe à créer » (ambre). */
+.pill-role { color: var(--text-3); background: transparent; border: 1px solid var(--hairline); }
+.pill-vous { color: var(--success-text); background: var(--success-soft); }
 .panel {
   background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
   padding: 24px; margin-top: 16px; box-shadow: var(--shadow-card);
@@ -534,6 +539,9 @@ a { color: inherit; text-decoration: none; }
    en vie, « supprimer » l'efface. Le filet les empêche de se lire comme une
    paire de boutons interchangeables. */
 .action-sep { width: 1px; height: 14px; background: var(--hairline); }
+/* Une invitation n'est pas encore quelqu'un : le trait pointillé le dit sans
+   un mot, et sans reprendre l'ambre déjà pris par « mot de passe à créer ». */
+.req-row-attente { border-style: dashed; border-color: var(--border-strong); background: transparent; }
 
 @media (max-width: 620px) {
   .admin-section-head { flex-direction: column; align-items: stretch; }
@@ -553,6 +561,30 @@ a { color: inherit; text-decoration: none; }
   font-family: inherit;
 }
 .store-sup-select:focus { border-color: var(--accent); }
+
+/* ── Ajouter une personne : le rôle d'abord ──────────────────────────────
+   Une seule porte pour les deux rôles. Le choix se fait sur deux cartes
+   plutôt qu'un menu déroulant : ce n'est pas un réglage parmi d'autres,
+   c'est ce qui décide de tout le reste du formulaire. */
+.role-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.role-carte {
+  display: flex; align-items: flex-start; gap: 10px; text-align: left;
+  border: 1px solid var(--hairline); border-radius: 12px; padding: 12px 14px;
+  background: var(--surface); color: var(--text); cursor: pointer; font-family: inherit;
+}
+.role-carte:hover { border-color: var(--border-strong); }
+.role-carte.on { border-color: var(--accent); background: var(--accent-soft); }
+.role-carte:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.role-radio {
+  width: 15px; height: 15px; border-radius: 50%; flex: none; margin-top: 3px;
+  border: 1.5px solid var(--border-strong);
+}
+.role-carte.on .role-radio { border-color: var(--accent); border-width: 4.5px; }
+.role-nom { font-size: 14px; font-weight: 650; }
+.role-quoi { font-size: 12.5px; color: var(--text-2); margin-top: 1px; line-height: 1.45; }
+.champ-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); margin-bottom: 7px; }
+.champ-label .obligatoire { color: var(--warning-text); font-weight: 500; }
+@media (max-width: 640px) { .role-choix { grid-template-columns: 1fr; } }
 
 /* ── Tableau de bord d'entreprise : un bloc par magasin ──
    Même figure que la fiche entreprise de la console Quantinvo : l'administrateur
@@ -697,6 +729,18 @@ a { color: inherit; text-decoration: none; }
    même ligne, casse normale, pour qu'il se lise comme un montant et non
    comme un titre. */
 .dash-sub-note { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-2); }
+
+/* ── Titre de section qui porte un compte, et de quoi effacer un filtre ──
+   « Mon équipe » range tout le monde dans une seule liste : le titre doit dire
+   combien de personnes elle contient, et — dès qu'un filtre est actif —
+   combien sur combien, avec la sortie à côté. `.dash-sub` reste un simple
+   libellé partout ailleurs. */
+.dash-sub-compte { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dash-sub-n {
+  text-transform: none; letter-spacing: 0.02em; font-size: 11px; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px;
+}
+.dash-sub-compte .link-btn { text-transform: none; letter-spacing: 0; font-weight: 550; }
 .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
 .dash-card {
@@ -812,6 +856,11 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg); border: 1px solid var(--hairline); color: var(--text); outline: none;
   width: 100%; font-family: inherit;
 }
+/* ⚠️ Un filtre se dimensionne sur son contenu, pas sur la ligne entière. Avec
+   le `width: 100%` ci-dessus, deux menus déroulants dans la même barre
+   passaient chacun à la ligne : trois contrôles empilés là où il en fallait
+   une rangée. */
+.toolbar select { width: auto; min-width: 168px; padding-right: 8px; }
 .toolbar .btn { height: 38px; }
 .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
 .toolbar-spacer { flex: 1; }
