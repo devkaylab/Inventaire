@@ -32,6 +32,9 @@ export function ongletsPour(profile: Profile): Onglet[] {
     return [
       { href: '/admin', label: 'Tableau de bord' },
       { href: '/admin/entreprises', label: 'Entreprises' },
+      // Ce que les clients font du produit, tout le parc d'un coup. Distinct
+      // des entreprises : on n'y entre pas par un client, on y cherche.
+      { href: '/admin/usage', label: 'Usage' },
       { href: '/admin/console', label: 'Console' },
     ]
   }

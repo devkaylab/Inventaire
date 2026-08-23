@@ -152,11 +152,67 @@ describe('la RPC ne rend que des faits', () => {
     expect(bloc).toContain('revoke all on function public.admin_usage_overview(uuid) from public, anon')
   })
 
+  it('sert tout le parc sans dédoubler sa signature', () => {
+    // Ajouter un paramètre aurait créé une SECONDE fonction et rendu un appel
+    // à un argument ambigu — le piège de `ca_request_store`, puis
+    // d'`admin_add_store` le matin même. `p_company_id` accepte simplement nul.
+    const parc = readFileSync(
+      join(process.cwd(), '..', 'supabase', 'migrations', '20260823150001_usage_tout_le_parc.sql'),
+      'utf8',
+    )
+    expect(parc).toContain('admin_usage_overview(p_company_id uuid default null)')
+    expect(parc).not.toContain('drop function')
+    // Chaque magasin porte son entreprise : sans elle le filtre de la page
+    // n'aurait rien sur quoi s'appuyer, et une liste longue ne se lirait pas.
+    expect(parc).toContain("'company_name'")
+    // Le filtre est optionnel des deux côtés — sinon `null` ne rendrait rien.
+    expect(parc).toContain('p_company_id is null or s.company_id = p_company_id')
+    expect(parc).toContain('p_company_id is null or st.company_id = p_company_id')
+  })
+
   it('le jugement ne descend pas en SQL', () => {
     // Les seuils et le vocabulaire vivent dans lib/mesure.ts, testable sans
     // base. Une comparaison de tranche en SQL les figerait en deux endroits.
     for (const mot of ['Rien à signaler', 'Au-delà', 'tranche']) {
       expect(corps).not.toContain(mot)
     }
+  })
+})
+
+describe('les deux écrans', () => {
+  const page = readFileSync(join(process.cwd(), 'app', 'admin', 'usage', 'page.tsx'), 'utf8')
+  const section = readFileSync(
+    join(process.cwd(), 'components', 'admin', 'UsageConstate.tsx'), 'utf8',
+  )
+  const shell = readFileSync(join(process.cwd(), 'components', 'AppShell.tsx'), 'utf8')
+
+  /** Les deux fichiers portent l'interdiction EN COMMENTAIRE : sans ce
+   *  nettoyage, le test attrape la consigne au lieu du code. */
+  const sansCommentaires = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+  it('n’écrivent jamais le verdict à la main', () => {
+    // Le vocabulaire vit dans LIBELLES, pour qu'un mot ne puisse pas dériver
+    // d'un écran à l'autre — et surtout pour que la règle d'asymétrie ne se
+    // perde pas en route.
+    for (const source of [page, section]) {
+      const code = sansCommentaires(source)
+      expect(code).toContain('LIBELLES')
+      expect(code).not.toContain('Conforme')
+      expect(code).not.toContain('Cohérent')
+    }
+  })
+
+  it('la page du parc a son onglet dans la console', () => {
+    // Sans entrée de navigation, elle n'existe que pour qui connaît l'adresse.
+    expect(shell).toContain("{ href: '/admin/usage', label: 'Usage' }")
+  })
+
+  it('la page du parc lit tout le parc, pas une entreprise', () => {
+    expect(page).toContain('p_company_id: null')
+  })
+
+  it('la section de la fiche lit une seule entreprise', () => {
+    expect(section).toContain('p_company_id: companyId')
   })
 })

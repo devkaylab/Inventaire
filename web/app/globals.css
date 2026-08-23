@@ -864,6 +864,70 @@ a { color: inherit; text-decoration: none; }
    déborde en ambre, et c'est le seul sens de lecture qui conclue (voir
    lib/mesure.ts). L'état ne se dit donc pas par une pastille mais par la
    donnée elle-même. */
+/* Page /admin/usage — le graphique du parc.
+   Une rangée par magasin : nom, piste, part, faits. La piste vaut 0 à 150 %
+   de la borne de la tranche ; le repère vertical marque les 100 %. Les
+   largeurs fixes des colonnes servent au calcul du repère, qui ne peut pas
+   se placer en pourcentage d'une piste en `flex`. */
+.usage-plot { position: relative; display: flex; flex-direction: column; gap: 11px; }
+.usage-repere {
+  position: absolute; top: 0; bottom: 0; width: 0;
+  left: calc(196px + (100% - 196px - 58px - 162px) * 0.6667);
+  border-left: 1px dashed var(--text-3);
+}
+.usage-ligne { display: flex; align-items: center; gap: 12px; }
+.usage-nom {
+  width: 184px; flex: none; text-align: right; font-size: 13px;
+  color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.usage-piste {
+  position: relative; flex: 1; height: 12px; border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.usage-part {
+  position: absolute; left: 0; top: 0; height: 12px;
+  border-radius: 6px; background: var(--accent);
+}
+/* Départ à 66,67 % + 2 px : la piste va jusqu'à 150 %, la tranche est aux
+   deux tiers, et le retrait empêche les deux aplats de se lire comme un. */
+.usage-sur {
+  position: absolute; top: 0; height: 12px; left: calc(66.67% + 2px);
+  border-radius: 6px; background: var(--warning);
+}
+.usage-pct {
+  width: 46px; flex: none; text-align: right; font-size: 12.5px;
+  font-weight: 500; color: var(--text-2);
+}
+.usage-pct.au-dela { color: var(--warning-text); font-weight: 600; }
+.usage-faits { width: 150px; flex: none; font-size: 12px; color: var(--text-3); }
+.usage-axe { display: flex; margin-top: 14px; padding: 0 220px 0 196px; }
+.usage-axe span { font-size: 11px; color: var(--text-3); }
+.usage-axe span:nth-child(1), .usage-axe span:nth-child(2) { flex: 0 0 33.33%; }
+.usage-axe span:nth-child(3) { flex: 1; color: var(--text-2); font-weight: 600; }
+
+.usage-champ { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); }
+.usage-champ select, .usage-champ input {
+  font-family: inherit; font-size: 14px; padding: 9px 11px; border-radius: 10px;
+  border: 1px solid var(--hairline); background: var(--bg); color: var(--text);
+}
+.usage-champ select:focus, .usage-champ input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.usage-bascule { display: flex; gap: 6px; }
+.usage-bascule button {
+  flex: 1; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 7px 8px; border-radius: 9px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--text) 5%, transparent); color: var(--text-2);
+}
+.usage-bascule button[aria-pressed="true"] {
+  background: var(--accent); color: var(--on-accent); border-color: transparent;
+}
+.usage-somme { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+.usage-somme:last-child { border-bottom: none; }
+.usage-somme b { font-size: 19px; font-weight: 800; letter-spacing: -0.4px; white-space: nowrap; }
+
 .jauge { display: flex; align-items: center; gap: 10px; }
 /* ⚠️ La zone est plus large que la piste, et c'est nécessaire : le dépassement
    est en position absolue, donc hors du flux. Sans cette réserve de 36 px il
