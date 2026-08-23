@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { mfaPending } from '@/lib/mfa'
+import { friendlySignInError } from '@/lib/errors'
 import { registerForPushNotifications } from '@/lib/push'
 import { cacheProfile, getCachedProfile } from '@/lib/offline'
 import type { Tables } from '@/types/database.types'
@@ -106,7 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    // On traduit ici plutôt que dans l'écran : le message qui franchit cette
+    // frontière est déjà en français, pour tout appelant présent ou futur.
+    return { error: error ? friendlySignInError(error) : null }
   }
 
   async function signUp(email: string, password: string, fullName: string, role: 'employee' | 'supervisor') {

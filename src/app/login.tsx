@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/auth'
 import { challengeAndVerify, mfaPending, verifiedTotpFactor } from '@/lib/mfa'
 import { useTheme } from '@/lib/theme'
 import { AppLogo } from '@/components/AppLogo'
-import { PRIVACY_URL } from '@/constants/links'
+import { PASSWORD_FORGOT_URL, PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export default function LoginScreen() {
@@ -27,6 +27,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  // L'erreur se lit sous le formulaire : une alerte s'efface avant qu'on
+  // l'ait lue, et cache les champs qu'elle commente.
+  const [erreur, setErreur] = useState<string | null>(null)
 
   // Deuxième étape : le compte a un second facteur et la session en est
   // restée au mot de passe. Tant que le code n'est pas saisi, on n'entre pas.
@@ -73,14 +76,15 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs.')
+      setErreur('Saisissez votre adresse e-mail et votre mot de passe.')
       return
     }
     setLoading(true)
+    setErreur(null)
     const { error } = await signIn(email.trim(), password)
     if (error) {
       setLoading(false)
-      Alert.alert('Connexion échouée', error)
+      setErreur(error)
       return
     }
     // Le mot de passe ne suffit pas toujours. Quand un second facteur est
@@ -184,12 +188,24 @@ export default function LoginScreen() {
             placeholderTextColor={theme.textMuted}
           />
 
+          {erreur && (
+            <View style={styles.erreurBox}>
+              <Text style={styles.erreurText}>{erreur}</Text>
+            </View>
+          )}
+
           <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
             {loading ? (
               <ActivityIndicator color={theme.onAccent} />
             ) : (
               <Text style={styles.buttonText}>Se connecter</Text>
             )}
+          </Pressable>
+
+          {/* Absent jusqu'ici : qui avait oublié son mot de passe n'avait
+              aucune sortie depuis l'application. */}
+          <Pressable style={styles.link} onPress={() => Linking.openURL(PASSWORD_FORGOT_URL)}>
+            <Text style={styles.linkText}>Mot de passe oublié ?</Text>
           </Pressable>
 
           <Pressable style={styles.link} onPress={() => router.push('/signup')}>
@@ -252,6 +268,16 @@ function makeStyles(t: Theme) {
     },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
+    erreurBox: {
+      backgroundColor: t.dangerSoft,
+      borderColor: t.danger,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    erreurText: { color: t.danger, fontSize: 14, fontFamily: Font.medium, lineHeight: 20 },
     link: { alignItems: 'center', paddingVertical: Spacing.sm },
     linkText: { color: t.accent, fontSize: 14, fontFamily: Font.medium },
     privacyLink: { alignItems: 'center', paddingVertical: Spacing.xs },

@@ -39,3 +39,38 @@ export function friendlyInsertCountError(e: unknown): string {
   }
   return `Impossible d'enregistrer le comptage : ${msg}`
 }
+
+/**
+ * Message clair pour un échec de connexion.
+ *
+ * Sans cette traduction, l'app affichait le message brut de Supabase, en
+ * anglais (« Invalid login credentials », « Network request failed ») — à un
+ * compteur saisonnier, devant le rayon. Le site, lui, traduisait déjà.
+ *
+ * ⚠️ **« identifiants invalides » et « compte inconnu » rendent le MÊME
+ * texte**, volontairement : dire « ce compte n'existe pas » rouvrirait
+ * l'oracle d'énumération d'adresses fermé par le constat M3.
+ */
+export function friendlySignInError(e: unknown): string {
+  const err = e as { name?: string; status?: number; message?: string } | null
+  const msg = (err?.message ?? '').toLowerCase()
+
+  const reseau =
+    err?.name === 'AuthRetryableFetchError' ||
+    /network request failed|fetch failed|failed to fetch|timeout|timed out/.test(msg)
+  if (reseau) {
+    return 'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.'
+  }
+
+  if (err?.status === 429 || /rate limit|too many requests/.test(msg)) {
+    return 'Trop de tentatives. Patientez une minute avant de réessayer.'
+  }
+
+  if (/email not confirmed|not confirmed/.test(msg)) {
+    return "Votre compte n'est pas encore activé. Ouvrez le lien reçu par e-mail pour choisir votre mot de passe."
+  }
+
+  // Identifiants refusés — et tout le reste, faute de mieux : un message
+  // technique en anglais n'aide personne.
+  return 'Adresse e-mail ou mot de passe incorrect.'
+}
