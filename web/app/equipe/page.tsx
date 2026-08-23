@@ -159,6 +159,45 @@ export default function EquipePage() {
     appliquer('ca_delete_user', { p_user: p.id })
   }
 
+  /**
+   * Changer le rôle d'un membre — superviseur ⇄ compteur.
+   *
+   * Il n'existait aucun chemin : une personne embauchée compteur puis promue
+   * chef de rayon devait être supprimée et réinvitée, en perdant au passage
+   * l'attribution de ses comptages.
+   *
+   * ⚠️ **Ce n'est pas une case à cocher.** Le rôle décide de ce que la
+   * personne voit et de ce qu'elle peut défaire ; la confirmation dit donc les
+   * deux conséquences qui se remarquent — les magasins qui la suivent, et
+   * l'accès aux inventaires qui change. Pas de recopie du nom en revanche :
+   * c'est réversible d'un clic, contrairement à la suppression.
+   */
+  async function changerRole(m: Member, vers: 'supervisor' | 'employee') {
+    const nom = m.full_name || 'Cette personne'
+    const magasins = m.store_ids.length
+    const details = vers === 'supervisor'
+      ? [
+          magasins > 0
+            ? `${nom} garde ${magasins === 1 ? 'son magasin' : `ses ${magasins} magasins`}, mais en tant que superviseur.`
+            : `${nom} n’a aucun magasin : affectez-lui-en un d’abord, un superviseur en a toujours au moins un.`,
+          'Elle pourra créer des inventaires, importer les fichiers et gérer les compteurs de ses magasins.',
+        ]
+      : [
+          magasins > 0
+            ? `${nom} garde ${magasins === 1 ? 'son magasin' : `ses ${magasins} magasins`}, mais en tant que compteur.`
+            : `${nom} n’a aucun magasin : elle restera sans accès tant qu’on ne lui en affecte pas un.`,
+          'Elle ne pourra plus créer ni clôturer d’inventaire, y compris ceux qu’elle a créés.',
+        ]
+    const ok = await confirm({
+      title: vers === 'supervisor' ? 'Passer cette personne superviseur ?' : 'Passer cette personne compteur ?',
+      message: `${nom} — ${m.email ?? 'adresse inconnue'}`,
+      details,
+      confirmLabel: vers === 'supervisor' ? 'Passer superviseur' : 'Passer compteur',
+    })
+    if (!ok) return
+    appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })
+  }
+
   if (guard.status !== 'ready') {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
@@ -230,6 +269,10 @@ export default function EquipePage() {
                             if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
                           }}
                         >Retirer les accès</button>
+                        <span className="action-sep" />
+                        <button className="link-btn" onClick={() => changerRole(m, 'employee')}>
+                          Passer compteur
+                        </button>
                         <span className="action-sep" />
                         <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
                           Supprimer le compte
@@ -366,6 +409,10 @@ export default function EquipePage() {
                         </div>
                       </div>
                       <div className="req-actions">
+                        <button className="link-btn" onClick={() => changerRole(m, 'supervisor')}>
+                          Passer superviseur
+                        </button>
+                        <span className="action-sep" />
                         <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
                           Supprimer le compte
                         </button>

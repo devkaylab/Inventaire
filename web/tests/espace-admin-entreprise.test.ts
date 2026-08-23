@@ -174,6 +174,7 @@ describe('le journal se lit en français', () => {
     const magasins = [
       '../../supabase/migrations/20260822130001_demande_ajout_magasin.sql',
       '../../supabase/migrations/20260822180001_demande_suppression_magasin.sql',
+      '../../supabase/migrations/20260823120001_ca_changer_le_role.sql',
     ].flatMap((f) => [...lire(f).matchAll(/log_company_action\([^,]+,\s*'([a-z_]+)'/g)].map((m) => m[1]))
     for (const action of new Set([...ecrites, ...magasins])) {
       expect(ACTIONS[action], `${action} n'a pas de libellé`).toBeDefined()

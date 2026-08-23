@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { ACTIONS } from '../lib/journal'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const m1 = lire('../../supabase/migrations/20260820190001_admin_entreprise_drapeau.sql')
@@ -18,6 +19,7 @@ const pageEquipe = lire('../app/equipe/page.tsx')
 // Le bloc de nomination a suivi le détail de l'entreprise sur sa fiche
 // (découpage de la console du 21 août 2026).
 const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
+const mRole = lire('../../supabase/migrations/20260823120001_ca_changer_le_role.sql')
 
 describe('le drapeau et sa garde (migration 1)', () => {
   it('le verrou anti-élévation fige le nouveau drapeau', () => {
@@ -343,5 +345,68 @@ describe('l’administrateur d’entreprise a tous les magasins', () => {
       expect(source, nom).toContain('Votre entreprise n’a encore aucun magasin')
       expect(source, nom).not.toMatch(/affectez-vous un magasin/i)
     }
+  })
+})
+
+describe('changer le rôle d’un membre (23 août 2026)', () => {
+  // Demande de Julien. Il n'y avait aucun chemin : `profiles.role` est figé
+  // par `profiles_pin_privileged` pour `authenticated`, donc une personne
+  // embauchée compteur puis promue devait être supprimée et réinvitée — en
+  // perdant l'attribution de ses comptages.
+  const corps = mRole.split('function public.ca_set_user_role(')[1]?.split('$$;')[0] ?? ''
+
+  it('la fonction est réservée à l’administrateur de l’entreprise', () => {
+    expect(corps).toContain('if not public.is_company_admin() then')
+    expect(mRole).toContain('revoke all on function public.ca_set_user_role(uuid, text, uuid[]) from public, anon')
+  })
+
+  it('les trois refus sont là', () => {
+    // Soi-même : un administrateur qui se rétrograde enferme son entreprise.
+    expect(corps).toContain('p_user is null or p_user = auth.uid()')
+    // Un autre administrateur : son rôle et son drapeau se tiennent.
+    expect(corps).toContain('if v_target.is_company_admin then')
+    // Un superviseur a toujours au moins un magasin (règle du même jour).
+    expect(corps).toContain('Un superviseur a toujours au moins un magasin')
+  })
+
+  it('⚠️ les affectations suivent le rôle, sinon la personne ne voit rien', () => {
+    // Un superviseur est rattaché par store_supervisors, un compteur par
+    // store_team. Écrire `role` sans déplacer les lignes donnerait quelqu'un
+    // qui a un rôle et aucun magasin.
+    const [promo, retro] = corps
+      .split("if v_role = 'supervisor' then")[1]
+      .split('-- Rétrogradation')
+    expect(promo).toContain('insert into public.store_supervisors')
+    expect(promo).toContain('delete from public.store_team')
+    expect(retro).toContain('insert into public.store_team')
+    expect(retro).toContain('delete from public.store_supervisors')
+  })
+
+  it('un second clic n’est pas une erreur', () => {
+    expect(corps).toContain("json_build_object('success', true, 'already', true)")
+  })
+
+  it('les deux sens sont journalisés, et traduits', () => {
+    expect(corps).toContain("'promu_superviseur'")
+    expect(corps).toContain("'retrograde_compteur'")
+    // Le garde-fou par balayage ne voit pas un `case ... end` : on nomme donc
+    // les deux libellés ici.
+    expect(ACTIONS['promu_superviseur']).toBeDefined()
+    expect(ACTIONS['retrograde_compteur']).toBeDefined()
+  })
+
+  it('l’écran porte les deux gestes, dans les deux listes', () => {
+    expect(pageEquipe).toContain("changerRole(m, 'employee')")
+    expect(pageEquipe).toContain("changerRole(m, 'supervisor')")
+    expect(pageEquipe).toContain("appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })")
+  })
+
+  it('la confirmation dit ce qui change, sans recopie du nom', () => {
+    // Réversible d'un clic, contrairement à la suppression : la recopie du
+    // nom serait de la cérémonie.
+    const bloc = pageEquipe.split('async function changerRole')[1]?.split('\n  if (guard')[0] ?? ''
+    expect(bloc).toContain('mais en tant que superviseur')
+    expect(bloc).toContain('Elle ne pourra plus créer ni clôturer d’inventaire')
+    expect(bloc).not.toContain('requireText')
   })
 })
