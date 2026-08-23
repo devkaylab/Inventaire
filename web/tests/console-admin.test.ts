@@ -14,6 +14,7 @@ const migration = lire('../../supabase/migrations/20260821160001_admin_apercu_en
 const listeEntreprises = lire('../app/admin/entreprises/page.tsx')
 const tableauDeBord = lire('../app/admin/page.tsx')
 const fiche = lire('../app/admin/entreprise/[companyId]/page.tsx')
+const consolePage = lire('../app/admin/console/page.tsx')
 
 describe('aperçu des entreprises (migration)', () => {
   it('ne divulgue aucun code dans la liste', () => {
@@ -97,5 +98,39 @@ describe('la recherche d’entreprise', () => {
   it('dit combien de lignes restent, et permet d’effacer', () => {
     expect(listeEntreprises).toContain('sur {companies.length}')
     expect(listeEntreprises).toContain('Effacer')
+  })
+})
+
+describe('Quantinvo peut supprimer un compte (23 août 2026)', () => {
+  // Constat de Julien : « Quantinvo sur le site ne peut supprimer personne. »
+  // `admin_delete_user` existait depuis le 18 août, mais le seul bouton qui
+  // l'appelait était sur une **demande** de suppression déposée par la
+  // personne elle-même. La console pouvait effacer une entreprise entière,
+  // pas un compte.
+  it('la fiche entreprise porte le geste, sur chaque personne', () => {
+    expect(fiche).toContain('async function supprimerPersonne(m: Member)')
+    expect(fiche).toContain("supabase.rpc('admin_delete_user', { p_user_id: m.id })")
+    expect(fiche).toContain('onClick={() => supprimerPersonne(m)}')
+  })
+
+  it('elle exige la recopie du nom, comme /equipe', () => {
+    // Ce bouton est à quelques centimètres d'une simple liste de lecture, et
+    // la suppression est irréversible. `window.confirm` ne sait pas exiger un
+    // geste délibéré : c'est la modale du produit qui s'ouvre ici.
+    const bloc = fiche.slice(fiche.indexOf('async function supprimerPersonne'))
+    expect(bloc.slice(0, 1800)).toContain('requireText: nom || m.email')
+    expect(bloc.slice(0, 1800)).toContain("tone: 'danger'")
+  })
+
+  it('elle dit ce que la suppression emporte, et ce qu’elle laisse', () => {
+    expect(fiche).toContain('Ses comptages restent, mais son nom disparaît des rapports déjà faits.')
+    expect(fiche).toContain('Ses inventaires et ses invitations sont détachés de son compte.')
+    // Une entreprise sans administrateur remonte dans « À traiter » : autant
+    // le dire avant.
+    expect(fiche).toContain('C’est un administrateur de cette entreprise')
+  })
+
+  it('la console garde son chemin d’origine — les demandes de suppression', () => {
+    expect(consolePage).toContain("supabase.rpc('admin_delete_user', { p_user_id: r.user_id })")
   })
 })

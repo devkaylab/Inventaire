@@ -17,6 +17,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { AppShell } from '@/components/AppShell'
 import { densite, trancheDe } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
@@ -175,6 +176,7 @@ export default function AdminCompanyPage() {
   const params = useParams<{ companyId: string }>()
   const companyId = params?.companyId
   const guard = useAuthGuard('admin')
+  const confirmer = useConfirm()
   const [detail, setDetail] = useState<Detail | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [storeName, setStoreName] = useState('')
@@ -329,6 +331,50 @@ export default function AdminCompanyPage() {
     // Ce que ça emporte doit se lire avant, pas se découvrir après.
     if (!confirm(`Supprimer le magasin « ${s.name} » ?\n\nSes inventaires et tous leurs comptages seront effacés. Cette action est irréversible.`)) return
     appel('admin_delete_store', { p_store_id: s.id })
+  }
+
+  /**
+   * Supprimer une personne — le geste qui manquait à Quantinvo.
+   *
+   * ⚠️ **La console ne savait supprimer personne.** `admin_delete_user` existe
+   * depuis le 18 août 2026, mais le seul bouton qui l'appelait était sur une
+   * **demande de suppression** déposée par la personne elle-même
+   * (/admin/console). Autrement dit : Quantinvo pouvait effacer une entreprise
+   * entière, pas un compte. Constat de Julien, 23 août 2026.
+   *
+   * La recopie du nom est la même règle que /equipe, et pour la même raison :
+   * ce bouton est à quelques centimètres d'une liste de lecture, et la
+   * suppression est irréversible. C'est aussi pourquoi il ouvre la modale du
+   * produit et non un `confirm()` du navigateur, comme le reste de cette page
+   * — `window.confirm` ne sait pas exiger un geste délibéré.
+   */
+  async function supprimerPersonne(m: Member) {
+    const nom = (m.full_name ?? '').trim()
+    const details = [
+      `${nom || 'Sans nom'} — ${m.email ?? 'adresse inconnue'}`,
+      'La personne perd l’accès à Quantinvo immédiatement.',
+      'Ses comptages restent, mais son nom disparaît des rapports déjà faits.',
+      'Ses inventaires et ses invitations sont détachés de son compte.',
+    ]
+    // Une entreprise sans administrateur remonte dans « À traiter » sur
+    // /admin : autant le dire avant, pas après.
+    if (m.is_company_admin) {
+      details.push(
+        'C’est un administrateur de cette entreprise : sans lui, plus personne n’y gère les superviseurs.',
+      )
+    }
+    const ok = await confirmer({
+      title: 'Supprimer définitivement ce compte ?',
+      message: 'Cette suppression est définitive.',
+      details,
+      confirmLabel: 'Supprimer définitivement',
+      tone: 'danger',
+      requireText: nom || m.email || 'SUPPRIMER',
+    })
+    if (!ok) return
+    const { data, error } = await supabase.rpc('admin_delete_user', { p_user_id: m.id })
+    if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
+    charger()
   }
 
   async function supprimerEntreprise() {
@@ -557,6 +603,11 @@ export default function AdminCompanyPage() {
                   <div className="muted small">
                     {m.email} · {m.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
                   </div>
+                </div>
+                <div className="req-actions">
+                  <button className="link-btn danger-link" onClick={() => supprimerPersonne(m)}>
+                    Supprimer le compte
+                  </button>
                 </div>
               </div>
             ))}
