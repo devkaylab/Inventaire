@@ -20,6 +20,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Renommer } from '@/components/ui/Renommer'
 import { AppShell } from '@/components/AppShell'
+import { UsageConstate } from '@/components/admin/UsageConstate'
 import { densite, trancheDe } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
 
@@ -606,6 +607,10 @@ export default function AdminCompanyPage() {
           </div>
         )}
       </section>
+
+      {/* Après les magasins, avant les personnes : on lit d'abord ce que le
+          patrimoine produit, ensuite qui le fait tourner. */}
+      <UsageConstate companyId={companyId} />
 
       <section className="admin-section">
         <h2>Personnes ({detail.members.length})</h2>

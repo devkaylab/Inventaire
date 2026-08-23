@@ -859,6 +859,35 @@ a { color: inherit; text-decoration: none; }
 .dash-table th.sortable:hover { color: var(--text); }
 .dash-art-label { font-weight: 600; }
 
+/* Usage constaté — la jauge d'un magasin dans son registre.
+   La piste vaut la borne haute de la tranche facturée : ce qui la dépasse
+   déborde en ambre, et c'est le seul sens de lecture qui conclue (voir
+   lib/mesure.ts). L'état ne se dit donc pas par une pastille mais par la
+   donnée elle-même. */
+.jauge { display: flex; align-items: center; gap: 10px; }
+/* ⚠️ La zone est plus large que la piste, et c'est nécessaire : le dépassement
+   est en position absolue, donc hors du flux. Sans cette réserve de 36 px il
+   recouvrait le pourcentage, qui disparaissait — vu à l'écran le 23 août 2026,
+   sur les deux seules lignes qui comptent. */
+.jauge-zone { position: relative; width: 132px; height: 8px; flex: none; }
+.jauge-piste {
+  position: absolute; left: 0; top: 0; width: 96px; height: 8px;
+  border-radius: 4px; background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.jauge-part {
+  position: absolute; left: 0; top: 0; height: 8px;
+  border-radius: 4px; background: var(--accent);
+}
+/* 2 px de retrait : deux aplats collés se liraient comme un seul. */
+.jauge-sur {
+  position: absolute; top: 0; height: 8px; left: 98px;
+  border-radius: 4px; background: var(--warning);
+}
+.jauge-val { font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
+.jauge-val.au-dela { color: var(--warning-text); font-weight: 600; }
+.usage-constat { font-size: 15px; color: var(--text-2); margin: 4px 0 18px; max-width: 74ch; }
+.usage-constat b { color: var(--warning-text); }
+
 .dash-info { display: flex; flex-direction: column; gap: 4px; }
 .dash-info-grid { display: flex; flex-direction: column; gap: 2px; }
 .dash-info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
