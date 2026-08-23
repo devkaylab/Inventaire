@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Modal, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -21,6 +21,18 @@ interface Props {
  * Overlay de chargement de marque : le logo animé « mouline » dans un anneau qui
  * tourne, avec une pulsation. Les animations Reanimated tournent sur le thread UI,
  * donc l'anneau reste fluide même quand le thread JS est occupé (génération du PDF).
+ *
+ * ⚠️ **Ce n'est pas une `Modal`, et cela doit le rester.** Il en était une, donc
+ * un `UIViewController` présenté. Deux dégâts, vus au simulateur le 23 août
+ * 2026 : iOS refusait d'afficher la feuille de partage par-dessus, et
+ * `shareAsync` ne se résolvait **jamais** (le bouton d'impression tournait
+ * indéfiniment) ; puis, une fois la modale retirée juste avant le partage,
+ * **l'application ne répondait plus du tout** à la fermeture de la feuille —
+ * plus un seul appui, il fallait la relancer. Un voile posé sur la carte n'a
+ * aucun de ces effets.
+ *
+ * Il se pose donc **dans** l'élément qu'il couvre, qui doit être en
+ * `position: relative` (le défaut) : c'est la carte « Créer des balises ».
  */
 export function GeneratingOverlay({ visible, message = 'Génération en cours…', sub }: Props) {
   const theme = useTheme()
@@ -40,39 +52,43 @@ export function GeneratingOverlay({ visible, message = 'Génération en cours…
   const logoStyle = useAnimatedStyle(() => ({ transform: [{ scale: 0.92 + 0.08 * pulse.value }] }))
   const msgStyle = useAnimatedStyle(() => ({ opacity: 0.6 + 0.4 * pulse.value }))
 
+  if (!visible) return null
+
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
-          <View style={styles.ringWrap}>
-            {/* anneau extérieur (sens horaire) + anneau intérieur (sens inverse) */}
-            <Animated.View style={[styles.ring, ringStyle]} />
-            <Animated.View style={[styles.ringInner, innerRingStyle]} />
-            <Animated.View style={logoStyle}>
-              <AppLogo size={56} />
-            </Animated.View>
-          </View>
-          <Animated.Text style={[styles.msg, msgStyle]}>{message}</Animated.Text>
-          {sub ? <Text style={styles.sub}>{sub}</Text> : null}
+    <View style={styles.backdrop}>
+      <View style={styles.card}>
+        <View style={styles.ringWrap}>
+          {/* anneau extérieur (sens horaire) + anneau intérieur (sens inverse) */}
+          <Animated.View style={[styles.ring, ringStyle]} />
+          <Animated.View style={[styles.ringInner, innerRingStyle]} />
+          <Animated.View style={logoStyle}>
+            <AppLogo size={56} />
+          </Animated.View>
         </View>
+        <Animated.Text style={[styles.msg, msgStyle]}>{message}</Animated.Text>
+        {sub ? <Text style={styles.sub}>{sub}</Text> : null}
       </View>
-    </Modal>
+    </View>
   )
 }
 
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(6,9,16,0.6)',
+      position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+      // La carte qui l'accueille a ce rayon : sans lui, le voile déborde aux
+      // quatre coins.
+      borderRadius: Radius.lg,
+      backgroundColor: 'rgba(6,9,16,0.72)',
       alignItems: 'center',
       justifyContent: 'center',
+      zIndex: 10,
     },
     card: {
       backgroundColor: t.surface,
       borderRadius: Radius.xl,
-      paddingVertical: Spacing.xxl,
-      paddingHorizontal: Spacing.xxxl,
+      paddingVertical: Spacing.xl,
+      paddingHorizontal: Spacing.xxl,
       alignItems: 'center',
       gap: Spacing.lg,
       borderWidth: 1,

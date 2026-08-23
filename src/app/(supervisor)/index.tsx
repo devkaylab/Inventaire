@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { closeSession, deleteSessionPermanently, getMyAssignedStores, getPreparation, getSessions } from '@/lib/queries'
-import { PourDemarrer, etapesDemarrage } from '@/components/PourDemarrer'
-import { useRepere } from '@/lib/reperes'
+import { closeSession, deleteSessionPermanently, getMyAssignedStores, getMyTeamByStore, getSessions } from '@/lib/queries'
+import { BandeauDemarrage, etapeCourante, etapesDemarrage } from '@/components/BandeauDemarrage'
+import { useJalon, useRepere } from '@/lib/reperes'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -238,76 +238,78 @@ export default function SupervisorHomeScreen() {
   })
   const sansMagasin = !magasinsEnErreur && magasins !== undefined && magasins.length === 0
 
-  // ── « Pour démarrer » ──────────────────────────────────────────────
+  // ── Le bandeau de démarrage ────────────────────────────────────────
+  //
+  // Il ne vise plus un inventaire mais **le démarrage du superviseur** :
+  // imprimer ses balises, se donner des compteurs, lancer son premier
+  // inventaire. La préparation d'une session (zones, fichiers, membres) se
+  // conduit depuis la session elle-même, où elle est déjà.
   //
   // ⚠️ **Uniquement les inventaires qu'on a CRÉÉS.** La première version
-  // prenait le premier inventaire non clôturé de la liste — invités compris.
-  // Résultat vu sur l'iPhone de Julien : le guide cochait « 1 membre » à
-  // partir de l'inventaire de quelqu'un d'autre, et affichait un état
-  // incompréhensible.
+  // regardait le premier inventaire non clôturé de la liste — invités
+  // compris. Résultat vu sur l'iPhone de Julien : le guide se cochait sur
+  // l'inventaire de quelqu'un d'autre.
   //
   // ⚠️ **Et seulement à quelqu'un qui démarre vraiment.** Au-delà d'un
   // inventaire créé, la personne connaît le produit : lui expliquer comment
-  // commencer est du bruit. Le guide ne réapparaît jamais.
+  // commencer est du bruit. Le bandeau ne réapparaît jamais.
   const { aVoir: guideAVoir, marquerVu: masquerGuide } = useRepere('guide-demarrage', profile?.id)
   const mesInventaires = useMemo(
     () => (sessions ?? []).filter(s => s.created_by === profile?.id),
     [sessions, profile?.id],
   )
-  const inventaireGuide = useMemo(
-    () => mesInventaires.find(s => s.status !== 'closed') ?? null,
-    [mesInventaires],
-  )
   const debutant = mesInventaires.length <= 1
-  const montrerGuide = guideAVoir && debutant && !sansMagasin && sessions !== undefined
 
-  const { data: preparation } = useQuery({
-    queryKey: ['preparation', inventaireGuide?.id],
-    queryFn: () => getPreparation(inventaireGuide!.id, profile?.id),
-    enabled: !!inventaireGuide && montrerGuide,
+  // ⚠️ **Le jalon local, et le piège de ce bandeau.** Une planche de balises
+  // est dessinée sur le téléphone et n'écrit rien en base : l'étape ne peut
+  // se cocher que sur un repère posé à l'impression. `useJalon` le relit à
+  // chaque retour sur l'écran — on revient précisément de la boîte à outils.
+  const { pose: balisesImprimees, pret: jalonPret } = useJalon('balises-imprimees', profile?.id)
+
+  const montrerGuide = guideAVoir && jalonPret && debutant && !sansMagasin && sessions !== undefined
+
+  // L'équipe : la même RPC que « Mon équipe », pas un décompte à part.
+  const { data: equipe } = useQuery({
+    queryKey: ['my-team'],
+    queryFn: getMyTeamByStore,
+    enabled: montrerGuide,
   })
+  // Une invitation en attente compte : le travail est fait, il ne manque que
+  // la réponse de la personne. Sans cela l'étape resterait à faire juste
+  // après avoir invité quelqu'un — exactement au mauvais moment.
+  const equipeConstituee =
+    (equipe?.stores ?? []).some(s => s.counters.length > 0) || (equipe?.invitations.length ?? 0) > 0
+
   const etapes = useMemo(
-    () => etapesDemarrage(preparation, {
-      inventaireExiste: !!inventaireGuide,
-      utiliseZones: inventaireGuide?.uses_zones ?? true,
+    () => etapesDemarrage({
+      balisesImprimees,
+      equipeConstituee,
+      inventaireCree: mesInventaires.length > 0,
     }),
-    [preparation, inventaireGuide],
+    [balisesImprimees, equipeConstituee, mesInventaires.length],
   )
-
-  // Le guide prend tout l'écran tant qu'il n'y a rien d'autre à afficher.
-  const guidePleinEcran = montrerGuide && mesInventaires.length === 0
-
-  // ⚠️ **Le bouton « Nouvel inventaire » ne se masque que s'il ferait
-  // doublon.** Il était retiré dès que le guide s'affichait — or le guide ne
-  // porte ce bouton que tant que l'étape 1 reste à faire. Une fois l'inventaire
-  // créé, plus aucun chemin ne menait à la création tant que le guide durait
-  // (vu au simulateur le 23 août 2026, sur un guide arrêté à « 3 sur 4 »).
-  const guideOffreCreation = montrerGuide && etapes.find(e => !e.faite)?.cle === 'inventaire'
+  const etape = etapeCourante(etapes)
 
   const carteGuide = montrerGuide ? (
-    <PourDemarrer
+    <BandeauDemarrage
       etapes={etapes}
       onMasquer={masquerGuide}
       onAction={(cle) => {
-        const id = inventaireGuide?.id
-        if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
-        if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
-        else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
-        else router.push(`/(supervisor)/${id}/invite`)
+        if (cle === 'balises') router.push('/(compte)/tools')
+        else if (cle === 'equipe') router.push('/(compte)/team')
+        else router.push('/(supervisor)/new-session')
       }}
     />
   ) : null
 
   const queryClient = useQueryClient()
-  // ⚠️ Tirer pour rafraîchir doit aussi recharger la préparation : sans elle,
-  // le guide gardait l'état qu'il avait au premier affichage, et le geste
+  // ⚠️ Tirer pour rafraîchir doit aussi recharger l'équipe : sans elle, le
+  // bandeau gardait l'état qu'il avait au premier affichage, et le geste
   // naturel pour « débloquer » un écran figé ne débloquait rien.
   const onRefresh = useCallback(() => {
     refetch()
-    if (inventaireGuide) {
-      queryClient.invalidateQueries({ queryKey: ['preparation', inventaireGuide.id] })
-    }
-  }, [refetch, inventaireGuide, queryClient])
+    queryClient.invalidateQueries({ queryKey: ['my-team'] })
+  }, [refetch, queryClient])
   const [selection, setSelection] = useState(false)
   const [coches, setCoches] = useState<string[]>([])
 
@@ -537,26 +539,25 @@ export default function SupervisorHomeScreen() {
     return out
   }, [sessions, profile?.id])
 
+  /**
+   * « + Nouvel inventaire » et le bandeau ne se répètent que dans un seul cas :
+   * le bandeau en est à l'étape de création **et** la liste est vide. Là, et
+   * là seulement, le bouton s'efface — le bandeau est sous les yeux, il n'y a
+   * rien à faire défiler.
+   *
+   * ⚠️ Ne pas élargir la condition à `montrerGuide` seul : le bandeau part
+   * vers le haut dès qu'on fait défiler une liste, et le bouton était alors le
+   * seul chemin restant vers la création (défaut vu au simulateur le 23 août
+   * 2026, sur le guide qui l'a précédé).
+   */
+  const fabDoublon = montrerGuide && etape?.cle === 'inventaire' && rows.length === 0
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']} onStartShouldSetResponderCapture={auContact}>
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color={theme.accent} />
         </View>
-      ) : guidePleinEcran ? (
-        // Tant qu'aucun inventaire n'existe, le guide **est** l'écran : il n'y
-        // a rien d'autre à montrer, et une carte flottant dans une liste vide
-        // se lirait mal.
-        //
-        // ⚠️ **Dès qu'un inventaire existe, il doit rester atteignable.** Le
-        // guide occupait l'écran entier tant qu'il durait — donc, l'inventaire
-        // qu'on venait de créer n'apparaissait plus nulle part et ne pouvait
-        // plus s'ouvrir. Vu au simulateur le 23 août 2026 : bloqué à « 2 sur
-        // 4 », le seul chemin restant était « Masquer ce guide », qui se lit
-        // « je ne veux pas d'aide », pas « accéder à mes inventaires ».
-        <ScrollView contentContainerStyle={styles.guidePlein}>
-          {carteGuide}
-        </ScrollView>
       ) : (
         <FlatList
           data={rows}
@@ -589,10 +590,11 @@ export default function SupervisorHomeScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              {/* Le guide se pose au-dessus de la liste, il ne la remplace
-                  plus : on garde le repère de ce qu'il reste à faire *et*
-                  l'accès à l'inventaire en cours de préparation. */}
-              {montrerGuide && carteGuide}
+              {/* Le bandeau se pose au-dessus de la liste, il ne la
+                  remplace jamais. Le guide pleine page qui l'a précédé
+                  masquait l'inventaire qu'on venait de créer : à 76 px, la
+                  question ne se pose plus. */}
+              {carteGuide}
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
               {/* Le mode sélection s'ouvre aussi par un appui long sur une
                   carte ; ce bouton le rend découvrable, l'appui long ne
@@ -657,7 +659,7 @@ export default function SupervisorHomeScreen() {
             </Pressable>
           </View>
         </View>
-      ) : guideOffreCreation ? null : (
+      ) : fabDoublon ? null : (
         <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
           <Text style={styles.fabText}>+ Nouvel inventaire</Text>
         </Pressable>
@@ -730,7 +732,6 @@ function makeStyles(t: Theme) {
     meta: { fontSize: 12, color: t.textMuted, ...tabular },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
     emptyText: { color: t.textMuted, fontSize: 15, fontFamily: Font.regular },
-    guidePlein: { flexGrow: 1, paddingTop: Spacing.sm, paddingBottom: Spacing.xxxl },
     videCard: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: Radius.lg,
       padding: Spacing.xl, marginHorizontal: Spacing.lg, marginTop: Spacing.lg, gap: Spacing.sm },
     videTitre: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },

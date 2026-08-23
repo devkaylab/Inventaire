@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useMutation } from '@tanstack/react-query'
-import { exportBaliseSheet } from '@/lib/balises'
+import { buildBaliseSheetFile, shareBaliseSheet } from '@/lib/balises'
+import { poserJalon } from '@/lib/reperes'
+import { useAuth } from '@/lib/auth'
 import type { BaliseSeries } from '@/lib/baliseSeries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -19,17 +21,39 @@ interface Props {
  * ouvre le formulaire (numérotation, premier numéro, nombre) puis imprime.
  * Réutilisé sur le profil et sur l'écran Zones d'un inventaire, pour que la
  * création des balises se trouve là où on en a besoin.
+ *
+ * ⚠️ **Dessiner et partager sont deux temps.** Voir `lib/balises.ts` et
+ * `GeneratingOverlay` : l'overlay de chargement était une `Modal`, donc un
+ * `UIViewController` présenté, et iOS refusait d'ouvrir la feuille de partage
+ * par-dessus — le bouton tournait indéfiniment, aucun PDF ne sortait (vu au
+ * simulateur le 23 août 2026). L'overlay est maintenant un voile posé sur
+ * cette carte : plus rien n'est présenté, le partage part sans détour.
  */
 export function BaliseCreator({ context }: Props) {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const { profile } = useAuth()
   const [open, setOpen] = useState(false)
+  const [dessin, setDessin] = useState(false)
 
   const print = useMutation({
     mutationFn: (series: BaliseSeries) =>
-      exportBaliseSheet(`${series.from}-${series.to}`, series.codes.map((code) => ({ code }))),
-    onSuccess: (r) => { if (!r.shared) Alert.alert('PDF généré', `Le fichier ${r.filename} a été créé.`) },
-    onError: (e) => Alert.alert('Erreur', errorMessage(e)),
+      buildBaliseSheetFile(`${series.from}-${series.to}`, series.codes.map((code) => ({ code }))),
+    onSuccess: (planche) => {
+      // ⚠️ **Le seul endroit où l'étape 1 du bandeau de démarrage se coche.**
+      // Une planche est dessinée ici, sur le téléphone, et n'écrit rien en
+      // base : aucun fait serveur ne pourra jamais dire qu'elle a été
+      // produite. Le jalon se pose donc à la seconde où le PDF sort, et
+      // seulement en cas de succès.
+      if (profile?.id) void poserJalon('balises-imprimees', profile.id)
+      setDessin(false)
+      shareBaliseSheet(planche)
+        .then(ouvert => {
+          if (!ouvert) Alert.alert('PDF généré', `Le fichier ${planche.filename} a été créé.`)
+        })
+        .catch(e => Alert.alert('Erreur', errorMessage(e)))
+    },
+    onError: (e) => { setDessin(false); Alert.alert('Erreur', errorMessage(e)) },
   })
 
   const steps = [
@@ -56,15 +80,19 @@ export function BaliseCreator({ context }: Props) {
           </Text>
         </View>
       ))}
-      <Pressable style={styles.btn} onPress={() => setOpen(true)} disabled={print.isPending}>
-        {print.isPending
+      <Pressable style={styles.btn} onPress={() => setOpen(true)} disabled={dessin}>
+        {dessin
           ? <ActivityIndicator color={theme.onAccent} />
           : <Text style={styles.btnText}>Créer et imprimer des balises</Text>}
       </Pressable>
 
-      <BaliseSheetModal visible={open} onClose={() => setOpen(false)} onSubmit={(s) => print.mutate(s)} />
+      <BaliseSheetModal
+        visible={open}
+        onClose={() => setOpen(false)}
+        onSubmit={(s) => { setDessin(true); print.mutate(s) }}
+      />
       <GeneratingOverlay
-        visible={print.isPending}
+        visible={dessin}
         message="Préparation de l’impression…"
         sub="Création du PDF des balises"
       />

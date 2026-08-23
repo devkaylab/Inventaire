@@ -85,10 +85,6 @@ export default function ZonesScreen() {
       setStart('')
       setEnd('')
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
-      // La checklist « Pour démarrer » se coche sur ce compte : sans cette
-      // ligne, l'étape des zones restait à faire alors qu'elle venait d'être
-      // faite (constat au simulateur, 23 août 2026).
-      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     },
     onError: (e) => Alert.alert('Erreur', errorMessage(e)),
   })
@@ -101,10 +97,6 @@ export default function ZonesScreen() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
-      // La checklist « Pour démarrer » se coche sur ce compte : sans cette
-      // ligne, l'étape des zones restait à faire alors qu'elle venait d'être
-      // faite (constat au simulateur, 23 août 2026).
-      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     },
     onError: (e) => Alert.alert('Erreur', errorMessage(e)),
   })

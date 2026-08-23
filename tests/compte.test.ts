@@ -637,7 +637,7 @@ describe('un superviseur a une entreprise et au moins un magasin (23 août 2026)
 describe('onboarding (23 août 2026)', () => {
   const reperes = lire('lib/reperes.ts')
   const porte = lire('components/PorteBienvenue.tsx')
-  const demarrer = lire('components/PourDemarrer.tsx')
+  const bandeau = lire('components/BandeauDemarrage.tsx')
   const scanner = lire('components/scanner.tsx')
 
   it('aucun drapeau global : une clé par repère, portant le compte', () => {
@@ -658,28 +658,22 @@ describe('onboarding (23 août 2026)', () => {
     expect(porte).toContain('mfaRequired')
   })
 
-  it('la checklist se coche sur des faits, jamais à la main', () => {
-    expect(demarrer).toContain('faite: opts.inventaireExiste')
-    expect(demarrer).toContain('faite: p.zones > 0')
-    expect(demarrer).toContain('faite: p.articles > 0')
-    expect(demarrer).toContain('faite: p.membres > 0')
-    // Imprimer une planche ne laisse rien en base : pas d'étape à part.
-    expect(demarrer).not.toMatch(/titre: 'Imprimer vos balises'/)
+  it('les étapes se cochent sur des faits, jamais à la main', () => {
+    expect(bandeau).toContain('faite: faits.balisesImprimees')
+    expect(bandeau).toContain('faite: faits.equipeConstituee')
+    expect(bandeau).toContain('faite: faits.inventaireCree')
+    // Aucune étape ne se coche au clic : le bandeau n'a qu'une action, elle
+    // ouvre l'écran où le travail se fait.
+    expect(bandeau).not.toMatch(/setFaite|marquerEtape/)
   })
 
-  it('créer un inventaire vient avant les zones et l’import', () => {
-    // Les plages s'affectent DANS un inventaire, et le référentiel y est
-    // rattaché (theoretical_stock.session_id).
-    const i = demarrer.indexOf("cle: 'inventaire'")
-    const z = demarrer.indexOf("cle: 'zones'")
-    const f = demarrer.indexOf("cle: 'fichiers'")
-    expect(i).toBeGreaterThan(-1)
-    expect(i).toBeLessThan(z)
-    expect(z).toBeLessThan(f)
-  })
-
-  it('l’étape « membres » dit que l’équipe du magasin ne suffit pas', () => {
-    expect(demarrer).toContain('Être dans l’équipe du magasin ne suffit pas')
+  it('les balises viennent d’abord, l’inventaire en dernier', () => {
+    const b = bandeau.indexOf("cle: 'balises'")
+    const e = bandeau.indexOf("cle: 'equipe'")
+    const i = bandeau.indexOf("cle: 'inventaire'")
+    expect(b).toBeGreaterThan(-1)
+    expect(b).toBeLessThan(e)
+    expect(e).toBeLessThan(i)
   })
 
   it('la caméra est amorcée avant la boîte système', () => {
@@ -695,7 +689,101 @@ describe('onboarding (23 août 2026)', () => {
   })
 })
 
-describe('le guide « Pour démarrer » ne s’adresse qu’à qui démarre', () => {
+/**
+ * Le bandeau de démarrage (23 août 2026) — une seule étape à la fois, 76 px,
+ * et le démarrage du superviseur pour objet : générer ses balises, constituer
+ * son équipe, créer son premier inventaire.
+ */
+describe('le bandeau de démarrage', () => {
+  const bandeau = lire('components/BandeauDemarrage.tsx')
+  const accueil = lire('app/(supervisor)/index.tsx')
+  const reperes = lire('lib/reperes.ts')
+  const createur = lire('components/BaliseCreator.tsx')
+
+  it('l’ancien bloc « Pour démarrer » n’existe plus', () => {
+    expect(existsSync(src('components/PourDemarrer.tsx'))).toBe(false)
+  })
+
+  it('une seule étape s’affiche : la première non faite', () => {
+    expect(bandeau).toContain('return etapes.find(e => !e.faite) ?? null')
+    // Pas de liste déroulée : le bandeau ne rend que `courante`.
+    expect(bandeau).not.toMatch(/etapes\.map\(/)
+  })
+
+  it('il tient sur une rangée d’environ 76 px', () => {
+    expect(bandeau).toContain('minHeight: 76')
+  })
+
+  it('la carte entière est cliquable, et le chevron le dit', () => {
+    expect(bandeau).toContain('onPress={() => onAction(courante.cle)}')
+    expect(bandeau).toContain('<ChevronIcon color={theme.accent} />')
+  })
+
+  it('la croix masque, et elle est un tracé', () => {
+    expect(bandeau).toContain('onPress={onMasquer}')
+    expect(bandeau).toContain('<CroixIcon')
+    expect(bandeau).not.toContain('✕')
+  })
+
+  it('le compteur dit l’étape en cours sur le total', () => {
+    expect(bandeau).toContain('{rang} SUR {etapes.length}')
+    expect(bandeau).toContain('const rang = etapes.indexOf(courante) + 1')
+  })
+
+  it('tout fait, le bandeau s’efface de lui-même', () => {
+    expect(bandeau).toContain('if (!courante) return null')
+  })
+
+  // ── LE piège de ce chantier ────────────────────────────────────────────
+  //
+  // Une planche de balises est dessinée sur le téléphone et n'écrit RIEN en
+  // base : aucun fait serveur ne dira jamais qu'elle a été produite. Sans le
+  // jalon local, l'étape 1 resterait à faire pour toujours — et le bandeau
+  // ne dépasserait jamais « 1 sur 3 ».
+  it('l’étape des balises se coche sur un jalon local, posé à l’impression', () => {
+    expect(reperes).toContain("export type Jalon = 'balises-imprimees'")
+    expect(reperes).toMatch(/jalon\.\$\{jalon\}\.\$\{userId\}/)
+    expect(createur).toContain("void poserJalon('balises-imprimees', profile.id)")
+    // Posé dans onSuccess, jamais à l'ouverture du formulaire.
+    const succes = createur.indexOf('onSuccess:')
+    const pose = createur.indexOf("poserJalon('balises-imprimees'")
+    expect(succes).toBeGreaterThan(-1)
+    expect(pose).toBeGreaterThan(succes)
+    expect(accueil).toContain("useJalon('balises-imprimees', profile?.id)")
+  })
+
+  it('le jalon se relit au retour sur l’écran, pas au seul montage', () => {
+    // On revient précisément de la boîte à outils qui vient de le poser.
+    expect(reperes).toContain('useFocusEffect(relire)')
+  })
+
+  it('« Revoir les repères » ne défait pas ce qui a été fait', () => {
+    // oublierReperes ne touche qu'aux repères : un jalon est un fait.
+    const oubli = reperes.slice(reperes.indexOf('export async function oublierReperes'))
+    expect(oubli.slice(0, 400)).not.toContain('balises-imprimees')
+  })
+
+  it('les trois étapes mènent là où le travail se fait', () => {
+    expect(accueil).toContain("router.push('/(compte)/tools')")
+    expect(accueil).toContain("router.push('/(compte)/team')")
+    expect(accueil).toContain("router.push('/(supervisor)/new-session')")
+  })
+
+  it('une invitation en attente suffit à constituer l’équipe', () => {
+    // Sinon l'étape resterait à faire juste après avoir invité quelqu'un.
+    expect(accueil).toContain("(equipe?.invitations.length ?? 0) > 0")
+    // Même RPC que « Mon équipe », pas un décompte à part.
+    expect(accueil).toContain('queryFn: getMyTeamByStore')
+  })
+
+  it('le bandeau attend d’avoir lu le jalon avant de s’afficher', () => {
+    // Sans ce garde, l'étape 1 clignoterait à chaque ouverture chez quelqu'un
+    // qui a déjà imprimé ses balises.
+    expect(accueil).toContain('guideAVoir && jalonPret')
+  })
+})
+
+describe('le bandeau de démarrage ne s’adresse qu’à qui démarre', () => {
   // Constaté sur l'iPhone de Julien, 23 août 2026 : le guide s'affichait à un
   // administrateur qui n'avait créé aucun inventaire, en analysant celui d'un
   // AUTRE — d'où un « 1 membre » coché venu de nulle part.
@@ -704,7 +792,6 @@ describe('le guide « Pour démarrer » ne s’adresse qu’à qui démarre', ()
 
   it('il ne regarde que les inventaires qu’on a créés', () => {
     expect(accueil).toContain('s.created_by === profile?.id')
-    expect(accueil).toContain('mesInventaires.find')
     // Le motif fautif : le premier non clôturé de TOUTE la liste.
     expect(accueil).not.toMatch(/\(sessions \?\? \[\]\)\.find\(s => s\.status !== 'closed'\)/)
   })
@@ -799,52 +886,27 @@ describe('le parcours du superviseur, vu à l’écran (23 août 2026)', () => {
   const accueil = lire('app/(supervisor)/index.tsx')
   const zones = lire('app/(supervisor)/[sessionId]/zones.tsx')
   const importEcran = lire('app/(supervisor)/[sessionId]/import.tsx')
-  const invite = lire('app/(supervisor)/[sessionId]/invite.tsx')
   const fiche = lire('app/(supervisor)/[sessionId]/index.tsx')
   const nouveau = lire('app/(supervisor)/new-session.tsx')
-  const requetes = lire('lib/queries.ts')
 
-  // ── Le guide masquait l'inventaire qu'on venait de créer ────────────────
+  // ── Le guide pleine page masquait l'inventaire qu'on venait de créer ────
   //
   // Il occupait l'écran entier tant qu'il durait. Bloqué à « 2 sur 4 », le
   // superviseur n'avait plus aucun chemin vers son inventaire : le seul lien
-  // restant, « Masquer ce guide », se lit « je ne veux pas d'aide ».
-  it('le guide ne prend tout l’écran que s’il n’y a aucun inventaire', () => {
-    expect(accueil).toContain('const guidePleinEcran = montrerGuide && mesInventaires.length === 0')
+  // restant, « Masquer ce guide », se lit « je ne veux pas d'aide ». Le
+  // bandeau de 76 px a réglé la question par sa taille — il ne doit jamais
+  // reprendre l'écran.
+  it('le bandeau ne remplace jamais la liste', () => {
+    expect(accueil).not.toContain('guidePleinEcran')
+    expect(accueil).not.toContain('guidePlein')
   })
 
-  it('le guide se pose au-dessus de la liste dès qu’un inventaire existe', () => {
-    expect(accueil).toContain('{montrerGuide && carteGuide}')
+  it('le bandeau se pose au-dessus de la liste', () => {
+    expect(accueil).toContain('{carteGuide}')
   })
 
-  // ── Le guide « coché par les faits » ne se cochait jamais ───────────────
-  //
-  // Aucun des écrans qui font avancer la checklist n'invalidait la requête
-  // « preparation » : l'étape des zones restait à faire alors qu'une plage
-  // venait d'être affectée, et l'import ne cochait rien non plus.
-  it('affecter une plage recharge la préparation', () => {
-    expect(zones).toContain("queryKey: ['preparation', sessionId]")
-  })
-
-  it('importer un fichier recharge la préparation', () => {
-    expect(importEcran).toContain("queryKey: ['preparation', sessionId]")
-  })
-
-  it('ajouter une personne recharge la préparation', () => {
-    expect(invite).toContain("queryKey: ['preparation', sessionId]")
-  })
-
-  it('tirer pour rafraîchir recharge aussi le guide', () => {
-    expect(accueil).toContain("queryClient.invalidateQueries({ queryKey: ['preparation', inventaireGuide.id] })")
-  })
-
-  // ── L'étape « compteurs » se cochait sur le créateur lui-même ───────────
-  //
-  // Il est inscrit dans `session_members` à la création : la checklist
-  // affichait « 1 membre » et se cochait avant que personne n'ait été ajouté.
-  it('le créateur ne compte pas comme un compteur ajouté', () => {
-    expect(requetes).toContain('if (createurId) q = q.neq(\'user_id\', createurId)')
-    expect(accueil).toContain('getPreparation(inventaireGuide!.id, profile?.id)')
+  it('tirer pour rafraîchir recharge aussi le bandeau', () => {
+    expect(accueil).toContain("queryClient.invalidateQueries({ queryKey: ['my-team'] })")
   })
 
   // ── « 10 balises manquantes » sur un inventaire à 0 % ───────────────────
@@ -1020,13 +1082,14 @@ describe('le tunnel de préparation (23 août 2026)', () => {
   })
 
   // Le guide masquait « Nouvel inventaire » tant qu'il durait, pour éviter le
-  // doublon avec le bouton de son étape 1 — mais il ne porte ce bouton que tant
-  // que cette étape reste à faire. Une fois cochée, plus aucun chemin ne menait
-  // à la création.
+  // doublon — et une fois son étape 1 cochée, plus aucun chemin ne menait à la
+  // création. Le bandeau, lui, ne l'efface que dans le seul cas où il ferait
+  // vraiment doublon : son étape est la création ET la liste est vide, donc
+  // rien ne peut le faire défiler hors de l'écran.
   it('« Nouvel inventaire » ne se masque que s’il ferait doublon', () => {
     const accueil = lire('app/(supervisor)/index.tsx')
-    expect(accueil).toContain("const guideOffreCreation = montrerGuide && etapes.find(e => !e.faite)?.cle === 'inventaire'")
-    expect(accueil).toContain('guideOffreCreation ? null : (')
+    expect(accueil).toContain("const fabDoublon = montrerGuide && etape?.cle === 'inventaire' && rows.length === 0")
+    expect(accueil).toContain('fabDoublon ? null : (')
     expect(accueil).not.toContain('montrerGuide ? null : (')
   })
 

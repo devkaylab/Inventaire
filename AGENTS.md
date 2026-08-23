@@ -14,6 +14,87 @@ revient au programme, il sera repris à zéro — l'ancien tutoriel décrivait d
 des écrans disparus (notamment les boutons de passe « Passer en Audit » /
 « Revenir en … », supprimés avec `advance_pass` / `revert_pass`).
 
+# Le bandeau de démarrage (23 août 2026)
+
+*« Remplacer le bloc “Pour démarrer” par un bandeau d'une seule étape
+(~76 px), qui ne vise plus un inventaire mais le démarrage du superviseur. »*
+
+Le bloc « Pour démarrer » déroulait quatre étapes de **préparation d'un
+inventaire** (créer, zones, fichiers, membres) en haut de l'accueil. Deux
+choses ont changé, et la seconde est la plus importante.
+
+**La forme** : `components/BandeauDemarrage.tsx`, une rangée de 76 px,
+cliquable de bout en bout, avec un chevron et une croix. Elle annonce, elle
+n'explique pas — l'explication vit dans l'écran où l'on atterrit.
+
+**L'objet** : les trois étapes sont ce qu'il faut avoir fait **une fois** pour
+être en état de travailler — `Générer mes balises` (→ boîte à outils),
+`Constituer mon équipe` (→ Mon équipe), `Créer mon premier inventaire`. La
+préparation d'une session se conduit depuis la session, où elle est déjà.
+
+Points à ne pas défaire :
+
+- **⚠️ L'étape des balises se coche sur un jalon local, et il n'y a pas
+  d'autre moyen.** Une planche est dessinée sur le téléphone et **n'écrit rien
+  en base** : aucun fait serveur ne dira jamais qu'elle a été produite. D'où
+  `Jalon` dans `lib/reperes.ts` — à ne pas confondre avec un repère : un
+  repère est une aide qui ne se montre qu'une fois, un jalon est un **fait**.
+  Il se pose dans `BaliseCreator`, au `onSuccess` du dessin du PDF, et nulle
+  part ailleurs. `useJalon` le relit à chaque retour sur l'écran
+  (`useFocusEffect`) : on revient précisément de l'écran qui vient de le
+  poser. Conséquence assumée : changer de téléphone remet l'étape à faire.
+- **`oublierReperes` n'efface pas les jalons.** « Revoir les repères » rejoue
+  les aides ; il ne défait pas ce qui a été fait.
+- **Les deux autres étapes se lisent en base** : `my_team_by_store` (la même
+  RPC que « Mon équipe ») et les inventaires créés par la personne. **Une
+  invitation en attente compte** comme une équipe constituée — sinon l'étape
+  resterait à faire juste après avoir invité quelqu'un.
+- **Le bandeau ne remplace jamais la liste.** Le guide qui l'a précédé prenait
+  l'écran entier et masquait l'inventaire qu'on venait de créer ; à 76 px la
+  question ne se pose plus. `guidePleinEcran` a disparu.
+- **« + Nouvel inventaire » ne s'efface que s'il ferait vraiment doublon** :
+  étape en cours = la création **et** liste vide. Élargir la condition
+  ramènerait le défaut inverse — le bandeau part vers le haut dès qu'on fait
+  défiler, et le bouton était alors le seul chemin restant.
+- `getPreparation` et les invalidations `['preparation', …]` de Zones, Import
+  et Inviter ont été **retirées** : plus personne ne les lit.
+
+## Deux défauts trouvés en l'exerçant, et corrigés
+
+Tout a été parcouru au simulateur, appui par appui. Deux choses cassaient, et
+la seconde rendait la première étape inutilisable.
+
+1. **Mon équipe et Boîte à outils s'ouvrent depuis deux endroits.** Le bandeau
+   y mène directement depuis l'accueil superviseur, donc **en traversant deux
+   groupes de routes** : ils sont alors le premier écran de la pile `(compte)`,
+   la flèche native ne s'affiche pas, et on reste coincé dessus. C'est le piège
+   déjà écrit plus bas (« ce qu'un écran ouvre doit être dans sa pile ») ; ici
+   il est réglé par un `headerLeft: RetourVersApp` sur ces deux écrans, qui
+   pointe vers le bon endroit dans les deux cas.
+
+2. **⚠️ « Créer et imprimer des balises » ne marchait pas — et c'était vrai
+   avant ce chantier.** L'overlay de chargement était une `Modal`, donc un
+   `UIViewController` présenté : iOS **refuse** d'ouvrir la feuille de partage
+   par-dessus (`Attempt to present UIActivityViewController … which is already
+   presenting`), `shareAsync` ne se résolvait jamais, le bouton tournait
+   indéfiniment et **aucun PDF ne sortait**. Retirer la modale juste avant le
+   partage ne suffit pas non plus : la feuille s'ouvre « while a presentation
+   is in progress », et à sa fermeture **l'application ne répond plus du tout**
+   — plus un seul appui, il faut la relancer.
+
+   Corrigé en deux gestes : `lib/balises.ts` sépare `buildBaliseSheetFile`
+   (dessiner) de `shareBaliseSheet` (partager), et **`GeneratingOverlay` n'est
+   plus une `Modal`** mais un voile posé sur la carte qui l'accueille. Plus
+   rien n'est présenté, donc plus de conflit. Ne pas la remettre en `Modal`.
+
+Vérifié au simulateur le 23 août 2026, clair et sombre : le bandeau à
+« 1 sur 3 », l'impression jusqu'au PDF (`balises_1-900`, 1,2 Mo, feuille de
+partage avec Imprimer et Enregistrer), le jalon qui fait passer le bandeau à
+« 2 sur 3 » au retour, les deux flèches de retour, la croix qui masque, et
+l'application qui répond après la fermeture du partage.
+
+Tests de garde : `tests/compte.test.ts`, bloc « le bandeau de démarrage ».
+
 # Parcours d'inscription
 
 Plus d'auto-inscription. `handle_new_user` refuse tout e-mail qui n'est ni une

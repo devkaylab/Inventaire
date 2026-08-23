@@ -12,11 +12,12 @@
  * qui change de téléphone retrouve ses repères.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { useFocusEffect } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export type Repere =
   | 'bienvenue'          // l'écran nominatif de première ouverture
-  | 'guide-demarrage'    // « Pour démarrer », le guide du superviseur
+  | 'guide-demarrage'    // le bandeau de démarrage du superviseur
   | 'compter-auditer'    // les deux lignes sous les boutons de l'inventaire
   | 'premiere-balise'    // le volet « balise ouverte, scannez les articles »
   | 'balise-terminee'    // la première clôture
@@ -80,4 +81,70 @@ export function useRepere(repere: Repere, userId: string | null | undefined) {
   }, [repere, userId])
 
   return { aVoir: pret && aVoir, pret, marquerVu }
+}
+
+/* ─── Les jalons : un fait que la base ne garde pas ────────────────────────
+ *
+ * ⚠️ **À ne pas confondre avec un repère.** Un repère est une aide qui ne se
+ * montre qu'une fois ; un jalon est un **fait**, noté ici faute de trace
+ * ailleurs. Le seul à ce jour : une planche de balises produite. Elle est
+ * dessinée sur le téléphone depuis le 21 août 2026 et **n'écrit rien en
+ * base** — sans ce jalon, l'étape « Générer mes balises » du bandeau de
+ * démarrage ne pourrait jamais se cocher toute seule.
+ *
+ * Conséquence assumée : le jalon est **local**. Changer de téléphone remet
+ * l'étape à faire. C'est le prix de l'absence de trace serveur, et c'est
+ * moins grave que l'inverse — une étape à refaire coûte un appui, une étape
+ * cochée à tort ferait mentir le bandeau.
+ *
+ * `oublierReperes` **ne les efface pas** : « Revoir les repères » rejoue les
+ * aides, il ne défait pas ce qui a été fait.
+ */
+export type Jalon = 'balises-imprimees'
+
+const cleJalon = (jalon: Jalon, userId: string) => `jalon.${jalon}.${userId}`
+
+export async function jalonPose(jalon: Jalon, userId: string): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(cleJalon(jalon, userId))) === '1'
+  } catch {
+    // Stockage indisponible : on ne prétend pas que c'est fait.
+    return false
+  }
+}
+
+export async function poserJalon(jalon: Jalon, userId: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(cleJalon(jalon, userId), '1')
+  } catch {
+    // Sans effet : au pire l'étape reste à faire.
+  }
+}
+
+/**
+ * Le jalon d'un écran, **relu à chaque retour dessus**.
+ *
+ * C'est tout l'intérêt du `useFocusEffect` : on revient précisément de
+ * l'écran qui vient de poser le jalon (la boîte à outils, pour les balises).
+ * Une lecture au seul montage laisserait le bandeau afficher l'étape 1 après
+ * qu'elle a été faite.
+ */
+export function useJalon(jalon: Jalon, userId: string | null | undefined) {
+  const [pret, setPret] = useState(false)
+  const [pose, setPose] = useState(false)
+
+  const relire = useCallback(() => {
+    let vivant = true
+    if (!userId) { setPret(false); setPose(false); return }
+    void jalonPose(jalon, userId).then(v => {
+      if (!vivant) return
+      setPose(v)
+      setPret(true)
+    })
+    return () => { vivant = false }
+  }, [jalon, userId])
+
+  useFocusEffect(relire)
+
+  return { pose, pret }
 }

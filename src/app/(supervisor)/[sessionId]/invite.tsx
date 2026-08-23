@@ -216,8 +216,6 @@ export default function InviteToSessionScreen() {
     await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
     await queryClient.invalidateQueries({ queryKey: ['session-invitations', sessionId] })
     if (storeId) await queryClient.invalidateQueries({ queryKey: ['store-directory', storeId] })
-    // Idem : la checklist compte les membres de l'inventaire.
-    await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
   }
 
   async function partager() {

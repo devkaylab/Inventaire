@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, router, useLocalSearchParams } from 'expo-router'
@@ -52,7 +51,6 @@ export default function ImportScreen() {
   const styles = makeStyles(theme)
   const [catalog, setCatalog] = useState<StepState>(initialState)
   const [stock, setStock] = useState<StepState>(initialState)
-  const queryClient = useQueryClient()
 
   const set = (step: Step) => (step === 'catalog' ? setCatalog : setStock)
 
@@ -81,10 +79,6 @@ export default function ImportScreen() {
         uploaded: result.uploaded,
         errors: result.errors,
       }))
-      // La checklist « Pour démarrer » compte les lignes importées : sans
-      // cette invalidation, l'étape des fichiers restait à faire après un
-      // import réussi.
-      await queryClient.invalidateQueries({ queryKey: ['preparation', sessionId] })
     } catch (e: unknown) {
       console.error('[import screen]', step, e)
       set(step)(s => ({

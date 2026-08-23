@@ -114,13 +114,26 @@ async function buildBaliseSheet(balises: BaliseInfo[]): Promise<string> {
   return await doc.saveAsBase64()
 }
 
-export type ExportResult = { shared: boolean; uri: string; filename: string }
+export type PlancheBalises = { uri: string; filename: string }
 
-/** Génère le PDF des balises et ouvre le partage iOS (aperçu → Imprimer / Enregistrer). */
-export async function exportBaliseSheet(
+/**
+ * ⚠️ **Dessiner et partager sont deux temps, et ils doivent le rester.**
+ *
+ * Les deux ne faisaient qu'une fonction, appelée pendant que l'overlay de
+ * chargement était à l'écran. Or cet overlay est une `Modal`, donc un
+ * `UIViewController` présenté : iOS **refuse** d'afficher la feuille de
+ * partage par-dessus (« Attempt to present UIActivityViewController on … which
+ * is already presenting »), `shareAsync` ne se résout jamais, et le bouton
+ * « Créer et imprimer des balises » tourne **indéfiniment**. Vu au simulateur
+ * le 23 août 2026 : rien ne sortait, et rien ne le disait.
+ *
+ * L'appelant dessine d'abord, **retire l'overlay**, et ne partage qu'une fois
+ * l'écran libre (voir `BaliseCreator`).
+ */
+export async function buildBaliseSheetFile(
   title: string,
   balises: BaliseInfo[]
-): Promise<ExportResult> {
+): Promise<PlancheBalises> {
   // Laisse React peindre l'overlay de chargement avant le dessin (bloquant) du PDF.
   await new Promise((r) => setTimeout(r, 30))
   const b64 = await buildBaliseSheet(balises)
@@ -130,14 +143,16 @@ export async function exportBaliseSheet(
   if (file.exists) file.delete()
   file.create()
   file.write(b64, { encoding: 'base64' })
+  return { uri: file.uri, filename }
+}
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Planches de balises',
-      UTI: 'com.adobe.pdf',
-    })
-    return { shared: true, uri: file.uri, filename }
-  }
-  return { shared: false, uri: file.uri, filename }
+/** Ouvre le partage iOS (aperçu → Imprimer / Enregistrer). Faux si indisponible. */
+export async function shareBaliseSheet(planche: PlancheBalises): Promise<boolean> {
+  if (!(await Sharing.isAvailableAsync())) return false
+  await Sharing.shareAsync(planche.uri, {
+    mimeType: 'application/pdf',
+    dialogTitle: 'Planches de balises',
+    UTI: 'com.adobe.pdf',
+  })
+  return true
 }
