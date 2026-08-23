@@ -70,7 +70,16 @@ export function friendlySignInError(e: unknown): string {
     return "Votre compte n'est pas encore activé. Ouvrez le lien reçu par e-mail pour choisir votre mot de passe."
   }
 
-  // Identifiants refusés — et tout le reste, faute de mieux : un message
-  // technique en anglais n'aide personne.
-  return 'Adresse e-mail ou mot de passe incorrect.'
+  // Identifiants refusés. C'est le seul cas où ce texte est juste — et il
+  // couvre volontairement « compte inconnu » (constat M3).
+  if (/invalid login credentials|invalid credentials|user not found|invalid grant/.test(msg)) {
+    return 'Adresse e-mail ou mot de passe incorrect.'
+  }
+
+  // ⚠️ Tout le reste ne doit PAS retomber sur « mot de passe incorrect ».
+  // La première version le faisait : une panne de configuration ou une erreur
+  // serveur s'affichait comme une faute de saisie, et on cherchait au mauvais
+  // endroit (constaté le 23 août 2026, Julien ne pouvant plus se connecter).
+  if (__DEV__) console.warn('[signIn] erreur non reconnue :', err?.status, err?.name, err?.message)
+  return 'Connexion impossible pour le moment. Réessayez dans un instant.'
 }

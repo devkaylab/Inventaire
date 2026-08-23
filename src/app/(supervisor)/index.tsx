@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { router } from 'expo-router'
@@ -511,6 +511,23 @@ export default function SupervisorHomeScreen() {
         <View style={styles.center}>
           <ActivityIndicator color={theme.accent} />
         </View>
+      ) : montrerGuide ? (
+        // Comme dans la maquette, le guide **est** l'écran tant qu'il dure :
+        // pas une carte flottant dans une liste vide. La liste revient dès
+        // qu'il est terminé ou masqué.
+        <ScrollView contentContainerStyle={styles.guidePlein}>
+          <PourDemarrer
+            etapes={etapes}
+            onMasquer={masquerGuide}
+            onAction={(cle) => {
+              const id = inventaireGuide?.id
+              if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
+              if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
+              else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
+              else router.push(`/(supervisor)/${id}/invite`)
+            }}
+          />
+        </ScrollView>
       ) : (
         <FlatList
           data={rows}
@@ -542,7 +559,6 @@ export default function SupervisorHomeScreen() {
           onScrollBeginDrag={fermerVolet}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
-            <>
             <View style={styles.listHeader}>
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
               {/* Le mode sélection s'ouvre aussi par un appui long sur une
@@ -554,20 +570,6 @@ export default function SupervisorHomeScreen() {
                 </Pressable>
               )}
             </View>
-            {montrerGuide && (
-              <PourDemarrer
-                etapes={etapes}
-                onMasquer={masquerGuide}
-                onAction={(cle) => {
-                  const id = inventaireGuide?.id
-                  if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
-                  if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
-                  else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
-                  else router.push(`/(supervisor)/${id}/invite`)
-                }}
-              />
-            )}
-            </>
           }
           ListEmptyComponent={
             sansMagasin ? (
@@ -695,6 +697,7 @@ function makeStyles(t: Theme) {
     meta: { fontSize: 12, color: t.textMuted, ...tabular },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
     emptyText: { color: t.textMuted, fontSize: 15, fontFamily: Font.regular },
+    guidePlein: { flexGrow: 1, justifyContent: 'center', paddingBottom: Spacing.xxxl },
     videCard: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: Radius.lg,
       padding: Spacing.xl, marginHorizontal: Spacing.lg, marginTop: Spacing.lg, gap: Spacing.sm },
     videTitre: { color: t.textPrimary, fontSize: 16, fontFamily: Font.semibold },
