@@ -48,7 +48,7 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>NSCameraUsageDescription</key>
-    <string>L'accès à la caméra est nécessaire pour scanner les codes-barres des articles.</string>
+    <string>La caméra sert à lire les balises de zone et les codes-barres des articles pendant l'inventaire. Aucune photo n'est enregistrée.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

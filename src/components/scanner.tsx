@@ -3,9 +3,11 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -222,7 +224,7 @@ export function Scanner({
   // Couleur du mode : Compter = accent, Auditer = or.
   const modeColor = baliseMode === 'audit' ? AUDIT_COLOR : theme.accent
   const modeOn = baliseMode === 'audit' ? AUDIT_ON : theme.onAccent
-  const [permission, requestPermission] = useCameraPermissions()
+  const [permission, requestPermission, relirePermission] = useCameraPermissions()
   const [mode, setMode] = useState<Mode>('camera')
   const [manualInput, setManualInput] = useState('')
   // Douchette (Zebra/Honeywell/BT HID) — capture keyboard-wedge en mode dédié.
@@ -367,9 +369,24 @@ export function Scanner({
   const cooldownAnim = useRef(new Animated.Value(0)).current
   const COOLDOWN_MS = 1500
 
+  // ⚠️ Cet effet rappelait `requestPermission()` à **chaque** changement de
+  // `permission`. Sur iOS, après un refus, la boîte système ne revient jamais :
+  // l'appel était inerte, l'écran restait sans issue, et on tournait à vide.
+  // On ne demande donc que tant que le système accepte encore la question.
   useEffect(() => {
-    if (permission && !permission.granted) requestPermission()
-  }, [permission])
+    if (permission?.status === 'undetermined' && permission.canAskAgain) {
+      void requestPermission()
+    }
+  }, [permission?.status, permission?.canAskAgain, requestPermission])
+
+  // Retour des Réglages : sans cette relecture, l'écran resterait sur
+  // « refusé » alors que l'autorisation vient d'être accordée.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (etat) => {
+      if (etat === 'active') void relirePermission()
+    })
+    return () => sub.remove()
+  }, [relirePermission])
 
   useEffect(() => {
     loadScanSound()
@@ -853,10 +870,35 @@ export function Scanner({
           </>
         ) : (
           <View style={styles.permBox}>
-            <Text style={styles.permText}>Accès à la caméra refusé.</Text>
-            <Pressable onPress={requestPermission} style={styles.permBtn}>
-              <Text style={styles.permBtnText}>Autoriser la caméra</Text>
-            </Pressable>
+            <Text style={styles.permTitre}>Caméra désactivée</Text>
+            <Text style={styles.permText}>
+              Sans la caméra, Quantinvo ne peut lire ni les balises ni les codes-barres.
+            </Text>
+            {permission?.canAskAgain ? (
+              <Pressable onPress={requestPermission} style={styles.permBtn}>
+                <Text style={styles.permBtnText}>Autoriser la caméra</Text>
+              </Pressable>
+            ) : (
+              // Après un refus définitif, seule l'appli Réglages peut rendre
+              // l'accès : un bouton qui redemande ne ferait rien.
+              <Pressable onPress={() => { void Linking.openSettings() }} style={styles.permBtn}>
+                <Text style={styles.permBtnText}>Ouvrir les Réglages</Text>
+              </Pressable>
+            )}
+            {/* Le comptage ne doit pas s'arrêter là : les deux phases ont un
+                repli clavier, encore fallait-il le dire ici. */}
+            {balisePhase ? (
+              <Text style={styles.permAide}>
+                En attendant, saisissez le numéro de la balise dans le champ ci-dessus.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.permAide}>En attendant, saisissez les codes à la main.</Text>
+                <Pressable onPress={() => setMode('manual')} style={styles.permBtnSecondaire}>
+                  <Text style={styles.permBtnSecondaireText}>Passer en saisie manuelle</Text>
+                </Pressable>
+              </>
+            )}
           </View>
         )
       ) : mode === 'hardware' ? (
@@ -1135,7 +1177,12 @@ function makeStyles(t: Theme) {
     triggerBtnText: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary },
 
     permBox: { alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
+    permTitre: { color: t.textPrimary, fontSize: 17, textAlign: 'center', fontFamily: Font.semibold },
     permText: { color: t.textSecondary, fontSize: 15, textAlign: 'center', fontFamily: Font.regular },
+    permAide: { color: t.textMuted, fontSize: 13, textAlign: 'center', fontFamily: Font.regular, lineHeight: 18 },
+    permBtnSecondaire: { borderColor: t.borderStrong, borderWidth: 1, borderRadius: Radius.md,
+      paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
+    permBtnSecondaireText: { color: t.textPrimary, fontFamily: Font.semibold },
     permBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, ...t.shadowButton },
     permBtnText: { color: t.onAccent, fontFamily: Font.semibold },
 

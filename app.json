@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.quantinvo.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "L'accès à la caméra est nécessaire pour scanner les codes-barres des articles.",
+        "NSCameraUsageDescription": "La caméra sert à lire les balises de zone et les codes-barres des articles pendant l'inventaire. Aucune photo n'est enregistrée.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -38,7 +38,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "L'accès à la caméra est nécessaire pour scanner les codes-barres des articles."
+          "cameraPermission": "La caméra sert à lire les balises de zone et les codes-barres des articles pendant l'inventaire. Aucune photo n'est enregistrée."
         }
       ],
       [
