@@ -411,6 +411,8 @@ export default function EquipePage() {
       {estAdmin && ajoutOuvert && (
         <AjouterPersonne
           stores={ca?.stores ?? []}
+          membres={membres}
+          moi={guard.profile.id}
           busy={busy}
           onCompteur={inviterCompteur}
           onSuperviseur={inviterSuperviseur}
@@ -625,9 +627,11 @@ export default function EquipePage() {
  * appelée jusqu'à l'obligation d'un magasin.
  */
 function AjouterPersonne({
-  stores, busy, onCompteur, onSuperviseur, onFermer,
+  stores, membres, moi, busy, onCompteur, onSuperviseur, onFermer,
 }: {
   stores: Store[]
+  membres: Member[]
+  moi: string
   busy: boolean
   onCompteur: (firstName: string, lastName: string, email: string, storeIds: string[]) => Promise<boolean>
   onSuperviseur: (firstName: string, lastName: string, email: string, storeIds: string[]) => Promise<boolean>
@@ -638,6 +642,40 @@ function AjouterPersonne({
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [superviseur, setSuperviseur] = useState('')
+
+  /**
+   * Un compteur compte **pour quelqu'un**, dans le magasin de ce quelqu'un.
+   *
+   * Sans ce choix, l'administrateur cochait n'importe quel magasin de
+   * l'entreprise — y compris un magasin que personne ne supervise. Le compteur
+   * existait alors sans apparaître dans le « Mon équipe » de qui que ce soit.
+   *
+   * ⚠️ **Le superviseur choisi ne s'enregistre nulle part** (décision de
+   * Julien, option A) : « le superviseur d'un compteur » n'existe pas en base,
+   * c'est le magasin qui relie les deux. Ce menu ne fait que restreindre la
+   * liste en dessous. Si le superviseur quitte le magasin, le compteur y reste
+   * et passe sous la responsabilité de celui qui le reprend — on encadre un
+   * magasin, pas des personnes.
+   */
+  const superviseurs = membres.filter((m) => m.role === 'supervisor')
+  // Un administrateur d'entreprise a tous les magasins par construction.
+  const magasinsDe = (m: Member) => (m.is_company_admin ? stores.map((s) => s.id) : m.store_ids)
+  const choisi = superviseurs.find((m) => m.id === superviseur) ?? null
+  const magasinsProposes = role === 'supervisor'
+    ? stores
+    : choisi
+      ? stores.filter((s) => magasinsDe(choisi).includes(s.id))
+      : []
+
+  function changerSuperviseur(id: string) {
+    setSuperviseur(id)
+    const m = superviseurs.find((x) => x.id === id)
+    const ids = m ? magasinsDe(m) : []
+    // Un seul magasin : rien à choisir, la question a déjà sa réponse. Même
+    // règle que la création d'inventaire dans l'application.
+    setSelected(ids.length === 1 ? ids : [])
+  }
 
   function toggle(id: string) {
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
@@ -645,15 +683,22 @@ function AjouterPersonne({
 
   // Un superviseur a toujours au moins un magasin — la base le refuse sinon
   // (migration 20260823100001). Le dire avant l'envoi vaut mieux qu'après.
-  const magasinManquant = role === 'supervisor' && selected.length === 0
-  const incomplet = !firstName.trim() || !lastName.trim() || !email.trim() || magasinManquant
+  // Un compteur aussi, désormais : la liste vide voulait dire « tous les
+  // magasins », ce qui donnait l'entreprise entière à chaque ajout.
+  const superviseurManquant = role === 'employee' && !choisi
+  const magasinManquant = selected.length === 0
+  const incomplet = !firstName.trim() || !lastName.trim() || !email.trim()
+    || superviseurManquant || magasinManquant
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (incomplet) return
     const envoyer = role === 'supervisor' ? onSuperviseur : onCompteur
     const ok = await envoyer(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), selected)
-    if (ok) { setFirstName(''); setLastName(''); setEmail(''); setSelected([]); onFermer() }
+    if (ok) {
+      setFirstName(''); setLastName(''); setEmail('')
+      setSelected([]); setSuperviseur(''); onFermer()
+    }
   }
 
   return (
@@ -665,7 +710,7 @@ function AjouterPersonne({
           type="button"
           className={`role-carte${role === 'employee' ? ' on' : ''}`}
           aria-pressed={role === 'employee'}
-          onClick={() => setRole('employee')}
+          onClick={() => { setRole('employee'); setSelected([]); setSuperviseur('') }}
         >
           <span className="role-radio" />
           <span>
@@ -679,7 +724,7 @@ function AjouterPersonne({
           type="button"
           className={`role-carte${role === 'supervisor' ? ' on' : ''}`}
           aria-pressed={role === 'supervisor'}
-          onClick={() => setRole('supervisor')}
+          onClick={() => { setRole('supervisor'); setSelected([]); setSuperviseur('') }}
         >
           <span className="role-radio" />
           <span>
@@ -700,24 +745,85 @@ function AjouterPersonne({
         </div>
       </div>
 
-      {stores.length > 0 && (
+      {/* ── Superviseur, puis ses magasins ──
+          Les deux champs qui dépendent l'un de l'autre sont voisins : on
+          choisit le superviseur, la liste se remplit juste en dessous. Un
+          superviseur, lui, ne compte pour personne : le menu ne le concerne
+          pas. ── */}
+      {role === 'employee' && (
+        <div style={{ marginTop: 18 }}>
+          <div className="champ-label">Superviseur</div>
+          {superviseurs.length === 0 ? (
+            <>
+              <div className="vide-cadre">
+                Votre entreprise n&apos;a encore aucun superviseur. Un compteur compte toujours
+                pour quelqu&apos;un&nbsp;: commencez par en inviter un.
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 10 }}
+                onClick={() => { setRole('supervisor'); setSelected([]); setSuperviseur('') }}
+              >Inviter un superviseur</button>
+            </>
+          ) : (
+            <select
+              className="champ-select"
+              value={superviseur}
+              onChange={(e) => changerSuperviseur(e.target.value)}
+              aria-label="Superviseur de ce compteur"
+            >
+              <option value="">Choisir le superviseur de ce compteur…</option>
+              {superviseurs.map((m) => {
+                const n = magasinsDe(m).length
+                return (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name || m.email || 'Sans nom'}
+                    {m.id === moi ? ' (vous)' : ''}
+                    {' — '}
+                    {m.is_company_admin ? 'tous les magasins' : `${n} magasin${n > 1 ? 's' : ''}`}
+                  </option>
+                )
+              })}
+            </select>
+          )}
+        </div>
+      )}
+
+      {(role === 'supervisor' || superviseurs.length > 0) && stores.length > 0 && (
         <div style={{ marginTop: 18 }}>
           <div className="champ-label">
-            Magasins{role === 'supervisor' && <span className="obligatoire"> · au moins un</span>}
+            Magasins <span className="obligatoire">· au moins un</span>
           </div>
-          <div className="chips" style={{ marginBottom: 0 }}>
-            {stores.map((s) => (
-              <label key={s.id} className="chip" style={{ cursor: 'pointer', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={selected.includes(s.id)}
-                  onChange={() => toggle(s.id)}
-                  style={{ accentColor: 'var(--accent)' }}
-                />
-                {s.name}
-              </label>
-            ))}
-          </div>
+          {magasinsProposes.length === 0 ? (
+            <div className="vide-cadre">
+              Choisissez d&apos;abord un superviseur&nbsp;: les magasins proposés seront les siens.
+            </div>
+          ) : (
+            <>
+              <div className="chips" style={{ marginBottom: 0 }}>
+                {magasinsProposes.map((s) => (
+                  <label key={s.id} className="chip" style={{ cursor: 'pointer', gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(s.id)}
+                      onChange={() => toggle(s.id)}
+                      style={{ accentColor: 'var(--accent)' }}
+                    />
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+              {/* Un magasin absent de la liste se remarque : le dire évite de
+                  chercher un défaut là où il y a une règle. */}
+              {choisi && magasinsProposes.length < stores.length && (
+                <p className="muted small" style={{ marginTop: 8 }}>
+                  Les autres magasins de l&apos;entreprise ne sont pas proposés&nbsp;:
+                  {' '}{choisi.full_name || 'cette personne'} ne les supervise pas.
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -731,7 +837,7 @@ function AjouterPersonne({
       <p className="muted small" style={{ marginTop: 12 }}>
         {role === 'supervisor'
           ? 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Un superviseur a toujours au moins un magasin.'
-          : 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Sans magasin coché, elle aura accès à tous ceux de l’entreprise.'}
+          : 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Le superviseur choisi ne sert qu’à trouver le bon magasin : c’est le magasin qui donne l’accès.'}
       </p>
     </form>
   )

@@ -440,8 +440,9 @@ describe('refonte de « Mon équipe » (23 août 2026)', () => {
     // par un administrateur recevait donc l'entreprise entière.
     const bloc = pageEquipe.split('async function inviterCompteur')[1]?.split('}\n')[0] ?? ''
     expect(bloc).toContain('body: { firstName, lastName, email, storeIds }')
-    // Et l'obligation du superviseur se dit avant l'envoi, pas après le refus.
-    expect(pageEquipe).toContain("const magasinManquant = role === 'supervisor' && selected.length === 0")
+    // Et l'obligation se dit avant l'envoi, pas après le refus — pour les
+    // deux rôles depuis que le superviseur se choisit (23 août, option A).
+    expect(pageEquipe).toContain('const magasinManquant = selected.length === 0')
   })
 
   it('les invitations passent en tête, et n’y restent pas quand il n’y en a plus', () => {
@@ -485,5 +486,53 @@ describe('refonte de « Mon équipe » (23 août 2026)', () => {
     // C'est ainsi qu'il travaille : un saisonnier part d'un magasin, pas de tous.
     expect(pageEquipe).toContain('<div className="dash-sub">Compteurs · {s.name}</div>')
     expect(pageEquipe).toContain("appliquer('remove_counter_from_store'")
+  })
+})
+
+describe('un compteur compte pour quelqu’un (23 août 2026)', () => {
+  // Demande de Julien : l'administrateur désigne le superviseur, puis choisit
+  // le magasin — et la liste ne montre que les magasins de ce superviseur.
+  // Maquette : https://claude.ai/code/artifact/3c19c9ed-11f9-4d68-887a-ca5f8b41eb03
+  const panneau = pageEquipe.split('function AjouterPersonne(')[1] ?? ''
+
+  it('le superviseur se choisit avant les magasins, et seulement pour un compteur', () => {
+    expect(panneau).toContain("{role === 'employee' && (")
+    expect(panneau).toContain('aria-label="Superviseur de ce compteur"')
+    const iSup = panneau.indexOf('Superviseur de ce compteur')
+    const iMag = panneau.indexOf('Magasins <span className="obligatoire">')
+    expect(iSup).toBeGreaterThan(-1)
+    expect(iSup).toBeLessThan(iMag)
+  })
+
+  it('la liste des magasins est celle du superviseur choisi', () => {
+    expect(panneau).toContain('stores.filter((s) => magasinsDe(choisi).includes(s.id))')
+    // Un administrateur d'entreprise les a tous par construction.
+    expect(panneau).toContain('const magasinsDe = (m: Member) => (m.is_company_admin ? stores.map((s) => s.id) : m.store_ids)')
+    // Un magasin absent se remarque : on dit pourquoi.
+    expect(panneau).toContain('ne les supervise pas')
+  })
+
+  it('un superviseur qui n’a qu’un magasin le voit coché d’office', () => {
+    expect(panneau).toContain('setSelected(ids.length === 1 ? ids : [])')
+  })
+
+  it('⚠️ un magasin est désormais exigé, pour les deux rôles', () => {
+    // La liste vide voulait dire « tous les magasins du superviseur » — donc
+    // l'entreprise entière quand c'est l'administrateur qui ajoute.
+    expect(panneau).toContain('const magasinManquant = selected.length === 0')
+    expect(panneau).toContain("const superviseurManquant = role === 'employee' && !choisi")
+  })
+
+  it('une entreprise sans superviseur le dit, et propose d’en inviter un', () => {
+    expect(panneau).toContain('Votre entreprise n&apos;a encore aucun superviseur.')
+    expect(panneau).toContain('Inviter un superviseur</button>')
+  })
+
+  it('⚠️ le superviseur choisi ne s’enregistre nulle part (option A)', () => {
+    // « Le superviseur d'un compteur » n'existe pas en base : c'est le magasin
+    // qui relie les deux. Le menu ne fait que restreindre la liste en dessous.
+    expect(pageEquipe).toContain('body: { firstName, lastName, email, storeIds }')
+    expect(pageEquipe).not.toMatch(/supervisorId|p_supervisor|superviseur_id/)
+    expect(panneau).toContain("ne s'enregistre nulle part")
   })
 })

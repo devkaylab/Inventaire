@@ -1517,6 +1517,50 @@ section **Membres** avec recherche, filtre magasin et filtre type de profil.
 - **Le superviseur ordinaire garde son rangement magasin par magasin** : c'est
   ainsi qu'il travaille, un saisonnier part d'un magasin et pas de tous.
 
+## Un compteur compte pour quelqu'un — le superviseur d'abord
+
+*« Ajout membre par admin entreprise, compteur : l'admin doit préciser qui est
+le superviseur, puis sélectionner le magasin, liste magasin = liste magasin
+superviseur. »* Maquette :
+https://claude.ai/code/artifact/3c19c9ed-11f9-4d68-887a-ca5f8b41eb03
+
+Le panneau d'ajout enchaîne désormais **rôle → identité → superviseur →
+magasins**, et les deux champs qui dépendent l'un de l'autre sont voisins.
+Avant, l'administrateur cochait n'importe quel magasin de l'entreprise — y
+compris un magasin que **personne ne supervise**. Le compteur existait alors
+sans apparaître dans le « Mon équipe » de qui que ce soit.
+
+⚠️ **Le superviseur choisi ne s'enregistre nulle part** (option A, tranchée
+par Julien). *« Le superviseur d'un compteur » n'existe pas en base* : un
+compteur appartient à des magasins, un superviseur aussi, et c'est le magasin
+qui les relie. Ce menu ne fait que **restreindre la liste en dessous**. Si le
+superviseur quitte le magasin, le compteur y reste et passe sous la
+responsabilité de celui qui le reprend — on encadre un magasin, pas des
+personnes. Ne pas ajouter de colonne « superviseur » à `profiles` ou à
+`team_invitations` en croyant compléter ce travail : c'est l'option B, elle a
+été écartée.
+
+- **Un superviseur qui n'a qu'un magasin le voit coché d'office** — la
+  question a déjà sa réponse. Même règle que la création d'inventaire dans
+  l'application.
+- **L'administrateur figure dans la liste**, avec « tous les magasins » : dans
+  une petite structure c'est lui qui encadre, l'écran ne doit pas l'obliger à
+  nommer quelqu'un d'autre.
+- **Le rôle Superviseur n'affiche pas ce menu** : un superviseur ne compte
+  pour personne. Sa liste reste celle de tous les magasins de l'entreprise.
+- **Un magasin absent de la liste se dit** — « … ne les supervise pas » —
+  sinon on cherche un défaut là où il y a une règle.
+- **Une entreprise sans aucun superviseur ne peut pas recevoir de compteur**,
+  et le panneau le dit avec le geste qui débloque (« Inviter un superviseur »,
+  qui bascule le rôle).
+- **⚠️ Un magasin est désormais exigé pour les deux rôles.** La liste vide
+  voulait dire « tous les magasins du superviseur » : depuis l'écran d'un
+  administrateur, cela donnait l'entreprise entière à chaque compteur ajouté.
+
+Vu à l'écran (route jetable rendant le vrai panneau, retirée — `git status`
+contrôlé), clair et sombre : les quatre états (superviseur non choisi, deux
+magasins, un seul coché d'office, entreprise sans superviseur).
+
 ## Affecter un magasin à un compteur (`ca_set_counter_stores`)
 
 Migration `20260823130001`. Il n'existait que `remove_counter_from_store` : on
