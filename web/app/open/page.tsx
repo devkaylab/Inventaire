@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
+import { StoreBadges } from '@/components/StoreBadges'
 
 // Schéma de l'app mobile (app.json → "scheme": "quantinvo").
 const APP_SCHEME = 'quantinvo://'
@@ -42,10 +43,17 @@ export default function OpenAppPage() {
           <a href={APP_SCHEME} className="btn btn-primary btn-block">Ouvrir l&apos;application</a>
         )}
 
+        {/* Le cul-de-sac d'avant : « installez d'abord l'application », sans
+            dire où la prendre. Les deux badges suivent `lib/appStores.ts` —
+            recherche tant que l'app n'est pas publiée, fiche réelle ensuite. */}
         {isMobile && (
-          <p className="sub" style={{ marginTop: 16, fontSize: 13 }}>
-            Si rien ne se passe, installez d&apos;abord l&apos;application Quantinvo, puis rouvrez ce lien.
-          </p>
+          <>
+            <p className="sub" style={{ marginTop: 16, fontSize: 13 }}>
+              Si rien ne se passe, c&apos;est que l&apos;application n&apos;est pas encore
+              installée sur ce téléphone.
+            </p>
+            <StoreBadges />
+          </>
         )}
 
         <div className="center-link" style={{ marginTop: 16 }}>
