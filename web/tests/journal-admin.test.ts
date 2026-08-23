@@ -4,7 +4,7 @@
 // que l'action, donc une action d'administration réussie sans trace ne peut
 // pas exister. Ces tests empêchent de désinstrumenter une fonction admin, de
 // rouvrir l'écriture du journal aux clients, ou d'oublier sa purge.
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -30,13 +30,29 @@ const FONCTIONS_INSTRUMENTEES = [
   'admin_quote_company_request',
   'admin_set_company_request_status',
   'admin_fulfil_company_request',
+  'admin_rename_company',
+  'admin_rename_store',
 ]
 
 describe('journal des actions admin (migration)', () => {
   it('journalise chacune des fonctions d’administration', () => {
+    // ⚠️ On balaie **toutes** les migrations, pas seulement celle qui a créé le
+    // journal : une fonction `admin_*` écrite plus tard vit dans son propre
+    // fichier, et la chercher ici seulement la laissait passer sans trace
+    // (constat du 23 août 2026, sur `admin_rename_company`).
+    const dossier = path.resolve(__dirname, '../../supabase/migrations')
+    const toutes = readdirSync(dossier)
+      .filter((f) => f.endsWith('.sql'))
+      .map((f) => readFileSync(path.join(dossier, f), 'utf8'))
     for (const fn of FONCTIONS_INSTRUMENTEES) {
-      const corps = migration.split(`function public.${fn}(`)[1]?.split('$function$;')[0] ?? ''
-      expect(corps, `${fn} doit appeler log_admin_action`).toContain('log_admin_action')
+      const corps = toutes
+        .filter((m) => m.includes(`function public.${fn}(`))
+        .map((m) => m.split(`function public.${fn}(`)[1]?.split(/\$function\$;|\$\$;/)[0] ?? '')
+      expect(corps.length, `${fn} n'est définie dans aucune migration`).toBeGreaterThan(0)
+      expect(
+        corps.some((c) => c.includes('log_admin_action')),
+        `${fn} doit appeler log_admin_action`,
+      ).toBe(true)
     }
   })
 

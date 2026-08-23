@@ -20,6 +20,7 @@ import { AppShell } from '@/components/AppShell'
 import { getMyCompany, type Company } from '@/lib/account'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { Renommer } from '@/components/ui/Renommer'
 import { LigneInventaire } from '@/components/magasin/CorpsMagasin'
 import { nb, relativeTime } from '@/lib/format'
 import type { SessionBloc } from '@/lib/entreprise'
@@ -167,7 +168,21 @@ export default function FicheMagasinPage() {
 
       <div className="app-head">
         <div>
-          <h1 className="page-title">{fiche.store.name}</h1>
+          {/* La page entière est réservée à l'administrateur d'entreprise
+              (redirection plus haut) : pas de garde de rôle à répéter ici. */}
+          <Renommer
+            nom={fiche.store.name}
+            label="ce magasin"
+            className="page-title"
+            onValider={async (nom) => {
+              const { data, error } = await supabase.rpc('ca_rename_store', {
+                p_store_id: storeId, p_name: nom,
+              })
+              if (error || !data?.success) return error?.message ?? data?.error ?? 'Renommage impossible.'
+              await charger()
+              return null
+            }}
+          />
           <p className="page-sub">
             {fiche.sessions.length} inventaire{fiche.sessions.length > 1 ? 's' : ''}
             {' · '}{fiche.counters.length} compteur{fiche.counters.length > 1 ? 's' : ''}

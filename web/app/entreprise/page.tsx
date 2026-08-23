@@ -18,6 +18,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
+import { Renommer } from '@/components/ui/Renommer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { type ApercuEntreprise } from '@/lib/entreprise'
 import { libelleAction, type LigneJournal } from '@/lib/journal'
@@ -57,7 +58,24 @@ export default function EntreprisePage() {
     <AppShell profile={guard.profile} companyName={vue?.company.name}>
       <div className="app-head">
         <div>
-          <h1 className="page-title">{vue?.company.name || 'Mon entreprise'}</h1>
+          {/* Réservé à l'administrateur d'entreprise (redirection plus haut).
+              Son entreprise porte son nom : il doit pouvoir le corriger sans
+              nous écrire. */}
+          {vue?.company.name ? (
+            <Renommer
+              nom={vue.company.name}
+              label="votre entreprise"
+              className="page-title"
+              onValider={async (nom) => {
+                const { data, error } = await supabase.rpc('ca_rename_company', { p_name: nom })
+                if (error || !data?.success) return error?.message ?? data?.error ?? 'Renommage impossible.'
+                await charger()
+                return null
+              }}
+            />
+          ) : (
+            <h1 className="page-title">Mon entreprise</h1>
+          )}
           <p className="page-sub">Tableau de bord</p>
         </div>
       </div>

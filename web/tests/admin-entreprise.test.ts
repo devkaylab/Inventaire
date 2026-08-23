@@ -536,3 +536,70 @@ describe('un compteur compte pour quelqu’un (23 août 2026)', () => {
     expect(panneau).toContain("ne s'enregistre nulle part")
   })
 })
+
+describe('renommer un magasin, renommer une entreprise (23 août 2026)', () => {
+  // Demande de Julien : « les comptes admin doivent pouvoir renommer un
+  // magasin et entreprise ». Rien ne le permettait — un nom de travers
+  // obligeait à supprimer et recréer, donc à perdre les inventaires.
+  const mRenom = lire('../../supabase/migrations/20260823140001_renommer_magasin_entreprise.sql')
+  const controle = lire('../components/ui/Renommer.tsx')
+  const ficheMagasin = lire('../app/magasins/[storeId]/page.tsx')
+  const pageEntreprise2 = lire('../app/entreprise/page.tsx')
+  const corps = (fn: string) => mRenom.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+
+  it('les deux autorités ont chacune leurs deux fonctions', () => {
+    for (const fn of ['admin_rename_company', 'admin_rename_store', 'ca_rename_company', 'ca_rename_store']) {
+      expect(corps(fn), fn).not.toBe('')
+    }
+    expect(corps('admin_rename_company')).toContain('public.is_admin()')
+    expect(corps('ca_rename_store')).toContain('public.is_company_admin()')
+  })
+
+  it('⚠️ la garde du client porte sur l’entreprise DU MAGASIN', () => {
+    // Sans cela on renommerait le magasin d'un autre client.
+    expect(corps('ca_rename_store')).toContain('where id = p_store_id and company_id = v_company')
+  })
+
+  it('un nom vide est refusé, un nom trop long est borné', () => {
+    expect(mRenom).toContain("select nullif(left(btrim(coalesce(p_nom, '')), 80), '')")
+    expect(corps('ca_rename_company')).toContain('Le nom ne peut pas être vide.')
+  })
+
+  it('deux magasins d’une même entreprise ne portent pas le même nom', () => {
+    for (const fn of ['admin_rename_store', 'ca_rename_store']) {
+      expect(corps(fn), fn).toContain('lower(s.name) = lower(v_nom)')
+      expect(corps(fn), fn).toContain('s.id <> p_store_id')
+    }
+  })
+
+  it('le même nom deux fois n’est pas une erreur', () => {
+    for (const fn of ['admin_rename_company', 'ca_rename_store']) {
+      expect(corps(fn), fn).toContain("json_build_object('success', true, 'already', true)")
+    }
+  })
+
+  it('le journal garde le nom d’avant', () => {
+    // Sans lui, une ligne « renommé en X » ne dit pas ce qu'on a perdu.
+    for (const fn of ['admin_rename_store', 'ca_rename_company']) {
+      expect(corps(fn), fn).toContain("json_build_object('avant', v_avant)")
+    }
+    expect(ACTIONS['magasin_renomme']).toBeDefined()
+    expect(ACTIONS['entreprise_renommee']).toBeDefined()
+  })
+
+  it('le geste est le même partout : un lien, puis un champ sur place', () => {
+    // Pas de modale : on renomme ce qu'on a sous les yeux, et c'est réversible
+    // d'un second renommage.
+    expect(controle).toContain('<button type="button" className="link-btn" onClick={ouvrir}>Renommer</button>')
+    expect(controle).toContain("if (e.key === 'Escape')")
+    // Un refus du serveur reste sous le champ, le temps de corriger.
+    expect(controle).toContain('if (message) { setErreur(message); return }')
+  })
+
+  it('les quatre écrans le portent', () => {
+    expect(ficheEntreprise).toContain("supabase.rpc('admin_rename_company'")
+    expect(ficheEntreprise).toContain("supabase.rpc('admin_rename_store'")
+    expect(ficheMagasin).toContain("supabase.rpc('ca_rename_store'")
+    expect(pageEntreprise2).toContain("supabase.rpc('ca_rename_company'")
+  })
+})

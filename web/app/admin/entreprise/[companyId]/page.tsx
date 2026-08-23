@@ -18,6 +18,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { Renommer } from '@/components/ui/Renommer'
 import { AppShell } from '@/components/AppShell'
 import { densite, trancheDe } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
@@ -409,7 +410,19 @@ export default function AdminCompanyPage() {
       <Link href="/admin/entreprises" className="link-btn" style={{ display: 'inline-block', marginBottom: 14 }}>
         ← Toutes les entreprises
       </Link>
-      <h1 className="page-title">{detail.company.name}</h1>
+      <Renommer
+        nom={detail.company.name}
+        label="cette entreprise"
+        className="page-title"
+        onValider={async (nom) => {
+          const { data, error } = await supabase.rpc('admin_rename_company', {
+            p_company_id: companyId, p_name: nom,
+          })
+          if (error || !data?.success) return error?.message ?? data?.error ?? 'Renommage impossible.'
+          await charger()
+          return null
+        }}
+      />
       <div className="code-row" style={{ marginTop: -4 }}>
         Code : <code>{detail.company.join_code}</code>
         <button className="link-btn" onClick={() => copier(detail.company.join_code)}>
@@ -539,7 +552,19 @@ export default function AdminCompanyPage() {
                 <div className="store-block" key={s.id}>
                   <div className="store-block-head">
                     <div>
-                      <span className="store-block-name">{s.name}</span>
+                      <Renommer
+                        nom={s.name}
+                        label="ce magasin"
+                        className="store-block-name"
+                        onValider={async (nom) => {
+                          const { data, error } = await supabase.rpc('admin_rename_store', {
+                            p_store_id: s.id, p_name: nom,
+                          })
+                          if (error || !data?.success) return error?.message ?? data?.error ?? 'Renommage impossible.'
+                          await charger()
+                          return null
+                        }}
+                      />
                       <div className="code-row">
                         Code magasin : <code>{s.join_code}</code>
                         <button className="link-btn" onClick={() => copier(s.join_code)}>
