@@ -61,12 +61,32 @@
 // téléphones comptent, c'est là qu'il faut regarder — du côté des droits sur
 // l'inventaire, pas du côté du réseau.
 //
-// La cadence a deux bornes, et elles comptent autant que le reste :
-//   · au plus un message toutes les `MIN_GAP_MS` — une rafale de scans ne
-//     produit qu'un seul message, c'est ce qui remplace l'ancien `sync` par
-//     scan ;
-//   · au moins un message toutes les `BEAT_MS` — sans quoi le site croirait
-//     l'appareil parti au bout de `STALE_MS`.
+// ── Cadence : trois bornes, et elles comptent autant que le reste ──────────
+//
+// (23 août 2026, après relevé de la facture Supabase.)
+//
+// ⚠️ **Un battement coûte DEUX messages** — un à l'envoi, un à la réception
+// par le tableau de bord abonné — et un de plus par écran ouvert en sus.
+// C'est la règle de facturation de Supabase pour un broadcast. Tout ce qui
+// suit vise donc à émettre le moins souvent possible sans rien perdre de ce
+// qui se voit.
+//
+//   · `MODE_GAP_MS` — changement de mode (comptage ⇄ audit, ouverture ou
+//     fermeture d'un écran). **Presque immédiat**, parce que cela se voit :
+//     le tableau de bord afficherait sinon « en comptage » alors que la
+//     personne a refermé l'écran ;
+//   · `SCAN_GAP_MS` — scans enregistrés. **Freiné très fort**, parce que cela
+//     ne se voit pas : le tableau de bord ne recalcule ses agrégats qu'une
+//     fois par minute (`AUTO_MIN_GAP_MS`) et sonde par ailleurs. Émettre à
+//     chaque rafale de 5 s n'avançait donc rien et coûtait six fois plus ;
+//   · `BEAT_MS` — silence maximal, sans quoi le site croirait l'appareil parti
+//     au bout de `STALE_MS` (90 s, soit trois battements manqués).
+//
+// ⚠️ Le battement de fond se **réarme après chaque message**, il ne tourne pas
+// sur un `setInterval` aveugle. L'ancienne version émettait toutes les 30 s
+// même si un message venait de partir deux secondes plus tôt : sur un compteur
+// actif, c'étaient 120 messages par heure de pur doublon. Ne pas revenir à un
+// intervalle fixe.
 //
 // Rien à configurer côté serveur : le broadcast passe par le service Realtime
 // et ne touche pas à la réplication logique de Postgres.
@@ -83,12 +103,19 @@ export const presenceTopic = (sessionId: string) => `session:${sessionId}:presen
 /** Événement de battement v3. */
 export const BEAT_EVENT = 'beat'
 
-/** Cadence des battements. Le site considère un appareil parti au-delà de
- *  trois battements manqués (90 s). */
+/** Silence maximal. Le site considère un appareil parti au-delà de trois
+ *  battements manqués (`STALE_MS`, 90 s). */
 const BEAT_MS = 30_000
 
-/** Intervalle minimal entre deux messages : une rafale de scans est regroupée. */
-const MIN_GAP_MS = 5_000
+/** Frein sur les scans : une rafale — et même un inventaire entier — ne produit
+ *  rien de plus que le battement de fond. Le tableau de bord ne recalcule
+ *  qu'une fois par minute, il n'a rien à faire d'un signal plus rapide. */
+const SCAN_GAP_MS = 30_000
+
+/** Frein sur le mode : quasi immédiat, parce que c'est ce qui se voit. Garde
+ *  juste ce qu'il faut pour qu'un aller-retour entre deux écrans ne produise
+ *  pas deux messages. */
+const MODE_GAP_MS = 2_000
 
 export type PresenceMode = 'count' | 'audit' | null
 
@@ -149,7 +176,14 @@ function top(): Holder | undefined {
  * montage écrasait `currentEmitter`, et son démontage le remettait à `null`
  * alors que le premier écran vivait toujours.
  */
-type Engine = { sessionId: string; markDirty: () => void; stop: () => void }
+type Engine = {
+  sessionId: string
+  /** Des scans ont eu lieu. Freiné fort — voir `SCAN_GAP_MS`. */
+  markDirty: () => void
+  /** Le mode a changé. Quasi immédiat — voir `MODE_GAP_MS`. */
+  markMode: () => void
+  stop: () => void
+}
 let engine: Engine | null = null
 
 /**
@@ -189,9 +223,30 @@ function startEngine(sessionId: string): Engine {
   // pour rien.
   let lastSentAt = Date.now()
   let gapTimer: ReturnType<typeof setTimeout> | null = null
+  /** Échéance du message programmé, pour ne le devancer que s'il y a lieu. */
+  let gapDueAt: number | null = null
+  let beatTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * (Ré)arme le battement de fond pour `BEAT_MS` après le dernier message.
+   *
+   * C'est ce qui remplace le `setInterval` d'origine : tant que des messages
+   * partent, le battement ne s'ajoute jamais par-dessus. Le silence entre deux
+   * messages ne dépasse donc jamais `BEAT_MS`, et n'est jamais plus court non
+   * plus sans raison.
+   */
+  const armBeat = () => {
+    if (beatTimer) clearTimeout(beatTimer)
+    beatTimer = setTimeout(() => {
+      beatTimer = null
+      if (!disposed) emit()
+    }, BEAT_MS)
+  }
 
   const emit = (gone = false) => {
     lastSentAt = Date.now()
+    // Un message programmé n'a plus lieu d'être : celui-ci porte déjà tout.
+    if (gapTimer) { clearTimeout(gapTimer); gapTimer = null; gapDueAt = null }
     const payload = {
       v: BEAT_V,
       k: DEVICE_KEY,
@@ -210,17 +265,32 @@ function startEngine(sessionId: string): Engine {
     // arrive au plus tard dans trente secondes. Surtout, ne jamais laisser
     // cette promesse échouer bruyamment — le comptage ne dépend pas d'elle.
     void channel.httpSend(BEAT_EVENT, payload).catch(() => {})
+    // Le dernier message ne réarme rien : l'émetteur s'arrête.
+    if (!gone) armBeat()
   }
 
-  /** Émet maintenant si l'intervalle minimal est écoulé, sinon le programme. */
-  const emitThrottled = () => {
-    if (disposed || gapTimer) return
-    const wait = Math.max(0, MIN_GAP_MS - (Date.now() - lastSentAt))
-    if (wait === 0) { emit(); return }
+  /**
+   * Émet dès que `minGap` est écoulé depuis le dernier message, sinon le
+   * programme.
+   *
+   * Un message déjà programmé **plus tôt** est conservé ; un déclencheur plus
+   * pressé que celui en attente le devance. C'est ce qui permet à un
+   * changement de mode de passer devant un scan programmé trente secondes plus
+   * loin, sans jamais produire deux messages là où un seul suffit.
+   */
+  const emitAt = (minGap: number) => {
+    if (disposed) return
+    const now = Date.now()
+    const due = lastSentAt + minGap
+    if (due <= now) { emit(); return }
+    if (gapTimer && gapDueAt !== null && gapDueAt <= due) return
+    if (gapTimer) clearTimeout(gapTimer)
+    gapDueAt = due
     gapTimer = setTimeout(() => {
       gapTimer = null
+      gapDueAt = null
       if (!disposed) emit()
-    }, wait)
+    }, due - now)
   }
 
   // Le jeton d'accès du service Realtime est posé par supabase-js à la
@@ -231,14 +301,17 @@ function startEngine(sessionId: string): Engine {
     if (!disposed) emit()
   })
 
-  const beat = setInterval(() => { if (!disposed) emit() }, BEAT_MS)
+  // Armé tout de suite, et non seulement au premier message : si la mise en
+  // place du jeton n'aboutit jamais, un battement part quand même.
+  armBeat()
 
   return {
     sessionId,
-    markDirty: () => { dirty = true; emitThrottled() },
+    markDirty: () => { dirty = true; emitAt(SCAN_GAP_MS) },
+    markMode: () => { emitAt(MODE_GAP_MS) },
     stop: () => {
       disposed = true
-      clearInterval(beat)
+      if (beatTimer) clearTimeout(beatTimer)
       if (gapTimer) clearTimeout(gapTimer)
       // Dernier mot : l'appareil disparaît tout de suite de l'écran du
       // superviseur, au lieu d'y rester quatre-vingt-dix secondes.
@@ -272,9 +345,9 @@ function syncEngine(): void {
     // Même inventaire, écran différent : on ne redémarre rien, mais le mode
     // vient de changer. Sans ce rappel, fermer le comptage laisserait
     // l'appareil affiché « en comptage » jusqu'au battement suivant, soit
-    // trente secondes. `markDirty` regroupe : un aller-retour rapide entre
-    // deux écrans ne produit pas deux messages.
-    if (change) engine.markDirty()
+    // trente secondes. `markMode` regroupe sur deux secondes : un aller-retour
+    // rapide entre deux écrans ne produit pas deux messages.
+    if (change) engine.markMode()
     return
   }
   engine?.stop()
@@ -317,15 +390,16 @@ export function useSessionPresence(sessionId: string | undefined, activity: Pres
   }, [sessionId, userId])
 
   // Changement de mode : on met à jour l'entrée et on prévient tout de suite.
-  // Passer de comptage à audit doit se voir ; `markDirty` regroupe, donc un
-  // aller-retour rapide entre deux modes ne produit pas deux messages.
+  // Passer de comptage à audit doit se voir ; `markMode` regroupe sur deux
+  // secondes, donc un aller-retour rapide entre deux modes ne produit pas deux
+  // messages.
   useEffect(() => {
     const id = idRef.current
     if (id == null) return
     const h = holders.find(x => x.id === id)
     if (!h || h.mode === activity.mode) return
     h.mode = activity.mode
-    if (h.id === top()?.id) engine?.markDirty()
+    if (h.id === top()?.id) engine?.markMode()
   }, [activity.mode])
 }
 

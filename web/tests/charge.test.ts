@@ -90,8 +90,10 @@ describe('un téléphone ne compte que pour un appareil', () => {
     expect(presenceMobile).toContain('if (engine && engine.sessionId === holder.sessionId)')
     // Mais le changement d'écran doit se voir tout de suite : sans ce rappel,
     // fermer le comptage laisserait l'appareil « en comptage » jusqu'au
-    // battement suivant, soit trente secondes.
-    expect(presenceMobile).toContain('if (change) engine.markDirty()')
+    // battement suivant, soit trente secondes. `markMode` et non `markDirty`
+    // depuis le 23 août 2026 : les scans sont désormais freinés à trente
+    // secondes, ce rappel-ci doit rester presque immédiat.
+    expect(presenceMobile).toContain('if (change) engine.markMode()')
   })
 })
 
@@ -137,8 +139,50 @@ describe('battements du mobile', () => {
   it('regroupe les scans au lieu d’émettre à chaque fois', () => {
     // C'est ce qui remplace le `sync` par scan : sans borne minimale, cent
     // compteurs reproduisent le millier de messages par seconde de la v2.
-    expect(presenceMobile).toMatch(/MIN_GAP_MS\s*=\s*[\d_]+/)
+    expect(presenceMobile).toMatch(/SCAN_GAP_MS\s*=\s*[\d_]+/)
     expect(corps(presenceMobile, 'pingSession')).not.toContain('httpSend')
+  })
+
+  // ── Ce que la facture a appris, le 23 août 2026 ───────────────────────────
+  // Un battement coûte DEUX messages (un envoyé, un reçu par le tableau de
+  // bord), et un de plus par écran ouvert. Les trois garanties qui suivent
+  // valent chacune plusieurs fois le forfait à l'échelle.
+
+  const nombreMobile = (nom: string) =>
+    Number(presenceMobile.match(new RegExp(`const ${nom} = ([\\d_]+)`))?.[1].replace(/_/g, ''))
+
+  it('freine les scans bien plus que le changement de mode', () => {
+    // Les deux déclencheurs partageaient `markDirty`. Or le mode se voit — le
+    // tableau de bord afficherait « en comptage » après la fermeture de
+    // l'écran — alors qu'un scan ne se voit pas : les agrégats ne sont
+    // recalculés qu'une fois par minute de toute façon.
+    expect(nombreMobile('MODE_GAP_MS')).toBeLessThan(nombreMobile('SCAN_GAP_MS'))
+    // `corps` ne sait extraire que des fonctions exportées : ces deux-là sont
+    // des méthodes de l'émetteur, on les vise donc au texte.
+    expect(presenceMobile).toContain('markDirty: () => { dirty = true; emitAt(SCAN_GAP_MS) }')
+    expect(presenceMobile).toContain('markMode: () => { emitAt(MODE_GAP_MS) }')
+  })
+
+  it('ne double pas le battement de fond par-dessus un message récent', () => {
+    // Un `setInterval` aveugle émettait toutes les 30 s même si un message
+    // venait de partir : 120 messages par heure et par compteur actif, de pur
+    // doublon. Le battement se réarme désormais après chaque message.
+    expect(presenceMobile).not.toContain('setInterval(')
+    // Le battement est un délai qu'on réarme, et c'est `emit` qui le réarme —
+    // donc jamais de battement par-dessus un message qui vient de partir.
+    expect(presenceMobile).toContain('const armBeat = ()')
+    expect(presenceMobile).toContain('if (!gone) armBeat()')
+  })
+
+  it('ne laisse jamais le silence dépasser le seuil du site', () => {
+    // Le site déclare un appareil parti au-delà de STALE_MS. Le silence
+    // maximal est BEAT_MS, et le frein le plus lâche ne doit pas le dépasser —
+    // sinon un appareil qui compte disparaîtrait de l'écran.
+    const stale = Number(
+      presenceSite.match(/STALE_MS = ([\d_]+)/)?.[1].replace(/_/g, ''),
+    )
+    expect(nombreMobile('BEAT_MS')).toBeLessThan(stale)
+    expect(nombreMobile('SCAN_GAP_MS')).toBeLessThanOrEqual(nombreMobile('BEAT_MS'))
   })
 
   it('garde la même version de contrat des deux côtés', () => {
