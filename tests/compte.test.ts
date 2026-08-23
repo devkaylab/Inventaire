@@ -694,3 +694,35 @@ describe('onboarding (23 août 2026)', () => {
     expect(reperes).toContain('oublierReperes')
   })
 })
+
+describe('le guide « Pour démarrer » ne s’adresse qu’à qui démarre', () => {
+  // Constaté sur l'iPhone de Julien, 23 août 2026 : le guide s'affichait à un
+  // administrateur qui n'avait créé aucun inventaire, en analysant celui d'un
+  // AUTRE — d'où un « 1 membre » coché venu de nulle part.
+  const accueil = lire('app/(supervisor)/index.tsx')
+  const bienvenue = lire('components/Bienvenue.tsx')
+
+  it('il ne regarde que les inventaires qu’on a créés', () => {
+    expect(accueil).toContain('s.created_by === profile?.id')
+    expect(accueil).toContain('mesInventaires.find')
+    // Le motif fautif : le premier non clôturé de TOUTE la liste.
+    expect(accueil).not.toMatch(/\(sessions \?\? \[\]\)\.find\(s => s\.status !== 'closed'\)/)
+  })
+
+  it('il ne s’affiche pas à quelqu’un qui connaît déjà le produit', () => {
+    expect(accueil).toContain('mesInventaires.length <= 1')
+  })
+
+  it('« Masquer » est définitif, pas le temps d’une session', () => {
+    expect(accueil).toContain("useRepere('guide-demarrage'")
+    expect(accueil).toContain('onMasquer={masquerGuide}')
+  })
+
+  it('la bienvenue couvre l’écran au lieu de le partager', () => {
+    // Avec flex: 1 elle devenait un frère du Stack : les deux se partageaient
+    // la hauteur et elle s'affichait SOUS l'accueil.
+    expect(bienvenue).toContain("position: 'absolute'")
+    expect(bienvenue).toContain('zIndex: 50')
+    expect(bienvenue).not.toMatch(/safe: \{ flex: 1,/)
+  })
+})

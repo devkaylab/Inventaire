@@ -99,7 +99,7 @@ export function Bienvenue({
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.corps}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.corps}>
         <AppLogo size={40} animated={false} />
         <Text style={styles.eyebrow}>Première ouverture</Text>
         <Text style={styles.titre}>{prenom ? `Bonjour ${prenom}.` : 'Bonjour.'}</Text>
@@ -136,7 +136,12 @@ export function Bienvenue({
 }
 
 const makeStyles = (t: Theme) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: t.background },
+  // ⚠️ **En surcouche, pas en voisin.** Avec `flex: 1`, cet écran devenait un
+  // frère du Stack dans la colonne du layout racine : les deux se
+  // partageaient la hauteur, et la bienvenue s'affichait SOUS l'accueil
+  // (constaté sur l'iPhone de Julien, 23 août 2026). Il faut couvrir.
+  // zIndex sous celui du splash (100), qui doit rester au-dessus.
+  safe: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, backgroundColor: t.background },
   corps: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xxl, paddingBottom: Spacing.lg },
   eyebrow: { color: t.textMuted, fontSize: 11, fontFamily: Font.semibold, letterSpacing: 1, textTransform: 'uppercase', marginTop: Spacing.xxxl },
   titre: { color: t.textPrimary, fontSize: 30, fontFamily: Font.bold, letterSpacing: -0.6, marginTop: Spacing.xs },

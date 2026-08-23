@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export type Repere =
   | 'bienvenue'          // l'écran nominatif de première ouverture
+  | 'guide-demarrage'    // « Pour démarrer », le guide du superviseur
   | 'compter-auditer'    // les deux lignes sous les boutons de l'inventaire
   | 'premiere-balise'    // le volet « balise ouverte, scannez les articles »
   | 'balise-terminee'    // la première clôture
@@ -43,7 +44,7 @@ export async function marquerRepereVu(repere: Repere, userId: string): Promise<v
 
 /** Oublie tous les repères d'un compte — « Revoir les repères », Mon compte. */
 export async function oublierReperes(userId: string): Promise<void> {
-  const cles: Repere[] = ['bienvenue', 'compter-auditer', 'premiere-balise', 'balise-terminee', 'balayage']
+  const cles: Repere[] = ['bienvenue', 'guide-demarrage', 'compter-auditer', 'premiere-balise', 'balise-terminee', 'balayage']
   try {
     await AsyncStorage.multiRemove(cles.map(r => cle(r, userId)))
   } catch {

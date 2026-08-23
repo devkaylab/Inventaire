@@ -239,29 +239,40 @@ export default function SupervisorHomeScreen() {
   const sansMagasin = !magasinsEnErreur && magasins !== undefined && magasins.length === 0
 
   // ── « Pour démarrer » ──────────────────────────────────────────────
-  // Le guide porte sur le dernier inventaire ouvert : c'est celui que le
-  // superviseur prépare. Une fois les quatre étapes vraies, le composant se
-  // retire de lui-même — rien à cocher, rien à fermer.
-  const [guideMasque, setGuideMasque] = useState(false)
-  const inventaireEnCours = useMemo(
-    () => (sessions ?? []).find(s => s.status !== 'closed') ?? null,
-    [sessions],
+  //
+  // ⚠️ **Uniquement les inventaires qu'on a CRÉÉS.** La première version
+  // prenait le premier inventaire non clôturé de la liste — invités compris.
+  // Résultat vu sur l'iPhone de Julien : le guide cochait « 1 membre » à
+  // partir de l'inventaire de quelqu'un d'autre, et affichait un état
+  // incompréhensible.
+  //
+  // ⚠️ **Et seulement à quelqu'un qui démarre vraiment.** Au-delà d'un
+  // inventaire créé, la personne connaît le produit : lui expliquer comment
+  // commencer est du bruit. Le guide ne réapparaît jamais.
+  const { aVoir: guideAVoir, marquerVu: masquerGuide } = useRepere('guide-demarrage', profile?.id)
+  const mesInventaires = useMemo(
+    () => (sessions ?? []).filter(s => s.created_by === profile?.id),
+    [sessions, profile?.id],
   )
+  const inventaireGuide = useMemo(
+    () => mesInventaires.find(s => s.status !== 'closed') ?? null,
+    [mesInventaires],
+  )
+  const debutant = mesInventaires.length <= 1
+  const montrerGuide = guideAVoir && debutant && !sansMagasin && sessions !== undefined
+
   const { data: preparation } = useQuery({
-    queryKey: ['preparation', inventaireEnCours?.id],
-    queryFn: () => getPreparation(inventaireEnCours!.id),
-    enabled: !!inventaireEnCours && !guideMasque && !sansMagasin,
+    queryKey: ['preparation', inventaireGuide?.id],
+    queryFn: () => getPreparation(inventaireGuide!.id),
+    enabled: !!inventaireGuide && montrerGuide,
   })
   const etapes = useMemo(
     () => etapesDemarrage(preparation, {
-      inventaireExiste: !!inventaireEnCours,
-      utiliseZones: inventaireEnCours?.uses_zones ?? true,
+      inventaireExiste: !!inventaireGuide,
+      utiliseZones: inventaireGuide?.uses_zones ?? true,
     }),
-    [preparation, inventaireEnCours],
+    [preparation, inventaireGuide],
   )
-  // Le guide ne s'affiche pas à quelqu'un qui n'a pas de magasin : l'écran lui
-  // dit déjà l'obstacle, et aucune de ces étapes ne lui est accessible.
-  const montrerGuide = !guideMasque && !sansMagasin && sessions !== undefined
 
   const queryClient = useQueryClient()
   const onRefresh = useCallback(() => { refetch() }, [refetch])
@@ -532,19 +543,6 @@ export default function SupervisorHomeScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
           ListHeaderComponent={
             <>
-            {montrerGuide && (
-              <PourDemarrer
-                etapes={etapes}
-                onMasquer={() => setGuideMasque(true)}
-                onAction={(cle) => {
-                  const id = inventaireEnCours?.id
-                  if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
-                  if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
-                  else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
-                  else router.push(`/(supervisor)/${id}/invite`)
-                }}
-              />
-            )}
             <View style={styles.listHeader}>
               <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
               {/* Le mode sélection s'ouvre aussi par un appui long sur une
@@ -556,6 +554,19 @@ export default function SupervisorHomeScreen() {
                 </Pressable>
               )}
             </View>
+            {montrerGuide && (
+              <PourDemarrer
+                etapes={etapes}
+                onMasquer={masquerGuide}
+                onAction={(cle) => {
+                  const id = inventaireGuide?.id
+                  if (cle === 'inventaire' || !id) { router.push('/(supervisor)/new-session'); return }
+                  if (cle === 'zones') router.push(`/(supervisor)/${id}/zones`)
+                  else if (cle === 'fichiers') router.push(`/(supervisor)/${id}/import`)
+                  else router.push(`/(supervisor)/${id}/invite`)
+                }}
+              />
+            )}
             </>
           }
           ListEmptyComponent={
