@@ -52,19 +52,17 @@ export default function NewSessionScreen() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      // Enchaînement guidé : (zones si activées) → import des fichiers → suivi.
+      // ⚠️ **Pas de confirmation à valider.** Elle annonçait le numéro, le code
+      // et l'étape suivante — pour ensuite faire exactement ce qu'elle
+      // annonçait : deux appuis pour arriver là où le bouton menait déjà.
+      // Rien ne se perd : le numéro et le code se lisent sur la fiche
+      // (« Identifiants », avec Copier et Partager), et l'étape « compteurs »
+      // les remet sous les yeux au moment où l'on veut les transmettre.
+      //
+      // Enchaînement guidé : (zones si activées) → fichiers → compteurs.
       const sid = result.session_id
-      Alert.alert(
-        'Inventaire créé',
-        `N° d'inventaire : ${result.inventory_number}\nCode inventaire : ${result.security_code ?? securityCode}\n\n${usesZones ? 'Étape suivante : définissez vos zones, puis importez les fichiers.' : 'Étape suivante : importez le catalogue et le stock théorique.'}`,
-        [{
-          text: 'Continuer',
-          onPress: () => {
-            if (usesZones) router.replace(`/(supervisor)/${sid}/zones?from=new`)
-            else router.replace(`/(supervisor)/${sid}/import?from=new`)
-          },
-        }],
-      )
+      if (usesZones) router.replace(`/(supervisor)/${sid}/zones?from=new`)
+      else router.replace(`/(supervisor)/${sid}/import?from=new`)
     } catch (e: unknown) {
       console.error('[new-session] createSession', e)
       Alert.alert('Erreur', errorMessage(e))
@@ -151,7 +149,7 @@ export default function NewSessionScreen() {
             </Pressable>
           </View>
           <Text style={styles.hint}>
-            {"Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cette session."}
+            {"Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cet inventaire."}
           </Text>
 
           <View style={styles.switchRow}>

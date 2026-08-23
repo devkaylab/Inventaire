@@ -277,6 +277,13 @@ export default function SupervisorHomeScreen() {
   // Le guide prend tout l'écran tant qu'il n'y a rien d'autre à afficher.
   const guidePleinEcran = montrerGuide && mesInventaires.length === 0
 
+  // ⚠️ **Le bouton « Nouvel inventaire » ne se masque que s'il ferait
+  // doublon.** Il était retiré dès que le guide s'affichait — or le guide ne
+  // porte ce bouton que tant que l'étape 1 reste à faire. Une fois l'inventaire
+  // créé, plus aucun chemin ne menait à la création tant que le guide durait
+  // (vu au simulateur le 23 août 2026, sur un guide arrêté à « 3 sur 4 »).
+  const guideOffreCreation = montrerGuide && etapes.find(e => !e.faite)?.cle === 'inventaire'
+
   const carteGuide = montrerGuide ? (
     <PourDemarrer
       etapes={etapes}
@@ -650,7 +657,7 @@ export default function SupervisorHomeScreen() {
             </Pressable>
           </View>
         </View>
-      ) : montrerGuide ? null : (
+      ) : guideOffreCreation ? null : (
         <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
           <Text style={styles.fabText}>+ Nouvel inventaire</Text>
         </Pressable>

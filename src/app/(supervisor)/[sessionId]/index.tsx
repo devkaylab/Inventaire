@@ -227,7 +227,7 @@ export default function SessionDetailScreen() {
   function confirmDelete() {
     Alert.alert(
       'Supprimer définitivement',
-      'Cette action va supprimer :\n\n• Tous les comptages\n• Le stock théorique\n• Les écarts d\'audit\n• Les membres de la session\n• Le référentiel articles de cet inventaire\n\nPensez à exporter le rapport avant.\n\nCette action est IRRÉVERSIBLE.',
+      'Cette action va supprimer :\n\n• Tous les comptages\n• Le stock théorique\n• Les écarts d\'audit\n• Les membres de l\'inventaire\n• Le référentiel articles de cet inventaire\n\nPensez à exporter le rapport avant.\n\nCette action est IRRÉVERSIBLE.',
       [
         { text: 'Annuler', style: 'cancel' },
         {

@@ -194,11 +194,14 @@ export default function ImportScreen() {
         )}
 
         {fromNew && (
+          // Le tunnel s'arrêtait ici, sur « Commencer l'inventaire » — alors
+          // qu'un inventaire sans compteur ne commence pas. L'étape des
+          // compteurs vient après les fichiers, et c'est d'elle qu'on entre.
           <Pressable
             style={styles.startBtn}
-            onPress={() => router.replace(`/(supervisor)/${sessionId}`)}
+            onPress={() => router.replace(`/(supervisor)/${sessionId}/invite?from=new`)}
           >
-            <Text style={styles.startBtnText}>{"Commencer l'inventaire"}</Text>
+            <Text style={styles.startBtnText}>Suivant : ajouter des compteurs</Text>
           </Pressable>
         )}
       </ScrollView>

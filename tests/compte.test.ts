@@ -872,9 +872,18 @@ describe('le parcours du superviseur, vu à l’écran (23 août 2026)', () => {
     expect(zones).toContain("Alert.alert('Plage incomplète'")
   })
 
+  // Amendé le 23 août : le pop-up « Inventaire créé » a été retiré avec le
+  // reste du tunnel. La règle de vocabulaire, elle, ne bouge pas — c'est ce
+  // que ce test garde désormais, sur tout l'écran.
   it('le vocabulaire reste « inventaire », jamais « session »', () => {
-    expect(nouveau).toContain("'Inventaire créé'")
     expect(nouveau).not.toContain("'Session créée'")
+    expect(nouveau).not.toMatch(/Alert\.alert\(\s*'Session/)
+    // Le mot s'était aussi glissé dans deux textes lus par les compteurs : la
+    // confirmation de suppression et le refus d'enregistrement. « Session »
+    // reste réservé à l'authentification (Supabase), où c'est le bon mot.
+    expect(nouveau).not.toContain('rejoignent cette session')
+    expect(lire('app/(supervisor)/[sessionId]/index.tsx')).not.toContain('membres de la session')
+    expect(lire('lib/errors.ts')).not.toContain('plus inscrit à cette session')
   })
 
   // ── Le bouton qui fait avancer ne se confond plus avec les autres ───────
@@ -918,5 +927,111 @@ describe('aucun emoji dans les écrans du parcours', () => {
     for (const nom of ['CorbeilleIcon', 'AlerteIcon', 'AstuceIcon', 'FichierIcon', 'TorcheIcon', 'CocheIcon']) {
       expect(icones).toContain(`export function ${nom}`)
     }
+  })
+})
+
+/**
+ * Le tunnel de préparation, revu le 23 août 2026 à la demande de Julien :
+ * plus de pop-up après la création, et une quatrième étape — les compteurs,
+ * avec de quoi créer son équipe sur place.
+ *
+ * Maquette validée avant codage :
+ * https://claude.ai/code/artifact/1bded047-76d5-4a80-a00e-9d25d8a74a65
+ */
+describe('le tunnel de préparation (23 août 2026)', () => {
+  const nouveau = lire('app/(supervisor)/new-session.tsx')
+  const importEcran = lire('app/(supervisor)/[sessionId]/import.tsx')
+  const compteurs = lire('app/(supervisor)/[sessionId]/invite.tsx')
+
+  // ── Le pop-up de création ───────────────────────────────────────────────
+  //
+  // Il annonçait le numéro, le code et l'étape suivante — pour ensuite faire
+  // exactement ce qu'il annonçait.
+  it('la création n’ouvre plus de confirmation', () => {
+    expect(nouveau).not.toContain("'Inventaire créé'")
+    expect(nouveau).not.toContain("text: 'Continuer'")
+  })
+
+  it('la création mène droit à la première étape', () => {
+    expect(nouveau).toContain('if (usesZones) router.replace(`/(supervisor)/${sid}/zones?from=new`)')
+    expect(nouveau).toContain('else router.replace(`/(supervisor)/${sid}/import?from=new`)')
+  })
+
+  // ── L'étape qui manquait ────────────────────────────────────────────────
+  it('les fichiers mènent aux compteurs, pas à la sortie', () => {
+    expect(importEcran).toContain('/invite?from=new')
+    expect(importEcran).toContain('Suivant : ajouter des compteurs')
+  })
+
+  it('la sortie du tunnel est sur l’écran des compteurs', () => {
+    expect(compteurs).toContain("router.replace(`/(supervisor)/${sessionId}`)")
+    expect(compteurs).toContain("Commencer l'inventaire")
+  })
+
+  it('l’écran des compteurs ferme le retour comme les deux précédents', () => {
+    expect(compteurs).toContain('headerBackVisible: false')
+    expect(compteurs).toContain('gestureEnabled: false')
+  })
+
+  it('le bouton de sortie garde le vert du bout du tunnel', () => {
+    expect(compteurs).toContain('startBtn: {\n      backgroundColor: t.success')
+  })
+
+  // ── Demande de Julien : le dire sur la page ─────────────────────────────
+  it('la page dit qu’on peut commencer sans personne', () => {
+    expect(compteurs).toContain('Vous pouvez commencer sans personne')
+  })
+
+  it('rien ne bloque la sortie', () => {
+    // Le bouton de sortie n'a ni `disabled` ni condition sur les membres.
+    const bloc = compteurs.slice(compteurs.indexOf('finBloc'), compteurs.indexOf('finNote'))
+    expect(bloc).not.toContain('disabled')
+  })
+
+  // ── Créer son équipe sur place ──────────────────────────────────────────
+  //
+  // Avant : « Un nouveau compteur doit d'abord être ajouté via Ajouter un
+  // membre » — un renvoi sans lien, donc un cul-de-sac.
+  it('le renvoi sans lien a disparu', () => {
+    expect(compteurs).not.toContain('utilisez « Ajouter un membre » depuis votre profil')
+    expect(compteurs).not.toContain("doit d'abord être ajouté via")
+  })
+
+  it('l’écran crée le compte puis l’ajoute à l’inventaire', () => {
+    expect(compteurs).toContain('inviteTeammate(')
+    expect(compteurs).toContain('inviteToSession({ sessionId, fullName: who, email: mail, role: \'counter\' })')
+  })
+
+  // ⚠️ Le compteur créé appartient au magasin de CET inventaire. Une liste
+  // vide le rattacherait à tous les magasins du superviseur.
+  it('le compteur créé est rattaché au magasin de l’inventaire', () => {
+    expect(compteurs).toContain('storeIds: storeId ? [storeId] : []')
+  })
+
+  // Un compte créé dont l'ajout échoue existe quand même : le taire ferait
+  // recommencer, pour un « déjà invité ».
+  it('un ajout raté après création se dit', () => {
+    expect(compteurs).toContain('Compte créé, ajout à faire')
+  })
+
+  it('« pas d’équipe » se juge sur l’annuaire, pas sur la recherche', () => {
+    expect(compteurs).toContain('const equipeVide = directory !== undefined')
+    expect(compteurs).toContain("d.role !== 'supervisor'")
+  })
+
+  // Le guide masquait « Nouvel inventaire » tant qu'il durait, pour éviter le
+  // doublon avec le bouton de son étape 1 — mais il ne porte ce bouton que tant
+  // que cette étape reste à faire. Une fois cochée, plus aucun chemin ne menait
+  // à la création.
+  it('« Nouvel inventaire » ne se masque que s’il ferait doublon', () => {
+    const accueil = lire('app/(supervisor)/index.tsx')
+    expect(accueil).toContain("const guideOffreCreation = montrerGuide && etapes.find(e => !e.faite)?.cle === 'inventaire'")
+    expect(accueil).toContain('guideOffreCreation ? null : (')
+    expect(accueil).not.toContain('montrerGuide ? null : (')
+  })
+
+  it('l’autre voie — numéro et code — est sur la page', () => {
+    expect(compteurs).toContain('Ou partagez les identifiants')
+    expect(compteurs).toContain('Share.share(')
   })
 })
