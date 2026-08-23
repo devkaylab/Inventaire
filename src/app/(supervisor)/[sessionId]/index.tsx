@@ -223,7 +223,7 @@ export default function SessionDetailScreen() {
   function confirmDelete() {
     Alert.alert(
       'Supprimer définitivement',
-      'Cette action va supprimer :\n\n• Tous les comptages\n• Le stock théorique\n• Les écarts d’audit\n• Les membres de la session\n• Le référentiel articles de cet inventaire\n\nPensez à exporter le rapport avant.\n\nCette action est IRRÉVERSIBLE.',
+      'Cette action va supprimer :\n\n• Tous les comptages\n• Le stock théorique\n• Les écarts d\'audit\n• Les membres de la session\n• Le référentiel articles de cet inventaire\n\nPensez à exporter le rapport avant.\n\nCette action est IRRÉVERSIBLE.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -356,7 +356,7 @@ export default function SessionDetailScreen() {
           {!closed && (
             <MenuRow label="Inviter une personne" onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
           )}
-          <MenuRow label="Écarts d’audit" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
+          <MenuRow label="Écarts d'audit" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
           <MenuRow label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} />
           {!closed && isCreator && (
             <MenuRow label="Clôturer l'inventaire" onPress={confirmClose} />
