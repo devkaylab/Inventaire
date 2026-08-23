@@ -46,7 +46,7 @@ export default function SupervisorLayout() {
       <Stack.Screen name="[sessionId]/import" options={{ title: 'Importer les données', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/zones" options={{ title: 'Zones & balises', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="[sessionId]/audits" options={{ title: 'Audits & écarts', ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="[sessionId]/audits" options={{ title: 'Écarts d’audit', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/results" options={{ title: 'Résultats', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/missing" options={{ title: 'Balises manquantes', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/pending" options={{ title: "Balises en attente", ...headerBase, headerRight: actionsRight }} />
