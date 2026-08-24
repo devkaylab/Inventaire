@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { Stack } from 'expo-router'
+import { Stack, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -14,7 +14,7 @@ import {
 } from '@expo-google-fonts/inter'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { useNotificationRouting } from '@/lib/push'
-import { ThemeProvider } from '@/lib/theme'
+import { ThemeProvider, useThemeControls } from '@/lib/theme'
 import { SplashAnimation } from '@/components/SplashAnimation'
 import { OfflineTopBanner } from '@/components/OfflineTopBanner'
 import { PorteBienvenue } from '@/components/PorteBienvenue'
@@ -25,6 +25,37 @@ SplashScreen.preventAutoHideAsync()
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 2, staleTime: 30_000 } },
 })
+
+/**
+ * La barre d'état suit l'écran affiché.
+ *
+ * Elle était posée en dur sur `light`, ce qui est juste pour l'immense
+ * majorité des écrans : leur en-tête est presque noir. Mais quatre écrans
+ * s'ouvrent sur le **fond de page** — connexion, inscription, création
+ * d'entreprise, et l'écran d'attente. En thème clair, l'heure, le réseau et
+ * la batterie s'y affichaient en blanc sur blanc : illisibles. Constaté sur
+ * la capture de l'écran de connexion, le 24 août 2026.
+ *
+ * Le choix se fait ici, à partir de la route, plutôt que par un second
+ * `StatusBar` posé sur ces écrans : `expo-status-bar` ne restaure rien au
+ * démontage, si bien qu'un style local resterait appliqué après la
+ * navigation suivante. Ici, il est recalculé à chaque changement de route.
+ */
+const ECRANS_SUR_FOND = ['login', 'signup', 'company-setup']
+
+function BarreEtat() {
+  const { name } = useThemeControls()
+  // `useSegments` est typé sur les routes connues, mais rend un tableau vide
+  // sur l'écran d'attente : d'où la lecture du premier segment, pas de la
+  // longueur — cet écran est lui aussi sur le fond de page.
+  const premier = useSegments()[0] as string | undefined
+  const surFond = !premier || ECRANS_SUR_FOND.includes(premier)
+  // Texte sombre seulement là où le haut de l'écran est clair : sur le fond
+  // de page, en thème clair. Partout ailleurs le haut est sombre — en-tête
+  // presque noir, ou fond de page en thème sombre.
+  const sombre = name === 'dark'
+  return <StatusBar style={surFond && !sombre ? 'dark' : 'light'} />
+}
 
 /**
  * Toucher « Nouvel inventaire » ouvrait l'accueil : rien n'écoutait la
@@ -64,8 +95,7 @@ export default function RootLayout() {
               d'inventaire ne recevrait rien. Elle doit envelopper toute
               l'application, pas seulement l'écran concerné. */}
           <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
-            {/* Header bar is near-black in both themes → light status bar text */}
-            <StatusBar style="light" />
+            <BarreEtat />
             {/* Au-dessus de la pile : le bandeau doit coiffer l'en-tête de
                 chaque écran, et rester visible quelle que soit la page. */}
             <OfflineTopBanner />
