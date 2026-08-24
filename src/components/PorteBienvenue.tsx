@@ -5,11 +5,23 @@
  * routage par rôle existe déjà et fonctionne, on ne s'y insère pas. Quand la
  * porte se referme, la personne est exactement là où l'app l'avait menée.
  *
- * ⚠️ **Le bouton doit mener quelque part.** La première version se contentait
- * de refermer la porte : « Préparer mon premier inventaire » retombait sur la
- * liste des inventaires, sans rien préparer (constaté par Julien le 23 août
- * 2026). Le libellé ET la destination se calculent maintenant depuis l'état
- * réel du compte.
+ * ⚠️ **Le bouton doit mener quelque part, TOUJOURS.** Deux fois le contraire
+ * a été livré :
+ *
+ * - 23 août 2026 — « Préparer mon premier inventaire » se contentait de
+ *   refermer la porte, donc retombait sur la liste sans rien préparer. Le
+ *   libellé ET la destination se calculent depuis l'état réel du compte
+ *   depuis ce jour-là.
+ * - 24 août 2026 — il restait deux branches à action vide (« Voir mes
+ *   inventaires », « Commencer »). Au **premier lancement** ça ne se voyait
+ *   pas : l'application avait déjà déposé la personne sur son accueil, et
+ *   refermer la porte suffisait. Mais « Revoir les repères » rejoue la porte
+ *   **depuis Mon compte** — et là, rien ne ramenait à l'accueil. Constat de
+ *   Julien : « Voir mes inventaires mène juste à l'écran du profil ».
+ *
+ * D'où la règle : aucune branche ne rend une fonction vide. Un test de garde
+ * le vérifie. `replace` et non `push`, pour ne pas empiler un second accueil
+ * au-dessus de Mon compte ni laisser une flèche de retour qui y revient.
  */
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
@@ -56,12 +68,12 @@ export function PorteBienvenue() {
     if (role === 'supervisor') {
       return miennes.length === 0
         ? { libelle: 'Préparer mon premier inventaire', aller: () => router.push('/(supervisor)/new-session') }
-        : { libelle: 'Voir mes inventaires', aller: () => {} }
+        : { libelle: 'Voir mes inventaires', aller: () => router.replace('/(supervisor)/') }
     }
     // Un compteur qui n'a qu'un inventaire n'a rien à choisir : on l'ouvre.
     return sessions.length === 1
       ? { libelle: 'Ouvrir mon inventaire', aller: () => router.push(`/(employee)/${sessions[0].id}`) }
-      : { libelle: 'Commencer', aller: () => {} }
+      : { libelle: 'Commencer', aller: () => router.replace('/(employee)/') }
   })()
 
   return (

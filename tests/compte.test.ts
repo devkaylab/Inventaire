@@ -1206,3 +1206,43 @@ describe('les totaux du compteur se rafraîchissent (24 août 2026)', () => {
       .toContain("queryKey: ['session-counts', sessionId]")
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// « Revoir les repères » rejoue la porte AILLEURS que sur l'accueil
+// (constat de Julien, 24 août 2026)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// « Voir mes inventaires » et « Commencer » avaient une action vide. Au
+// premier lancement ça ne se voyait pas : `index.tsx` avait déjà déposé la
+// personne sur son accueil, et refermer la porte suffisait à l'y laisser.
+// Mais « Revoir les repères » vit dans Mon compte et rejoue la porte de là :
+// le bouton refermait alors la porte sur l'écran du profil.
+//
+// C'est la deuxième fois que ce bouton ne mène nulle part — la première, le
+// 23 août, « Préparer mon premier inventaire » retombait sur la liste. D'où
+// une garde qui porte sur *toutes* les branches, et pas sur l'une d'elles.
+describe('la porte de bienvenue mène toujours quelque part (24 août 2026)', () => {
+  const porte = lire('components/PorteBienvenue.tsx')
+
+  it('aucune branche ne rend une action vide', () => {
+    // Le motif exact du défaut : `aller: () => {}`.
+    expect(porte).not.toMatch(/aller:\s*\(\)\s*=>\s*\{\s*\}/)
+  })
+
+  it('chaque libellé proposé a sa destination', () => {
+    // Quatre libellés, quatre `router.*`. Si l'un s'ajoute sans destination,
+    // le compte ne tombe plus juste.
+    const libelles = porte.match(/libelle: '/g) ?? []
+    const routages = porte.match(/aller: \(\) => router\.(push|replace)\(/g) ?? []
+    expect(libelles.length).toBeGreaterThanOrEqual(4)
+    expect(routages.length).toBe(libelles.length)
+  })
+
+  it('le retour à l’accueil remplace au lieu d’empiler', () => {
+    // `push` depuis Mon compte poserait un second accueil au-dessus, avec une
+    // flèche de retour qui y ramène. Ces deux-là ramènent chez soi : ils
+    // remplacent.
+    expect(porte).toContain("aller: () => router.replace('/(supervisor)/')")
+    expect(porte).toContain("aller: () => router.replace('/(employee)/')")
+  })
+})
