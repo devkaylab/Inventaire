@@ -43,6 +43,7 @@ const RX = M + COL + 0.5 // début de la colonne de droite
 const RW = W - M - RX    // sa largeur
 
 const CAPTURES = path.resolve(__dirname, '../../../web/screenshots')
+const MOBILE = path.resolve(__dirname, 'captures')
 
 // ── Logo Quantinvo (tuile dégradée, inchangée en Papier) ────
 async function logoPng(px = 640) {
@@ -69,19 +70,71 @@ async function capture(fichier, { left, top, width, height }) {
   return { data: 'image/png;base64,' + buf.toString('base64'), ratio: width / height }
 }
 
+/**
+ * Encadre une capture d'écran d'iPhone dans un téléphone dessiné : bezel
+ * encre, coins arrondis, et le bas **coupé** pour que le téléphone sorte de
+ * sa carte au lieu d'y flotter — c'est ce débord qui donne la profondeur.
+ *
+ * On donne la place disponible (`w` × `h`, en pouces de diapo) plutôt qu'une
+ * fraction à couper : la coupe s'en déduit. C'est ce qui évite d'ajuster
+ * vingt valeurs à la main dès qu'une carte change de hauteur — et le
+ * chevauchement du texte que ça produisait.
+ *
+ * Les captures vivent dans `captures/`, préparées par `preparer-captures.js`.
+ */
+async function cadrer(fichier, { w, h }) {
+  const chemin = path.join(MOBILE, fichier)
+  const meta = await sharp(chemin).metadata()
+  const PW = meta.width, PH = meta.height
+  // Rayon et bezel proportionnels à la largeur : même géométrie que l'écran
+  // réel, quelle que soit la résolution de la capture.
+  const R = Math.round(PW * 0.124), B = Math.round(PW * 0.028)
+  const OW = PW + 2 * B, OH = PH + 2 * B, OR = R + B
+  const masque = Buffer.from(`<svg width="${PW}" height="${PH}"><rect width="${PW}" height="${PH}" rx="${R}" ry="${R}" fill="#fff"/></svg>`)
+  const ecran = await sharp(chemin).composite([{ input: masque, blend: 'dest-in' }]).png().toBuffer()
+  const bezel = Buffer.from(`<svg width="${OW}" height="${OH}">
+    <rect x="0" y="0" width="${OW}" height="${OH}" rx="${OR}" ry="${OR}" fill="#0B0F19"/>
+    <rect x="${B * 0.4}" y="${B * 0.4}" width="${OW - B * 0.8}" height="${OH - B * 0.8}" rx="${OR - B * 0.4}" ry="${OR - B * 0.4}" fill="none" stroke="#3D4556" stroke-width="${Math.max(1, B * 0.12)}"/>
+  </svg>`)
+  let buf = await sharp(bezel).composite([{ input: ecran, left: B, top: B }]).png().toBuffer()
+  // Hauteur visible voulue, en pixels de la capture : la largeur commande.
+  const voulue = Math.round(OW * (h / w))
+  if (voulue < OH) buf = await sharp(buf).extract({ left: 0, top: 0, width: OW, height: voulue }).png().toBuffer()
+  const hauteur = Math.min(voulue, OH)
+  return { data: 'image/png;base64,' + buf.toString('base64'), ratio: OW / hauteur, complet: voulue >= OH }
+}
+
+const FINE = '\u202F'   // espace fine insécable
+
+/** Applique la typographie française à une chaîne, ou à un tableau de runs. */
+function typo(t) {
+  if (Array.isArray(t)) return t.map((r) => (r && typeof r.text === 'string' ? { ...r, text: typo(r.text) } : r))
+  if (typeof t !== 'string') return t
+  return t
+    .replace(/ ([»;:!?])/g, FINE + '$1')
+    .replace(/« /g, '«' + FINE)
+}
+
 async function preparer({ titre }) {
   const pres = new pptxgen()
   pres.layout = 'LAYOUT_WIDE'
   pres.author = 'Devkaylab'
   pres.company = 'Devkaylab'
   pres.title = titre
-  // Le texte se cale en haut de sa boîte par défaut : un paragraphe centré
-  // verticalement dans un bloc flotte à mi-hauteur dès qu'il est court.
+  // Deux corrections appliquées à tout texte de tous les decks, plutôt qu'à
+  // chaque appel — c'est le seul endroit où l'on est sûr de n'en oublier
+  // aucun.
+  //
+  // 1. Le texte se cale en haut de sa boîte par défaut : un paragraphe centré
+  //    verticalement dans un bloc flotte à mi-hauteur dès qu'il est court.
+  // 2. L'espace avant `» ; : ! ?` et après `«` devient une espace fine
+  //    insécable. Sans elle, un guillemet fermant se retrouve seul en début
+  //    de ligne — vu sur « Textile femme, 1 à 12 ».
   const addSlide = pres.addSlide.bind(pres)
   pres.addSlide = (...a) => {
     const s = addSlide(...a)
     const addText = s.addText.bind(s)
-    s.addText = (t, o = {}) => addText(t, { valign: 'top', ...o })
+    s.addText = (t, o = {}) => addText(typo(t), { valign: 'top', ...o })
     return s
   }
   const logo = await logoPng()
@@ -198,6 +251,63 @@ async function preparer({ titre }) {
       s.addText(text, { x, y, w, h: 0.4, fontFace: FONT, fontSize: 10, italic: true, color: P.SLATE, margin: 0 })
     },
 
+    /**
+     * Bloc « un écran expliqué » : un titre, une phrase, puis le téléphone
+     * dans une carte qu'il déborde par le bas.
+     *
+     * Le texte est **au-dessus de la carte**, jamais dedans : un téléphone
+     * assez grand pour être lisible recouvrait le texte quand les deux
+     * partageaient le même rectangle.
+     */
+    ecran(s, { x, y, w, titre, texte, tel, bas = H - 0.72, fill = P.MIST, marge = 0.34 }) {
+      let cy = y
+      if (titre) {
+        s.addText(titre, {
+          x, y: cy, w, h: 0.4, fontFace: FONTD, fontSize: 13.5, bold: true,
+          color: P.DEEP, margin: 0, lineSpacingMultiple: 1.0,
+        })
+        cy += 0.42
+      }
+      if (texte) {
+        // Deux lignes, pas trois : au-delà, la carte se réduit et le
+        // téléphone n'en montre plus qu'une bande. Les textes sont écrits
+        // pour tenir (≈ 105 signes sur une colonne de trois).
+        s.addText(texte, {
+          x, y: cy, w, h: 0.64, fontFace: FONT, fontSize: 11, color: P.INK2,
+          margin: 0, lineSpacingMultiple: 1.15,
+        })
+        cy += 0.68
+      }
+      const hc = bas - cy
+      s.addShape('roundRect', { x, y: cy, w, h: hc, rectRadius: 0.14, fill: { color: fill }, line: { color: fill, width: 0 } })
+      const tw = w - 2 * marge, th = tw / tel.ratio
+      // Un téléphone entièrement visible se pose au fond de la carte ; un
+      // téléphone coupé la déborde, et c'est le cas voulu.
+      s.addImage({ data: tel.data, x: x + marge, y: cy + hc - th, w: tw, h: th })
+    },
+
+    /**
+     * Téléphone **entier**, sans carte : pour un écran dont l'essentiel est en
+     * bas (une feuille qui monte, une alerte). Un téléphone qui déborde n'en
+     * montrerait que l'en-tête. Il est plus étroit — c'est la contrepartie :
+     * à hauteur donnée, on ne gagne en hauteur d'écran qu'en largeur perdue.
+     */
+    ecranEntier(s, { x, y, h, tel, legende }) {
+      const w = h * tel.ratio
+      s.addShape('roundRect', {
+        x, y, w, h, rectRadius: 0.3, fill: { color: P.PAPER }, line: { color: P.PAPER, width: 0 },
+        shadow: { type: 'outer', color: '0B0F19', opacity: 0.18, blur: 14, offset: 3, angle: 90 },
+      })
+      s.addImage({ data: tel.data, x, y, w, h })
+      if (legende) {
+        s.addText(legende, {
+          x: x - 0.5, y: y + h + 0.14, w: w + 1, h: 0.36, fontFace: FONT, fontSize: 10,
+          italic: true, color: P.SLATE, align: 'center', margin: 0,
+        })
+      }
+      return { w }
+    },
+
     /** Pied : mention à gauche, numéro à droite. */
     pied(s, n, mention) {
       s.addText(mention, { x: M, y: H - 0.5, w: 7, h: 0.3, fontFace: FONT, fontSize: 9, color: P.SLATE, margin: 0 })
@@ -275,4 +385,4 @@ async function ecrire(pres, base) {
   console.log('OK', fichier)
 }
 
-module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture }
+module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer }

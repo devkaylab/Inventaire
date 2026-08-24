@@ -49,8 +49,8 @@ async function main() {
     d.citation(s, "J'ai dessiné Quantinvo pendant des inventaires, pas dans une salle de réunion.", { y: 1.5, h: 2.4, size: 22 })
     d.para(s, 'Julien Thiong-kay, Devkaylab', { x: M, y: 3.45, w: COL, h: 0.4, size: 12, color: P.SLATE })
     d.alineas(s, [
-      [null, "Son auteur fait du contrôle des stocks en magasin. Les irritants, il les a sous les yeux à chaque inventaire : la balise qu'on ne retrouve pas, la réserve sans réseau, le fichier Excel qu'il faut reformater avant chaque import, le rapport qui arrive trois jours après, quand tout le monde est passé à autre chose."],
-      [null, "Quantinvo est la réponse à ces irritants. Rien de plus. Une application sur le téléphone que l'équipe a déjà en poche, un tableau de bord pour celui qui pilote, un rapport à la fin."],
+      [null, "Je fais du contrôle des stocks en magasin. Les irritants, je les ai sous les yeux à chaque inventaire : la balise qu'on ne retrouve pas, la réserve sans réseau, le fichier Excel qu'il faut reformater avant chaque import, le rapport qui arrive trois jours après, quand tout le monde est passé à autre chose."],
+      [null, "Quantinvo est la réponse à ces irritants, et rien de plus. Une application sur le téléphone que l'équipe a déjà en poche, un tableau de bord pour celui qui pilote, un rapport à la fin."],
       [null, "Ce n'est pas un module d'ERP qu'on adapte au magasin. C'est un outil de magasin, qui tient dans une poche et se prend en main en dix minutes."],
     ], { y: 1.5, h: 4.8, size: 14, gap: 14 })
     d.pied(s, 3, PIED)
