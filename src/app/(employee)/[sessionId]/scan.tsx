@@ -67,6 +67,12 @@ export default function EmployeeScanScreen() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['my-counts', sessionId] })
+      // ⚠️ Les deux clés, pas une seule. `my-counts` est la liste des balises
+      // comptées ; `my-count-totals` est le « 129 pièces comptées · 34
+      // auditées » de « Ma progression ». L'écran reste monté sous le
+      // scanner : sans cette invalidation il affiche les chiffres d'avant le
+      // comptage — sur l'écran même où l'on vient vérifier ce qu'on a remonté.
+      await queryClient.invalidateQueries({ queryKey: ['my-count-totals', sessionId] })
       if (usesZones) await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     } catch (e: unknown) {
       console.error('[scan] insertCount', e)

@@ -1155,3 +1155,54 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     expect(compteurs).toContain('Share.share(')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// « Ma progression » affichait des chiffres d'avant le comptage
+// (constat au simulateur, 24 août 2026)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// L'écran d'un compteur lit `['my-count-totals', sessionId]` — le « 131 pièces
+// comptées · 50 auditées » de son en-tête. **Rien n'invalidait cette clé.**
+// L'écran de scan invalidait `['my-counts']` (la liste des balises) et
+// oubliait les totaux, alors que son miroir superviseur invalide bien
+// `['session-counts']`, ce que son écran lit. Vu en vrai : la base disait 50
+// pièces auditées, l'écran en affichait encore 34 — sur l'écran même où l'on
+// vient vérifier ce qu'on a remonté, et qui n'a ni bouton de rafraîchissement
+// ni tirer-pour-rafraîchir.
+//
+// Même famille que « Inviter un compteur, et le voir » du 23 août : une clé de
+// cache qui ne correspond à rien ne fait échouer aucun test et ne lève aucune
+// erreur. D'où ces gardes, qui portent sur la clé et non sur la présence d'un
+// `invalidateQueries`.
+describe('les totaux du compteur se rafraîchissent (24 août 2026)', () => {
+  const scanCompteur = lire('app/(employee)/[sessionId]/scan.tsx')
+  const ecranCompteur = lire('app/(employee)/[sessionId]/index.tsx')
+  const fileHorsLigne = readFileSync(src('hooks/useOfflineQueue.ts'), 'utf8')
+
+  it('l’écran du compteur lit bien les totaux du serveur', () => {
+    expect(ecranCompteur).toContain("queryKey: ['my-count-totals', sessionId]")
+    expect(ecranCompteur).toContain('getMyCountTotals')
+  })
+
+  it('un scan invalide la clé que cet écran lit, pas seulement la liste', () => {
+    expect(scanCompteur).toContain("queryKey: ['my-count-totals', sessionId]")
+    // La liste des balises comptées reste invalidée elle aussi : les deux
+    // écrans ne lisent pas la même chose.
+    expect(scanCompteur).toContain("queryKey: ['my-counts', sessionId]")
+  })
+
+  it('une file hors ligne qui remonte les rend vrais', () => {
+    // Hors ligne, rien n'est parti : les totaux du serveur ont raison de ne
+    // pas bouger. C'est la remontée qui les périme.
+    expect(fileHorsLigne).toContain("queryKey: ['my-count-totals', sessionId]")
+  })
+
+  it('le miroir superviseur reste correct', () => {
+    // La garde vaut dans les deux sens : c'est en comparant les deux écrans
+    // que le défaut s'est vu.
+    const scanSuperviseur = lire('app/(supervisor)/[sessionId]/scan.tsx')
+    expect(scanSuperviseur).toContain("queryKey: ['session-counts', sessionId]")
+    expect(lire('app/(supervisor)/[sessionId]/index.tsx'))
+      .toContain("queryKey: ['session-counts', sessionId]")
+  })
+})

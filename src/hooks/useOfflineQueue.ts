@@ -88,8 +88,11 @@ export function useOfflineQueue(sessionId: string | undefined): OfflineQueueStat
       queryClient.setQueryData(['offline-balises', sessionId], r.balises)
       // Une balise entièrement remontée change ce que voit le superviseur :
       // on rafraîchit l'avancement plutôt que d'attendre le prochain passage.
+      // Et les totaux du compteur, qui ne bougent qu'à ce moment-là : hors
+      // ligne rien n'est parti, c'est la remontée qui les rend vrais.
       if (r.balisesSent.length > 0) {
         await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+        await queryClient.invalidateQueries({ queryKey: ['my-count-totals', sessionId] })
       }
     } catch (e) {
       console.warn('[offline] synchronisation impossible', e)
