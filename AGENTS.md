@@ -3129,6 +3129,11 @@ nommant les 13 pièces, *Annuler* restant sur l'écran ; et « Rouvrir la
 balise 1 ? » précède l'ouverture depuis la liste, *Annuler* n'ouvrant rien.
 Données d'essai remises en état (13 pièces, `done`).
 
+**Et confirmé par Julien sur son iPhone le soir même**, build refait :
+« le build est fait déjà et le test est bon » — le scénario qui avait tout
+déclenché (ouvrir la balise 1000 de « Fwee », ne rien scanner, revenir) ne
+décompte plus rien.
+
 Tests de garde : `tests/comptage.test.ts`.
 
 # Balises : séries imprimées, pas de stock (21 août 2026)
