@@ -3074,10 +3074,29 @@ Points à ne pas défaire :
 ## Le garde-fou du retour, et le piège de la pile
 
 Quitter le comptage avec une balise **réellement** ouverte pose la question —
-« Clôturer la balise 1 ? », *Clôturer* ou *Laisser ouverte*. Choix de Julien
-parmi trois (refermer tout seul aurait réécrit la date ; ne rouvrir qu'au
-premier geste est devenu le niveau 1 ci-dessus). Une balise seulement
-consultée ne demande donc **rien** : il n'y a rien à décider.
+« Quitter le comptage ? », *Rester* (bouton plein) ou *Quitter*. Une balise
+seulement consultée ne demande **rien** : il n'y a rien à décider.
+
+⚠️ **Cette question ne décide pas d'une clôture, et c'est un amendement du
+soir même** (Julien : « il faut prevent from closing/returning by accident »).
+La première version proposait *Clôturer* / *Laisser ouverte* : aucune des deux
+réponses ne permettait de **rester** — un retour accidentel faisait quitter
+l'écran quoi qu'on réponde. Les deux gestes sont désormais séparés :
+
+- **le retour protège la navigation** — la réponse voulue est *Rester*, donc
+  c'est elle le bouton plein ;
+- **la clôture a sa propre confirmation** (`closeBalise` la pose lui-même) :
+  « Clôturer la balise 1 ? — 13 pièces comptées. Vous pourrez y revenir si
+  besoin. » Les boutons de clôture sont à portée du pouce pendant qu'on
+  scanne, et une clôture de travers annonce un rayon fini qui ne l'est pas.
+  **La question nomme le compte** : c'est le seul chiffre qui fasse remarquer
+  qu'on n'est pas sur la bonne balise. Le paramètre `silencieux` a disparu
+  avec la clôture automatique à la sortie.
+
+Même règle pour « Rouvrir » depuis la liste, dont la question a été
+**raccourcie sur capture de Julien** (la note « la simple consultation ne
+change rien… » retirée — les cartes de question restent courtes, straight to
+the point).
 
 ⚠️ **`beforeRemove` ne retient pas cette pile.** Premier essai : l'écran
 partait quand même, la question s'affichait par-dessus l'écran d'arrivée, et
@@ -3103,11 +3122,12 @@ test parce qu'un `onPress={closeBalise}` se réécrit vite.
 Vérifié au simulateur le 25 août 2026 sur « Rayon textile », tous les chemins :
 consulter la balise 1 puis revenir ne demande rien et laisse 25 % (ligne
 contrôlée en base, date du 17:25 inchangée) ; compter une pièce rend
-l'ouverture réelle et le retour pose alors la question ; *Clôturer* repart en
-gardant 25 %, *Laisser ouverte* repart en tombant à 22 % en connaissance de
-cause ; le balayage est intercepté comme le bouton ; et la confirmation
-« Rouvrir la balise 1 ? » précède l'ouverture depuis la liste, *Annuler*
-n'ouvrant rien. Données d'essai remises en état (13 pièces, `done`).
+l'ouverture réelle et le retour pose alors sa question — *Rester* garde bien
+sur l'écran, *Quitter* laisse la balise ouverte en connaissance de cause ; le
+balayage est intercepté comme le bouton ; la clôture demande confirmation en
+nommant les 13 pièces, *Annuler* restant sur l'écran ; et « Rouvrir la
+balise 1 ? » précède l'ouverture depuis la liste, *Annuler* n'ouvrant rien.
+Données d'essai remises en état (13 pièces, `done`).
 
 Tests de garde : `tests/comptage.test.ts`.
 

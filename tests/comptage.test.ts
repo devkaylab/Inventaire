@@ -91,9 +91,27 @@ describe('quitter le comptage avec une balise ouverte', () => {
     expect(scanner).not.toContain("addListener('beforeRemove'")
   })
 
-  it('propose de clôturer plutôt que de décider seul', () => {
-    expect(scanner).toContain('Clôturer la balise ${activeBaliseRef.current?.code} ?')
-    expect(scanner).toContain('Laisser ouverte')
+  it('rattrape le retour accidentel : le bouton plein garde sur l’écran', () => {
+    // ⚠️ Amendé le 25 août 2026 au soir : la question du retour ne décide plus
+    // d'une clôture (la clôture a sa propre confirmation, voir plus bas) —
+    // elle rattrape un retour touché par erreur, et la réponse voulue est
+    // donc « Rester », en bouton plein.
+    expect(scanner).toContain("titre: 'Quitter le comptage ?'")
+    expect(scanner).toContain("action: 'Rester'")
+    expect(scanner).toContain("annuler: 'Quitter'")
+  })
+
+  it('clôturer est confirmé, en nommant ce qui a été compté', () => {
+    // « prevent from closing by accident » — les boutons de clôture sont à
+    // portée du pouce pendant qu'on scanne, et une clôture de travers annonce
+    // un rayon fini qui ne l'est pas. Le chiffre est le seul moyen de voir
+    // qu'on n'est pas sur la bonne balise.
+    const cloture = scanner.slice(scanner.indexOf('async function closeBalise'))
+    const question = cloture.indexOf('titre: `Clôturer la balise ${active.code} ?`')
+    const appel = cloture.indexOf('await setBalise(')
+    expect(question).toBeGreaterThan(0)
+    expect(question).toBeLessThan(appel)
+    expect(cloture.slice(0, appel)).toContain('if (!ok) return')
   })
 
   it('libère la sortie au rendu suivant, sinon la garde la reprend au vol', () => {

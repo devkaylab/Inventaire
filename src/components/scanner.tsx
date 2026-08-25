@@ -704,13 +704,28 @@ export function Scanner({
 
   // ── Clôture la zone ouverte ──────────────────────────────────────────────
   /**
-   * `silencieux` : clôture sans la célébration ni la consommation du repère.
-   * C'est le cas de la sortie d'écran (voir le garde-fou plus bas) — on quitte,
-   * un volet qui s'ouvre au moment où la page disparaît n'aurait pas de sens.
+   * Clôturer est un geste **délibéré**, donc confirmé (demande de Julien le
+   * 25 août 2026 : « prevent from closing by accident »). Les deux boutons de
+   * clôture sont à portée du pouce pendant qu'on scanne, et une clôture de
+   * travers annonce un rayon fini qui ne l'est pas — c'est une donnée fausse
+   * dans le rapport, pas seulement une gêne.
+   *
+   * La question nomme ce qui a été compté : c'est le seul chiffre qui permet
+   * de se rendre compte qu'on n'est pas sur la bonne balise.
    */
-  async function closeBalise(silencieux = false) {
+  async function closeBalise() {
     const active = activeBaliseRef.current
     if (!active) return
+    const compte = baliseModeRef.current === 'count'
+    const pieces = recentScansRef.current.reduce((n, e) => n + e.qty, 0)
+    const p = pieces > 1 ? 's' : ''
+    const ok = await demander({
+      titre: `Clôturer la balise ${active.code} ?`,
+      texte: `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p}. Vous pourrez y revenir si besoin.`,
+      action: 'Clôturer',
+      annuler: 'Annuler',
+    })
+    if (!ok) return
     // Ouverture différée jamais concrétisée : rien n'a été ouvert, il n'y a
     // rien à refermer. Rappeler `set_balise` déplacerait sa date de clôture
     // pour rien — c'est justement ce qu'on cherche à préserver.
@@ -728,7 +743,7 @@ export function Scanner({
         signaler.erreur('Balise', result.error ?? 'Clôture impossible.')
         return
       }
-      if (!silencieux && repereCloture.aVoir) {
+      if (repereCloture.aVoir) {
         // La célébration est une ligne de fait, pas une fanfare : ce sont les
         // chiffres qui font plaisir, et ils viennent de la liste à l'écran.
         const scans = recentScansRef.current
@@ -769,7 +784,6 @@ export function Scanner({
       titre: `Rouvrir la balise ${z.code} ?`,
       texte: `Elle est terminée, avec ${unites} pièce${p} enregistrée${p}. `
         + 'Vous pourrez en ajouter ou les corriger ; rien n’est effacé.',
-      note: 'La simple consultation ne change rien : la balise ne repasse en cours que si vous comptez.',
       action: 'Rouvrir',
       annuler: 'Annuler',
     })
@@ -804,14 +818,17 @@ export function Scanner({
   // ouverte — celle où l'on a compté quelque chose.
   usePreventRemove(!!activeBalise && !ouvertureDifferee && !sortieAutorisee, ({ data }) => {
     void demander({
-      titre: `Clôturer la balise ${activeBaliseRef.current?.code} ?`,
-      texte: 'Vous quittez le comptage alors que cette balise est encore ouverte. '
-        + 'Tant qu’elle le reste, l’inventaire la compte comme non terminée.',
-      note: 'Vous étiez seulement venu la consulter ? Clôturez-la : ses pièces sont déjà enregistrées, rien ne sera compté en double.',
-      action: 'Clôturer',
-      annuler: 'Laisser ouverte',
-    }).then(async (ok) => {
-      if (ok) await closeBalise(true)
+      titre: 'Quitter le comptage ?',
+      texte: `La balise ${activeBaliseRef.current?.code} restera ouverte : `
+        + 'l’inventaire la comptera comme non terminée tant qu’elle l’est.',
+      // ⚠️ Le bouton plein garde sur l'écran. Cette question n'est plus là pour
+      // décider d'une clôture — elle a son propre bouton, et sa propre
+      // confirmation — mais pour rattraper un retour touché par erreur. La
+      // réponse voulue dans ce cas est donc de rester.
+      action: 'Rester',
+      annuler: 'Quitter',
+    }).then((rester) => {
+      if (rester) return
       // Retenir l'action et la rejouer au rendu suivant : c'est ce qui lève la
       // garde avant de repartir. La rejouer ici la ferait reprendre au vol.
       setSortieAutorisee(() => data.action)
