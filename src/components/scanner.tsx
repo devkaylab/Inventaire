@@ -18,6 +18,14 @@ import {
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
+import { useNavigation } from 'expo-router'
+// ⚠️ Chemin interne, faute de mieux : expo-router embarque react-navigation
+// mais n'exporte pas `usePreventRemove`, alors que c'est le seul mécanisme qui
+// retienne un retour natif (le runtime le nomme lui-même dans son alerte).
+// `tests/comptage.test.ts` échoue si ce fichier disparaît d'une mise à jour —
+// sans quoi la garde du retour sauterait en silence.
+import { usePreventRemove } from 'expo-router/build/react-navigation/core/usePreventRemove'
+import type { NavigationAction as ActionNavigation } from 'expo-router/build/react-navigation/routers'
 import { useKeepAwake } from 'expo-keep-awake'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyScanEntries, getZoneDashboard, insertArticle } from '@/lib/queries'
@@ -227,6 +235,7 @@ export function Scanner({
   const theme = useTheme()
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
+  const navigation = useNavigation()
   // ── L'écran ne se verrouille pas pendant le comptage ──────────────────────
   //
   // Compter, c'est poser le téléphone sur une étagère, scanner, le reprendre.
@@ -650,7 +659,12 @@ export function Scanner({
   }
 
   // ── Clôture la zone ouverte ──────────────────────────────────────────────
-  async function closeBalise() {
+  /**
+   * `silencieux` : clôture sans la célébration ni la consommation du repère.
+   * C'est le cas de la sortie d'écran (voir le garde-fou plus bas) — on quitte,
+   * un volet qui s'ouvre au moment où la page disparaît n'aurait pas de sens.
+   */
+  async function closeBalise(silencieux = false) {
     const active = activeBaliseRef.current
     if (!active) return
     try {
@@ -659,7 +673,7 @@ export function Scanner({
         signaler.erreur('Balise', result.error ?? 'Clôture impossible.')
         return
       }
-      if (repereCloture.aVoir) {
+      if (!silencieux && repereCloture.aVoir) {
         // La célébration est une ligne de fait, pas une fanfare : ce sont les
         // chiffres qui font plaisir, et ils viennent de la liste à l'écran.
         const scans = recentScansRef.current
@@ -679,6 +693,48 @@ export function Scanner({
       signaler.erreur('Erreur', errorMessage(e))
     }
   }
+
+  // ── Quitter l'écran avec une balise encore ouverte ────────────────────────
+  //
+  // ⚠️ **Ouvrir une balise déjà clôturée la décompte.** `set_balise` la repasse
+  // en « en cours » et efface sa date de clôture, et rien ne la refermait au
+  // retour : il suffisait donc de **regarder** une balise finie pour que
+  // l'inventaire la déclare non comptée. Constat de Julien le 25 août 2026 sur
+  // « Fwee » — il ouvre la balise 1000, ne scanne rien, revient, et le tableau
+  // de bord annonce « aucune balise comptée » alors que ses 23 pièces n'ont
+  // jamais bougé (`counts` est en ajout pur, rien n'était perdu : c'est
+  // l'étiquette « comptée » qui l'était). Sur le terrain, un compteur qui
+  // scanne la mauvaise étiquette puis fait retour décompte une balise finie
+  // sans s'en apercevoir.
+  //
+  // La sortie pose donc la question au lieu de décider dans son dos (choix de
+  // Julien parmi trois). Elle ne se pose **que** si une balise est encore
+  // ouverte : le trajet normal — clôturer, puis revenir — ne demande rien.
+  // ⚠️ **`beforeRemove` ne retient pas cette pile.** Premier essai : l'écran
+  // partait quand même, la question s'affichait par-dessus l'écran d'arrivée,
+  // et le runtime le disait — « was removed natively but didn't get removed
+  // from JS state […] Consider using a 'usePreventRemove' hook ». C'est donc
+  // ce hook, et non `navigation.addListener`, qui tient le retour natif et le
+  // geste de balayage.
+  const [sortieAutorisee, setSortieAutorisee] = useState<ActionNavigation | null>(null)
+  usePreventRemove(!!activeBalise && !sortieAutorisee, ({ data }) => {
+    void demander({
+      titre: `Clôturer la balise ${activeBaliseRef.current?.code} ?`,
+      texte: 'Vous quittez le comptage alors que cette balise est encore ouverte. '
+        + 'Tant qu’elle le reste, l’inventaire la compte comme non terminée.',
+      note: 'Vous étiez seulement venu la consulter ? Clôturez-la : ses pièces sont déjà enregistrées, rien ne sera compté en double.',
+      action: 'Clôturer',
+      annuler: 'Laisser ouverte',
+    }).then(async (ok) => {
+      if (ok) await closeBalise(true)
+      // Retenir l'action et la rejouer au rendu suivant : c'est ce qui lève la
+      // garde avant de repartir. La rejouer ici la ferait reprendre au vol.
+      setSortieAutorisee(() => data.action)
+    })
+  })
+  useEffect(() => {
+    if (sortieAutorisee) navigation.dispatch(sortieAutorisee)
+  }, [sortieAutorisee, navigation])
 
   // ── Ouverture délibérée d'une balise par saisie de son numéro ─────────────
   async function openBaliseManual() {
@@ -872,7 +928,7 @@ export function Scanner({
               <Text style={styles.zoneBannerText} numberOfLines={1}>
                 Zone ouverte · {activeBalise.name ?? 'Sans nom'} · balise {activeBalise.code}
               </Text>
-              <Pressable style={styles.zoneCloseBtn} onPress={closeBalise} disabled={resolving}>
+              <Pressable style={styles.zoneCloseBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
                 <Text style={styles.zoneCloseText}>Clôturer</Text>
               </Pressable>
             </View>
@@ -1159,7 +1215,7 @@ export function Scanner({
             ListEmptyComponent={<Text style={styles.emptyHint}>Scannez un article pour commencer</Text>}
           />
           {activeBalise && (
-            <Pressable style={styles.closeFooterBtn} onPress={closeBalise} disabled={resolving}>
+            <Pressable style={styles.closeFooterBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
               <Text style={styles.closeFooterText}>Clôturer la balise {activeBalise.code}</Text>
             </Pressable>
           )}
