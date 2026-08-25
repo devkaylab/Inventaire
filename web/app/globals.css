@@ -806,9 +806,12 @@ a { color: inherit; text-decoration: none; }
      un `backdrop-filter` ne floute que ce qui est peint DERRIÈRE l'élément,
      et le fond de la page est uni : sans ces lueurs portées par la tuile
      elle-même, le verre serait invisible ;
-   · `pointer-events: none` sur ce `::before` : il déborde de 32 px de la
-     carte, donc de la colonne du rail — sans lui, il avalerait les clics
-     sur la bande gauche des onglets d'en face. */
+   · ⚠️ le `::before` ne doit JAMAIS déborder de la carte (`inset: 0` et le
+     rayon hérité). La tuile est positionnée, donc peinte au-dessus de ses
+     voisines non positionnées : une première version débordait de 32 px et
+     posait un voile sur les tuiles d'à côté (constat de Julien, capture à
+     l'appui, 25 août 2026). Les lueurs se découpent aux coins de la carte —
+     le halo est sous le verre, il ne bave pas dessus les voisines. */
 .dash-progress {
   position: relative;
   background: rgba(21, 26, 39, 0.5);
@@ -821,8 +824,9 @@ a { color: inherit; text-decoration: none; }
 .dash-progress::before {
   content: '';
   position: absolute;
-  inset: -32px;
+  inset: 0;
   z-index: -1;
+  border-radius: inherit;
   pointer-events: none;
   background:
     radial-gradient(280px 220px at 14% 16%, rgba(99, 102, 241, 0.16), transparent 68%),
