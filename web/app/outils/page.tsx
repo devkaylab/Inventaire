@@ -12,6 +12,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { BaliseSheetPanel } from '@/components/BaliseSheetPanel'
 import { getMyCompany, type Company } from '@/lib/account'
+import { ModelesPanel } from '@/components/ModelesPanel'
 
 export default function OutilsPage() {
   const guard = useAuthGuard('supervisor')
@@ -37,6 +38,8 @@ export default function OutilsPage() {
       </div>
 
       <BaliseSheetPanel context="account" />
+
+      <ModelesPanel />
 
       <div className="panel">
         <h3>Prise en main de l&apos;application</h3>

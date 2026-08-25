@@ -118,7 +118,10 @@ function cellToCode(v: unknown): string {
 
 // Header aliases (already normalized) for the catalog's identifying columns.
 const SKU_KEYS = ['sku', 'codearticle', 'reference', 'ref', 'codeart']
-const EAN_KEYS = ['ean', 'ean13', 'gtin', 'gtin13', 'codebarre', 'codebarres', 'gencod', 'gencode', 'barcode']
+// « codeean » : vu en vrai le 25 août 2026 — un fichier client portait la
+// colonne « Code Ean », inconnue ici. Tous les EAN sortaient nuls, et les
+// lignes au même SKU s'écrasaient au lieu d'être gardées sous leur EAN.
+const EAN_KEYS = ['ean', 'ean13', 'gtin', 'gtin13', 'codeean', 'codeean13', 'codebarre', 'codebarres', 'gencod', 'gencode', 'barcode']
 
 function pickCode(r: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
