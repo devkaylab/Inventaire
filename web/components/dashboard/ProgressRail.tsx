@@ -17,6 +17,15 @@ import type { Totals } from '@/hooks/useSessionData'
  *   minutes serait un métronome, pas un geste d'accueil ;
  * · `prefers-reduced-motion` saute l'animation (t = 1 d'emblée), comme le
  *   reste du site coupe déjà ses transitions de barres.
+ *
+ * ⚠️ **Le chiffre affiché ne doit JAMAIS dépendre de l'arrivée d'une image.**
+ * La première version calait tout sur `requestAnimationFrame` : dans un onglet
+ * en arrière-plan, aucune image n'est rendue, l'animation ne démarrait pas et
+ * la tuile restait bloquée sur **0 %** — un chiffre faux, sur un tableau de
+ * bord, pour une décoration. Relevé par Julien le 25 août 2026, reproduit au
+ * navigateur. D'où le filet `setTimeout` : lui se déclenche même sans image
+ * (bridé à la seconde en arrière-plan, mais il se déclenche), et pose la vraie
+ * valeur. L'animation est un bonus ; la justesse ne se négocie pas.
  */
 function useArrivee() {
   const [t, setT] = useState(0)
@@ -25,20 +34,30 @@ function useArrivee() {
       setT(1)
       return
     }
-    /* Le chronomètre part à la PREMIÈRE image rendue, pas au montage : dans
-       un onglet en arrière-plan, requestAnimationFrame ne tourne pas — un
-       départ au montage ferait sauter l'arrivée à sa fin dès que l'onglet
-       devient visible, au lieu de la jouer sous les yeux de la personne. */
-    let debut = 0
     let raf = 0
+    let filet: ReturnType<typeof setTimeout> | undefined
+    let fini = false
+    const terminer = () => {
+      fini = true
+      cancelAnimationFrame(raf)
+      clearTimeout(filet)
+      setT(1)
+    }
+    /* Le chronomètre part à la PREMIÈRE image rendue, pas au montage : sinon
+       un onglet revenu au premier plan verrait l'arrivée déjà finie au lieu
+       de la jouer sous ses yeux. */
+    let debut = 0
     const pas = (now: number) => {
+      if (fini) return
       if (!debut) debut = now
       const brut = Math.min(1, (now - debut) / 1400)
+      if (brut >= 1) { terminer(); return }
       setT(1 - Math.pow(1 - brut, 3))
-      if (brut < 1) raf = requestAnimationFrame(pas)
+      raf = requestAnimationFrame(pas)
     }
+    filet = setTimeout(terminer, 1800)
     raf = requestAnimationFrame(pas)
-    return () => cancelAnimationFrame(raf)
+    return () => { fini = true; cancelAnimationFrame(raf); clearTimeout(filet) }
   }, [])
   return t
 }
