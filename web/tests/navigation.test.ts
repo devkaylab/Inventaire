@@ -265,6 +265,44 @@ describe('l’onglet Set up tient en deux volets', () => {
   })
 })
 
+describe('« Commencer l’inventaire » conclut la page, il ne l’ouvre pas', () => {
+  // Julien, 25 août 2026, test réel sur « Fwee » — fichier importé, balises
+  // renseignées : « placer bouton commencer l'inventaire en bas. Le mettre en
+  // haut est perturbant et on ne sait pas quoi faire après. »
+  const setup = lire('../components/dashboard/tabs/SetupTab.tsx')
+
+  it('vient après les deux volets, pas avant', () => {
+    const demarrage = setup.indexOf('<Demarrage')
+    const fichiers = setup.indexOf('titre="Données d’inventaire"')
+    const zones = setup.indexOf('titre="Zone de comptage"')
+    expect(demarrage).toBeGreaterThan(fichiers)
+    expect(demarrage).toBeGreaterThan(zones)
+  })
+
+  it('reste hors des volets', () => {
+    // L'autre moitié de la règle du 21 août : une action ne doit jamais se
+    // retrouver derrière une section fermée. En dessous n'est pas dedans.
+    const corps = setup.slice(setup.indexOf('<Volet'), setup.indexOf('<Demarrage'))
+    expect(corps).not.toContain('<Demarrage')
+  })
+
+  it('dit ce qui vient après le démarrage', () => {
+    // La seconde moitié du constat : un bouton qui disparaît une fois pressé
+    // laisse sans réponse la question « et maintenant ? ».
+    expect(setup).toContain('L’inventaire est en cours')
+    expect(setup).toContain('Suivre l’avancement')
+    expect(setup).toContain('onOpenSuivi')
+    expect(lire('../app/dashboard/[sessionId]/page.tsx')).toContain("onOpenSuivi={() => selectTab('suivi')}")
+  })
+
+  it('dit aussi ce qui manque encore', () => {
+    // Sans référentiel, le bouton ne part pas : l'écran nomme le fichier à
+    // charger plutôt que de laisser deviner pourquoi il refuse.
+    expect(setup).toContain('Il reste une chose à faire')
+    expect(setup).toContain('disabled={!pret || starting}')
+  })
+})
+
 describe('les boutons des boutiques d’applications', () => {
   // Demande de Julien, 21 août 2026 : « ajoute les logos liés vers les
   // plateformes de téléchargement de l'app même si ce n'est pas encore en

@@ -50,7 +50,7 @@ const EMPTY: StepState = {
  * l'avancement, ni pour la seule section restante en mode sans balise. Tout
  * part replié, sans exception — c'est ce qui rend la page prévisible.
  */
-export function SetupTab({ sessionId, status, readOnly, importState, usesZones, zones, onChanged, onZonesChanged }: {
+export function SetupTab({ sessionId, status, readOnly, importState, usesZones, zones, onChanged, onZonesChanged, onOpenSuivi }: {
   sessionId: string
   status: SessionStatus
   readOnly: boolean
@@ -59,6 +59,8 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
   zones: ZoneDashboardRow[]
   onChanged: () => Promise<void> | void
   onZonesChanged: () => Promise<void> | void
+  /** Où l'on va une fois l'inventaire lancé : le suivi de l'avancement. */
+  onOpenSuivi: () => void
 }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -66,9 +68,9 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
   const [stock, setStock] = useState<StepState>(EMPTY)
   const [starting, setStarting] = useState(false)
 
-  // Le démarrage n'a de sens qu'une fois le référentiel chargé, et une seule
-  // fois : passé en « En cours », l'inventaire ne revient pas à « Ouverte ».
-  const canStart = !readOnly && status === 'open' && importState.articles > 0
+  // Le démarrage n'a de sens qu'une fois le référentiel chargé : sans lui, un
+  // scan n'a aucune référence à laquelle se rattacher.
+  const pret = importState.articles > 0
 
   async function start() {
     setStarting(true)
@@ -145,18 +147,6 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
 
   return (
     <div>
-      {canStart && (
-        <div className="banner banner-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <span>
-            Le référentiel est chargé. Démarrez l&apos;inventaire pour signaler à
-            l&apos;équipe que la préparation est terminée.
-          </span>
-          <button type="button" className="btn btn-primary btn-sm" disabled={starting} onClick={start}>
-            {starting ? 'Démarrage…' : 'Commencer l’inventaire'}
-          </button>
-        </div>
-      )}
-
       {readOnly && (
         <div className="banner banner-warn">
           Cet inventaire est clôturé : les fichiers ne peuvent plus être remplacés ni les
@@ -254,7 +244,82 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
         onFile={f => run(f, importState.stock, 'stock', setStock, importStockFile)}
       />
       </Volet>
+
+      {!readOnly && (
+        <Demarrage
+          status={status}
+          pret={pret}
+          starting={starting}
+          onStart={start}
+          onOpenSuivi={onOpenSuivi}
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * Le démarrage, en fin de préparation.
+ *
+ * ⚠️ **Il vit sous les volets, jamais au-dessus.** Il y a été jusqu'au 25 août
+ * 2026, en bandeau d'entrée de section — Julien, test réel sur « Fwee » :
+ * « le mettre en haut est perturbant et on ne sait pas quoi faire après ».
+ * On arrive sur Set up pour préparer ; une action posée avant le travail se
+ * lit comme une consigne, et une fois pressée elle ne dit pas où aller. En
+ * fin de page elle conclut ce qu'on vient de faire.
+ *
+ * Ce qui ne change pas de la règle du 21 août : **il n'entre pas dans un
+ * volet**. Une action ne doit jamais se retrouver derrière une section
+ * fermée — être en dessous n'est pas être caché.
+ *
+ * Il est là dans les trois états, parce que c'est le même endroit qu'on
+ * regarde : ce qui manque encore, le démarrage, puis la suite (« l'équipe
+ * peut compter, allez au suivi »). C'est la seconde moitié du constat — un
+ * bouton qui disparaît une fois pressé laisse sans réponse la question
+ * « et maintenant ? ».
+ */
+function Demarrage({ status, pret, starting, onStart, onOpenSuivi }: {
+  status: SessionStatus
+  pret: boolean
+  starting: boolean
+  onStart: () => void
+  onOpenSuivi: () => void
+}) {
+  // Passé en « En cours », l'inventaire ne revient pas à « Ouverte » : la
+  // préparation reste modifiable, le démarrage ne se rejoue pas.
+  if (status !== 'open') {
+    return (
+      <section className="demarrage">
+        <div className="demarrage-txt">
+          <div className="demarrage-titre">L’inventaire est en cours</div>
+          <p className="demarrage-sous">
+            L’équipe peut compter depuis l’application. La préparation reste modifiable
+            ici — un fichier se remplace, une plage de balises se réaffecte.
+          </p>
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={onOpenSuivi}>
+          Suivre l’avancement
+        </button>
+      </section>
+    )
+  }
+
+  return (
+    <section className={`demarrage${pret ? ' demarrage-pret' : ''}`}>
+      <div className="demarrage-txt">
+        <div className="demarrage-titre">
+          {pret ? 'Tout est prêt : commencez l’inventaire' : 'Il reste une chose à faire'}
+        </div>
+        <p className="demarrage-sous">
+          {pret
+            ? 'Le démarrage signale à l’équipe que la préparation est terminée : les compteurs peuvent scanner depuis l’application, et vous suivez l’avancement dans l’onglet Suivi.'
+            : 'Chargez le référentiel articles dans « Données d’inventaire », juste au-dessus : sans lui, les scans n’ont aucune référence à laquelle se rattacher.'}
+        </p>
+      </div>
+      <button type="button" className="btn btn-primary" disabled={!pret || starting} onClick={onStart}>
+        {starting ? 'Démarrage…' : 'Commencer l’inventaire'}
+      </button>
+    </section>
   )
 }
 
