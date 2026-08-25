@@ -20,6 +20,7 @@
     "expo-glass-effect": "~56.0.4",
     "expo-haptics": "~56.0.3",
     "expo-image": "~56.0.11",
+    "expo-keep-awake": "~56.0.3",
     "expo-linking": "~56.0.14",
     "expo-modules-core": "^56.0.16",
     "expo-notifications": "~56.0.23",

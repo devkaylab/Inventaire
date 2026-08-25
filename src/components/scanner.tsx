@@ -18,6 +18,7 @@ import {
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
+import { useKeepAwake } from 'expo-keep-awake'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyScanEntries, getZoneDashboard, insertArticle } from '@/lib/queries'
 import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
@@ -36,6 +37,7 @@ import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
 import { demander, signaler } from '@/lib/dialogue'
+import { redresserSaisie, clavierDecale } from '@/lib/douchette'
 
 interface ScannerProps {
   sessionId: string
@@ -225,6 +227,15 @@ export function Scanner({
   const theme = useTheme()
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
+  // ── L'écran ne se verrouille pas pendant le comptage ──────────────────────
+  //
+  // Compter, c'est poser le téléphone sur une étagère, scanner, le reprendre.
+  // Au verrouillage l'écran quitte la page : il faut déverrouiller, retrouver
+  // l'inventaire, rouvrir le comptage — et une douchette, qui écrit dans un
+  // champ, perd son champ. Le verrou est levé tant que ce composant est monté,
+  // donc tant qu'on est sur la page de comptage, et repris en la quittant :
+  // c'est ce qui évite de vider la batterie une fois le travail fini.
+  useKeepAwake('comptage')
   // Couleur du mode : Compter = accent, Auditer = or.
   const modeColor = baliseMode === 'audit' ? AUDIT_COLOR : theme.accent
   const modeOn = baliseMode === 'audit' ? AUDIT_ON : theme.onAccent
@@ -235,6 +246,11 @@ export function Scanner({
   const [hwInput, setHwInput] = useState('')
   const hwInputRef = useRef<TextInput>(null)
   const [baliseInput, setBaliseInput] = useState('')
+  // Une douchette QWERTY sur un iPhone AZERTY écrit &é"' au lieu de 1234.
+  // Une fois le décalage constaté, il ne se corrige pas tout seul en cours de
+  // comptage : on le retient pour redresser aussi les codes qui n'en portent
+  // aucune preuve (une référence sans chiffre). Voir `@/lib/douchette`.
+  const clavierDecaleRef = useRef(false)
   const [resolving, setResolving] = useState(false)
   const [recentScans, setRecentScans] = useState<ScanEntry[]>([])
   const [barcodeReady, setBarcodeReady] = useState(false)
@@ -589,8 +605,13 @@ export function Scanner({
 
   // ── Ouverture délibérée d'une balise par saisie de son numéro ─────────────
   async function openBaliseManual() {
-    const code = baliseInput.trim()
-    if (!code) return
+    const brut = baliseInput.trim()
+    if (!brut) return
+    // Ce champ reçoit la frappe de la douchette comme celle du clavier : même
+    // redressement qu'en mode douchette. Un numéro tapé au pavé numérique
+    // traverse sans bouger — les chiffres ne sont jamais retouchés.
+    if (clavierDecale(brut)) clavierDecaleRef.current = true
+    const code = redresserSaisie(brut, clavierDecaleRef.current)
     Keyboard.dismiss()
     setResolving(true)
     try {
@@ -631,9 +652,13 @@ export function Scanner({
 
   // ── Douchette : une frappe-clavier terminée par Entrée (suffixe DataWedge) ──
   async function handleHardwareSubmit() {
-    const value = hwInput
+    const brut = hwInput
     setHwInput('')
-    if (!value.trim()) return
+    if (!brut.trim()) return
+    // La douchette envoie des touches, pas des caractères : sur un iPhone
+    // français, une douchette QWERTY sortie d'usine écrit &é"' pour 1234.
+    if (clavierDecale(brut)) clavierDecaleRef.current = true
+    const value = redresserSaisie(brut, clavierDecaleRef.current)
     await resolveAndRecord(value)
     // Garde le champ à l'écoute pour le scan suivant (scan continu).
     hwInputRef.current?.focus()
