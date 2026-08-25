@@ -1421,6 +1421,31 @@ a { color: inherit; text-decoration: none; }
 .volet-corps > *:first-child { margin-top: 14px; }
 @media (prefers-reduced-motion: reduce) { .volet-chevron { transition: none; } }
 
+/* ── Set up : le démarrage, en fin de préparation ───────── */
+/* Il conclut la page, il ne l'ouvre pas (Julien, 25 août 2026 : « le mettre
+   en haut est perturbant »). Sous les volets, jamais dedans : une action ne
+   doit pas se retrouver derrière une section fermée. */
+.demarrage {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  flex-wrap: wrap; margin-top: 18px; padding: 20px 22px;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--radius); box-shadow: var(--shadow-card);
+}
+/* Prêt à partir : la carte se teinte, c'est le seul moment où elle appelle. */
+.demarrage-pret {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.demarrage-txt { flex: 1; min-width: 260px; }
+.demarrage-titre {
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+  font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
+}
+/* `flex: none` : dans une colonne flex, un bouton s'étire sur toute la
+   largeur — déjà vu sur « Ouvrir le magasin ». */
+.demarrage .btn { flex: none; }
+.demarrage-sous { color: var(--text-2); font-size: 13.5px; margin-top: 4px; max-width: 62ch; }
+
 /* ── Équipe ─────────────────────────────────────────────── */
 .cred-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

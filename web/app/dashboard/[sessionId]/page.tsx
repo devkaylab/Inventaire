@@ -269,6 +269,7 @@ export default function SessionDashboardPage() {
                 zones={data.zones}
                 onChanged={data.refreshMeta}
                 onZonesChanged={data.refreshLive}
+                onOpenSuivi={() => selectTab('suivi')}
               />
             )}
 
