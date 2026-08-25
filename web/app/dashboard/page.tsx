@@ -219,7 +219,9 @@ export default function DashboardPage() {
         </div>
         <div className="dash-kpi">
           <div className="dash-kpi-value num">{sessions.length}</div>
-          <div className="dash-kpi-label">Total</div>
+          {/* « Total » seul ne disait pas ce qu'il ajoute à « en cours » —
+              question de Julien le 25 août 2026 : « à quoi correspond ce 5 ? » */}
+          <div className="dash-kpi-label">Total, clôturés compris</div>
         </div>
       </div>
 
