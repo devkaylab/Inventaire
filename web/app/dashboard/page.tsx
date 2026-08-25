@@ -219,12 +219,10 @@ export default function DashboardPage() {
         </div>
         <div className="dash-kpi">
           <div className="dash-kpi-value num">{sessions.length}</div>
-          {/* « Total » seul ne disait pas ce qu'il ajoute à « en cours » —
-              question de Julien le 25 août 2026 : « à quoi correspond ce 5 ? »
-              Libellé arrêté par lui, au pluriel près, comme les deux voisines. */}
-          <div className="dash-kpi-label">
-            Inventaire{sessions.length > 1 ? 's' : ''} au total, clôturés compris
-          </div>
+          {/* Libellé arrêté par Julien le 25 août 2026, à l'ordre des mots
+              près (« Nombre d'inventaire total ») : c'est le compte de tout ce
+              que la liste montre, clôturés compris. */}
+          <div className="dash-kpi-label">Nombre total d&apos;inventaires</div>
         </div>
       </div>
 
