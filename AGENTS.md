@@ -2685,6 +2685,80 @@ condition.
   **par appareil**. Cent téléphones sur un catalogue de 10 Mo font 1 Go pour un
   seul magasin ; le forfait en inclut 250.
 
+# Mode douchette : les chiffres, et l'écran qui reste allumé (25 août 2026)
+
+Deux constats de Julien, en test réel avec une douchette Bluetooth.
+
+## « Seulement des symboles s'affichent — &é"' au lieu de 1234 »
+
+**Une douchette ne transmet pas des caractères, elle transmet des touches** —
+les mêmes codes HID qu'un clavier physique. C'est iOS qui décide ensuite du
+caractère, en suivant Réglages › Général › Clavier › **Clavier physique**.
+Presque toutes les douchettes sortent d'usine en QWERTY ; un iPhone français
+est en AZERTY. Les deux ne partagent pas la rangée du haut : la touche « 1 »
+du QWERTY est la touche « & » de l'AZERTY. Les lettres sont touchées aussi
+(A↔Q, Z↔W, M↔virgule) et le tiret d'une référence arrive en « ) ».
+
+`src/lib/douchette.ts` repasse la saisie par la disposition inverse, à partir
+des quatre rangées écrites touche par touche. Trois points à ne pas défaire :
+
+- **⚠️ Les chiffres ne sont jamais retouchés.** Sur AZERTY ils s'obtiennent
+  avec Majuscule : les exclure de la table fait qu'une saisie déjà correcte
+  (pavé numérique, douchette bien réglée) traverse sans bouger. Sans cette
+  exclusion, on casserait ce qui marche.
+- **⚠️ On ne convertit que si le décalage est prouvé.** Deux preuves, et deux
+  seulement : un **accent** (é è ç à ù ² ° § µ £ ¨, majuscules comprises), que
+  la douchette ne peut pas produire et qu'aucun code-barres ne contient ; ou
+  un code **entièrement fait de la rangée du haut**, qui est alors un nombre
+  déformé — la balise 1 arrive en « & », et sans ce second volet elle ne
+  serait jamais redressée. **Un « & » au milieu d'une référence alphanumérique
+  ne prouve rien** : M&S existe, et redresser sa référence la détruirait. Même
+  raison inverse pour « - » et « _ », qui s'écrivent dans de vraies
+  références : ils sont dans la table, jamais dans les preuves.
+- **Le décalage constaté est retenu** (`clavierDecaleRef`) pour le reste du
+  comptage : il ne se corrigera pas tout seul, et c'est ce qui rattrape les
+  codes sans preuve — une référence sans chiffre, ou un nombre fait des seuls
+  3, 4, 5, 6 et 8.
+
+**Le champ de la balise reçoit le même traitement** : la douchette y écrit
+comme dans l'autre, et son `keyboardType="number-pad"` ne contraint que le
+clavier tactile — un clavier HID envoie ce qu'il veut.
+
+Le vrai réglage reste côté matériel (passer la douchette en AZERTY par son
+code-barres de configuration, ou changer la disposition du clavier physique
+dans iOS) ; le correctif rend l'app juste dans les deux cas.
+
+## « Le téléphone doit rester sur la page et ne pas se verrouiller »
+
+`useKeepAwake('comptage')` dans `Scanner`, donc **un seul point pour les deux
+écrans de comptage**. Compter, c'est poser le téléphone sur une étagère : au
+verrouillage la page se perd — et une douchette, qui écrit dans un champ, perd
+son champ. Le verrou est repris au démontage, en quittant l'écran de comptage,
+ce qui évite de vider la batterie une fois le travail fini.
+
+`expo-keep-awake` était déjà installé (dépendance du paquet `expo`, pod
+présent) : il n'est déclaré dans `package.json` que pour l'honnêteté, **aucun
+`pod install` n'a été nécessaire**.
+
+## Vérifications, et la limite du simulateur
+
+Au simulateur, sur les données réelles : « & » saisi dans le champ balise
+ouvre **la balise 1**, et une sonde temporaire a rendu `dispo=true
+activation=OK` pour le keep-awake (sonde retirée, `git diff` contrôlé). Rien
+n'a été laissé en base — la balise rouverte a été reclôturée, aucun comptage
+ni article créé.
+
+⚠️ **Le simulateur ne sait pas rejouer le défaut à l'identique** : l'injection
+de texte passe elle-même par la disposition du Mac (taper `AC-3001` fait
+arriver `QC)»àÀ&`, guillemets typographiques compris) et **les caractères non
+ASCII sont écartés**. C'est pratique pour provoquer le décalage, inutile pour
+comparer au caractère près. La table, elle, est couverte par
+`tests/douchette.test.ts`.
+
+Au passage, confirmé à l'écran : `autoCapitalize="characters"` **fait bien
+remonter `À` plutôt que `à`** — d'où les majuscules accentuées ajoutées à la
+table et aux preuves. Sans elles, un scan sur deux serait resté faux.
+
 # Balises : séries imprimées, pas de stock (21 août 2026)
 
 La création de balises ne passe plus par le serveur. Le superviseur choisit
