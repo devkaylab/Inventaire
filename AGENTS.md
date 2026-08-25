@@ -2861,6 +2861,11 @@ activation=OK` pour le keep-awake (sonde retirée, `git diff` contrôlé). Rien
 n'a été laissé en base — la balise rouverte a été reclôturée, aucun comptage
 ni article créé.
 
+**Et sur le téléphone de Julien, le 25 août 2026, les deux points confirmés
+en vrai** : « ça marche, les 13 chiffres passent », puis « l'écran ne se
+verrouille plus non plus ». Un simulateur ne verrouille jamais son écran : le
+keep-awake ne pouvait pas se prouver autrement qu'avec l'appareil en main.
+
 **Le simulateur rejoue le défaut fidèlement, et c'est le meilleur banc
 d'essai qu'on ait sans douchette** — corrigé le 25 août 2026, une première
 version de cette note disait l'inverse. Son injection de texte passe par la
