@@ -84,7 +84,15 @@ describe('Grille tarifaire', () => {
     // ferait douter, au moment précis où on demande de la confiance.
     const deck = readFileSync(join(racine, 'docs/entreprise/deck/build.js'), 'utf8')
     for (const t of TRANCHES) {
+      // Le contrat, lui, nomme toutes les tranches — « sur devis » comprise.
       expect(cgv, `profil « ${t.profil} » absent des CGV`).toContain(`| ${t.profil} |`)
+      // Le deck ne montre que la grille des prix affichés, et s'arrête donc à
+      // « Très grand magasin ». La tranche au-delà d'un million n'a pas de
+      // prix de grille : c'est une conversation, pas une ligne de tableau, et
+      // l'annoncer sur une diapositive commerciale poserait une question à
+      // laquelle la diapositive ne répond pas. Décision de Julien, 25 août
+      // 2026 — ne pas « compléter » le deck en l'y ajoutant.
+      if (t.prixEuros === null) continue
       expect(deck, `profil « ${t.profil} » absent du deck`).toContain(t.profil)
     }
 
