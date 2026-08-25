@@ -796,6 +796,63 @@ a { color: inherit; text-decoration: none; }
    première carte descendait de 16 px sous la barre d'onglets d'en face, et
    l'écart entre les cartes valait 36 px au lieu de 20. */
 .dash-rail > .panel { margin-top: 0; }
+
+/* ── La tuile Progression en verre dépoli — piste « Halo » ─────────
+   Maquette validée par Julien le 25 août 2026 (trois pistes, artifact
+   « Tuile Progression en verre »). Tout est scopé sur `.dash-progress` :
+   la règle du chantier est de ne toucher que cette tuile.
+   Deux points à ne pas défaire :
+   · le halo vit dans le `::before` de la tuile, pas sur le fond de page —
+     un `backdrop-filter` ne floute que ce qui est peint DERRIÈRE l'élément,
+     et le fond de la page est uni : sans ces lueurs portées par la tuile
+     elle-même, le verre serait invisible ;
+   · `pointer-events: none` sur ce `::before` : il déborde de 32 px de la
+     carte, donc de la colonne du rail — sans lui, il avalerait les clics
+     sur la bande gauche des onglets d'en face. */
+.dash-progress {
+  position: relative;
+  background: rgba(21, 26, 39, 0.5);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.18);
+}
+.dash-progress::before {
+  content: '';
+  position: absolute;
+  inset: -32px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(280px 220px at 14% 16%, rgba(99, 102, 241, 0.16), transparent 68%),
+    radial-gradient(260px 230px at 88% 84%, rgba(56, 201, 255, 0.12), transparent 68%);
+}
+/* Le pourcentage reprend le dégradé de la barre de comptage ; l'unité « % »
+   garde sa couleur — le `-webkit-text-fill-color` hérité doit être rendu. */
+.dash-progress .dash-big {
+  background: linear-gradient(100deg, var(--accent), var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.dash-progress .dash-big-unit { color: var(--text-2); -webkit-text-fill-color: var(--text-2); }
+/* Le rail de barre : `--bg` opaque ferait une saignée sombre dans le verre. */
+.dash-progress .dash-bar { background: rgba(11, 15, 25, 0.55); }
+
+:root[data-theme="light"] .dash-progress {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(20, 25, 40, 0.1);
+  box-shadow: 0 12px 36px rgba(79, 70, 229, 0.14);
+}
+:root[data-theme="light"] .dash-progress::before {
+  background:
+    radial-gradient(280px 220px at 14% 16%, rgba(79, 70, 229, 0.1), transparent 68%),
+    radial-gradient(260px 230px at 88% 84%, rgba(10, 165, 216, 0.09), transparent 68%);
+}
+:root[data-theme="light"] .dash-progress .dash-bar { background: rgba(20, 25, 40, 0.07); }
+
 .dash-big { font-size: 56px; font-weight: 800; letter-spacing: -2px; line-height: 1; margin: 10px 0 6px; }
 .dash-big-unit { font-size: 28px; font-weight: 700; color: var(--text-2); margin-left: 4px; }
 .dash-progress-sub { color: var(--text-2); font-size: 14px; }
