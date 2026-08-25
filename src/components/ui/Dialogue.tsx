@@ -271,17 +271,32 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   },
   boutons: { flexDirection: 'row', gap: Spacing.sm + 2, marginTop: Spacing.xl },
   // 44 px : la cible tactile minimale, et la hauteur des boutons de la charte.
+  //
+  // ⚠️ **`minHeight`, pas `height`.** Les deux boutons sont à `flex: 1`, donc
+  // à largeur égale quelle que soit la longueur des libellés : sur la largeur
+  // d'un téléphone, « Compter quand même » passe à la ligne. Avec une hauteur
+  // figée, le texte débordait de la pastille — vu au simulateur le 25 août
+  // 2026. Il fait maintenant grandir le bouton, et le `stretch` de la rangée
+  // donne la même hauteur à son voisin. Le rembourrage horizontal et le
+  // centrage vont avec : sans eux, un libellé sur deux lignes se colle au
+  // bord.
   btnContour: {
-    flex: 1, height: 44, borderRadius: Radius.md,
+    flex: 1, minHeight: 44, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
     borderWidth: 1, borderColor: t.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
-  btnContourText: { color: t.textSecondary, fontSize: 15, fontFamily: Font.medium },
+  btnContourText: {
+    color: t.textSecondary, fontSize: 15, fontFamily: Font.medium, textAlign: 'center',
+  },
   btnPlein: {
-    flex: 1, height: 44, borderRadius: Radius.md,
+    flex: 1, minHeight: 44, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
     alignItems: 'center', justifyContent: 'center',
   },
-  btnPleinText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
+  btnPleinText: {
+    color: t.onAccent, fontSize: 15, fontFamily: Font.semibold, textAlign: 'center',
+  },
   presse: { opacity: 0.75 },
 
   bandeau: {

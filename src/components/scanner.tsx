@@ -387,6 +387,40 @@ export function Scanner({
     (z) => (baliseMode === 'count' ? z.count_status : z.audit_status) === 'done',
   )
 
+  // ── Rouvrir une balise terminée : le dire avant, pas après ────────────────
+  //
+  // `counts` est en **ajout pur** — rouvrir une balise n'efface rien, les
+  // scans s'ajoutent au total déjà là. Le superviseur s'en aperçoit : la liste
+  // se réamorce sous ses yeux avec l'existant. **Le compteur, non** : la
+  // policy `counts_select_own` ne lui rend que ses propres lignes, donc la
+  // liste s'affiche vide alors que la balise porte déjà des pièces, et il
+  // double le comptage sans le voir.
+  //
+  // Le total, lui, lui est accessible — `get_zone_dashboard` est SECURITY
+  // DEFINER et somme tous les compteurs. C'est donc une donnée qu'il a déjà
+  // sur son téléphone, et qu'il suffit de lui mettre devant les yeux au bon
+  // moment. Rien à ouvrir côté serveur : les droits sur les lignes restent ce
+  // qu'ils sont, on ne dit ni qui a compté, ni quoi.
+  //
+  // ⚠️ Se pose **avant** d'appeler `set_balise` : après, la balise serait déjà
+  // rouverte, et refuser obligerait à la reclôturer — ce qui déplacerait sa
+  // date de clôture pour rien.
+
+  /** La même normalisation que `norm_balise` en base : sans espaces, en capitales. */
+  const normBalise = (v: string) => v.replace(/\s/g, '').toUpperCase()
+
+  function baliseDejaFaite(code: string): { unites: number; refs: number } | null {
+    const cible = normBalise(code)
+    const z = (zoneRows ?? []).find((r) => normBalise(r.code) === cible)
+    if (!z) return null
+    const compte = baliseModeRef.current === 'count'
+    if ((compte ? z.count_status : z.audit_status) !== 'done') return null
+    return {
+      unites: Math.round(Number(compte ? z.count_units : z.audit_units)),
+      refs: Number(compte ? z.count_lines : z.audit_lines),
+    }
+  }
+
   // Réamorce la liste avec le contenu de la balise ouverte (tous compteurs),
   // pour voir et corriger ce qui a déjà été compté/audité dans cette zone.
   useEffect(() => {
@@ -543,7 +577,33 @@ export function Scanner({
   //
   // `allowCreate` n'est vrai qu'au second passage, quand la personne a confirmé
   // vouloir ajouter une balise absente des plages de l'inventaire.
-  async function openBaliseCode(code: string, closePrev: boolean, allowCreate = false) {
+  /**
+   * @param sansAvertir  vrai quand la personne vient **exprès** rouvrir une
+   *                     balise depuis « Revenir sur une balise » : ce rang
+   *                     affiche déjà le total et son bouton dit « Rouvrir ».
+   *                     Y ajouter une question apprendrait à cliquer sans
+   *                     lire, et la question ne servirait plus là où elle
+   *                     compte — le scan d'une étiquette qu'on croit neuve.
+   */
+  async function openBaliseCode(
+    code: string, closePrev: boolean, allowCreate = false, sansAvertir = false,
+  ) {
+    const compte = baliseModeRef.current === 'count'
+    const faite = allowCreate || sansAvertir ? null : baliseDejaFaite(code)
+    if (faite && faite.unites > 0) {
+      const p = faite.unites > 1 ? 's' : ''
+      const r = faite.refs > 1 ? 's' : ''
+      const ok = await demander({
+        titre: `Balise ${code} déjà ${compte ? 'comptée' : 'auditée'}`,
+        texte: `${faite.unites} pièce${p} sur ${faite.refs} référence${r} y sont déjà enregistrée${p}. `
+          + 'Vos scans viendront s’ajouter à ce total : rien ne sera remplacé.',
+        note: 'Vous revenez corriger une erreur ? Continuez. Vous pensiez ouvrir une '
+          + 'balise neuve ? Vérifiez le numéro sur l’étiquette.',
+        action: compte ? 'Compter quand même' : 'Auditer quand même',
+        annuler: 'Ne pas ouvrir',
+      })
+      if (!ok) return
+    }
     try {
       if (closePrev && activeBaliseRef.current) {
         await setBalise(sessionId, activeBaliseRef.current.code, baliseModeRef.current, false)
@@ -1061,7 +1121,7 @@ export function Scanner({
             keyExtractor={(z) => z.id}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <Pressable style={styles.reopenRow} onPress={() => openBaliseCode(item.code, false)}>
+              <Pressable style={styles.reopenRow} onPress={() => openBaliseCode(item.code, false, false, true)}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.reopenName} numberOfLines={1}>{item.name ?? 'Sans zone'}</Text>
                   <Text style={styles.reopenMeta}>

@@ -1349,3 +1349,50 @@ describe('les pop-ups sont à nous', () => {
     expect(lire('app/login.tsx')).toContain('avertir({')
   })
 })
+
+// Recompter une balise déjà faite n'efface rien : `counts` est en ajout pur,
+// les quantités se cumulent. Le superviseur le voit — la liste se réamorce
+// avec l'existant ; le compteur non, `counts_select_own` ne lui rend que ses
+// propres lignes. D'où l'avertissement, posé sur la seule donnée que les deux
+// partagent : le total de la balise, rendu par `get_zone_dashboard`.
+describe('rouvrir une balise déjà comptée', () => {
+  const scanner = lire('components/scanner.tsx')
+
+  it('avertit avant d’ouvrir, jamais après', () => {
+    // Après `set_balise`, la balise serait déjà rouverte : refuser
+    // obligerait à la reclôturer, ce qui déplacerait sa date de clôture.
+    const corps = scanner.slice(scanner.indexOf('async function openBaliseCode'))
+    const question = corps.indexOf('baliseDejaFaite(code)')
+    const ouverture = corps.indexOf('setBalise(sessionId, code')
+    expect(question).toBeGreaterThan(-1)
+    expect(ouverture).toBeGreaterThan(-1)
+    expect(question).toBeLessThan(ouverture)
+  })
+
+  it('dit que les scans s’ajoutent, sans dire qui a compté', () => {
+    expect(scanner).toContain('ajouter à ce total')
+    // Le total est public entre membres ; le détail des lignes ne l'est pas.
+    // L'avertissement ne doit nommer personne.
+    const bloc = scanner.slice(scanner.indexOf('déjà ${compte'), scanner.indexOf('if (!ok) return'))
+    expect(bloc).not.toMatch(/counted_by|counted_by|par \$\{/)
+  })
+
+  it('se tait sur le chemin délibéré et sur une balise neuve', () => {
+    // « Revenir sur une balise » affiche déjà le total et dit « Rouvrir » :
+    // une question de plus y apprendrait à cliquer sans lire.
+    expect(scanner).toContain('openBaliseCode(item.code, false, false, true)')
+    expect(scanner).toContain('allowCreate || sansAvertir ? null : baliseDejaFaite(code)')
+  })
+
+  it('lit le statut du mode en cours, pas celui de l’autre passe', () => {
+    // Une balise comptée mais pas auditée ne doit pas déclencher
+    // l'avertissement quand on vient l'auditer.
+    expect(scanner).toContain("(compte ? z.count_status : z.audit_status) !== 'done'")
+  })
+
+  it('normalise le code comme la base', () => {
+    // `norm_balise` : sans espaces, en capitales. Sans cela, « 1000 » scanné
+    // ne retrouverait pas la ligne du tableau de bord.
+    expect(scanner).toContain("replace(/\\s/g, '').toUpperCase()")
+  })
+})
