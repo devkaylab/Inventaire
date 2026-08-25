@@ -13,6 +13,49 @@ const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
  * pour que l'inventaire la déclare non comptée — les pièces, elles, n'avaient
  * pas bougé (`counts` est en ajout pur).
  */
+/**
+ * Consulter une balise finie ne l'ouvre pas.
+ *
+ * Le garde-fou du retour ne suffit pas à lui seul : il suppose une sortie
+ * propre. Une application tuée, un téléphone à plat ou une panne au mauvais
+ * moment laisseraient la balise ouverte, donc décomptée. La seule garantie est
+ * de **ne rien écrire tant que rien n'est compté**.
+ */
+describe('consulter une balise finie ne l’ouvre pas', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+
+  it('ouvre en local et sort avant d’appeler set_balise', () => {
+    const ouverture = scanner.slice(scanner.indexOf('async function openBaliseCode'))
+    const differe = ouverture.indexOf('const terminee = allowCreate ? null : rangeeTerminee(code)')
+    const appel = ouverture.indexOf('await setBalise(sessionId, code, baliseModeRef.current, true, allowCreate)')
+    expect(differe).toBeGreaterThan(0)
+    // ⚠️ L'ordre EST la garantie : la branche différée doit précéder l'appel,
+    // et rendre la main (`return`) avant lui.
+    expect(differe).toBeLessThan(appel)
+    expect(ouverture.slice(differe, appel)).toContain('return')
+  })
+
+  it('ne rend l’ouverture réelle qu’en écrivant un comptage', () => {
+    // Tout ce qui écrit passe par `enregistrer`, qui matérialise d'abord.
+    expect(scanner).toContain('async function enregistrer(')
+    expect(scanner).toContain('await materialiserOuverture()')
+    // Plus aucune écriture ne court-circuite ce passage obligé.
+    const appelsDirects = scanner.match(/await onArticleResolved\(/g) ?? []
+    expect(appelsDirects).toHaveLength(1) // le seul, à l'intérieur d'`enregistrer`
+  })
+
+  it('ne referme pas ce qui n’a jamais été ouvert', () => {
+    // Rappeler `set_balise` déplacerait la date de clôture d'origine.
+    const cloture = scanner.slice(scanner.indexOf('async function closeBalise'))
+    expect(cloture.indexOf('if (ouvertureDiffereeRef.current)'))
+      .toBeLessThan(cloture.indexOf('await setBalise('))
+  })
+
+  it('une balise seulement consultée ne pose pas la question au retour', () => {
+    expect(scanner).toContain('!!activeBalise && !ouvertureDifferee && !sortieAutorisee')
+  })
+})
+
 describe('quitter le comptage avec une balise ouverte', () => {
   const scanner = lire('../src/components/scanner.tsx')
 
@@ -20,7 +63,7 @@ describe('quitter le comptage avec une balise ouverte', () => {
     // ⚠️ `beforeRemove` ne retient pas cette pile : l'écran part quand même et
     // la question s'affiche par-dessus l'écran d'arrivée. Essayé, constaté au
     // simulateur, et le runtime le dit lui-même dans son alerte.
-    expect(scanner).toContain('usePreventRemove(!!activeBalise && !sortieAutorisee')
+    expect(scanner).toContain('usePreventRemove(!!activeBalise')
     expect(scanner).not.toContain("addListener('beforeRemove'")
   })
 

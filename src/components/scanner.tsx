@@ -236,6 +236,13 @@ export function Scanner({
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
   const navigation = useNavigation()
+  /**
+   * Une balise terminée ouverte pour être **consultée** : rien n'est écrit
+   * côté serveur tant qu'on n'a rien compté. L'état sert au garde-fou du
+   * retour (qui ne doit alors rien demander), le ref aux appels asynchrones.
+   */
+  const [ouvertureDifferee, setOuvertureDifferee] = useState(false)
+  const ouvertureDiffereeRef = useRef(false)
   // ── L'écran ne se verrouille pas pendant le comptage ──────────────────────
   //
   // Compter, c'est poser le téléphone sur une étagère, scanner, le reprendre.
@@ -417,6 +424,23 @@ export function Scanner({
 
   /** La même normalisation que `norm_balise` en base : sans espaces, en capitales. */
   const normBalise = (v: string) => v.replace(/\s/g, '').toUpperCase()
+
+  /**
+   * La ligne de la balise si elle est **terminée** dans le mode courant.
+   *
+   * C'est ce qui déclenche l'ouverture différée : une balise finie qu'on vient
+   * consulter ne doit rien changer côté serveur tant qu'on n'a rien compté.
+   * Contrairement à `baliseDejaFaite`, elle ne demande pas que la balise porte
+   * des pièces : un rayon vide clôturé est terminé lui aussi, et le décompter
+   * pour l'avoir regardé serait le même défaut.
+   */
+  function rangeeTerminee(code: string) {
+    const cible = normBalise(code)
+    const z = (zoneRows ?? []).find((r) => normBalise(r.code) === cible)
+    if (!z) return null
+    const compte = baliseModeRef.current === 'count'
+    return (compte ? z.count_status : z.audit_status) === 'done' ? z : null
+  }
 
   function baliseDejaFaite(code: string): { unites: number; refs: number } | null {
     const cible = normBalise(code)
@@ -614,8 +638,25 @@ export function Scanner({
       if (!ok) return
     }
     try {
-      if (closePrev && activeBaliseRef.current) {
+      if (closePrev && activeBaliseRef.current && !ouvertureDiffereeRef.current) {
         await setBalise(sessionId, activeBaliseRef.current.code, baliseModeRef.current, false)
+      }
+      // ── Consulter n'ouvre rien ────────────────────────────────────────────
+      // Une balise déjà terminée s'ouvre **en local seulement** : sa ligne ne
+      // bouge pas, elle reste « comptée » avec sa date d'origine. L'ouverture
+      // ne devient réelle qu'au premier geste qui touche au comptage (voir
+      // `materialiserOuverture`). Sans cela, la seule consultation la
+      // décomptait — et le garde-fou du retour ne rattrapait pas une
+      // application tuée, un téléphone à plat ou une panne au mauvais moment.
+      const terminee = allowCreate ? null : rangeeTerminee(code)
+      if (terminee) {
+        ignoreBaliseRef.current = terminee.code
+        ouvertureDiffereeRef.current = true
+        setOuvertureDifferee(true)
+        setActiveBalise({ code: terminee.code, name: terminee.name ?? null })
+        pingSession(sessionId, 'balise')
+        playScanSound()
+        return
       }
       const result = await setBalise(sessionId, code, baliseModeRef.current, true, allowCreate)
       if (!result.success) {
@@ -667,6 +708,17 @@ export function Scanner({
   async function closeBalise(silencieux = false) {
     const active = activeBaliseRef.current
     if (!active) return
+    // Ouverture différée jamais concrétisée : rien n'a été ouvert, il n'y a
+    // rien à refermer. Rappeler `set_balise` déplacerait sa date de clôture
+    // pour rien — c'est justement ce qu'on cherche à préserver.
+    if (ouvertureDiffereeRef.current) {
+      ouvertureDiffereeRef.current = false
+      setOuvertureDifferee(false)
+      ignoreBaliseRef.current = active.code
+      setActiveBalise(null)
+      playScanSound()
+      return
+    }
     try {
       const result = await setBalise(sessionId, active.code, baliseModeRef.current, false)
       if (!result.success) {
@@ -717,7 +769,10 @@ export function Scanner({
   // ce hook, et non `navigation.addListener`, qui tient le retour natif et le
   // geste de balayage.
   const [sortieAutorisee, setSortieAutorisee] = useState<ActionNavigation | null>(null)
-  usePreventRemove(!!activeBalise && !sortieAutorisee, ({ data }) => {
+  // Une balise seulement consultée n'a rien changé : partir ne coûte rien, la
+  // question ne se pose pas. Elle ne reste que pour une balise réellement
+  // ouverte — celle où l'on a compté quelque chose.
+  usePreventRemove(!!activeBalise && !ouvertureDifferee && !sortieAutorisee, ({ data }) => {
     void demander({
       titre: `Clôturer la balise ${activeBaliseRef.current?.code} ?`,
       texte: 'Vous quittez le comptage alors que cette balise est encore ouverte. '
@@ -756,8 +811,31 @@ export function Scanner({
     baliseInputRef.current?.clear()
   }
 
+  /**
+   * Rend réelle une ouverture différée, puis enregistre. **Tout ce qui écrit
+   * un comptage passe par ici** : c'est le seul endroit où « on touche à la
+   * balise », donc le seul où elle doit repasser en « en cours ».
+   * Elle est appelée avant l'écriture : si l'ouverture échoue, rien n'est
+   * compté dans une balise que le tableau de bord croit terminée.
+   */
+  async function materialiserOuverture() {
+    if (!ouvertureDiffereeRef.current) return
+    const active = activeBaliseRef.current
+    if (!active) return
+    const r = await setBalise(sessionId, active.code, baliseModeRef.current, true)
+    if (!r.success) throw new Error(r.error ?? 'Ouverture impossible.')
+    ouvertureDiffereeRef.current = false
+    setOuvertureDifferee(false)
+    queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+  }
+
+  async function enregistrer(article: Article, qty: number, zoneCode: string | null) {
+    await materialiserOuverture()
+    await onArticleResolved(article, qty, zoneCode)
+  }
+
   async function recordArticle(article: Article, zoneCode: string | null = null) {
-    await onArticleResolved(article, 1, zoneCode)
+    await enregistrer(article, 1, zoneCode)
     // Réveille le tableau de bord du superviseur sans attendre son sondage.
     pingSession(sessionId, 'count')
     playScanSound()
@@ -813,7 +891,7 @@ export function Scanner({
   // ── List actions ───────────────────────────────────────────────────────────
   async function handleIncrement(entry: ScanEntry) {
     try {
-      await onArticleResolved(entry.article, 1, activeBaliseRef.current?.code ?? null)
+      await enregistrer(entry.article, 1, activeBaliseRef.current?.code ?? null)
       setRecentScans(prev =>
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty + 1, timestamp: Date.now() } : e)
       )
@@ -825,7 +903,7 @@ export function Scanner({
   async function handleDecrement(entry: ScanEntry) {
     if (entry.qty <= 1) { handleDelete(entry); return }
     try {
-      await onArticleResolved(entry.article, -1, activeBaliseRef.current?.code ?? null)
+      await enregistrer(entry.article, -1, activeBaliseRef.current?.code ?? null)
       setRecentScans(prev =>
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty - 1 } : e)
       )
@@ -843,7 +921,7 @@ export function Scanner({
     }).then(async (ok) => {
       if (!ok) return
       try {
-        await onArticleResolved(entry.article, -entry.qty, activeBaliseRef.current?.code ?? null)
+        await enregistrer(entry.article, -entry.qty, activeBaliseRef.current?.code ?? null)
         setRecentScans(prev => prev.filter(e => e.id !== entry.id))
       } catch {
         signaler.erreur('Erreur', 'Impossible de supprimer la ligne.')
