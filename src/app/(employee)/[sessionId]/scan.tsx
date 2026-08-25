@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -13,6 +13,7 @@ import { Scanner } from '@/components/scanner'
 import { friendlyInsertCountError } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
+import { signaler } from '@/lib/dialogue'
 
 export default function EmployeeScanScreen() {
   const { sessionId, mode } = useLocalSearchParams<{ sessionId: string; mode?: string }>()
@@ -76,7 +77,7 @@ export default function EmployeeScanScreen() {
       if (usesZones) await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     } catch (e: unknown) {
       console.error('[scan] insertCount', e)
-      Alert.alert('Enregistrement impossible', friendlyInsertCountError(e))
+      signaler.erreur('Enregistrement impossible', friendlyInsertCountError(e))
     }
   }
 

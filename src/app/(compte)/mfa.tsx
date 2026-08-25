@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -26,6 +25,7 @@ import { QrCode } from '@/components/QrCode'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { demander, signaler } from '@/lib/dialogue'
 
 /**
  * Double authentification — activation depuis le téléphone.
@@ -70,7 +70,7 @@ export default function MfaScreen() {
     try {
       setEnroll(await startEnrollTotp())
     } catch (e) {
-      Alert.alert('Activation impossible', errorMessage(e))
+      signaler.erreur('Activation impossible', errorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -88,7 +88,7 @@ export default function MfaScreen() {
     try {
       await Linking.openURL(uri)
     } catch {
-      Alert.alert(
+      signaler.erreur(
         'Aucune application d’authentification',
         'Installez-en une (Google Authenticator, Aegis, 1Password…), puis recopiez-y la clé affichée en dessous.',
       )
@@ -101,7 +101,7 @@ export default function MfaScreen() {
     try {
       const r = await challengeAndVerify(enroll.factorId, code)
       if (!r.success) {
-        Alert.alert(
+        signaler.erreur(
           'Code refusé',
           'Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.',
         )
@@ -110,11 +110,11 @@ export default function MfaScreen() {
       setEnroll(null)
       setCode('')
       await relire()
-      Alert.alert(
-        'Double authentification activée',
-        'Votre code vous sera demandé à chaque connexion, sur le téléphone comme sur le site.',
-        [{ text: 'Fermer', onPress: () => router.back() }],
-      )
+      signaler.succes(
+          'Double authentification activée',
+          'Votre code vous sera demandé à chaque connexion, sur le téléphone comme sur le site.',
+        )
+        router.back()
     } finally {
       setBusy(false)
     }
@@ -122,25 +122,20 @@ export default function MfaScreen() {
 
   function confirmerRetrait() {
     if (!factorId) return
-    Alert.alert(
-      'Désactiver la double authentification ?',
-      'Votre mot de passe redeviendra seul à protéger votre compte.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Désactiver',
-          style: 'destructive',
-          onPress: async () => {
-            const r = await unenrollTotp(factorId)
-            if (!r.success) {
-              Alert.alert('Erreur', r.error ?? 'Désactivation impossible.')
-              return
-            }
-            await relire()
-          },
-        },
-      ],
-    )
+    void demander({
+      titre: 'Désactiver la double authentification ?',
+      texte: 'Votre mot de passe redeviendra seul à protéger votre compte.',
+      action: 'Désactiver',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      const r = await unenrollTotp(factorId)
+      if (!r.success) {
+        signaler.erreur('Désactivation impossible', r.error ?? undefined)
+        return
+      }
+      await relire()
+    })
   }
 
   if (chargement) {

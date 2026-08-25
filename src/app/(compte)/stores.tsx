@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,6 +17,7 @@ import { errorMessage } from '@/lib/errors'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 /**
  * Magasins — les magasins du superviseur et leurs codes.
@@ -60,7 +60,7 @@ export default function StoresScreen() {
           'Ce code est confidentiel : ne le communiquez pas aux compteurs.',
       })
     } catch (e) {
-      Alert.alert('Partage impossible', errorMessage(e))
+      signaler.erreur('Partage impossible', errorMessage(e))
     }
   }
 

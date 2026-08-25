@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,6 +21,7 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { CroixIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { demander, signaler } from '@/lib/dialogue'
 
 /**
  * Mon équipe — les compteurs du superviseur, rangés par magasin.
@@ -67,25 +67,20 @@ export default function TeamScreen() {
    */
   const handleRemoveCounter = useCallback((counter: TeamCounter, store: TeamStore) => {
     const nom = counter.full_name || counter.email || 'ce compteur'
-    Alert.alert(
-      `Retirer ${nom} ?`,
-      `${nom} n'aura plus accès aux inventaires de ${store.name}. Ses comptages déjà enregistrés sont conservés.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Retirer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeCounterFromStore(counter.id, store.id)
-              await queryClient.invalidateQueries({ queryKey: ['my-team'] })
-            } catch (e) {
-              Alert.alert('Retrait impossible', errorMessage(e))
-            }
-          },
-        },
-      ],
-    )
+    void demander({
+      titre: `Retirer ${nom} ?`,
+      texte: `${nom} n'aura plus accès aux inventaires de ${store.name}. Ses comptages déjà enregistrés sont conservés.`,
+      action: 'Retirer',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await removeCounterFromStore(counter.id, store.id)
+        await queryClient.invalidateQueries({ queryKey: ['my-team'] })
+      } catch (e) {
+        signaler.erreur('Retrait impossible', errorMessage(e))
+      }
+    })
   }, [queryClient])
 
   const stores = data?.stores ?? []
@@ -94,25 +89,21 @@ export default function TeamScreen() {
   const personne = stores.every((s) => s.counters.length === 0) && invitations.length === 0
 
   function handleCancelInvite(inv: TeamInvite) {
-    Alert.alert(
-      'Annuler l’invitation ?',
-      `${nomInvite(inv) || inv.email} ne pourra plus créer son compte.`,
-      [
-        { text: 'Retour', style: 'cancel' },
-        {
-          text: 'Annuler l’invitation',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await cancelMyInvitation(inv.id)
-              await queryClient.invalidateQueries({ queryKey: ['my-team'] })
-            } catch (e) {
-              Alert.alert('Erreur', errorMessage(e))
-            }
-          },
-        },
-      ],
-    )
+    void demander({
+      titre: 'Annuler l’invitation ?',
+      texte: `${nomInvite(inv) || inv.email} ne pourra plus créer son compte.`,
+      action: 'Annuler l’invitation',
+      annuler: 'Retour',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await cancelMyInvitation(inv.id)
+        await queryClient.invalidateQueries({ queryKey: ['my-team'] })
+      } catch (e) {
+        signaler.erreur('Erreur', errorMessage(e))
+      }
+    })
   }
 
 

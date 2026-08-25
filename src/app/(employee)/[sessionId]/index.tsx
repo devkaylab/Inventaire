@@ -1,4 +1,11 @@
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -15,6 +22,7 @@ import { useNotificationsSurInventaire } from '@/lib/push'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
+import { demander, signaler } from '@/lib/dialogue'
 
 export default function EmployeeProgressScreen() {
   // Les notifications se demandent ici : ouvrir un inventaire est le geste
@@ -62,11 +70,11 @@ export default function EmployeeProgressScreen() {
     mutationFn: () => leaveSession(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      Alert.alert('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
+      signaler.succes('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
       if (router.canGoBack()) router.back()
       else router.replace('/(employee)/')
     },
-    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
   })
 
   function confirmLeave() {
@@ -75,14 +83,12 @@ export default function EmployeeProgressScreen() {
     const warning = queue.pending > 0
       ? `\n\nAttention : ${queue.pending} balise${queue.pending > 1 ? 's' : ''} (${baliseSummary(queue.balises, 5)}) n'${queue.pending > 1 ? 'ont' : 'a'} pas encore été remontée${queue.pending > 1 ? 's' : ''}. Retrouvez du réseau avant de quitter.`
       : ''
-    Alert.alert(
-      "Quitter l'inventaire",
-      `Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l'équipe.${warning}`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Quitter', style: 'destructive', onPress: () => leaveMutation.mutate() },
-      ],
-    )
+    void demander({
+      titre: 'Quitter l’inventaire ?',
+      texte: `Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l'équipe.${warning}`,
+      action: 'Quitter',
+      ton: 'danger',
+    }).then((ok) => { if (ok) leaveMutation.mutate() })
   }
 
   const countedPieces = mesTotaux?.counted ?? 0

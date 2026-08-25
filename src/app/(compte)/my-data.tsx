@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
@@ -7,6 +14,7 @@ import { exportMyData } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 /**
  * Droit d'accès et de portabilité (articles 15 et 20 du RGPD).
@@ -39,10 +47,10 @@ export default function MyDataScreen() {
           UTI: 'public.json',
         })
       } else {
-        Alert.alert('Fichier créé', `Vos données ont été enregistrées dans ${filename}.`)
+        signaler.succes('Fichier créé', `Vos données ont été enregistrées dans ${filename}.`)
       }
     } catch (e) {
-      Alert.alert('Export impossible', errorMessage(e))
+      signaler.erreur('Export impossible', errorMessage(e))
     } finally {
       setBusy(false)
     }

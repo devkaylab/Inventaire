@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,6 +17,7 @@ import { updateMyName } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 /**
  * Modifier son nom.
@@ -44,7 +44,7 @@ export default function NameScreen() {
       await refreshProfile()
       router.back()
     } catch (e) {
-      Alert.alert('Modification impossible', errorMessage(e))
+      signaler.erreur('Modification impossible', errorMessage(e))
     } finally {
       setBusy(false)
     }

@@ -53,3 +53,6 @@ logo-d-application-inventaire/
 # Playwright (exécution hors du dossier web)
 test-results/
 supabase/.temp/
+
+# Canevas de design publiés : 2 Mo d’éditeur embarqué, régénérables
+/*-quantinvo.html

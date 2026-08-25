@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -11,6 +11,17 @@ import { describe, expect, it } from 'vitest'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const src = (p: string) => path.join(here, '..', 'src', p)
 const lire = (p: string) => readFileSync(src(p), 'utf8')
+
+/** Tous les fichiers de `src/`, pour les gardes qui balaient au lieu de citer. */
+function fichiersSource(dossier = src('.')): string[] {
+  const out: string[] = []
+  for (const e of readdirSync(dossier, { withFileTypes: true })) {
+    const chemin = path.join(dossier, e.name)
+    if (e.isDirectory()) out.push(...fichiersSource(chemin))
+    else if (/\.tsx?$/.test(e.name)) out.push(chemin)
+  }
+  return out
+}
 
 describe('découpage de Mon compte', () => {
   it('l’ancien écran carrefour n’existe plus', () => {
@@ -202,7 +213,10 @@ describe('balise hors plage — proposer l’ajout plutôt qu’un « OK » sec'
 
   it('l’alerte propose d’ajouter la balise', () => {
     expect(scanner).toContain('Balise hors plage')
-    expect(scanner).toMatch(/text: 'Ajouter'/)
+    // Depuis le 24 août 2026 la question est une carte de l'app, pas une
+    // alerte iOS : le bouton se déclare en `action`, et son libellé compte
+    // autant qu'avant — c'est lui qui donne au compteur un moyen d'avancer.
+    expect(scanner).toMatch(/action: 'Ajouter'/)
   })
 
   it('l’ajout repasse par la base avec la création autorisée', () => {
@@ -331,7 +345,9 @@ describe('supprimer et retirer depuis l’app', () => {
     // Sur un téléphone, une corbeille se touche vite.
     expect(liste).toContain('Supprimer « ${nom} » ?')
     expect(liste).toContain('n’est pas clôturé')
-    expect(liste).toContain("style: 'destructive'")
+    // `ton: 'danger'` a remplacé `style: 'destructive'` le 24 août 2026 :
+    // c'est lui qui peint le bouton en rouge dans la carte de confirmation.
+    expect(liste).toContain("ton: 'danger'")
   })
 
   it('retirer un compteur vise UN magasin, pas tous', () => {
@@ -983,9 +999,9 @@ describe('le parcours du superviseur, vu à l’écran (23 août 2026)', () => {
   // Une saisie incomplète n'est pas une erreur — surtout au premier
   // inventaire de quelqu'un qui découvre l'app.
   it('une saisie incomplète ne se titre pas « Erreur »', () => {
-    expect(nouveau).not.toContain("Alert.alert('Erreur', \"Donnez un nom à l'inventaire.\")")
-    expect(nouveau).toContain("Alert.alert('Nom manquant'")
-    expect(zones).toContain("Alert.alert('Plage incomplète'")
+    expect(nouveau).not.toContain("signaler.erreur('Erreur', \"Donnez un nom à l'inventaire.\")")
+    expect(nouveau).toContain("signaler.erreur('Nom manquant'")
+    expect(zones).toContain("signaler.erreur('Plage incomplète'")
   })
 
   // Amendé le 23 août : le pop-up « Inventaire créé » a été retiré avec le
@@ -1244,5 +1260,92 @@ describe('la porte de bienvenue mène toujours quelque part (24 août 2026)', ()
     // remplacent.
     expect(porte).toContain("aller: () => router.replace('/(supervisor)/')")
     expect(porte).toContain("aller: () => router.replace('/(employee)/')")
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Les pop-ups sont à nous (24 août 2026)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// `Alert.alert` n'avait rien du produit : police système, bleu d'iOS, et
+// surtout **deux réponses du même poids** — sur une suppression, « Annuler »
+// et « Supprimer » se ressemblaient trait pour trait. Direction B retenue
+// avec Julien sur trois canevas : la question s'ouvre au même moment et au
+// même endroit, dans une carte de l'app, et la réponse voulue est un bouton
+// plein tandis qu'« Annuler » n'est qu'un contour.
+//
+// Trois formes, et le partage entre elles est la décision que ces gardes
+// tiennent : `demander` pour ce qui se refuse, `avertir` pour ce qui doit
+// être lu, `signaler` pour ce qui passe tout seul.
+describe('les pop-ups sont à nous', () => {
+  const dialogue = readFileSync(src('lib/dialogue.ts'), 'utf8')
+  const carte = readFileSync(src('components/ui/Dialogue.tsx'), 'utf8')
+  const layout = lire('app/_layout.tsx')
+
+  it('plus une seule alerte iOS dans les écrans', () => {
+    // `passControls.ts` est du code mort — plus personne ne l'importe depuis
+    // le retrait d'`advance_pass` — et il est le seul à en garder.
+    const restants: string[] = []
+    for (const f of fichiersSource()) {
+      if (f.endsWith('passControls.ts')) continue
+      if (/\bAlert\.alert\(/.test(readFileSync(f, 'utf8'))) restants.push(f)
+    }
+    expect(restants).toEqual([])
+  })
+
+  it('l’hôte est monté à la racine, au-dessus de la pile', () => {
+    // Une question peut être posée depuis n'importe quel écran ; si l'hôte
+    // vivait dans un écran, elle disparaîtrait avec lui.
+    expect(layout).toContain('<Dialogues />')
+  })
+
+  it('la carte est un Modal, le bandeau non', () => {
+    // Sur iOS rien ne passe au-dessus d'un Modal sans en être un, et l'app en
+    // a quatre. Le bandeau, lui, ne bloque rien : il reste une surcouche.
+    expect(carte).toMatch(/<Modal\b/)
+    expect(carte).toContain("pointerEvents=\"box-none\"")
+  })
+
+  it('la réponse part au démontage, jamais au toucher', () => {
+    // ⚠️ iOS refuse d'ouvrir une feuille de partage tant qu'une présentation
+    // est en cours : c'est ce qui avait rendu l'impression des balises
+    // inutilisable. Une action qui partage juste après un « oui » doit donc
+    // partir quand plus rien n'est présenté.
+    expect(carte).toContain('onDismiss={vider}')
+    expect(carte).toContain('questionRefermee(')
+    // Android n'a pas `onDismiss` : le repli minuté doit rester.
+    expect(carte).toMatch(/Platform\.OS !== 'ios'/)
+  })
+
+  it('le voile ne referme rien', () => {
+    // Toucher à côté n'est pas une réponse : sur une suppression ce serait
+    // ambigu, sur un refus ce serait perdre l'explication.
+    expect(carte).not.toMatch(/styles\.voile[\s\S]{0,200}onPress/)
+  })
+
+  it('un bandeau passe tout seul, une erreur reste plus longtemps', () => {
+    // Décision de Julien : personne ne tape « OK » pour un PDF qui est sorti.
+    // Un refus, lui, dit souvent quoi corriger — il lui faut le temps d'être lu.
+    expect(dialogue).toMatch(/erreur: 6000/)
+    expect(dialogue).toMatch(/succes: 3500/)
+  })
+
+  it('les résultats sont des bandeaux, pas des questions', () => {
+    for (const [fichier, titre] of [
+      ['components/BaliseCreator.tsx', 'PDF généré'],
+      ['app/(compte)/my-data.tsx', 'Fichier créé'],
+      ['app/(compte)/new-member.tsx', 'Compteur ajouté'],
+    ] as const) {
+      const texte = lire(fichier)
+      expect(texte).toContain(`'${titre}'`)
+      expect(texte).toMatch(new RegExp(`signaler\\.succes\\([\\s\\S]{0,20}'${titre}'`))
+    }
+  })
+
+  it('ce qui indique une marche à suivre garde son bouton', () => {
+    // « adressez-vous à l'administrateur de votre entreprise » ne peut pas
+    // passer tout seul : c'est la seule chose à faire ensuite.
+    expect(lire('app/(compte)/new-member.tsx')).toContain('avertir({')
+    expect(lire('app/login.tsx')).toContain('avertir({')
   })
 })

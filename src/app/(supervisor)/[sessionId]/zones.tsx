@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -22,6 +21,7 @@ import { BaliseCreator } from '@/components/BaliseCreator'
 import { CorbeilleIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { demander, signaler } from '@/lib/dialogue'
 
 type ZoneGroup = { name: string; total: number; counted: number; audited: number; codes: string[] }
 
@@ -78,7 +78,7 @@ export default function ZonesScreen() {
     mutationFn: () => defineZoneRange(sessionId, name.trim(), parseInt(start, 10), parseInt(end, 10)),
     onSuccess: async (result) => {
       if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Affectation impossible.')
+        signaler.erreur('Erreur', result.error ?? 'Affectation impossible.')
         return
       }
       setName('')
@@ -86,36 +86,38 @@ export default function ZonesScreen() {
       setEnd('')
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     },
-    onError: (e) => Alert.alert('Erreur', errorMessage(e)),
+    onError: (e) => signaler.erreur('Erreur', errorMessage(e)),
   })
 
   const del = useMutation({
     mutationFn: (zoneName: string) => deleteZone(sessionId, zoneName),
     onSuccess: async (result) => {
       if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Suppression impossible.')
+        signaler.erreur('Erreur', result.error ?? 'Suppression impossible.')
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     },
-    onError: (e) => Alert.alert('Erreur', errorMessage(e)),
+    onError: (e) => signaler.erreur('Erreur', errorMessage(e)),
   })
 
   function onAssign() {
     const s = parseInt(start, 10)
     const e = parseInt(end, 10)
     // Saisie incomplète : on dit ce qu'il manque, on ne titre pas « Erreur ».
-    if (!name.trim()) { Alert.alert('Nom manquant', 'Donnez un nom à l’emplacement.'); return }
-    if (isNaN(s) || isNaN(e)) { Alert.alert('Plage incomplète', 'Saisissez une balise de début et de fin.'); return }
-    if (s > e) { Alert.alert('Plage à revoir', 'La balise de début doit être inférieure ou égale à celle de fin.'); return }
+    if (!name.trim()) { signaler.erreur('Nom manquant', 'Donnez un nom à l’emplacement.'); return }
+    if (isNaN(s) || isNaN(e)) { signaler.erreur('Plage incomplète', 'Saisissez une balise de début et de fin.'); return }
+    if (s > e) { signaler.erreur('Plage à revoir', 'La balise de début doit être inférieure ou égale à celle de fin.'); return }
     assign.mutate()
   }
 
   function confirmDelete(zoneName: string) {
-    Alert.alert('Retirer l’emplacement ?', `L’affectation « ${zoneName} » sera supprimée.`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Retirer', style: 'destructive', onPress: () => del.mutate(zoneName) },
-    ])
+    void demander({
+      titre: 'Retirer l’emplacement ?',
+      texte: `L’affectation « ${zoneName} » sera supprimée.`,
+      action: 'Retirer',
+      ton: 'danger',
+    }).then((ok) => { if (ok) del.mutate(zoneName) })
   }
 
   if (isLoading) {

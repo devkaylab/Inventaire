@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #6366F1; } a:hover { color: #4F46E5; }
+  </style>
+</helmet>
+
+<div style="width: 900px; height: 900px; background: #EDEEF2; padding: 30px; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px;">
+
+  <div style="color: #6B7280; font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;">C · En place — la question s’ouvre là où le doigt vient de toucher</div>
+
+  <div style="display: flex; gap: 30px;">
+
+    <!-- ─────────── Cas 1 : une question ─────────── -->
+    <div style="width: 390px; height: 780px; background: #0B0F19; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(11,15,25,0.28);">
+
+      <div style="height: 100px; background: #060910; display: flex; align-items: flex-end; padding: 0 16px 12px; box-sizing: border-box; gap: 12px;">
+        <div style="height: 40px; padding: 0 16px 0 12px; border-radius: 999px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.14); display: flex; align-items: center; gap: 4px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+          <span style="color: #FFFFFF; font-size: 15px; font-weight: 500;">Retour</span>
+        </div>
+        <div style="flex-grow: 1; text-align: center; color: #FFFFFF; font-size: 17px; font-weight: 700; letter-spacing: -0.2px; margin-right: 40px;">Mon compte</div>
+      </div>
+
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="color: #646C7E; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 8px 0 4px 4px;">Mon travail</div>
+        <div style="background: #151A27; border: 1px solid #232A39; border-radius: 16px; overflow: hidden;">
+          <div style="height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 12px;"><span style="flex-grow: 1; color: #F3F5F9; font-size: 16px; font-weight: 500;">Mes magasins</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#646C7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+          <div style="height: 1px; background: #232A39; margin-left: 16px;"></div>
+          <div style="height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 12px;"><span style="flex-grow: 1; color: #F3F5F9; font-size: 16px; font-weight: 500;">Boîte à outils</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#646C7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+        </div>
+
+        <div style="color: #646C7E; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 12px 0 4px 4px;">Mon compte</div>
+        <div style="background: #151A27; border: 1px solid #232A39; border-radius: 16px; overflow: hidden;">
+          <div style="height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 12px;"><span style="flex-grow: 1; color: #F3F5F9; font-size: 16px; font-weight: 500;">Télécharger mes données</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#646C7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+          <div style="height: 1px; background: #232A39; margin-left: 16px;"></div>
+
+          <!-- Le rang qu'on vient de toucher s'ouvre : rien d'autre ne bouge -->
+          <div style="background: rgba(99,102,241,0.15); padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+              <span style="flex-grow: 1; color: #F3F5F9; font-size: 16px; font-weight: 600;">Revoir les repères</span>
+            </div>
+            <div style="color: #9BA3B4; font-size: 14px; line-height: 20px; margin-top: 8px;">L’écran de bienvenue et les explications du premier scan réapparaîtront <span style="color: #F3F5F9; font-weight: 600;">une fois</span>, sur ce téléphone.</div>
+            <div style="display: flex; gap: 10px; margin-top: 14px;">
+              <div style="flex-grow: 1; height: 44px; border-radius: 12px; border: 1px solid #2D3548; background: #151A27; display: flex; align-items: center; justify-content: center;">
+                <span style="color: #9BA3B4; font-size: 15px; font-weight: 500;">Annuler</span>
+              </div>
+              <div style="flex-grow: 1; height: 44px; border-radius: 12px; background: #6366F1; display: flex; align-items: center; justify-content: center;">
+                <span style="color: #FFFFFF; font-size: 15px; font-weight: 600;">Revoir</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 1px; background: #232A39; margin-left: 16px;"></div>
+          <div style="height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 12px;"><span style="flex-grow: 1; color: #F3F5F9; font-size: 16px; font-weight: 500;">Se déconnecter</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#646C7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────── Cas 2 : un geste qui efface ─────────── -->
+    <div style="width: 390px; height: 780px; background: #0B0F19; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(11,15,25,0.28);">
+
+      <div style="height: 100px; background: #060910; display: flex; align-items: flex-end; padding: 0 16px 12px; box-sizing: border-box;">
+        <div style="flex-grow: 1; text-align: center; color: #FFFFFF; font-size: 17px; font-weight: 700; letter-spacing: -0.2px;">Inventaires</div>
+      </div>
+
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="color: #F3F5F9; font-size: 26px; font-weight: 400; margin: 4px 0 12px 4px;">Bonjour, <span style="font-weight: 700;">Camille Roux</span></div>
+        <div style="color: #646C7E; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 4px 4px;">Mes inventaires</div>
+
+        <!-- La carte visée s'ouvre sur sa propre question, bordée de rouge -->
+        <div style="background: #151A27; border: 1px solid #EF4444; border-radius: 16px; overflow: hidden;">
+          <div style="padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="flex-grow: 1; color: #F3F5F9; font-size: 17px; font-weight: 700;">Rayon textile</span>
+              <span style="padding: 5px 10px; border-radius: 999px; background: rgba(16,185,129,0.14); color: #10B981; font-size: 12.5px; font-weight: 600;">Ouverte</span>
+            </div>
+            <div style="color: #9BA3B4; font-size: 14px; margin-top: 4px;">Oberlin Lyon</div>
+            <div style="color: #646C7E; font-size: 13px; margin-top: 2px; font-variant-numeric: tabular-nums;">INV-20260823-5CD7 · 23/08/2026</div>
+          </div>
+
+          <div style="background: rgba(239,68,68,0.14); padding: 16px; border-top: 1px solid rgba(239,68,68,0.35);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
+              <span style="flex-grow: 1; color: #F3F5F9; font-size: 16px; font-weight: 600;">Supprimer cet inventaire ?</span>
+            </div>
+            <div style="color: #9BA3B4; font-size: 14px; line-height: 20px; margin-top: 8px;">Il est <span style="color: #F3F5F9; font-weight: 600;">encore ouvert</span>. Comptages, stock théorique, audits, membres et référentiel seront effacés.</div>
+            <div style="display: flex; gap: 10px; margin-top: 14px;">
+              <div style="flex-grow: 1; height: 44px; border-radius: 12px; border: 1px solid #2D3548; background: #151A27; display: flex; align-items: center; justify-content: center;">
+                <span style="color: #9BA3B4; font-size: 15px; font-weight: 500;">Annuler</span>
+              </div>
+              <div style="flex-grow: 1; height: 44px; border-radius: 12px; background: #EF4444; display: flex; align-items: center; justify-content: center;">
+                <span style="color: #FFFFFF; font-size: 15px; font-weight: 600;">Supprimer</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #151A27; border: 1px solid #232A39; border-radius: 16px; padding: 16px; opacity: 0.5;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="flex-grow: 1; color: #F3F5F9; font-size: 17px; font-weight: 700;">Réserve — janvier</span>
+            <span style="padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #9BA3B4; font-size: 12.5px; font-weight: 600;">Clôturée</span>
+          </div>
+          <div style="color: #9BA3B4; font-size: 14px; margin-top: 4px;">Oberlin Lyon</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="color: #6B7280; font-size: 12.5px; line-height: 18px; max-width: 810px;">Aucun voile, aucune boîte : la question sort de l’objet qu’elle concerne, et on voit encore lequel c’est — utile quand on supprime le troisième inventaire d’une liste. Elle ne convient qu’aux questions nées d’un appui : une erreur qui survient toute seule n’a pas de rang où s’ouvrir, et il faudra de toute façon l’une des deux autres formes pour elle.</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -18,6 +18,7 @@ import { ThemeProvider, useThemeControls } from '@/lib/theme'
 import { SplashAnimation } from '@/components/SplashAnimation'
 import { OfflineTopBanner } from '@/components/OfflineTopBanner'
 import { PorteBienvenue } from '@/components/PorteBienvenue'
+import { Dialogues } from '@/components/ui/Dialogue'
 
 // Hold the native splash until fonts are ready; our animated splash takes over from there.
 SplashScreen.preventAutoHideAsync()
@@ -113,6 +114,10 @@ export default function RootLayout() {
                 couvre l'atterrissage le temps d'être lu, une fois par
                 appareil et par compte. */}
             <PorteBienvenue />
+            {/* Les questions et les bandeaux, au-dessus de la pile et de la
+                porte : une question peut être posée depuis n'importe quel
+                écran, y compris pendant l'atterrissage. */}
+            <Dialogues />
             {showSplash && <SplashAnimation onFinish={() => setShowSplash(false)} />}
           </GestureHandlerRootView>
         </AuthProvider>

@@ -22,7 +22,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -50,6 +49,7 @@ import {
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 export default function InviteToSessionScreen() {
   const { sessionId, from } = useLocalSearchParams<{ sessionId: string; from?: string }>()
@@ -121,7 +121,7 @@ export default function InviteToSessionScreen() {
 
   async function handleSubmit() {
     if (!selected) {
-      return Alert.alert('Personne à choisir', 'Choisissez une personne dans la liste des suggestions.')
+      return signaler.erreur('Personne à choisir', 'Choisissez une personne dans la liste des suggestions.')
     }
     const fullName = selected.full_name || ''
     const mail = selected.email
@@ -135,16 +135,16 @@ export default function InviteToSessionScreen() {
       await rafraichir()
       // ⚠️ Dans le tunnel, on reste : on ajoute souvent plusieurs personnes à
       // la suite. Hors tunnel, l'écran a été ouvert pour un ajout et se ferme.
-      Alert.alert(
-        added ? 'Personne ajoutée' : 'Invitation envoyée',
-        added
-          ? `${who} a été ajouté à l'inventaire en tant que ${roleLabel}.`
-          : `${who} recevra un e-mail l'invitant à créer son compte avec l'adresse ${mail}. Elle rejoindra l'inventaire dès son inscription.`,
-        [{ text: fromNew ? 'Continuer' : 'Terminé', onPress: () => { if (!fromNew) router.back() } }],
-      )
+      signaler.succes(
+          added ? 'Personne ajoutée' : 'Invitation envoyée',
+          added
+            ? `${who} a été ajouté à l'inventaire en tant que ${roleLabel}.`
+            : `${who} recevra un e-mail l'invitant à créer son compte avec l'adresse ${mail}.`,
+        )
+        if (!fromNew) router.back()
       clearSelection()
     } catch (e) {
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -166,9 +166,9 @@ export default function InviteToSessionScreen() {
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim().toLowerCase()
-    if (!first) return Alert.alert('Prénom manquant', 'Saisissez le prénom du compteur.')
-    if (!last) return Alert.alert('Nom manquant', 'Saisissez le nom du compteur.')
-    if (!mail || !mail.includes('@')) return Alert.alert('Adresse à revoir', 'Saisissez une adresse e-mail valide.')
+    if (!first) return signaler.erreur('Prénom manquant', 'Saisissez le prénom du compteur.')
+    if (!last) return signaler.erreur('Nom manquant', 'Saisissez le nom du compteur.')
+    if (!mail || !mail.includes('@')) return signaler.erreur('Adresse à revoir', 'Saisissez une adresse e-mail valide.')
 
     const who = `${first} ${last}`
     setCreating(true)
@@ -186,7 +186,7 @@ export default function InviteToSessionScreen() {
       } catch (e) {
         await rafraichir()
         setFirstName(''); setLastName(''); setEmail('')
-        return Alert.alert(
+        return signaler.info(
           'Compte créé, ajout à faire',
           `Le compte de ${who} est créé, mais son ajout à l'inventaire a échoué : ${errorMessage(e)}\n\nRetrouvez-le par la recherche ci-dessus.`,
         )
@@ -194,7 +194,7 @@ export default function InviteToSessionScreen() {
 
       await rafraichir()
       setFirstName(''); setLastName(''); setEmail('')
-      Alert.alert(
+      signaler.succes(
         'Compteur ajouté',
         `${who} reçoit un e-mail à l'adresse ${mail} pour choisir son mot de passe, et fait déjà partie de cet inventaire.`,
       )
@@ -203,9 +203,9 @@ export default function InviteToSessionScreen() {
       if (code === 'other_company') {
         // Ce n'est pas une faute de saisie : on dit la marche à suivre, et on
         // ne nomme jamais l'autre entreprise.
-        Alert.alert('Cette personne n’est pas de votre entreprise', errorMessage(e))
+        signaler.erreur('Cette personne n’est pas de votre entreprise', errorMessage(e))
       } else {
-        Alert.alert('Erreur', errorMessage(e))
+        signaler.erreur('Erreur', errorMessage(e))
       }
     } finally {
       setCreating(false)

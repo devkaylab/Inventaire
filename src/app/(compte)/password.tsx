@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -23,6 +22,7 @@ import { PasswordRules } from '@/components/PasswordRules'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 /**
  * Changer son mot de passe depuis l'app.
@@ -54,24 +54,24 @@ export default function PasswordScreen() {
   async function enregistrer() {
     const probleme = passwordError(password)
     if (probleme) {
-      Alert.alert('Mot de passe refusé', probleme)
+      signaler.erreur('Mot de passe refusé', probleme)
       return
     }
     if (password !== confirm) {
-      Alert.alert('Mot de passe refusé', 'Les deux saisies ne sont pas identiques.')
+      signaler.erreur('Mot de passe refusé', 'Les deux saisies ne sont pas identiques.')
       return
     }
 
     const email = session?.user.email
     if (!email) {
-      Alert.alert('Erreur', 'Votre session a expiré. Reconnectez-vous.')
+      signaler.erreur('Erreur', 'Votre session a expiré. Reconnectez-vous.')
       return
     }
 
     setBusy(true)
     try {
       if (!(await verifyCurrentPassword(email, actuel))) {
-        Alert.alert(
+        signaler.erreur(
           'Mot de passe actuel incorrect',
           'Vérifiez votre saisie. Si vous ne vous en souvenez plus, passez par « Mot de passe oublié ».',
         )
@@ -80,16 +80,16 @@ export default function PasswordScreen() {
 
       const { error } = await supabase.auth.updateUser({ password })
       if (error) {
-        Alert.alert('Mot de passe refusé', friendlyPasswordError(error.message))
+        signaler.erreur('Mot de passe refusé', friendlyPasswordError(error.message))
         return
       }
-      Alert.alert(
-        'Mot de passe modifié',
-        'Votre nouveau mot de passe est actif, sur le téléphone comme sur le site.',
-        [{ text: 'Fermer', onPress: () => router.back() }],
-      )
+      signaler.succes(
+          'Mot de passe modifié',
+          'Votre nouveau mot de passe est actif, sur le téléphone comme sur le site.',
+        )
+        router.back()
     } catch (e) {
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     } finally {
       setBusy(false)
     }

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { avertir, signaler } from '@/lib/dialogue'
 
 export default function NewMemberScreen() {
   const { profile } = useAuth()
@@ -44,12 +44,12 @@ export default function NewMemberScreen() {
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim().toLowerCase()
-    if (!first) return Alert.alert('Erreur', 'Saisissez le prénom du compteur.')
-    if (!last) return Alert.alert('Erreur', 'Saisissez le nom du compteur.')
-    if (!mail || !mail.includes('@')) return Alert.alert('Erreur', "Saisissez une adresse e-mail valide.")
-    if (!company) return Alert.alert('Erreur', 'Entreprise introuvable.')
+    if (!first) return signaler.erreur('Erreur', 'Saisissez le prénom du compteur.')
+    if (!last) return signaler.erreur('Erreur', 'Saisissez le nom du compteur.')
+    if (!mail || !mail.includes('@')) return signaler.erreur('Erreur', "Saisissez une adresse e-mail valide.")
+    if (!company) return signaler.erreur('Erreur', 'Entreprise introuvable.')
     if (multiStore && selectedStores.length === 0) {
-      return Alert.alert('Erreur', 'Choisissez au moins un magasin auquel rattacher ce compteur.')
+      return signaler.erreur('Erreur', 'Choisissez au moins un magasin auquel rattacher ce compteur.')
     }
 
     const name = `${first} ${last}`
@@ -68,15 +68,15 @@ export default function NewMemberScreen() {
       // équipe », et le superviseur recommençait (constat de Julien,
       // 23 août 2026). Le cache tient 30 s, un retour ne suffit pas.
       await queryClient.invalidateQueries({ queryKey: ['my-team'] })
-      Alert.alert(
-        'Compteur ajouté',
-        res.emailSent
-          ? `${name} reçoit un e-mail à l'adresse ${mail}. Le lien lui permettra de vérifier ses informations et de choisir son mot de passe.`
-          : res.alreadyInvited
-            ? `${name} avait déjà été invité : le lien reçu précédemment reste valable.`
-            : `${name} a été ajouté, mais l'e-mail n'a pas pu partir (${res.emailError ?? 'raison inconnue'}). Relancez l'ajout pour réessayer.`,
-        [{ text: 'Terminé', onPress: () => router.back() }],
-      )
+      signaler.succes(
+          'Compteur ajouté',
+          res.emailSent
+            ? `${name} reçoit un e-mail à l'adresse ${mail}. Le lien lui permettra de choisir son mot de passe.`
+            : res.alreadyInvited
+              ? `${name} avait déjà été invité : le lien reçu précédemment reste valable.`
+              : `${name} a été ajouté, mais l'e-mail n'a pas pu partir (${res.emailError ?? 'raison inconnue'}). Relancez l'ajout pour réessayer.`,
+        )
+        router.back()
     } catch (e) {
       const msg = errorMessage(e)
       const code = (e as { code?: string } | null)?.code
@@ -84,9 +84,12 @@ export default function NewMemberScreen() {
       // saisie : rien à corriger dans le formulaire. On le dit comme un fait,
       // avec la marche à suivre, et non sous un titre « Erreur ».
       if (code === 'other_company') {
-        Alert.alert('Cette personne n’est pas de votre entreprise', msg, [{ text: 'J’ai compris' }])
+        void avertir({
+          titre: 'Cette personne n’est pas de votre entreprise',
+          texte: msg,
+        })
       } else {
-        Alert.alert(
+        signaler.erreur(
           'Erreur',
           /duplicate|unique/i.test(msg)
             ? 'Cette adresse e-mail est déjà invitée ou déjà utilisée.'

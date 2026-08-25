@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -14,6 +26,7 @@ import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { PendingBalisesRow } from '@/components/PendingBalisesRow'
 import { useNotificationsSurInventaire } from '@/lib/push'
 import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
+import { demander, signaler } from '@/lib/dialogue'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -104,12 +117,12 @@ export default function SessionDetailScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      Alert.alert(
+      signaler.succes(
         'Inventaire clôturé',
         'Plus aucun comptage ne peut y être enregistré. Les données sont conservées et le rapport reste disponible.',
       )
     },
-    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
   })
 
   const reopenMutation = useMutation({
@@ -117,31 +130,31 @@ export default function SessionDetailScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      Alert.alert('Inventaire rouvert', 'Le comptage peut reprendre.')
+      signaler.succes('Inventaire rouvert', 'Le comptage peut reprendre.')
     },
-    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteSessionPermanently(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      Alert.alert('Inventaire supprimé', 'L\'inventaire et toutes ses données ont été supprimés.')
+      signaler.succes('Inventaire supprimé', 'L\'inventaire et toutes ses données ont été supprimés.')
       if (router.canGoBack()) router.back()
       else router.replace('/(supervisor)/')
     },
-    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
   })
 
   const leaveMutation = useMutation({
     mutationFn: () => leaveSession(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      Alert.alert('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
+      signaler.succes('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
       if (router.canGoBack()) router.back()
       else router.replace('/(supervisor)/')
     },
-    onError: (e) => { Alert.alert('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
   })
 
   const refreshing = countsFetching || zonesFetching
@@ -164,88 +177,82 @@ export default function SessionDetailScreen() {
   const isCreator = !!profile?.id && session?.created_by === profile.id
 
   async function handleRemoveMember(userId: string, name: string) {
-    Alert.alert('Retirer ce membre', `Retirer ${name} de l'inventaire ? Ses comptages déjà saisis sont conservés.`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Retirer', style: 'destructive', onPress: async () => {
-          try {
-            await removeSessionMember(sessionId, userId)
-            await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
-          } catch (e) { Alert.alert('Erreur', errorMessage(e)) }
-        },
-      },
-    ])
+    void demander({
+      titre: `Retirer ${name} ?`,
+      texte: 'Cette personne ne verra plus l’inventaire. Ses comptages déjà saisis sont conservés.',
+      action: 'Retirer',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await removeSessionMember(sessionId, userId)
+        await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
+      } catch (e) { signaler.erreur('Erreur', errorMessage(e)) }
+    })
   }
 
   async function handleDeleteInvite(id: string, label: string) {
-    Alert.alert('Annuler l\'invitation', `Annuler l'invitation de ${label} ?`, [
-      { text: 'Retour', style: 'cancel' },
-      {
-        text: 'Annuler l\'invitation', style: 'destructive', onPress: async () => {
-          try {
-            await deleteSessionInvitation(id)
-            await queryClient.invalidateQueries({ queryKey: ['session-invitations', sessionId] })
-          } catch (e) { Alert.alert('Erreur', errorMessage(e)) }
-        },
-      },
-    ])
+    void demander({
+      titre: 'Annuler l’invitation ?',
+      texte: `${label} ne pourra plus rejoindre cet inventaire.`,
+      action: 'Annuler l’invitation',
+      annuler: 'Retour',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await deleteSessionInvitation(id)
+        await queryClient.invalidateQueries({ queryKey: ['session-invitations', sessionId] })
+      } catch (e) { signaler.erreur('Erreur', errorMessage(e)) }
+    })
   }
 
   function confirmLeave() {
-    Alert.alert(
-      'Quitter l\'inventaire',
-      'Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l\'équipe.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Quitter', style: 'destructive', onPress: () => leaveMutation.mutate() },
-      ],
-    )
+    void demander({
+      titre: 'Quitter l’inventaire ?',
+      texte: 'Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l’équipe.',
+      action: 'Quitter',
+      ton: 'danger',
+    }).then((ok) => { if (ok) leaveMutation.mutate() })
   }
 
   function confirmClose() {
-    Alert.alert(
-      "Clôturer l'inventaire",
-      "L'inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.\n\nToutes les données sont conservées et le rapport reste disponible. Vous pourrez le rouvrir si besoin.",
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Clôturer', onPress: () => closeMutation.mutate() },
-      ]
-    )
+    void demander({
+      titre: 'Clôturer l’inventaire ?',
+      texte: 'Il passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.',
+      note: 'Toutes les données sont conservées et le rapport reste disponible. Vous pourrez le rouvrir si besoin.',
+      action: 'Clôturer',
+    }).then((ok) => { if (ok) closeMutation.mutate() })
   }
 
   function confirmReopen() {
-    Alert.alert(
-      "Rouvrir l'inventaire",
-      'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Rouvrir', onPress: () => reopenMutation.mutate() },
-      ]
-    )
+    void demander({
+      titre: 'Rouvrir l’inventaire ?',
+      texte: 'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
+      action: 'Rouvrir',
+    }).then((ok) => { if (ok) reopenMutation.mutate() })
   }
 
   function confirmDelete() {
-    Alert.alert(
-      'Supprimer définitivement',
-      'Cette action va supprimer :\n\n• Tous les comptages\n• Le stock théorique\n• Les écarts d\'audit\n• Les membres de l\'inventaire\n• Le référentiel articles de cet inventaire\n\nPensez à exporter le rapport avant.\n\nCette action est IRRÉVERSIBLE.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Dernière confirmation',
-              `Supprimer l'inventaire "${session?.inventory_number}" et toutes ses données ?`,
-              [
-                { text: 'Annuler', style: 'cancel' },
-                { text: 'Oui, supprimer', style: 'destructive', onPress: () => deleteMutation.mutate() },
-              ]
-            )
-          },
-        },
-      ]
-    )
+    void demander({
+      titre: 'Supprimer cet inventaire ?',
+      texte: 'Comptages, stock théorique, écarts d’audit, membres et référentiel articles seront effacés.',
+      note: 'Pensez à exporter le rapport avant : cette action est irréversible.',
+      action: 'Supprimer',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      // Seconde question : le geste est irréversible, et le numéro nommé
+      // ici est la dernière chance de voir qu'on vise le mauvais inventaire.
+      const sur = await demander({
+        titre: 'Dernière confirmation',
+        texte: `Supprimer « ${session?.name || session?.inventory_number} » et toutes ses données ?`,
+        surtitre: 'Irréversible',
+        action: 'Oui, supprimer',
+        ton: 'danger',
+      })
+      if (sur) deleteMutation.mutate()
+    })
   }
 
   async function shareCredentials() {
@@ -260,7 +267,7 @@ export default function SessionDetailScreen() {
     try {
       await Share.share({ message: value })
     } catch { /* user dismissed */ }
-    Alert.alert(`${label} copié`, value, [{ text: 'OK' }])
+    signaler.succes(`${label} copié`, value)
   }
 
   if (isLoading || !session) {

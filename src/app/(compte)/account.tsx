@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
@@ -12,6 +12,7 @@ import { MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { demander } from '@/lib/dialogue'
 
 /**
  * Mon compte — la personne, puis ce qu'elle ouvre.
@@ -68,32 +69,24 @@ export default function AccountScreen() {
 
   /** Remet à zéro les repères de ce compte sur cet appareil. */
 
-  function confirmerReperes() {
-
-    Alert.alert(
-
-      'Revoir les repères',
-
-      'L’écran de bienvenue et les explications du premier scan réapparaîtront une fois, sur ce téléphone.',
-
-      [
-
-        { text: 'Annuler', style: 'cancel' },
-
-        { text: 'Revoir', onPress: () => { if (profile?.id) void oublierReperes(profile.id) } },
-
-      ],
-
-    )
-
+  async function confirmerReperes() {
+    const ok = await demander({
+      titre: 'Revoir les repères ?',
+      texte: 'L’écran de bienvenue et les explications du premier scan réapparaîtront une fois, sur ce téléphone.',
+      action: 'Revoir',
+    })
+    if (ok && profile?.id) void oublierReperes(profile.id)
   }
 
 
-  function confirmSignOut() {
-    Alert.alert('Se déconnecter', 'Vous devrez ressaisir votre mot de passe.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Se déconnecter', style: 'destructive', onPress: () => { void signOut() } },
-    ])
+  async function confirmSignOut() {
+    const ok = await demander({
+      titre: 'Se déconnecter ?',
+      texte: 'Vous devrez ressaisir votre mot de passe.',
+      action: 'Se déconnecter',
+      ton: 'danger',
+    })
+    if (ok) void signOut()
   }
 
   return (

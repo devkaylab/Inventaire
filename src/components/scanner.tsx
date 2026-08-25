@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   AppState,
   FlatList,
@@ -36,6 +35,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
+import { demander, signaler } from '@/lib/dialogue'
 
 interface ScannerProps {
   sessionId: string
@@ -98,7 +98,7 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
     // (report.ts) blanks the SKU column when sku === ean, so it stays invisible.
     const trimmedSku = sku.trim() || trimmedEan
     if (!trimmedSku) {
-      Alert.alert('Erreur', 'Saisissez au moins un code (SKU ou EAN).')
+      signaler.erreur('Erreur', 'Saisissez au moins un code (SKU ou EAN).')
       return
     }
     setSaving(true)
@@ -113,7 +113,7 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
       })
       onConfirm(article)
     } catch (e) {
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -488,7 +488,7 @@ export function Scanner({
         // Pas une balise → article : il faut d'abord une zone ouverte.
         if (!activeBaliseRef.current) {
           playErrorSound()
-          Alert.alert('Zone fermée', 'Scannez d’abord une balise pour ouvrir une zone.')
+          signaler.erreur('Zone fermée', 'Scannez d’abord une balise pour ouvrir une zone.')
           return
         }
       }
@@ -526,22 +526,19 @@ export function Scanner({
         // Le libellé vient de `set_balise` (comparaison souple : il n'y a pas
         // de code d'erreur distinct côté base).
         if (!allowCreate && /non\s+d[ée]finie/i.test(result.error ?? '')) {
-          Alert.alert(
-            'Balise hors plage',
-            `La balise ${code} n'appartient à aucune plage de cet inventaire.\n\n` +
-              'Vérifiez le numéro. Si l\'étiquette est bien collée dans ce magasin, ' +
-              'ajoutez-la pour compter tout de suite — le superviseur lui donnera son ' +
-              'emplacement ensuite.',
-            [
-              { text: 'Annuler', style: 'cancel' },
-              // La zone précédente a déjà été clôturée au premier passage :
-              // ne pas la reclôturer.
-              { text: 'Ajouter', onPress: () => { void openBaliseCode(code, false, true) } },
-            ],
-          )
+          void demander({
+            titre: 'Balise hors plage',
+            texte: `La balise ${code} n'appartient à aucune plage de cet inventaire. Vérifiez le numéro.`,
+            note: 'Si l’étiquette est bien collée dans ce magasin, ajoutez-la pour compter tout de suite — le superviseur lui donnera son emplacement ensuite.',
+            action: 'Ajouter',
+          }).then((ok) => {
+            // La zone précédente a déjà été clôturée au premier passage :
+            // ne pas la reclôturer.
+            if (ok) void openBaliseCode(code, false, true)
+          })
           return
         }
-        Alert.alert('Balise', result.error ?? 'Balise inconnue.')
+        signaler.erreur('Balise', result.error ?? 'Balise inconnue.')
         return
       }
       ignoreBaliseRef.current = result.code ?? code
@@ -555,7 +552,7 @@ export function Scanner({
       playScanSound()
     } catch (e) {
       playErrorSound()
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     }
   }
 
@@ -566,7 +563,7 @@ export function Scanner({
     try {
       const result = await setBalise(sessionId, active.code, baliseModeRef.current, false)
       if (!result.success) {
-        Alert.alert('Balise', result.error ?? 'Clôture impossible.')
+        signaler.erreur('Balise', result.error ?? 'Clôture impossible.')
         return
       }
       if (repereCloture.aVoir) {
@@ -586,7 +583,7 @@ export function Scanner({
       pingSession(sessionId, 'balise')
       playScanSound()
     } catch (e) {
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     }
   }
 
@@ -661,7 +658,7 @@ export function Scanner({
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty + 1, timestamp: Date.now() } : e)
       )
     } catch {
-      Alert.alert('Erreur', "Impossible d'enregistrer la modification.")
+      signaler.erreur('Erreur', "Impossible d'enregistrer la modification.")
     }
   }
 
@@ -673,30 +670,25 @@ export function Scanner({
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty - 1 } : e)
       )
     } catch {
-      Alert.alert('Erreur', "Impossible d'enregistrer la modification.")
+      signaler.erreur('Erreur', "Impossible d'enregistrer la modification.")
     }
   }
 
   function handleDelete(entry: ScanEntry) {
-    Alert.alert(
-      'Supprimer la ligne ?',
-      `Retirer "${entry.article.label || entry.article.sku}" (×${entry.qty}) de ce comptage ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onArticleResolved(entry.article, -entry.qty, activeBaliseRef.current?.code ?? null)
-              setRecentScans(prev => prev.filter(e => e.id !== entry.id))
-            } catch {
-              Alert.alert('Erreur', "Impossible de supprimer la ligne.")
-            }
-          },
-        },
-      ]
-    )
+    void demander({
+      titre: 'Supprimer la ligne ?',
+      texte: `Retirer « ${entry.article.label || entry.article.sku} » (×${entry.qty}) de ce comptage ?`,
+      action: 'Supprimer',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await onArticleResolved(entry.article, -entry.qty, activeBaliseRef.current?.code ?? null)
+        setRecentScans(prev => prev.filter(e => e.id !== entry.id))
+      } catch {
+        signaler.erreur('Erreur', 'Impossible de supprimer la ligne.')
+      }
+    })
   }
 
   if (!permission) {

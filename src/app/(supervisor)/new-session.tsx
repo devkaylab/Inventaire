@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,6 +18,7 @@ import { createSession, getMyAssignedStores } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 function generateCode(): string {
   return Math.random().toString(36).toUpperCase().slice(2, 8)
@@ -35,20 +47,20 @@ export default function NewSessionScreen() {
     // sans titrer « Erreur ». C'est le premier inventaire de quelqu'un qui
     // découvre l'app — le ton compte.
     if (!name.trim()) {
-      Alert.alert('Nom manquant', "Donnez un nom à l'inventaire.")
+      signaler.erreur('Nom manquant', "Donnez un nom à l'inventaire.")
       return
     }
     // Le bouton est déjà inactif dans ce cas : garde silencieuse, pas d'alerte.
     if (!storeId) return
     if (securityCode.trim().length < 4) {
-      Alert.alert('Code trop court', 'Le code de sécurité doit comporter au moins 4 caractères.')
+      signaler.erreur('Code trop court', 'Le code de sécurité doit comporter au moins 4 caractères.')
       return
     }
     setLoading(true)
     try {
       const result = await createSession(name.trim(), storeId, securityCode.trim(), usesZones)
       if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Impossible de créer l’inventaire.')
+        signaler.erreur('Erreur', result.error ?? 'Impossible de créer l’inventaire.')
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
@@ -65,7 +77,7 @@ export default function NewSessionScreen() {
       else router.replace(`/(supervisor)/${sid}/import?from=new`)
     } catch (e: unknown) {
       console.error('[new-session] createSession', e)
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     } finally {
       setLoading(false)
     }

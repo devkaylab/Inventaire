@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -22,6 +21,7 @@ import { getSessions } from '@/lib/offlineSync'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -45,14 +45,14 @@ export default function EmployeeHomeScreen() {
 
   async function handleJoin() {
     if (!inventoryNumber.trim() || !securityCode.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir le numéro d\'inventaire et le code de sécurité.')
+      signaler.erreur('Erreur', 'Veuillez remplir le numéro d\'inventaire et le code de sécurité.')
       return
     }
     setLoading(true)
     try {
       const result = await joinSession(inventoryNumber.trim(), securityCode.trim())
       if (!result.success) {
-        Alert.alert('Erreur', result.error ?? 'Impossible de rejoindre la session.')
+        signaler.erreur('Erreur', result.error ?? 'Impossible de rejoindre la session.')
         return
       }
       setInventoryNumber('')
@@ -61,7 +61,7 @@ export default function EmployeeHomeScreen() {
       router.push(`/(employee)/${result.session_id}`)
     } catch (e: unknown) {
       console.error('[employee] joinSession', e)
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     } finally {
       setLoading(false)
     }

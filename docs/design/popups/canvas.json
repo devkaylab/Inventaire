@@ -1,0 +1,32 @@
+{
+  "artboards": [
+    { "file": "Aujourdhui.dc.html", "title": "Aujourd'hui — l'alerte iOS", "x": 0, "y": 0, "w": 450, "h": 900 },
+    { "file": "Main.dc.html", "title": "A · La feuille", "x": 510, "y": 0, "w": 900, "h": 900 },
+    { "file": "Carte.dc.html", "title": "B · La carte", "x": 1470, "y": 0, "w": 900, "h": 900 },
+    { "file": "EnPlace.dc.html", "title": "C · En place", "x": 2430, "y": 0, "w": 900, "h": 900 }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -220,
+      "w": 450,
+      "text": "114 Alert.alert dans l'app, 32 titres distincts.\n\nQuatre familles : une question neutre, un geste qui efface, un résultat (« PDF généré »), un refus (« Clôture impossible »).\n\nLes trois directions ci-contre traitent les deux premières — celles qui posent une question. Les deux autres familles suivront la forme retenue."
+    },
+    {
+      "id": "socle",
+      "x": 510,
+      "y": -220,
+      "w": 900,
+      "text": "Socle commun aux trois : Inter (la police de l'app), surface #151A27, filets #232A39, indigo #6366F1, rouge #EF4444, rayons 12/16/20/28, titres à -0,4 d'interlettrage, boutons de 44 à 48 px.\n\nRien d'inventé : tout est lu dans src/constants/ink.ts et dans le volet de fin de balise."
+    },
+    {
+      "id": "a-choisir",
+      "x": 1470,
+      "y": -220,
+      "w": 900,
+      "text": "Trois choses à trancher :\n\n1. Où la question arrive — sous le pouce (A), au centre (B), dans le rang touché (C).\n2. Boutons empilés (A) ou côte à côte (B, C).\n3. Tuile d'icône (A) ou surtitre coloré (B, C) pour dire le ton."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

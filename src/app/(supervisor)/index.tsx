@@ -1,5 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  type GestureResponderEvent,
+} from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { router } from 'expo-router'
@@ -13,6 +22,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import type { Tables } from '@/types/database.types'
+import { demander, signaler } from '@/lib/dialogue'
 
 type Session = Tables<'inventory_sessions'>
 
@@ -386,28 +396,21 @@ export default function SupervisorHomeScreen() {
   const confirmerSuppression = useCallback((s: Session) => {
     const nom = s.name || s.store_name
     const enCours = s.status !== 'closed'
-    Alert.alert(
-      `Supprimer « ${nom} » ?`,
-      [
-        enCours ? 'Cet inventaire n’est pas clôturé.' : null,
-        'Ses comptages, son stock théorique, ses audits, ses membres et son référentiel seront supprimés définitivement.',
-      ].filter(Boolean).join('\n\n'),
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteSessionPermanently(s.id)
-              await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-            } catch (e) {
-              Alert.alert('Suppression impossible', errorMessage(e))
-            }
-          },
-        },
-      ],
-    )
+    void demander({
+      titre: `Supprimer « ${nom} » ?`,
+      texte: 'Ses comptages, son stock théorique, ses audits, ses membres et son référentiel seront supprimés définitivement.',
+      note: enCours ? 'Cet inventaire n’est pas clôturé.' : undefined,
+      action: 'Supprimer',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await deleteSessionPermanently(s.id)
+        await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      } catch (e) {
+        signaler.erreur('Suppression impossible', errorMessage(e))
+      }
+    })
   }, [queryClient])
 
   /**
@@ -420,24 +423,20 @@ export default function SupervisorHomeScreen() {
    */
   const confirmerCloture = useCallback((s: Session) => {
     const nom = s.name || s.store_name
-    Alert.alert(
-      `Clôturer « ${nom} » ?`,
-      "L'inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.\n\nToutes les données sont conservées et le rapport reste disponible. Son créateur pourra le rouvrir.",
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Clôturer',
-          onPress: async () => {
-            try {
-              await closeSession(s.id)
-              await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-            } catch (e) {
-              Alert.alert('Clôture impossible', errorMessage(e))
-            }
-          },
-        },
-      ],
-    )
+    void demander({
+      titre: `Clôturer « ${nom} » ?`,
+      texte: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.',
+      note: 'Toutes les données sont conservées et le rapport reste disponible. Son créateur pourra le rouvrir.',
+      action: 'Clôturer',
+    }).then(async (ok) => {
+      if (!ok) return
+      try {
+        await closeSession(s.id)
+        await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      } catch (e) {
+        signaler.erreur('Clôture impossible', errorMessage(e))
+      }
+    })
   }, [queryClient])
 
   const selectionnables = useMemo(
@@ -469,41 +468,37 @@ export default function SupervisorHomeScreen() {
     const liste = noms.slice(0, 8).map(n => `• ${n}`).join('\n')
     const reste = noms.length > 8 ? `\n• et ${noms.length - 8} autre${noms.length - 8 > 1 ? 's' : ''}` : ''
     const enCours = choisis.filter(s => s.status !== 'closed').length
-    Alert.alert(
-      choisis.length === 1 ? 'Supprimer cet inventaire ?' : `Supprimer ces ${choisis.length} inventaires ?`,
-      [
-        liste + reste,
+    void demander({
+      titre: choisis.length === 1 ? 'Supprimer cet inventaire ?' : `Supprimer ces ${choisis.length} inventaires ?`,
+      texte: liste + reste,
+      note: [
         enCours > 0
           ? `${enCours} d'entre eux ${enCours > 1 ? 'ne sont pas clôturés' : "n'est pas clôturé"}.`
           : null,
         'Comptages, stock théorique, audits, membres et référentiel seront supprimés définitivement.',
-      ].filter(Boolean).join('\n\n'),
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            const echecs: string[] = []
-            for (const s of choisis) {
-              try {
-                await deleteSessionPermanently(s.id)
-              } catch (e) {
-                echecs.push(`${s.name || s.store_name} : ${errorMessage(e)}`)
-              }
-            }
-            await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-            quitterSelection()
-            if (echecs.length > 0) {
-              Alert.alert(
-                echecs.length === choisis.length ? 'Suppression impossible' : 'Suppression partielle',
-                `${choisis.length - echecs.length} sur ${choisis.length} supprimé${choisis.length - echecs.length > 1 ? 's' : ''}.\n\n${echecs.join('\n')}`,
-              )
-            }
-          },
-        },
-      ],
-    )
+      ].filter(Boolean).join(' '),
+      action: 'Supprimer',
+      ton: 'danger',
+    }).then(async (ok) => {
+      if (!ok) return
+      const echecs: string[] = []
+      for (const s of choisis) {
+        try {
+          await deleteSessionPermanently(s.id)
+        } catch (e) {
+          echecs.push(`${s.name || s.store_name} : ${errorMessage(e)}`)
+        }
+      }
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      quitterSelection()
+      // Un échec ne doit pas passer inaperçu derrière un succès global.
+      if (echecs.length > 0) {
+        signaler.erreur(
+          echecs.length === choisis.length ? 'Suppression impossible' : 'Suppression partielle',
+          `${choisis.length - echecs.length} sur ${choisis.length} supprimé${choisis.length - echecs.length > 1 ? 's' : ''}. ${echecs.join(' ')}`,
+        )
+      }
+    })
   }, [sessions, coches, queryClient, quitterSelection])
 
   /**

@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,6 +15,7 @@ import { getSession, getSessionDetail, getSessionResults, recomputeAudit, type S
 import { exportResultsToExcel } from '@/lib/report'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 
 function fmt(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, '')
@@ -60,10 +60,10 @@ export default function ResultsScreen() {
     },
     onSuccess: (result) => {
       if (!result.shared) {
-        Alert.alert('Rapport généré', `Le fichier ${result.filename} a été créé mais le partage n'est pas disponible sur cette plateforme.`)
+        signaler.succes('Rapport généré', `Le fichier ${result.filename} a été créé mais le partage n'est pas disponible sur cette plateforme.`)
       }
     },
-    onError: () => Alert.alert('Erreur', "La génération du rapport Excel a échoué."),
+    onError: () => signaler.erreur('Erreur', "La génération du rapport Excel a échoué."),
   })
 
   if (isLoading) {

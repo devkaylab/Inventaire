@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Alert, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMyDeletionRequest, requestAccountDeletion } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { demander, signaler } from '@/lib/dialogue'
 
 /**
  * Demande de suppression de compte.
@@ -31,30 +32,28 @@ export function useAccountDeletion() {
     try {
       const res = await requestAccountDeletion()
       if (!res.success) {
-        Alert.alert('Erreur', res.error ?? "Impossible d'envoyer la demande.")
+        signaler.erreur('Erreur', res.error ?? "Impossible d'envoyer la demande.")
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['my-deletion-request'] })
-      Alert.alert(
+      signaler.succes(
         'Demande envoyée',
         "Votre demande de suppression a été transmise à l'administrateur. Il la traitera prochainement ; votre compte et vos données personnelles seront alors supprimés.",
       )
     } catch (e) {
-      Alert.alert('Erreur', errorMessage(e))
+      signaler.erreur('Erreur', errorMessage(e))
     } finally {
       setLoading(false)
     }
   }
 
   function confirm() {
-    Alert.alert(
-      'Supprimer mon compte',
-      "Une demande de suppression sera envoyée à l'administrateur. Une fois traitée, votre compte et vos données personnelles seront supprimés définitivement. Continuer ?",
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Envoyer la demande', style: 'destructive', onPress: submit },
-      ],
-    )
+    void demander({
+      titre: 'Supprimer mon compte ?',
+      texte: "Une demande de suppression sera envoyée à l'administrateur. Une fois traitée, votre compte et vos données personnelles seront supprimés définitivement.",
+      action: 'Envoyer la demande',
+      ton: 'danger',
+    }).then((ok) => { if (ok) submit() })
   }
 
   return { pending: !!pending, loading, confirm }

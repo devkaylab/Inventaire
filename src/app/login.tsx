@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -19,6 +18,7 @@ import { useTheme } from '@/lib/theme'
 import { AppLogo } from '@/components/AppLogo'
 import { PASSWORD_FORGOT_URL, PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { avertir, signaler } from '@/lib/dialogue'
 
 export default function LoginScreen() {
   const { signIn, signOut, session, profile, loading: authLoading, mfaRequired, recheckMfa } = useAuth()
@@ -48,18 +48,18 @@ export default function LoginScreen() {
     const factorId = await verifiedTotpFactor()
     if (!factorId) {
       setLoading(false)
-      Alert.alert(
-        'Second facteur introuvable',
-        'Aucune application d’authentification n’est associée à ce compte. Reconnectez-vous.',
-        [{ text: 'Revenir à la connexion', onPress: () => { void abandonner() } }],
-      )
+      void avertir({
+        titre: 'Second facteur introuvable',
+        texte: 'Aucune application d’authentification n’est associée à ce compte. Reconnectez-vous.',
+        action: 'Revenir à la connexion',
+      }).then(() => { void abandonner() })
       return
     }
     const r = await challengeAndVerify(factorId, code)
     if (!r.success) {
       setLoading(false)
       setCode('')
-      Alert.alert(
+      signaler.erreur(
         'Code refusé',
         'Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.',
       )

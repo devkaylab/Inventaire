@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { Alert, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { router } from 'expo-router'
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
 import { registerPushToken } from '@/lib/queries'
+import { signaler } from '@/lib/dialogue'
 
 // Identifiant du projet EAS (issu de `eas init`, aussi dans app.json).
 // Repli en dur : sur un projet iOS versionné (sans prebuild récent), la config
@@ -31,7 +32,7 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotifications(): Promise<void> {
   try {
     if (!Device.isDevice) {
-      if (PUSH_DEBUG) Alert.alert('Push', 'Les notifications ne fonctionnent que sur un vrai appareil (pas sur simulateur).')
+      if (PUSH_DEBUG) signaler.info('Push', 'Les notifications ne fonctionnent que sur un vrai appareil (pas sur simulateur).')
       return
     }
 
@@ -46,7 +47,7 @@ export async function registerForPushNotifications(): Promise<void> {
       status = req.status
     }
     if (status !== 'granted') {
-      if (PUSH_DEBUG) Alert.alert('Push', 'Autorisation des notifications refusée. Activez-les dans Réglages > Quantinvo > Notifications.')
+      if (PUSH_DEBUG) signaler.info('Push', 'Autorisation des notifications refusée. Activez-les dans Réglages > Quantinvo > Notifications.')
       return
     }
 
@@ -66,11 +67,11 @@ export async function registerForPushNotifications(): Promise<void> {
     if (tokenResp.data) {
       await registerPushToken(tokenResp.data, Platform.OS)
     } else if (PUSH_DEBUG) {
-      Alert.alert('Push', 'Aucun jeton renvoyé par Expo.')
+      signaler.info('Push', 'Aucun jeton renvoyé par Expo.')
     }
   } catch (e) {
     if (PUSH_DEBUG) {
-      Alert.alert('Push — erreur', e instanceof Error ? e.message : String(e))
+      signaler.erreur('Push — erreur', e instanceof Error ? e.message : String(e))
     }
   }
 }

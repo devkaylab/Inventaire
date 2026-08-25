@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import { useMutation } from '@tanstack/react-query'
 import { buildBaliseSheetFile, shareBaliseSheet } from '@/lib/balises'
 import { poserJalon } from '@/lib/reperes'
@@ -8,6 +14,7 @@ import type { BaliseSeries } from '@/lib/baliseSeries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { signaler } from '@/lib/dialogue'
 import { BaliseSheetModal } from './BaliseSheetModal'
 import { GeneratingOverlay } from './GeneratingOverlay'
 
@@ -49,11 +56,11 @@ export function BaliseCreator({ context }: Props) {
       setDessin(false)
       shareBaliseSheet(planche)
         .then(ouvert => {
-          if (!ouvert) Alert.alert('PDF généré', `Le fichier ${planche.filename} a été créé.`)
+          if (!ouvert) signaler.succes('PDF généré', `Le fichier ${planche.filename} a été créé.`)
         })
-        .catch(e => Alert.alert('Erreur', errorMessage(e)))
+        .catch(e => signaler.erreur('Erreur', errorMessage(e)))
     },
-    onError: (e) => { setDessin(false); Alert.alert('Erreur', errorMessage(e)) },
+    onError: (e) => { setDessin(false); signaler.erreur('Erreur', errorMessage(e)) },
   })
 
   const steps = [
