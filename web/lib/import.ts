@@ -83,7 +83,10 @@ export function cellToCode(v: unknown): string {
 }
 
 export const SKU_KEYS = ['sku', 'codearticle', 'reference', 'ref', 'codeart']
-export const EAN_KEYS = ['ean', 'ean13', 'gtin', 'gtin13', 'codebarre', 'codebarres', 'gencod', 'gencode', 'barcode']
+// « codeean » : vu en vrai le 25 août 2026 — un fichier client portait la
+// colonne « Code Ean », inconnue ici. Tous les EAN sortaient nuls, et les
+// lignes au même SKU s'écrasaient au lieu d'être gardées sous leur EAN.
+export const EAN_KEYS = ['ean', 'ean13', 'gtin', 'gtin13', 'codeean', 'codeean13', 'codebarre', 'codebarres', 'gencod', 'gencode', 'barcode']
 const BRAND_KEYS = ['brand', 'marque', 'fournisseur']
 const LABEL_KEYS = ['label', 'libelle', 'designation', 'description', 'nom']
 const PRICE_KEYS = ['prixdachat', 'cost', 'cogs', 'cout', 'pa']

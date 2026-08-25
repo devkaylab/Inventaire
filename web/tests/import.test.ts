@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { cellToCode, mapCatalogRows, mapStockRows, normalizeHeader } from '@/lib/import'
+import { cellToCode, EAN_KEYS, mapCatalogRows, mapStockRows, normalizeHeader } from '@/lib/import'
+import { MODELE_REFERENCEMENT, MODELE_STOCK } from '@/lib/modeles'
 
 const S = 'session-1'
 
@@ -83,6 +86,32 @@ describe('mapCatalogRows', () => {
     expect(errors.join(' ')).toMatch(/double/i)
   })
 
+  it('reconnaît « Code Ean » — le fichier du 25 août 2026', () => {
+    // Inventaire « Fwee », fichier client : la colonne s'appelait « Code
+    // Ean », inconnue ici. Tous les EAN sortaient nuls, et — conséquence en
+    // chaîne — les lignes au même SKU s'écrasaient au lieu d'être gardées
+    // chacune sous son EAN.
+    expect(EAN_KEYS).toContain('codeean')
+    expect(EAN_KEYS).toContain('codeean13')
+
+    const rows = [
+      { sku: 'A', [normalizeHeader('Code Ean')]: '3701234567891' },
+      { sku: 'A', [normalizeHeader('Code Ean')]: '3701234567907' },
+    ]
+    const { articles } = mapCatalogRows(rows, S)
+    expect(articles).toHaveLength(2)
+    expect(articles.map(a => a.ean).sort()).toEqual(['3701234567891', '3701234567907'])
+  })
+
+  it('l’application mobile reconnaît les mêmes en-têtes', () => {
+    // Les deux `lib/import.ts` sont dupliqués (l'app et le site ne compilent
+    // pas ensemble) : une variante ajoutée d'un seul côté ferait diverger le
+    // même fichier importé du téléphone et de l'ordinateur.
+    const mobile = readFileSync(join(__dirname, '../../src/lib/import.ts'), 'utf8')
+    const liste = mobile.match(/const EAN_KEYS = \[([^\]]+)\]/)?.[1] ?? ''
+    for (const cle of EAN_KEYS) expect(liste).toContain(`'${cle}'`)
+  })
+
   it('un même SKU avec des EAN différents garde chaque EAN scannable', () => {
     // Référentiel bijouterie/horlogerie : une ligne par pièce, le SKU (modèle)
     // se répète, l'EAN identifie la pièce. Écraser perdait tous les EAN sauf
@@ -139,5 +168,50 @@ describe('mapStockRows', () => {
   it('traite une quantité absente comme zéro, sans planter', () => {
     const { rows } = mapStockRows([{ sku: 'A' }], S)
     expect(rows[0].theoretical_qty).toBe(0)
+  })
+})
+
+describe('les modèles de la boîte à outils', () => {
+  // Demande de Julien, 25 août 2026 : deux gabarits à télécharger depuis la
+  // boîte à outils. L'invariant qui compte : **chaque modèle doit traverser
+  // son propre import sans rien perdre** — un gabarit dont une colonne ne
+  // serait pas relue serait pire que pas de gabarit.
+  const versLignes = (m: typeof MODELE_REFERENCEMENT) => {
+    const [entetes, ...corps] = m.lignes
+    return corps.map(l => Object.fromEntries(l.map((v, i) => [normalizeHeader(entetes[i]), v])))
+  }
+
+  it('le modèle Référencement traverse l’import sans perte', () => {
+    const { articles, skipped } = mapCatalogRows(versLignes(MODELE_REFERENCEMENT), S)
+    expect(skipped).toBe(0)
+    // Trois lignes, dont deux au même SKU avec chacune son EAN : le modèle
+    // montre précisément le cas des doublons voulus, et aucune ne se perd.
+    expect(articles).toHaveLength(MODELE_REFERENCEMENT.lignes.length - 1)
+    expect(articles.every(a => a.ean && a.brand && a.label)).toBe(true)
+    expect(articles.every(a => a.unit_purchase_price > 0)).toBe(true)
+  })
+
+  it('le modèle Stock théorique traverse l’import sans perte', () => {
+    const { rows, skipped } = mapStockRows(versLignes(MODELE_STOCK), S)
+    expect(skipped).toBe(0)
+    expect(rows).toHaveLength(MODELE_STOCK.lignes.length - 1)
+    expect(rows.every(r => r.theoretical_qty > 0)).toBe(true)
+  })
+
+  it('les cellules des modèles sont toutes des chaînes', () => {
+    // C'est ce qui type les colonnes en Texte dans Excel : un code « 0123 »
+    // garde ses zéros de tête. Une cellule numérique retyperait la colonne.
+    for (const m of [MODELE_REFERENCEMENT, MODELE_STOCK]) {
+      for (const ligne of m.lignes) for (const c of ligne) expect(typeof c).toBe('string')
+    }
+  })
+
+  it('la boîte à outils les propose', () => {
+    const page = readFileSync(join(__dirname, '../app/outils/page.tsx'), 'utf8')
+    expect(page).toContain('<ModelesPanel />')
+    const panneau = readFileSync(join(__dirname, '../components/ModelesPanel.tsx'), 'utf8')
+    expect(panneau).toContain('MODELE_REFERENCEMENT')
+    expect(panneau).toContain('MODELE_STOCK')
+    expect(panneau).toContain('telechargerModele')
   })
 })

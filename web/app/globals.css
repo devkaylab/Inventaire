@@ -1446,6 +1446,18 @@ a { color: inherit; text-decoration: none; }
 .demarrage .btn { flex: none; }
 .demarrage-sous { color: var(--text-2); font-size: 13.5px; margin-top: 4px; max-width: 62ch; }
 
+/* ── Boîte à outils : modèles de fichiers ───────────────── */
+.modeles { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.modele-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 14px; background: var(--bg); border: 1px solid var(--hairline);
+  border-radius: 10px; flex-wrap: wrap;
+}
+.modele-row > div:first-child { flex: 1; min-width: 260px; }
+.modele-nom { font-weight: 600; font-size: 14.5px; margin-bottom: 4px; }
+/* `flex: none` : un bouton dans un conteneur flex s'étire — déjà vu ailleurs. */
+.modele-row .btn { flex: none; }
+
 /* ── Équipe ─────────────────────────────────────────────── */
 .cred-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

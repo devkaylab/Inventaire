@@ -2750,19 +2750,23 @@ des quatre rangées écrites touche par touche. Trois points à ne pas défaire 
   avec Majuscule : les exclure de la table fait qu'une saisie déjà correcte
   (pavé numérique, douchette bien réglée) traverse sans bouger. Sans cette
   exclusion, on casserait ce qui marche.
-- **⚠️ On ne convertit que si le décalage est prouvé.** Deux preuves, et deux
-  seulement : un **accent** (é è ç à ù ² ° § µ £ ¨, majuscules comprises), que
-  la douchette ne peut pas produire et qu'aucun code-barres ne contient ; ou
-  un code **entièrement fait de la rangée du haut**, qui est alors un nombre
-  déformé — la balise 1 arrive en « & », et sans ce second volet elle ne
-  serait jamais redressée. **Un « & » au milieu d'une référence alphanumérique
-  ne prouve rien** : M&S existe, et redresser sa référence la détruirait. Même
-  raison inverse pour « - » et « _ », qui s'écrivent dans de vraies
-  références : ils sont dans la table, jamais dans les preuves.
+- **⚠️ Sinon, on ne convertit que si le décalage est prouvé** (« sinon »
+  depuis que la clé de contrôle passe devant — section suivante). Deux
+  preuves, et deux seulement : un **accent** (é è ç à ù ² ° § µ £ ¨,
+  majuscules comprises), que la douchette ne peut pas produire et qu'aucun
+  code-barres ne contient ; ou un code **entièrement fait de la rangée du
+  haut**, qui est alors un nombre déformé — la balise 1 arrive en « & », et
+  sans ce second volet elle ne serait jamais redressée. **Un « & » au milieu
+  d'une référence alphanumérique ne prouve rien** : M&S existe, et redresser
+  sa référence la détruirait. Quant à « - » et « _ », ils s'écrivent dans de
+  vraies références : ils ne sont **dans aucune table ni dans les preuves**
+  (le 25 août au soir les a sortis de la table — sur iOS ils ne portent aucun
+  chiffre).
 - **Le décalage constaté est retenu** (`clavierDecaleRef`) pour le reste du
   comptage : il ne se corrigera pas tout seul, et c'est ce qui rattrape les
   codes sans preuve — une référence sans chiffre, ou un nombre fait des seuls
-  3, 4, 5, 6 et 8.
+  3, 4 et 5. ⚠️ Il ne peut plus abîmer un code-barres dont la clé est juste :
+  celui-là est rendu tel quel (section suivante).
 
 **Le champ de la balise reçoit le même traitement** : la douchette y écrit
 comme dans l'autre, et son `keyboardType="number-pad"` ne contraint que le
@@ -2771,6 +2775,71 @@ clavier tactile — un clavier HID envoie ce qu'il veut.
 Le vrai réglage reste côté matériel (passer la douchette en AZERTY par son
 code-barres de configuration, ou changer la disposition du clavier physique
 dans iOS) ; le correctif rend l'app juste dans les deux cas.
+
+## ⚠️ La disposition d'iOS est celle du Mac, pas celle de Windows (25 août 2026)
+
+Second test de Julien, douchette **Inateck Nano 160D** en Bluetooth :
+*« ça ne fonctionne toujours pas correctement »*. L'EAN 8809652585598 du
+produit photographié s'affichait `//09?52559/`.
+
+Rejoué caractère par caractère, le constat est sans ambiguïté — **la table de
+la première correction était celle d'un clavier français Windows**. Or les
+deux dispositions françaises diffèrent sur deux touches, et ce sont justement
+des chiffres :
+
+| touche | Windows | **Mac, donc iOS** |
+| --- | --- | --- |
+| 6 | `-` | **`§`** |
+| 8 | `_` | **`!`** |
+
+Le scan arrivait donc en `!!ÀÇ§(É(!((Ç!`, et le module prenait le `!` et le
+`§` pour la touche « / » du bas de clavier : onze chiffres redressés sur
+treize, **les deux autres abîmés**. Les tables de `lib/douchette.ts` sont
+maintenant celles d'iOS (`IOS_FR`), écrites à partir des touches d'une
+douchette QWERTY (`US`).
+
+**Et surtout, la clé de contrôle tranche avant toute heuristique.**
+`gtinValide` (EAN-8, UPC-A, EAN-13, ITF-14) rend le redressement
+**indépendant de la disposition exacte du téléphone** — c'est ce qui manquait,
+et c'est ce qui évitera le prochain aller-retour :
+
+- un code **déjà valide n'est jamais converti**, même après un scan décalé
+  (le drapeau `force` ne peut plus abîmer ce qui est juste) ;
+- un code dont la conversion **tombe juste** est converti, sans avoir besoin
+  d'accent ni de rangée du haut. La table Windows est gardée pour ce seul
+  arbitrage : son résultat n'est retenu que s'il porte une clé valide, donc
+  elle ne peut rien corrompre ;
+- les heuristiques (accents, rangée du haut) restent **pour ce qui n'a pas de
+  clé** : un numéro de balise, un SKU.
+
+⚠️ **`-` et `_` ne sont dans aucune table de redressement** (`AMBIGUS`) :
+« REF-12 » et « SKU_01 » existent, les redresser les détruirait. Sur iOS ils
+ne portent plus aucun chiffre de toute façon.
+
+## ⚠️ Un champ de capture ne se pilote pas par un état React (25 août 2026)
+
+Deux caractères sur treize **manquaient** dans le même scan (`//09?52559/`
+contre les treize attendus) : ce n'est pas la table, c'est la capture.
+
+Une douchette écrit treize touches en moins d'un dixième de seconde. Avec
+`value={état}` sur le `TextInput`, chaque frappe renvoie au natif un texte
+**déjà périmé** — et des caractères disparaissent au milieu du code, sans que
+rien ne le signale. Le champ douchette **et** le champ d'ouverture d'une
+balise sont donc passés en non contrôlés : `defaultValue=""`, un tampon
+`useRef` mis à jour à chaque frappe, lu au moment de valider, et `.clear()`
+pour vider. Ne pas y remettre de `value`.
+
+Deux effets remettent les tampons à zéro au changement de mode et de phase :
+le champ est démonté, un scan resté en cours ne doit pas ressortir plus tard.
+
+Vérifié par `tests/douchette.test.ts` (16 cas), qui rejoue **le scan réel du
+25 août** — `!!àç§(é(!((ç!` → `8809652585598`, majuscules accentuées
+comprises — et le même code déformé par un clavier Windows.
+
+⚠️ **Ce que le simulateur ne peut pas prouver** : il n'a pas de douchette
+Bluetooth, et son injection de texte passe par la disposition du Mac (voir
+plus bas). La table et la clé de contrôle sont couvertes par les tests ; la
+capture non contrôlée, elle, ne se vérifie qu'avec la douchette en main.
 
 ## « Le téléphone doit rester sur la page et ne pas se verrouiller »
 
@@ -2802,6 +2871,42 @@ comparer au caractère près. La table, elle, est couverte par
 Au passage, confirmé à l'écran : `autoCapitalize="characters"` **fait bien
 remonter `À` plutôt que `à`** — d'où les majuscules accentuées ajoutées à la
 table et aux preuves. Sans elles, un scan sur deux serait resté faux.
+
+# Les fichiers d'import : « Code Ean », doublons de SKU, modèles (25 août 2026)
+
+Trois demandes de Julien après l'inventaire d'essai « Fwee », et les trois se
+tiennent : sa colonne s'appelait **« Code Ean »**, inconnue des deux
+`lib/import.ts` — donc tous les EAN sortaient nuls, **donc** les lignes au
+même SKU s'écrasaient (« dernière valeur conservée ») au lieu d'être gardées
+chacune sous son EAN.
+
+- **`codeean` et `codeean13` sont dans `EAN_KEYS`**, des deux côtés. ⚠️ Les
+  deux `lib/import.ts` sont dupliqués (l'app et le site ne compilent pas
+  ensemble) : un test de `web/tests/import.test.ts` lit le fichier mobile et
+  échoue si les listes divergent.
+- **Les doublons de SKU voulus marchaient déjà** — un SKU peut porter
+  plusieurs EAN (une taille par code-barres), chaque ligne supplémentaire est
+  importée sous son EAN (contrainte UNIQUE (session_id, sku) oblige). Rien à
+  « rendre possible » : c'est la colonne EAN non reconnue qui neutralisait ce
+  mécanisme. Ne pas « corriger » l'écrasement des vrais doublons (même SKU
+  sans EAN distinct) : lui est voulu.
+- **Deux modèles à télécharger dans la boîte à outils du site**
+  (`web/lib/modeles.ts`, `components/ModelesPanel.tsx`) : Référencement et
+  Stock théorique, en `.xlsx` dessinés sur place par la bibliothèque déjà
+  vendorisée. **Toutes les cellules sont des chaînes** — c'est ce qui type les
+  colonnes en Texte dans Excel et préserve les zéros de tête, le piège que
+  l'écran d'import documente. Le modèle Référencement montre le cas des
+  doublons : ART-001 sur deux lignes, deux EAN. **Chaque modèle traverse son
+  propre import dans un test** — un gabarit dont une colonne ne serait pas
+  relue serait pire que pas de gabarit. Pas de fichiers statiques dans
+  `public/` : ils divergeraient du code d'import sans qu'aucun test le voie.
+  (La boîte à outils de l'app n'a pas ces modèles : un tableur s'ouvre sur un
+  ordinateur, et l'import de fichiers est le travail du site.)
+
+Vérifié au navigateur (route jetable, retirée) : le panneau en clair et en
+sombre, et les deux téléchargements réels — classeurs relus, cellules en
+texte. Tests de garde : `web/tests/import.test.ts`, blocs « Code Ean » et
+« les modèles de la boîte à outils ».
 
 # Balises : séries imprimées, pas de stock (21 août 2026)
 

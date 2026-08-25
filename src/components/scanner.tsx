@@ -242,10 +242,20 @@ export function Scanner({
   const [permission, requestPermission, relirePermission] = useCameraPermissions()
   const [mode, setMode] = useState<Mode>('camera')
   const [manualInput, setManualInput] = useState('')
-  // Douchette (Zebra/Honeywell/BT HID) — capture keyboard-wedge en mode dédié.
-  const [hwInput, setHwInput] = useState('')
+  // Douchette (Zebra/Honeywell/Inateck/BT HID) — capture keyboard-wedge en
+  // mode dédié.
+  //
+  // ⚠️ **Ces deux champs ne sont pas pilotés par un état React**, et c'est ce
+  // qui rend la capture fiable : une douchette écrit treize touches en moins
+  // d'un dixième de seconde, et un `value={état}` renvoie au natif un texte
+  // déjà périmé — des caractères disparaissent au milieu du code, sans que
+  // rien ne le signale. Constat de Julien le 25 août 2026 : sur un EAN de
+  // treize chiffres, deux manquaient. Le tampon est donc une référence, mise à
+  // jour à chaque frappe et lue au moment de valider.
+  const hwBufRef = useRef('')
   const hwInputRef = useRef<TextInput>(null)
-  const [baliseInput, setBaliseInput] = useState('')
+  const baliseBufRef = useRef('')
+  const baliseInputRef = useRef<TextInput>(null)
   // Une douchette QWERTY sur un iPhone AZERTY écrit &é"' au lieu de 1234.
   // Une fois le décalage constaté, il ne se corrige pas tout seul en cours de
   // comptage : on le retient pour redresser aussi les codes qui n'en portent
@@ -431,10 +441,17 @@ export function Scanner({
   // ── Mode douchette : maintient le focus sur le champ de capture pour recevoir
   // les frappes de la douchette, sauf pendant la saisie « article inconnu ». ──
   useEffect(() => {
+    // Le champ est démonté à chaque changement de mode : son tampon doit
+    // l'être aussi, sinon un scan resté en cours ressortirait plus tard sous
+    // les yeux de personne.
+    hwBufRef.current = ''
     if (mode !== 'hardware' || balisePhase || illisibleCode !== null) return
     const id = setTimeout(() => hwInputRef.current?.focus(), 60)
     return () => clearTimeout(id)
   }, [mode, balisePhase, illisibleCode])
+
+  // Même raison pour le champ d'ouverture d'une balise.
+  useEffect(() => { baliseBufRef.current = '' }, [balisePhase])
 
   // ── Cooldown: animated bar drains over COOLDOWN_MS after each auto-scan ────
   function startCooldown() {
@@ -605,7 +622,7 @@ export function Scanner({
 
   // ── Ouverture délibérée d'une balise par saisie de son numéro ─────────────
   async function openBaliseManual() {
-    const brut = baliseInput.trim()
+    const brut = baliseBufRef.current.trim()
     if (!brut) return
     // Ce champ reçoit la frappe de la douchette comme celle du clavier : même
     // redressement qu'en mode douchette. Un numéro tapé au pavé numérique
@@ -619,7 +636,8 @@ export function Scanner({
     } finally {
       setResolving(false)
     }
-    setBaliseInput('')
+    baliseBufRef.current = ''
+    baliseInputRef.current?.clear()
   }
 
   async function recordArticle(article: Article, zoneCode: string | null = null) {
@@ -652,8 +670,9 @@ export function Scanner({
 
   // ── Douchette : une frappe-clavier terminée par Entrée (suffixe DataWedge) ──
   async function handleHardwareSubmit() {
-    const brut = hwInput
-    setHwInput('')
+    const brut = hwBufRef.current
+    hwBufRef.current = ''
+    hwInputRef.current?.clear()
     if (!brut.trim()) return
     // La douchette envoie des touches, pas des caractères : sur un iPhone
     // français, une douchette QWERTY sortie d'usine écrit &é"' pour 1234.
@@ -820,9 +839,10 @@ export function Scanner({
           <Text style={styles.baliseFieldLabel}>Ouvrir une balise — saisissez son numéro ou scannez-la</Text>
           <View style={styles.manualRow}>
             <TextInput
+              ref={baliseInputRef}
               style={[styles.manualInput, { flex: 1 }, tabular]}
-              value={baliseInput}
-              onChangeText={setBaliseInput}
+              defaultValue=""
+              onChangeText={t => { baliseBufRef.current = t }}
               keyboardType="number-pad"
               placeholder="N° de balise"
               placeholderTextColor={theme.textMuted}
@@ -988,8 +1008,8 @@ export function Scanner({
           <TextInput
             ref={hwInputRef}
             style={[styles.manualInput, tabular]}
-            value={hwInput}
-            onChangeText={setHwInput}
+            defaultValue=""
+            onChangeText={t => { hwBufRef.current = t }}
             onSubmitEditing={handleHardwareSubmit}
             blurOnSubmit={false}
             showSoftInputOnFocus={false}
