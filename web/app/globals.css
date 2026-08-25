@@ -844,6 +844,29 @@ a { color: inherit; text-decoration: none; }
 .dash-progress .dash-big-unit { color: var(--text-2); -webkit-text-fill-color: var(--text-2); }
 /* Le rail de barre : `--bg` opaque ferait une saignée sombre dans le verre. */
 .dash-progress .dash-bar { background: rgba(11, 15, 25, 0.55); }
+/* Le reflet « Flux » (piste A de la maquette motion, mixée avec le geste
+   d'arrivée porté par ProgressRail) : un voile clair parcourt la barre de
+   comptage puis se repose — confiné à la barre, seule la progression bouge.
+   Il vit sur le remplissage (clippé par son rayon), donc il ne peut pas
+   déborder de la tuile — même règle que le halo. */
+.dash-progress .dash-bar-count { position: relative; overflow: hidden; }
+.dash-progress .dash-bar-count::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 46%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+  animation: dash-flux 3.4s ease-in-out infinite;
+}
+@keyframes dash-flux {
+  0% { transform: translateX(-120%); }
+  60% { transform: translateX(320%); }
+  100% { transform: translateX(320%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-progress .dash-bar-count::after { animation: none; opacity: 0; }
+}
 
 :root[data-theme="light"] .dash-progress {
   background: rgba(255, 255, 255, 0.58);

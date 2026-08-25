@@ -1,9 +1,51 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fmtQty, plural } from '@/lib/format'
 import type { ZoneDashboardRow } from '@/lib/zones'
 import type { Totals } from '@/hooks/useSessionData'
+
+/**
+ * Le geste d'arrivée de la tuile (piste E de la maquette « Tuile Progression
+ * en mouvement », mixée avec le reflet A porté par globals.css) : au montage,
+ * les barres se remplissent et le grand nombre compte jusqu'à sa valeur en
+ * 1,4 s, puis tout est immobile. Trois choses tiennent ce choix :
+ * · la page ne monte la tuile qu'une fois `data.loading` passé — les valeurs
+ *   sont donc déjà là au montage, l'animation ne compte jamais vers zéro ;
+ * · elle ne se joue qu'au montage : un rafraîchissement du direct met à jour
+ *   les valeurs sans recompter — un tableau de bord qui recompte toutes les
+ *   minutes serait un métronome, pas un geste d'accueil ;
+ * · `prefers-reduced-motion` saute l'animation (t = 1 d'emblée), comme le
+ *   reste du site coupe déjà ses transitions de barres.
+ */
+function useArrivee() {
+  const [t, setT] = useState(0)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setT(1)
+      return
+    }
+    /* Le chronomètre part à la PREMIÈRE image rendue, pas au montage : dans
+       un onglet en arrière-plan, requestAnimationFrame ne tourne pas — un
+       départ au montage ferait sauter l'arrivée à sa fin dès que l'onglet
+       devient visible, au lieu de la jouer sous les yeux de la personne. */
+    let debut = 0
+    let raf = 0
+    const pas = (now: number) => {
+      if (!debut) debut = now
+      const brut = Math.min(1, (now - debut) / 1400)
+      setT(1 - Math.pow(1 - brut, 3))
+      if (brut < 1) raf = requestAnimationFrame(pas)
+    }
+    raf = requestAnimationFrame(pas)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return t
+}
+
+/* Pendant l'arrivée, la transition CSS des barres (.4s) doublerait l'easing
+   du compteur et le remplissage traînerait derrière le chiffre. */
+const sansTransition = (t: number) => (t < 1 ? ('none' as const) : undefined)
 
 /**
  * Colonne de progression. Deux barres, pas une : le comptage et l'audit sont
@@ -22,6 +64,7 @@ export function ProgressRail({
   /** Renvoie vers un onglet : l'avancement dans Suivi, la préparation dans Set up. */
   onOpenTab: (tab: 'suivi' | 'setup') => void
 }) {
+  const arrivee = useArrivee()
   const stats = useMemo(() => {
     const total = zones.length
     const counted = zones.filter(z => z.count_status === 'done').length
@@ -47,7 +90,7 @@ export function ProgressRail({
     return (
       <aside className="dash-progress panel">
         <div className="dash-section-label">Progression</div>
-        <div className="dash-big num">{fmtQty(totals.counted)}</div>
+        <div className="dash-big num">{fmtQty(Math.round(totals.counted * arrivee))}</div>
         <div className="dash-progress-sub">
           {totals.counted > 1 ? 'pièces scannées' : 'pièce scannée'} en comptage
         </div>
@@ -70,7 +113,10 @@ export function ProgressRail({
           {theoreticalQty > 0 ? (
             <>
               <div className="dash-bar">
-                <div className="dash-bar-fill dash-bar-count" style={{ width: `${pct}%` }} />
+                <div
+                  className="dash-bar-fill dash-bar-count"
+                  style={{ width: `${pct * arrivee}%`, transition: sansTransition(arrivee) }}
+                />
               </div>
               <div className="dash-progress-sub small">
                 {fmtQty(totals.counted)} / {fmtQty(theoreticalQty)} pièces attendues — {pct}%
@@ -95,7 +141,7 @@ export function ProgressRail({
   return (
     <aside className="dash-progress panel">
       <div className="dash-section-label">Progression</div>
-      <div className="dash-big num">{stats.countPct}<span className="dash-big-unit">%</span></div>
+      <div className="dash-big num">{Math.round(stats.countPct * arrivee)}<span className="dash-big-unit">%</span></div>
       <div className="dash-progress-sub">des balises comptées</div>
 
       <div className="dash-bar-row">
@@ -104,7 +150,10 @@ export function ProgressRail({
           <strong className="num">{stats.counted}/{stats.total}</strong>
         </div>
         <div className="dash-bar">
-          <div className="dash-bar-fill dash-bar-count" style={{ width: `${stats.countPct}%` }} />
+          <div
+            className="dash-bar-fill dash-bar-count"
+            style={{ width: `${stats.countPct * arrivee}%`, transition: sansTransition(arrivee) }}
+          />
         </div>
         {stats.countOpen > 0 && (
           <div className="dash-progress-sub small">{plural(stats.countOpen, 'balise en cours', 'balises en cours')}</div>
@@ -117,7 +166,10 @@ export function ProgressRail({
           <strong className="num">{stats.audited}/{stats.total}</strong>
         </div>
         <div className="dash-bar">
-          <div className="dash-bar-fill dash-bar-audit" style={{ width: `${stats.auditPct}%` }} />
+          <div
+            className="dash-bar-fill dash-bar-audit"
+            style={{ width: `${stats.auditPct * arrivee}%`, transition: sansTransition(arrivee) }}
+          />
         </div>
         {stats.auditOpen > 0 && (
           <div className="dash-progress-sub small">{plural(stats.auditOpen, 'balise en cours', 'balises en cours')}</div>
