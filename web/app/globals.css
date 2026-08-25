@@ -848,21 +848,28 @@ a { color: inherit; text-decoration: none; }
    d'arrivée porté par ProgressRail) : un voile clair parcourt la barre de
    comptage puis se repose — confiné à la barre, seule la progression bouge.
    Il vit sur le remplissage (clippé par son rayon), donc il ne peut pas
-   déborder de la tuile — même règle que le halo. */
+   déborder de la tuile — même règle que le halo.
+   ⚠️ Le reflet se mesure en PIXELS, pas en pourcentage du remplissage
+   (constat de Julien, 25 août 2026 : « l'animation Flux n'est toujours pas
+   visible »). En %, sur la barre à 33 % de Fwee il faisait 40 px et passait
+   en un clin d'œil ; à 0 % il n'existait pas. En px, le même glint traverse
+   toutes les largeurs au même rythme — et le voile est monté à 0.45, un
+   bandeau de 8 px de haut n'ayant pas les moyens d'être timide. */
 .dash-progress .dash-bar-count { position: relative; overflow: hidden; }
 .dash-progress .dash-bar-count::after {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 46%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+  left: 0;
+  width: 56px;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
   animation: dash-flux 3.4s ease-in-out infinite;
 }
 @keyframes dash-flux {
-  0% { transform: translateX(-120%); }
-  60% { transform: translateX(320%); }
-  100% { transform: translateX(320%); }
+  0% { transform: translateX(-64px); }
+  60% { transform: translateX(300px); }
+  100% { transform: translateX(300px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .dash-progress .dash-bar-count::after { animation: none; opacity: 0; }
