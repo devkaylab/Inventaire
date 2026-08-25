@@ -56,6 +56,30 @@ describe('consulter une balise finie ne l’ouvre pas', () => {
   })
 })
 
+/**
+ * « Rouvrir » depuis la liste demande confirmation (Julien, 25 août 2026).
+ * Un rang se touche du pouce en faisant défiler, et l'écran qui s'ouvre a la
+ * caméra vive avec le scan automatique.
+ */
+describe('rouvrir depuis la liste demande confirmation', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+
+  it('passe par la question et n’ouvre qu’après un oui', () => {
+    expect(scanner).toContain('onPress={() => { void rouvrirDepuisListe(item) }}')
+    const fonction = scanner.slice(scanner.indexOf('async function rouvrirDepuisListe'))
+    const question = fonction.indexOf('titre: `Rouvrir la balise ${z.code} ?`')
+    const ouverture = fonction.indexOf('if (ok) await openBaliseCode(')
+    expect(question).toBeGreaterThan(0)
+    expect(question).toBeLessThan(ouverture)
+  })
+
+  it('ne rejoue pas l’avertissement long du scan', () => {
+    // Deux questions de nature différente : celle-ci demande une intention,
+    // l'autre apprend un fait. `sansAvertir` reste vrai depuis ce rang.
+    expect(scanner).toContain('await openBaliseCode(z.code, false, false, true)')
+  })
+})
+
 describe('quitter le comptage avec une balise ouverte', () => {
   const scanner = lire('../src/components/scanner.tsx')
 

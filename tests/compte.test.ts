@@ -1378,9 +1378,12 @@ describe('rouvrir une balise déjà comptée', () => {
   })
 
   it('se tait sur le chemin délibéré et sur une balise neuve', () => {
-    // « Revenir sur une balise » affiche déjà le total et dit « Rouvrir » :
-    // une question de plus y apprendrait à cliquer sans lire.
-    expect(scanner).toContain('openBaliseCode(item.code, false, false, true)')
+    // ⚠️ Amendé le 25 août 2026 au soir, pas affaibli. « Revenir sur une
+    // balise » ne rejoue toujours PAS cet avertissement-ci — il y apprendrait
+    // à cliquer sans lire, le rang affichant déjà le total. Mais ce rang pose
+    // désormais sa propre question, courte, à la demande de Julien (gestes
+    // accidentels) : voir `rouvrirDepuisListe` et `tests/comptage.test.ts`.
+    expect(scanner).toContain('await openBaliseCode(z.code, false, false, true)')
     expect(scanner).toContain('allowCreate || sansAvertir ? null : baliseDejaFaite(code)')
   })
 

@@ -614,9 +614,12 @@ export function Scanner({
    * @param sansAvertir  vrai quand la personne vient **exprès** rouvrir une
    *                     balise depuis « Revenir sur une balise » : ce rang
    *                     affiche déjà le total et son bouton dit « Rouvrir ».
-   *                     Y ajouter une question apprendrait à cliquer sans
-   *                     lire, et la question ne servirait plus là où elle
-   *                     compte — le scan d'une étiquette qu'on croit neuve.
+   *                     L'avertissement long — celui qui sert au scan d'une
+   *                     étiquette qu'on croit neuve — n'y aurait rien à
+   *                     apprendre, et le répéter apprendrait à cliquer sans
+   *                     lire. ⚠️ Ce rang pose en revanche **sa propre**
+   *                     question, courte, depuis le 25 août 2026 : voir
+   *                     `rouvrirDepuisListe`.
    */
   async function openBaliseCode(
     code: string, closePrev: boolean, allowCreate = false, sansAvertir = false,
@@ -744,6 +747,33 @@ export function Scanner({
     } catch (e) {
       signaler.erreur('Erreur', errorMessage(e))
     }
+  }
+
+  /**
+   * « Rouvrir » depuis la liste des balises terminées, précédé d'une question.
+   *
+   * Demandée par Julien le 25 août 2026 — « ça évite les manip accidentelles ».
+   * Un rang de liste se touche du pouce en faisant défiler, et l'écran qui
+   * s'ouvre a la caméra vive avec le scan automatique : le vrai risque n'est
+   * plus de perdre l'état de la balise (la consultation n'écrit plus rien),
+   * c'est de **compter dans un rayon déjà fini** sans l'avoir voulu.
+   *
+   * Elle est volontairement courte et distincte de l'avertissement du scan :
+   * celle-ci demande une intention, celle-là apprend un fait.
+   */
+  async function rouvrirDepuisListe(z: (typeof doneBalises)[number]) {
+    const compte = baliseModeRef.current === 'count'
+    const unites = Math.round(Number(compte ? z.count_units : z.audit_units))
+    const p = unites > 1 ? 's' : ''
+    const ok = await demander({
+      titre: `Rouvrir la balise ${z.code} ?`,
+      texte: `Elle est terminée, avec ${unites} pièce${p} enregistrée${p}. `
+        + 'Vous pourrez en ajouter ou les corriger ; rien n’est effacé.',
+      note: 'La simple consultation ne change rien : la balise ne repasse en cours que si vous comptez.',
+      action: 'Rouvrir',
+      annuler: 'Annuler',
+    })
+    if (ok) await openBaliseCode(z.code, false, false, true)
   }
 
   // ── Quitter l'écran avec une balise encore ouverte ────────────────────────
@@ -1255,7 +1285,7 @@ export function Scanner({
             keyExtractor={(z) => z.id}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <Pressable style={styles.reopenRow} onPress={() => openBaliseCode(item.code, false, false, true)}>
+              <Pressable style={styles.reopenRow} onPress={() => { void rouvrirDepuisListe(item) }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.reopenName} numberOfLines={1}>{item.name ?? 'Sans zone'}</Text>
                   <Text style={styles.reopenMeta}>
