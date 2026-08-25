@@ -2836,10 +2836,10 @@ Vérifié par `tests/douchette.test.ts` (16 cas), qui rejoue **le scan réel du
 25 août** — `!!àç§(é(!((ç!` → `8809652585598`, majuscules accentuées
 comprises — et le même code déformé par un clavier Windows.
 
-⚠️ **Ce que le simulateur ne peut pas prouver** : il n'a pas de douchette
-Bluetooth, et son injection de texte passe par la disposition du Mac (voir
-plus bas). La table et la clé de contrôle sont couvertes par les tests ; la
-capture non contrôlée, elle, ne se vérifie qu'avec la douchette en main.
+**Confirmé par Julien sur son iPhone, douchette Inateck, le 25 août 2026 :
+« ça marche, les 13 chiffres passent ».** C'est la seule preuve qui valait
+pour la capture — un simulateur n'envoie pas treize touches en un dixième de
+seconde.
 
 ## « Le téléphone doit rester sur la page et ne pas se verrouiller »
 
@@ -2861,12 +2861,24 @@ activation=OK` pour le keep-awake (sonde retirée, `git diff` contrôlé). Rien
 n'a été laissé en base — la balise rouverte a été reclôturée, aucun comptage
 ni article créé.
 
-⚠️ **Le simulateur ne sait pas rejouer le défaut à l'identique** : l'injection
-de texte passe elle-même par la disposition du Mac (taper `AC-3001` fait
-arriver `QC)»àÀ&`, guillemets typographiques compris) et **les caractères non
-ASCII sont écartés**. C'est pratique pour provoquer le décalage, inutile pour
-comparer au caractère près. La table, elle, est couverte par
-`tests/douchette.test.ts`.
+**Le simulateur rejoue le défaut fidèlement, et c'est le meilleur banc
+d'essai qu'on ait sans douchette** — corrigé le 25 août 2026, une première
+version de cette note disait l'inverse. Son injection de texte passe par la
+disposition du **Mac**, celle-là même que suit iOS : taper `8809652585598`
+dans le champ douchette fait arriver `!!àç§(é(!((Ç!`, **exactement la chaîne
+que la douchette de Julien a produite sur son iPhone**. C'est ce qui a permis
+de vérifier la table iOS à l'écran avant qu'il ne reconstruise.
+
+Deux précautions d'emploi, et une seule vraie limite :
+
+- **taper le code voulu, pas le code déformé** : c'est le simulateur qui
+  déforme. Les caractères non ASCII envoyés sont de toute façon écartés ;
+- la touche 3 peut arriver en `»` plutôt qu'en `"` — ce sont les guillemets
+  typographiques de macOS, une substitution du champ de saisie et non une
+  différence de disposition ;
+- **la rafale, elle, ne se prouve qu'avec la douchette** : l'injection du
+  simulateur est trop lente pour reproduire treize touches en un dixième de
+  seconde. C'est le défaut de capture, et il a fallu l'iPhone de Julien.
 
 Au passage, confirmé à l'écran : `autoCapitalize="characters"` **fait bien
 remonter `À` plutôt que `à`** — d'où les majuscules accentuées ajoutées à la
