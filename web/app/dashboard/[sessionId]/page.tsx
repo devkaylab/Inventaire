@@ -156,6 +156,15 @@ export default function SessionDashboardPage() {
           où il vivait hors de la coquille. */}
       <div className="app-head">
         <div>
+          {/* Retour vers la liste — piste A validée sur maquette (25 août
+              2026). L'onglet « Tableau de bord » mène au même endroit mais ne
+              se lit pas comme un retour ; ce lien nomme sa destination. */}
+          <Link href="/dashboard" className="retour-liste">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+            Mes inventaires
+          </Link>
           <h1 className="page-title">{session.name || session.store_name}</h1>
           <p className="page-sub">
             {session.store_name} · <span className="num">{session.inventory_number}</span>

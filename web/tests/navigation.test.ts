@@ -124,6 +124,14 @@ describe('le tableau de bord d’un inventaire', () => {
     // Les sections de l'inventaire, elles, restent atteignables sur mobile.
     expect(page).toContain('<MobileNav')
   })
+
+  it('porte le retour vers la liste au-dessus du titre', () => {
+    // Piste A validée sur maquette (25 août 2026) : l'onglet « Tableau de
+    // bord » mène au même endroit mais ne se lit pas comme un retour. Le lien
+    // nomme sa destination, au-dessus du titre — pas dans la rangée d'actions.
+    expect(page).toContain('<Link href="/dashboard" className="retour-liste">')
+    expect(page.indexOf('retour-liste')).toBeLessThan(page.indexOf('className="page-title"'))
+  })
 })
 
 describe('les onglets suivent le rôle', () => {

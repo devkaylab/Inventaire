@@ -1842,6 +1842,16 @@ a { color: inherit; text-decoration: none; }
    inventaire. Une classe plutôt qu'un style en ligne : le jour où un autre
    écran en a besoin, il n'a rien à recopier. */
 .page-sub { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+/* Le lien de rappel au-dessus du titre d'un inventaire (piste A de la
+   maquette « Retour vers Mes inventaires »). Discret : il accompagne le
+   titre, il ne rivalise pas avec lui. */
+.retour-liste {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 500; color: var(--text-2);
+  margin-bottom: 8px;
+}
+.retour-liste:hover { color: var(--text); }
+.retour-liste svg { flex: none; }
 .app-head {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
