@@ -78,6 +78,10 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
       await startSession(sessionId)
       toast.success('Inventaire démarré : l’équipe peut compter.')
       await onChanged()
+      // La préparation est finie : on n'a plus rien à faire ici. Le geste
+      // suivant est de regarder l'équipe compter, donc l'écran y va — après
+      // le rafraîchissement, pour que Suivi s'ouvre sur l'état à jour.
+      onOpenSuivi()
     } catch (err) {
       toast.error(friendlyError(err))
     } finally {
@@ -277,6 +281,11 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
  * peut compter, allez au suivi »). C'est la seconde moitié du constat — un
  * bouton qui disparaît une fois pressé laisse sans réponse la question
  * « et maintenant ? ».
+ *
+ * **Le démarrage emmène sur Suivi** (Julien, 25 août 2026) : la préparation
+ * est finie, on n'a plus rien à faire ici. Le troisième état n'est donc pas
+ * ce qu'on voit juste après avoir cliqué — il est là pour qui revient
+ * préparer un inventaire déjà lancé.
  */
 function Demarrage({ status, pret, starting, onStart, onOpenSuivi }: {
   status: SessionStatus

@@ -1298,6 +1298,12 @@ Points à ne pas défaire :
   **la suite** (« L'inventaire est en cours », et « Suivre l'avancement » qui
   mène à l'onglet Suivi). Un bouton qui disparaît une fois pressé laisse la
   question sans réponse.
+- **Le clic emmène sur Suivi.** *« Cliquer sur commencer l'inventaire doit
+  ramener sur la page suivi »* — la préparation est finie, on n'a plus rien à
+  faire sur Set up. Le troisième état n'est donc pas ce qu'on voit juste après
+  avoir cliqué : il est là pour qui **revient** préparer un inventaire déjà
+  lancé. La bascule se fait **après `onChanged`**, sinon Suivi s'ouvrirait sur
+  l'état d'avant.
 - **`onOpenSuivi` vient de la page** (`selectTab('suivi')`), comme
   `ProgressRail` : l'onglet vit dans l'URL, la section ne se déplace pas
   toute seule.

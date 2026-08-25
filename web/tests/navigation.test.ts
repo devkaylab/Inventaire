@@ -295,6 +295,15 @@ describe('« Commencer l’inventaire » conclut la page, il ne l’ouvre pas', 
     expect(lire('../app/dashboard/[sessionId]/page.tsx')).toContain("onOpenSuivi={() => selectTab('suivi')}")
   })
 
+  it('emmène sur Suivi une fois l’inventaire lancé', () => {
+    // « Cliquer sur commencer l'inventaire doit ramener sur la page suivi »
+    // (Julien, 25 août 2026). La préparation est finie : on n'a plus rien à
+    // faire sur Set up. Après `onChanged`, pour que Suivi s'ouvre à jour.
+    const corps = setup.slice(setup.indexOf('async function start()'), setup.indexOf('async function run('))
+    expect(corps).toContain('onOpenSuivi()')
+    expect(corps.indexOf('await onChanged()')).toBeLessThan(corps.indexOf('onOpenSuivi()'))
+  })
+
   it('dit aussi ce qui manque encore', () => {
     // Sans référentiel, le bouton ne part pas : l'écran nomme le fichier à
     // charger plutôt que de laisser deviner pourquoi il refuse.
