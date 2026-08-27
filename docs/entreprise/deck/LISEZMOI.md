@@ -10,6 +10,7 @@ réservé à la ligne de scan sous l'en-tête.
 | `build.js` | `Quantinvo-presentation.pptx` | Direction, achats : la présentation commerciale | 12 |
 | `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, déploiement MDM, comptes, sécurité, RGPD | 12 |
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs : le guide de prise en main | 19 |
+| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : décharger l'Inventory Control (sans/avec, Zebra) | 14 |
 
 ## Générer
 
@@ -103,6 +104,14 @@ complet.
   « Revenir sur une balise », « Rejoindre un inventaire », « Balise hors
   plage », les onglets Suivi / Set up / Écarts d'audit / Rapport / Équipe.
   Un libellé qui change dans l'application change ici — et la capture avec.
+- **Le deck La Samaritaine suit leur propre document** (« Déroulement
+  inventaire tournant », août 2026) : la page « Aujourd'hui », la règle
+  d'audit 100 % W&J / 30 %, la consolidation SKU Variance / stock théorique
+  et le projet d'inventaire aléatoire en viennent tels quels. Si leur
+  procédure change, la page 2 change. **Jamais de prix Zebra** dans ce deck
+  ni en présentation : l'ancre SmartCount est confidentielle. La page
+  « Pourquoi pas Zebra » reste factuelle et garde son encadré honnête
+  (terminaux durcis, flotte amortie).
 - **Contact** : `contact@quantinvo.com` partout, jamais l'adresse Gmail.
 - Les couleurs et le logo sont ceux de `web/app/globals.css` et de
   `web/components/Logo.tsx` : si la charte bouge, reprendre `charte.js`.
