@@ -2385,6 +2385,48 @@ quota et l'envoi valable qui suit passe ; aucune ligne résiduelle ni dans
 `company_requests` ni dans `submission_attempts` ; une seule signature de la
 fonction ; droits limités à `anon`, `authenticated` et `service_role`.
 
+### Et le texte est borné (`20260828130001`)
+
+Second volet du même constat. Le stock, la surface et le nombre de magasins
+étaient bornés depuis le premier jour ; le **texte** ne l'était pas. Un
+anonyme pouvait écrire ce qu'il voulait, de la longueur qu'il voulait, dans
+`company_name`, `message`, `contact_phone`, le prénom et le nom.
+
+**⚠️ Refus, pas troncature — et c'est le point.** Le nom de l'entreprise
+devient `companies.name` à la création, puis figure sur le devis et sur la
+facture Stripe : des pièces datées, qui ne se réécrivent pas. Une troncature
+silencieuse y produirait un document faux, et le message du client serait
+amputé sans qu'il le sache. La règle du projet s'applique telle quelle : les
+erreurs de saisie restent explicites, elles ne parlent que de ce que la
+personne vient de taper.
+
+**Les chiffres, et d'où ils viennent** — 80 pour le nom d'entreprise, le
+prénom et le nom : c'est la borne de `nom_propre()`, qui gouverne déjà tous
+les renommages. Sans cet alignement, une entreprise créée depuis une demande
+pouvait porter un nom qu'aucun renommage n'aurait pu lui redonner. Puis 254
+pour l'e-mail (RFC 5321), 30 pour le téléphone, 2 000 pour le message. **Le
+nom de magasin passe de 120 à 80** pour la même raison ; lui reste tronqué et
+non refusé, comportement d'origine, et l'écran le borne déjà à 80.
+
+**La mesure passe avant le comptage du quota** : une saisie trop longue ne
+consomme pas le quota de quelqu'un, au même titre qu'une faute de frappe.
+
+**Trois épaisseurs, et elles ne font pas double emploi** : l'écran empêche
+(`maxLength` sur les six champs de `/inscription` — sans quoi on n'apprend
+qu'après avoir cliqué qu'un texte collé est trop long), la fonction refuse
+avec un message lisible, et la contrainte `company_requests_longueurs` est la
+ceinture — elle vaudra aussi pour la fonction qu'on écrira demain. La table
+était vide au moment de la poser, vérifié avant.
+
+À savoir : **`decline_quote_by_token` était déjà bornée** (`left(…, 500)` sur
+le motif de refus, l'autre écriture ouverte à `anon`). Rien à y faire.
+
+Vérifié en base, en transactions annulées : chaque borne refuse à +1 et
+accepte à la limite exacte ; un `insert` direct qui contourne la fonction est
+refusé par la contrainte ; le nom de magasin de 200 caractères ressort à 80 ;
+aucun résidu. Et au navigateur sur `/inscription` : les six `maxLength` sont
+bien dans le DOM, la page rend sans erreur de console.
+
 Le reste de la revue — rapport complet, neuf constats classés — est là :
 https://claude.ai/code/artifact/e0b727e9-5d2d-4110-bc0c-01d97c663595
 

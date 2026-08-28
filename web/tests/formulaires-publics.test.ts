@@ -121,3 +121,53 @@ describe('le formulaire d’inscription est limité en débit', () => {
     expect(migration).toContain('grant execute on function public.submit_company_request')
   })
 })
+
+describe('le formulaire d’inscription borne ce qu’il accepte', () => {
+  // Second volet du même constat (28 août 2026) : la fonction est appelable
+  // sans compte, et le texte n'avait aucune borne — seuls le stock, la surface
+  // et le nombre de magasins en avaient. Migration 20260828130001.
+  const { fichier, corps } = derniereDefinition('submit_company_request')
+  const migration = readFileSync(path.join(dossierMigrations, fichier), 'utf8')
+  const inscription = lire('../app/inscription/page.tsx')
+
+  it('refuse les cinq champs trop longs', () => {
+    expect(corps).toContain('length(btrim(p_company_name)) > 80')
+    expect(corps).toContain('length(btrim(p_first_name)) > 80')
+    expect(corps).toContain('length(btrim(p_last_name)) > 80')
+    expect(corps).toContain('length(v_email) > 254')
+    expect(corps).toContain("length(btrim(coalesce(p_phone, ''))) > 30")
+    expect(corps).toContain("length(btrim(coalesce(p_message, ''))) > 2000")
+  })
+
+  it('refuse plutôt que de tronquer', () => {
+    // Le nom de l'entreprise devient `companies.name`, puis figure sur le devis
+    // et sur la facture Stripe — des pièces datées. Une troncature silencieuse
+    // y produirait un document faux.
+    expect(corps).toContain("'Le nom de l''entreprise ne peut pas dépasser 80 caractères.'")
+  })
+
+  it('mesure AVANT de compter le quota', () => {
+    // Une saisie trop longue ne doit pas consommer le quota de quelqu'un, au
+    // même titre qu'une faute de frappe.
+    expect(corps.indexOf('> 2000')).toBeLessThan(corps.indexOf('rate_limit_ok'))
+  })
+
+  it('pose la contrainte de table comme ceinture', () => {
+    // La fonction est aujourd'hui le seul chemin ouvert à `anon` ; la
+    // contrainte vaudra aussi pour la fonction qu'on écrira demain.
+    expect(migration).toContain('company_requests_longueurs')
+    expect(migration).toContain('length(company_name)        <= 80')
+    expect(migration).toContain('length(message)             <= 2000')
+  })
+
+  it('borne les mêmes champs à l’écran', () => {
+    // L'écran empêche, le serveur refuse. Sans le premier, quelqu'un qui colle
+    // un long texte ne l'apprend qu'après avoir cliqué.
+    expect(inscription).toMatch(/id="company"\s+maxLength=\{80\}/)
+    expect(inscription).toMatch(/id="firstName" maxLength=\{80\}/)
+    expect(inscription).toMatch(/id="lastName" maxLength=\{80\}/)
+    expect(inscription).toMatch(/id="email"[^>]*maxLength=\{254\}/)
+    expect(inscription).toMatch(/id="phone" maxLength=\{30\}/)
+    expect(inscription).toContain('maxLength={2000}')
+  })
+})

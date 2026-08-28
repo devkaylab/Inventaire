@@ -307,6 +307,7 @@ export default function CompanyRequestPage() {
             <label htmlFor="company">Nom de l&apos;entreprise</label>
             <input
               id="company"
+              maxLength={80}
               value={companyName}
               onChange={(e) => {
                 nomRempliDuRegistre.current = false
@@ -324,22 +325,22 @@ export default function CompanyRequestPage() {
           <div className="field-duo">
             <div className="field">
               <label htmlFor="firstName">Prénom du contact</label>
-              <input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Marie" />
+              <input id="firstName" maxLength={80} value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Marie" />
             </div>
             <div className="field">
               <label htmlFor="lastName">Nom du contact</label>
-              <input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Durand" />
+              <input id="lastName" maxLength={80} value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Durand" />
             </div>
           </div>
 
           <div className="field-duo">
             <div className="field">
               <label htmlFor="email">E-mail</label>
-              <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.durand@acme.fr" />
+              <input id="email" type="email" autoComplete="email" maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="marie.durand@acme.fr" />
             </div>
             <div className="field">
               <label htmlFor="phone">Téléphone</label>
-              <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01 23 45 67 89" />
+              <input id="phone" maxLength={30} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01 23 45 67 89" />
             </div>
           </div>
 
@@ -390,6 +391,7 @@ export default function CompanyRequestPage() {
             <textarea
               id="message"
               rows={3}
+              maxLength={2000}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Échéance, contraintes, nombre de magasins si le réseau est grand…"
