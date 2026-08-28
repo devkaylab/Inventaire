@@ -977,6 +977,26 @@ describe('le geste caché, montré une fois', () => {
  * « je n'ai pas reçu mon invitation », le repère du menu d'un inventaire, et
  * les trois étapes de l'administrateur d'entreprise.
  */
+describe('un seul inventaire ne s’ouvre pas tout seul', () => {
+  // Tranché par Julien le 28 août 2026, question laissée ouverte par la
+  // maquette du 23. La liste reste, même à une ligne : elle nomme l'inventaire
+  // et son magasin, et le comportement ne change pas le jour où un deuxième
+  // s'ouvre — un matin d'inventaire, sous les doigts de quelqu'un qui avait
+  // pris l'habitude de l'autre.
+  const accueil = lire('app/(employee)/index.tsx')
+
+  it('l’accueil du compteur ne redirige jamais vers un inventaire', () => {
+    expect(accueil).not.toMatch(/<Redirect/)
+    // Une navigation qui part d'un effet est une navigation que personne n'a
+    // demandée. Celles de cet écran suivent toutes un appui — rejoindre par
+    // code, ouvrir une carte.
+    for (const m of accueil.matchAll(/useEffect\(/g)) {
+      const corps = accueil.slice(m.index!, m.index! + 700)
+      expect(corps, 'une navigation depuis un effet').not.toMatch(/router\.(push|replace)/)
+    }
+  })
+})
+
 describe('le viseur enseigne, une consigne à la fois', () => {
   const scanner = lire('components/scanner.tsx')
 

@@ -389,10 +389,14 @@ supposerait un lien profond que l'app ne sait pas ouvrir, pour faire circuler
 un code semi-confidentiel : à rouvrir seulement si le besoin se présente en
 vrai.
 
-**La question ouverte reste ouverte** : un seul inventaire ouvert dans le
-magasin, faut-il l'ouvrir directement au lieu d'afficher la liste ? Sans
-réponse, la liste reste — elle porte le nom de l'inventaire et son magasin, et
-le comportement ne change pas le jour où un deuxième s'ouvre.
+**⚠️ La question ouverte est tranchée : NON** (Julien, 28 août 2026). Un seul
+inventaire ouvert dans le magasin **ne s'ouvre pas directement** — la liste
+reste, même à une ligne. Elle porte le nom de l'inventaire et son magasin,
+c'est-à-dire la preuve qu'on est au bon endroit ; et surtout le comportement
+ne change pas le jour où un deuxième s'ouvre, ce qui arrive précisément un
+matin d'inventaire, à quelqu'un qui a pris l'habitude de l'autre. Le seul gain
+aurait été un appui. **Ne pas réintroduire de redirection automatique** depuis
+l'accueil du compteur : un test la refuse.
 
 ## Vérifications
 
