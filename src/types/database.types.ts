@@ -83,6 +83,27 @@ export type Database = {
         }
         Relationships: []
       }
+      alertes_envoyees: {
+        Row: {
+          cle: string
+          derniere_le: string
+          nombre: number
+          premiere_le: string
+        }
+        Insert: {
+          cle: string
+          derniere_le?: string
+          nombre?: number
+          premiere_le?: string
+        }
+        Update: {
+          cle?: string
+          derniere_le?: string
+          nombre?: number
+          premiere_le?: string
+        }
+        Relationships: []
+      }
       article_audit: {
         Row: {
           final_qty: number | null
@@ -261,16 +282,25 @@ export type Database = {
           contact_last_name: string
           contact_phone: string
           created_at: string
+          decline_reason: string
+          declined_at: string | null
           id: string
           message: string
           paid_at: string | null
           quote_amount_cents: number | null
+          quote_expires_at: string | null
+          quote_lines: Json
           quote_reference: string
           quote_sent_at: string | null
+          quote_token: string | null
           siren: string | null
           status: string
           store_count: number
           stores: Json
+          stripe_checkout_session_id: string | null
+          stripe_customer_id: string | null
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
           updated_at: string
         }
         Insert: {
@@ -284,16 +314,25 @@ export type Database = {
           contact_last_name: string
           contact_phone?: string
           created_at?: string
+          decline_reason?: string
+          declined_at?: string | null
           id?: string
           message?: string
           paid_at?: string | null
           quote_amount_cents?: number | null
+          quote_expires_at?: string | null
+          quote_lines?: Json
           quote_reference?: string
           quote_sent_at?: string | null
+          quote_token?: string | null
           siren?: string | null
           status?: string
           store_count: number
           stores?: Json
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -307,16 +346,25 @@ export type Database = {
           contact_last_name?: string
           contact_phone?: string
           created_at?: string
+          decline_reason?: string
+          declined_at?: string | null
           id?: string
           message?: string
           paid_at?: string | null
           quote_amount_cents?: number | null
+          quote_expires_at?: string | null
+          quote_lines?: Json
           quote_reference?: string
           quote_sent_at?: string | null
+          quote_token?: string | null
           siren?: string | null
           status?: string
           store_count?: number
           stores?: Json
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -614,6 +662,121 @@ export type Database = {
           },
         ]
       }
+      store_requests: {
+        Row: {
+          accepted_at: string | null
+          admin_note: string
+          company_id: string
+          created_at: string
+          decline_reason: string
+          declined_at: string | null
+          handled_at: string | null
+          id: string
+          kind: string
+          message: string
+          paid_at: string | null
+          quote_amount_cents: number | null
+          quote_expires_at: string | null
+          quote_lines: Json
+          quote_reference: string
+          quote_sent_at: string | null
+          quote_token: string | null
+          requested_by: string | null
+          requested_label: string
+          sqm: number | null
+          status: string
+          store_id: string | null
+          store_name: string
+          stripe_checkout_session_id: string | null
+          stripe_customer_id: string | null
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          units: number | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          admin_note?: string
+          company_id: string
+          created_at?: string
+          decline_reason?: string
+          declined_at?: string | null
+          handled_at?: string | null
+          id?: string
+          kind?: string
+          message?: string
+          paid_at?: string | null
+          quote_amount_cents?: number | null
+          quote_expires_at?: string | null
+          quote_lines?: Json
+          quote_reference?: string
+          quote_sent_at?: string | null
+          quote_token?: string | null
+          requested_by?: string | null
+          requested_label?: string
+          sqm?: number | null
+          status?: string
+          store_id?: string | null
+          store_name: string
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          units?: number | null
+        }
+        Update: {
+          accepted_at?: string | null
+          admin_note?: string
+          company_id?: string
+          created_at?: string
+          decline_reason?: string
+          declined_at?: string | null
+          handled_at?: string | null
+          id?: string
+          kind?: string
+          message?: string
+          paid_at?: string | null
+          quote_amount_cents?: number | null
+          quote_expires_at?: string | null
+          quote_lines?: Json
+          quote_reference?: string
+          quote_sent_at?: string | null
+          quote_token?: string | null
+          requested_by?: string | null
+          requested_label?: string
+          sqm?: number | null
+          status?: string
+          store_id?: string | null
+          store_name?: string
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          units?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_supervisors: {
         Row: {
           created_at: string
@@ -688,6 +851,8 @@ export type Database = {
           id: string
           join_code: string
           name: string
+          sqm: number | null
+          units: number | null
         }
         Insert: {
           annual_price_cents?: number | null
@@ -696,6 +861,8 @@ export type Database = {
           id?: string
           join_code: string
           name: string
+          sqm?: number | null
+          units?: number | null
         }
         Update: {
           annual_price_cents?: number | null
@@ -704,6 +871,8 @@ export type Database = {
           id?: string
           join_code?: string
           name?: string
+          sqm?: number | null
+          units?: number | null
         }
         Relationships: [
           {
@@ -714,6 +883,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stripe_events_traites: {
+        Row: {
+          event_id: string
+          recu_le: string
+        }
+        Insert: {
+          event_id: string
+          recu_le?: string
+        }
+        Update: {
+          event_id?: string
+          recu_le?: string
+        }
+        Relationships: []
       }
       submission_attempts: {
         Row: {
@@ -948,8 +1132,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_quote_by_token: { Args: { p_token: string }; Returns: Json }
       admin_add_store: {
-        Args: { p_company_id: string; p_name: string }
+        Args: {
+          p_company_id: string
+          p_name: string
+          p_sqm?: number
+          p_units?: number
+        }
         Returns: Json
       }
       admin_assign_supervisor: {
@@ -957,15 +1147,19 @@ export type Database = {
         Returns: Json
       }
       admin_business_overview: { Args: never; Returns: Json }
+      admin_charge_pointes: { Args: never; Returns: Json }
       admin_company_detail: { Args: { p_company_id: string }; Returns: Json }
       admin_create_company: { Args: { p_name: string }; Returns: Json }
       admin_delete_company: { Args: { p_company_id: string }; Returns: Json }
+      admin_delete_company_request: { Args: { p_id: string }; Returns: Json }
       admin_delete_store: { Args: { p_store_id: string }; Returns: Json }
       admin_delete_user: { Args: { p_user_id: string }; Returns: Json }
       admin_fulfil_company_request: {
         Args: { p_id: string; p_store_names?: string[] }
         Returns: Json
       }
+      admin_fulfil_store_removal: { Args: { p_id: string }; Returns: Json }
+      admin_fulfil_store_request: { Args: { p_id: string }; Returns: Json }
       admin_invite_company_admin: {
         Args: {
           p_company: string
@@ -1033,6 +1227,8 @@ export type Database = {
           contact_last_name: string
           contact_phone: string
           created_at: string
+          decline_reason: string
+          declined_at: string
           id: string
           message: string
           quote_amount_cents: number
@@ -1043,6 +1239,7 @@ export type Database = {
           stores: Json
         }[]
       }
+      admin_list_store_requests: { Args: never; Returns: Json }
       admin_list_store_supervisors: {
         Args: { p_company_id: string }
         Returns: {
@@ -1059,13 +1256,38 @@ export type Database = {
           name: string
         }[]
       }
+      admin_notify_emails: { Args: never; Returns: string[] }
+      admin_pipeline: { Args: never; Returns: Json }
       admin_quote_company_request: {
         Args: {
           p_amount_cents: number
           p_id: string
+          p_lines?: Json
           p_note?: string
           p_reference: string
         }
+        Returns: Json
+      }
+      admin_quote_store_request: {
+        Args: {
+          p_amount_cents: number
+          p_id: string
+          p_lines?: Json
+          p_note?: string
+          p_reference: string
+        }
+        Returns: Json
+      }
+      admin_reject_store_request: {
+        Args: { p_id: string; p_note?: string }
+        Returns: Json
+      }
+      admin_rename_company: {
+        Args: { p_company_id: string; p_name: string }
+        Returns: Json
+      }
+      admin_rename_store: {
+        Args: { p_name: string; p_store_id: string }
         Returns: Json
       }
       admin_revoke_company_admin: { Args: { p_user: string }; Returns: Json }
@@ -1077,12 +1299,34 @@ export type Database = {
         Args: { p_price_cents: number; p_store_id: string }
         Returns: Json
       }
+      admin_set_store_request_status: {
+        Args: { p_id: string; p_note?: string; p_status: string }
+        Returns: Json
+      }
+      admin_set_store_volume: {
+        Args: { p_sqm?: number; p_store_id: string; p_units: number }
+        Returns: Json
+      }
       admin_unassign_supervisor: {
         Args: { p_store_id: string; p_user_id: string }
         Returns: Json
       }
+      admin_usage_overview: { Args: { p_company_id?: string }; Returns: Json }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      anomalies_a_signaler: { Args: never; Returns: Json }
+      attach_checkout_session: {
+        Args: {
+          p_customer_id?: string
+          p_id: string
+          p_kind: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       ca_cancel_invitation: { Args: { p_id: string }; Returns: Json }
+      ca_cancel_store_request: { Args: { p_id: string }; Returns: Json }
+      ca_company_overview: { Args: never; Returns: Json }
+      ca_delete_user: { Args: { p_user: string }; Returns: Json }
       ca_invite_supervisor: {
         Args: {
           p_email: string
@@ -1092,12 +1336,41 @@ export type Database = {
         }
         Returns: Json
       }
+      ca_list_audit_log: { Args: { p_limit?: number }; Returns: Json }
+      ca_list_store_requests: { Args: never; Returns: Json }
       ca_list_team: { Args: never; Returns: Json }
       ca_remove_supervisor: { Args: { p_user: string }; Returns: Json }
+      ca_rename_company: { Args: { p_name: string }; Returns: Json }
+      ca_rename_store: {
+        Args: { p_name: string; p_store_id: string }
+        Returns: Json
+      }
+      ca_request_store: {
+        Args: {
+          p_message?: string
+          p_name: string
+          p_sqm?: number
+          p_units?: number
+        }
+        Returns: Json
+      }
+      ca_request_store_removal: {
+        Args: { p_message?: string; p_store_id: string }
+        Returns: Json
+      }
+      ca_set_counter_stores: {
+        Args: { p_store_ids: string[]; p_user: string }
+        Returns: Json
+      }
       ca_set_supervisor_stores: {
         Args: { p_store_ids: string[]; p_user: string }
         Returns: Json
       }
+      ca_set_user_role: {
+        Args: { p_role: string; p_store_ids?: string[]; p_user: string }
+        Returns: Json
+      }
+      ca_store_detail: { Args: { p_store_id: string }; Returns: Json }
       can_access_session: { Args: { p_session_id: string }; Returns: boolean }
       can_join_session_topic: { Args: { p_topic: string }; Returns: boolean }
       cancel_my_invitation: { Args: { p_id: string }; Returns: Json }
@@ -1115,6 +1388,11 @@ export type Database = {
           p_store_id: string
           p_uses_zones?: boolean
         }
+        Returns: Json
+      }
+      declencher_alerte: { Args: never; Returns: undefined }
+      decline_quote_by_token: {
+        Args: { p_reason?: string; p_token: string }
         Returns: Json
       }
       define_zone: {
@@ -1148,6 +1426,16 @@ export type Database = {
           role: string
           user_id: string
         }[]
+      }
+      fulfil_paid_request: {
+        Args: {
+          p_customer_id?: string
+          p_event_id?: string
+          p_invoice_id?: string
+          p_payment_intent_id?: string
+          p_session_id: string
+        }
+        Returns: Json
       }
       gen_company_code: { Args: never; Returns: string }
       gen_store_code: { Args: never; Returns: string }
@@ -1260,6 +1548,15 @@ export type Database = {
           units: number
         }[]
       }
+      invite_company_admin_after_payment: {
+        Args: {
+          p_company: string
+          p_email: string
+          p_first: string
+          p_last: string
+        }
+        Returns: Json
+      }
       is_admin: { Args: never; Returns: boolean }
       is_assigned_store: { Args: { p_store_id: string }; Returns: boolean }
       is_company_admin: { Args: { p_company?: string }; Returns: boolean }
@@ -1293,9 +1590,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_system_action: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_details?: Json
+          p_target_id: string
+          p_target_label: string
+          p_target_type: string
+        }
+        Returns: undefined
+      }
+      marquer_alertes: { Args: { p_cles: string[] }; Returns: number }
       my_team_by_store: { Args: never; Returns: Json }
+      nom_propre: { Args: { p_nom: string }; Returns: string }
       norm_balise: { Args: { p: string }; Returns: string }
       purge_expired_data: { Args: never; Returns: Json }
+      quote_by_token: { Args: { p_token: string }; Returns: Json }
       rate_limit_ok: {
         Args: {
           p_key: string
@@ -1348,6 +1659,21 @@ export type Database = {
       }
       siren_valide: { Args: { p_siren: string }; Returns: boolean }
       submit_company_request: {
+        Args: {
+          p_ape?: string
+          p_company_name: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_message?: string
+          p_phone: string
+          p_siren?: string
+          p_store_count: number
+          p_stores?: Json
+        }
+        Returns: Json
+      }
+      submit_company_request_detailed: {
         Args: {
           p_ape?: string
           p_company_name: string

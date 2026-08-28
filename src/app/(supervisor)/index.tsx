@@ -15,8 +15,8 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { closeSession, deleteSessionPermanently, getMyAssignedStores, getMyTeamByStore, getSessions } from '@/lib/queries'
-import { BandeauDemarrage, etapeCourante, etapesDemarrage } from '@/components/BandeauDemarrage'
+import { closeSession, deleteSessionPermanently, getCompanyOverview, getMyAssignedStores, getMyTeamByStore, getSessions } from '@/lib/queries'
+import { BandeauDemarrage, etapeCourante, etapesAdmin, etapesDemarrage } from '@/components/BandeauDemarrage'
 import { useJalon, useRepere } from '@/lib/reperes'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -313,7 +313,15 @@ export default function SupervisorHomeScreen() {
     () => (sessions ?? []).filter(s => s.created_by === profile?.id),
     [sessions, profile?.id],
   )
-  const debutant = mesInventaires.length <= 1
+  /**
+   * ⚠️ **Un administrateur d'entreprise ne se mesure pas au nombre
+   * d'inventaires qu'il a créés** : il n'en crée pas, ce sont ceux de ses
+   * superviseurs. Ses trois étapes se cochent sur des faits d'entreprise, et
+   * le bandeau s'efface quand elles sont faites — c'est `demarrageFini` qui
+   * le note alors, comme pour tout le monde.
+   */
+  const estAdmin = !!profile?.is_company_admin
+  const debutant = estAdmin || mesInventaires.length <= 1
 
   // ⚠️ **Le jalon local, et le piège de ce bandeau.** Une planche de balises
   // est dessinée sur le téléphone et n'écrit rien en base : l'étape ne peut
@@ -327,7 +335,14 @@ export default function SupervisorHomeScreen() {
   const { data: equipe } = useQuery({
     queryKey: ['my-team'],
     queryFn: getMyTeamByStore,
-    enabled: montrerGuide,
+    enabled: montrerGuide && !estAdmin,
+  })
+  // L'entreprise vue par son administrateur : la même RPC que le tableau de
+  // bord du site. Elle n'est demandée que si le bandeau est à l'écran.
+  const { data: apercu } = useQuery({
+    queryKey: ['apercu-entreprise'],
+    queryFn: getCompanyOverview,
+    enabled: montrerGuide && estAdmin,
   })
   // Une invitation en attente compte : le travail est fait, il ne manque que
   // la réponse de la personne. Sans cela l'étape resterait à faire juste
@@ -336,12 +351,20 @@ export default function SupervisorHomeScreen() {
     (equipe?.stores ?? []).some(s => s.counters.length > 0) || (equipe?.invitations.length ?? 0) > 0
 
   const etapes = useMemo(
-    () => etapesDemarrage({
-      balisesImprimees,
-      equipeConstituee,
-      inventaireCree: mesInventaires.length > 0,
-    }),
-    [balisesImprimees, equipeConstituee, mesInventaires.length],
+    () => estAdmin
+      ? etapesAdmin({
+          magasins: apercu?.stores.length ?? 0,
+          magasinsSansSuperviseur: (apercu?.stores ?? []).filter(m => m.supervisors.length === 0).length,
+          // Le dernier inventaire *créé*, clôturé ou non : une étape faite ne
+          // se défait pas parce qu'on a clôturé.
+          inventaireLance: (apercu?.stores ?? []).some(m => m.last_session_at !== null),
+        })
+      : etapesDemarrage({
+          balisesImprimees,
+          equipeConstituee,
+          inventaireCree: mesInventaires.length > 0,
+        }),
+    [estAdmin, apercu, balisesImprimees, equipeConstituee, mesInventaires.length],
   )
 
   /**
@@ -380,6 +403,9 @@ export default function SupervisorHomeScreen() {
       onAction={(cle) => {
         if (cle === 'balises') router.push('/(compte)/tools')
         else if (cle === 'equipe') router.push('/(compte)/team')
+        // Les deux étapes de l'administrateur mènent à ses magasins : c'est là
+        // que se lit lequel n'a personne pour le tenir.
+        else if (cle === 'magasins' || cle === 'superviseurs') router.push('/(compte)/stores')
         else router.push('/(supervisor)/new-session')
       }}
     />
@@ -392,6 +418,7 @@ export default function SupervisorHomeScreen() {
   const onRefresh = useCallback(() => {
     refetch()
     queryClient.invalidateQueries({ queryKey: ['my-team'] })
+    queryClient.invalidateQueries({ queryKey: ['apercu-entreprise'] })
   }, [refetch, queryClient])
   const [selection, setSelection] = useState(false)
   const [coches, setCoches] = useState<string[]>([])

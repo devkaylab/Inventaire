@@ -572,8 +572,11 @@ describe('les six impasses du premier lancement (23 août 2026)', () => {
   it('les notifications ne se demandent plus à la connexion', () => {
     // Elles s'ouvraient juste après le mot de passe, avant le moindre écran.
     expect(auth).not.toContain('registerForPushNotifications')
-    expect(lire('app/(employee)/[sessionId]/index.tsx')).toContain('useNotificationsSurInventaire()')
+    // Côté superviseur, la demande reste à l'ouverture d'un inventaire : c'est
+    // lui qui invite, être sollicité là ne le surprend pas.
     expect(lire('app/(supervisor)/[sessionId]/index.tsx')).toContain('useNotificationsSurInventaire()')
+    // Côté compteur, elle a encore reculé d'un cran — voir le bloc suivant.
+    expect(lire('app/(employee)/[sessionId]/index.tsx')).not.toContain('useNotificationsSurInventaire()')
   })
 
   it('toucher la notification ouvre l’inventaire', () => {
@@ -965,6 +968,149 @@ describe('le geste caché, montré une fois', () => {
     // Pas de fermeture automatique : une aide qu'on n'a pas lue n'a pas été
     // donnée.
     expect(accueil).not.toMatch(/setTimeout\([^)]*balayageVu/)
+  })
+})
+
+/**
+ * Les points restants de la maquette d'onboarding du 23 août, faits le
+ * 28 août 2026 : le viseur qui enseigne, l'amorce des notifications, la sortie
+ * « je n'ai pas reçu mon invitation », le repère du menu d'un inventaire, et
+ * les trois étapes de l'administrateur d'entreprise.
+ */
+describe('le viseur enseigne, une consigne à la fois', () => {
+  const scanner = lire('components/scanner.tsx')
+
+  it('deux conseils, l’un après l’autre, quand rien n’est lu', () => {
+    expect(scanner).toContain("'Rapprochez-vous, le code doit remplir le cadre'")
+    expect(scanner).toContain("'Trop sombre ? Allumez la lampe'")
+    // Jamais les deux ensemble : un rang, pas une liste.
+    expect(scanner).toContain('const [rangConseil, setRangConseil]')
+  })
+
+  it('⚠️ ils s’arrêtent à la première lecture et ne reviennent pas', () => {
+    // Sans cela, « Rapprochez-vous » repart trois secondes après chaque scan,
+    // pendant qu'on marche vers l'article suivant. Relevé au simulateur.
+    expect(scanner).toContain('const [dejaLu, setDejaLu]')
+    expect(scanner).toContain('resolving || dejaLu) return')
+    // `torch` n'est pas dans les dépendances : allumer la lampe ne doit pas
+    // relancer « Rapprochez-vous ».
+    expect(scanner).not.toMatch(/resolving, torch\]\)/)
+  })
+
+  it('⚠️ ses hooks précèdent les deux retours anticipés', () => {
+    // Posés après « permission inconnue » ou l'écran d'amorce, ils seraient
+    // sautés d'un rendu à l'autre — et l'écran de comptage tomberait.
+    const hook = scanner.indexOf('const [rangConseil')
+    const retour = scanner.indexOf('if (!permission) {')
+    expect(hook).toBeGreaterThan(-1)
+    expect(retour).toBeGreaterThan(hook)
+  })
+
+  it('la forme du cadre annonce ce qu’on attend', () => {
+    expect(scanner).toContain('balisePhase ? styles.scanFrameCarre : styles.scanFrameLarge')
+    expect(scanner).toContain('scanFrameCarre')
+  })
+
+  it('la trace du dernier scan lève le doute, sans voler la place d’un conseil', () => {
+    expect(scanner).toContain("`Dernier scan · ")
+    expect(scanner).toContain('conseil ?? dernierScan ?? camHint')
+  })
+})
+
+describe('les notifications s’annoncent avant de se demander', () => {
+  const accueil = lire('app/(employee)/index.tsx')
+  const push = lire('lib/push.ts')
+
+  it('l’état se lit sans ouvrir la boîte système', () => {
+    expect(push).toContain('export async function etatNotifications')
+    expect(push).toContain('getPermissionsAsync')
+    // Un refus définitif ne se propose plus : seuls les Réglages débloquent.
+    expect(push).toContain("return perm.canAskAgain ? 'a-demander' : 'refusees'")
+  })
+
+  it('la carte dit ce qu’on recevra, et laisse le choix', () => {
+    expect(accueil).toContain('Être prévenu des prochains inventaires')
+    expect(accueil).toContain('Plus tard')
+    expect(accueil).toContain('Activer')
+  })
+
+  it('elle ne s’affiche qu’à qui a déjà un inventaire et peut encore répondre', () => {
+    expect(accueil).toContain('notifsAVoir && notifsADemander && nbSessions > 0')
+  })
+
+  it('⚠️ déjà accordées : rien à l’écran, mais le jeton se réenregistre', () => {
+    // Un jeton Expo peut tourner ; sans cela les personnes déjà installées
+    // cesseraient d'être prévenues sans que rien ne le dise.
+    expect(accueil).toContain("if (etat === 'accordees') { void registerForPushNotifications(); return }")
+  })
+
+  it('la question a été posée, elle ne se repose pas', () => {
+    expect(accueil).toContain("useRepere('notifications'")
+    expect(lire('lib/reperes.ts')).toContain("| 'notifications'")
+  })
+})
+
+describe('les sorties qui manquaient', () => {
+  const login = lire('app/login.tsx')
+  const inventaire = lire('app/(supervisor)/[sessionId]/index.tsx')
+
+  it('« Je n’ai pas reçu mon invitation » renvoie au responsable, jamais au support', () => {
+    expect(login).toContain('Je n&apos;ai pas reçu mon invitation')
+    expect(login).toContain('Votre invitation vient de votre responsable')
+    // ⚠️ Sur le code seul : le commentaire de l'écran cite « contactez le
+    // support » pour dire qu'on ne l'écrit pas. Le lire ferait échouer une
+    // garde qui porte sur ce que l'écran affiche.
+    const sansCommentaires = login.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(sansCommentaires).not.toMatch(/support|assistance/i)
+  })
+
+  it('le repère du menu attend qu’il y ait quelque chose à lire', () => {
+    expect(inventaire).toContain("useRepere('menu-inventaire'")
+    expect(inventaire).toContain('repereMenuAVoir && countedPieces > 0')
+    // Il dit ce qui ne se voit pas : l'export vit dans le rapport.
+    expect(inventaire).toContain('export Excel')
+  })
+
+  it('un membre qui n’est jamais entré se voit', () => {
+    // `is_active` veut dire « s'est déjà connecté » — libellé du site.
+    expect(inventaire).toContain('Mot de passe à créer')
+    expect(inventaire).toContain("mm.profiles?.is_active === false")
+  })
+})
+
+describe('l’administrateur d’entreprise a ses propres étapes', () => {
+  const bandeau = lire('components/BandeauDemarrage.tsx')
+  const accueil = lire('app/(supervisor)/index.tsx')
+  const magasins = lire('app/(compte)/stores.tsx')
+
+  it('trois étapes, et ce ne sont pas celles d’un superviseur', () => {
+    expect(bandeau).toContain('export function etapesAdmin')
+    expect(bandeau).toContain('Vos magasins sont créés')
+    expect(bandeau).toContain('Un superviseur par magasin')
+    expect(bandeau).toContain('Un premier inventaire lancé')
+  })
+
+  it('⚠️ « un superviseur par magasin » ne le compte pas lui-même', () => {
+    // Il a tous les magasins par construction : se compter cocherait l'étape
+    // d'office. La RPC l'exclut, et le commentaire dit pourquoi.
+    expect(lire('lib/queries.ts')).toContain("supervisors` **n'y compte pas les administrateurs**")
+  })
+
+  it('l’étape « un inventaire » ne se décoche pas à la clôture', () => {
+    expect(accueil).toContain("m.last_session_at !== null")
+  })
+
+  it('un seul bandeau à l’écran : le sien', () => {
+    expect(accueil).toContain('estAdmin')
+    expect(accueil).toContain('debutant = estAdmin || mesInventaires.length <= 1')
+  })
+
+  it('ses magasins disent qui les tient, et lesquels sont à pourvoir', () => {
+    expect(magasins).toContain('Aucun superviseur · à pourvoir')
+    // Deux noms, puis « et N autres » — la règle du 23 août.
+    expect(magasins).toContain('function nommer')
+    // Et l'écran dit où cela se règle : l'app n'a pas d'administration.
+    expect(magasins).toContain('page Mon équipe du site')
   })
 })
 

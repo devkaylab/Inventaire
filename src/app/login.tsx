@@ -24,6 +24,17 @@ export default function LoginScreen() {
   const { signIn, signOut, session, profile, loading: authLoading, mfaRequired, recheckMfa } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
+
+  /** L'invitation vient du responsable — on dit à qui la redemander. */
+  function expliquerInvitation() {
+    void avertir({
+      titre: 'Votre invitation vient de votre responsable',
+      texte:
+        "C'est la personne qui vous a ajouté à son équipe qui envoie l'invitation, à l'adresse " +
+        "qu'elle a saisie. Regardez dans vos courriers indésirables, puis demandez-lui de vous la renvoyer.",
+      note: "Si vous n'avez jamais été ajouté à une équipe, aucun compte ne peut s'ouvrir depuis cet écran.",
+    })
+  }
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -206,6 +217,14 @@ export default function LoginScreen() {
               aucune sortie depuis l'application. */}
           <Pressable style={styles.link} onPress={() => Linking.openURL(PASSWORD_FORGOT_URL)}>
             <Text style={styles.linkText}>Mot de passe oublié ?</Text>
+          </Pressable>
+
+          {/* Le premier écran d'aide est le responsable, jamais nous : c'est lui
+              qui sait qui doit être dans quelle équipe, et lui seul peut
+              renvoyer l'invitation. « Contactez le support » ferait attendre
+              pour rien quelqu'un qui a la réponse à côté de lui. */}
+          <Pressable style={styles.link} onPress={expliquerInvitation}>
+            <Text style={styles.linkText}>Je n&apos;ai pas reçu mon invitation</Text>
           </Pressable>
 
           <Pressable style={styles.link} onPress={() => router.push('/signup')}>

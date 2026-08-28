@@ -77,6 +77,35 @@ export async function registerForPushNotifications(): Promise<void> {
 }
 
 /**
+ * L'état des notifications, **sans jamais ouvrir la boîte système**.
+ *
+ * C'est ce qui permet d'amorcer la demande dans notre charte avant de la
+ * poser : on ne peut proposer « Activer » que si le système accepte encore la
+ * question. Après un refus définitif, seule l'appli Réglages peut rendre
+ * l'accès — proposer un bouton serait mentir.
+ */
+export type EtatNotifications = 'accordees' | 'a-demander' | 'refusees' | 'indisponible'
+
+export async function etatNotifications(): Promise<EtatNotifications> {
+  // ⚠️ Sur simulateur, `isDevice` est faux : la carte d'amorce ne s'y montre
+  // jamais, et ce chemin ne se vérifie qu'appareil en main.
+  if (!Device.isDevice) return 'indisponible'
+  try {
+    const perm = await Notifications.getPermissionsAsync()
+    if (perm.status === 'granted') return 'accordees'
+    return perm.canAskAgain ? 'a-demander' : 'refusees'
+  } catch {
+    return 'indisponible'
+  }
+}
+
+/** Demande l'autorisation puis enregistre le jeton. Rend l'état obtenu. */
+export async function activerNotifications(): Promise<boolean> {
+  await registerForPushNotifications()
+  return (await etatNotifications()) === 'accordees'
+}
+
+/**
  * Demande les notifications au moment où elles ont un objet : l'ouverture
  * d'un inventaire. Avant, la boîte système partait juste après la connexion,
  * sans explication et avant le moindre écran.

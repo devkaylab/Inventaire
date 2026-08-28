@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,6 +22,8 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { activerNotifications, etatNotifications, registerForPushNotifications } from '@/lib/push'
+import { useRepere } from '@/lib/reperes'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -42,6 +44,43 @@ export default function EmployeeHomeScreen() {
   const mySessions = (sessions ?? []).filter(s => s.status !== 'closed')
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
+
+  /* ── Les notifications se demandent quand elles ont un objet ──────────────
+   *
+   * La boîte iOS partait toute seule à l'ouverture d'un inventaire, sans un
+   * mot sur ce qu'on recevrait. Or un refus est **définitif** : il ne se
+   * défait qu'en passant par les Réglages. On l'amorce donc ici, sur la liste,
+   * au moment où le premier inventaire arrive — la carte dit exactement ce qui
+   * sera envoyé, et rien de plus.
+   *
+   * ⚠️ **Déjà accordées : on ne montre rien, mais on réenregistre le jeton.**
+   * Un jeton Expo peut changer ; sans ce rafraîchissement silencieux, les
+   * personnes déjà installées cesseraient d'être prévenues le jour où le leur
+   * tourne.
+   */
+  const { aVoir: notifsAVoir, marquerVu: notifsRepondu } = useRepere('notifications', profile?.id)
+  const [notifsADemander, setNotifsADemander] = useState(false)
+  const nbSessions = mySessions.length
+  useEffect(() => {
+    if (nbSessions === 0) return
+    let vivant = true
+    void etatNotifications().then(etat => {
+      if (!vivant) return
+      if (etat === 'accordees') { void registerForPushNotifications(); return }
+      setNotifsADemander(etat === 'a-demander')
+    })
+    return () => { vivant = false }
+  }, [nbSessions])
+  const montrerNotifs = notifsAVoir && notifsADemander && nbSessions > 0
+
+  async function activerLesNotifications() {
+    // Marqué avant la boîte système : qu'on accepte ou qu'on refuse, la
+    // question a été posée et ne se repose pas.
+    notifsRepondu()
+    setNotifsADemander(false)
+    const ok = await activerNotifications()
+    if (ok) signaler.succes('Notifications activées', 'Vous serez prévenu dès qu’un inventaire vous est confié.')
+  }
 
   async function handleJoin() {
     if (!inventoryNumber.trim() || !securityCode.trim()) {
@@ -134,6 +173,26 @@ export default function EmployeeHomeScreen() {
             </>
           )}
 
+          {montrerNotifs && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Être prévenu des prochains inventaires</Text>
+              <Text style={styles.cardDesc}>
+                Une notification quand votre superviseur vous ajoute à un inventaire. Rien d&apos;autre.
+              </Text>
+              <View style={styles.notifsRangee}>
+                {/* « Plus tard » d'abord, en retrait : le bouton plein est
+                    celui qui ouvre la boîte système, il doit être le plus
+                    loin d'un pouce qui balaie la liste. */}
+                <Pressable style={styles.notifsPlusTard} onPress={() => { notifsRepondu(); setNotifsADemander(false) }}>
+                  <Text style={styles.notifsPlusTardText}>Plus tard</Text>
+                </Pressable>
+                <Pressable style={styles.notifsActiver} onPress={() => { void activerLesNotifications() }}>
+                  <Text style={styles.notifsActiverText}>Activer</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
               {mySessions.length > 0 ? 'Rejoindre un autre inventaire' : 'Rejoindre un inventaire'}
@@ -200,6 +259,17 @@ function makeStyles(t: Theme) {
     pasTexte: { color: t.textPrimary, fontSize: 14, fontFamily: Font.medium, flex: 1 },
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.xl, borderWidth: 1, borderColor: t.hairline, gap: Spacing.md, ...t.shadowCard },
     cardTitle: { fontSize: 18, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
+    notifsRangee: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
+    notifsPlusTard: {
+      flex: 1, minHeight: 44, borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
+      alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    },
+    notifsPlusTardText: { color: t.textSecondary, fontSize: 15, fontFamily: Font.semibold },
+    notifsActiver: {
+      flex: 1, minHeight: 44, borderRadius: Radius.md, backgroundColor: t.accent,
+      alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    },
+    notifsActiverText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
     cardDesc: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
     label: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary },
     input: { borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 13, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },

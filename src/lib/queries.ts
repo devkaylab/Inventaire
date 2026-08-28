@@ -389,6 +389,38 @@ export async function inviteToSession(input: {
   return result
 }
 
+/**
+ * L'entreprise vue par son administrateur — la même RPC que le site.
+ *
+ * ⚠️ `supervisors` **n'y compte pas les administrateurs** : ils ont tous les
+ * magasins par construction, les compter ferait dire à l'écran que chaque
+ * magasin est encadré alors que personne ne le tient. C'est cette exclusion
+ * qui rend l'étape « un superviseur par magasin » utile.
+ *
+ * `last_session_at` est un fait qui ne se défait pas (le dernier inventaire
+ * *créé*, clôturé ou non) : l'étape « un premier inventaire » ne se décoche
+ * donc pas quand on clôture.
+ */
+export type ApercuMagasin = {
+  id: string
+  name: string
+  join_code: string
+  supervisors: { id: string; full_name: string | null }[]
+  counters: number
+  last_session_at: string | null
+}
+
+export type ApercuEntreprise = {
+  company: { id: string; name: string }
+  stores: ApercuMagasin[]
+}
+
+export async function getCompanyOverview(): Promise<ApercuEntreprise | null> {
+  const { data, error } = await supabase.rpc('ca_company_overview')
+  if (error) throwSupabase('getCompanyOverview', error)
+  return (data as unknown as ApercuEntreprise) ?? null
+}
+
 /** Invitations en attente pour un inventaire (personnes pas encore inscrites). */
 export async function getSessionInvitations(sessionId: string): Promise<SessionInvitation[]> {
   const { data, error } = await supabase

@@ -12,7 +12,7 @@ import {
 import { Redirect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
-import { getMyAssignedStores } from '@/lib/queries'
+import { getCompanyOverview, getMyAssignedStores } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
@@ -40,6 +40,33 @@ export default function StoresScreen() {
     queryKey: ['my-stores'],
     queryFn: getMyAssignedStores,
   })
+
+  /**
+   * Qui tient chaque magasin — pour l'administrateur seulement.
+   *
+   * Il voit tous les magasins de son entreprise par construction ; ce qu'il
+   * ne voyait nulle part dans l'application, c'est **lequel n'a personne pour
+   * le tenir**. C'est la deuxième étape de son bandeau de démarrage, et c'est
+   * ici qu'elle se règle.
+   *
+   * ⚠️ `supervisors` **ne le compte pas lui-même** (la RPC exclut les
+   * administrateurs) : sinon chaque magasin paraîtrait encadré.
+   */
+  const estAdmin = !!profile?.is_company_admin
+  const { data: apercu } = useQuery({
+    queryKey: ['apercu-entreprise'],
+    queryFn: getCompanyOverview,
+    enabled: estAdmin,
+  })
+  const encadrement = new Map(
+    (apercu?.stores ?? []).map(m => [m.id, m.supervisors.map(p => p.full_name).filter(Boolean) as string[]]),
+  )
+
+  /** Deux noms, puis « et N autres » — la règle du 23 août 2026. */
+  function nommer(noms: string[]): string {
+    if (noms.length <= 2) return noms.join(', ')
+    return `${noms[0]}, ${noms[1]} et ${noms.length - 2} autre${noms.length - 2 > 1 ? 's' : ''}`
+  }
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
 
@@ -110,6 +137,17 @@ export default function StoresScreen() {
               <View key={s.id} style={[styles.storeRow, i > 0 && styles.storeRowSep]}>
                 <View style={styles.storeLeft}>
                   <Text style={styles.storeName}>{s.name}</Text>
+                  {estAdmin && encadrement.has(s.id) && (
+                    encadrement.get(s.id)!.length > 0 ? (
+                      <Text style={styles.encadrement} numberOfLines={1}>
+                        {nommer(encadrement.get(s.id)!)}
+                      </Text>
+                    ) : (
+                      // Une pastille, pas une phrase : c'est ce qu'on cherche
+                      // du regard en parcourant la liste.
+                      <Text style={styles.aPourvoir}>Aucun superviseur · à pourvoir</Text>
+                    )
+                  )}
                   <Text style={styles.codeLabel}>Code magasin</Text>
                   <Text style={[styles.code, tabular]}>{s.join_code ?? '—'}</Text>
                 </View>
@@ -123,6 +161,13 @@ export default function StoresScreen() {
                 )}
               </View>
             ))}
+            {estAdmin && (apercu?.stores ?? []).some(m => m.supervisors.length === 0) && (
+              <Text style={styles.note}>
+                Un magasin sans superviseur n&apos;a personne pour y lancer un inventaire.
+                L&apos;accès s&apos;ouvre depuis la page Mon équipe du site : l&apos;application
+                n&apos;a pas d&apos;écran d&apos;administration.
+              </Text>
+            )}
             <Text style={styles.note}>
               Ce code est confidentiel : ne le communiquez jamais aux compteurs. Les accès
               superviseur sont ouverts par l&apos;administrateur de votre entreprise, depuis le
@@ -143,6 +188,13 @@ function makeStyles(t: Theme) {
     card: {
       backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg,
       borderWidth: 1, borderColor: t.hairline, ...t.shadowCard,
+    },
+    encadrement: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, marginTop: 2 },
+    aPourvoir: {
+      alignSelf: 'flex-start', marginTop: 4,
+      fontSize: 11, fontFamily: Font.semibold, color: t.warning,
+      backgroundColor: t.warningSoft, borderRadius: Radius.pill,
+      paddingHorizontal: 8, paddingVertical: 2, overflow: 'hidden',
     },
     storeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
     storeRowSep: {

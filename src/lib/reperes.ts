@@ -20,6 +20,8 @@ export type Repere =
   | 'compter-auditer'    // les deux lignes sous les boutons de l'inventaire
   | 'premiere-balise'    // le volet « balise ouverte, scannez les articles »
   | 'balise-terminee'    // la première clôture
+  | 'menu-inventaire'    // où se lisent les écarts, le rapport et l'export
+  | 'notifications'      // l'amorce avant la boîte système des notifications
   | 'balayage'           // le geste caché de la liste d'inventaires
 
 const cle = (repere: Repere, userId: string) => `repere.${repere}.${userId}`
@@ -73,7 +75,7 @@ export async function marquerRepereVu(repere: Repere, userId: string): Promise<v
 
 /** Oublie tous les repères d'un compte — « Revoir les repères », Mon compte. */
 export async function oublierReperes(userId: string): Promise<void> {
-  const cles: Repere[] = ['bienvenue', 'guide-demarrage', 'compter-auditer', 'premiere-balise', 'balise-terminee', 'balayage']
+  const cles: Repere[] = ['bienvenue', 'guide-demarrage', 'compter-auditer', 'premiere-balise', 'balise-terminee', 'balayage', 'menu-inventaire', 'notifications']
   try {
     await AsyncStorage.multiRemove(cles.map(r => cle(r, userId)))
   } catch {

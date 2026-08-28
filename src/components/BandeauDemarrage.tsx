@@ -28,7 +28,7 @@ import { CroixIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
-export type CleEtape = 'balises' | 'equipe' | 'inventaire'
+export type CleEtape = 'balises' | 'equipe' | 'inventaire' | 'magasins' | 'superviseurs'
 
 export type EtapeDemarrage = {
   cle: CleEtape
@@ -65,6 +65,38 @@ export function etapeCourante(etapes: EtapeDemarrage[]): EtapeDemarrage | null {
   return etapes.find(e => !e.faite) ?? null
 }
 
+/**
+ * Les trois étapes d'un **administrateur d'entreprise**.
+ *
+ * Elles ne sont pas les mêmes que celles d'un superviseur, et c'est le fond du
+ * sujet : il n'imprime pas de balises et ne compte pas. Son démarrage, c'est
+ * que ses magasins soient tenus par quelqu'un, puis qu'un premier inventaire
+ * parte. Un seul bandeau à l'écran : c'est celui-ci qu'il voit, pas l'autre.
+ *
+ * ⚠️ « Un superviseur par magasin » **ne se compte pas lui-même** : il a tous
+ * les magasins par construction (déclencheurs du 22 août 2026). La RPC
+ * l'exclut déjà de `supervisors` ; sans cela l'étape serait cochée d'office et
+ * ne dirait rien.
+ */
+export type FaitsAdmin = {
+  magasins: number
+  magasinsSansSuperviseur: number
+  /** Un inventaire a déjà été créé quelque part dans l'entreprise. */
+  inventaireLance: boolean
+}
+
+export function etapesAdmin(faits: FaitsAdmin): EtapeDemarrage[] {
+  return [
+    { cle: 'magasins', titre: 'Vos magasins sont créés', faite: faits.magasins > 0 },
+    {
+      cle: 'superviseurs',
+      titre: 'Un superviseur par magasin',
+      faite: faits.magasins > 0 && faits.magasinsSansSuperviseur === 0,
+    },
+    { cle: 'inventaire', titre: 'Un premier inventaire lancé', faite: faits.inventaireLance },
+  ]
+}
+
 function IconeEtape({ cle, color }: { cle: CleEtape; color: string }) {
   return (
     <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
@@ -77,7 +109,14 @@ function IconeEtape({ cle, color }: { cle: CleEtape; color: string }) {
           <Path d="M14 14h3v3h-3zM20.5 14v3M14 20.5h7" />
         </>
       )}
-      {cle === 'equipe' && (
+      {/* Une devanture : un magasin, pas un bâtiment quelconque. */}
+      {cle === 'magasins' && (
+        <>
+          <Path d="M3.5 9.5 5 4h14l1.5 5.5a2.6 2.6 0 0 1-5 .9 2.6 2.6 0 0 1-5 0 2.6 2.6 0 0 1-5 0 2.6 2.6 0 0 1-2.5-.9z" />
+          <Path d="M5 11.5V20h14v-8.5M10 20v-5h4v5" />
+        </>
+      )}
+      {(cle === 'equipe' || cle === 'superviseurs') && (
         <>
           <Circle cx="9" cy="8" r="3.4" />
           <Path d="M2.6 20a6.4 6.4 0 0 1 12.8 0M18.5 8.2v5.6M15.7 11h5.6" />

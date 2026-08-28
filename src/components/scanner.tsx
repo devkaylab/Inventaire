@@ -976,6 +976,35 @@ export function Scanner({
     })
   }
 
+  /**
+   * ⚠️ Ces deux hooks sont ici, et pas plus bas avec le texte qu'ils servent :
+   * deux retours anticipés suivent (permission inconnue, écran d'amorce). Un
+   * hook posé après serait sauté d'un rendu à l'autre — « rendered fewer hooks
+   * than expected », et l'écran de comptage tombe.
+   */
+  const [rangConseil, setRangConseil] = useState<0 | 1 | 2>(0)
+  const cameraVisible = (balisePhase || mode === 'camera') && !!permission?.granted
+  /**
+   * ⚠️ **Les conseils s'arrêtent à la première lecture, et ne reviennent
+   * pas.** Vu au simulateur : sans cela, « Rapprochez-vous » repart trois
+   * secondes après chaque scan — c'est-à-dire pendant qu'on marche vers
+   * l'article suivant, à quelqu'un qui vient précisément de réussir. Ils
+   * servent à apprendre à viser, pas à commenter un comptage.
+   *
+   * Remis à zéro au changement de phase : viser un QR de balise et viser un
+   * code-barres ne se règlent pas pareil.
+   */
+  const [dejaLu, setDejaLu] = useState(false)
+  useEffect(() => { if (barcodeReady) setDejaLu(true) }, [barcodeReady])
+  useEffect(() => { setDejaLu(false) }, [balisePhase])
+  useEffect(() => {
+    setRangConseil(0)
+    if (!cameraVisible || barcodeReady || resolving || dejaLu) return
+    const t1 = setTimeout(() => setRangConseil(1), 3500)
+    const t2 = setTimeout(() => setRangConseil(2), 8000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [cameraVisible, barcodeReady, resolving, dejaLu])
+
   if (!permission) {
     return <View style={styles.center}><ActivityIndicator color={theme.accent} /></View>
   }
@@ -1006,7 +1035,32 @@ export function Scanner({
     )
   }
 
+  /**
+   * Le viseur enseigne, une consigne à la fois.
+   *
+   * Quand rien n'est lu, la seule chose à l'écran est un cadre : la personne
+   * ne sait pas si elle est trop loin, trop près, ou dans le noir. Deux
+   * phrases, l'une après l'autre, disent quoi essayer — jamais les deux
+   * ensemble, on ne lit pas deux conseils debout, un téléphone dans une main.
+   *
+   * ⚠️ Le compte à rebours **repart à chaque lecture** : dès qu'un code est
+   * détecté, il n'y a plus rien à conseiller. Et `torch` n'est pas dans les
+   * dépendances — allumer la lampe ne doit pas relancer « Rapprochez-vous ».
+   */
+  const conseil = rangConseil === 0
+    ? null
+    : rangConseil === 1
+      ? 'Rapprochez-vous, le code doit remplir le cadre'
+      : torch
+        ? 'Reculez un peu, et tenez le téléphone droit'
+        : 'Trop sombre ? Allumez la lampe'
+
   const totalScanned = recentScans.reduce((s, e) => s + e.qty, 0)
+  // La trace du dernier scan : elle lève le doute « est-ce que ça a pris ? »
+  // sans quitter la caméra des yeux. Elle ne remplace jamais un conseil.
+  const dernierScan = !balisePhase && recentScans.length > 0
+    ? `Dernier scan · ${recentScans[0].article.label || recentScans[0].article.sku}`
+    : null
   const triggerLabel = balisePhase
     ? (barcodeReady ? 'Scanner la balise' : 'Visez une balise…')
     : (barcodeReady ? 'Scanner maintenant' : 'En attente d\'un code…')
@@ -1015,6 +1069,9 @@ export function Scanner({
     : barcodeReady
       ? (balisePhase ? 'Balise détectée — appuyez pour ouvrir' : 'Scan automatique — Vol − ou bouton pour forcer')
       : (balisePhase ? 'Visez la balise de la zone' : 'Pointez la caméra vers un code-barres')
+  // Ce que la barre dit, par ordre de priorité : ce qui se passe maintenant,
+  // puis ce qu'il faut essayer, puis ce qui vient d'être enregistré.
+  const barreTexte = (resolving || barcodeReady) ? camHint : (conseil ?? dernierScan ?? camHint)
 
   return (
     <KeyboardAvoidingView
@@ -1164,15 +1221,26 @@ export function Scanner({
                   <Text style={styles.overlayText}>Enregistrement…</Text>
                 </View>
               )}
-              <View style={[styles.scanFrame, barcodeReady && styles.scanFrameReady]} pointerEvents="none" />
+              {/* La forme du cadre annonce ce qu'on attend : un carré pour un
+                  QR de balise, un rectangle large pour un code-barres. C'est
+                  la moitié de ce que le viseur enseigne, et elle ne coûte
+                  qu'un style. */}
+              <View
+                style={[
+                  styles.scanFrame,
+                  balisePhase ? styles.scanFrameCarre : styles.scanFrameLarge,
+                  barcodeReady && styles.scanFrameReady,
+                ]}
+                pointerEvents="none"
+              />
               {/* Cooldown bar */}
               <Animated.View
                 style={[styles.cooldownBar, { width: cooldownAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
                 pointerEvents="none"
               />
               <View style={styles.hintBar} pointerEvents="none">
-                <Text style={[styles.hintText, barcodeReady && styles.hintTextReady]}>
-                  {camHint}
+                <Text style={[styles.hintText, barcodeReady && styles.hintTextReady]} numberOfLines={1}>
+                  {barreTexte}
                 </Text>
               </View>
             </View>
@@ -1529,9 +1597,13 @@ function makeStyles(t: Theme) {
     },
     overlayText: { color: '#fff', fontSize: 13, fontFamily: Font.semibold },
     scanFrame: {
-      position: 'absolute', top: '15%', left: '12%', right: '12%', height: '50%',
+      position: 'absolute',
       borderWidth: 2, borderColor: FRAME_COLOR_IDLE, borderRadius: Radius.sm,
     },
+    scanFrameLarge: { top: '15%', left: '12%', right: '12%', height: '50%' },
+    // Mesuré sur la hauteur fixe de la caméra (200), plutôt qu'en pourcentages :
+    // un carré demande la même valeur dans les deux sens.
+    scanFrameCarre: { top: 28, height: 144, width: 144, left: '50%', marginLeft: -72 },
     scanFrameReady: { borderColor: FRAME_COLOR_READY, borderWidth: 3 },
     torchBtn: {
       position: 'absolute', top: Spacing.sm, right: Spacing.sm,

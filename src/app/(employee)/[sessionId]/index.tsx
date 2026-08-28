@@ -18,7 +18,6 @@ import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
-import { useNotificationsSurInventaire } from '@/lib/push'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
@@ -27,7 +26,9 @@ import { demander, signaler } from '@/lib/dialogue'
 export default function EmployeeProgressScreen() {
   // Les notifications se demandent ici : ouvrir un inventaire est le geste
   // qui leur donne un objet.
-  useNotificationsSurInventaire()
+  // ⚠️ La demande de notifications a quitté cet écran : elle est amorcée sur
+  // la liste des inventaires, par une carte qui dit ce qu'on recevra. Ouvrir
+  // la boîte iOS ici la posait sans un mot — et un refus est définitif.
   // Rien n'expliquait la différence entre les deux passages à un
   // saisonnier. Deux lignes sous les boutons, tant qu'il n'a rien compté :
   // l'information est à côté du geste, jamais dans une modale.

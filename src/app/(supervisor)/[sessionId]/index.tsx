@@ -26,6 +26,7 @@ import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { PendingBalisesRow } from '@/components/PendingBalisesRow'
 import { useNotificationsSurInventaire } from '@/lib/push'
 import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
+import { useRepere } from '@/lib/reperes'
 import { demander, signaler } from '@/lib/dialogue'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
@@ -175,6 +176,20 @@ export default function SessionDetailScreen() {
   }, [refetch, manualRefresh])
 
   const isCreator = !!profile?.id && session?.created_by === profile.id
+
+  /**
+   * Où se lisent les écarts, le rapport et son export — une fois.
+   *
+   * ⚠️ **Adapté de la maquette du 23 août, qui parlait d'« un menu en haut à
+   * droite ».** Il n'y en a pas : les actions sont listées sur cet écran. Ce
+   * qui ne se voit pas, en revanche, c'est que l'export Excel vit *dans* le
+   * rapport, et que le site montre les mêmes tableaux en plus large. C'est ce
+   * que dit ce repère, et rien d'autre.
+   *
+   * Il attend qu'il y ait quelque chose à lire : sur un inventaire à zéro
+   * pièce, il annoncerait des tableaux vides.
+   */
+  const { aVoir: repereMenuAVoir, marquerVu: repereMenuVu } = useRepere('menu-inventaire', profile?.id)
 
   async function handleRemoveMember(userId: string, name: string) {
     void demander({
@@ -376,6 +391,17 @@ export default function SessionDetailScreen() {
         )}
 
         {/* Menu d'actions */}
+        {repereMenuAVoir && countedPieces > 0 && (
+          <View style={styles.repereCarte}>
+            <Text style={styles.repereTexte}>
+              Les écarts d&apos;audit et le rapport sont juste en dessous. L&apos;export Excel se
+              trouve dans le rapport, et le site montre les mêmes tableaux en plus large.
+            </Text>
+            <Pressable onPress={repereMenuVu} hitSlop={10} style={styles.repereBtn}>
+              <Text style={styles.repereCompris}>Compris</Text>
+            </Pressable>
+          </View>
+        )}
         <SectionLabel>Actions</SectionLabel>
         <MenuCard>
           {!closed && (
@@ -496,15 +522,27 @@ function InfoPanel({
           {memberList.length === 0 ? (
             <Text style={styles.zoneEmpty}>{"Aucun membre pour l'instant."}</Text>
           ) : memberList.map(m => {
-            const mm = m as unknown as { profiles: { full_name: string } | null; role?: string }
+            const mm = m as unknown as {
+              profiles: { full_name: string; is_active?: boolean | null } | null
+              role?: string
+            }
             const name = mm.profiles?.full_name ?? 'Inconnu'
+            // ⚠️ `is_active` veut dire « s'est déjà connecté », rien d'autre —
+            // même piège de lecture que sur « Mon équipe », où le badge disait
+            // « Accès retiré ». Le libellé est celui du site.
+            const jamaisEntre = mm.profiles?.is_active === false
             const isOwner = m.user_id === session.created_by
             return (
               <View key={m.user_id} style={styles.memberRow}>
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>{name.charAt(0).toUpperCase()}</Text>
                 </View>
-                <Text style={styles.memberName}>{name}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.memberName}>{name}</Text>
+                  {/* Sous le nom, pas à côté : à la largeur d'un téléphone, la
+                      rangée casserait le nom sur deux lignes. */}
+                  {jamaisEntre && <Text style={styles.memberAttente}>Mot de passe à créer</Text>}
+                </View>
                 {/* « Créateur » dit un état, « Retirer » supprime quelqu'un.
                     Les deux étaient des pastilles colorées de même taille :
                     rien ne les distinguait au premier coup d'œil. */}
@@ -660,6 +698,17 @@ function makeStyles(t: Theme) {
     shareBtnText: { color: t.accent, fontSize: Texte.courant, fontFamily: Font.semibold },
 
     // Members
+    /* Un repère qui ne se montre qu'une fois s'écrit partout de la même
+       façon : encre inversée, un seul mot à toucher. Même dessin que la bulle
+       du balayage, sur l'accueil. */
+    repereCarte: {
+      marginTop: Spacing.lg, backgroundColor: t.textPrimary, borderRadius: Radius.lg,
+      padding: Spacing.md, gap: Spacing.sm,
+    },
+    repereTexte: { color: t.background, fontSize: Texte.second, lineHeight: 18, fontFamily: Font.regular },
+    repereBtn: { alignSelf: 'flex-end' },
+    repereCompris: { color: t.background, fontSize: Texte.second, fontFamily: Font.semibold },
+
     memberRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, borderColor: t.hairline },
     memberAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
     memberAvatarPending: { backgroundColor: t.warningSoft },
@@ -668,6 +717,12 @@ function makeStyles(t: Theme) {
     // Une étiquette, pas un bouton : elle dit un état, elle n'a pas à attirer
     // l'œil ni à ressembler à quelque chose qui se touche.
     memberTag: { fontSize: Texte.etiquette, fontFamily: Font.semibold, color: t.textSecondary, backgroundColor: t.hairline, borderRadius: Radius.pill, paddingHorizontal: 9, paddingVertical: 3, overflow: 'hidden' },
+    memberAttente: {
+      alignSelf: 'flex-start', marginTop: 3,
+      fontSize: Texte.etiquette, fontFamily: Font.semibold, color: t.warning,
+      backgroundColor: t.warningSoft, borderRadius: Radius.pill,
+      paddingHorizontal: 8, paddingVertical: 2, overflow: 'hidden',
+    },
     invitePendingHint: { fontSize: Texte.second, color: t.textMuted, fontFamily: Font.regular, marginTop: 1 },
     // Une action, pas une étiquette : du texte, qui se touche.
     removeBtn: { paddingHorizontal: 4, paddingVertical: 4 },
