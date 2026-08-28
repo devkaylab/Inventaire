@@ -1085,9 +1085,32 @@ l'absence d'appelant dans l'app, le site **et** les fonctions edge.
 - **Les paramètres en tableau sont vérifiés élément par élément** :
   `ca_invite_supervisor` et `ca_set_supervisor_stores` comptent les magasins de
   l'entreprise et refusent si le compte diffère. Aucune affectation croisée
-  possible. (`ca_set_counter_stores` filtre au lieu de refuser — pas de fuite,
-  mais le même geste à l'écran réussit à moitié d'un côté et échoue franchement
-  de l'autre.)
+  possible.
+
+## Deux fonctions sœurs traitent la même erreur pareil (`20260828280001`)
+
+Relevé comme observation pendant le balayage, corrigé ensuite à la demande de
+Julien. `ca_set_supervisor_stores` **refusait** une liste contenant un magasin
+d'une autre entreprise ; `ca_set_counter_stores` le **filtrait** silencieusement
+et rendait `success: true`.
+
+Aucune fuite dans les deux cas — c'est pourquoi ce n'était pas un constat. Mais
+les deux servent **le même geste à l'écran** (`changerMagasins` route selon le
+rôle) : l'administrateur voyait son action échouer franchement sur un
+superviseur et réussir à moitié sur un compteur, avec moins de magasins
+affectés qu'il n'en avait cochés et rien pour le lui dire. Le journal
+enregistrait le compte filtré, ce qui rendait l'écart invisible après coup.
+
+⚠️ **Ce qui reste différent, et doit le rester : la liste vide.** Un compteur
+sans magasin est un état normal — c'est même ce qui a justifié d'écrire cette
+fonction le 23 août, un compteur retiré de son dernier magasin devenant
+invisible partout et donc irrécupérable. Un superviseur, lui, garde toujours au
+moins un magasin : pour le détacher, on lui retire le rôle. Ne pas « aligner »
+cette différence-là.
+
+Vérifié en transaction annulée, session d'administrateur simulée, sur les
+données réelles : magasin étranger refusé avec le message exact de la jumelle,
+liste vide acceptée, magasin de l'entreprise accepté.
 - **Les 17 policies de lecture sont toutes cloisonnées** par entreprise, session
   ou personne.
 - **Le formulaire public superviseur est bien éteint** : `submit-supervisor-request`

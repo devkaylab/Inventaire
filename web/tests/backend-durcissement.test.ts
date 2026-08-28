@@ -97,3 +97,29 @@ describe('VR-008 et VR-009 · les permissions sans objet', () => {
     expect(toutesLesMigrations).toContain('revoke insert, update, references on public.companies from anon, authenticated')
   })
 })
+
+describe('les deux fonctions sœurs traitent la même erreur pareil', () => {
+  // Elles servent LE MÊME geste à l'écran — `changerMagasins` route selon le
+  // rôle. `ca_set_counter_stores` filtrait silencieusement un magasin étranger
+  // là où sa jumelle refusait : l'action réussissait à moitié, avec moins de
+  // magasins que cochés et rien pour le dire.
+  const compteur = derniereDefinition('ca_set_counter_stores').corps
+  const superviseur = derniereDefinition('ca_set_supervisor_stores').corps
+
+  it('un magasin étranger est refusé des deux côtés', () => {
+    const refus = "Un des magasins n''appartient pas à votre entreprise."
+    expect(compteur, 'compteur').toContain(refus)
+    expect(superviseur, 'superviseur').toContain(refus)
+    // ⚠️ Et le filtre silencieux ne revient pas.
+    expect(compteur).not.toContain('array_agg(st.id)')
+  })
+
+  it('⚠️ mais la liste vide reste acceptée pour un compteur', () => {
+    // Un compteur sans magasin est un état normal — c'est ce qui a justifié
+    // d'écrire cette fonction le 23 août, un compteur retiré de son dernier
+    // magasin devenant invisible partout et donc irrécupérable. Un superviseur,
+    // lui, garde toujours au moins un magasin. Ne pas « aligner » ça aussi.
+    expect(superviseur).toContain('Un superviseur garde au moins un magasin')
+    expect(compteur).not.toContain('garde au moins un magasin')
+  })
+})
