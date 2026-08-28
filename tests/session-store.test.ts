@@ -10,7 +10,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const trousseau = new Map<string, string>()
 const asyncStore = new Map<string, string>()
 
+let trousseauPresent = true
 vi.mock('expo-secure-store', () => ({
+  isAvailableAsync: async () => {
+    // Un module natif absent ne rend pas `false` : il lève.
+    if (!trousseauPresent) throw new Error('Cannot find native module ExpoSecureStore')
+    return true
+  },
   getItemAsync: async (k: string) => trousseau.get(k) ?? null,
   setItemAsync: async (k: string, v: string) => void trousseau.set(k, v),
   deleteItemAsync: async (k: string) => void trousseau.delete(k),
@@ -106,5 +112,31 @@ describe('⚠️ personne n’est déconnecté par le changement', () => {
     asyncStore.set(CLE, session(50))
     await sessionStore.removeItem(CLE)
     expect(asyncStore.has(CLE)).toBe(false)
+  })
+})
+
+describe('⚠️ un module natif absent ne donne pas un écran blanc', () => {
+  // Arrivé le 28 août 2026 : la dépendance était dans `package.json`, le
+  // `pod install` n'avait pas été fait, et deux téléphones reconstruits n'ont
+  // plus rien affiché. Ce fichier est chargé par la racine de l'application :
+  // une exception ici ne casse pas une page, elle empêche l'app de monter.
+  it('retombe sur le stockage ordinaire, et le dit', async () => {
+    const alerte = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    trousseauPresent = false
+    // Le module garde son verdict en mémoire : on le recharge pour repartir
+    // d'une page blanche.
+    vi.resetModules()
+    const { sessionStore: repli } = await import('@/lib/sessionStore')
+
+    const v = session(4000)
+    await repli.setItem(CLE, v)
+    expect(await repli.getItem(CLE)).toBe(v)
+    // Rien dans le trousseau, tout dans le stockage ordinaire.
+    expect(trousseau.size).toBe(0)
+    expect(asyncStore.get(CLE)).toBe(v)
+    expect(alerte).toHaveBeenCalled()
+
+    trousseauPresent = true
+    alerte.mockRestore()
   })
 })

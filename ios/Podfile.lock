@@ -99,6 +99,8 @@ PODS:
   - ExpoRouter (56.2.10):
     - ExpoModulesCore
     - RNScreens
+  - ExpoSecureStore (56.0.4):
+    - ExpoModulesCore
   - ExpoSharing (56.0.17):
     - ExpoModulesCore
   - ExpoSplashScreen (56.0.10):
@@ -2304,6 +2306,7 @@ DEPENDENCIES:
   - ExpoModulesWorkletsAdapter (from `../node_modules/expo-modules-core`)
   - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
+  - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
@@ -2448,6 +2451,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../node_modules/expo-router/ios"
+  ExpoSecureStore:
+    :path: "../node_modules/expo-secure-store/ios"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
   ExpoSplashScreen:
@@ -2653,6 +2658,7 @@ SPEC CHECKSUMS:
   ExpoModulesWorkletsAdapter: 59a69740bd200ff5f983cd97d49c086d47b802f4
   ExpoNotifications: 0b1d20c332a90db507a3e50076e7e756a56f2951
   ExpoRouter: abac86e050a6cb4f7f11dd9e79e11f7986d2be03
+  ExpoSecureStore: f1bd083c1b7b8d4142013ffcc0082d377d9f49f4
   ExpoSharing: 6209517626cce7f02b3bb31ccd92b9d4087c3bee
   ExpoSplashScreen: 3fe3a57d56d7242a9109d9714a6f9fa1e256538b
   ExpoSymbols: 377747de25bcb1ab68ec68f23d81fb81d43eae83

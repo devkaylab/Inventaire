@@ -54,6 +54,44 @@ const cleValide = (cle: string) => /^[A-Za-z0-9._-]+$/.test(cle)
 
 const surLeWeb = Platform.OS === 'web'
 
+/**
+ * ⚠️ Le trousseau est un module NATIF : s'il manque, chacun de ses appels lève
+ * « Cannot find native module ExpoSecureStore ». Et comme ce fichier est chargé
+ * par `supabase.ts`, donc par la racine de l'application, une exception ici ne
+ * casse pas une page — elle empêche l'application de monter. **Écran blanc, sans
+ * un mot.**
+ *
+ * C'est arrivé le 28 août 2026 : la dépendance était dans `package.json`, le
+ * `pod install` n'avait pas été fait, et deux téléphones reconstruits n'ont plus
+ * rien affiché. Le correctif de fond était le `pod install` ; celui-ci empêche
+ * qu'une prochaine dépendance native oubliée produise le même silence.
+ *
+ * On retombe alors sur `AsyncStorage` — c'est-à-dire le comportement d'avant.
+ * Moins sûr, mais l'application démarre, et l'avertissement dit pourquoi.
+ */
+let trousseauUtilisable: boolean | null = null
+
+async function trousseauDispo(): Promise<boolean> {
+  if (trousseauUtilisable !== null) return trousseauUtilisable
+  try {
+    trousseauUtilisable = (await SecureStore.isAvailableAsync()) === true
+  } catch {
+    trousseauUtilisable = false
+  }
+  if (!trousseauUtilisable) {
+    console.warn(
+      '[session] Trousseau indisponible — la session reste dans le stockage ordinaire. ' +
+        'Un `pod install` puis une reconstruction manquent probablement.',
+    )
+  }
+  return trousseauUtilisable
+}
+
+/** Le trousseau ne peut rien pour cette clé — ou pas du tout. */
+async function horsTrousseau(cle: string): Promise<boolean> {
+  return surLeWeb || !cleValide(cle) || !(await trousseauDispo())
+}
+
 async function lireNombre(cle: string): Promise<number> {
   const brut = await SecureStore.getItemAsync(cle)
   const n = brut === null ? NaN : Number(brut)
@@ -66,7 +104,7 @@ async function effacerMorceaux(cle: string, jusqua: number): Promise<void> {
 
 export const sessionStore = {
   async getItem(cle: string): Promise<string | null> {
-    if (surLeWeb || !cleValide(cle)) return AsyncStorage.getItem(cle)
+    if (await horsTrousseau(cle)) return AsyncStorage.getItem(cle)
 
     const n = await lireNombre(cle)
     if (n > 0) {
@@ -92,7 +130,7 @@ export const sessionStore = {
   },
 
   async setItem(cle: string, valeur: string): Promise<void> {
-    if (surLeWeb || !cleValide(cle)) return AsyncStorage.setItem(cle, valeur)
+    if (await horsTrousseau(cle)) return AsyncStorage.setItem(cle, valeur)
 
     const avant = await lireNombre(cle)
     const parts: string[] = []
@@ -112,7 +150,7 @@ export const sessionStore = {
   },
 
   async removeItem(cle: string): Promise<void> {
-    if (surLeWeb || !cleValide(cle)) return AsyncStorage.removeItem(cle)
+    if (await horsTrousseau(cle)) return AsyncStorage.removeItem(cle)
 
     const n = await lireNombre(cle)
     await effacerMorceaux(cle, n)
