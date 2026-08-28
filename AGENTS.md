@@ -1184,21 +1184,50 @@ change réellement — le dépôt ne déploie rien tout seul.
 Tests de garde : `web/tests/admin-entreprise.test.ts`, bloc « une personne
 d'une autre entreprise ».
 
-# Lint du site : `next lint`, jamais `eslint` à la main (22 août 2026)
+# Lint du site : `eslint .`, et pourquoi la règle a changé (28 août 2026)
 
-Le site se vérifie avec **`npx next lint`** depuis `web/`, qui lit
-`web/.eslintrc.json`. Lancer `npx eslint …` directement depuis `web/` donne
-de faux résultats : ESLint remonte l'arborescence et charge
-`eslint.config.js` à la **racine du dépôt** — la configuration de
-l'application mobile (Expo), qui porte des règles React récentes
-(`react-hooks/set-state-in-effect`, `react-hooks/refs`) étrangères au site.
-On croit alors voir une trentaine d'erreurs (« setState dans un useEffect »
-sur chaque page qui charge ses données au montage) là où `next lint` ne
-signale rien. Constaté le 22 août 2026 : une fausse erreur a été annoncée à
-Julien, puis une désactivation de règle inutile a été écrite et retirée.
+**Le site se vérifie avec `npm run lint` depuis `web/`**, qui appelle
+`eslint .` et lit `web/eslint.config.mjs`.
 
-Conséquence : **ne rien désactiver dans `.eslintrc.json` sur la foi d'un
-`eslint` lancé à la main** — vérifier d'abord avec `next lint`.
+⚠️ **Cette règle est l'inverse de celle qui tenait jusqu'au 28 août 2026**, et
+le renversement mérite d'être compris avant d'y toucher.
+
+**L'ancienne règle** — « `npx next lint`, jamais `eslint` à la main » — avait
+une bonne raison : `npx eslint` lancé depuis `web/` **remontait
+l'arborescence** et chargeait `eslint.config.js` à la **racine du dépôt**,
+celle de l'application Expo. On croyait alors voir une trentaine d'erreurs
+(« setState dans un useEffect » sur chaque page qui charge ses données au
+montage) là où `next lint` n'en signalait aucune. Une fausse erreur a été
+annoncée à Julien le 22 août, puis une désactivation de règle inutile écrite
+et retirée.
+
+**Ce qui a changé** : Next 16 a **supprimé la commande `next lint`**. Elle prend
+désormais son argument pour un dossier — `npx next lint` répond « Invalid
+project directory provided, no such directory: …/web/lint ».
+
+**Et pourquoi le piège ne se rouvre pas** : ESLint 9 s'arrête à la **première**
+configuration plate trouvée en partant du dossier courant. `web/eslint.config.mjs`
+est trouvée avant celle de la racine, qui n'est donc plus jamais atteinte
+depuis `web/`. **Vérifié, pas déduit** : en déplaçant temporairement le fichier,
+`eslint --print-config` rend la configuration Expo (`import/ignore` sur
+`@react-native`, extensions `.android.js`) ; en le remettant, non.
+
+Deux détails à connaître :
+
+- **`eslint-config-next` 16 exporte directement une configuration plate.** Pas
+  de `FlatCompat` : il casse dessus (« Converting circular structure to JSON »,
+  il tente de valider à l'ancienne une configuration qui ne l'est plus).
+- **Trois règles de pureté React sont en avertissement**, pas en erreur :
+  `react-hooks/set-state-in-effect`, `react-hooks/refs`, `react-hooks/purity`.
+  Elles relèvent 35 points, dont 30 du même motif — une page qui charge ses
+  données dans un effet. ⚠️ **Ce sont de vraies remarques**, à la différence de
+  celles d'avant : elles décrivent une dette de style réelle. Elles restent
+  visibles plutôt que désactivées, et ne bloquent pas — les traiter est une
+  refonte des hooks, pas un sujet de sécurité, et cela ne se mène pas au milieu
+  d'une montée de version. Les repasser en `error` le jour où on s'y attelle.
+
+Ce qui ne change pas : **ne rien désactiver sur la foi d'un lint mal
+configuré** — vérifier d'abord d'où viennent les règles.
 
 ## « À traiter » sur /admin : des gestes, pas des constats (22 août 2026)
 
@@ -2685,6 +2714,51 @@ purger » le noieraient.
 n'est pas planifiée ». Si un autre travail périodique se présente, c'est là
 qu'il ira. Test de garde : `web/tests/journal-admin.test.ts`, « et cette purge
 est réellement planifiée ».
+
+## Montée en Next 16 — sur une branche, pas sur `main` (28 août 2026)
+
+Constat n°2 de la revue de sécurité. `npm audit` listait seize avis pour
+Next.js 14.2.35, dont sept de gravité haute, et **aucun correctif n'existe pour
+la branche 14** : le premier palier corrigé est 16.3.3.
+
+**Branche `montee-next16`, délibérément pas fusionnée.** Le motif est simple et
+tient à ce que je peux vérifier : `git push` sur `main` déploie le site, et
+**l'espace connecté demande une session que je n'ai pas**. Un build qui passe
+n'est pas un site qui marche. Ce qui a été vérifié pour de vrai est listé plus
+bas ; le reste — tableau de bord, inventaires, équipe, console — attend un
+essai par quelqu'un qui peut se connecter.
+
+Ce que la montée emporte : `next` 14.2.35 → **16.3.3**, `react` et `react-dom`
+18.3.1 → **19.2.8**, `eslint` 8 → **9**, `eslint-config-next` → 16,
+`@types/react` → 19, `vitest` → 3. Résultat : **`npm audit` rend zéro
+vulnérabilité** sur le site, contre onze avant (dont une critique).
+
+**Pourquoi c'était plus petit qu'il n'y paraît**, et c'est le point à retenir
+si la question se repose : les quatre pages à paramètre (`[token]`,
+`[sessionId]`, `[companyId]`, `[storeId]`) lisent leur paramètre avec
+`useParams()`, un hook **client**. Le changement de rupture de Next 15 — les
+`params` d'une page serveur devenus asynchrones — ne les concerne donc pas. Les
+cinq pages sans `'use client'` sont des pages vitrines sans paramètre. Il n'y a
+ni middleware, ni *server action*, ni route API, ni i18n : c'est ce qui rendait
+l'exposition faible **et** la migration courte.
+
+Ce qui a demandé du travail, en revanche : `next lint` n'existe plus, d'où le
+passage à la configuration plate d'ESLint — voir « Lint du site » plus haut, la
+règle du projet s'est inversée.
+
+**Vérifié** : typage (`tsc --noEmit`, rien), 624 tests, `next build` avec la
+**même table de routes** qu'avant (mêmes pages statiques, mêmes pages
+dynamiques), lint à zéro erreur. Puis au navigateur, sur le serveur de
+développement : `/`, `/inscription`, `/login`, `/devis/<jeton>` et
+`/mentions-legales` répondent 200, aucune erreur de console, la police et le
+thème s'appliquent, et **les six en-têtes de sécurité sont toujours servis** —
+ce que le test de garde ne prouve pas, puisqu'il lit `next.config.mjs` sans
+vérifier que Next l'honore.
+
+**Ce qui reste à faire avant de fusionner** : ouvrir l'espace connecté avec une
+vraie session — le tableau de bord d'un inventaire, l'import d'un fichier, le
+rapport, /equipe et la console — et regarder la console du navigateur. Si tout
+tient, `git merge montee-next16` et pousser.
 
 # Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
