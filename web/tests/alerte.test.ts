@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { GRACE_PAIEMENT_MIN, lireVente } from '../lib/pipeline'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const edge = lire('../../supabase/functions/alerte-anomalies/index.ts')
@@ -101,5 +102,37 @@ describe('la fonction qui écrit le message', () => {
     // Le montant et l'ancienneté : c'est ce qui donne l'urgence.
     expect(edge).toContain('euros(')
     expect(edge).toContain('depuisQuand(')
+  })
+})
+
+describe('l’écran et la boîte de réception racontent la même chose', () => {
+  // Avant le 28 août 2026, l'e-mail partait au bout de quinze minutes et
+  // /admin ne parlait de retard qu'au bout d'un jour : deux versions du même
+  // incident. Julien : « il serait intéressant de le voir sur le dashboard
+  // admin également ». Il y était déjà — mal réglé.
+  it('⚠️ le seuil du tableau est celui de l’alerte', () => {
+    expect(GRACE_PAIEMENT_MIN).toBe(15)
+    expect(migrations).toContain(`interval '${GRACE_PAIEMENT_MIN} minutes'`)
+  })
+
+  const vente = (paidIlYA: number) => ({
+    kind: 'company' as const,
+    id: 'x',
+    label: 'ACME',
+    status: 'paid' as const,
+    created_at: new Date(Date.now() - 86_400_000).toISOString(),
+    paid_at: new Date(Date.now() - paidIlYA * 60_000).toISOString(),
+  })
+
+  it('pendant la grâce, l’écran n’affole pas', () => {
+    const e = lireVente(vente(5) as never, new Date())
+    expect(e.retard).toBe(false)
+    expect(e.etat).toContain('création en cours')
+  })
+
+  it('passé la grâce, il dit que le client attend', () => {
+    const e = lireVente(vente(30) as never, new Date())
+    expect(e.retard).toBe(true)
+    expect(e.etat).toContain('rien n’a été créé')
   })
 })

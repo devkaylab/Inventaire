@@ -47,6 +47,17 @@ export const SEUILS_VENTE = {
   relancerApres: 7,
 } as const
 
+/**
+ * Un paiement encaissé dont rien n'a été créé : le webhook n'est pas passé.
+ *
+ * ⚠️ En MINUTES, et c'est volontaire. Le seuil doit être le même que celui de
+ * l'alerte par e-mail (`anomalies_a_signaler`, migration 20260828190001) :
+ * l'écran et la boîte de réception ne doivent pas raconter deux histoires
+ * différentes du même incident. Quinze minutes laissent à Stripe le temps de
+ * ses nouvelles tentatives.
+ */
+export const GRACE_PAIEMENT_MIN = 15
+
 /** À qui est le tour. `nous` = un geste t'attend ; `client` = on attend. */
 export type Tour = 'nous' | 'client'
 
@@ -133,12 +144,22 @@ export function lireVente(v: VenteEnCours, maintenant = new Date()): LectureVent
     case 'paid': {
       // Le webhook crée dans la foulée du paiement. Voir `paid` sans `created`
       // plus de quelques minutes, c'est un webhook qui n'est pas passé.
-      const d = v.paid_at ? jours(v.paid_at, maintenant) : 0
+      //
+      // ⚠️ Passé la grâce, ce n'est plus une attente : c'est une anomalie, et
+      // le client a payé sans rien recevoir. Le mot le dit, et le retard est
+      // posé au même instant que l'alerte par e-mail — pas un jour plus tard,
+      // comme c'était le cas avant le 28 août 2026.
+      const minutes = v.paid_at
+        ? (maintenant.getTime() - new Date(v.paid_at).getTime()) / 60000
+        : 0
+      const passeLaGrace = minutes >= GRACE_PAIEMENT_MIN
       return {
         tour: 'nous',
-        etat: v.paid_at ? `Payé le ${jourCourt(v.paid_at)} — création en attente` : 'Payé — création en attente',
+        etat: passeLaGrace
+          ? `Payé le ${jourCourt(v.paid_at!)} — rien n’a été créé, le client attend`
+          : 'Payé — création en cours',
         geste: v.kind === 'company' ? 'Créer l’entreprise' : 'Créer le magasin',
-        retard: d >= 1,
+        retard: passeLaGrace,
       }
     }
   }

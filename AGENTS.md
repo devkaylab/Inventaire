@@ -2832,6 +2832,22 @@ sans clé. Et `declencher_alerte()` joué à la main sur la base réelle ne
 provoque **aucun appel sortant** (`net._http_response` reste vide) : il n'y a
 rien à signaler.
 
+### L'écran dit la même chose que la boîte de réception
+
+Julien, l'e-mail reçu : *« il serait intéressant de le voir sur le dashboard
+admin également, non ? »* Il y était déjà — `lireVente` rendait `tour: 'nous'`
+sur un `paid`, donc /admin l'affichait en alerte ambre dans « Ventes en
+cours ». **Mal réglé, en revanche** : l'e-mail partait au bout de quinze
+minutes, l'écran ne parlait de retard qu'au bout d'un jour, et son libellé
+(« création en attente ») ne disait pas que quelque chose clochait.
+
+⚠️ **`GRACE_PAIEMENT_MIN` (`web/lib/pipeline.ts`) doit rester égal à la grâce
+de `anomalies_a_signaler`.** Un test compare la constante au texte de la
+migration : deux seuils qui divergent, ce sont deux versions du même incident,
+et c'est comme ça qu'on cesse de croire l'un ou l'autre. Passé la grâce,
+l'écran écrit « rien n'a été créé, le client attend » — le mot dit
+l'anomalie ; avant, il écrit « création en cours » et n'affole personne.
+
 Tests de garde : `web/tests/alerte.test.ts`.
 
 # Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
