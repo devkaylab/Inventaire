@@ -2852,6 +2852,37 @@ et c'est comme ça qu'on cesse de croire l'un ou l'autre. Passé la grâce,
 l'écran écrit « rien n'a été créé, le client attend » — le mot dit
 l'anomalie ; avant, il écrit « création en cours » et n'affole personne.
 
+### Et la purge se surveille elle-même (`20260828200001`)
+
+Julien, à qui je venais de demander de lancer une requête chaque matin pour
+vérifier que la purge avait tourné : *« elle ne peut pas se run seule la
+commande ? »*. Elle peut — et surtout **elle ne devrait pas exister** : une
+vérification dont un humain est responsable s'arrête au bout de trois jours.
+
+Le tour de garde pose donc une seconde question : *le ménage quotidien a-t-il
+eu lieu ?* Même principe que la première — on regarde le **résultat**
+(`cron.job_run_details`), pas une erreur de tâche.
+
+- **⚠️ 48 heures, pas 24.** La purge passe une fois par jour : alerter à 24 h
+  ferait sonner pour un passage décalé de quelques minutes ou une base
+  momentanément indisponible. Deux nuits manquées, ce n'est plus un hasard.
+- **⚠️ Le piège du démarrage.** Au moment de la pose, la purge n'avait **jamais
+  tourné** : une condition naïve (« aucun passage réussi depuis 48 h ») était
+  vraie tout de suite, et l'alerte serait partie avant que le ménage ait eu sa
+  chance. D'où le `greatest(...)` avec une date d'installation en dur — et si
+  la tâche ne démarrait jamais du tout, l'alerte finirait par partir quand
+  même, ce qui est exactement ce qu'on veut.
+- **⚠️ Le message se compose par nature.** Un seul texte, écrit pour les
+  paiements, ferait dire « un paiement sans suite » à propos du ménage. Une
+  alerte qui décrit mal ce qu'elle a vu ne se lit plus. `alerte-anomalies`
+  sépare donc `paiement` et `purge` — titre, paragraphes et ligne de détail
+  (celle d'une purge ne parle pas d'euros). Redéployée en version 3.
+
+Vérifié en base : silencieuse aujourd'hui (le repli tient), et **la branche
+purge se déclenche bien** — essayé en transaction annulée en reculant le repli
+à huit jours, la fonction rend alors la ligne `purge:silencieuse`. La fonction
+réelle est intacte après annulation, contrôlée sur `pg_get_functiondef`.
+
 Tests de garde : `web/tests/alerte.test.ts`.
 
 ## Le jeton de session vit dans le trousseau (28 août 2026)

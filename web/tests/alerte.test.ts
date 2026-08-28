@@ -43,6 +43,27 @@ describe('la question posée toutes les heures', () => {
     expect(migrations).toContain("a.derniere_le < now() - interval '24 hours'")
   })
 
+  it('⚠️ surveille aussi que le ménage quotidien a bien eu lieu', () => {
+    // Julien : « elle ne peut pas se run seule la commande ? » — à propos de
+    // la vérification quotidienne de la purge. Elle peut, et surtout elle ne
+    // devrait pas exister : une vérification dont un humain est responsable
+    // s'arrête au bout de trois jours.
+    expect(migrations).toContain("'purge:silencieuse'")
+    expect(migrations).toContain("j.jobname = 'purge-donnees-expirees'")
+    // 48 h, pas 24 : la purge passe une fois par jour, alerter à 24 h ferait
+    // sonner pour un passage décalé de quelques minutes.
+    expect(migrations).toContain("p.dernier < now() - interval '48 hours'")
+  })
+
+  it('⚠️ ne crie pas avant que la purge ait eu sa chance', () => {
+    // Au moment de la pose, la purge n'avait jamais tourné : une condition
+    // naïve serait vraie tout de suite et l'alerte partirait avant le premier
+    // ménage. D'où le repli sur la date d'installation — et si la tâche ne
+    // démarrait jamais, l'alerte finirait par partir quand même.
+    expect(migrations).toMatch(/greatest\(\s*coalesce\(max\(d\.end_time\)/)
+    expect(migrations).toContain("timestamptz '2026-08-28 13:30:00+00'")
+  })
+
   it('tourne toutes les heures, et le tour de garde est planifié', () => {
     expect(migrations).toMatch(/cron\.schedule\(\s*'alerte-paiement-sans-suite',\s*'7 \* \* \* \*'/)
   })
@@ -94,6 +115,17 @@ describe('la fonction qui écrit le message', () => {
     expect(edge).toContain('emailQuantinvo')
     expect(edge).toContain('envoyerEmail')
     expect(edge).not.toContain('<table')
+  })
+
+  it('⚠️ compose son message par NATURE', () => {
+    // Un seul texte, écrit pour les paiements, ferait dire « un paiement sans
+    // suite » à propos du ménage quotidien — et une alerte qui décrit mal ce
+    // qu'elle a vu ne se lit plus.
+    expect(edge).toContain("a.nature === 'paiement'")
+    expect(edge).toContain("a.nature === 'purge'")
+    expect(edge).toContain('La purge des données ne tourne plus')
+    // Et la ligne de détail d'une purge ne parle pas d'euros.
+    expect(edge).toContain('dernier passage')
   })
 
   it('dit ce qui s’est passé, et où agir', () => {

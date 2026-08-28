@@ -1,5 +1,5 @@
 // Edge function : le tour de garde. Prévient quand un paiement reste sans
-// suite (28 août 2026).
+// suite, ou quand le ménage quotidien cesse de se faire (28 août 2026).
 //
 // Dernier manque relevé par la revue de sécurité : les journaux existaient,
 // **personne n'était prévenu de rien**. Le cas qui coûte de l'argent est
@@ -8,11 +8,16 @@
 // l'apprenons quand il écrit.
 //
 // ⚠️ ON SURVEILLE LE RÉSULTAT, PAS LA MACHINE. Pas les erreurs techniques des
-// fonctions — elles sont bruyantes, et la plupart se règlent seules. Une seule
-// question, posée toutes les heures : *y a-t-il un paiement encaissé dont rien
-// n'a été créé ?* La détection vit en base (`anomalies_a_signaler`), qui porte
-// aussi les quinze minutes de grâce laissées aux nouvelles tentatives de
-// Stripe.
+// fonctions — elles sont bruyantes, et la plupart se règlent seules. Deux
+// questions seulement, posées toutes les heures : *y a-t-il un paiement
+// encaissé dont rien n'a été créé ?* et *le ménage quotidien a-t-il eu lieu ?*
+// La détection vit en base (`anomalies_a_signaler`), qui porte aussi les délais
+// de grâce — quinze minutes pour les nouvelles tentatives de Stripe,
+// quarante-huit heures pour la purge, qui ne passe qu'une fois par jour.
+//
+// La seconde question remplace une vérification que Julien aurait dû faire à
+// la main chaque matin. Une vérification dont un humain est responsable
+// s'arrête au bout de trois jours.
 //
 // ⚠️ ELLE N'EST PAS APPELÉE PAR UN NAVIGATEUR mais par la tâche planifiée de
 // la base (`declencher_alerte`, toutes les heures à la minute 7). D'où
@@ -87,33 +92,62 @@ Deno.serve(async (req) => {
 
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const n = anomalies.length
-  const total = anomalies.reduce((s, a) => s + (a.montant_centimes ?? 0), 0)
 
-  const { html, text } = emailQuantinvo({
-    titre: n > 1 ? `${n} paiements sans suite` : 'Un paiement sans suite',
-    apercu: `${euros(total)} encaissés, rien n’a été créé.`,
-    paragraphes: [
-      n > 1
-        ? `${n} paiements ont été encaissés sans que l’entreprise ou le magasin correspondant n’ait été créé. Au total, ${euros(total)}.`
-        : `Un paiement a été encaissé sans que l’entreprise ou le magasin correspondant n’ait été créé.`,
+  // ⚠️ Le message se compose par NATURE. Un seul texte, écrit pour les
+  // paiements, ferait dire « un paiement sans suite » à propos du ménage
+  // quotidien — et une alerte qui décrit mal ce qu'elle a vu ne se lit plus.
+  const paiements = anomalies.filter((a) => a.nature === 'paiement')
+  const purges = anomalies.filter((a) => a.nature === 'purge')
+  const total = paiements.reduce((s, a) => s + (a.montant_centimes ?? 0), 0)
+
+  const titre = paiements.length && purges.length
+    ? `${n} anomalies`
+    : purges.length
+      ? 'La purge des données ne tourne plus'
+      : paiements.length > 1
+        ? `${paiements.length} paiements sans suite`
+        : 'Un paiement sans suite'
+
+  const paragraphes: string[] = []
+  if (paiements.length) {
+    paragraphes.push(
+      paiements.length > 1
+        ? `${paiements.length} paiements ont été encaissés sans que l’entreprise ou le magasin correspondant n’ait été créé. Au total, ${euros(total)}.`
+        : 'Un paiement a été encaissé sans que l’entreprise ou le magasin correspondant n’ait été créé.',
       'C’est le signe que la confirmation de Stripe n’est pas arrivée jusqu’au serveur. Le client, lui, a payé et n’a rien reçu : ni ses codes, ni son accès.',
       'La création se termine à la main depuis le tableau de bord.',
-    ],
+    )
+  }
+  if (purges.length) {
+    paragraphes.push(
+      `Le ménage quotidien des données n’a pas abouti depuis plus de deux jours — dernier passage réussi ${depuisQuand(purges[0].depuis)}.`,
+      'Les durées de conservation annoncées dans la politique de confidentialité ne sont donc plus tenues : rien n’est effacé ni anonymisé en attendant.',
+    )
+  }
+
+  const { html, text } = emailQuantinvo({
+    titre,
+    apercu: paiements.length
+      ? `${euros(total)} encaissés, rien n’a été créé.`
+      : 'Le ménage quotidien des données ne se fait plus.',
+    paragraphes,
     details: anomalies.slice(0, 10).map((a) => ({
       intitule: a.objet || 'Sans nom',
-      valeur: `${euros(a.montant_centimes)} · ${a.parcours} · payé ${depuisQuand(a.depuis)}`,
+      valeur: a.nature === 'purge'
+        ? `${a.parcours} · dernier passage ${depuisQuand(a.depuis)}`
+        : `${euros(a.montant_centimes)} · ${a.parcours} · payé ${depuisQuand(a.depuis)}`,
     })),
     bouton: { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
     note: n > 10 ? `Et ${n - 10} autres, visibles sur le tableau de bord.` : undefined,
     raison:
-      'Vous recevez ce message parce que vous suivez les ventes Quantinvo. Tant que la situation dure, il est rappelé une fois par jour, pas davantage.',
+      'Vous recevez ce message parce que vous suivez Quantinvo. Tant que la situation dure, il est rappelé une fois par jour, pas davantage.',
     siteUrl: appUrl,
   })
 
   try {
     await envoyerEmail({
       to: dest,
-      subject: n > 1 ? `⚠ ${n} paiements sans suite` : '⚠ Un paiement sans suite',
+      subject: `⚠ ${titre}`,
       html,
       text,
       replyTo: adresseDeContact(dest),
