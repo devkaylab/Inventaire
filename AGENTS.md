@@ -248,6 +248,28 @@ dans le menu » de l'écran de suivi, la checklist de l'administrateur
 d'entreprise — et la question restée ouverte : un seul inventaire ouvert,
 l'ouvre-t-on directement ?
 
+## Vérifications (28 août 2026)
+
+- **`/bienvenue`** vu au navigateur, clair et sombre, sur 375 px, en forçant
+  temporairement la branche « Compte activé » d'un compteur (forçage retiré,
+  `git status` contrôlé) : l'adresse en gras, le bouton, les deux badges, et la
+  phrase « L'application arrive bientôt sur les deux boutiques ».
+- **L'indice de balayage** exercé au simulateur sur un compte réel, appui par
+  appui : la carte s'entrouvre sur « Clôturer » et « Supprimer » (capturée
+  pendant le coup d'œil), **un appui sur « Supprimer » pendant ce temps ne fait
+  rien** — c'est la garde à ne pas défaire —, « Compris » retire la bulle, et
+  le balayage volontaire ouvre bien la confirmation nommée. Données d'essai
+  supprimées, zéro résidu contrôlé en base.
+  ⚠️ **Piège du jour** : l'application installée dans le simulateur tournait
+  sur un **bundle figé** — les modifications ne se voyaient pas, alors que
+  Metro servait bien le code à jour (vérifié en téléchargeant le bundle).
+  Passer par `./scripts/simulateur.sh` avant de conclure quoi que ce soit.
+- **La fonction edge** redéployée par le CLI (version 26, `verify_jwt` toujours
+  vrai, 401 sans jeton), et les fichiers téléchargés depuis la production sont
+  **identiques à l'octet près** à ceux du dépôt.
+- **Non vérifié** : l'e-mail reçu dans une vraie boîte. Il demande une
+  invitation réelle, donc un compte de plus.
+
 Tests de garde : `tests/compte.test.ts` (bloc « le geste caché, montré une
 fois »), `web/tests/email-template.test.ts` (bloc « l'invitation d'un compteur
 nomme qui invite »), `web/tests/navigation.test.ts` (« figurent aussi à la fin
