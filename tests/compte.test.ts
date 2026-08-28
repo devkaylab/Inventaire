@@ -1399,3 +1399,92 @@ describe('rouvrir une balise déjà comptée', () => {
     expect(scanner).toContain("replace(/\\s/g, '').toUpperCase()")
   })
 })
+
+describe('« Supprimer mon compte » n’est plus voisine de « Se déconnecter »', () => {
+  // Constat de Julien, 28 août 2026, en voulant se déconnecter : « c'est celui
+  // qu'on a envie de cliquer, car il ressemble fortement à un bouton de
+  // déconnexion ». Les deux lignes se suivaient dans la même carte, et la
+  // rouge — la plus grave — était la seule à attirer l'œil.
+  /**
+   * Le code seul. Les commentaires de ces écrans **racontent** le défaut
+   * corrigé — ils citent « Supprimer mon compte » et le mot `danger` — et
+   * feraient échouer des gardes qui portent sur ce que l'écran affiche.
+   */
+  const codeSeul = (fichier: string) =>
+    readFileSync(src(fichier), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n')
+
+  const compte = codeSeul('app/(compte)/account.tsx')
+  const profil = codeSeul('app/(compte)/profile.tsx')
+  const layout = codeSeul('app/(compte)/_layout.tsx')
+
+  it('⚠️ la suppression a quitté l’écran « Mon compte »', () => {
+    expect(compte).not.toContain('Supprimer mon compte')
+    expect(compte).not.toContain('suppression.confirm')
+    expect(profil).toContain('Supprimer mon compte')
+    expect(profil).toContain('suppression.confirm')
+  })
+
+  it('⚠️ et elle est seule sous son propre titre, en bas', () => {
+    // C'est la distance qui protège : une carte à elle, séparée du reste.
+    expect(profil).toContain('Zone sensible')
+    const zone = profil.split('Zone sensible')[1] ?? ''
+    expect(zone).toContain('Supprimer mon compte')
+    // Rien d'autre ne descend sous ce titre.
+    expect(zone).not.toContain('Mot de passe')
+    expect(zone).not.toContain('Prénom et nom')
+  })
+
+  it('« Se déconnecter » est la seule ligne rouge de « Mon compte »', () => {
+    // Elle ne pouvait pas l'être tant que la suppression était en dessous :
+    // deux rouges voisins n'auraient rien distingué.
+    // Un seul rang porte l'attribut, et c'est celui de la sortie. (On compte
+    // sur les rangs, pas sur le mot : `ton: 'danger'` sert aussi à teinter la
+    // carte de confirmation, ce qui n'a rien à voir.)
+    const rangsRouges = compte
+      .split('<MenuRow')
+      .slice(1)
+      .filter((rang) => /^[\s\S]*?\/>/.exec(rang)?.[0].match(/\bdanger\b/))
+    expect(rangsRouges.length).toBe(1)
+    expect(rangsRouges[0]).toContain('Se déconnecter')
+  })
+
+  it('le profil rassemble ce qu’on modifie sur soi', () => {
+    // Le nom et le mot de passe étaient dans deux sections différentes de
+    // l'écran principal, sans raison.
+    for (const attendu of ['Prénom et nom', 'Mot de passe', 'Double authentification']) {
+      expect(profil).toContain(attendu)
+      expect(compte).not.toContain(attendu)
+    }
+    expect(compte).toContain('Mon profil')
+    expect(layout).toContain('name="profile"')
+  })
+
+  it('la confirmation n’a pas bougé', () => {
+    // Le déplacement ajoute une distance ; il ne remplace pas la question.
+    expect(profil).toContain('useAccountDeletion')
+  })
+
+  it('chaque ligne de menu porte son icône', () => {
+    // Une ligne sans icône dépareille dans une colonne alignée.
+    for (const ecran of [compte, profil]) {
+      const lignes = ecran.match(/<MenuRow/g)?.length ?? 0
+      const avecIcone = ecran.match(/icon="/g)?.length ?? 0
+      expect(lignes).toBeGreaterThan(0)
+      expect(avecIcone).toBe(lignes)
+    }
+  })
+
+  it('les icônes sont au trait, jamais en aplat', () => {
+    // À 21 px un aplat devient une tache : on voit une forme colorée, pas un
+    // objet. Et le trait prend la couleur du rang, donc rougit avec lui.
+    const icones = readFileSync(src('components/ui/MenuIcons.tsx'), 'utf8')
+    expect(icones).toContain("fill: 'none'")
+    expect(icones).toContain('strokeWidth: 1.7')
+    const liste = readFileSync(src('components/ui/MenuList.tsx'), 'utf8')
+    expect(liste).toContain('danger ? theme.danger : theme.textMuted')
+  })
+})

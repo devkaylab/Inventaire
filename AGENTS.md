@@ -2903,6 +2903,70 @@ mais le trousseau réel ne se vérifie qu'appareil en main.
 
 Tests de garde : `tests/session-store.test.ts`.
 
+## « Supprimer mon compte » quitte le voisinage de « Se déconnecter » (28 août 2026)
+
+Constat de Julien, en voulant se déconnecter : *« le bouton supprimer mon
+compte est celui qu'on a envie de cliquer, car il ressemble fortement à un
+bouton de déconnexion »*.
+
+Il avait raison, et le défaut est de mise en page pure : les deux lignes se
+suivaient **dans la même carte**, et la suppression était la **seule ligne
+colorée de l'écran**. Autrement dit, le geste le plus grave était le plus
+visible, à un centimètre de celui qu'on cherchait. Deux gestes sans rapport,
+que rien ne séparait.
+
+**Écran `(compte)/profile.tsx`**, qui rassemble ce qu'on vient modifier **sur
+soi** : le prénom et le nom, le mot de passe, la double authentification —
+puis, tout en bas, sous son propre titre « Zone sensible » et seule dans sa
+carte, la suppression. C'est la **distance** qui protège ; la confirmation, elle,
+n'a pas bougé.
+
+Maquette validée avant codage :
+https://claude.ai/code/artifact/fc883be2-b91f-4fab-b096-7d90c6bb504c
+
+Points à ne pas défaire :
+
+- **⚠️ « Se déconnecter » est passée en rouge, et ce n'était possible qu'après
+  ce déménagement.** Elle est désormais la seule ligne colorée de « Mon
+  compte » : le rouge y désigne une chose et une seule, la sortie. Tant que la
+  suppression était juste en dessous, deux rouges voisins n'auraient rien
+  distingué — ils auraient aggravé le problème.
+- **Elle n'a pas de chevron** (`sansChevron`) : elle agit sur place, elle
+  n'ouvre pas d'écran. Un chevron promettrait une page.
+- **Le mot de passe a quitté « Ma sécurité »**, qui ne gardait plus qu'une
+  ligne. La double authentification l'a suivi : elle appartient au même sujet.
+- **Ce qui reste sur « Mon compte » est sans conséquence** — le travail du
+  superviseur, l'export de données, les repères, la déconnexion. On peut y
+  toucher n'importe quoi sans rien perdre.
+- Le bandeau « demande de suppression en cours » reste affiché **sur les deux
+  écrans** : c'est un état, pas une action, et il doit se voir sans avoir à
+  chercher.
+
+## Les icônes de menu (`components/ui/MenuIcons.tsx`)
+
+Demandées dans la foulée, capture à l'appui. `MenuRow` accepte une icône, et
+tous les rangs des deux écrans en portent une — un test le vérifie, parce
+qu'une ligne sans icône dépareille immédiatement dans une colonne alignée.
+
+- **⚠️ Au trait, jamais en aplat.** À 21 px une icône pleine devient une tache :
+  on voit une forme colorée, pas un objet.
+- **Elle prend la couleur du rang** (`danger ? theme.danger : theme.textMuted`),
+  donc elle rougit avec « Se déconnecter » sans qu'on dessine une seconde
+  version. Et c'est le gris des libellés secondaires, pas celui du texte : à
+  cette taille, un trait à pleine valeur pèse plus que le mot qu'il accompagne.
+- **Même grille de 24 et même épaisseur (1,7) pour toutes.** Ce qui fait tenir
+  une colonne, c'est l'alignement des traits, pas le dessin de chacune — une
+  icône hors grille se remarque aussitôt.
+- Vocabulaire, si on en ajoute une : un contour fermé pour un lieu ou un objet
+  (magasin, carte d'identité, bouclier), un trait ouvert pour un mouvement
+  (téléchargement, sortie).
+
+Tests de garde : `tests/compte.test.ts`, bloc « “Supprimer mon compte” n'est
+plus voisine de “Se déconnecter” ». ⚠️ Ils lisent le **code seul** : les
+commentaires de ces écrans racontent le défaut corrigé, donc citent
+« Supprimer mon compte » et le mot `danger`, et feraient échouer une garde qui
+porte sur ce que l'écran affiche.
+
 # Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
 Le site vit sur **`https://www.quantinvo.com`** — c'est l'adresse canonique,

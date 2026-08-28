@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+import { MenuIcon, type NomIcone } from '@/components/ui/MenuIcons'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
@@ -40,25 +41,36 @@ export function MenuCard({
 
 export function MenuRow({
   label,
+  /** Icône de tête. Une ligne sans icône reste possible, mais dépareille. */
+  icon,
   /** État affiché à droite du libellé (« Activée », « 3 magasins »…). */
   value,
   onPress,
   danger,
   last,
+  /** Sans chevron : la ligne agit sur place au lieu d'ouvrir un écran. */
+  sansChevron,
 }: {
   label: string
+  icon?: NomIcone
   value?: string
   onPress: () => void
   danger?: boolean
   last?: boolean
+  sansChevron?: boolean
 }) {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  // L'icône prend la couleur du rang : elle rougit avec lui, sans second
+  // dessin. Le gris est celui des libellés secondaires, pas celui du texte —
+  // à cette taille, un trait à pleine valeur pèse plus que le mot.
+  const teinte = danger ? theme.danger : theme.textMuted
   return (
     <Pressable style={[styles.row, !last && styles.rowBorder]} onPress={onPress}>
+      {!!icon && <MenuIcon nom={icon} color={teinte} />}
       <Text style={[styles.label, danger && styles.labelDanger]}>{label}</Text>
       {!!value && <Text style={styles.value}>{value}</Text>}
-      <ChevronIcon color={danger ? theme.danger : theme.textMuted} />
+      {!sansChevron && <ChevronIcon color={teinte} />}
     </Pressable>
   )
 }
@@ -82,7 +94,7 @@ function makeStyles(t: Theme) {
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.sm,
+      gap: Spacing.md,
       paddingHorizontal: Spacing.lg,
       paddingVertical: Spacing.lg,
     },

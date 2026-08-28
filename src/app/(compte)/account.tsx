@@ -1,11 +1,9 @@
-import { useCallback, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router, useFocusEffect } from 'expo-router'
+import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { getMyCompany } from '@/lib/queries'
-import { verifiedTotpFactor } from '@/lib/mfa'
 import { oublierReperes } from '@/lib/reperes'
 import { DeletionPendingNote, useAccountDeletion } from '@/components/AccountDeletion'
 import { MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
@@ -47,19 +45,6 @@ export default function AccountScreen() {
 
   const { data: company } = useQuery({ queryKey: ['my-company'], queryFn: getMyCompany })
 
-  // L'état du second facteur se relit à chaque retour sur l'écran : on en
-  // revient précisément après l'avoir activé ou retiré.
-  const [mfaOn, setMfaOn] = useState<boolean | null>(null)
-  const relireMfa = useCallback(() => {
-    let vivant = true
-    verifiedTotpFactor()
-      .then((id) => { if (vivant) setMfaOn(!!id) })
-      .catch(() => { if (vivant) setMfaOn(null) })
-    return () => { vivant = false }
-  }, [])
-  // `useFocusEffect` couvre aussi le premier affichage : pas besoin d'un
-  // `useEffect` en plus, qui ferait une lecture pour rien à l'ouverture.
-  useFocusEffect(relireMfa)
 
   const email = session?.user.email ?? '—'
   const superviseur = profile?.role === 'supervisor'
@@ -114,36 +99,38 @@ export default function AccountScreen() {
           <>
             <SectionLabel>Mon travail</SectionLabel>
             <MenuCard>
-              <MenuRow label="Mes magasins" onPress={() => router.push('/(compte)/stores')} />
-              <MenuRow label="Mon équipe" onPress={() => router.push('/(compte)/team')} />
-              <MenuRow label="Boîte à outils" onPress={() => router.push('/(compte)/tools')} last />
+              <MenuRow icon="magasin" label="Mes magasins" onPress={() => router.push('/(compte)/stores')} />
+              <MenuRow icon="equipe" label="Mon équipe" onPress={() => router.push('/(compte)/team')} />
+              <MenuRow icon="outils" label="Boîte à outils" onPress={() => router.push('/(compte)/tools')} last />
             </MenuCard>
           </>
         )}
 
-        <SectionLabel>Ma sécurité</SectionLabel>
-        <MenuCard>
-          <MenuRow label="Mot de passe" onPress={() => router.push('/(compte)/password')} />
-          <MenuRow
-            label="Double authentification"
-            value={mfaOn === null ? undefined : mfaOn ? 'Activée' : 'Non activée'}
-            onPress={() => router.push('/(compte)/mfa')}
-            last
-          />
-        </MenuCard>
-
         <SectionLabel>Mon compte</SectionLabel>
         <MenuCard>
-          <MenuRow label="Modifier mon nom" onPress={() => router.push('/(compte)/name')} />
-          <MenuRow label="Télécharger mes données" onPress={() => router.push('/(compte)/my-data')} />
+          {/* Le nom, le mot de passe, la double authentification et la
+              suppression vivent derrière cette ligne. Ce qui reste ici est
+              sans conséquence. */}
+          <MenuRow icon="profil" label="Mon profil" onPress={() => router.push('/(compte)/profile')} />
+          <MenuRow icon="donnees" label="Télécharger mes données" onPress={() => router.push('/(compte)/my-data')} />
           {/* Les repères d'onboarding ne se montrent qu'une fois. Ils doivent
               rester retrouvables (règle Apple HIG, Things 3) — sans quoi une
               personne qui a touché « Plus tard » n'a plus aucun moyen d'y revenir. */}
-          <MenuRow label="Revoir les repères" onPress={confirmerReperes} />
-          <MenuRow label="Se déconnecter" onPress={confirmSignOut} />
-          {!suppression.pending && (
-            <MenuRow label="Supprimer mon compte" onPress={suppression.confirm} danger last />
-          )}
+          <MenuRow icon="reperes" label="Revoir les repères" onPress={confirmerReperes} />
+          {/* ⚠️ En rouge, et c'est nouveau : elle est désormais la SEULE ligne
+              colorée de l'écran. Tant que « Supprimer mon compte » était juste
+              en dessous, deux rouges voisins n'auraient rien distingué — c'est
+              d'ailleurs la suppression qu'on touchait en visant celle-ci
+              (constat de Julien, 28 août 2026). Sans chevron : elle agit sur
+              place, elle n'ouvre rien. */}
+          <MenuRow
+            icon="sortie"
+            label="Se déconnecter"
+            onPress={confirmSignOut}
+            danger
+            sansChevron
+            last
+          />
         </MenuCard>
         {suppression.pending && <DeletionPendingNote />}
 

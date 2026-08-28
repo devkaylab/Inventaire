@@ -111,6 +111,7 @@ export default function CompteLayout() {
       <Stack.Screen name="team" options={{ title: 'Mon équipe', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
       <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="tools" options={{ title: 'Boîte à outils', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
+      <Stack.Screen name="profile" options={{ title: 'Mon profil', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="password" options={{ title: 'Mot de passe', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="mfa" options={{ title: 'Double authentification', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="my-data" options={{ title: 'Mes données', ...headerBase, headerRight: actionsRight }} />
