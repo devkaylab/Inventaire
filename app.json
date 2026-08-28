@@ -59,7 +59,8 @@
       ],
       "expo-image",
       "expo-sharing",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

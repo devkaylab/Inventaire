@@ -2854,6 +2854,55 @@ l'anomalie ; avant, il écrit « création en cours » et n'affole personne.
 
 Tests de garde : `web/tests/alerte.test.ts`.
 
+## Le jeton de session vit dans le trousseau (28 août 2026)
+
+Constat n°8, dernier de la revue. `supabase-js` rangeait la session dans
+`AsyncStorage` — un fichier en clair dans le bac à sable de l'application. Ce
+bac à sable la protège des autres applications, **pas** d'un téléphone
+déverrouillé, d'une sauvegarde non chiffrée ni d'un appareil débridé. Et une
+session vaut trente jours d'inactivité.
+
+Elle vit désormais dans `expo-secure-store` — Keychain sur iOS, Keystore sur
+Android : chiffrée par le système et liée à l'appareil. Le branchement tient en
+une ligne de `src/lib/supabase.ts` (`storage: sessionStore`) ; tout le reste est
+dans `src/lib/sessionStore.ts`, et **les trois pièges y sont**.
+
+- **⚠️ Le trousseau ne prend pas de grandes valeurs.** Expo annonce 2 048 octets
+  par entrée et prévient qu'au-delà l'écriture pourra échouer. Une session
+  Supabase — deux JWT et l'objet utilisateur — dépasse couramment ce seuil. Elle
+  est donc **découpée** en morceaux de 1 800 octets (`<clé>__0`, `<clé>__1`…),
+  leur nombre rangé sous `<clé>`. Ne pas « simplifier » en un `setItemAsync`
+  direct : ça marche sur une session courte et casse sur une longue — donc plus
+  tard, et sur le téléphone de quelqu'un d'autre.
+- **⚠️ Personne n'est déconnecté par le changement.** À la première lecture, si
+  le trousseau est vide, on regarde dans `AsyncStorage` : la session de l'ancien
+  monde y est déménagée, puis l'ancienne copie effacée. Sans ce passage, tous
+  les compteurs déjà installés se retrouveraient devant l'écran de connexion —
+  un matin d'inventaire, ça se paie cher.
+- **Une session plus courte ne laisse pas d'orphelins** : les morceaux au-delà
+  du nouveau compte sont effacés, faute de quoi une lecture ultérieure
+  recollerait la queue de l'ancienne session à la nouvelle.
+- Un morceau manquant rend `null`, jamais un JSON tronqué : supabase-js
+  redemande une connexion, ce qui vaut mieux qu'une valeur qu'il ne sait pas
+  analyser.
+- Sur le **web** (`react-native-web` est dans les dépendances), le trousseau
+  n'existe pas : on retombe sur `AsyncStorage`. Le web n'est pas la cible, mais
+  il ne doit pas planter.
+
+**Le reste du cache hors ligne ne bouge pas** — catalogue d'articles, file de
+comptages — et c'est délibéré : il est volumineux, et `oublierCachesLocaux`
+l'efface déjà à la déconnexion. Le trousseau est pour le secret, pas pour le
+volume.
+
+⚠️ **`expo-secure-store` est une dépendance NATIVE.** Elle impose un
+`pod install` et une **reconstruction de l'application** : tant que le nouveau
+build n'est pas installé, rien ne change sur les téléphones. C'est aussi la
+seule partie que les tests ne prouvent pas — ils couvrent le découpage, le
+déménagement et le ménage des orphelins, avec les deux modules natifs simulés,
+mais le trousseau réel ne se vérifie qu'appareil en main.
+
+Tests de garde : `tests/session-store.test.ts`.
+
 # Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
 Le site vit sur **`https://www.quantinvo.com`** — c'est l'adresse canonique,

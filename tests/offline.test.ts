@@ -468,8 +468,8 @@ describe('la déconnexion fait le ménage, sans perdre le travail', () => {
     // C'est la seule donnée du téléphone qui ne se retélécharge pas. Les
     // effacer ferait perdre une journée de comptage à quelqu'un qui se
     // déconnecte avant d'avoir retrouvé du réseau.
-    await enqueueCount(SID, { sku: 'A', ean: null, qty: 3, zone: '1000', passNumber: 1 })
-    await enqueueCount(SID, { sku: 'B', ean: null, qty: 1, zone: '1000', passNumber: 1 })
+    await enqueueCount(SID, { sku: 'A', qty: 3, zone: '1000', pass_number: 1, session_id: SID })
+    await enqueueCount(SID, { sku: 'B', qty: 1, zone: '1000', pass_number: 1, session_id: SID })
 
     const avant = await pendingCounts(SID)
     expect(avant.length).toBe(2)
