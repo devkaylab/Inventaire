@@ -875,6 +875,33 @@ describe('le bandeau de démarrage ne s’adresse qu’à qui démarre', () => {
     expect(accueil).toContain('onMasquer={masquerGuide}')
   })
 
+  /**
+   * Constat de Julien, 28 août 2026 : « il s'affiche à chaque fois qu'il n'y
+   * a plus d'inventaire en cours ». Les étapes se cochent sur des faits relus
+   * à chaque ouverture — supprimer ses inventaires décochait la troisième et
+   * ramenait le bandeau des semaines après le démarrage.
+   */
+  it('la fin du démarrage se note, sinon le bandeau revient', () => {
+    expect(accueil).toContain('const demarrageFini =')
+    // Les deux façons d'en avoir fini, et il faut les deux.
+    expect(accueil).toContain('(!debutant || etapeCourante(etapes) === null)')
+    expect(accueil).toContain('if (guideAVoir && demarrageFini) masquerGuide()')
+  })
+
+  it('elle se note comme un repère, pas comme un jalon', () => {
+    // Un jalon ne s'efface pas : « Revoir les repères » ne ramènerait plus
+    // jamais le bandeau. La fin du démarrage passe donc par le repère que la
+    // croix marque déjà.
+    expect(accueil).not.toContain("poserJalon('demarrage")
+    expect(lire('lib/reperes.ts')).toContain("export type Jalon = 'balises-imprimees'")
+  })
+
+  it('elle ne se note pas à qui n’a rien vu du bandeau', () => {
+    // Données non chargées, jalon non lu, aucun magasin : ce sont les gardes
+    // de `montrerGuide`, et elles valent aussi pour le marquage.
+    expect(accueil).toContain('sessions !== undefined && jalonPret && !sansMagasin')
+  })
+
   it('la bienvenue couvre l’écran au lieu de le partager', () => {
     // Avec flex: 1 elle devenait un frère du Stack : les deux se partageaient
     // la hauteur et elle s'affichait SOUS l'accueil.

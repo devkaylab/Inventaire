@@ -34,6 +34,16 @@ préparation d'une session se conduit depuis la session, où elle est déjà.
 
 Points à ne pas défaire :
 
+- **⚠️ Le bandeau ne se rejoue pas** (28 août 2026). Ses étapes se cochent sur
+  des faits relus à chaque ouverture : supprimer ses inventaires remettait la
+  troisième à faire et le bandeau revenait — des semaines après le démarrage,
+  à quelqu'un qui connaît le produit. Constat de Julien : « il s'affiche à
+  chaque fois qu'il n'y a plus d'inventaire en cours ». La fin du démarrage
+  est donc **notée** dès qu'elle survient (les trois étapes cochées, ou plus
+  d'un inventaire créé), avec **le repère que la croix marque déjà** —
+  surtout pas un jalon : « Revoir les repères » doit pouvoir ramener le
+  bandeau, or un jalon ne s'efface pas. Le marquage reprend les gardes de
+  `montrerGuide` : on ne consomme pas un bandeau qu'on n'a jamais montré.
 - **⚠️ L'étape des balises se coche sur un jalon local, et il n'y a pas
   d'autre moyen.** Une planche est dessinée sur le téléphone et **n'écrit rien
   en base** : aucun fait serveur ne dira jamais qu'elle a été produite. D'où

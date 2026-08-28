@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { closeSession, deleteSessionPermanently, getMyAssignedStores, getMyTeamByStore, getSessions } from '@/lib/queries'
-import { BandeauDemarrage, etapesDemarrage } from '@/components/BandeauDemarrage'
+import { BandeauDemarrage, etapeCourante, etapesDemarrage } from '@/components/BandeauDemarrage'
 import { useJalon, useRepere } from '@/lib/reperes'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -298,6 +298,35 @@ export default function SupervisorHomeScreen() {
     }),
     [balisesImprimees, equipeConstituee, mesInventaires.length],
   )
+
+  /**
+   * ⚠️ **Le bandeau ne se rejoue pas.**
+   *
+   * Ses trois étapes se cochent sur des faits relus à chaque ouverture :
+   * supprimer ses inventaires remettait la troisième à faire, et le bandeau
+   * revenait — à quelqu'un qui connaît le produit depuis longtemps. Constat
+   * de Julien, 28 août 2026 : « il s'affiche à chaque fois qu'il n'y a plus
+   * d'inventaire en cours ». Un guide de démarrage qui reparaît des semaines
+   * après le démarrage ne guide plus rien, il dit qu'on a reculé.
+   *
+   * La fin du démarrage est donc **notée**, exactement comme la croix la
+   * note — le **même repère**, et surtout pas un jalon : « Revoir les
+   * repères » doit pouvoir ramener le bandeau, or un jalon ne s'efface pas.
+   *
+   * Deux façons d'en avoir fini, et il faut les deux : plus rien à faire
+   * (les trois étapes cochées), ou plus rien à expliquer (au-delà d'un
+   * inventaire créé, la personne connaît le produit). Les gardes de
+   * `montrerGuide` sont reprises telles quelles — on ne consomme pas le
+   * bandeau de quelqu'un à qui on ne l'a jamais montré, faute de magasin ou
+   * de données chargées.
+   */
+  const demarrageFini =
+    sessions !== undefined && jalonPret && !sansMagasin &&
+    (!debutant || etapeCourante(etapes) === null)
+
+  useEffect(() => {
+    if (guideAVoir && demarrageFini) masquerGuide()
+  }, [guideAVoir, demarrageFini, masquerGuide])
 
   const carteGuide = montrerGuide ? (
     <BandeauDemarrage
