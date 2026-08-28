@@ -2277,7 +2277,9 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   24 h). Migration `20260818000002`, appliquée en live après essai en
   transaction annulée. **Ne pas réintroduire de message distinct** : c'est
   l'oracle que ce correctif ferme, et deux tests le gardent
-  (`web/tests/formulaires-publics.test.ts`).
+  (`web/tests/formulaires-publics.test.ts`). ⚠️ Ce verrou a été **perdu puis
+  rétabli** sur le formulaire d'inscription : voir « Un `create or replace` ne
+  dit pas ce qu'il fait disparaître », plus bas.
 - **M1** — six en-têtes de sécurité posés dans `web/next.config.mjs` (et non
   dans `vercel.json`, pour qu'une règle trop stricte se voie dès le
   développement). La CSP ferme `frame-ancestors`, `object-src`, `base-uri` et
@@ -2333,6 +2335,58 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   rien signaler — deux tests montent la garde (`tests/xlsx.test.ts` de chaque
   côté). Procédure de mise à jour : `vendor/LISEZMOI.md`, outillage :
   `scripts/installer-sheetjs.mjs`.
+
+## ⚠️ Un `create or replace` ne dit pas ce qu'il fait disparaître (28 août 2026)
+
+Revue de sécurité du 28 août 2026, dix-huit points passés en revue. Le seul
+vrai trou trouvé : **`submit_company_request` avait perdu sa limitation de
+débit**, et c'est la fonction publique du formulaire d'inscription — appelable
+sans compte, depuis n'importe où.
+
+Le mécanisme mérite d'être retenu, parce qu'il se reproduira. Le durcissement
+du 18 août avait posé les deux verrous. Les migrations `20260821210001` (SIREN
+et magasins déclarés) puis `20260821230001` (code APE) ont **réécrit la
+fonction en entier** pour ajouter des colonnes, sans recopier le bloc. Rien ne
+l'a signalé : `create or replace` ne compare pas, il remplace. Relevé en
+interrogeant `pg_get_functiondef` sur la définition **en vigueur**, pas sur les
+fichiers du dépôt.
+
+Deux conséquences pendant la semaine où le verrou manquait : l'inondation
+possible du formulaire (et des accusés de réception qu'il déclenche), et
+surtout la réouverture de l'énumération d'adresses — la fonction répond « Une
+demande est déjà en cours pour cette adresse » quand elle connaît l'adresse.
+
+Rétabli par `20260828120001`. Trois points à ne pas défaire :
+
+- **Le verrou est placé après la validation de saisie et AVANT la recherche
+  par adresse.** Une faute de frappe ne doit pas consommer le quota de
+  quelqu'un ; et un script ne doit pas pouvoir interroger la base autant qu'il
+  veut avant d'être freiné. L'ordre est ce qui fait le contrôle.
+- **La réponse reste différenciée**, contrairement à la version du 18 août qui
+  répondait `{success: true, received: true}` dans les deux cas. C'est une
+  décision de produit — un client qui a déjà déposé une demande mérite qu'on le
+  lui dise — que la limitation rend tenable : cinq essais par heure ne font pas
+  un annuaire. Le sujet reste ouvert si l'énumération redevient un souci.
+- **Les droits se reposent dans la même migration.** `create or replace` rend
+  EXECUTE à PUBLIC — la leçon de `20260819172706`, et le second piège de la
+  même famille.
+
+**Le garde-fou a changé de nature, et c'est le plus important.** Les tests du
+dépôt lisent une migration **nommée en dur** ; aucun ne lisait celles de
+21 août, donc aucun n'a rien vu. `derniereDefinition()`
+(`web/tests/formulaires-publics.test.ts`) prend désormais la **dernière**
+migration qui définit la fonction — celle qui décrit ce qui tourne. Vérifié
+dans les deux sens : sans le correctif, deux tests échouent. À reprendre pour
+les autres fonctions sensibles si le sujet revient.
+
+Vérifié en base le 28 août 2026, en transactions annulées : cinq envois
+passent, le sixième est refusé ; dix saisies invalides ne consomment pas le
+quota et l'envoi valable qui suit passe ; aucune ligne résiduelle ni dans
+`company_requests` ni dans `submission_attempts` ; une seule signature de la
+fonction ; droits limités à `anon`, `authenticated` et `service_role`.
+
+Le reste de la revue — rapport complet, neuf constats classés — est là :
+https://claude.ai/code/artifact/e0b727e9-5d2d-4110-bc0c-01d97c663595
 
 ## Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
