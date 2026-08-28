@@ -152,13 +152,19 @@ Deno.serve(async (req) => {
 
   // Les magasins doivent appartenir au superviseur : sans ce filtre, un appel
   // direct à l'API rattacherait un compteur à n'importe quel magasin.
+  //
+  // La liste des magasins du superviseur est lue dans tous les cas : elle sert
+  // au filtre, et plus bas à nommer le magasin dans l'e-mail quand
+  // l'invitation n'en vise qu'un.
+  const { data: mine } = await admin
+    .from('store_supervisors')
+    .select('store_id')
+    .eq('user_id', inviter.id)
+  const mesMagasins = (mine ?? []).map((s: { store_id: string }) => s.store_id)
+
   let allowedStoreIds: string[] = []
   if (storeIds.length > 0) {
-    const { data: mine } = await admin
-      .from('store_supervisors')
-      .select('store_id')
-      .eq('user_id', inviter.id)
-    const mineSet = new Set((mine ?? []).map((s: { store_id: string }) => s.store_id))
+    const mineSet = new Set(mesMagasins)
     allowedStoreIds = storeIds.filter((id) => mineSet.has(id))
     if (allowedStoreIds.length === 0) {
       return json({ success: false, error: "Aucun des magasins choisis ne vous est affecté." }, 403)
@@ -229,26 +235,85 @@ Deno.serve(async (req) => {
   }
 
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
+
+  /* ── Où l'on arrive, et de la part de qui ────────────────────────────────
+   *
+   * Le message nommait « une équipe d'inventaire » — ni le magasin, ni
+   * l'entreprise — et ne disait pas qu'il faudrait installer quelque chose.
+   * Or le nom du responsable et celui du magasin sont les deux seules preuves,
+   * pour la personne qui reçoit ce message, qu'elle est au bon endroit ; et
+   * l'application est l'étape suivante, autant l'annoncer ici.
+   *
+   * ⚠️ **Le magasin n'est nommé que s'il y en a un seul.** Une invitation peut
+   * en porter plusieurs, ou aucun — « aucun » voulant dire tous ceux du
+   * superviseur, résolus à l'inscription par `handle_new_user`. Dans ces deux
+   * cas l'entreprise prend sa place : une liste de magasins ne se lit pas dans
+   * un objet d'e-mail.
+   *
+   * ⚠️ **Ces deux lectures viennent APRÈS tous les contrôles.** Elles servent
+   * à écrire le message, jamais à décider de l'invitation.
+   */
+  const idsPourLeNom = allowedStoreIds.length > 0 ? allowedStoreIds : mesMagasins
+  let storeName: string | null = null
+  if (idsPourLeNom.length === 1) {
+    const { data: st } = await admin
+      .from('stores')
+      .select('name')
+      .eq('id', idsPourLeNom[0])
+      .maybeSingle()
+    storeName = st?.name ?? null
+  }
+  const { data: comp } = await admin
+    .from('companies')
+    .select('name')
+    .eq('id', prof.company_id)
+    .maybeSingle()
+  const companyName: string | null = comp?.name ?? null
+  const lieu = storeName ?? companyName
+
   const greeting = firstName ? `Bonjour ${firstName},` : 'Bonjour,'
-  const inviterName = prof.full_name ? ` par ${prof.full_name}` : ''
+  // Sans nom complet au profil, la phrase tient quand même : on ne laisse
+  // jamais un blanc à la place de qui invite.
+  const quiInvite = prof.full_name || 'Votre responsable'
+
   const { html, text } = emailQuantinvo({
-    titre: 'Votre compte est prêt à être activé',
+    titre: "Vous rejoignez l'équipe d'inventaire",
     salutation: greeting,
     paragraphes: [
-      `Vous avez été ajouté à une équipe d'inventaire${inviterName}.`,
-      "Il ne reste qu'à vérifier vos informations et à choisir votre mot de passe.",
+      lieu
+        ? `${quiInvite} vous a ajouté à l'équipe d'inventaire de ${lieu}. C'est avec cette adresse que vous vous connecterez.`
+        : `${quiInvite} vous a ajouté à son équipe d'inventaire. C'est avec cette adresse que vous vous connecterez.`,
+      "Il reste deux choses à faire : choisir votre mot de passe, puis installer l'application Quantinvo sur votre téléphone — c'est là que l'on compte.",
     ],
-    bouton: { libelle: 'Finaliser mon compte', lien: actionLink },
+    // L'encadré de faits est celui de l'invitation à un inventaire : rien de
+    // neuf à dessiner, et l'identifiant y trouve sa place — c'est ce que la
+    // personne devra retaper dans l'application.
+    details: [
+      ...(storeName ? [{ intitule: 'Magasin', valeur: storeName }] : []),
+      ...(companyName ? [{ intitule: 'Entreprise', valeur: companyName }] : []),
+      { intitule: 'Votre identifiant', valeur: email },
+    ],
+    // ⚠️ Aucun lien de boutique ici : deux gestes concurrents dans un message
+    // qui n'en veut qu'un, et un lien mort tant que l'application n'est pas
+    // publiée. Le chemin vers la boutique est sur /bienvenue, après le mot de
+    // passe — là où il est vrai.
+    bouton: { libelle: "Accepter l'invitation", lien: actionLink },
     note: 'Ce lien est personnel et à usage unique.',
     raison: 'Vous recevez ce message parce que votre responsable vous a ajouté à son équipe.',
     siteUrl: appUrl,
   })
 
+  const objet = prof.full_name && lieu
+    ? `${prof.full_name} vous ajoute à l'équipe de ${lieu}`
+    : lieu
+      ? `Vous rejoignez l'équipe d'inventaire de ${lieu}`
+      : "Vous rejoignez une équipe d'inventaire Quantinvo"
+
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [email], subject: 'Finalisez votre compte Quantinvo', html, text }),
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [email], subject: objet, html, text }),
     })
     const bodyText = await resp.text()
     if (!resp.ok) {

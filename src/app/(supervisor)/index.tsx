@@ -88,7 +88,7 @@ function Case({ coche, theme }: { coche: boolean; theme: Theme }) {
   )
 }
 
-function SessionCard({ session, theme, styles, onDelete, onClose, selection, coche, onToggle, onVoletOuvert, onVoletFerme }: {
+function SessionCard({ session, theme, styles, onDelete, onClose, selection, coche, onToggle, onVoletOuvert, onVoletFerme, indice, onIndiceCompris }: {
   session: Session
   theme: Theme
   styles: ReturnType<typeof makeStyles>
@@ -104,6 +104,9 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
   coche?: boolean
   /** Absent = cet inventaire n'est pas sélectionnable (on ne peut pas le supprimer). */
   onToggle?: () => void
+  /** Vrai sur le seul rang qui montre le geste de balayage, une seule fois. */
+  indice?: boolean
+  onIndiceCompris?: () => void
 }) {
   const sc = statusColors(theme)[session.status] ?? { fg: theme.textMuted, bg: theme.accentSoft }
   // En mode sélection, toucher la carte coche au lieu d'ouvrir : on ne veut pas
@@ -126,6 +129,30 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
   const appuiLong = useRef(false)
   const balayage = useRef<SwipeableMethods | null>(null)
   const conteneur = useRef<View | null>(null)
+
+  /**
+   * Le coup d'œil qui enseigne le balayage.
+   *
+   * Le geste découvre « Clôturer » et « Supprimer » depuis le 22 août 2026, et
+   * rien ne le disait. Une phrase seule décrirait le geste ; la carte qui
+   * s'entrouvre le montre. Elle se referme d'elle-même : c'est une
+   * démonstration, pas un état.
+   *
+   * ⚠️ **Les volets sont inertes pendant ce temps.** Ils s'ouvrent sans que
+   * personne ne les ait demandés — un doigt déjà posé sur l'écran ne doit pas
+   * tomber sur « Supprimer ». Ils redeviennent touchables une fois la carte
+   * refermée.
+   *
+   * Le premier délai laisse la liste se poser : ouvrir pendant qu'elle se
+   * monte ne se verrait pas.
+   */
+  const [coupDoeil, setCoupDoeil] = useState(false)
+  useEffect(() => {
+    if (!indice) return
+    const ouvrir = setTimeout(() => { setCoupDoeil(true); balayage.current?.openRight() }, 550)
+    const fermer = setTimeout(() => { balayage.current?.close(); setCoupDoeil(false) }, 1750)
+    return () => { clearTimeout(ouvrir); clearTimeout(fermer) }
+  }, [indice])
 
   const carte = (
     <Pressable
@@ -200,7 +227,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
       }}
       onSwipeableWillClose={() => onVoletFerme?.(balayage.current)}
       renderRightActions={() => (
-        <View style={styles.balayageVolets}>
+        <View style={styles.balayageVolets} pointerEvents={coupDoeil ? 'none' : 'auto'}>
           {/* Clôturer avant Supprimer : le geste destructeur est le plus loin
               du doigt, il faut aller le chercher. */}
           {onClose && (
@@ -226,6 +253,21 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
     >
       {carte}
     </ReanimatedSwipeable>
+
+    {/* La bulle nomme le geste que le coup d'œil vient de montrer. « Compris »
+        est le seul bouton : quitter l'écran sans répondre la laisse à voir —
+        une aide qu'on n'a pas lue n'a pas été donnée. */}
+    {indice && (
+      <View style={styles.indiceBulle}>
+        <Text style={styles.indiceTexte}>
+          Balayez une carte vers la gauche pour clôturer ou supprimer un inventaire.
+          Chaque geste demande confirmation.
+        </Text>
+        <Pressable onPress={onIndiceCompris} hitSlop={10} style={styles.indiceBtn}>
+          <Text style={styles.indiceCompris}>Compris</Text>
+        </Pressable>
+      </View>
+    )}
     </View>
   )
 }
@@ -264,6 +306,9 @@ export default function SupervisorHomeScreen() {
   // inventaire créé, la personne connaît le produit : lui expliquer comment
   // commencer est du bruit. Le bandeau ne réapparaît jamais.
   const { aVoir: guideAVoir, marquerVu: masquerGuide } = useRepere('guide-demarrage', profile?.id)
+  // L'indice de balayage : déclaré le 23 août 2026 et resté sans écran
+  // jusqu'au 28. Les conditions d'affichage sont plus bas, avec la liste.
+  const { aVoir: balayageAVoir, marquerVu: balayageVu } = useRepere('balayage', profile?.id)
   const mesInventaires = useMemo(
     () => (sessions ?? []).filter(s => s.created_by === profile?.id),
     [sessions, profile?.id],
@@ -562,6 +607,32 @@ export default function SupervisorHomeScreen() {
     return out
   }, [sessions, profile?.id])
 
+  /* ── Le geste caché, montré une fois ──────────────────────────────────────
+   *
+   * Il ne se joue que sur le premier rang qui porte réellement un volet — un
+   * inventaire invité n'en a aucun, et une démonstration sur une carte qui ne
+   * bouge pas apprendrait le contraire de ce qu'on veut.
+   *
+   * ⚠️ **Il attend le deuxième inventaire**, et ce n'est pas une précaution de
+   * façade : avec un seul, le bandeau de démarrage occupe encore le haut de
+   * l'écran, et l'on ne sert pas deux aides à la fois. C'est aussi le moment
+   * où la liste commence à se gérer.
+   *
+   * Jamais pendant une sélection : le balayage y entre déjà en concurrence
+   * avec le défilement d'une liste qu'on est en train de cocher.
+   */
+  const sessionsAffichees = useMemo(
+    () => rows.flatMap(r => (r.kind === 'session' ? [r.session] : [])),
+    [rows],
+  )
+  const premierBalayable = useMemo(
+    () => sessionsAffichees.find(s => peutSupprimer(s) || s.status !== 'closed') ?? null,
+    [sessionsAffichees, peutSupprimer],
+  )
+  const montrerIndice =
+    balayageAVoir && !montrerGuide && !selection &&
+    sessionsAffichees.length >= 2 && premierBalayable !== null
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']} onStartShouldSetResponderCapture={auContact}>
       {isLoading ? (
@@ -590,6 +661,8 @@ export default function SupervisorHomeScreen() {
                 selection={selection}
                 coche={coches.includes(item.session.id)}
                 onToggle={peutSupprimer(item.session) ? () => basculer(item.session.id) : undefined}
+                indice={montrerIndice && item.session.id === premierBalayable?.id}
+                onIndiceCompris={balayageVu}
               />
             )
           }
@@ -720,6 +793,20 @@ function makeStyles(t: Theme) {
     balayageCloturer: { backgroundColor: t.warning },
     balayageSupprimer: { backgroundColor: t.danger },
     balayageTexte: { color: '#fff', fontSize: 13, fontFamily: Font.semibold },
+
+    /* La bulle de l'indice de balayage. Elle s'inverse — encre sur fond clair,
+       clair sur fond d'encre — parce qu'elle doit se détacher d'une liste de
+       cartes, dans les deux thèmes. */
+    indiceBulle: {
+      marginTop: Spacing.sm,
+      backgroundColor: t.textPrimary,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+    },
+    indiceTexte: { color: t.background, fontSize: 13, lineHeight: 18, fontFamily: Font.regular },
+    indiceBtn: { alignSelf: 'flex-end' },
+    indiceCompris: { color: t.background, fontSize: 13, fontFamily: Font.semibold },
     cardSelected: { borderColor: t.accent, backgroundColor: t.accentSoft },
     // Ce qu'on ne peut pas supprimer reste lisible, mais s'efface : la
     // sélection ne le concerne pas.

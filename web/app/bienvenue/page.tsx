@@ -7,6 +7,7 @@ import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { PasswordRules } from '@/components/PasswordRules'
+import { StoreBadges } from '@/components/StoreBadges'
 import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
 
 /**
@@ -155,7 +156,14 @@ export default function WelcomePage() {
             <Link href="/"><Logo size={56} /></Link>
             <h1>Compte activé</h1>
             <p className="sub">
-              Bienvenue {firstName}. Votre compte est actif : vous pouvez vous connecter dès maintenant.
+              {isSupervisor ? (
+                <>Bienvenue {firstName}. Votre compte est actif : vous pouvez vous connecter dès maintenant.</>
+              ) : (
+                <>
+                  Bienvenue {firstName}. Il ne reste qu&apos;à installer l&apos;application Quantinvo,
+                  puis à vous connecter avec <b>{email}</b> et le mot de passe que vous venez de choisir.
+                </>
+              )}
             </p>
           </div>
           {isSupervisor ? (
@@ -163,11 +171,26 @@ export default function WelcomePage() {
               Accéder à mon espace
             </button>
           ) : (
+            /* Le cul-de-sac d'avant : cette page disait « ouvrez l'application »
+               sans dire où la prendre. Les badges vivaient sur /open, donc à un
+               clic de plus, derrière un lien qui ne mène quelque part que si
+               l'application est DÉJÀ installée. Or cette page s'ouvre depuis une
+               messagerie, au téléphone : c'est le seul moment du parcours où
+               montrer la boutique ne coûte rien.
+
+               « Ouvrir l'application » reste l'action première : tant que
+               `PUBLIEE` vaut faux, un badge mène à une recherche qui ne trouve
+               rien. Les badges suivent `appStores.ts` — le jour de la
+               publication, une seule ligne change là-bas et cette page dit vrai
+               toute seule, phrase d'attente comprise.
+
+               Et rien ne renvoie vers le web : un compteur y atterrirait sur
+               « Mon compte », que l'espace connecté referme sous 720 px — il
+               lirait « cet espace se pilote depuis un ordinateur » sur
+               l'appareil qu'il tient. */
             <>
               <Link href="/open" className="btn btn-primary btn-block">Ouvrir l&apos;application</Link>
-              <p className="sub" style={{ marginTop: 16, fontSize: 13, textAlign: 'center' }}>
-                Le comptage se fait depuis l&apos;application Quantinvo, sur votre téléphone.
-              </p>
+              <StoreBadges />
             </>
           )}
         </div>

@@ -911,6 +911,63 @@ describe('le bandeau de démarrage ne s’adresse qu’à qui démarre', () => {
   })
 })
 
+/**
+ * L'indice de balayage (28 août 2026).
+ *
+ * Le geste découvre « Clôturer » et « Supprimer » depuis le 22 août, et rien ne
+ * le disait. Le repère `balayage` était même déclaré dans `lib/reperes.ts`
+ * depuis le 23 août — et branché sur aucun écran : la seule pièce de
+ * l'onboarding qui existait sans interface.
+ */
+describe('le geste caché, montré une fois', () => {
+  const accueil = lire('app/(supervisor)/index.tsx')
+  const reperes = lire('lib/reperes.ts')
+
+  it('le repère existe, et il est enfin branché', () => {
+    expect(reperes).toContain("| 'balayage'")
+    expect(accueil).toContain("useRepere('balayage', profile?.id)")
+    // « Revoir les repères » le rejoue : c'est une aide, pas un fait.
+    const oubli = reperes.slice(reperes.indexOf('export async function oublierReperes'))
+    expect(oubli.slice(0, 400)).toContain("'balayage'")
+  })
+
+  it('il ne se joue que sur le premier rang qui porte un volet', () => {
+    // Un inventaire invité n'en a aucun : une démonstration sur une carte qui
+    // ne bouge pas apprendrait le contraire de ce qu'on veut.
+    expect(accueil).toContain("sessionsAffichees.find(s => peutSupprimer(s) || s.status !== 'closed')")
+    expect(accueil).toContain('indice={montrerIndice && item.session.id === premierBalayable?.id}')
+  })
+
+  it('il attend le deuxième inventaire, et se tait quand une autre aide parle', () => {
+    // Avec un seul inventaire, le bandeau de démarrage occupe encore le haut
+    // de l'écran — on ne sert pas deux aides à la fois. Et jamais pendant une
+    // sélection, où le balayage entre déjà en concurrence avec le défilement.
+    expect(accueil).toContain('balayageAVoir && !montrerGuide && !selection')
+    expect(accueil).toContain('sessionsAffichees.length >= 2')
+  })
+
+  it('la carte s’entrouvre puis se referme d’elle-même', () => {
+    expect(accueil).toContain('balayage.current?.openRight()')
+    expect(accueil).toContain('balayage.current?.close(); setCoupDoeil(false)')
+    // Les minuteries sont nettoyées : un rang démonté n'ouvre rien plus tard.
+    expect(accueil).toContain('clearTimeout(ouvrir); clearTimeout(fermer)')
+  })
+
+  it('⚠️ les volets sont inertes pendant le coup d’œil', () => {
+    // Ils s'ouvrent sans que personne ne les ait demandés : un doigt déjà posé
+    // sur l'écran ne doit pas tomber sur « Supprimer ».
+    expect(accueil).toContain("pointerEvents={coupDoeil ? 'none' : 'auto'}")
+  })
+
+  it('« Compris » marque le repère, et lui seul', () => {
+    expect(accueil).toContain('onPress={onIndiceCompris}')
+    expect(accueil).toContain('onIndiceCompris={balayageVu}')
+    // Pas de fermeture automatique : une aide qu'on n'a pas lue n'a pas été
+    // donnée.
+    expect(accueil).not.toMatch(/setTimeout\([^)]*balayageVu/)
+  })
+})
+
 describe('audit du 23 août : ce que le typage et les tests ne voyaient pas', () => {
   const porte = lire('components/PorteBienvenue.tsx')
   const bienvenue = lire('components/Bienvenue.tsx')

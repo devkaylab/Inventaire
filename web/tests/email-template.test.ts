@@ -159,3 +159,54 @@ describe('Fonctions edge — un seul gabarit', () => {
     })
   }
 })
+
+/**
+ * L'invitation d'un compteur (28 août 2026).
+ *
+ * Elle disait « Vous avez été ajouté à une équipe d'inventaire » : ni le
+ * magasin, ni l'entreprise, et rien sur l'application qu'il faudra installer.
+ * Le nom du responsable et celui du magasin sont les deux seules preuves, pour
+ * qui reçoit ce message, qu'il est au bon endroit.
+ */
+describe('l’invitation d’un compteur nomme qui invite, et où l’on arrive', () => {
+  const src = readFileSync(
+    path.resolve(__dirname, '../../supabase/functions/invite-teammate/index.ts'),
+    'utf8',
+  )
+
+  it('l’objet porte le nom de qui invite et celui du lieu', () => {
+    expect(src).toContain("vous ajoute à l'équipe de ${lieu}")
+    // Et il tient sans le nom du responsable, que le profil peut ne pas porter.
+    expect(src).toContain("Vous rejoignez l'équipe d'inventaire de ${lieu}")
+    expect(src).not.toContain("subject: 'Finalisez votre compte Quantinvo'")
+  })
+
+  it('le magasin n’est nommé que s’il y en a un seul', () => {
+    // Une invitation peut porter plusieurs magasins, ou aucun — « aucun »
+    // voulant dire tous ceux du superviseur. Une liste ne se lit pas dans un
+    // objet d'e-mail : l'entreprise prend alors sa place.
+    expect(src).toContain('if (idsPourLeNom.length === 1)')
+    expect(src).toContain('const lieu = storeName ?? companyName')
+  })
+
+  it('les deux lectures viennent après les contrôles, jamais avant', () => {
+    // Elles servent à écrire le message, pas à décider de l'invitation.
+    const controle = src.indexOf("code: 'other_company'")
+    const lecture = src.indexOf("from('stores')")
+    expect(controle).toBeGreaterThan(-1)
+    expect(lecture).toBeGreaterThan(controle)
+  })
+
+  it('elle annonce l’application, et ne donne aucun lien de boutique', () => {
+    expect(src).toContain("installer l'application Quantinvo sur votre téléphone")
+    // Deux gestes concurrents dans un message qui n'en veut qu'un — et un lien
+    // mort tant que l'application n'est pas publiée. La boutique est sur
+    // /bienvenue, après le mot de passe.
+    expect(src).not.toMatch(/apps\.apple|play\.google/)
+  })
+
+  it('l’identifiant figure dans l’encadré de faits', () => {
+    // C'est ce que la personne devra retaper dans l'application.
+    expect(src).toContain("{ intitule: 'Votre identifiant', valeur: email }")
+  })
+})

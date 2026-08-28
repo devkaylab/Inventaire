@@ -333,6 +333,21 @@ describe('les boutons des boutiques d’applications', () => {
     expect(badges).toContain('Google Play')
   })
 
+  it('figurent aussi à la fin de /bienvenue', () => {
+    // C'est le seul moment du parcours où la personne est sur son téléphone
+    // sans l'application : elle vient de choisir son mot de passe. Les badges
+    // étaient à un clic de plus, sur /open, derrière un lien qui ne mène
+    // quelque part que si l'application est DÉJÀ installée.
+    const bienvenue = lire('../app/bienvenue/page.tsx')
+    expect(bienvenue).toContain('<StoreBadges />')
+    // « Ouvrir l'application » reste l'action première : tant que l'app n'est
+    // pas publiée, un badge mène à une recherche qui ne trouve rien.
+    expect(bienvenue).toMatch(/btn btn-primary btn-block">Ouvrir l&apos;application/)
+    // Et rien ne renvoie vers le web : un compteur y trouverait « Mon compte »,
+    // que l'espace connecté referme sous 720 px.
+    expect(bienvenue).not.toContain('Continuer sur le web')
+  })
+
   it('les adresses ne vivent qu’à un seul endroit', () => {
     // Le jour de la publication, un seul fichier change. Un lien écrit en
     // dur dans le composant se retrouverait oublié.
