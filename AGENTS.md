@@ -774,10 +774,20 @@ deux types d'événement pour un même paiement.
 - Purge à **30 jours** dans `purge_expired_data` : Stripe ne rejoue pas au-delà.
 - RLS active, aucune policy, comme `submission_attempts` et `alertes_envoyees`.
 
-⚠️ **La fonction edge `stripe-webhook` reste à redéployer** pour que
-`p_event_id` parte réellement — le dépôt ne déploie rien. Sans ce
-redéploiement, la table existe et la garde est inerte ; rien n'est cassé pour
-autant, le `for update` protège seul comme avant :
+**La fonction edge `stripe-webhook` a été redéployée** (version 13, 28 août
+2026) — le dépôt ne déploie rien. Vérifié après coup : les trois fichiers
+téléchargés depuis la production sont **identiques à l'octet près** à ceux du
+dépôt (`supabase functions download` puis `diff`), `p_event_id` est bien dans ce
+qui tourne, et la fonction répond 405 sur GET, 400 « signature absente » sur un
+POST nu. ⚠️ **Ce 400 est aussi le contrôle de `verify_jwt`** : une fonction
+protégée par JWT aurait répondu 401 avant d'atteindre le code.
+
+Effet de bord bienvenu : le repli `SITE_PAR_DEFAUT` d'`_shared/email.ts`, qui
+pointait encore vers `quantinvo.vercel.app` dans la version déployée, est passé
+à `www.quantinvo.com` — les fonctions edge lisent `APP_PUBLIC_URL` à
+l'exécution, mais le repli ne se met à jour qu'au redéploiement.
+
+La commande :
 
 ```bash
 supabase functions deploy stripe-webhook --project-ref heabesqvlinzarqenymj --no-verify-jwt
@@ -791,11 +801,17 @@ tous les paiements. La règle vaut pour les quatre autres fonctions publiques �
 `submit-company-request`, `alerte-anomalies`. Vérifier `verify_jwt` après
 chaque déploiement.
 
-⚠️ **Ce redéploiement n'a volontairement pas été fait par la console MCP** :
-elle exige de retranscrire les trois fichiers (`index.ts` et les deux
-`_shared/`, 33 Ko) dans l'appel, dont la vérification de signature HMAC. Une
+⚠️ **Passer par le CLI, jamais par la console MCP, pour cette fonction.** La
+console exige de retranscrire les trois fichiers (`index.ts` et les deux
+`_shared/`, 33 Ko) dans l'appel, dont la vérification de signature HMAC : une
 faute de copie invisible sur le chemin du paiement ne vaut pas le gain. Le CLI
-copie les fichiers du disque à l'octet près — c'est le bon outil pour ça.
+copie les fichiers du disque, et `supabase functions download` permet de le
+vérifier ensuite par un `diff`. Il s'installe par
+`brew install supabase/tap/supabase`, et `supabase login` ouvre le navigateur —
+aucun mot de passe Supabase à retrouver. ⚠️ La fenêtre du **trousseau macOS**
+qui apparaît alors demande le mot de passe de la session Mac, pas celui de
+Supabase ; « Toujours autoriser » évite qu'elle revienne à chaque commande.
+Docker n'est pas nécessaire (le CLI prévient, et empaquette côté serveur).
 
 Tests de garde : `web/tests/stripe.test.ts`, blocs « deux livraisons du même
 événement », « une invitation en attente ailleurs », « crée ce qui a été
