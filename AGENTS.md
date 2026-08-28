@@ -2430,8 +2430,12 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   déclarer, ou un formulaire sans la mention, fait échouer la suite.
   La politique déclare aussi le suivi nominatif de l'activité (constat E3) —
   restent l'information des salariés, la consultation du CSE et l'AIPD. Elle
-  dit franchement que les demandes et invitations ne sont pas encore purgées
-  (E1 / E2) : à mettre à jour quand les durées seront posées.
+  disait franchement que les demandes et invitations n'étaient pas encore
+  purgées (E1 / E2). ⚠️ **Récrit le 28 août 2026**, le jour où la purge a été
+  planifiée : la section 7 énumère désormais les six durées et dit qu'elles
+  s'appliquent automatiquement. Une politique qui annonce un manque déjà comblé
+  est aussi fausse qu'une politique qui cache un manque — **la relire à chaque
+  fois que les durées bougent**.
 - **E4, page en place** — `/mentions-legales` sur le site, alimentée par
   `web/lib/legal.ts`. **L'activité éditrice n'est pas encore immatriculée** :
   tant qu'une mention requise manque, `mentionsCompletes()` est faux, la page
