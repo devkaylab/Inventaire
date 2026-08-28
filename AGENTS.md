@@ -1550,9 +1550,11 @@ même jour et à ne pas relâcher :
   qui a compté ces lignes**. La confirmation le dit en toutes lettres.
   L'alternative — refuser la suppression aux personnes ayant compté — a été
   écartée : la plupart des comptes ont compté, le droit aurait été décoratif.
-- **Immédiate.** Pas de délai de grâce : `pg_cron` n'est pas installé, une
-  suppression différée ne s'exécuterait jamais toute seule. Le geste délibéré
-  est demandé à l'écran, pas au calendrier.
+- **Immédiate.** Pas de délai de grâce. Le motif d'origine — `pg_cron` n'était
+  pas installé, une suppression différée ne se serait jamais exécutée — a
+  disparu le 28 août 2026 avec la planification de la purge. **La décision, en
+  revanche, tient toujours** : le geste délibéré est demandé à l'écran, pas au
+  calendrier. Un compte qu'on supprime doit disparaître quand on le dit.
 
 Chaque suppression est journalisée dans `company_audit_log`
 (`action = 'compte_supprime'`), **l'identité figée avant le `delete`** — après,
@@ -2378,8 +2380,9 @@ https://claude.ai/code/artifact/0db58594-ff3e-4ad5-91a8-29b85cbb3621
   bloquer, un déclencheur BEFORE DELETE sur `auth.users` efface l'identité
   résiduelle (demandes anonymisées, invitations supprimées), et
   `purge_expired_data()` porte les durées — 3 mois, 1 an, 3 ans — en un seul
-  point. **`pg_cron` reste non installé** : la purge n'est pas planifiée, elle
-  s'appelle à la main en `service_role`. Son corps n'a jamais été exécuté.
+  point. ⚠️ **Corrigé le 28 août 2026** : `pg_cron` est installé et la purge
+  tourne tous les jours à 03 h 15 UTC — voir « La purge s'exécute enfin toute
+  seule » plus bas. Pendant sept semaines, elle n'a jamais été exécutée.
 - **E5 / E6, hébergement de la politique** — découvert le 18 août 2026 :
   l'adresse `devkaylab.github.io/Inventaire/privacy.html`, vers laquelle
   pointent l'app et le site, renvoyait **404** — GitHub Pages n'était pas
@@ -2577,7 +2580,113 @@ créée. Données d'essai supprimées, zéro résidu contrôlé.
 Le reste de la revue — rapport complet, neuf constats classés — est là :
 https://claude.ai/code/artifact/e0b727e9-5d2d-4110-bc0c-01d97c663595
 
-## Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
+## Quatre durcissements de la revue (28 août 2026)
+
+Suite du même passage. Ce qui ne méritait pas un chantier, mais ne devait pas
+rester en l'état.
+
+## Une formule ne s'exécute plus depuis un export CSV
+
+Constat n°4. `toCsv` échappait correctement guillemets et points-virgules, mais
+**ne neutralisait pas les cellules qu'un tableur évalue** — celles qui
+commencent par `=`, `+`, `-` ou `@`. Or les libellés, marques et SKU du rapport
+viennent du **fichier fournisseur importé**, que Quantinvo ne contrôle pas : un
+libellé forgé devenait une commande exécutée sur le poste de la personne qui
+ouvre le rapport.
+
+`neutraliserFormule` (`web/lib/report.ts`) préfixe une apostrophe, la parade de
+l'OWASP. Elle se voit dans la cellule — c'est le prix, et il ne se paie que sur
+les valeurs qui commençaient par l'un de ces caractères.
+
+**⚠️ Les nombres ne passent jamais par là, et c'est le piège de ce correctif.**
+Un écart de −650 commence par un tiret. Le préfixer en ferait du texte, donc
+une colonne que le tableur ne sait plus additionner — sur la colonne même que
+le rapport existe pour montrer. D'où le tri sur `typeof v === 'number'` :
+`buildVarianceRows` et `buildDetailRows` produisent de vrais nombres pour
+toutes les quantités, et des chaînes pour tout le reste. Un test le fige.
+
+**L'export XLSX n'était pas concerné**, vérifié à la source plutôt que supposé :
+SheetJS écrit ces valeurs en cellules de type `s` (chaîne), jamais `f`
+(formule). Essayé — `json_to_sheet([{A:'=1+1'}])` rend `{"t":"s","v":"=1+1"}`.
+C'est aussi pourquoi l'application mobile n'avait rien à corriger : elle
+n'exporte qu'en XLSX.
+
+Tests de garde : `web/tests/report.test.ts`, bloc « les formules ne s'exécutent
+pas ».
+
+## Deux fonctions retirées à `anon` (`20260828160001`)
+
+Constat n°6. Six fonctions étaient exécutables par `anon` ; quatre à dessein
+(parcours de devis public, formulaire d'inscription). Les deux autres étaient
+des oublis : `admin_list_audit_log`, qui rend le journal des actions
+d'administration, et `team_invitations_figer_invariants`, la fonction de
+déclencheur posée le matin même.
+
+**Ni l'une ni l'autre ne fuyait** — essayé pour de vrai : la première répond
+`forbidden`, la seconde refuse d'être appelée hors déclencheur. C'était un
+droit accordé sans raison.
+
+⚠️ **La cause est toujours la même** : `create or replace function` rend EXECUTE
+à PUBLIC. Le projet l'a appris avec `get_session_activity` (`20260819172706`),
+et l'a refait le matin même sur une fonction de déclencheur. Toute migration
+qui définit une fonction repose ses droits dans le même fichier — **fonctions
+de déclencheur comprises**, elles n'ont aucune raison d'être appelables.
+
+## L'annuaire de toute l'entreprise n'est plus joignable (`20260828170001`)
+
+Constat n°7. `get_company_directory` rend le nom et l'adresse e-mail de chaque
+personne de l'entreprise. Correctement cloisonnée par `get_my_company()`, mais
+**sans contrôle de rôle** : un compteur y lisait l'annuaire complet,
+superviseurs compris. Sa voisine `get_store_directory` exige, elle,
+`is_assigned_store`.
+
+⚠️ **Le correctif est un retrait, pas un garde**, et c'est ce qui compte :
+vérifié avant d'écrire, **plus aucun écran ne l'appelait**. Les deux
+applications passent par `get_store_directory` depuis le 7 août 2026 (commit
+`8ba7e30`), et le téléphone a été reconstruit plusieurs fois depuis. Une
+fonction que personne n'appelle et qui rend les adresses de toute une
+entreprise n'a pas besoin d'un contrôle de rôle : elle a besoin d'être
+injoignable. L'enveloppe morte `getCompanyDirectory` a quitté
+`src/lib/queries.ts` — c'est elle qui donnait l'illusion d'un appelant.
+
+La fonction **reste en base**, droit retiré : on retire l'accès d'abord, on
+supprime l'objet plus tard. Règle du projet.
+
+## La purge s'exécute enfin toute seule (`20260828180001`)
+
+Constat n°5, et c'est le plus embarrassant. `purge_expired_data()` portait les
+durées de conservation en un seul point depuis le 18 août — et **rien ne
+l'appelait**. `pg_cron` n'était pas installé, son corps n'avait jamais tourné.
+Les durées annoncées dans la politique de confidentialité n'étaient donc pas
+tenues : tout était conservé indéfiniment. Autant un sujet RGPD qu'un sujet de
+sécurité — plus on garde, plus une fuite coûte cher.
+
+⚠️ **Essayée à blanc avant d'être planifiée**, en transaction annulée : elle
+s'exécute sans erreur et **ne supprimerait rien aujourd'hui**, les dix
+compteurs de son rapport sont à zéro. La base est trop jeune pour qu'une durée
+soit atteinte — c'est le meilleur moment pour la brancher, elle ne peut
+surprendre personne. Ne pas planifier une fonction destructrice sans l'avoir
+d'abord jouée à blanc.
+
+Passage quotidien à **03 h 15 UTC**, hors des heures d'inventaire et décalé de
+l'heure ronde. La trace vit dans `cron.job_run_details` (statut, durée,
+horodatage), lisible depuis le tableau de bord Supabase :
+
+```sql
+select * from cron.job_run_details order by start_time desc limit 20;
+select cron.unschedule('purge-donnees-expirees');   -- pour l'arrêter
+```
+
+Pas de ligne dans `admin_audit_log` : ce journal enregistre des gestes faits
+sur des personnes et des entreprises, et 365 lignes par an disant « rien à
+purger » le noieraient.
+
+**⚠️ `pg_cron` est désormais installé** — ce n'est plus vrai que « la purge
+n'est pas planifiée ». Si un autre travail périodique se présente, c'est là
+qu'il ira. Test de garde : `web/tests/journal-admin.test.ts`, « et cette purge
+est réellement planifiée ».
+
+# Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
 Le site vit sur **`https://www.quantinvo.com`** — c'est l'adresse canonique,
 choisie par Vercel à l'ajout du domaine : `quantinvo.com` redirige en 308

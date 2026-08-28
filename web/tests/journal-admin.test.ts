@@ -77,6 +77,23 @@ describe('journal des actions admin (migration)', () => {
     expect(purge).toContain("journal_admin_ttl    constant interval := interval '1 year'")
     expect(purge).toContain('delete from public.admin_audit_log')
   })
+
+  it('⚠️ et cette purge est réellement planifiée', () => {
+    // Elle a existé sept semaines sans que rien ne l'appelle : `pg_cron`
+    // n'était pas installé, son corps n'avait jamais tourné, et les durées
+    // annoncées dans la politique de confidentialité n'étaient pas tenues.
+    // Constat n°5 de la revue de sécurité du 28 août 2026, migration
+    // 20260828180001. Une durée de conservation qui ne s'exécute pas n'est pas
+    // une durée de conservation.
+    const dossier = path.resolve(__dirname, '../../supabase/migrations')
+    const toutes = readdirSync(dossier)
+      .filter((f) => f.endsWith('.sql'))
+      .map((f) => readFileSync(path.join(dossier, f), 'utf8'))
+      .join('\n')
+    expect(toutes).toContain('create extension if not exists pg_cron')
+    expect(toutes).toMatch(/cron\.schedule\(\s*'purge-donnees-expirees'/)
+    expect(toutes).toContain('select public.purge_expired_data()')
+  })
 })
 
 describe('journal des actions admin (écran)', () => {

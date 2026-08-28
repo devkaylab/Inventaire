@@ -428,13 +428,6 @@ export async function leaveSession(sessionId: string) {
 
 export type DirectoryEntry = { user_id: string; full_name: string; email: string; role: string }
 
-/** Annuaire des membres de l'entreprise (nom + e-mail) pour la recherche à l'invitation. */
-export async function getCompanyDirectory(): Promise<DirectoryEntry[]> {
-  const { data, error } = await supabase.rpc('get_company_directory')
-  if (error) throwSupabase('getCompanyDirectory', error)
-  return (data ?? []) as DirectoryEntry[]
-}
-
 /** Annuaire d'un magasin : superviseurs affectés + compteurs de l'équipe du magasin.
  *  Sert à l'invitation à un inventaire (membres existants, même magasin). */
 export async function getStoreDirectory(storeId: string): Promise<DirectoryEntry[]> {

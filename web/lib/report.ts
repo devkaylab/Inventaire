@@ -125,16 +125,45 @@ export async function downloadXlsx(
 }
 
 /** Sérialise en CSV point-virgule — la variante qu'Excel français ouvre sans assistant. */
+/**
+ * Neutralise une cellule qu'un tableur exécuterait comme une formule.
+ *
+ * ⚠️ POURQUOI. Excel et LibreOffice évaluent toute cellule dont le premier
+ * caractère est `=`, `+`, `-` ou `@` — et le tabulateur ou le retour chariot
+ * suffisent à décaler le contenu vers l'un d'eux. Or les libellés, marques et
+ * SKU de ce rapport viennent du **fichier fournisseur importé**, que Quantinvo
+ * ne contrôle pas : un libellé forgé devient une commande qui s'exécute sur le
+ * poste de la personne qui ouvre le rapport.
+ *
+ * L'apostrophe de tête est la parade retenue par l'OWASP : le tableur affiche
+ * le texte au lieu de l'évaluer. Elle se voit dans la cellule — c'est le prix,
+ * et il ne se paie que sur les valeurs qui commençaient par l'un de ces
+ * caractères.
+ *
+ * ⚠️ **Les nombres ne passent jamais par ici** (voir `echapper`) : un écart de
+ * −650 est un nombre, pas une chaîne, et le préfixer en ferait du texte —
+ * impossible à sommer dans le tableur, sur la colonne même que le rapport
+ * existe pour montrer. C'est le piège classique de ce correctif.
+ *
+ * L'export XLSX n'est pas concerné : SheetJS écrit ces valeurs en cellules de
+ * type `s` (chaîne), jamais `f` (formule). Vérifié à la source.
+ */
+export function neutraliserFormule(valeur: string): string {
+  return /^[=+\-@\t\r]/.test(valeur) ? `'${valeur}` : valeur
+}
+
 export function toCsv(rows: Record<string, string | number>[]): string {
   if (rows.length === 0) return ''
   const headers = Object.keys(rows[0])
-  const escape = (v: string | number) => {
-    const s = String(v ?? '')
+  const echapper = (v: string | number) => {
+    // Un nombre reste un nombre : il n'y a rien à neutraliser, et le figer en
+    // texte casserait les totaux du tableur.
+    const s = typeof v === 'number' ? String(v) : neutraliserFormule(String(v ?? ''))
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
   const lines = [
-    headers.join(';'),
-    ...rows.map(r => headers.map(h => escape(r[h])).join(';')),
+    headers.map(echapper).join(';'),
+    ...rows.map(r => headers.map(h => echapper(r[h])).join(';')),
   ]
   return lines.join('\r\n')
 }

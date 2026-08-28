@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDetailRows, buildVarianceRows, reportFilename, toCsv } from '@/lib/report'
+import { buildDetailRows, buildVarianceRows, neutraliserFormule, reportFilename, toCsv } from '@/lib/report'
 import type { SessionDetailRow, SessionResultRow } from '@/lib/inventory'
 
 function result(p: Partial<SessionResultRow> & { sku: string }): SessionResultRow {
@@ -95,6 +95,47 @@ describe('toCsv', () => {
 
   it('renvoie une chaîne vide sans donnée', () => {
     expect(toCsv([])).toBe('')
+  })
+})
+
+describe('toCsv — les formules ne s’exécutent pas (28 août 2026)', () => {
+  // Revue de sécurité, constat n°4. Les libellés, marques et SKU viennent du
+  // fichier fournisseur importé : un libellé forgé devenait une commande à
+  // l'ouverture du rapport dans Excel ou LibreOffice.
+  it('neutralise les quatre caractères d’amorce', () => {
+    for (const charge of ['=1+1', '+1+1', '-1+1', '@SUM(A1)']) {
+      expect(neutraliserFormule(charge)).toBe(`'${charge}`)
+    }
+    // Le tabulateur et le retour chariot suffisent à décaler le contenu.
+    expect(neutraliserFormule('\t=1+1')).toBe("'\t=1+1")
+    expect(neutraliserFormule('\r=1+1')).toBe("'\r=1+1")
+  })
+
+  it('laisse tranquille ce qui n’amorce rien', () => {
+    for (const valeur of ['ACME', '3701234567890', 'REF-12', 'M&S', '']) {
+      expect(neutraliserFormule(valeur)).toBe(valeur)
+    }
+  })
+
+  it('⚠️ ne touche JAMAIS aux nombres', () => {
+    // Un écart de −650 est un nombre. Le préfixer en ferait du texte, donc une
+    // colonne que le tableur ne sait plus additionner — sur la colonne même
+    // que le rapport existe pour montrer. C'est le piège de ce correctif.
+    const csv = toCsv([{ Écart: -650, Valeur: -12.5, Qté: 0 }])
+    expect(csv.split('\r\n')[1]).toBe('-650;-12.5;0')
+    expect(csv).not.toContain("'-650")
+  })
+
+  it('protège la ligne réelle d’un rapport', () => {
+    const csv = toCsv([{ SKU: '=cmd|\' /C calc\'!A0', Désignation: 'Pull', 'Qté': -3 }])
+    expect(csv).toContain("'=cmd")
+    expect(csv).toContain(';-3')
+  })
+
+  it('neutralise avant de mettre entre guillemets', () => {
+    // L'apostrophe doit être DANS la cellule, pas devant le guillemet ouvrant.
+    const csv = toCsv([{ A: '=a;b' }])
+    expect(csv).toContain('"\'=a;b"')
   })
 })
 
