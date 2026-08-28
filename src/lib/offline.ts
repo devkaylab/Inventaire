@@ -326,6 +326,48 @@ export const getCachedSession = <T,>(sessionId: string) => getJson<T>(sessionKey
 export const cacheSessionList = (list: unknown) => putJson(sessionListKey, list)
 export const getCachedSessionList = <T,>() => getJson<T[]>(sessionListKey)
 
+/**
+ * Oublie les caches locaux à la déconnexion.
+ *
+ * ⚠️ POURQUOI. Le catalogue d'articles d'un inventaire — références, libellés,
+ * prix d'achat — vit en clair dans `AsyncStorage`, et y restait après la
+ * déconnexion : le bac à sable de l'application le protège des autres
+ * applications, pas d'un téléphone déverrouillé ni d'une sauvegarde non
+ * chiffrée. Constat n°8 de la revue de sécurité du 28 août 2026.
+ *
+ * ⚠️ ET SURTOUT, CE QU'ELLE NE TOUCHE PAS : **la file des comptages en attente
+ * et les échecs**. Ce sont les seules données du téléphone qui n'existent nulle
+ * part ailleurs — les effacer ferait perdre une journée de comptage à quelqu'un
+ * qui se déconnecte avant d'avoir retrouvé du réseau. Tout le reste (articles,
+ * zones, fiches d'inventaire, liste, profil) se retélécharge à la reconnexion :
+ * c'est ce qui rend ce ménage sans risque.
+ *
+ * La file de la v1 (`offline:v1:op:`) est épargnée pour la même raison : elle
+ * attend encore d'être drainée par `migrateLegacy`.
+ *
+ * Rend ce qu'elle a fait, pour le journal de développement — et pour qu'un
+ * appelant puisse un jour prévenir « il vous reste N comptages à envoyer ».
+ */
+export async function oublierCachesLocaux(): Promise<{ effaces: number; conserves: number }> {
+  const toutes = await AsyncStorage.getAllKeys()
+  const precieuse = (k: string) =>
+    k.startsWith(V1_OP_PREFIX) || k.includes(`${V}:bal:`) || k.includes(`${V}:failed:`)
+
+  const aEffacer = toutes.filter((k) => k.startsWith(`${V}:`) && !precieuse(k))
+  const conserves = toutes.filter(precieuse).length
+
+  if (aEffacer.length) await AsyncStorage.multiRemove(aEffacer)
+
+  // ⚠️ ET L'INDEX EN MÉMOIRE, qui n'est pas dans `AsyncStorage` : `articleIndex`
+  // garde le catalogue entier de la dernière session ouverte, pour résoudre un
+  // code sans lire le disque. Vider le stockage sans le vider laisserait tout
+  // le référentiel en RAM pour la durée du processus — le premier jet de ce
+  // ménage l'oubliait, et c'est le test qui l'a montré.
+  articleIndex = null
+
+  return { effaces: aEffacer.length, conserves }
+}
+
 // ─── File d'attente, groupée par balise ──────────────────────────────────────
 
 const chunkKey = (sessionId: string, code: string, i: number) =>

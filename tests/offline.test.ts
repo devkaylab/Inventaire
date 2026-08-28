@@ -21,12 +21,14 @@ import {
   cacheSessionList,
   cacheZones,
   clearSession,
+  oublierCachesLocaux,
   getCachedProfile,
   getCachedSession,
   getCachedSessionList,
   enqueueBalise,
   enqueueCount,
   failedOps,
+  hasCachedArticles,
   flush,
   isAuthExpired,
   isNetworkError,
@@ -435,5 +437,47 @@ describe('isAuthExpired', () => {
     expect(isAuthExpired({ code: '23505', message: 'duplicate key value' })).toBe(false)
     expect(isAuthExpired({ message: 'Network request failed' })).toBe(false)
     expect(isAuthExpired(null)).toBe(false)
+  })
+})
+
+describe('la déconnexion fait le ménage, sans perdre le travail', () => {
+  // Constat n°8 de la revue de sécurité du 28 août 2026 : le catalogue
+  // d'articles restait en clair sur le téléphone après la déconnexion.
+  const SID = '11111111-1111-1111-1111-111111111111'
+
+  it('efface ce qui se retélécharge', async () => {
+    await cacheProfile({ id: 'u1' })
+    await cacheSessionList([{ id: SID }])
+    await cacheSession(SID, { id: SID, uses_zones: true })
+    await cacheArticles(SID, [
+      { id: 'a1', session_id: SID, sku: 'A', ean: '3701', brand: 'M', label: 'Pull',
+        unit_purchase_price: 10 } as never,
+    ])
+    await cacheZones(SID, [{ id: 'z1', session_id: SID, code: '1000' } as never])
+
+    const bilan = await oublierCachesLocaux()
+    expect(bilan.effaces).toBeGreaterThan(0)
+
+    expect(await getCachedProfile()).toBeNull()
+    expect(await getCachedSessionList()).toBeNull()
+    expect(await getCachedSession(SID)).toBeNull()
+    expect(await hasCachedArticles(SID)).toBe(false)
+  })
+
+  it('⚠️ garde les comptages en attente — ils n’existent nulle part ailleurs', async () => {
+    // C'est la seule donnée du téléphone qui ne se retélécharge pas. Les
+    // effacer ferait perdre une journée de comptage à quelqu'un qui se
+    // déconnecte avant d'avoir retrouvé du réseau.
+    await enqueueCount(SID, { sku: 'A', ean: null, qty: 3, zone: '1000', passNumber: 1 })
+    await enqueueCount(SID, { sku: 'B', ean: null, qty: 1, zone: '1000', passNumber: 1 })
+
+    const avant = await pendingCounts(SID)
+    expect(avant.length).toBe(2)
+
+    const bilan = await oublierCachesLocaux()
+    expect(bilan.conserves).toBeGreaterThan(0)
+
+    const apres = await pendingCounts(SID)
+    expect(apres.length).toBe(2)
   })
 })

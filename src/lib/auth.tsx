@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { mfaPending } from '@/lib/mfa'
 import { friendlySignInError } from '@/lib/errors'
-import { cacheProfile, getCachedProfile } from '@/lib/offline'
+import { cacheProfile, getCachedProfile, oublierCachesLocaux } from '@/lib/offline'
 import type { Tables } from '@/types/database.types'
 
 type Profile = Tables<'profiles'>
@@ -125,6 +125,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await supabase.auth.signOut()
+
+    // Le catalogue d'articles, les zones et les fiches d'inventaire quittent le
+    // téléphone : ils se retéléchargent, et ils n'ont rien à faire là une fois
+    // la session fermée (constat n°8 de la revue du 28 août 2026).
+    //
+    // ⚠️ La file des comptages en attente, elle, RESTE — c'est la seule donnée
+    // du téléphone qui n'existe nulle part ailleurs. Voir `oublierCachesLocaux`.
+    //
+    // Un ménage qui échoue ne retient pas la déconnexion : on est déjà
+    // déconnecté, et rester connecté serait le pire des deux.
+    try {
+      await oublierCachesLocaux()
+    } catch {
+      // Sans conséquence : les clés restantes seront écrasées à la prochaine
+      // session, et la déconnexion, elle, a bien eu lieu.
+    }
   }
 
   /**
