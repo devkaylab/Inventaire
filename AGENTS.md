@@ -2760,6 +2760,80 @@ vraie session — le tableau de bord d'un inventaire, l'import d'un fichier, le
 rapport, /equipe et la console — et regarder la console du navigateur. Si tout
 tient, `git merge montee-next16` et pousser.
 
+## Un paiement resté sans suite se dit tout seul (28 août 2026)
+
+Dernier manque de la revue. Les journaux existaient — `admin_audit_log`,
+`company_audit_log`, écrits dans la même transaction que l'action — mais
+**personne n'était prévenu de rien**. Le cas qui coûte de l'argent est toujours
+le même : un client paie par carte, le webhook Stripe ne passe pas,
+l'entreprise n'est jamais créée. Le client a payé, il n'a rien, et on
+l'apprend quand il écrit.
+
+**⚠️ La détection existait déjà**, et c'est ce qui a rendu le travail court :
+`web/lib/pipeline.ts` sait lire un `paid` sans création (« Payé — création en
+attente », passé en alerte au bout d'un jour) et /admin l'affiche. Ce qui
+manquait n'était pas l'intelligence, c'était le **facteur** — il fallait aller
+chercher l'information.
+
+**On surveille le résultat, pas la machine.** Pas les erreurs techniques des
+fonctions : elles sont bruyantes, la plupart se règlent seules, et une alerte
+qu'on cesse de lire ne protège plus rien. Une seule question, posée toutes les
+heures à la minute 7 : *y a-t-il un paiement encaissé dont rien n'a été créé ?*
+
+### Les quatre choses à ne pas défaire
+
+- **⚠️ Quinze minutes de grâce.** Stripe réessaie quand une réponse tarde.
+  Alerter à la seconde ferait sonner pour des paiements qui se règlent seuls
+  deux minutes plus tard.
+- **⚠️ La mémoire des alertes** (`alertes_envoyees`). Sans elle, un paiement
+  bloqué produirait vingt-quatre e-mails par jour. Une anomalie qui dure est
+  rappelée **une fois par jour**, pas davantage ; une anomalie réglée disparaît
+  de la mémoire au bout de trente jours, de sorte qu'une récidive redonne lieu
+  à une alerte plutôt qu'à un silence.
+- **⚠️ On marque APRÈS l'envoi.** Un e-mail qui ne part pas laisse l'anomalie
+  ouverte, et l'heure suivante réessaie. L'ordre inverse la ferait taire pour
+  de bon sur un incident réseau d'une seconde.
+- **Le silence est le cas normal**, et c'est lui qui rend l'alerte crédible.
+  Rien à signaler, rien n'est envoyé — et `declencher_alerte` s'arrête même
+  avant de réveiller la fonction edge.
+
+### La clé, et pourquoi ce n'est pas la clé de service
+
+`alerte-anomalies` est déployée en `verify_jwt: false` — une tâche `pg_cron`
+n'a pas de session. La porte est une **clé partagée**, vérifiée en temps
+constant, sur le modèle du webhook Stripe.
+
+**⚠️ Cette clé n'autorise qu'une chose : demander le tour de garde.** Ce n'est
+pas la clé de service ; si la base fuyait, ce jeton ne permettrait de lire
+aucune donnée. Il vit dans le **coffre** (`vault.decrypted_secrets`, secret
+`alerte_cle`), jamais en clair dans une définition de fonction —
+`pg_get_functiondef` est lisible par qui peut lire le catalogue.
+
+**Tant que le secret d'edge n'est pas posé, rien ne part** : la fonction répond
+500 et la tâche planifiée ne l'appelle même pas. La planification est donc
+inoffensive avant sa configuration.
+
+**Il faut poser `ALERTE_CLE` dans les secrets d'edge functions**, avec la valeur
+du coffre. Pour la relire :
+
+```sql
+select decrypted_secret from vault.decrypted_secrets where name = 'alerte_cle';
+```
+
+### Vérifié
+
+En base, en transaction annulée, les cinq comportements : base saine →
+silence ; paiement sans création depuis deux heures → détecté, avec le montant
+et le nom ; juste après l'alerte → silence ; vingt-cinq heures plus tard,
+toujours ouvert → rappelé ; paiement d'il y a cinq minutes → silence.
+
+Sur la fonction déployée : elle démarre, refuse un GET (405) et refuse tout
+sans clé. Et `declencher_alerte()` joué à la main sur la base réelle ne
+provoque **aucun appel sortant** (`net._http_response` reste vide) : il n'y a
+rien à signaler.
+
+Tests de garde : `web/tests/alerte.test.ts`.
+
 # Le domaine : `www.quantinvo.com` (branché le 22 août 2026)
 
 Le site vit sur **`https://www.quantinvo.com`** — c'est l'adresse canonique,
