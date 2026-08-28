@@ -56,3 +56,6 @@ supabase/.temp/
 
 # Canevas de design publiés : 2 Mo d’éditeur embarqué, régénérables
 /*-quantinvo.html
+
+# Rapports de la skill threat-modeling : régénérables, et volumineux
+/Risk_Assessment_Report/
