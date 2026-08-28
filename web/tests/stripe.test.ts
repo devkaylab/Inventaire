@@ -108,7 +108,10 @@ describe('la session Checkout', () => {
 
 describe('payé, donc créé', () => {
   it('seul le serveur peut déclencher la création', () => {
-    for (const fn of ['fulfil_paid_request(text, text, text, text)', 'attach_checkout_session(text, uuid, text, text)',
+    // ⚠️ Cinq arguments depuis `20260828250001` : `p_event_id` s'ajoute, et
+    // l'ancienne signature à quatre est SUPPRIMÉE — deux signatures rendraient
+    // un appel à quatre arguments ambigu.
+    for (const fn of ['fulfil_paid_request(text, text, text, text, text)', 'attach_checkout_session(text, uuid, text, text)',
       'invite_company_admin_after_payment(uuid, text, text, text)', 'log_system_action(text, text, text, text, text, jsonb)']) {
       const f = fichier(fn)
       expect(f, fn).toContain(`revoke all on function public.${fn} from public, anon, authenticated`)
@@ -124,7 +127,7 @@ describe('payé, donc créé', () => {
     expect(c).toContain("'already', true")
     expect(c).toContain("'Session inconnue'")
     // Côté fonction : déjà-fait → 200 (Stripe s'arrête), inconnue → 500 (Stripe réessaie).
-    expect(webhook).toContain('if (result.already) return json({ received: true, already: true })')
+    expect(webhook).toContain('if (result.already) return json({ received: true, already: true,')
     expect(webhook).toContain("if (!result?.success) return json({ error: result?.error ?? 'refus' }, 500)")
   })
 
@@ -144,6 +147,21 @@ describe('payé, donc créé', () => {
     // ⚠️ Et le rejeu répond « already », jamais une erreur : Stripe rejoue tant
     // qu'il n'a pas son 200, une erreur relancerait la boucle qu'on ferme.
     expect(c).toContain("'status', 'paid', 'company_id', v_req.company_id")
+  })
+
+  it('un événement Stripe ne se traite qu’une fois', () => {
+    // 28 août 2026. Défense en profondeur au niveau de l'ÉVÉNEMENT, en plus du
+    // `for update` qui tient déjà la course au niveau de la demande.
+    const c = corps('fulfil_paid_request')
+    expect(c).toContain('insert into public.stripe_events_traites')
+    expect(c).toContain('on conflict (event_id) do nothing')
+    // ⚠️ Le marquage est DANS la transaction de création, et il vient en
+    // premier. Marquer depuis la fonction edge, avant l'appel, rendrait tout
+    // échec définitif : le rejeu serait écarté comme « déjà vu ».
+    expect(webhook).toContain('p_event_id:')
+    expect(webhook).not.toContain("rpc('marquer_evenement_stripe'")
+    // La table entre dans la purge, comme tout le reste.
+    expect(corps('purge_expired_data')).toContain('delete from public.stripe_events_traites')
   })
 
   it('une invitation en attente ailleurs ne se reprend pas', () => {

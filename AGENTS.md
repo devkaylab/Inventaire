@@ -747,11 +747,47 @@ session ne peut pas se faire la course à elle-même. Le verrou est le mécanism
 correct de Postgres pour ce cas, mais la démonstration demanderait deux webhooks
 signés joués en parallèle sur un environnement de test.
 
-**Reste ouvert, et c'est la vraie idempotence** : le webhook ne mémorise aucun
-identifiant d'événement Stripe. Une table `stripe_events_traites` (clé primaire
-sur `event_id`, `on conflict do nothing`, purgée à 30 jours dans
-`purge_expired_data`) fermerait le sujet pour de bon, y compris pour
-`checkout.session.async_payment_succeeded` que le prélèvement SEPA ajoutera.
+### La vraie idempotence : `stripe_events_traites` (`20260828250001`)
+
+Écrite dans la foulée. La table porte l'invariant au niveau de l'**événement**,
+en plus du `for update` qui tient la course au niveau de la demande, et laisse
+une trace de ce qui a été reçu et quand. Elle prépare
+`checkout.session.async_payment_succeeded`, que le prélèvement SEPA ajoutera :
+deux types d'événement pour un même paiement.
+
+- **⚠️ Le marquage est DANS `fulfil_paid_request`, pas dans la fonction edge.**
+  Marquer depuis le webhook, avant d'appeler la création, rendrait tout échec
+  **définitif** : le client paie, la création échoue, Stripe réessaie, et le
+  rejeu est écarté comme « déjà vu ». Il faudrait démarquer sur chaque chemin
+  d'erreur — une compensation qu'on finirait par oublier sur un chemin ajouté
+  plus tard. Dans la même transaction, il n'y a rien à compenser : si la
+  fonction lève, la marque disparaît avec le travail.
+- **Le marquage vient en premier**, avant même la lecture de la demande : un
+  `insert … on conflict do nothing` qui ne pose aucune ligne dit que
+  l'événement est déjà passé, et on sort par `already` sans rien relire.
+- **⚠️ `p_event_id` est facultatif, et doit le rester.** C'est ce qui a permis
+  d'appliquer la migration avant que le webhook ne soit redéployé : un appel à
+  quatre arguments se comporte exactement comme avant. Vérifié.
+- **⚠️ L'ancienne signature à quatre arguments est supprimée** dans la même
+  migration : `p_event_id` ayant un défaut, Postgres garderait les deux et un
+  appel à quatre deviendrait ambigu — même piège que `ca_request_store`.
+- Purge à **30 jours** dans `purge_expired_data` : Stripe ne rejoue pas au-delà.
+- RLS active, aucune policy, comme `submission_attempts` et `alertes_envoyees`.
+
+⚠️ **La fonction edge `stripe-webhook` reste à redéployer** pour que
+`p_event_id` parte réellement — le dépôt ne déploie rien. Sans ce
+redéploiement, la table existe et la garde est inerte ; rien n'est cassé pour
+autant, le `for update` protège seul comme avant :
+
+```bash
+supabase functions deploy stripe-webhook --project-ref heabesqvlinzarqenymj
+```
+
+⚠️ **Ce redéploiement n'a volontairement pas été fait par la console MCP** :
+elle exige de retranscrire les trois fichiers (`index.ts` et les deux
+`_shared/`, 33 Ko) dans l'appel, dont la vérification de signature HMAC. Une
+faute de copie invisible sur le chemin du paiement ne vaut pas le gain. Le CLI
+copie les fichiers du disque à l'octet près — c'est le bon outil pour ça.
 
 Tests de garde : `web/tests/stripe.test.ts`, blocs « deux livraisons du même
 événement », « une invitation en attente ailleurs », « crée ce qui a été

@@ -65,10 +65,15 @@ Deno.serve(async (req) => {
     p_customer_id: typeof session.customer === 'string' ? session.customer : null,
     p_invoice_id: typeof session.invoice === 'string' ? session.invoice : null,
     p_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+    // L'identifiant de l'événement, marqué DANS la même transaction que la
+    // création : un rejeu ressort en `already` sans rien refaire. Le marquage
+    // n'est volontairement pas fait ici — le faire avant l'appel rendrait tout
+    // échec définitif, puisque le rejeu serait alors écarté comme « déjà vu ».
+    p_event_id: typeof event.id === 'string' ? event.id : null,
   })
   if (error) return json({ error: error.message }, 500)
   if (!result?.success) return json({ error: result?.error ?? 'refus' }, 500)
-  if (result.already) return json({ received: true, already: true })
+  if (result.already) return json({ received: true, already: true, kind: result.kind })
 
   // À partir d'ici tout est créé. Les e-mails se tentent, ils ne défont rien.
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
