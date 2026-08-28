@@ -1,0 +1,99 @@
+// Durcissement du backend — modélisation de menaces du 28 août 2026.
+//
+// Ces tests empêchent de défaire cinq constats trouvés en balayant les 127
+// fonctions, les 38 policies et les déclencheurs par MOTIF de défaut plutôt
+// que par lecture linéaire.
+//
+// Ce qu'ils gardent :
+//   · VR-006 — un refus de devis ne peut plus écraser une acceptation ;
+//   · VR-005 — quatre fonctions de la console ne franchissent plus deux fois
+//     la même transition d'état ;
+//   · VR-007 — un superviseur invité ne peut plus effacer les comptages
+//     d'autrui, SANS perdre son droit d'arbitrer ;
+//   · VR-008 — l'invariant de `profiles` ne se contourne plus par l'INSERT ;
+//   · VR-009 — `join_code` n'est plus modifiable en droits de colonne.
+import { readdirSync, readFileSync } from 'node:fs'
+import path from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { derniereDefinition, dossierMigrations } from './migrations'
+
+const toutesLesMigrations = readdirSync(dossierMigrations)
+  .filter((f) => f.endsWith('.sql'))
+  .map((f) => readFileSync(path.join(dossierMigrations, f), 'utf8'))
+  .join('\n')
+
+describe('VR-006 · un refus n’écrase pas une acceptation', () => {
+  const corps = derniereDefinition('decline_quote_by_token').corps
+
+  it('verrouille la ligne avant de décider', () => {
+    // Sans `for update`, le contrôle de statut n'est qu'une lecture : un accord
+    // et un refus concurrents passent tous les deux, et le refus écrase.
+    expect(corps.match(/for update;/g)?.length, 'les deux branches').toBe(2)
+  })
+
+  it('et garde ses deux UPDATE, comme sa jumelle', () => {
+    // L'asymétrie avec `accept_quote_by_token` était le signe de l'oubli.
+    expect(corps.match(/and status = 'quoted'/g)?.length).toBe(2)
+    expect(derniereDefinition('accept_quote_by_token').corps).toContain("and status = 'quoted'")
+  })
+})
+
+describe('VR-005 · la console ne crée pas en double', () => {
+  // L'acteur est de confiance : ce n'est pas une attaque, c'est un double-clic
+  // pendant que la réponse tarde.
+  for (const fn of [
+    'admin_fulfil_company_request',
+    'admin_fulfil_store_request',
+    'admin_fulfil_store_removal',
+    'admin_quote_store_request',
+  ]) {
+    it(`${fn} verrouille sa lecture initiale`, () => {
+      expect(derniereDefinition(fn).corps, fn).toContain('for update;')
+    })
+  }
+
+  it('⚠️ le verrou suffit : chacune rejette déjà l’état d’arrivée', () => {
+    // C'est ce qui distingue ce correctif de celui du webhook, où le contrôle
+    // laissait passer et où il a fallu garder l'UPDATE en plus.
+    expect(derniereDefinition('admin_fulfil_company_request').corps).toContain("v_req.status <> 'paid'")
+    expect(derniereDefinition('admin_fulfil_store_removal').corps).toContain("v_req.status <> 'pending'")
+  })
+})
+
+describe('VR-007 · les comptages ne s’effacent plus en masse', () => {
+  it('la policy DELETE sur counts est retirée', () => {
+    expect(toutesLesMigrations).toContain('drop policy if exists counts_delete_supervisor on public.counts')
+  })
+
+  it('⚠️ mais l’arbitrage reste : delete_audit_line n’est pas touchée', () => {
+    // Un superviseur invité supervise et arbitre — il ne peut ni clôturer ni
+    // supprimer l'inventaire, mais il doit pouvoir retirer une ligne fausse.
+    // `delete_audit_line` est SECURITY DEFINER (hors RLS), gardée par
+    // `can_access_session`, et bornée à UN sku dans UNE zone.
+    const corps = derniereDefinition('delete_audit_line').corps
+    expect(corps).toContain('can_access_session(p_session_id)')
+    expect(corps).toContain('delete from public.counts')
+    expect(corps).toContain('sku = p_sku')
+  })
+
+  it('⚠️ et counts reste en ajout pur : aucune policy UPDATE ne réapparaît', () => {
+    // Une correction est une ligne négative. Une policy UPDATE contredirait le
+    // principe sur lequel repose tout le rapport d'inventaire.
+    expect(toutesLesMigrations).not.toMatch(/create policy \w*counts\w*update/i)
+  })
+})
+
+describe('VR-008 et VR-009 · les permissions sans objet', () => {
+  it('un client ne peut plus insérer son propre profil', () => {
+    // `profiles_pin_privileged` est un déclencheur BEFORE UPDATE : il ne voyait
+    // pas un INSERT. Même forme que VR-003, où un invariant posé sur un verbe
+    // se contournait par un autre.
+    expect(toutesLesMigrations).toContain('drop policy if exists profiles_insert on public.profiles')
+  })
+
+  it('join_code n’est plus modifiable', () => {
+    // La révocation d'origine n'avait porté que sur SELECT.
+    expect(toutesLesMigrations).toContain('revoke insert, update, references on public.stores from anon, authenticated')
+    expect(toutesLesMigrations).toContain('revoke insert, update, references on public.companies from anon, authenticated')
+  })
+})
