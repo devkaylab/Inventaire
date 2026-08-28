@@ -431,9 +431,13 @@ Points à ne pas défaire :
   `invite_company_admin_after_payment`, exécutables par le **seul
   `service_role`**. Elles ne doivent jamais être ouvertes à `authenticated`.
 - **Rejeu** : Stripe renvoie un événement tant qu'il n'a pas reçu 200.
-  `fulfil_paid_request` répond `already: true` sur une session déjà traitée
-  (index unique sur `stripe_checkout_session_id`), et la fonction répond
-  **200**. Une session inconnue répond 500 — c'est un vrai problème, Stripe
+  `fulfil_paid_request` répond `already: true` sur une session déjà traitée,
+  et la fonction répond **200**. ⚠️ **Corrigé le 28 août 2026** : cette note
+  attribuait la protection à l'index unique sur
+  `stripe_checkout_session_id`, ce qui était faux — il porte sur la table des
+  demandes, le doublon naissait dans `companies` et `stores`. C'est le
+  `for update` de `20260828210001` qui protège, voir « Modélisation de
+  menaces du parcours de l'argent ». Une session inconnue répond 500 — c'est un vrai problème, Stripe
   doit réessayer. Ce qui n'est pas `checkout.session.completed` avec
   `payment_status = paid` répond 200 sans rien faire.
 - **Une session Checkout par demande** : clé d'idempotence
@@ -557,6 +561,201 @@ jour venu, mêmes variables, nouvelles valeurs :
    clés en `live` le jour venu — mêmes variables, nouvelles valeurs.
 
 Tests de garde : `web/tests/stripe.test.ts`.
+
+## Modélisation de menaces du parcours de l'argent (28 août 2026)
+
+Passage STRIDE sur le seul chemin où une faille coûte de l'argent : demande
+d'inscription → devis → acceptation → Checkout → webhook → création
+d'entreprise et invitation de l'administrateur, variante « demande de magasin »
+comprise. Quatre constats, tous corrigés le jour même.
+
+**⚠️ La méthode compte autant que les constats : l'analyse a porté sur la base
+réelle (`pg_get_functiondef`), pas sur `supabase/migrations/`.** Le dossier
+diverge de la production — c'est écrit plus bas — et huit des neuf constats du
+matin venaient déjà de cet écart. Une lecture des fichiers aurait modélisé une
+base qui n'existe pas. Refaire ce travail depuis le dépôt, c'est le refaire pour
+rien.
+
+Chiffres relevés au passage, utiles pour situer : **127 fonctions dans `public`,
+dont 121 en `SECURITY DEFINER`** (donc 121 frontières de privilège qui se
+défendent seules), 100 ouvertes à `authenticated`, 4 à `anon`, 23 tables toutes
+sous RLS, 38 policies, 12 déclencheurs, 17 fonctions edge.
+
+### VR-001 · Un même paiement créait deux entreprises (`20260828210001`)
+
+Le plus grave, et **il ne demandait aucun attaquant**. `fulfil_paid_request`
+contrôlait le statut par une **lecture**, puis faisait son `UPDATE` sans
+condition. Deux livraisons concurrentes du même événement Stripe lisaient toutes
+deux `accepted`, passaient toutes deux, et créaient chacune une entreprise
+complète avec ses magasins et ses codes.
+
+- **⚠️ L'index unique `company_requests_stripe_session_idx` ne protégeait pas de
+  ça**, contrairement à ce que cette note affirmait plus haut : il porte sur la
+  table des *demandes*, alors que le doublon naît dans `companies` et `stores`,
+  que rien ne contraint. Deux protections avaient été confondues.
+- **Stripe est le déclencheur** : il redélivre tant qu'il n'a pas reçu de `200`,
+  et le webhook ne mémorise aucun identifiant d'événement.
+- **Le risque se nourrissait lui-même** : `gen_store_code()` fait une requête
+  par tentative, une fois par magasin. Plus la commande est grosse, plus c'est
+  lent ; plus c'est lent, plus Stripe expire et réessaie pendant que la première
+  exécution tourne encore.
+
+Correctif : **`for update` sur les deux `select` initiaux**. Le verrou de ligne
+sérialise les webhooks concurrents ; le second attend, relit la ligne
+(`READ COMMITTED` réévalue après le verrou), y trouve `paid`, et sort par la
+branche `already` qui existait déjà. Plus `and status = 'accepted'` sur les deux
+`UPDATE` de transition — **le motif exact d'`accept_quote_by_token`, qui l'avait
+et que celle-ci n'avait pas**.
+
+**⚠️ Le `if not found` répond `already: true`, jamais une erreur.** Stripe rejoue
+tant qu'il n'a pas son 200 : une erreur ici relancerait la boucle qu'on ferme.
+
+### VR-003 · Le paiement détruisait l'invitation en attente d'un tiers (`20260828220001`)
+
+`invite_company_admin_after_payment` faisait
+`delete from team_invitations where lower(email) = v_email` **sans borne
+d'entreprise**. Toute invitation en attente portant cette adresse était effacée,
+quelle que soit l'entreprise qui l'avait émise.
+
+**⚠️ C'est la reprise d'invitation que le constat n°3 du même jour a fermée, et
+elle passait par la seule porte que `team_invitations_figees` ne garde pas** :
+ce déclencheur se réveille sur `UPDATE`, ce chemin fait `DELETE` + `INSERT`.
+L'invariant était respecté à la lettre et contourné dans son intention. À
+retenir pour tout futur invariant posé sur un déclencheur : vérifier ce que le
+couple suppression-recréation lui fait.
+
+Le cas involontaire est le plus probable — un client légitime dont l'adresse de
+contact traîne une invitation ailleurs la détruit en payant.
+
+Deux décisions à ne pas défaire :
+
+- **⚠️ On refuse (`other_company`), on n'efface pas.** Garder les deux
+  invitations n'était pas une option : l'unicité de `team_invitations.email` sur
+  toute la base est porteuse, `handle_new_user` retrouve l'invitation **par
+  l'adresse** pour décider du rôle et de l'entreprise. Deux lignes pour une
+  adresse la rendraient ambiguë — « laquelle choisir » sur une décision de
+  privilège est exactement le genre de trou qu'on ferme ailleurs. C'est donc le
+  `DELETE` qui cède, pas la contrainte.
+- **⚠️ Un refus, pas une exception.** Le paiement est encaissé et l'entreprise
+  déjà créée quand cette fonction s'exécute ; une exception ferait échouer le
+  webhook, donc rejouer Stripe indéfiniment. Le webhook sait déjà traiter un
+  refus sans 500 (`notes.push(…)`), et l'anomalie remonte d'elle-même sur /admin
+  par `companies_without_admin`. Rien de nouveau à journaliser.
+
+### VR-002 · On crée ce qui a été devisé (`20260828240001`)
+
+La boucle suivait `store_count`, **saisi par le prospect** dans le formulaire
+public (borné de 1 à 500 par contrainte), et non les lignes du devis payé.
+
+**Le document que le client signe comptait déjà les lignes** : dans
+`admin-send-quote`, le PDF fait `lignes.length || q.store_count`. Devis et
+création n'utilisaient pas la même source, et ne pouvaient diverger que dans un
+sens — plus de magasins livrés que facturés.
+
+Deux gestes, et il faut les deux : la création suit le devis, et
+`admin_quote_company_request` refuse un devis dont les lignes ne correspondent
+pas aux magasins déclarés. Le premier protège quoi qu'il arrive en amont, le
+second évite qu'un devis faux parte chez un client.
+
+**⚠️ Le repli sur `store_count` reste, et le `nullif` est ce qui le tient.**
+`jsonb_array_length('[]')` vaut **0**, pas `null` : un `coalesce` naïf ferait
+boucler `1..0`, donc créerait **zéro magasin** pour un devis sans lignes. Le
+prix de repli se divise désormais par le nombre réellement créé, plus par
+`store_count`.
+
+### VR-004 · Les codes d'accès sortent d'un CSPRNG (`20260828230001`)
+
+`gen_store_code()` et `gen_company_code()` tiraient leurs caractères avec
+`random()`, non cryptographique (CWE-338), pour une valeur que le produit traite
+comme un secret : `join_code` ouvre l'entrée dans un magasin, et la colonne est
+révoquée en `SELECT` pour `anon`/`authenticated`. Les jetons de devis, eux,
+utilisaient déjà `gen_random_uuid()`.
+
+- **⚠️ La révocation est la moitié la plus utile du correctif.** Les deux
+  fonctions étaient exécutables par `authenticated` : n'importe quel compte
+  connecté pouvait les appeler à volonté et **observer les sorties du
+  générateur**, ce qui est précisément l'oracle qui rend une faiblesse de PRNG
+  exploitable. Vérifié avant de révoquer : les cinq appelants sont tous en
+  `SECURITY DEFINER`, ils ne dépendent pas de ce droit.
+- **⚠️ `extensions.gen_random_bytes`, qualifié par son schéma.** Supabase
+  installe `pgcrypto` dans `extensions`, et ces fonctions figent `search_path` à
+  `'public'` : l'appel nu **échoue à l'exécution, pas à la création**. La
+  première version de la migration s'est appliquée sans broncher et a cassé la
+  génération de code le temps du premier essai. `gen_random_uuid` ne pose pas ce
+  problème — depuis PG13 elle est dans `pg_catalog`.
+- **⚠️ `% 32` ne biaise pas** parce que l'alphabet fait exactement 32 caractères
+  et que 256 en est un multiple. Cela cesserait d'être vrai si on touchait à
+  l'alphabet.
+- **Les codes existants ne changent pas** : les regénérer invaliderait ce qui a
+  déjà été communiqué aux équipes.
+
+### Le cinquième défaut : un garde-fou périmé
+
+Trouvé en voulant protéger les quatre correctifs. **`web/tests/stripe.test.ts`
+lisait `20260822250001_stripe_paiement.sql` nommé en dur.** Or
+`fulfil_paid_request` avait été réécrite le 22 août par la migration du prix par
+magasin : le test passait depuis six jours **en validant une définition qui ne
+tournait plus**.
+
+C'est mot pour mot le défaut qui avait fait perdre sa limitation de débit à
+`submit_company_request`, et dont cette note disait « à reprendre pour les autres
+fonctions sensibles si le sujet revient ». Il est revenu.
+
+**`derniereDefinition()` vit désormais dans `web/tests/migrations.ts`**, partagée
+par `formulaires-publics.test.ts` et `stripe.test.ts`, avec `fichierDe()` pour
+lire les `GRANT` (qui sont hors du corps de la fonction). **⚠️ Toute nouvelle
+garde sur une fonction sensible passe par là — jamais par un nom de fichier en
+dur.**
+
+Deux effets de bord instructifs :
+
+- une assertion a dû être **recentrée sur l'intention** (`v_ligne := …` puis
+  `v_ligne ->> 'libelle'`) plutôt que sur une écriture depuis refactorée ;
+- compter `for update` a d'abord rendu 3 au lieu de 2 : **le commentaire de la
+  fonction contient les mots**. On compte `for update;`, l'instruction. Même
+  piège que le `sansCommentaires()` de `formulaires-publics.test.ts`.
+
+### Ce qui a été contrôlé et qui tient
+
+Dit explicitement, parce qu'une absence de constat ne vaut que si on sait ce qui
+a été regardé : signature du webhook vérifiée sur le corps brut avant toute
+lecture ; les quatre fonctions `anon` sont exactement les quatre voulues (le
+retrait du 28 août tient) ; réponse uniforme de `submit_company_request` ;
+limitation de débit posée avant la recherche par adresse ; RLS active sur 23
+tables sur 23 ; bornes de longueur au niveau de la table ; un devis de
+suppression ne peut pas se faire payer ; l'expiration à 30 jours est contrôlée à
+l'acceptation comme au déclin.
+
+**Une piste ouverte puis fermée**, à ne pas rouvrir : `store_team` porte la RLS
+sans aucune policy et ce n'est documenté nulle part. Vérifié — aucun accès
+direct à cette table depuis l'app, le site ou les fonctions edge, tout passe par
+des RPC `SECURITY DEFINER`. C'est la configuration la plus sûre, pas un oubli.
+
+### Vérifications
+
+Tout en transactions annulées, sur les fonctions réellement appliquées, données
+d'essai contrôlées à zéro après coup : le rejeu répond `already` sans rien
+recréer et une session inconnue reste en erreur (pour que Stripe réessaie) ; la
+reprise d'invitation est refusée et **l'invitation de l'autre entreprise reste
+intacte** ; 500 magasins déclarés avec un devis à une ligne créent **un**
+magasin au prix devisé, et un devis sans lignes crée toujours les magasins
+déclarés ; 200 codes tirés, tous distincts, bien formés, les 32 caractères
+représentés.
+
+**⚠️ Ce qui n'a pas été prouvé : la concurrence réelle de VR-001.** Une seule
+session ne peut pas se faire la course à elle-même. Le verrou est le mécanisme
+correct de Postgres pour ce cas, mais la démonstration demanderait deux webhooks
+signés joués en parallèle sur un environnement de test.
+
+**Reste ouvert, et c'est la vraie idempotence** : le webhook ne mémorise aucun
+identifiant d'événement Stripe. Une table `stripe_events_traites` (clé primaire
+sur `event_id`, `on conflict do nothing`, purgée à 30 jours dans
+`purge_expired_data`) fermerait le sujet pour de bon, y compris pour
+`checkout.session.async_payment_succeeded` que le prélèvement SEPA ajoutera.
+
+Tests de garde : `web/tests/stripe.test.ts`, blocs « deux livraisons du même
+événement », « une invitation en attente ailleurs », « crée ce qui a été
+devisé » et « les codes d'accès ».
 
 # E-mails transactionnels : un seul gabarit
 
