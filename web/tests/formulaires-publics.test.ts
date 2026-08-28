@@ -8,44 +8,12 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { derniereDefinition, dossierMigrations } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const superviseur = lire('../app/superviseur/page.tsx')
 
-// ── Lire la définition QUI FAIT FOI, pas celle d'un fichier choisi ──────────
-//
-// ⚠️ C'est le point de ce garde-fou, et il vient d'un vrai défaut. Les autres
-// tests du dépôt lisent une migration nommée en dur. Or une fonction se
-// redéfinit : `submit_company_request` a perdu sa limitation de débit le
-// 21 août 2026 parce que deux migrations l'ont réécrite en entier sans
-// recopier le bloc, et rien ne lisait ces migrations-là. Un test qui pointe un
-// fichier ne voit pas ce qu'une migration ultérieure a défait.
-//
-// On prend donc la DERNIÈRE migration qui définit la fonction — celle qui
-// décrit ce qui tourne réellement en base.
-const dossierMigrations = path.resolve(__dirname, '../../supabase/migrations')
-
-function derniereDefinition(fn: string): { fichier: string; corps: string } {
-  // `create or replace`, pas seulement `function` : un `drop function if
-  // exists` porte le même nom et vient parfois après la création.
-  const marqueur = `create or replace function public.${fn}(`
-  const fichiers = readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql')).sort().reverse()
-
-  for (const fichier of fichiers) {
-    const texte = readFileSync(path.join(dossierMigrations, fichier), 'utf8')
-    if (!texte.includes(marqueur)) continue
-    const apres = texte.slice(texte.lastIndexOf(marqueur))
-    // Fin du corps : le délimiteur de chaîne, quel qu'il soit dans ce fichier.
-    const fin = Math.min(
-      ...['$function$;', '$$;'].map((d) => {
-        const i = apres.indexOf(d)
-        return i === -1 ? Number.POSITIVE_INFINITY : i
-      }),
-    )
-    return { fichier, corps: apres.slice(0, fin) }
-  }
-  throw new Error(`Aucune migration ne définit ${fn}`)
-}
+// `derniereDefinition` vit dans ./migrations : stripe.test.ts s'en sert aussi.
 
 /** Le code seul : les commentaires parlent de `outcome`, le code ne doit pas le rendre. */
 const sansCommentaires = (sql: string) =>

@@ -1,0 +1,48 @@
+// Lire la définition QUI FAIT FOI, pas celle d'un fichier choisi.
+//
+// ⚠️ Ce helper vient d'un vrai défaut, et il a resservi. Un test qui lit une
+// migration nommée en dur ne voit pas ce qu'une migration ultérieure a défait :
+//
+//   · `submit_company_request` a perdu sa limitation de débit le 21 août 2026,
+//     parce que deux migrations l'ont réécrite en entier sans recopier le bloc,
+//     et que rien ne lisait ces migrations-là ;
+//   · `web/tests/stripe.test.ts` lisait `20260822250001_stripe_paiement.sql` en
+//     dur. Le 28 août, `fulfil_paid_request` et
+//     `invite_company_admin_after_payment` ont été corrigées ailleurs : le test
+//     a continué de passer en validant une définition qui ne tournait plus.
+//
+// D'où une seule définition partagée, plutôt qu'une copie par fichier de test.
+// Toute nouvelle garde sur une fonction sensible passe par ici.
+import { readdirSync, readFileSync } from 'node:fs'
+import path from 'node:path'
+
+export const dossierMigrations = path.resolve(__dirname, '../../supabase/migrations')
+
+/** La dernière migration qui définit `fn`, et le corps de cette définition. */
+export function derniereDefinition(fn: string): { fichier: string; corps: string } {
+  // `create or replace`, pas seulement `function` : un `drop function if
+  // exists` porte le même nom et vient parfois après la création.
+  const marqueur = `create or replace function public.${fn}(`
+  const fichiers = readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql')).sort().reverse()
+
+  for (const fichier of fichiers) {
+    const texte = readFileSync(path.join(dossierMigrations, fichier), 'utf8')
+    if (!texte.includes(marqueur)) continue
+    const apres = texte.slice(texte.lastIndexOf(marqueur))
+    // Fin du corps : le délimiteur de chaîne, quel qu'il soit dans ce fichier.
+    const fin = Math.min(
+      ...['$function$;', '$$;'].map((d) => {
+        const i = apres.indexOf(d)
+        return i === -1 ? Number.POSITIVE_INFINITY : i
+      }),
+    )
+    return { fichier, corps: apres.slice(0, fin) }
+  }
+  throw new Error(`Aucune migration ne définit ${fn}`)
+}
+
+/** Le fichier entier de la dernière migration qui définit `fn` — pour lire les GRANT, qui sont hors du corps. */
+export function fichierDe(fn: string): string {
+  const { fichier } = derniereDefinition(fn)
+  return readFileSync(path.join(dossierMigrations, fichier), 'utf8')
+}

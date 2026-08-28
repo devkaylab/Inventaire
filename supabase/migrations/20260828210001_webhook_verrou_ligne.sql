@@ -183,7 +183,5 @@ end; $function$;
 -- reposent dans la même migration — leçon de `20260819172706`, oubliée deux
 -- fois depuis. Cette fonction crée des entreprises : elle reste réservée au
 -- rôle serveur, que seul le webhook porte.
-revoke execute on function public.fulfil_paid_request(text, text, text, text)
-  from public, anon, authenticated;
-grant execute on function public.fulfil_paid_request(text, text, text, text)
-  to service_role;
+revoke all on function public.fulfil_paid_request(text, text, text, text) from public, anon, authenticated;
+grant execute on function public.fulfil_paid_request(text, text, text, text) to service_role;

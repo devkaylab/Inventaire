@@ -14,15 +14,23 @@ import path from 'node:path'
 import { createHmac } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { formulaire, verifierWebhook } from '../../supabase/functions/_shared/stripe'
+import { derniereDefinition, fichierDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
-const migration = lire('../../supabase/migrations/20260822250001_stripe_paiement.sql')
 const webhook = lire('../../supabase/functions/stripe-webhook/index.ts')
 const accept = lire('../../supabase/functions/accept-quote/index.ts')
 const stripe = lire('../../supabase/functions/_shared/stripe.ts')
 const pageDevis = lire('../app/devis/[token]/page.tsx')
 
-const corps = (fn: string) => migration.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+// ⚠️ La DERNIÈRE migration qui définit la fonction, pas un fichier nommé en dur.
+// Ce test lisait `20260822250001_stripe_paiement.sql` : le 28 août 2026,
+// `fulfil_paid_request` et `invite_company_admin_after_payment` ont été
+// corrigées ailleurs, et le test a continué de passer en validant une
+// définition qui ne tournait plus. Même défaut que celui qui a fait perdre sa
+// limitation de débit à `submit_company_request` le 21 août.
+const corps = (fn: string) => derniereDefinition(fn).corps
+/** Le fichier entier — les GRANT sont hors du corps de la fonction. */
+const fichier = (sig: string) => fichierDe(sig.split('(')[0])
 
 /** Signe comme Stripe : `t=<ts>,v1=hmac(secret, "<ts>.<corps>")`. */
 function signer(secret: string, corps: string, ts = Math.floor(Date.now() / 1000)) {
@@ -102,8 +110,9 @@ describe('payé, donc créé', () => {
   it('seul le serveur peut déclencher la création', () => {
     for (const fn of ['fulfil_paid_request(text, text, text, text)', 'attach_checkout_session(text, uuid, text, text)',
       'invite_company_admin_after_payment(uuid, text, text, text)', 'log_system_action(text, text, text, text, text, jsonb)']) {
-      expect(migration, fn).toContain(`revoke all on function public.${fn} from public, anon, authenticated`)
-      expect(migration, fn).toContain(`grant execute on function public.${fn} to service_role`)
+      const f = fichier(fn)
+      expect(f, fn).toContain(`revoke all on function public.${fn} from public, anon, authenticated`)
+      expect(f, fn).toContain(`grant execute on function public.${fn} to service_role`)
     }
     // Et l'acceptation, elle, ne crée toujours rien.
     expect(corps('accept_quote_by_token')).not.toMatch(/insert into public\.(companies|stores)\b/)
@@ -119,9 +128,44 @@ describe('payé, donc créé', () => {
     expect(webhook).toContain("if (!result?.success) return json({ error: result?.error ?? 'refus' }, 500)")
   })
 
+  it('deux livraisons du même événement ne créent pas deux entreprises', () => {
+    // VR-001, 28 août 2026. Le contrôle de statut était une LECTURE, et une
+    // lecture ne sérialise rien : deux webhooks concurrents lisaient tous deux
+    // « accepted » et créaient chacun une entreprise complète. L'index unique
+    // sur stripe_checkout_session_id ne protège pas de ça — il porte sur la
+    // table des demandes, le doublon naît dans companies et stores.
+    const c = corps('fulfil_paid_request')
+    // Le verrou de ligne, sur les DEUX branches (entreprise et magasin).
+    // `for update;` — l'instruction, pas les mots : le commentaire au-dessus du
+    // premier select les contient aussi.
+    expect(c.match(/for update;/g)?.length, 'for update sur les deux select').toBe(2)
+    // La ceinture : la transition ne s'applique pas deux fois.
+    expect(c.match(/and status = 'accepted'/g)?.length, 'garde sur les deux update').toBe(2)
+    // ⚠️ Et le rejeu répond « already », jamais une erreur : Stripe rejoue tant
+    // qu'il n'a pas son 200, une erreur relancerait la boucle qu'on ferme.
+    expect(c).toContain("'status', 'paid', 'company_id', v_req.company_id")
+  })
+
+  it('une invitation en attente ailleurs ne se reprend pas', () => {
+    // VR-003, 28 août 2026. Le delete n'était borné par aucune entreprise :
+    // payer en nommant l'adresse d'un tiers effaçait son invitation en attente.
+    // C'est la reprise que le déclencheur `team_invitations_figees` interdit —
+    // il se réveille sur UPDATE, ce chemin fait DELETE + INSERT.
+    const c = corps('invite_company_admin_after_payment')
+    expect(c).toContain("'other_company'")
+    expect(c).toContain('company_id = p_company')
+    // ⚠️ Le delete nu sur la seule adresse ne doit jamais revenir.
+    expect(c).not.toMatch(/where lower\(email\) = v_email;/)
+  })
+
   it('crée les magasins avec les noms du devis, et invite le contact comme administrateur', () => {
     const c = corps('fulfil_paid_request')
-    expect(c).toContain("v_req.quote_lines -> (v_i - 1) ->> 'libelle'")
+    // En deux temps depuis `20260822270001` (le prix par magasin) : la ligne du
+    // devis est capturée, puis son libellé lu. On vérifie l'intention, pas une
+    // écriture — c'est ce refactor qui avait rendu l'assertion précédente
+    // inopérante sans que rien ne le signale.
+    expect(c).toContain('v_ligne := v_req.quote_lines -> (v_i - 1)')
+    expect(c).toContain("btrim(v_ligne ->> 'libelle')")
     expect(corps('invite_company_admin_after_payment')).toContain("'company_admin'")
     expect(webhook).toContain("rpc('invite_company_admin_after_payment'")
     expect(webhook).toContain("type: 'invite'")
