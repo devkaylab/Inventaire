@@ -5,7 +5,7 @@
 // la policy d'invitations restreinte aux compteurs (le trou d'élévation
 // fermé par la migration 2), la journalisation de chaque écriture, et la
 // purge du journal d'entreprise.
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ACTIONS } from '../lib/journal'
@@ -601,5 +601,56 @@ describe('renommer un magasin, renommer une entreprise (23 août 2026)', () => {
     expect(ficheEntreprise).toContain("supabase.rpc('admin_rename_store'")
     expect(ficheMagasin).toContain("supabase.rpc('ca_rename_store'")
     expect(pageEntreprise2).toContain("supabase.rpc('ca_rename_company'")
+  })
+})
+
+describe('une invitation ne se reprend pas (28 août 2026)', () => {
+  // Constat n°3 de la revue de sécurité. `team_invitations.email` est unique
+  // **pour toute la base**, pas par entreprise, et `invite-teammate` écrivait
+  // sa ligne en `upsert` avec la clé de service — donc hors RLS — sans
+  // regarder à qui elle appartenait, et sans réécrire `role`.
+  //
+  // Un superviseur de n'importe quelle entreprise pouvait donc reprendre une
+  // invitation `company_admin` en attente : `company_id` basculait sur la
+  // sienne, le rôle privilégié survivait (PostgREST ne met à jour que les
+  // colonnes envoyées), et `handle_new_user` l'aurait honoré.
+  const equipe = readFileSync(
+    path.resolve(__dirname, '../../supabase/functions/invite-teammate/index.ts'), 'utf8')
+  const dossier = path.resolve(__dirname, '../../supabase/migrations')
+  const migrations = readdirSync(dossier)
+    .filter((f) => f.endsWith('.sql'))
+    .map((f) => readFileSync(path.join(dossier, f), 'utf8'))
+    .join('\n')
+
+  it('regarde à qui appartient l’invitation avant d’écrire', () => {
+    expect(equipe).toContain("from('team_invitations')")
+    expect(equipe).toContain('dejaInvitee')
+    expect(equipe).toContain("dejaInvitee.company_id !== prof.company_id")
+    // Et l'ordre compte : contrôler après l'écriture ne contrôlerait rien.
+    expect(equipe.indexOf('dejaInvitee')).toBeLessThan(equipe.indexOf('.upsert('))
+  })
+
+  it('pose le rôle, il ne le laisse pas se déduire', () => {
+    // Sans cette ligne, un `upsert` conserve le rôle de la ligne existante.
+    const charge = equipe.split('.upsert(')[1]?.split('onConflict')[0] ?? ''
+    expect(charge).toContain("role: 'employee'")
+  })
+
+  it('refuse aussi une invitation à un autre poste dans la même entreprise', () => {
+    // Un superviseur ne reprend pas l'invitation d'un superviseur ou d'un
+    // administrateur, fût-elle de son entreprise.
+    expect(equipe).toContain("dejaInvitee.role !== 'employee'")
+    expect(equipe).toContain("code: 'already_invited'")
+  })
+
+  it('le verrou est en base, et vaut pour la clé de service', () => {
+    // ⚠️ C'est ce qui le distingue de `profiles_pin_privileged`, borné aux
+    // rôles clients : ici le trou est dans un chemin en `service_role`, donc
+    // le déclencheur ne doit porter AUCUNE condition sur `current_user`.
+    const bloc = migrations.split('team_invitations_figer_invariants()')[1] ?? ''
+    expect(bloc).toContain('new.company_id is distinct from old.company_id')
+    expect(bloc).toContain('new.role is distinct from old.role')
+    expect(bloc).not.toContain('current_user')
+    expect(migrations).toContain('before update on public.team_invitations')
   })
 })

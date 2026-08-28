@@ -2,6 +2,12 @@
 // - Vérifie que l'appelant est superviseur.
 // - Pré-inscrit l'e-mail (team_invitations) dans son entreprise.
 // - Crée l'utilisateur auth et envoie le lien de finalisation.
+//
+// ⚠️ Elle écrit avec la clé de service, donc hors RLS : les deux contrôles qui
+// remplacent les policies sont écrits à la main ici — les magasins doivent
+// appartenir au superviseur, et une invitation déjà posée ailleurs ne se
+// reprend pas (constat n°3 de la revue du 28 août 2026). Le rôle est posé
+// explicitement, jamais laissé à ce qui restait dans la ligne.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
@@ -100,6 +106,50 @@ Deno.serve(async (req) => {
     })
   }
 
+  // ── Déjà invitée, mais ailleurs ? ────────────────────────────────────────
+  //
+  // ⚠️ `team_invitations.email` est unique **pour toute la base**, pas par
+  // entreprise. Sans ce contrôle, l'`upsert` plus bas basculait la ligne d'une
+  // autre entreprise sur celle-ci — et comme `role` n'est pas dans la charge,
+  // PostgREST ne le met pas à jour : un `company_admin` en attente survivait à
+  // l'écrasement, et `handle_new_user` l'aurait honoré. Constat n°3 de la
+  // revue de sécurité du 28 août 2026.
+  //
+  // Le déclencheur `team_invitations_figees` (20260828150001) refuse de toute
+  // façon les deux changements, service_role compris. Ce contrôle-ci est là
+  // pour le dire lisiblement plutôt que de laisser remonter une exception.
+  const { data: dejaInvitee } = await admin
+    .from('team_invitations')
+    .select('company_id, role')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (dejaInvitee && dejaInvitee.company_id !== prof.company_id) {
+    // Même traitement que le compte existant ailleurs : ce n'est pas une
+    // faute de saisie, et on ne nomme pas l'autre entreprise.
+    return json({
+      success: false,
+      code: 'other_company',
+      error:
+        'Cette adresse est déjà réservée dans une autre entreprise, et un compte ne peut être ' +
+        "rattaché qu'à une seule. Demandez à l'administrateur de votre entreprise de s'en " +
+        'occuper, ou ajoutez cette personne avec une autre adresse e-mail.',
+    })
+  }
+
+  if (dejaInvitee && dejaInvitee.role !== 'employee') {
+    // Même entreprise, mais elle est attendue à un autre poste. Un superviseur
+    // ne reprend pas une invitation de superviseur ou d'administrateur.
+    return json({
+      success: false,
+      code: 'already_invited',
+      error:
+        'Cette personne est déjà invitée à un autre poste dans votre entreprise. ' +
+        "Attendez qu'elle ait créé son compte, ou demandez à l'administrateur de votre " +
+        'entreprise de reprendre son invitation.',
+    })
+  }
+
   // Les magasins doivent appartenir au superviseur : sans ce filtre, un appel
   // direct à l'API rattacherait un compteur à n'importe quel magasin.
   let allowedStoreIds: string[] = []
@@ -123,6 +173,10 @@ Deno.serve(async (req) => {
       {
         company_id: prof.company_id,
         email,
+        // ⚠️ Explicite, et non déduit de l'absence : sans cette ligne, un
+        // `upsert` conserve le rôle de la ligne existante (PostgREST ne met à
+        // jour que les colonnes envoyées). C'est la moitié du constat n°3.
+        role: 'employee',
         full_name: fullName,
         first_name: firstName,
         last_name: lastName,
