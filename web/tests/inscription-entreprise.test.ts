@@ -185,8 +185,12 @@ describe('une demande d’inscription prévient tout le monde (22 août 2026)', 
   const edge = readFileSync(join(racine, 'supabase/functions/submit-company-request/index.ts'), 'utf8')
   const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
 
-  it('l’edge appelle la RPC publique, puis écrit l’accusé et l’avis interne', () => {
-    expect(edge).toContain("rpc('submit_company_request'")
+  it('l’edge appelle la RPC, puis écrit l’accusé et l’avis interne', () => {
+    // ⚠️ La version « detailed », depuis le 28 août 2026 : la surface publique
+    // répond la même chose qu'une demande soit créée ou déjà en cours, et
+    // c'est ici — donc par e-mail, à qui possède l'adresse — que la différence
+    // se dit. Voir `formulaires-publics.test.ts`.
+    expect(edge).toContain("rpc('submit_company_request_detailed'")
     expect(edge).toContain("rpc('admin_notify_emails')")
     expect(edge).toContain('Votre demande est bien reçue')
     expect(edge).toContain('Nouvelle demande d’inscription')
@@ -195,7 +199,7 @@ describe('une demande d’inscription prévient tout le monde (22 août 2026)', 
 
   it('un e-mail qui ne part pas n’annule pas la demande', () => {
     expect(edge).toContain('emailed')
-    expect(edge).toContain("if (!resendKey) return json({ success: true, emailed: false })")
+    expect(edge).toContain("if (!resendKey) return json({ success: true, received: true, emailed: false })")
   })
 
   it('la page retombe sur la RPC directe si l’edge est injoignable', () => {

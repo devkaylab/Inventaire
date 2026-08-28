@@ -2427,6 +2427,72 @@ refusé par la contrainte ; le nom de magasin de 200 caractères ressort à 80 ;
 aucun résidu. Et au navigateur sur `/inscription` : les six `maxLength` sont
 bien dans le DOM, la page rend sans erreur de console.
 
+### Et il répond la même chose (`20260828140001`)
+
+Troisième volet, et fermeture du constat. La fonction publique répondait deux
+choses différentes — `{success: true, request_id}` pour une adresse inconnue,
+`{success: false, error: 'Une demande est déjà en cours…'}` sinon. On pouvait
+donc lui poser une question qu'on ne lui avait pas posée : *cette adresse
+a-t-elle déjà parlé à Quantinvo ?*
+
+**⚠️ La limitation de débit ne suffisait pas, et il faut savoir pourquoi.** La
+limite à 5 est posée **sur l'adresse testée** : quelqu'un qui essaie mille
+adresses différentes a droit à un essai sur chacune, elle ne le gêne pas. Seule
+la limite par point de connexion (20 par heure) le freinait. **Une limitation
+de débit ne remplace pas une réponse uniforme**, elle la rend seulement plus
+lente à contourner — à retenir la prochaine fois que le raisonnement se
+présente.
+
+Le motif est celui de `submit_supervisor_request` / `…_detailed`, repris tel
+quel :
+
+- **`submit_company_request_detailed`** fait tout le travail et rend le détail
+  (`outcome` : `created` ou `request_pending`). Exécutable par le **seul rôle
+  serveur** — `revoke … from public, anon, authenticated`, et **aucun `grant`**.
+- **`submit_company_request`** est un **mince enrobage** public qui n'en laisse
+  sortir que `{success: true, received: true}`.
+
+Points à ne pas défaire :
+
+- **⚠️ L'enrobage APPELLE, il ne recopie pas.** La duplication est exactement
+  ce qui a fait perdre la limitation de débit le 21 août. Une seule
+  implémentation, donc rien à resynchroniser — un test le vérifie (`not
+  toContain('insert into public.company_requests')`).
+- **⚠️ `request_id` a disparu de la réponse publique.** Le rendre à la création
+  et pas autrement aurait laissé l'oracle intact : un identifiant présent ou
+  absent est une réponse aussi bavarde qu'une phrase. Personne ne le lisait.
+- **Les erreurs de saisie restent explicites** — champ vide, e-mail malformé,
+  SIREN faux, texte trop long, excès de tentatives. Elles ne parlent que de ce
+  que la personne vient de taper. C'est la règle depuis M3.
+- **C'est la fonction edge qui dit la vérité au vrai client**, par e-mail :
+  « votre demande est déjà en cours ». Le canal n'atteint que le propriétaire
+  de l'adresse — c'est tout l'intérêt. Elle ne rend **jamais** `outcome` à son
+  appelant : ce serait rouvrir l'oracle un cran plus haut.
+- **Le texte de ce message ne reprend pas le nom d'entreprise saisi**, et se
+  termine par « si vous n'êtes pas à l'origine de cet envoi, vous pouvez
+  ignorer ce message » : n'importe qui peut poster ce formulaire avec une
+  adresse qui n'est pas la sienne. C'est la contrepartie connue du motif — il
+  permet de déclencher un e-mail vers une adresse arbitraire, bornée par les
+  cinq envois par heure.
+- **Pas d'avis interne dans cette branche** : il n'y a pas de nouvelle affaire
+  à traiter.
+
+**Limite assumée** : une demande créée déclenche deux e-mails, une demande déjà
+en cours un seul — le temps de réponse diffère donc un peu. Canal auxiliaire
+étroit, bruité par le réseau, et déjà présent sur le formulaire superviseur. On
+ne le ferme pas.
+
+⚠️ **La fonction edge a été redéployée** (version 7, `verify_jwt: false`
+inchangé) — sans quoi la base et le code auraient divergé : `outcome` étant
+devenu invisible à la surface publique, l'ancienne edge aurait envoyé un accusé
+de réception et un avis interne pour une demande qui n'a rien créé.
+
+Vérifié en base (réponses **identiques au caractère près** dans les deux cas,
+erreurs de saisie intactes, `anon` refusé sur `…_detailed`) puis **en vrai sur
+la fonction déployée** : deux envois de la même adresse → deux réponses
+identiques `{"success":true,"received":true,"emailed":true}`, une seule ligne
+créée. Données d'essai supprimées, zéro résidu contrôlé.
+
 Le reste de la revue — rapport complet, neuf constats classés — est là :
 https://claude.ai/code/artifact/e0b727e9-5d2d-4110-bc0c-01d97c663595
 

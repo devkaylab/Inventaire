@@ -47,6 +47,16 @@ function derniereDefinition(fn: string): { fichier: string; corps: string } {
   throw new Error(`Aucune migration ne définit ${fn}`)
 }
 
+/** Le code seul : les commentaires parlent de `outcome`, le code ne doit pas le rendre. */
+const sansCommentaires = (sql: string) =>
+  sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n')
+
+/** Le texte de toutes les migrations, pour ce qui n'est pas un corps de fonction. */
+const toutesLesMigrations = readdirSync(dossierMigrations)
+  .filter((f) => f.endsWith('.sql'))
+  .map((f) => readFileSync(path.join(dossierMigrations, f), 'utf8'))
+  .join('\n')
+
 describe('parcours public superviseur — éteint le 21 août 2026', () => {
   // Les accès superviseur sont ouverts par l'administrateur de l'entreprise
   // (/equipe). La page subsiste en explication : l'application mobile
@@ -93,7 +103,10 @@ describe('le formulaire d’inscription est limité en débit', () => {
   // Régression du 21 août 2026, relevée le 28 : la fonction publique
   // `submit_company_request` — appelable **sans compte** — avait perdu les deux
   // verrous posés par le constat M3. Rétablie par 20260828120001.
-  const { fichier, corps } = derniereDefinition('submit_company_request')
+  //
+  // ⚠️ Le travail vit désormais dans `…_detailed` (20260828140001) : la surface
+  // publique n'en est plus que l'enrobage. C'est là qu'il faut regarder.
+  const { fichier, corps } = derniereDefinition('submit_company_request_detailed')
 
   it('garde les deux verrous, par adresse et par point de connexion', () => {
     expect(corps).toContain("rate_limit_ok('company_request', v_email, 5, interval '1 hour')")
@@ -101,9 +114,9 @@ describe('le formulaire d’inscription est limité en débit', () => {
   })
 
   it('compte AVANT de chercher l’adresse en base', () => {
-    // La fonction répond différemment selon qu'elle connaît l'adresse ou non.
-    // Placer le verrou après cette recherche laisserait interroger la base
-    // autant qu'on veut : on ne serait freiné qu'une fois la réponse obtenue.
+    // La recherche par adresse ne renseigne plus personne depuis que la réponse
+    // est uniforme, mais l'ordre reste le bon : on ne laisse pas interroger la
+    // base autant qu'on veut avant de freiner.
     const verrou = corps.indexOf('rate_limit_ok')
     const recherche = corps.indexOf('contact_email')
     // Les deux repères doivent exister : sans cette ligne, un corps qui a perdu
@@ -126,8 +139,7 @@ describe('le formulaire d’inscription borne ce qu’il accepte', () => {
   // Second volet du même constat (28 août 2026) : la fonction est appelable
   // sans compte, et le texte n'avait aucune borne — seuls le stock, la surface
   // et le nombre de magasins en avaient. Migration 20260828130001.
-  const { fichier, corps } = derniereDefinition('submit_company_request')
-  const migration = readFileSync(path.join(dossierMigrations, fichier), 'utf8')
+  const { corps } = derniereDefinition('submit_company_request_detailed')
   const inscription = lire('../app/inscription/page.tsx')
 
   it('refuse les cinq champs trop longs', () => {
@@ -155,9 +167,9 @@ describe('le formulaire d’inscription borne ce qu’il accepte', () => {
   it('pose la contrainte de table comme ceinture', () => {
     // La fonction est aujourd'hui le seul chemin ouvert à `anon` ; la
     // contrainte vaudra aussi pour la fonction qu'on écrira demain.
-    expect(migration).toContain('company_requests_longueurs')
-    expect(migration).toContain('length(company_name)        <= 80')
-    expect(migration).toContain('length(message)             <= 2000')
+    expect(toutesLesMigrations).toContain('company_requests_longueurs')
+    expect(toutesLesMigrations).toContain('length(company_name)        <= 80')
+    expect(toutesLesMigrations).toContain('length(message)             <= 2000')
   })
 
   it('borne les mêmes champs à l’écran', () => {
@@ -169,5 +181,54 @@ describe('le formulaire d’inscription borne ce qu’il accepte', () => {
     expect(inscription).toMatch(/id="email"[^>]*maxLength=\{254\}/)
     expect(inscription).toMatch(/id="phone" maxLength=\{30\}/)
     expect(inscription).toContain('maxLength={2000}')
+  })
+})
+
+describe('le formulaire d’inscription répond la même chose', () => {
+  // Troisième volet (28 août 2026, migration 20260828140001). La fonction
+  // publique disait `{success:false, error:'Une demande est déjà en cours…'}`
+  // pour une adresse connue et `{success:true, request_id}` sinon : on pouvait
+  // lui demander si une adresse avait déjà parlé à Quantinvo.
+  const publique = sansCommentaires(derniereDefinition('submit_company_request').corps)
+  const detaillee = derniereDefinition('submit_company_request_detailed')
+  const edge = lire('../../supabase/functions/submit-company-request/index.ts')
+
+  it('ne laisse rien filtrer de l’issue', () => {
+    expect(publique).toContain("'received', true")
+    // Ni le motif, ni l'identifiant : un identifiant rendu à la création et pas
+    // autrement serait une réponse aussi bavarde qu'une phrase.
+    expect(publique).not.toContain('déjà en cours')
+    expect(publique).not.toContain('request_id')
+    expect(publique).not.toContain('outcome')
+  })
+
+  it('n’est qu’un enrobage — une seule implémentation', () => {
+    // La duplication est ce qui a fait perdre la limitation de débit le
+    // 21 août : l'enrobage APPELLE, il ne recopie pas.
+    expect(publique).toContain('public.submit_company_request_detailed(')
+    expect(publique).not.toContain('insert into public.company_requests')
+  })
+
+  it('garde les erreurs de saisie explicites', () => {
+    // Elles ne parlent que de ce que la personne vient de taper, jamais du
+    // contenu de la base.
+    expect(publique).toContain("'success', false")
+    expect(publique).toContain("v ->> 'error'")
+  })
+
+  it('réserve le détail au rôle serveur', () => {
+    const migration = readFileSync(path.join(dossierMigrations, detaillee.fichier), 'utf8')
+    expect(migration).toMatch(
+      /revoke all on function public\.submit_company_request_detailed[\s\S]*?from public, anon, authenticated/,
+    )
+    expect(migration).not.toMatch(/grant execute on function public\.submit_company_request_detailed/)
+  })
+
+  it('la fonction edge lit le détail, et ne le rend pas', () => {
+    // C'est elle qui écrit à l'adresse : le canal n'atteint que son
+    // propriétaire. Mais elle ne doit pas rouvrir l'oracle un cran plus haut.
+    expect(edge).toContain("rpc('submit_company_request_detailed'")
+    expect(edge).toContain("result.outcome === 'request_pending'")
+    expect(edge).not.toMatch(/json\(\{[^}]*outcome/)
   })
 })

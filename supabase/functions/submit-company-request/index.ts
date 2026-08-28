@@ -5,11 +5,22 @@
 // je ne sais pas si c'est déjà prévu ». Ça ne l'était pas : /inscription
 // écrivait en base et personne ne le savait — ni Quantinvo, ni le prospect.
 //
-// Même figure que `ca-request-store` : la RPC `submit_company_request` fait le
-// travail (elle est publique, gardée par sa propre validation et la limitation
-// de débit), l'edge écrit deux messages par-dessus — l'accusé au prospect,
-// l'avis aux administrateurs Quantinvo lus en base. Un e-mail qui ne part pas
-// ne défait pas la demande.
+// Même figure que `ca-request-store` : la RPC fait le travail (validation,
+// bornes de longueur, limitation de débit), l'edge écrit les messages
+// par-dessus — l'accusé au prospect, l'avis aux administrateurs Quantinvo lus
+// en base. Un e-mail qui ne part pas ne défait pas la demande.
+//
+// ⚠️ ELLE APPELLE `submit_company_request_detailed`, PAS LA SURFACE PUBLIQUE
+// (28 août 2026). Depuis la revue de sécurité, `submit_company_request` répond
+// la même chose qu'une demande soit créée ou déjà en cours : c'était un oracle
+// — on lui demandait si une adresse avait déjà parlé à Quantinvo. Le détail
+// (`outcome`) n'est plus rendu qu'au rôle serveur, donc ici, pour que la
+// personne qui **possède** l'adresse l'apprenne par e-mail. Un canal qui
+// n'atteint qu'elle.
+//
+// ⚠️ Et cette fonction ne rend jamais `outcome` à son appelant : ce serait
+// rouvrir l'oracle un cran plus haut. Les deux issues répondent
+// `{success: true, received: true}`.
 //
 // Déployée en `verify_jwt: false` : un formulaire public n'a pas de session.
 // Le site retombe sur la RPC directe si l'edge est injoignable — la demande
@@ -56,8 +67,9 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const client = createClient(url, serviceKey)
 
-  // La RPC porte la validation et la limitation de débit : on ne la double pas.
-  const { data: result, error } = await client.rpc('submit_company_request', {
+  // La RPC porte la validation, les bornes et la limitation de débit : on ne
+  // la double pas. Version « detailed » : voir l'en-tête.
+  const { data: result, error } = await client.rpc('submit_company_request_detailed', {
     p_company_name: p.companyName ?? '',
     p_first_name: p.firstName ?? '',
     p_last_name: p.lastName ?? '',
@@ -70,17 +82,53 @@ Deno.serve(async (req) => {
     p_stores: Array.isArray(p.stores) ? p.stores : [],
   })
   if (error) return json({ success: false, error: error.message }, 500)
+  // Les erreurs de saisie restent explicites : elles ne parlent que de ce que
+  // la personne vient de taper.
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Envoi impossible.' }, 400)
 
   const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return json({ success: true, emailed: false })
+  if (!resendKey) return json({ success: true, received: true, emailed: false })
 
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'
   const entreprise = (p.companyName ?? '').trim()
   const prenom = (p.firstName ?? '').trim()
+  const contact = adresseDeContact()
   const magasins = (Array.isArray(p.stores) ? p.stores : []).filter((m) => (m.name ?? '').trim() || m.units != null)
   const nbMagasins = magasins.length || p.storeCount || 0
+
+  // ── Une demande était déjà en cours ──────────────────────────────────────
+  // Rien n'a été créé une seconde fois. On le dit à l'adresse, et à elle
+  // seule : l'écran, lui, a répondu comme pour une demande nouvelle.
+  //
+  // Le texte ne reprend pas le nom d'entreprise qui vient d'être saisi — il
+  // peut être celui de n'importe qui, puisque n'importe qui peut poster ce
+  // formulaire avec une adresse qui n'est pas la sienne. D'où la dernière
+  // phrase, qui donne sa porte de sortie à quelqu'un qui n'a rien demandé.
+  //
+  // Pas d'avis interne ici : il n'y a pas de nouvelle affaire à traiter.
+  if (result.outcome === 'request_pending') {
+    let prevenu = false
+    try {
+      const rappel = emailQuantinvo({
+        titre: 'Votre demande est déjà en cours',
+        apercu: 'Une demande d’inscription est déjà en cours à cette adresse.',
+        salutation: prenom ? `Bonjour ${prenom},` : 'Bonjour,',
+        paragraphes: [
+          'Une nouvelle demande d’inscription vient d’être envoyée avec cette adresse. Une demande est déjà en cours : nous ne l’avons pas dupliquée, et vous n’avez rien à refaire.',
+          'Nous revenons vers vous avec un devis. Si vous n’êtes pas à l’origine de cet envoi, vous pouvez ignorer ce message.',
+          contact ? `Une question d’ici là ? Écrivez-nous à ${contact}.` : '',
+        ].filter(Boolean),
+        raison: 'Vous recevez ce message parce qu’une demande d’inscription a été envoyée avec votre adresse.',
+        siteUrl: appUrl,
+      })
+      await envoyer(resendKey, fromAddr, (p.email ?? '').trim(), 'Votre demande est déjà en cours', rappel.html, rappel.text)
+      prevenu = true
+    } catch {
+      // La demande d'origine est intacte ; le rappel qui ne part pas n'y change rien.
+    }
+    return json({ success: true, received: true, emailed: prevenu })
+  }
 
   let emailed = false
   try {
@@ -141,5 +189,7 @@ Deno.serve(async (req) => {
     // Sans conséquence pour le prospect : le tableau de bord montre la demande.
   }
 
-  return json({ success: true, emailed })
+  // Même forme que la branche ci-dessus : les deux issues se ressemblent
+  // jusque dans la réponse.
+  return json({ success: true, received: true, emailed })
 })
