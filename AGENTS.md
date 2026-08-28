@@ -780,8 +780,16 @@ redéploiement, la table existe et la garde est inerte ; rien n'est cassé pour
 autant, le `for update` protège seul comme avant :
 
 ```bash
-supabase functions deploy stripe-webhook --project-ref heabesqvlinzarqenymj
+supabase functions deploy stripe-webhook --project-ref heabesqvlinzarqenymj --no-verify-jwt
 ```
+
+⚠️ **`--no-verify-jwt` n'est pas facultatif.** Le dépôt n'a pas de
+`supabase/config.toml`, donc le CLI déploie avec la vérification de JWT
+**activée** par défaut. Stripe n'envoie aucun JWT : le webhook répondrait 401 à
+tous les paiements. La règle vaut pour les quatre autres fonctions publiques —
+`stripe-webhook`, `accept-quote`, `decline-quote`, `quote-pdf`,
+`submit-company-request`, `alerte-anomalies`. Vérifier `verify_jwt` après
+chaque déploiement.
 
 ⚠️ **Ce redéploiement n'a volontairement pas été fait par la console MCP** :
 elle exige de retranscrire les trois fichiers (`index.ts` et les deux
