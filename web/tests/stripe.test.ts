@@ -158,6 +158,22 @@ describe('payé, donc créé', () => {
     expect(c).not.toMatch(/where lower\(email\) = v_email;/)
   })
 
+  it('crée ce qui a été devisé, pas ce que le client a déclaré', () => {
+    // VR-002, 28 août 2026. La boucle suivait `store_count`, saisi par le
+    // prospect dans le formulaire public (borné à 500), et non les lignes du
+    // devis payé. Le PDF, lui, comptait déjà les lignes — les deux pouvaient
+    // diverger dans un seul sens : plus de magasins livrés que facturés.
+    const c = corps('fulfil_paid_request')
+    expect(c).toContain('for v_i in 1..v_n loop')
+    // ⚠️ Le `nullif(…, 0)` est ce qui garde le repli : `jsonb_array_length('[]')`
+    // vaut 0, pas null. Sans lui, un devis sans lignes créerait ZÉRO magasin.
+    expect(c).toContain("nullif(jsonb_array_length(coalesce(v_req.quote_lines, '[]'::jsonb)), 0)")
+    // Le prix de repli se divise par ce qui est réellement créé.
+    expect(c).toContain('v_req.quote_amount_cents / v_n')
+    // Et le devis lui-même ne peut plus être incohérent.
+    expect(corps('admin_quote_company_request')).toContain('v_lignes <> 0 and v_lignes <> v_n')
+  })
+
   it('crée les magasins avec les noms du devis, et invite le contact comme administrateur', () => {
     const c = corps('fulfil_paid_request')
     // En deux temps depuis `20260822270001` (le prix par magasin) : la ligne du
@@ -203,5 +219,32 @@ describe('trous trouvés au test complet du parcours (22 août 2026)', () => {
     const magasins = lire('../app/magasins/page.tsx')
     expect(magasins).toContain('Régler en ligne')
     expect(magasins).not.toContain('Votre facture arrive')
+  })
+})
+
+describe('les codes d’accès', () => {
+  // VR-004, 28 août 2026. `join_code` est un secret — il ouvre l'entrée dans un
+  // magasin, et la colonne est révoquée en SELECT pour anon/authenticated —
+  // mais il sortait de `random()`, non cryptographique (CWE-338). Les jetons de
+  // devis, eux, utilisaient déjà gen_random_uuid().
+  it('sortent d’un générateur cryptographique', () => {
+    for (const fn of ['gen_store_code', 'gen_company_code']) {
+      const c = corps(fn)
+      // ⚠️ Qualifié par son schéma : pgcrypto vit dans `extensions` chez
+      // Supabase et ces fonctions figent search_path à 'public'. L'appel nu
+      // échoue à l'exécution, pas à la création.
+      expect(c, fn).toContain('extensions.gen_random_bytes(6)')
+      expect(c, fn).not.toContain('random() * length(v_alphabet)')
+    }
+  })
+
+  it('ne sont plus fabricables par un client', () => {
+    // C'est la moitié la plus utile du correctif : `authenticated` pouvait
+    // appeler ces fonctions à volonté, donc observer les sorties du
+    // générateur. Sans cet oracle, il n'y a plus de suite à inférer.
+    for (const fn of ['gen_store_code', 'gen_company_code']) {
+      expect(fichierDe(fn), fn).toContain(
+        `revoke all on function public.${fn}() from public, anon, authenticated`)
+    }
   })
 })
