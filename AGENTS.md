@@ -3510,18 +3510,24 @@ n'est pas planifiée ». Si un autre travail périodique se présente, c'est là
 qu'il ira. Test de garde : `web/tests/journal-admin.test.ts`, « et cette purge
 est réellement planifiée ».
 
-## Montée en Next 16 — sur une branche, pas sur `main` (28 août 2026)
+## Montée en Next 16 — fusionnée (28 août 2026)
 
 Constat n°2 de la revue de sécurité. `npm audit` listait seize avis pour
 Next.js 14.2.35, dont sept de gravité haute, et **aucun correctif n'existe pour
 la branche 14** : le premier palier corrigé est 16.3.3.
 
-**Branche `montee-next16`, délibérément pas fusionnée.** Le motif est simple et
-tient à ce que je peux vérifier : `git push` sur `main` déploie le site, et
-**l'espace connecté demande une session que je n'ai pas**. Un build qui passe
-n'est pas un site qui marche. Ce qui a été vérifié pour de vrai est listé plus
-bas ; le reste — tableau de bord, inventaires, équipe, console — attend un
-essai par quelqu'un qui peut se connecter.
+Le travail a d'abord vécu sur la branche `montee-next16`, le temps qu'un essai
+en session réelle confirme l'espace connecté — `git push` sur `main` déploie le
+site, et un build qui passe n'est pas un site qui marche. **C'est fait : la
+branche est fusionnée dans `main`**, qui est en Next 16.3.3.
+
+⚠️ **La branche `montee-next16` ne sert donc plus à rien, et elle nuit.** Elle
+n'a aucun commit que `main` n'ait pas, elle ne rattrape jamais, et Vercel lui
+sert quand même une **préversion** — un instantané figé, de plus en plus vieux,
+qu'on prend pour le site en regardant la mauvaise adresse. Constat de Julien le
+29 août 2026, capture à l'appui : le bouton « Supprimer » des écarts, retiré le
+matin même, y figurait encore. **Une branche fusionnée se supprime** : en
+garder une, c'est garder une préversion qui ment.
 
 Ce que la montée emporte : `next` 14.2.35 → **16.3.3**, `react` et `react-dom`
 18.3.1 → **19.2.8**, `eslint` 8 → **9**, `eslint-config-next` → 16,
@@ -3550,10 +3556,9 @@ thème s'appliquent, et **les six en-têtes de sécurité sont toujours servis**
 ce que le test de garde ne prouve pas, puisqu'il lit `next.config.mjs` sans
 vérifier que Next l'honore.
 
-**Ce qui reste à faire avant de fusionner** : ouvrir l'espace connecté avec une
-vraie session — le tableau de bord d'un inventaire, l'import d'un fichier, le
-rapport, /equipe et la console — et regarder la console du navigateur. Si tout
-tient, `git merge montee-next16` et pousser.
+**Vérifié depuis, en session réelle**, ce que je ne pouvais pas voir : le
+tableau de bord d'un inventaire, l'import d'un fichier, le rapport, /equipe et
+la console.
 
 ## Un paiement resté sans suite se dit tout seul (28 août 2026)
 
