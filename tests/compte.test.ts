@@ -1777,3 +1777,115 @@ describe('« Supprimer mon compte » n’est plus voisine de « Se déconnecter 
     expect(liste).toContain('danger ? theme.danger : theme.textMuted')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L'écran des écarts d'audit, revu le 29 août 2026.
+//
+// Constat de Julien, capture à l'appui : « la section écarts arbitrés ne
+// convient pas ». En mode sombre elle s'affichait dans un **bandeau blanc**,
+// parce que le volet qui la portait venait du gabarit Expo et suivait un autre
+// système de thème que l'app. Autour de ce défaut, cinq autres du même ordre.
+describe('les écarts arbitrés se lisent comme une liste', () => {
+  const ecran = lire('app/(supervisor)/[sessionId]/audits.tsx')
+
+  it('⚠️ le volet du gabarit Expo a disparu, avec son fichier', () => {
+    // `ui/collapsible.tsx` importait `@/constants/theme` et `@/hooks/use-theme`
+    // — le thème du gabarit, pas celui de l'app. D'où le blanc sur fond sombre.
+    // Il n'avait aucun autre appelant : on retire, on n'adapte pas.
+    expect(existsSync(src('components/ui/collapsible.tsx'))).toBe(false)
+    for (const f of fichiersSource()) {
+      expect(readFileSync(f, 'utf8'), f).not.toContain('ui/collapsible')
+    }
+  })
+
+  it('la section se présente comme un groupe de balises, pas comme un volet', () => {
+    // Deux sections d'une même page se présentent de la même façon : un titre
+    // `baliseTitle` et une pastille de compte, comme « Balise 1 · Textile
+    // femme » juste au-dessus.
+    expect(ecran).toContain('<Text style={styles.baliseTitle}>Écarts arbitrés</Text>')
+    expect(ecran).toContain('styles.arbCard')
+    expect(ecran).toContain('styles.arbFilet')
+  })
+
+  it('⚠️ annuler un arbitrage se confirme, et le refus ne dit pas « Annuler »', () => {
+    // Le site demande confirmation, l'app annulait au premier appui — sur une
+    // liste qu'on fait défiler, et pour défaire une décision. Le bouton de
+    // refus dit « Garder » : deux « Annuler » dans la même carte ne se
+    // distingueraient pas l'un de l'autre.
+    expect(ecran).toContain('function confirmAnnuler')
+    expect(ecran).toContain("titre: 'Annuler cet arbitrage ?'")
+    expect(ecran).toContain("annuler: 'Garder'")
+    // Et la mutation ne part que par cette porte.
+    expect(ecran.match(/annuler\.mutate/g)?.length).toBe(1)
+  })
+
+  it('⚠️ la cible de l’annulation atteint les 44 pt de la charte', () => {
+    // Le libellé ne fait que 18 pt de haut. Vu au simulateur le 29 août 2026 :
+    // un appui posé sur le mot ratait la cible sans que rien ne le signale.
+    expect(ecran).toContain('hitSlop={{ top: 14, bottom: 14, left: 16, right: 10 }}')
+  })
+
+  it('le badge « Arbitré » ne répète plus le titre de la section', () => {
+    expect(ecran).not.toContain('>Arbitré<')
+  })
+
+  it('⚠️ un zéro ne porte aucune couleur, des deux côtés', () => {
+    // En rouge, « aucun écart » se lisait comme un problème ; en vert, un
+    // « 0 arbitré » annonçait une réussite qui n'a pas eu lieu.
+    expect(ecran).toContain('color={ecartsCount > 0 ? theme.danger : theme.textPrimary}')
+    expect(ecran).toContain('color={arbitres.length > 0 ? theme.success : theme.textPrimary}')
+  })
+
+  it('la consigne ne s’affiche que s’il y a quelque chose à corriger', () => {
+    expect(ecran).toContain('{groups.length > 0 && (')
+    expect(ecran).toContain('styles.okCard')
+  })
+
+  it('⚠️ les quatre chiffres d’un écart tiennent sur une ligne', () => {
+    // Demande de Julien sur la maquette. `minWidth: 72` poussait « Écart
+    // valeur » au rang suivant alors que la largeur de la carte suffit.
+    expect(ecran).toContain("figRow: { flexDirection: 'row', justifyContent: 'space-between'")
+    expect(ecran).not.toContain('minWidth: 72')
+    expect(ecran).not.toContain("flexWrap: 'wrap', gap: Spacing.lg, marginTop: 2")
+  })
+
+  it('`Chiffre` ne fait plus doublon avec `Fig`', () => {
+    expect(ecran).not.toContain('function Chiffre')
+    expect(ecran).not.toContain('chiffreValeurAccent')
+  })
+
+  it('⚠️ le fichier ne contient plus d’octet nul', () => {
+    // Trois séparateurs de clé étaient des octets nuls : git traitait le
+    // fichier comme binaire et n'en montrait plus aucun diff.
+    expect(readFileSync(src('app/(supervisor)/[sessionId]/audits.tsx')).includes(0)).toBe(false)
+  })
+})
+
+describe('« il y a 3 h » a une seule définition', () => {
+  it('les deux écrans qui datent un événement passent par `lib/temps`', () => {
+    // `PendingBalisesView` avait sa propre copie. Deux formats, deux endroits
+    // où corriger — le genre de doublon que ce projet paie cher.
+    expect(lire('components/PendingBalisesView.tsx')).toContain("from '@/lib/temps'")
+    expect(lire('app/(supervisor)/[sessionId]/audits.tsx')).toContain("from '@/lib/temps'")
+    expect(lire('components/PendingBalisesView.tsx')).not.toContain('function since')
+  })
+
+  it('compte en minutes, en heures, puis en jours', async () => {
+    const { depuis } = await import('../src/lib/temps')
+    const ilYA = (ms: number) => Date.now() - ms
+    expect(depuis(ilYA(10_000))).toBe("à l'instant")
+    expect(depuis(ilYA(12 * 60_000))).toBe('il y a 12 min')
+    expect(depuis(ilYA(3 * 3600_000))).toBe('il y a 3 h')
+    expect(depuis(ilYA(3 * 3600_000), { minutes: true })).toBe('il y a 3 h 00')
+    expect(depuis(ilYA(26 * 3600_000))).toBe('hier')
+    expect(depuis(ilYA(4 * 24 * 3600_000))).toBe('il y a 4 j')
+    // Une date illisible ne rend pas « NaN » : l'appelant la laisse tomber.
+    expect(depuis('pas une date')).toBe('')
+  })
+
+  it('⚠️ la précision aux minutes reste là où elle sert', () => {
+    // Les balises hors ligne surveillent un RETARD qui dure : « il y a 3 h 05 »
+    // s'y lit. Un arbitrage se date en jours — « hier » suffit.
+    expect(lire('components/PendingBalisesView.tsx')).toContain('{ minutes: true }')
+  })
+})

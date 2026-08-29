@@ -3,16 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { baliseLabel } from '@/components/OfflineBanner'
 import type { PendingBalise } from '@/lib/offlineSync'
+import { depuis } from '@/lib/temps'
 import { useTheme } from '@/lib/theme'
-
-/** « il y a 12 min », pour situer sans afficher une heure absolue peu parlante. */
-function since(ts: number): string {
-  const min = Math.max(0, Math.round((Date.now() - ts) / 60000))
-  if (min < 1) return "à l'instant"
-  if (min < 60) return `il y a ${min} min`
-  const h = Math.floor(min / 60)
-  return `il y a ${h} h ${String(min % 60).padStart(2, '0')}`
-}
 
 /**
  * Détail des balises qui n'ont pas encore rejoint le serveur.
@@ -72,7 +64,7 @@ export function PendingBalisesView({
               {b.scans} article{b.scans > 1 ? 's' : ''}
               {b.units !== b.scans ? ` · ${b.units} pièce${Math.abs(b.units) > 1 ? 's' : ''}` : ''}
               {' · '}
-              {since(b.since)}
+              {depuis(b.since, { minutes: true })}
             </Text>
             {b.hasBaliseOp && (
               <Text style={styles.flag}>Ouverture ou clôture de balise également en attente</Text>

@@ -4427,6 +4427,98 @@ inventaire créé —, qui suivent la personne d'un appareil à l'autre.
 
 Tests de garde : `tests/comptage.test.ts` et `tests/compte.test.ts`.
 
+# L'écran des écarts d'audit, revu (29 août 2026)
+
+*« Revois l'interface de la page écarts d'audit, la section écarts arbitrés ne
+convient pas. »* Capture à l'appui : en mode sombre, la section s'affichait dans
+un **bandeau blanc**. Maquette validée avant codage, variante retenue par
+Julien : https://claude.ai/code/artifact/ffce86dc-d20c-4eee-aef0-0a8cfb4d1e53
+
+## ⚠️ Le bandeau blanc venait du gabarit Expo
+
+`components/ui/collapsible.tsx` était un **reste du gabarit de départ** :
+`ThemedView`, `@/constants/theme`, `@/hooks/use-theme`, `expo-symbols` — un
+autre système de thème que celui de l'app (`@/constants/ink`, `@/lib/theme`).
+Il ne pouvait donc pas suivre le mode sombre, et il n'avait **aucun autre
+appelant**. Supprimé, pas adapté : une pièce qu'un seul écran utilise et qui
+vient d'ailleurs se retire.
+
+À retenir : quand un composant ne respecte pas le thème, regarder **d'où il
+importe ses couleurs** avant de le corriger.
+
+## Ce que la section est devenue
+
+Une **liste**, pas une pile de cartes — ce sont des affaires réglées, elles
+doivent peser moins qu'un écart ouvert. Un titre `baliseTitle` et une pastille
+de compte, comme les groupes de balises juste au-dessus ; une seule carte, des
+lignes séparées par un filet ; les trois chiffres nommés (Compteur, Auditeur,
+Retenu en accent) et « Annuler l'arbitrage » en gris à droite.
+
+- **Le badge « Arbitré » a disparu** : il répétait le titre de la section.
+- **La ligne porte sa date** (« hier »), comme sur le site, et **le SKU ne se
+  répète pas quand il EST déjà le titre** — un article sans libellé s'affiche
+  sous sa référence.
+- Au-delà de cinq, la liste se replie derrière « Voir les N autres ».
+
+## ⚠️ Annuler un arbitrage se confirme
+
+Le site demandait confirmation, l'app annulait **au premier appui** — sur une
+liste qu'on fait défiler, et pour défaire une décision. `confirmAnnuler` pose
+la question ; **le bouton de refus dit « Garder »**, parce que deux « Annuler »
+dans la même carte ne se distinguent pas l'un de l'autre.
+
+**⚠️ Et la cible fait 44 pt** (`hitSlop={{ top: 14, bottom: 14, … }}`). Le
+libellé ne fait que 18 pt de haut : au simulateur, un appui posé dessus ratait
+la cible **sans que rien ne le signale**. Un mot n'est pas un bouton tant qu'on
+ne lui a pas donné sa hauteur.
+
+## Le reste de la page
+
+- **« Corrigés » devient « Arbitrés »** : c'était le même nombre que la section,
+  sous deux noms.
+- **⚠️ Un zéro ne porte aucune couleur, des deux côtés.** En rouge, « aucun
+  écart » se lisait comme un problème ; en vert, un « 0 arbitré » annonçait une
+  réussite qui n'a pas eu lieu.
+- **La consigne ne s'affiche que s'il y a quelque chose à corriger** — sinon
+  elle explique un geste que personne n'a à faire — et une carte verte
+  « Aucun écart à traiter » prend sa place, au lieu d'une phrase grise reléguée
+  **sous** la section arbitrés.
+- **Les quatre chiffres d'un écart tiennent sur une ligne** (demande de Julien
+  sur la maquette) : `minWidth: 72` poussait « Écart valeur » au rang suivant
+  alors que la largeur de la carte suffit quand chacun se dimensionne sur son
+  contenu. `flexWrap` retiré, `gap` à 12, `space-between`.
+- `Chiffre` faisait doublon avec `Fig` : une seule définition.
+
+## Deux trouvailles au passage
+
+- **`depuis()` vit dans `src/lib/temps.ts`**, une seule définition pour les deux
+  écrans qui datent un événement. `PendingBalisesView` avait sa copie.
+  ⚠️ **La précision aux minutes reste là où elle sert** (`{ minutes: true }`) :
+  une balise hors ligne surveille un retard qui dure (« il y a 3 h 05 »), un
+  arbitrage se date en jours (« hier »).
+- **⚠️ `audits.tsx` contenait trois octets nuls**, séparateurs de clé invisibles
+  hérités d'une session précédente. Git traitait donc le fichier comme
+  **binaire** et n'en montrait plus aucun diff. Remplacés par une espace ; un
+  test l'interdit désormais.
+
+## Vérifications
+
+Au simulateur, sur les données réelles de « Rayon textile », clair et sombre :
+la section sans bandeau blanc, l'état « Aucun écart à traiter » avec deux lignes
+arbitrées, la confirmation (« Garder » ne change rien, « Annuler l'arbitrage »
+remet la ligne en écart), et les quatre chiffres sur une ligne. Les deux
+arbitrages d'essai ont été annulés : `article_audit` est revenue à l'identique
+(TF-1003 et TF-1005 en `failed`, `final_qty` nul, zéro ligne `resolved`).
+
+⚠️ **Piège de méthode du jour** : le bouton d'annulation a semblé inerte pendant
+plusieurs essais. Ce n'était pas le code — **la cible de 18 pt était trop petite
+pour l'appui du simulateur**. Une sonde (fond magenta + `signaler.info`) a
+tranché en un essai là où la relecture du code tournait en rond. Quand un appui
+ne produit rien, rendre la cible visible avant de suspecter la logique.
+
+Tests de garde : `tests/compte.test.ts`, blocs « les écarts arbitrés se lisent
+comme une liste » et « “il y a 3 h” a une seule définition ».
+
 # Les fichiers d'import : « Code Ean », doublons de SKU, modèles (25 août 2026)
 
 Trois demandes de Julien après l'inventaire d'essai « Fwee », et les trois se
