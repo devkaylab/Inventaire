@@ -1,0 +1,58 @@
+-- pg_net : ce qu'on NE PEUT PAS fermer, et ce qui protège à la place.
+--
+-- ⚠️ CETTE MIGRATION NE FAIT RIEN. Elle a été appliquée le 29 août 2026 avec
+-- trois `revoke`, qui ont tous été des **non-opérations silencieuses**. Le
+-- fichier est conservé parce que la migration figure dans l'historique de la
+-- base : le supprimer laisserait une entrée sans explication.
+--
+-- ── LE CONSTAT ──────────────────────────────────────────────────────────────
+--
+-- `pg_net`, installée le 28 août pour le tour de garde (`declencher_alerte`),
+-- laisse `anon` et `authenticated` avec :
+--
+--   · USAGE sur le schéma `net` — et le PUBLIC l'a aussi (`=U/supabase_admin`) ;
+--   · EXECUTE sur `net.http_post` / `http_get` / `http_delete`, par le défaut
+--     du PUBLIC ;
+--   · SELECT sur `net.http_request_queue` et `net._http_response`.
+--
+-- Ce que ça vaudrait si c'était atteignable : la file garde les **en-têtes
+-- envoyés**, donc la clé partagée `ALERTE_CLE`, et `_http_response` garde les
+-- **corps de réponse** ; plus un `http_post` ouvert, c'est-à-dire une base qui
+-- émet des requêtes sortantes vers l'adresse qu'on lui donne — une SSRF avec
+-- l'adresse IP de Supabase.
+--
+-- ── POURQUOI ON NE PEUT PAS LE RETIRER ──────────────────────────────────────
+--
+-- ⚠️ Ces droits ont été posés PAR `supabase_admin`. Postgres n'autorise un
+-- `REVOKE` qu'au donneur du droit, ou à un superutilisateur. Or la connexion
+-- de migration est `postgres`, qui sur Supabase **n'est ni superutilisateur ni
+-- membre de `supabase_admin`** (vérifié : `rolsuper` faux,
+-- `pg_has_role(..., 'supabase_admin', 'MEMBER')` faux).
+--
+-- ⚠️ ET LE REVOKE NE LÈVE PAS D'ERREUR — il émet un WARNING que ni l'outil MCP
+-- ni le tableau de bord ne remontent. La migration a donc répondu
+-- `{"success": true}` en ne changeant rien : `has_schema_privilege('anon',
+-- 'net', 'USAGE')` valait encore `true` juste après. **Contrôler l'effet d'un
+-- REVOKE, jamais son code de retour** — c'est le même piège que le `pod
+-- install` qui échoue en silence, et que le `create or replace` qui rend
+-- EXECUTE à PUBLIC.
+--
+-- ── CE QUI PROTÈGE RÉELLEMENT ───────────────────────────────────────────────
+--
+-- PostgREST n'expose que `public` et `graphql_public`. Le schéma `net` n'étant
+-- pas exposé, aucun client ne peut appeler `net.http_post` ni lire
+-- `net._http_response` par l'API REST, quels que soient ses droits SQL.
+--
+-- ⚠️ C'EST UNE PROTECTION DE CONFIGURATION, PAS DE PERMISSION. Elle tombe le
+-- jour où quelqu'un ajoute `net` aux « Exposed schemas » (Supabase →
+-- Settings → API), ou écrit dans `public` une fonction SECURITY INVOKER qui
+-- appelle `net.http_post`. Ne faire ni l'un ni l'autre.
+--
+-- Si le sujet doit être fermé pour de bon, il faut passer par l'assistance
+-- Supabase : eux seuls disposent de `supabase_admin`.
+--
+-- Vérifié avant d'écrire : `declencher_alerte` est la SEULE fonction de
+-- `public` qui touche `net.http_*`, elle est SECURITY DEFINER et appartient à
+-- `postgres` — elle ne dépend donc d'aucun droit d'`anon` ni d'`authenticated`.
+
+select 1 where false;
