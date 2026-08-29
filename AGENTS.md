@@ -2,6 +2,37 @@
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any code.
 
+# La version Android existe (29 août 2026)
+
+Premier build Android réussi, sans toucher au projet iOS. Ce qu'il faut savoir
+avant d'y retoucher :
+
+- **`android/` est un dossier GÉNÉRÉ** (`npx expo prebuild --platform android`),
+  et il est dans le `.gitignore` — contrairement à `ios/`, qui est versionné.
+  Ne pas l'ajouter à git ; toute configuration durable passe par `app.json`
+  (qui portait déjà le paquet `com.quantinvo.app`, l'icône adaptative et les
+  permissions) ou par un plugin de configuration.
+- **`./scripts/pixel.sh` est le seul chemin de build**, pendant de
+  `simulateur.sh` : il pose `JAVA_HOME` / `ANDROID_HOME` (un shell non
+  interactif ne les a pas), régénère `android/` et `local.properties` s'ils
+  manquent, compile, installe et lance sur le téléphone branché en USB.
+  Contrairement à l'iOS, **pas d'étape EXConstants à la main** : le plugin
+  Gradle d'Expo dépose app.config pendant le build.
+- **La chaîne installée le 29 août 2026** (Homebrew) : `openjdk@17` (formule,
+  pas de sudo), `android-commandlinetools` (cask), puis par `sdkmanager` :
+  plateforme android-36, build-tools 36.0.0, NDK 27.1.12297006, cmake 3.22.1 —
+  les versions viennent de `node_modules/react-native/gradle/libs.versions.toml`,
+  pas d'un choix. Licences acceptées. `JAVA_HOME`, `ANDROID_HOME` et le PATH
+  (`adb`) sont posés dans `~/.zshrc`.
+- **⚠️ L'APK release est signé avec la clé de DEBUG** (comportement du gabarit
+  Expo) : parfait pour installer sur un appareil, **interdit pour Google
+  Play**. La publication passera par un AAB et une vraie clé de signature —
+  probablement la signature gérée par Play ou EAS. Rien de tout cela n'est
+  fait ; le compte Play Console de Julien est en cours de validation
+  d'identité.
+- L'espace dans le chemin (`App inventaire`) n'a posé aucun problème à Gradle,
+  au NDK ni à CMake — 642 tâches, aucune reprise à la main.
+
 # Tutoriel / onboarding
 
 Le tutoriel intégré a été **entièrement retiré** de l'app (composants `help/`,
