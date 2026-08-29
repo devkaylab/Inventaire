@@ -141,4 +141,19 @@ describe('quitter le comptage avec une balise ouverte', () => {
   it('ne branche jamais closeBalise nu sur un onPress', () => {
     expect(scanner).not.toContain('onPress={closeBalise}')
   })
+
+  /**
+   * La confirmation porte le rouge du bouton qui l'a ouverte : un geste et sa
+   * confirmation de couleurs différentes donnent l'impression que la carte
+   * propose autre chose que ce qu'on vient de toucher.
+   *
+   * ⚠️ Mais le surtitre reste « Confirmation ». Le défaut du ton `danger` est
+   * « Action définitive », et clôturer ne l'est pas — la phrase juste au-dessus
+   * dit qu'on pourra y revenir. Retirer cette ligne rendrait la carte menteuse.
+   */
+  it('la confirmation de clôture est rouge, sans se dire définitive', () => {
+    const bloc = scanner.split('Clôturer la balise ${active.code} ?')[1]?.slice(0, 700) ?? ''
+    expect(bloc).toContain("ton: 'danger'")
+    expect(bloc).toContain("surtitre: 'Confirmation'")
+  })
 })

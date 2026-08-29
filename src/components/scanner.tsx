@@ -724,6 +724,14 @@ export function Scanner({
       texte: `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p}. Vous pourrez y revenir si besoin.`,
       action: 'Clôturer',
       annuler: 'Annuler',
+      // Le rouge du bouton qui a ouvert la question. Un geste et sa
+      // confirmation doivent porter la même couleur, sinon la carte a l'air
+      // de proposer autre chose que ce qu'on vient de toucher.
+      ton: 'danger',
+      // ⚠️ Mais on garde « Confirmation » : le surtitre par défaut du ton
+      // danger est « Action définitive », et clôturer ne l'est pas — la
+      // phrase juste au-dessus dit qu'on pourra y revenir.
+      surtitre: 'Confirmation',
     })
     if (!ok) return
     // Ouverture différée jamais concrétisée : rien n'a été ouvert, il n'y a
