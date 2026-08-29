@@ -4547,6 +4547,15 @@ compte. »* **Le site les avait déjà** ; l'app obligeait à retaper la quantit
   carte.
 - **Le singulier est géré** (`unites()`) : « 1 unité », « 0 unité »,
   « 3 unités ».
+- **⚠️ Le site porte les mêmes deux couleurs** (`.btn-compteur` / `.btn-auditeur`
+  dans `globals.css`), et « Retenir » y est passé en `btn-ghost` pour la même
+  raison qu'ici. **L'or n'est pas un jeton de palette mais une couleur de
+  mode** : la même valeur dans les deux thèmes et des deux côtés du produit —
+  c'est pourquoi il est écrit en dur (`#FFC349` / `#1A1A1A`) plutôt que dérivé
+  d'une variable. Un test compare la valeur du CSS à `AUDIT_COLOR` de
+  `src/constants/colors.ts` : les deux bougent ensemble. Le bouton Compteur,
+  lui, suit `var(--accent)`, qui vaut déjà l'accent de l'app dans chaque thème
+  (vérifié au navigateur : `#6366F1` en sombre, `#4F46E5` en clair).
 - **⚠️ Chaque nombre ne s'affiche qu'une fois.** Premier jet vu au simulateur :
   la rangée de chiffres affichait « Compteur 3 · Auditeur 2 » et les boutons
   juste dessous répétaient les mêmes deux nombres à quarante points d'écart.

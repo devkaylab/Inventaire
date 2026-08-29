@@ -556,3 +556,30 @@ describe('un superviseur gère vraiment son équipe', () => {
     expect(migration).toMatch(/revoke all on function public\.cancel_my_invitation\(uuid\) from public, anon/)
   })
 })
+
+
+describe('les deux passes ont la même couleur dans l’app et sur le site', () => {
+  // Compter est en accent, auditer en or. L'or n'est pas un jeton de palette
+  // mais une couleur de MODE : la même valeur dans les deux thèmes, et la même
+  // des deux côtés du produit. Les faire diverger, c'est apprendre deux fois
+  // la même chose à la même personne.
+  const css = lire('../app/globals.css')
+  const app = lire('../../src/constants/colors.ts')
+
+  it('l’or du bouton Auditeur est celui de l’app', () => {
+    expect(app).toContain("AUDIT_COLOR = '#FFC349'")
+    expect(app).toContain("AUDIT_ON = '#1A1A1A'")
+    expect(css).toContain('.btn-auditeur { background: #FFC349; color: #1A1A1A; }')
+  })
+
+  it('le bouton Compteur suit l’accent du thème, comme dans l’app', () => {
+    expect(css).toContain('.btn-compteur { background: var(--accent); color: var(--on-accent); }')
+  })
+
+  it('⚠️ et « Retenir » n’est plus un aplat d’accent', () => {
+    // Sinon deux boutons identiques dans la même rangée pour deux gestes
+    // différents : « Compteur » et « Retenir ».
+    const ecran = lire('../components/dashboard/tabs/EcartsTab.tsx')
+    expect(ecran).not.toContain('btn btn-primary btn-sm')
+  })
+})

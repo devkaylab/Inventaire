@@ -214,7 +214,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                   {!readOnly && (
                     <div className="dash-audit-actions">
                       <button
-                        type="button" className="btn btn-ghost btn-sm"
+                        type="button" className="btn btn-compteur btn-sm"
                         disabled={busy === d.key}
                         onClick={() => onResolve(d, d.counted)}
                         title="Retenir la quantité du compteur"
@@ -222,7 +222,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                         Compteur
                       </button>
                       <button
-                        type="button" className="btn btn-ghost btn-sm"
+                        type="button" className="btn btn-auditeur btn-sm"
                         disabled={busy === d.key}
                         onClick={() => onResolve(d, d.audited)}
                         title="Retenir la quantité de l'auditeur"
@@ -240,7 +240,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                         onKeyDown={e => { if (e.key === 'Enter') void onResolveTyped(d) }}
                       />
                       <button
-                        type="button" className="btn btn-primary btn-sm"
+                        type="button" className="btn btn-ghost btn-sm"
                         disabled={busy === d.key || invalid}
                         onClick={() => onResolveTyped(d)}
                       >
