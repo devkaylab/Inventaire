@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  deleteAuditLine, getArticleLabels, getAudits, recomputeAudit, resolveAudit,
+  getArticleLabels, getAudits, recomputeAudit, resolveAudit,
   type ArticleAudit, type ArticleLabel,
 } from '@/lib/inventory'
 import type { ZoneDashboardRow } from '@/lib/zones'
@@ -110,31 +110,6 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
       return
     }
     await onResolve(d, qty)
-  }
-
-  async function onDelete(d: Discrepancy) {
-    const label = labels[d.audit.sku]?.label || d.audit.sku
-    const ok = await confirm({
-      title: 'Supprimer cette ligne ?',
-      message: `Tous les comptages de « ${label} »${d.audit.zone ? ` dans la balise ${d.audit.zone}` : ''} seront supprimés — ceux du compteur comme ceux de l'auditeur.`,
-      details: ['Cette action est irréversible.', "À n'utiliser que si la ligne est une erreur de saisie, pas pour corriger une quantité."],
-      confirmLabel: 'Supprimer la ligne',
-      tone: 'danger',
-    })
-    if (!ok) return
-
-    setBusy(d.key)
-    try {
-      const r = await deleteAuditLine(sessionId, d.audit.sku, d.audit.zone)
-      if (!r.success) { toast.error('Suppression impossible.'); return }
-      toast.success('Ligne supprimée.')
-      await load()
-      await onResolved()
-    } catch (err) {
-      toast.error(friendlyError(err))
-    } finally {
-      setBusy(null)
-    }
   }
 
   async function onUndo(a: ArticleAudit) {
@@ -270,13 +245,6 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                         onClick={() => onResolveTyped(d)}
                       >
                         Retenir
-                      </button>
-                      <button
-                        type="button" className="link-btn danger-link"
-                        disabled={busy === d.key}
-                        onClick={() => onDelete(d)}
-                      >
-                        Supprimer
                       </button>
                     </div>
                   )}

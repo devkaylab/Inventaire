@@ -4501,14 +4501,58 @@ ne lui a pas donné sa hauteur.
   **binaire** et n'en montrait plus aucun diff. Remplacés par une espace ; un
   test l'interdit désormais.
 
+## ⚠️ Un écart d'audit s'arbitre, il ne se supprime pas
+
+*« On ne doit pas avoir de bouton supprimer sur la page écarts d'audit, ni sur
+l'app, ni sur le site. »* (Julien, 29 août 2026, après avoir demandé à quoi il
+servait.) La corbeille effaçait **tous les comptages** de l'article dans la
+balise — ceux du compteur comme ceux de l'auditeur — pour couvrir le scan
+d'un mauvais article. Ce cas se traite désormais comme les autres : on retient
+**0**, et la ligne garde sa trace au lieu de disparaître.
+
+Retiré des deux écrans (`audits.tsx`, `EcartsTab.tsx`) et des deux enveloppes
+clientes. **La RPC `delete_audit_line` reste en base** : on retire les appels
+d'abord, on supprime l'objet plus tard — règle du projet. Le garde-fou de
+VR-007 qui la citait comme « le geste légitime de retrait d'une ligne » a été
+récrit : c'est `resolve_audit` qui porte désormais l'arbitrage d'un superviseur
+invité, et un test vérifie qu'aucun écran ne rejoint plus `delete_audit_line`.
+
+## Deux boutons tranchent en un appui
+
+*« Sur l'app ajoute les deux boutons Compteur Auditeur pour valider le bon
+compte. »* **Le site les avait déjà** ; l'app obligeait à retaper la quantité
+à la main. Deux boutons en contour, à largeur égale, portant chacun sa valeur.
+
+- **⚠️ Aucun des deux n'est mis en avant.** Le compteur a raison aussi souvent
+  que l'auditeur : un aplat sur l'un des deux suggérerait la réponse. Ils sont
+  en contour, et le seul bouton plein de la carte reste « Retenir », qui vaut
+  pour la quantité saisie.
+- **⚠️ Ils portent la quantité, pas seulement le rôle.** Sur le site, une
+  infobulle explique ce que retient chaque bouton ; sur un téléphone il n'y en
+  a pas.
+- **⚠️ Chaque nombre ne s'affiche qu'une fois.** Premier jet vu au simulateur :
+  la rangée de chiffres affichait « Compteur 3 · Auditeur 2 » et les boutons
+  juste dessous répétaient les mêmes deux nombres à quarante points d'écart.
+  La rangée ne garde donc que ce qui se lit **sans se choisir** — Écart et
+  Écart valeur.
+- **⚠️ « Retenir » ne retient plus l'auditeur en douce.** Un champ vide valait
+  la quantité de l'auditeur ; avec un bouton « Auditeur » à côté, cela ferait
+  deux contrôles pour le même geste, dont un invisible. Le champ vide demande
+  maintenant une saisie.
+- La **virgule** du clavier français est acceptée, comme sur le site.
+
+Six styles sans aucun appelant (`passes`, `passChip*`, `badge*`) ont été
+retirés au passage.
+
 ## Vérifications
 
 Au simulateur, sur les données réelles de « Rayon textile », clair et sombre :
 la section sans bandeau blanc, l'état « Aucun écart à traiter » avec deux lignes
 arbitrées, la confirmation (« Garder » ne change rien, « Annuler l'arbitrage »
-remet la ligne en écart), et les quatre chiffres sur une ligne. Les deux
-arbitrages d'essai ont été annulés : `article_audit` est revenue à l'identique
-(TF-1003 et TF-1005 en `failed`, `final_qty` nul, zéro ligne `resolved`).
+remet la ligne en écart), et **un appui sur « Compteur » qui retient bien 3 là
+où le champ retenait 2**. Tous les arbitrages d'essai ont été annulés :
+`article_audit` est revenue à l'identique (TF-1003 et TF-1005 en `failed`,
+`final_qty` nul, zéro ligne `resolved`).
 
 ⚠️ **Piège de méthode du jour** : le bouton d'annulation a semblé inerte pendant
 plusieurs essais. Ce n'était pas le code — **la cible de 18 pt était trop petite

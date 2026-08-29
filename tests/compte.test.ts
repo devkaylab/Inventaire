@@ -1841,12 +1841,15 @@ describe('les écarts arbitrés se lisent comme une liste', () => {
     expect(ecran).toContain('styles.okCard')
   })
 
-  it('⚠️ les quatre chiffres d’un écart tiennent sur une ligne', () => {
-    // Demande de Julien sur la maquette. `minWidth: 72` poussait « Écart
-    // valeur » au rang suivant alors que la largeur de la carte suffit.
-    expect(ecran).toContain("figRow: { flexDirection: 'row', justifyContent: 'space-between'")
+  it('⚠️ chaque nombre ne s’affiche qu’une fois', () => {
+    // Les deux boutons PORTENT le compte du compteur et celui de l'auditeur :
+    // les répéter en chiffres au-dessus affichait les mêmes deux nombres à
+    // quarante points d'écart. La rangée garde ce qui se lit sans se choisir.
+    expect(ecran).not.toContain('label="Compteur" value={fmt(counted)}')
+    expect(ecran).not.toContain('label="Auditeur" value={fmt(audited)}')
+    expect(ecran).toContain('label="Écart valeur"')
     expect(ecran).not.toContain('minWidth: 72')
-    expect(ecran).not.toContain("flexWrap: 'wrap', gap: Spacing.lg, marginTop: 2")
+    expect(ecran).not.toContain("flexWrap: 'wrap'")
   })
 
   it('`Chiffre` ne fait plus doublon avec `Fig`', () => {
@@ -1887,5 +1890,41 @@ describe('« il y a 3 h » a une seule définition', () => {
     // Les balises hors ligne surveillent un RETARD qui dure : « il y a 3 h 05 »
     // s'y lit. Un arbitrage se date en jours — « hier » suffit.
     expect(lire('components/PendingBalisesView.tsx')).toContain('{ minutes: true }')
+  })
+})
+
+describe('un écart d’audit s’arbitre, il ne se supprime pas', () => {
+  const ecran = lire('app/(supervisor)/[sessionId]/audits.tsx')
+
+  it('⚠️ plus aucun bouton de suppression sur cet écran', () => {
+    // Règle de Julien, 29 août 2026 : « on ne doit pas avoir de bouton
+    // supprimer sur la page écarts d'audit, ni sur l'app ni sur le site ».
+    // Le cas qu'il couvrait — une ligne scannée par erreur — s'arbitre à 0.
+    expect(ecran).not.toContain('deleteAuditLine')
+    expect(ecran).not.toContain('CorbeilleIcon')
+    expect(ecran).not.toContain('deleteBtn')
+    expect(ecran).not.toContain('confirmDelete')
+    // Et le texte d'aide ne renvoie plus vers une corbeille disparue.
+    expect(ecran).not.toContain('corbeille')
+  })
+
+  it('deux boutons tranchent en un appui', () => {
+    // Le site les avait déjà ; l'app obligeait à retaper la quantité.
+    expect(ecran).toContain('onPress={() => onRetenir(counted)}')
+    expect(ecran).toContain('onPress={() => onRetenir(audited)}')
+    expect(ecran).toContain('<Text style={styles.choixLabel}>Compteur</Text>')
+    expect(ecran).toContain('<Text style={styles.choixLabel}>Auditeur</Text>')
+  })
+
+  it('⚠️ « Retenir » ne retient plus l’auditeur en douce', () => {
+    // Un champ vide valait la quantité de l'auditeur. Avec un bouton
+    // « Auditeur » à côté, cela ferait deux contrôles pour le même geste,
+    // dont un invisible.
+    expect(ecran).toContain("signaler.erreur('Quantité manquante'")
+    expect(ecran).not.toContain('onResolve(a, audited)')
+  })
+
+  it('la virgule du clavier français est acceptée', () => {
+    expect(ecran).toContain(".replace(',', '.')")
   })
 })

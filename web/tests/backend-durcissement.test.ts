@@ -15,7 +15,10 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { fileURLToPath } from 'node:url'
 import { derniereDefinition, dossierMigrations } from './migrations'
+
+const here = path.dirname(fileURLToPath(import.meta.url))
 
 const toutesLesMigrations = readdirSync(dossierMigrations)
   .filter((f) => f.endsWith('.sql'))
@@ -65,15 +68,29 @@ describe('VR-007 · les comptages ne s’effacent plus en masse', () => {
     expect(toutesLesMigrations).toContain('drop policy if exists counts_delete_supervisor on public.counts')
   })
 
-  it('⚠️ mais l’arbitrage reste : delete_audit_line n’est pas touchée', () => {
+  it('⚠️ mais l’arbitrage reste : resolve_audit n’est pas touchée', () => {
     // Un superviseur invité supervise et arbitre — il ne peut ni clôturer ni
-    // supprimer l'inventaire, mais il doit pouvoir retirer une ligne fausse.
-    // `delete_audit_line` est SECURITY DEFINER (hors RLS), gardée par
-    // `can_access_session`, et bornée à UN sku dans UNE zone.
-    const corps = derniereDefinition('delete_audit_line').corps
-    expect(corps).toContain('can_access_session(p_session_id)')
-    expect(corps).toContain('delete from public.counts')
-    expect(corps).toContain('sku = p_sku')
+    // supprimer l'inventaire, mais il doit pouvoir trancher un écart.
+    // `resolve_audit` est SECURITY DEFINER (hors RLS), donc gardée par
+    // `can_access_session` et non par la policy retirée.
+    expect(derniereDefinition('resolve_audit').corps).toContain('can_access_session')
+  })
+
+  it('⚠️ et plus aucun écran n’appelle delete_audit_line', () => {
+    // Retiré des deux écrans le 29 août 2026 : « un écart d'audit est à
+    // arbitrer, pas à supprimer » (Julien). La fonction reste en base — on
+    // retire les appels d'abord, on supprime l'objet plus tard, règle du
+    // projet — mais plus rien ne doit la rejoindre.
+    for (const f of [
+      '../lib/inventory.ts',
+      '../components/dashboard/tabs/EcartsTab.tsx',
+      '../../src/lib/queries.ts',
+      '../../src/app/(supervisor)/[sessionId]/audits.tsx',
+    ]) {
+      const code = readFileSync(path.join(here, f), 'utf8')
+      expect(code, f).not.toContain('delete_audit_line')
+      expect(code, f).not.toContain('deleteAuditLine')
+    }
   })
 
   it('⚠️ et counts reste en ajout pur : aucune policy UPDATE ne réapparaît', () => {

@@ -12,8 +12,8 @@ import {
 import { useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { annulerArbitrage, deleteAuditLine, getArticleLabels, getAudits, getSession, getZoneDashboard, recomputeAudit, resolveAudit } from '@/lib/queries'
-import { CocheIcon, CorbeilleIcon } from '@/components/ui/Icones'
+import { annulerArbitrage, getArticleLabels, getAudits, getSession, getZoneDashboard, recomputeAudit, resolveAudit } from '@/lib/queries'
+import { CocheIcon } from '@/components/ui/Icones'
 import type { ArticleAudit } from '@/lib/queries'
 import { depuis } from '@/lib/temps'
 import { useTheme } from '@/lib/theme'
@@ -114,34 +114,14 @@ export default function AuditsScreen() {
     onError: () => signaler.erreur('Erreur', 'Annulation impossible.'),
   })
 
-  const del = useMutation({
-    mutationFn: ({ sku, zone }: { sku: string; zone: string }) => deleteAuditLine(sessionId, sku, zone),
-    onSuccess: async (result, variables) => {
-      if (!result.success) { signaler.erreur('Erreur', 'Suppression impossible.'); return }
-      setInputs((prev) => { const n = { ...prev }; delete n[`${variables.zone} ${variables.sku}`]; return n })
-      await queryClient.invalidateQueries({ queryKey: ['audits', sessionId] })
-    },
-    onError: () => signaler.erreur('Erreur', 'Suppression impossible.'),
-  })
-
-  function onResolve(a: ArticleAudit, fallback: number | null) {
-    const raw = inputs[keyOf(a)]
-    const qty = parseFloat(raw ?? (fallback != null ? String(fallback) : ''))
+  function onResolve(a: ArticleAudit) {
+    // La virgule est acceptée : c'est ce que donne le clavier français.
+    const qty = parseFloat((inputs[keyOf(a)] ?? '').replace(',', '.'))
     if (isNaN(qty) || qty < 0) {
-      signaler.erreur('Quantité invalide', 'Entrez un nombre positif pour la quantité comptée.')
+      signaler.erreur('Quantité manquante', 'Entrez un nombre positif, ou touchez « Compteur » ou « Auditeur ».')
       return
     }
     resolve.mutate({ sku: a.sku, zone: a.zone, qty })
-  }
-
-  function confirmDelete(a: ArticleAudit, name: string) {
-    void demander({
-      titre: 'Supprimer la ligne ?',
-      texte: `Tous les comptages de « ${name} »${a.zone ? ` dans la balise ${a.zone}` : ''} seront supprimés.`,
-      note: 'Cette action est irréversible.',
-      action: 'Supprimer',
-      ton: 'danger',
-    }).then((ok) => { if (ok) del.mutate({ sku: a.sku, zone: a.zone }) })
   }
 
   // ⚠️ Annuler un arbitrage se confirme, comme sur le site. Le geste est à
@@ -158,7 +138,7 @@ export default function AuditsScreen() {
   }
 
   const list = audits ?? []
-  const busy = resolve.isPending || del.isPending
+  const busy = resolve.isPending
 
   // Écart = Auditeur (P2) − Compteur (P1). On ne compare que dans une balise
   // AUDITÉE : un article compté mais non audité ressort avec −compté. En mode
@@ -226,8 +206,8 @@ export default function AuditsScreen() {
         styles={styles}
         value={inputs[keyOf(a)] ?? ''}
         onChange={(t) => setInputs((p) => ({ ...p, [keyOf(a)]: t }))}
-        onSave={() => onResolve(a, audited)}
-        onDelete={() => confirmDelete(a, name)}
+        onSave={() => onResolve(a)}
+        onRetenir={(qty) => resolve.mutate({ sku: a.sku, zone: a.zone, qty })}
         busy={busy}
       />
     )
@@ -273,8 +253,8 @@ export default function AuditsScreen() {
         {groups.length > 0 && (
           <Text style={styles.hint}>
             {usesZones
-              ? 'Les écarts se comparent balise par balise. Corrigez la quantité retenue puis « Corriger », ou retirez une ligne erronée avec la corbeille.'
-              : 'Corrigez la quantité comptée puis « Corriger », ou retirez une ligne erronée avec la corbeille. Un écart apparaît quand le comptage et l’audit diffèrent.'}
+              ? 'Les écarts se comparent balise par balise. Retenez le compte du compteur ou celui de l’auditeur, ou saisissez une autre quantité.'
+              : 'Un écart apparaît quand le comptage et l’audit diffèrent. Retenez le compte du compteur ou celui de l’auditeur, ou saisissez une autre quantité.'}
           </Text>
         )}
 
@@ -377,7 +357,7 @@ function Fig({ label, value, color, styles }: { label: string; value: string; co
 }
 
 function AuditCard({
-  a, name, brand, counted, audited, ecart, ecartValue, theme, styles, value, onChange, onSave, onDelete, busy,
+  a, name, brand, counted, audited, ecart, ecartValue, theme, styles, value, onChange, onSave, onRetenir, busy,
 }: {
   a: ArticleAudit
   name: string
@@ -391,7 +371,7 @@ function AuditCard({
   value: string
   onChange: (t: string) => void
   onSave: () => void
-  onDelete: () => void
+  onRetenir: (qty: number) => void
   busy: boolean
 }) {
   return (
@@ -403,10 +383,31 @@ function AuditCard({
         </View>
       </View>
       <View style={styles.figRow}>
-        <Fig styles={styles} label="Compteur" value={fmt(counted)} />
-        <Fig styles={styles} label="Auditeur" value={fmt(audited)} />
         <Fig styles={styles} label="Écart" value={`${fmt(ecart)} u`} color={ecart < 0 ? theme.danger : theme.success} />
         <Fig styles={styles} label="Écart valeur" value={euro(ecartValue)} color={ecartValue < 0 ? theme.danger : undefined} />
+      </View>
+      {/* Trancher, c'est presque toujours choisir l'un des deux comptes : un
+          appui suffit. Les deux boutons portent la quantité qu'ils retiennent
+          — sur un téléphone il n'y a pas d'infobulle pour l'expliquer.
+          Aucun des deux n'est mis en avant : le compteur a raison aussi
+          souvent que l'auditeur, l'écran ne doit pas suggérer la réponse. */}
+      <View style={styles.choixRow}>
+        <Pressable
+          style={[styles.choixBtn, busy && { opacity: 0.6 }]}
+          onPress={() => onRetenir(counted)}
+          disabled={busy}
+        >
+          <Text style={styles.choixLabel}>Compteur</Text>
+          <Text style={[styles.choixValeur, tabular]}>{fmt(counted)}</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.choixBtn, busy && { opacity: 0.6 }]}
+          onPress={() => onRetenir(audited)}
+          disabled={busy}
+        >
+          <Text style={styles.choixLabel}>Auditeur</Text>
+          <Text style={[styles.choixValeur, tabular]}>{fmt(audited)}</Text>
+        </Pressable>
       </View>
       <View style={styles.resolveRow}>
         <TextInput
@@ -414,14 +415,11 @@ function AuditCard({
           value={value}
           onChangeText={onChange}
           keyboardType="numeric"
-          placeholder={`Qté retenue (${fmt(audited)})`}
+          placeholder="Autre quantité"
           placeholderTextColor={theme.textMuted}
         />
         <Pressable style={[styles.resolveBtn, busy && { opacity: 0.6 }]} onPress={onSave} disabled={busy}>
-          <Text style={styles.resolveBtnText}>Corriger</Text>
-        </Pressable>
-        <Pressable style={[styles.deleteBtn, busy && { opacity: 0.6 }]} onPress={onDelete} disabled={busy} hitSlop={6}>
-          <CorbeilleIcon color={theme.danger} size={20} />
+          <Text style={styles.resolveBtnText}>Retenir</Text>
         </Pressable>
       </View>
     </View>
@@ -457,21 +455,24 @@ function makeStyles(t: Theme) {
     cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
     sku: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary },
     subSku: { fontSize: 12, color: t.textSecondary, ...tabular },
-    badge: { borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
-    badgeText: { fontSize: 11, fontFamily: Font.bold },
-    passes: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-    figRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.md, marginTop: 2 },
+    figRow: { flexDirection: 'row', gap: Spacing.xxl, marginTop: 2 },
     fig: {},
     figLabel: { fontSize: 10, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
     figValue: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, marginTop: 2, ...tabular },
-    passChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.background, borderRadius: Radius.sm, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: t.hairline },
-    passChipDot: { width: 8, height: 8, borderRadius: 4 },
-    passChipText: { fontSize: 13, color: t.textPrimary, fontFamily: Font.semibold, ...tabular },
     resolveRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center', marginTop: Spacing.xs },
     input: { flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },
     resolveBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: 16, paddingVertical: 11, ...t.shadowButton },
     resolveBtnText: { color: t.onAccent, fontFamily: Font.bold, fontSize: 14 },
-    deleteBtn: { width: 42, height: 42, borderRadius: Radius.md, backgroundColor: t.dangerSoft, alignItems: 'center', justifyContent: 'center' },
+    // Deux choix de même poids, côte à côte. En contour, pas en aplat : le
+    // bouton plein de la carte est « Retenir », qui vaut pour la quantité
+    // saisie — deux aplats de plus en feraient trois actions concurrentes.
+    choixRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+    choixBtn: {
+      flex: 1, minHeight: 44, borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
+      alignItems: 'center', justifyContent: 'center', paddingVertical: 6,
+    },
+    choixLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
+    choixValeur: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, marginTop: 1 },
       empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
 
     // Aucun écart à traiter : la bonne nouvelle se dit, au lieu d'une phrase

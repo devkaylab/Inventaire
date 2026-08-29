@@ -328,14 +328,6 @@ export async function resolveAudit(id: string, sku: string, finalQty: number, zo
   return data as { success: boolean; error?: string }
 }
 
-export async function deleteAuditLine(id: string, sku: string, zone = ''): Promise<{ success: boolean; error?: string }> {
-  const { data, error } = await supabase.rpc('delete_audit_line', {
-    p_session_id: id, p_sku: sku, p_zone: zone,
-  })
-  if (error) fail('deleteAuditLine', error)
-  return data as { success: boolean; error?: string }
-}
-
 // ── Équipe ───────────────────────────────────────────────────────────────────
 
 export async function getSessionMembers(id: string): Promise<Member[]> {
