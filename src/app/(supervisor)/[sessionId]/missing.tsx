@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { getZoneDashboard } from '@/lib/queries'
 import type { ZoneDashboardRow } from '@/lib/queries'
+import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -55,7 +56,8 @@ export default function MissingBalisesScreen() {
       >
         {totalMissing === 0 ? (
           <View style={styles.doneCard}>
-            <Text style={styles.doneText}>✓ Toutes les balises ont été comptées</Text>
+            <CocheIcon color={theme.success} size={18} />
+            <Text style={styles.doneText}>Toutes les balises ont été comptées</Text>
           </View>
         ) : (
           <>
@@ -95,7 +97,12 @@ function makeStyles(t: Theme) {
     countBadgeText: { fontSize: 13, fontFamily: Font.bold, color: t.warning, ...tabular },
     codes: { fontSize: 14, color: t.textSecondary, lineHeight: 22, fontFamily: Font.medium, ...tabular },
 
-    doneCard: { backgroundColor: t.successSoft, borderRadius: Radius.lg, padding: Spacing.xl, alignItems: 'center' },
+    // L'icône était un « ✓ » collé au texte : en rangée, elle reste devant
+    // la phrase comme avant, au lieu de se poser au-dessus.
+    doneCard: {
+      backgroundColor: t.successSoft, borderRadius: Radius.lg, padding: Spacing.xl,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    },
     doneText: { fontSize: 15, fontFamily: Font.semibold, color: t.success },
   })
 }

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { checkPassword, PASSWORD_RULES } from '@/lib/password'
+import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Spacing, type Theme } from '@/constants/ink'
 
@@ -22,7 +23,7 @@ export function PasswordRules({ password }: { password: string }) {
         return (
           <View key={r.key} style={styles.row}>
             <View style={[styles.tick, ok && styles.tickOn]}>
-              {ok && <Text style={styles.tickMark}>✓</Text>}
+              {ok && <CocheIcon color={theme.onAccent} size={11} />}
             </View>
             <Text style={[styles.label, ok && styles.labelOn]}>{r.label}</Text>
           </View>
@@ -42,7 +43,6 @@ function makeStyles(t: Theme) {
       alignItems: 'center', justifyContent: 'center',
     },
     tickOn: { backgroundColor: t.success, borderColor: t.success },
-    tickMark: { color: t.onAccent, fontSize: 9, fontFamily: Font.bold, lineHeight: 12 },
     label: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular },
     labelOn: { color: t.success, fontFamily: Font.medium },
   })

@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createSession, getMyAssignedStores } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
+import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
@@ -138,7 +139,7 @@ export default function NewSessionScreen() {
                     onPress={() => setStoreId(s.id)}
                   >
                     <Text style={[styles.storeName, active && styles.storeNameActive]}>{s.name}</Text>
-                    {active && <Text style={styles.storeCheck}>✓</Text>}
+                    {active && <CocheIcon color={theme.accent} size={16} />}
                   </Pressable>
                 )
               })}
@@ -200,7 +201,6 @@ function makeStyles(t: Theme) {
     storeRowActive: { borderColor: t.accent, backgroundColor: t.accentSoft },
     storeName: { fontSize: 15, color: t.textPrimary, fontFamily: Font.medium },
     storeNameActive: { color: t.accent, fontFamily: Font.bold },
-    storeCheck: { fontSize: 16, color: t.accent, fontFamily: Font.bold },
     labelConsigne: { color: t.accent },
     emptyStores: { fontSize: 14, color: t.textMuted, fontFamily: Font.regular, lineHeight: 20, backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, padding: Spacing.lg },
     codeRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
