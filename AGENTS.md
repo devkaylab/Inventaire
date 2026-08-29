@@ -4656,6 +4656,10 @@ où le champ retenait 2**. Tous les arbitrages d'essai ont été annulés :
 `article_audit` est revenue à l'identique (TF-1003 et TF-1005 en `failed`,
 `final_qty` nul, zéro ligne `resolved`).
 
+**Confirmé par Julien sur son iPhone le 29 août 2026**, build refait : « ça a
+l'air tout bon ». C'est la seule preuve qui vaille pour les deux boutons de
+passe — un simulateur ne dit rien de ce qu'on touche au doigt.
+
 ⚠️ **Piège de méthode du jour** : le bouton d'annulation a semblé inerte pendant
 plusieurs essais. Ce n'était pas le code — **la cible de 18 pt était trop petite
 pour l'appui du simulateur**. Une sonde (fond magenta + `signaler.info`) a
