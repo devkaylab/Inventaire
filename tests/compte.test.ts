@@ -887,7 +887,15 @@ describe('le bandeau de démarrage ne s’adresse qu’à qui démarre', () => {
   it('la fin du démarrage se note, sinon le bandeau revient', () => {
     expect(accueil).toContain('const demarrageFini =')
     // Les deux façons d'en avoir fini, et il faut les deux.
-    expect(accueil).toContain('(!debutant || etapeCourante(etapes) === null)')
+    expect(accueil).toContain('!debutant || etapeCourante(etapes) === null')
+    // ⚠️ Et depuis le 29 août, les faits qui vivent EN BASE suffisent : le
+    // jalon des balises est local au téléphone, il ne doit jamais retenir à
+    // lui seul un bandeau d'accueil chez quelqu'un qui a une équipe et un
+    // inventaire. « J'en ai assez de voir ce bandeau » — Julien, sur un compte
+    // vieux de plusieurs semaines.
+    expect(accueil).toContain('demarrageAcquis({')
+    const bandeau = lire('components/BandeauDemarrage.tsx')
+    expect(bandeau).toContain('return faits.equipeConstituee && faits.inventaireCree')
     expect(accueil).toContain('if (guideAVoir && demarrageFini) masquerGuide()')
   })
 

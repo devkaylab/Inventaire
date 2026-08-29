@@ -60,6 +60,26 @@ export function etapesDemarrage(faits: FaitsDemarrage): EtapeDemarrage[] {
   ]
 }
 
+/**
+ * ⚠️ **Les faits qui vivent EN BASE suffisent à clore le démarrage.**
+ *
+ * L'étape des balises se coche sur un jalon LOCAL — une planche dessinée sur
+ * le téléphone n'écrit rien en base, aucun fait serveur ne dira jamais qu'elle
+ * a été produite. Conséquence : changer d'appareil la remet à faire.
+ *
+ * Ce qui était acceptable pour l'ordre des étapes ne l'est pas pour la fin du
+ * démarrage. Constat de Julien le 29 août 2026, sur un compte qui a une équipe
+ * et un inventaire depuis des semaines : « j'en ai assez de voir ce bandeau ».
+ * Un jalon d'appareil ne doit **jamais**, à lui seul, ramener un bandeau
+ * d'accueil à quelqu'un dont le compte montre qu'il connaît le produit.
+ *
+ * L'équipe et l'inventaire, eux, se lisent en base et suivent la personne d'un
+ * téléphone à l'autre. Les deux faits réunis closent le démarrage.
+ */
+export function demarrageAcquis(faits: FaitsDemarrage): boolean {
+  return faits.equipeConstituee && faits.inventaireCree
+}
+
 /** La première étape non faite — celle que le bandeau montre, et la seule. */
 export function etapeCourante(etapes: EtapeDemarrage[]): EtapeDemarrage | null {
   return etapes.find(e => !e.faite) ?? null

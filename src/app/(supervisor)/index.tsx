@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { closeSession, deleteSessionPermanently, getCompanyOverview, getMyAssignedStores, getMyTeamByStore, getSessions } from '@/lib/queries'
-import { BandeauDemarrage, etapeCourante, etapesAdmin, etapesDemarrage } from '@/components/BandeauDemarrage'
+import { BandeauDemarrage, demarrageAcquis, etapeCourante, etapesAdmin, etapesDemarrage } from '@/components/BandeauDemarrage'
 import { useJalon, useRepere } from '@/lib/reperes'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -390,7 +390,10 @@ export default function SupervisorHomeScreen() {
    */
   const demarrageFini =
     sessions !== undefined && jalonPret && !sansMagasin &&
-    (!debutant || etapeCourante(etapes) === null)
+    (!debutant || etapeCourante(etapes) === null ||
+     // Le jalon des balises est local : il ne retient plus le bandeau à lui
+     // seul quand l'équipe et l'inventaire, eux, sont là.
+     (!estAdmin && demarrageAcquis({ balisesImprimees, equipeConstituee, inventaireCree: mesInventaires.length > 0 })))
 
   useEffect(() => {
     if (guideAVoir && demarrageFini) masquerGuide()
