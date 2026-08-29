@@ -334,6 +334,9 @@ export function Scanner({
   // question « est-ce que ça a pris ? » a déjà sa réponse dans la ligne
   // « Dernier scan », sous le viseur.
   const [feuilleScans, setFeuilleScans] = useState(false)
+  // Lue par le détecteur, qui n'est mémoïsé que sur [barcodeReady].
+  const feuilleScansRef = useRef(false)
+  useEffect(() => { feuilleScansRef.current = feuilleScans }, [feuilleScans])
   const [barcodeReady, setBarcodeReady] = useState(false)
   const [illisibleCode, setIllisibleCode] = useState<string | null>(null)
   const [autoScan, setAutoScan] = useState(true)
@@ -613,6 +616,17 @@ export function Scanner({
 
   // ── Barcode detection — auto-scan as soon as a code enters the frame ───────
   const handleBarcodeDetected = useCallback((result: BarcodeScanningResult) => {
+    // ⚠️ La liste ouverte arrête le scan. Elle recouvre le viseur : ce que la
+    // caméra continuerait de lire derrière n'a été visé par personne, et
+    // s'ajouterait au comptage pendant qu'on relit justement ce comptage.
+    // Demande de Julien le 29 août 2026, « pour éviter les scans fantômes ».
+    //
+    // On ignore la détection plutôt que de débrancher `onBarcodeScanned` :
+    // expo-camera calcule `barcodeScannerEnabled = !!onBarcodeScanned`, et
+    // couper puis rebrancher reconfigure la session de capture — ce qui
+    // éteint la torche au passage.
+    if (feuilleScansRef.current) return
+
     // Le cadre fait loi : ce qui est lu ailleurs dans l'image n'a pas été visé.
     // Sans ce filtre, un code posé sur la table ou imprimé sur le carton d'à
     // côté est compté comme si on l'avait cadré.

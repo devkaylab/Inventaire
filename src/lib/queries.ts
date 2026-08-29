@@ -579,6 +579,26 @@ export async function getAudits(sessionId: string) {
   return data
 }
 
+/**
+ * Annule un arbitrage — le même geste que sur le site.
+ *
+ * `resolve_audit` ne sait que poser `resolved`, et `recompute_session_audit`
+ * préserve délibérément ce statut. Pour revenir en arrière sans toucher aux
+ * comptages, on repasse la ligne par la table : la policy `audit_supervisor`
+ * autorise l'UPDATE à un superviseur participant, et le recalcul qui suit
+ * rétablit le statut réel (validated / failed / pending) à partir des passes.
+ */
+export async function annulerArbitrage(sessionId: string, sku: string, zone = '') {
+  const { error } = await supabase
+    .from('article_audit')
+    .update({ status: 'pending', final_qty: null, resolved_by: null })
+    .eq('session_id', sessionId)
+    .eq('sku', sku)
+    .eq('zone', zone)
+  if (error) throwSupabase('annulerArbitrage', error)
+  await recomputeAudit(sessionId)
+}
+
 export async function resolveAudit(sessionId: string, sku: string, finalQty: number, zone = '') {
   const { data, error } = await supabase.rpc('resolve_audit', {
     p_session_id: sessionId,
