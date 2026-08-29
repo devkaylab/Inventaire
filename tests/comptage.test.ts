@@ -51,8 +51,18 @@ describe('consulter une balise finie ne l’ouvre pas', () => {
       .toBeLessThan(cloture.indexOf('await setBalise('))
   })
 
-  it('une balise seulement consultée ne pose pas la question au retour', () => {
-    expect(scanner).toContain('!!activeBalise && !ouvertureDifferee && !sortieAutorisee')
+  /**
+   * ⚠️ **La question se pose TOUJOURS.** Elle ne visait au départ que la balise
+   * réellement ouverte : consulter sans compter ne change rien. Mais son but
+   * n'est pas de protéger une donnée, c'est de rattraper un retour touché par
+   * erreur — et un doigt qui glisse se trompe autant dans un cas que dans
+   * l'autre. Demande de Julien le 29 août 2026 : « le but est d'éviter les
+   * mauvaises manips ». Ne pas la reconditionner.
+   */
+  it('la question du retour ne dépend plus de l’état de la balise', () => {
+    expect(scanner).toContain('usePreventRemove(!sortieAutorisee')
+    // Le texte, lui, s'adapte : une balise ouverte restera ouverte.
+    expect(scanner).toContain('const ouverte = !!activeBaliseRef.current && !ouvertureDiffereeRef.current')
   })
 })
 
@@ -87,7 +97,7 @@ describe('quitter le comptage avec une balise ouverte', () => {
     // ⚠️ `beforeRemove` ne retient pas cette pile : l'écran part quand même et
     // la question s'affiche par-dessus l'écran d'arrivée. Essayé, constaté au
     // simulateur, et le runtime le dit lui-même dans son alerte.
-    expect(scanner).toContain('usePreventRemove(!!activeBalise')
+    expect(scanner).toContain('usePreventRemove(!sortieAutorisee')
     expect(scanner).not.toContain("addListener('beforeRemove'")
   })
 

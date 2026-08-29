@@ -286,7 +286,12 @@ export function Scanner({
    * côté serveur tant qu'on n'a rien compté. L'état sert au garde-fou du
    * retour (qui ne doit alors rien demander), le ref aux appels asynchrones.
    */
-  const [ouvertureDifferee, setOuvertureDifferee] = useState(false)
+  // ⚠️ L'état n'a plus de lecteur depuis que la question du retour se pose
+  // toujours : c'est le ref qui dit, au moment du clic, si la balise est
+  // réellement ouverte — et un ref est frais, là où un état capturé dans le
+  // hook serait celui d'un ancien rendu. Le setter reste, il garde les deux
+  // en phase.
+  const [, setOuvertureDifferee] = useState(false)
   const ouvertureDiffereeRef = useRef(false)
   // ── L'écran ne se verrouille pas pendant le comptage ──────────────────────
   //
@@ -352,11 +357,20 @@ export function Scanner({
   // on quitte la macro.
   const objectifAutoRef = useRef<string | undefined>(undefined)
   /**
-   * La macro n'existe que si le téléphone a un ultra grand-angle. Sur les
-   * modèles qui n'en ont pas, la liste ne le contient pas et le bouton
-   * n'apparaît jamais — plutôt qu'un bouton qui ne ferait rien.
+   * ⚠️ **La macro passe par le ZOOM, pas par le nom de l'objectif.**
+   *
+   * Première version : le bouton n'apparaissait que si
+   * `getAvailableLensesAsync` listait `builtInUltraWideCamera`. Sur l'iPhone de
+   * Julien — qui a pourtant un ultra grand-angle — il ne s'est jamais affiché :
+   * l'API ne rend pas ce nom-là. Un bouton dont l'affichage dépend d'une chaîne
+   * de caractères que le système peut nommer autrement est un bouton qui ne
+   * s'affiche pas.
+   *
+   * `zoom = 0` demande le champ le plus large du périphérique virtuel, c'est-à-
+   * dire l'ultra grand-angle quand il existe — le même objectif qu'iOS choisit
+   * pour la macro. Sur un téléphone qui n'en a pas, le champ ne bouge tout
+   * simplement pas : rien ne casse.
    */
-  const [macroDispo, setMacroDispo] = useState(false)
   const [macro, setMacro] = useState(false)
 
   const pickCloseFocusLens = useCallback(async () => {
@@ -374,10 +388,7 @@ export function Scanner({
       const preferred = ['builtInTripleCamera', 'builtInDualWideCamera']
       const best = preferred.find(l => lenses.includes(l))
       if (best) { objectifAutoRef.current = best; setSelectedLens(best) }
-      // L'ultra grand-angle est ce qui rend la macro possible : c'est lui
-      // qu'iOS met en avant quand on s'approche, et c'est lui que le bouton
-      // force quand la bascule automatique ne se fait pas.
-      setMacroDispo(lenses.includes('builtInUltraWideCamera'))
+
     } catch {
       // Objectif indisponible : l'objectif par défaut reste parfaitement
       // utilisable, le scan ne doit pas échouer pour autant.
@@ -897,14 +908,22 @@ export function Scanner({
   // ce hook, et non `navigation.addListener`, qui tient le retour natif et le
   // geste de balayage.
   const [sortieAutorisee, setSortieAutorisee] = useState<ActionNavigation | null>(null)
-  // Une balise seulement consultée n'a rien changé : partir ne coûte rien, la
-  // question ne se pose pas. Elle ne reste que pour une balise réellement
-  // ouverte — celle où l'on a compté quelque chose.
-  usePreventRemove(!!activeBalise && !ouvertureDifferee && !sortieAutorisee, ({ data }) => {
+  // ⚠️ **La question se pose TOUJOURS, pas seulement sur une balise ouverte.**
+  // Elle ne visait au départ que la balise réellement ouverte : consulter sans
+  // rien compter ne change rien, donc partir ne coûtait rien. Mais le but de
+  // cette question n'est pas de protéger une donnée, c'est de **rattraper un
+  // retour touché par erreur** — et un doigt qui glisse sur « Retour » se
+  // trompe autant sur une balise consultée que sur une balise ouverte.
+  // Demande de Julien le 29 août 2026 : « le but est d'éviter les mauvaises
+  // manips ». Ne pas la reconditionner.
+  usePreventRemove(!sortieAutorisee, ({ data }) => {
+    const ouverte = !!activeBaliseRef.current && !ouvertureDiffereeRef.current
     void demander({
       titre: 'Quitter le comptage ?',
-      texte: `La balise ${activeBaliseRef.current?.code} restera ouverte : `
-        + 'l’inventaire la comptera comme non terminée tant qu’elle l’est.',
+      texte: ouverte
+        ? `La balise ${activeBaliseRef.current?.code} restera ouverte : `
+          + 'l’inventaire la comptera comme non terminée tant qu’elle l’est.'
+        : 'Vous reviendrez à l’inventaire. Rien de ce qui est compté n’est perdu.',
       // ⚠️ Le bouton plein garde sur l'écran. Cette question n'est plus là pour
       // décider d'une clôture — elle a son propre bouton, et sa propre
       // confirmation — mais pour rattraper un retour touché par erreur. La
@@ -1284,6 +1303,9 @@ export function Scanner({
                 facing="back"
                 enableTorch={torch}
                 selectedLens={selectedLens}
+                // 0 = le champ le plus large du périphérique virtuel, donc
+                // l'ultra grand-angle : c'est ce qui permet de s'approcher.
+                zoom={macro ? 0 : undefined}
                 // `autofocus` n'est volontairement pas renseigné : dans
                 // expo-camera, `on` signifie « faire le point une fois puis le
                 // **verrouiller** », et `off` (le défaut) « refaire le point
@@ -1313,23 +1335,15 @@ export function Scanner({
                   sur l'ultra grand-angle quand on s'approche — quand cette
                   bascule ne se fait pas, ce bouton la demande explicitement.
                   Il n'existe que si le téléphone a l'objectif qu'il faut. */}
-              {macroDispo && (
-                <Pressable
-                  style={[styles.macroBtn, macro && styles.macroBtnOn]}
-                  onPress={() => {
-                    setMacro(v => {
-                      const actif = !v
-                      setSelectedLens(actif ? 'builtInUltraWideCamera' : objectifAutoRef.current)
-                      return actif
-                    })
-                  }}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={macro ? 'Désactiver le rapproché' : 'Activer le rapproché'}
-                >
-                  <MacroIcon color={macro ? '#06121a' : FRAME_COLOR_READY} />
-                </Pressable>
-              )}
+              <Pressable
+                style={[styles.macroBtn, macro && styles.macroBtnOn]}
+                onPress={() => setMacro(v => !v)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={macro ? 'Désactiver le rapproché' : 'Activer le rapproché'}
+              >
+                <MacroIcon color={macro ? '#06121a' : FRAME_COLOR_READY} />
+              </Pressable>
               {resolving && (
                 <View style={styles.overlay}>
                   <ActivityIndicator color="#fff" size="small" />
