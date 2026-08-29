@@ -101,14 +101,48 @@ describe('quitter le comptage avec une balise ouverte', () => {
     expect(scanner).not.toContain("addListener('beforeRemove'")
   })
 
-  it('rattrape le retour accidentel : le bouton plein garde sur l’écran', () => {
-    // ⚠️ Amendé le 25 août 2026 au soir : la question du retour ne décide plus
-    // d'une clôture (la clôture a sa propre confirmation, voir plus bas) —
-    // elle rattrape un retour touché par erreur, et la réponse voulue est
-    // donc « Rester », en bouton plein.
+  /**
+   * ⚠️ **La question du retour a la MÊME forme que celle de la clôture** :
+   * « Annuler » à gauche, l'action à droite en bouton plein. Une carte où le
+   * bouton plein annule et l'autre agit inverse le geste d'un écran à l'autre —
+   * on finit par appuyer à droite sans lire. Demande de Julien le 29 août
+   * 2026, après avoir vu les deux cartes se contredire : « je veux le même pop
+   * up, pas un différent ».
+   *
+   * Le 25 août, la même question portait « Rester » en bouton plein ; c'était
+   * cohérent isolément, et faux à côté de la clôture.
+   */
+  it('la question du retour a la même forme que celle de la clôture', () => {
     expect(scanner).toContain("titre: 'Quitter le comptage ?'")
-    expect(scanner).toContain("action: 'Rester'")
-    expect(scanner).toContain("annuler: 'Quitter'")
+    expect(scanner).toContain("action: 'Quitter'")
+    expect(scanner).toContain("annuler: 'Annuler'")
+    // La clôture, elle, n'a pas bougé.
+    expect(scanner).toContain("action: 'Clôturer'")
+    expect(scanner).toContain("annuler: 'Annuler'")
+  })
+
+  /**
+   * ⚠️ **`getAvailableLensesAsync` rend le nom LOCALISÉ, pas l'identifiant.**
+   * Côté natif, `availableLenses.map { $0.localizedName }`, et `selectedLens`
+   * est comparé au même nom. Une liste écrite en identifiants ne correspond
+   * jamais — et sans objectif sélectionné, expo-camera retombe sur
+   * `builtInWideAngleCamera`, qui ne fait pas le point sous une dizaine de
+   * centimètres. C'était la cause de « le close-up ne marche plus ».
+   */
+  it('l’objectif se choisit par son nom localisé, pas par un identifiant', () => {
+    // ⚠️ Sur le CODE SEUL : les commentaires citent les identifiants pour
+    // expliquer le défaut, c'est leur place. La garde porte sur ce qui
+    // s'exécute.
+    const code = scanner
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter(l => !l.trim().startsWith('//')).join('\n')
+    expect(code).not.toContain('builtInTripleCamera')
+    expect(code).not.toContain('builtInDualWideCamera')
+    // Toujours pas l'ultra grand-angle seul : son champ à 0,5× rendrait les
+    // codes minuscules à distance normale.
+    expect(code).not.toContain('builtInUltraWideCamera')
+    expect(code).toContain("sansAccent(l).includes('triple')")
+    expect(code).toContain('/dual|double/')
   })
 
   it('clôturer est confirmé, en nommant ce qui a été compté', () => {

@@ -37,7 +37,7 @@ import { resolveArticle, setBalise } from '@/lib/offlineSync'
 import { parseBalise } from '@/lib/balises'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
-import { CroixIcon, MacroIcon, TorcheIcon } from '@/components/ui/Icones'
+import { CroixIcon, TorcheIcon } from '@/components/ui/Icones'
 import { ChevronIcon } from '@/components/ui/MenuList'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
@@ -353,45 +353,41 @@ export function Scanner({
   // pas et on garde l'objectif par défaut. La prop est ignorée sur Android.
   const cameraRef = useRef<CameraView>(null)
   const [selectedLens, setSelectedLens] = useState<string | undefined>(undefined)
-  // L'objectif choisi automatiquement, mémorisé pour pouvoir y revenir quand
-  // on quitte la macro.
-  const objectifAutoRef = useRef<string | undefined>(undefined)
-  /**
-   * ⚠️ **La macro passe par le ZOOM, pas par le nom de l'objectif.**
-   *
-   * Première version : le bouton n'apparaissait que si
-   * `getAvailableLensesAsync` listait `builtInUltraWideCamera`. Sur l'iPhone de
-   * Julien — qui a pourtant un ultra grand-angle — il ne s'est jamais affiché :
-   * l'API ne rend pas ce nom-là. Un bouton dont l'affichage dépend d'une chaîne
-   * de caractères que le système peut nommer autrement est un bouton qui ne
-   * s'affiche pas.
-   *
-   * `zoom = 0` demande le champ le plus large du périphérique virtuel, c'est-à-
-   * dire l'ultra grand-angle quand il existe — le même objectif qu'iOS choisit
-   * pour la macro. Sur un téléphone qui n'en a pas, le champ ne bouge tout
-   * simplement pas : rien ne casse.
-   */
-  const [macro, setMacro] = useState(false)
 
+  /**
+   * ⚠️ **`getAvailableLensesAsync` rend le nom LOCALISÉ de l'objectif, pas son
+   * identifiant.** Côté natif : `availableLenses.map { $0.localizedName }`, et
+   * `selectedLens` est comparé au même nom. Une liste écrite en identifiants
+   * (`builtInTripleCamera`, `builtInDualWideCamera`) ne correspond donc jamais
+   * — c'est ce que faisait ce code depuis le 13 août.
+   *
+   * Conséquence, et elle explique le constat de Julien du 29 août 2026 (« le
+   * close-up ne marche plus ») : aucun objectif n'étant sélectionné, expo-camera
+   * retombait sur `defaultBackCamera`, qui rend **`builtInWideAngleCamera`** —
+   * l'objectif simple, qui ne fait pas le point sous une dizaine de
+   * centimètres. La macro était donc hors d'atteinte.
+   *
+   * On cherche maintenant un périphérique **virtuel** par ce que son nom dit,
+   * dans la langue du téléphone : « triple », « double » ou « dual ». Un
+   * périphérique virtuel embarque l'ultra grand-angle et laisse iOS basculer
+   * en macro quand on s'approche — c'est lui qui fait le rapproché, pas un
+   * réglage.
+   *
+   * ⚠️ On ne prend toujours pas l'ultra grand-angle SEUL : son champ à 0,5×
+   * rendrait les codes-barres minuscules à distance normale, pour ne gagner
+   * que le très rapproché.
+   */
   const pickCloseFocusLens = useCallback(async () => {
     try {
       const lenses = await cameraRef.current?.getAvailableLensesAsync()
       if (!lenses?.length) return
-      // Uniquement des périphériques *virtuels* : ils embarquent l'ultra
-      // grand-angle et laissent iOS choisir l'objectif selon la distance.
-      //
-      // On ne prend surtout pas `builtInUltraWideCamera` seul : son champ à
-      // 0,5× ferait paraître les codes-barres minuscules et dégraderait le
-      // scan à distance normale, pour ne gagner que le très rapproché. Les
-      // téléphones qui ont un ultra grand-angle exposent de toute façon un
-      // périphérique virtuel.
-      const preferred = ['builtInTripleCamera', 'builtInDualWideCamera']
-      const best = preferred.find(l => lenses.includes(l))
-      if (best) { objectifAutoRef.current = best; setSelectedLens(best) }
-
+      const sansAccent = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      const virtuel =
+        lenses.find(l => sansAccent(l).includes('triple'))
+        ?? lenses.find(l => /dual|double/.test(sansAccent(l)))
+      if (virtuel) setSelectedLens(virtuel)
     } catch {
-      // Objectif indisponible : l'objectif par défaut reste parfaitement
-      // utilisable, le scan ne doit pas échouer pour autant.
+      // Pas de liste : on garde l'objectif par défaut plutôt que d'échouer.
     }
   }, [])
 
@@ -924,14 +920,15 @@ export function Scanner({
         ? `La balise ${activeBaliseRef.current?.code} restera ouverte : `
           + 'l’inventaire la comptera comme non terminée tant qu’elle l’est.'
         : 'Vous reviendrez à l’inventaire. Rien de ce qui est compté n’est perdu.',
-      // ⚠️ Le bouton plein garde sur l'écran. Cette question n'est plus là pour
-      // décider d'une clôture — elle a son propre bouton, et sa propre
-      // confirmation — mais pour rattraper un retour touché par erreur. La
-      // réponse voulue dans ce cas est donc de rester.
-      action: 'Rester',
-      annuler: 'Quitter',
-    }).then((rester) => {
-      if (rester) return
+      // ⚠️ La MÊME forme que la confirmation de clôture : « Annuler » à gauche,
+      // l'action à droite en bouton plein. Une carte où le bouton plein annule
+      // et l'autre agit inverse le geste d'un écran à l'autre — on finit par
+      // appuyer à droite sans lire. Demande de Julien le 29 août 2026 : « je
+      // veux le même pop up, pas un différent. »
+      action: 'Quitter',
+      annuler: 'Annuler',
+    }).then((quitter) => {
+      if (!quitter) return
       // Retenir l'action et la rejouer au rendu suivant : c'est ce qui lève la
       // garde avant de repartir. La rejouer ici la ferait reprendre au vol.
       setSortieAutorisee(() => data.action)
@@ -1303,9 +1300,6 @@ export function Scanner({
                 facing="back"
                 enableTorch={torch}
                 selectedLens={selectedLens}
-                // 0 = le champ le plus large du périphérique virtuel, donc
-                // l'ultra grand-angle : c'est ce qui permet de s'approcher.
-                zoom={macro ? 0 : undefined}
                 // `autofocus` n'est volontairement pas renseigné : dans
                 // expo-camera, `on` signifie « faire le point une fois puis le
                 // **verrouiller** », et `off` (le défaut) « refaire le point
@@ -1335,15 +1329,7 @@ export function Scanner({
                   sur l'ultra grand-angle quand on s'approche — quand cette
                   bascule ne se fait pas, ce bouton la demande explicitement.
                   Il n'existe que si le téléphone a l'objectif qu'il faut. */}
-              <Pressable
-                style={[styles.macroBtn, macro && styles.macroBtnOn]}
-                onPress={() => setMacro(v => !v)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={macro ? 'Désactiver le rapproché' : 'Activer le rapproché'}
-              >
-                <MacroIcon color={macro ? '#06121a' : FRAME_COLOR_READY} />
-              </Pressable>
+
               {resolving && (
                 <View style={styles.overlay}>
                   <ActivityIndicator color="#fff" size="small" />
@@ -1768,15 +1754,6 @@ function makeStyles(t: Theme) {
       borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
     },
     torchBtnOn: { backgroundColor: '#F5C518', borderColor: '#F5C518' },
-    // À gauche de la torche, même gabarit : deux réglages de la caméra, deux
-    // pastilles identiques.
-    macroBtn: {
-      position: 'absolute', top: Spacing.sm, right: Spacing.sm + 48,
-      width: 40, height: 40, borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center',
-      borderWidth: 1, borderColor: FRAME_COLOR_READY,
-    },
-    macroBtnOn: { backgroundColor: FRAME_COLOR_READY, borderColor: FRAME_COLOR_READY },
 
     voirScansBtn: {
       marginHorizontal: Spacing.md, marginTop: Spacing.sm,

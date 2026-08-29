@@ -76,35 +76,6 @@ export function FichierIcon({ color, size = 18 }: { color: string; size?: number
 }
 
 /** La torche du scanner — le seul bouton de l'écran de scan sans libellé. */
-/**
- * La macro — une fleur, comme sur l'appareil photo d'iPhone. C'est le signe
- * que tout le monde y associe le très rapproché ; en inventer un autre
- * obligerait à l'apprendre.
- *
- * Au trait, comme les autres : à cette taille un aplat devient une tache.
- */
-export function MacroIcon({ color, size = 20 }: { color: string; size?: number }) {
-  const r = size / 2
-  const p = size * 0.19
-  return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none">
-      {[0, 60, 120, 180, 240, 300].map(a => {
-        const rad = (a * Math.PI) / 180
-        return (
-          <Circle
-            key={a}
-            cx={r + Math.cos(rad) * p * 1.35}
-            cy={r + Math.sin(rad) * p * 1.35}
-            r={p}
-            stroke={color}
-            strokeWidth={1.5}
-          />
-        )
-      })}
-    </Svg>
-  )
-}
-
 export function TorcheIcon({ color, size = 20 }: { color: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
