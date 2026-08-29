@@ -13,6 +13,7 @@ import { useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { annulerArbitrage, getArticleLabels, getAudits, getSession, getZoneDashboard, recomputeAudit, resolveAudit } from '@/lib/queries'
+import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { CocheIcon } from '@/components/ui/Icones'
 import type { ArticleAudit } from '@/lib/queries'
 import { depuis } from '@/lib/temps'
@@ -24,6 +25,11 @@ const STATUS_RANK: Record<string, number> = { failed: 0, pending: 1, resolved: 2
 
 /** Au-delà, la liste des arbitrages se replie derrière « Voir les N autres ». */
 const ARBITRES_VUS = 5
+
+/** « 3 unités » — un nombre seul ne dit pas ce qu'il compte. */
+function unites(v: number): string {
+  return `${fmt(v)} unité${v >= 2 ? 's' : ''}`
+}
 
 function fmt(v: number | null): string {
   if (v === null || v === undefined) return '—'
@@ -393,20 +399,22 @@ function AuditCard({
           souvent que l'auditeur, l'écran ne doit pas suggérer la réponse. */}
       <View style={styles.choixRow}>
         <Pressable
-          style={[styles.choixBtn, busy && { opacity: 0.6 }]}
+          style={[styles.choixBtn, { backgroundColor: theme.accent }, busy && { opacity: 0.6 }]}
           onPress={() => onRetenir(counted)}
           disabled={busy}
         >
-          <Text style={styles.choixLabel}>Compteur</Text>
-          <Text style={[styles.choixValeur, tabular]}>{fmt(counted)}</Text>
+          <Text style={[styles.choixTexte, { color: theme.onAccent }, tabular]} numberOfLines={1} adjustsFontSizeToFit>
+            Compteur {unites(counted)}
+          </Text>
         </Pressable>
         <Pressable
-          style={[styles.choixBtn, busy && { opacity: 0.6 }]}
+          style={[styles.choixBtn, { backgroundColor: AUDIT_COLOR }, busy && { opacity: 0.6 }]}
           onPress={() => onRetenir(audited)}
           disabled={busy}
         >
-          <Text style={styles.choixLabel}>Auditeur</Text>
-          <Text style={[styles.choixValeur, tabular]}>{fmt(audited)}</Text>
+          <Text style={[styles.choixTexte, { color: AUDIT_ON }, tabular]} numberOfLines={1} adjustsFontSizeToFit>
+            Auditeur {unites(audited)}
+          </Text>
         </Pressable>
       </View>
       <View style={styles.resolveRow}>
@@ -461,18 +469,29 @@ function makeStyles(t: Theme) {
     figValue: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, marginTop: 2, ...tabular },
     resolveRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center', marginTop: Spacing.xs },
     input: { flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },
-    resolveBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: 16, paddingVertical: 11, ...t.shadowButton },
-    resolveBtnText: { color: t.onAccent, fontFamily: Font.bold, fontSize: 14 },
-    // Deux choix de même poids, côte à côte. En contour, pas en aplat : le
-    // bouton plein de la carte est « Retenir », qui vaut pour la quantité
-    // saisie — deux aplats de plus en feraient trois actions concurrentes.
-    choixRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
-    choixBtn: {
-      flex: 1, minHeight: 44, borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
-      alignItems: 'center', justifyContent: 'center', paddingVertical: 6,
+    resolveBtn: {
+      borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
+      paddingHorizontal: 16, paddingVertical: 11,
     },
-    choixLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
-    choixValeur: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, marginTop: 1 },
+    resolveBtnText: { color: t.textPrimary, fontFamily: Font.bold, fontSize: 14 },
+    // ⚠️ Les deux couleurs sont celles que l'app emploie déjà pour les deux
+    // passes : « Compter des articles » est en accent, « Auditer des articles »
+    // en or (`AUDIT_COLOR`). Reprendre cette paire ici, c'est réutiliser une
+    // association déjà apprise — et deux aplats ne se confondent avec aucune
+    // cellule de chiffres. Constat de Julien sur le premier jet : en contour,
+    // avec une étiquette en capitales et un gros nombre, « je n'ai pas
+    // l'impression que ce soient des boutons ».
+    //
+    // ⚠️ EMPILÉS, PAS CÔTE À CÔTE. Le libellé porte les unités, et
+    // « Auditeur 100000 unités » demande ~171 pt : côte à côte il ne reste que
+    // 136 pt de texte par bouton, il faudrait descendre à 11 pt. Sur toute la
+    // largeur il en reste 300, et la ligne tient quel que soit le nombre.
+    choixRow: { gap: Spacing.sm, marginTop: Spacing.xs },
+    choixBtn: {
+      minHeight: 48, borderRadius: Radius.md,
+      alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md,
+    },
+    choixTexte: { fontSize: 15, fontFamily: Font.bold },
       empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
 
     // Aucun écart à traiter : la bonne nouvelle se dit, au lieu d'une phrase

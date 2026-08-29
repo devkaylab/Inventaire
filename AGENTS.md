@@ -4523,13 +4523,30 @@ invité, et un test vérifie qu'aucun écran ne rejoint plus `delete_audit_line`
 compte. »* **Le site les avait déjà** ; l'app obligeait à retaper la quantité
 à la main. Deux boutons en contour, à largeur égale, portant chacun sa valeur.
 
-- **⚠️ Aucun des deux n'est mis en avant.** Le compteur a raison aussi souvent
-  que l'auditeur : un aplat sur l'un des deux suggérerait la réponse. Ils sont
-  en contour, et le seul bouton plein de la carte reste « Retenir », qui vaut
-  pour la quantité saisie.
-- **⚠️ Ils portent la quantité, pas seulement le rôle.** Sur le site, une
-  infobulle explique ce que retient chaque bouton ; sur un téléphone il n'y en
-  a pas.
+- **⚠️ Ils reprennent les couleurs des deux passes.** Premier jet en contour,
+  avec une étiquette en capitales et un gros nombre : *« je n'ai pas
+  l'impression que ce soient des boutons, intuitivement j'irais saisir la
+  quantité dans autre quantité »* (Julien). Ils empruntaient le dessin des
+  **cellules de chiffres** — donc ils se lisaient comme de l'affichage, et le
+  seul objet qui ressemblait à un bouton était « Retenir », juste à côté du
+  champ. Ce sont maintenant deux aplats, dans les couleurs que l'app emploie
+  déjà pour les deux passes : **accent pour compter, or (`AUDIT_COLOR`) pour
+  auditer** — la paire exacte des boutons « Compter des articles » / « Auditer
+  des articles » de l'écran d'inventaire. On réutilise une association déjà
+  apprise plutôt que d'en inventer une.
+- **⚠️ EMPILÉS, PAS CÔTE À CÔTE.** Le libellé porte les unités
+  (« Compteur 3 unités » — un nombre seul ne dit pas ce qu'il compte), et
+  « Auditeur 100000 unités » demande ~171 pt. Côte à côte il ne reste que
+  **136 pt de texte par bouton** : il faudrait descendre à 11 pt. Sur toute la
+  largeur il en reste 300, et la ligne tient quel que soit le nombre — vérifié
+  à l'écran en forçant 100000 et 123456, à taille pleine et sans
+  rétrécissement. `numberOfLines={1} adjustsFontSizeToFit` reste le filet pour
+  les valeurs absurdes.
+- **« Retenir » cède le premier plan** et passe en contour : saisir une autre
+  quantité est le cas rare, il n'a pas à être le bouton le plus lourd de la
+  carte.
+- **Le singulier est géré** (`unites()`) : « 1 unité », « 0 unité »,
+  « 3 unités ».
 - **⚠️ Chaque nombre ne s'affiche qu'une fois.** Premier jet vu au simulateur :
   la rangée de chiffres affichait « Compteur 3 · Auditeur 2 » et les boutons
   juste dessous répétaient les mêmes deux nombres à quarante points d'écart.

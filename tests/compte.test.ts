@@ -1912,8 +1912,35 @@ describe('un écart d’audit s’arbitre, il ne se supprime pas', () => {
     // Le site les avait déjà ; l'app obligeait à retaper la quantité.
     expect(ecran).toContain('onPress={() => onRetenir(counted)}')
     expect(ecran).toContain('onPress={() => onRetenir(audited)}')
-    expect(ecran).toContain('<Text style={styles.choixLabel}>Compteur</Text>')
-    expect(ecran).toContain('<Text style={styles.choixLabel}>Auditeur</Text>')
+    expect(ecran).toContain('Compteur {unites(counted)}')
+    expect(ecran).toContain('Auditeur {unites(audited)}')
+  })
+
+  it('⚠️ et ils se voient comme des boutons', () => {
+    // Constat de Julien sur le premier jet : en contour, avec une étiquette en
+    // capitales et un gros nombre, ils empruntaient le dessin des cellules de
+    // chiffres — « je n'ai pas l'impression que ce soient des boutons ».
+    // Les deux aplats reprennent les couleurs que l'app emploie déjà pour les
+    // deux passes : accent pour compter, or pour auditer.
+    expect(ecran).toContain('backgroundColor: theme.accent }')
+    expect(ecran).toContain('backgroundColor: AUDIT_COLOR }')
+    expect(ecran).toContain("from '@/constants/colors'")
+    // Et « Retenir » cède le premier plan : il n'est plus un aplat.
+    expect(ecran).not.toContain('resolveBtn: { backgroundColor: t.accent')
+  })
+
+  it('⚠️ un libellé tient sur une ligne, même à 100000 unités', () => {
+    // « Auditeur 100000 unités » demande ~171 pt ; côte à côte il ne reste que
+    // 136 pt de texte par bouton. D'où l'empilement — 300 pt disponibles — et
+    // le repli `adjustsFontSizeToFit` pour les valeurs absurdes.
+    expect(ecran).toContain('choixRow: { gap: Spacing.sm')
+    expect(ecran).not.toContain("choixRow: { flexDirection: 'row'")
+    expect(ecran.match(/numberOfLines=\{1\} adjustsFontSizeToFit/g)?.length).toBe(2)
+  })
+
+  it('le nombre dit ce qu’il compte, au singulier comme au pluriel', () => {
+    expect(ecran).toContain('function unites')
+    expect(ecran).toContain("unité${v >= 2 ? 's' : ''}")
   })
 
   it('⚠️ « Retenir » ne retient plus l’auditeur en douce', () => {
