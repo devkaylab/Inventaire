@@ -796,9 +796,9 @@ export function Scanner({
    * La question nomme ce qui a été compté : c'est le seul chiffre qui permet
    * de se rendre compte qu'on n'est pas sur la bonne balise.
    */
-  async function closeBalise() {
+  async function closeBalise(): Promise<boolean> {
     const active = activeBaliseRef.current
-    if (!active) return
+    if (!active) return true
     const compte = baliseModeRef.current === 'count'
     const pieces = recentScansRef.current.reduce((n, e) => n + e.qty, 0)
     const p = pieces > 1 ? 's' : ''
@@ -816,7 +816,7 @@ export function Scanner({
       // phrase juste au-dessus dit qu'on pourra y revenir.
       surtitre: 'Confirmation',
     })
-    if (!ok) return
+    if (!ok) return false
     // Ouverture différée jamais concrétisée : rien n'a été ouvert, il n'y a
     // rien à refermer. Rappeler `set_balise` déplacerait sa date de clôture
     // pour rien — c'est justement ce qu'on cherche à préserver.
@@ -826,13 +826,13 @@ export function Scanner({
       ignoreBaliseRef.current = active.code
       setActiveBalise(null)
       playScanSound()
-      return
+      return true
     }
     try {
       const result = await setBalise(sessionId, active.code, baliseModeRef.current, false)
       if (!result.success) {
         signaler.erreur('Balise', result.error ?? 'Clôture impossible.')
-        return
+        return true
       }
       if (repereCloture.aVoir) {
         // La célébration est une ligne de fait, pas une fanfare : ce sont les
@@ -850,8 +850,11 @@ export function Scanner({
       queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
       pingSession(sessionId, 'balise')
       playScanSound()
+      return true
     } catch (e) {
       signaler.erreur('Erreur', errorMessage(e))
+      // La clôture a échoué : on ne quitte pas l'écran dans son dos.
+      return false
     }
   }
 
@@ -903,32 +906,31 @@ export function Scanner({
   // from JS state […] Consider using a 'usePreventRemove' hook ». C'est donc
   // ce hook, et non `navigation.addListener`, qui tient le retour natif et le
   // geste de balayage.
+  /**
+   * ⚠️ **Retour clôture la balise, exactement comme les deux boutons
+   * « Clôturer ».** Demande de Julien, répétée le 29 août 2026 : « Retour doit
+   * clôturer au même titre que les deux boutons clôturer ».
+   *
+   * Ce que j'avais fait de travers, deux fois : une question « Quitter le
+   * comptage ? » qui laissait la balise ouverte. Or une balise laissée ouverte
+   * **disparaît de l'écran** — la liste « Revenir sur une balise » ne montre
+   * que les clôturées —, et ses pièces sont introuvables sans rescanner
+   * l'étiquette. Partir sans clôturer n'est donc pas une sortie, c'est une
+   * impasse.
+   *
+   * ⚠️ **Et pas de question quand rien n'est ouvert** (phase balise) : il n'y a
+   * rien à clôturer, donc rien à confirmer. Une carte qui s'ouvre pour ne rien
+   * décider apprend à répondre sans lire.
+   *
+   * `closeBalise` porte déjà sa propre confirmation, nommant la balise et son
+   * compte : on la réutilise telle quelle plutôt que d'en écrire une seconde
+   * qui dériverait. Elle rend `false` si la personne annule ou si la clôture
+   * échoue — on reste alors sur l'écran.
+   */
   const [sortieAutorisee, setSortieAutorisee] = useState<ActionNavigation | null>(null)
-  // ⚠️ **La question se pose TOUJOURS, pas seulement sur une balise ouverte.**
-  // Elle ne visait au départ que la balise réellement ouverte : consulter sans
-  // rien compter ne change rien, donc partir ne coûtait rien. Mais le but de
-  // cette question n'est pas de protéger une donnée, c'est de **rattraper un
-  // retour touché par erreur** — et un doigt qui glisse sur « Retour » se
-  // trompe autant sur une balise consultée que sur une balise ouverte.
-  // Demande de Julien le 29 août 2026 : « le but est d'éviter les mauvaises
-  // manips ». Ne pas la reconditionner.
-  usePreventRemove(!sortieAutorisee, ({ data }) => {
-    const ouverte = !!activeBaliseRef.current && !ouvertureDiffereeRef.current
-    void demander({
-      titre: 'Quitter le comptage ?',
-      texte: ouverte
-        ? `La balise ${activeBaliseRef.current?.code} restera ouverte : `
-          + 'l’inventaire la comptera comme non terminée tant qu’elle l’est.'
-        : 'Vous reviendrez à l’inventaire. Rien de ce qui est compté n’est perdu.',
-      // ⚠️ La MÊME forme que la confirmation de clôture : « Annuler » à gauche,
-      // l'action à droite en bouton plein. Une carte où le bouton plein annule
-      // et l'autre agit inverse le geste d'un écran à l'autre — on finit par
-      // appuyer à droite sans lire. Demande de Julien le 29 août 2026 : « je
-      // veux le même pop up, pas un différent. »
-      action: 'Quitter',
-      annuler: 'Annuler',
-    }).then((quitter) => {
-      if (!quitter) return
+  usePreventRemove(!!activeBalise && !sortieAutorisee, ({ data }) => {
+    void closeBalise().then((cloturee) => {
+      if (!cloturee) return
       // Retenir l'action et la rejouer au rendu suivant : c'est ce qui lève la
       // garde avant de repartir. La rejouer ici la ferait reprendre au vol.
       setSortieAutorisee(() => data.action)

@@ -52,17 +52,20 @@ describe('consulter une balise finie ne l’ouvre pas', () => {
   })
 
   /**
-   * ⚠️ **La question se pose TOUJOURS.** Elle ne visait au départ que la balise
-   * réellement ouverte : consulter sans compter ne change rien. Mais son but
-   * n'est pas de protéger une donnée, c'est de rattraper un retour touché par
-   * erreur — et un doigt qui glisse se trompe autant dans un cas que dans
-   * l'autre. Demande de Julien le 29 août 2026 : « le but est d'éviter les
-   * mauvaises manips ». Ne pas la reconditionner.
+   * ⚠️ **Retour clôture la balise, comme les deux boutons « Clôturer ».**
+   * Demande de Julien, répétée le 29 août 2026. Deux fois j'ai fait une
+   * question « Quitter le comptage ? » qui laissait la balise OUVERTE — or une
+   * balise ouverte disparaît de l'écran : la liste « Revenir sur une balise »
+   * ne montre que les clôturées, et ses pièces sont introuvables sans
+   * rescanner l'étiquette. Partir sans clôturer n'est pas une sortie, c'est
+   * une impasse.
    */
-  it('la question du retour ne dépend plus de l’état de la balise', () => {
-    expect(scanner).toContain('usePreventRemove(!sortieAutorisee')
-    // Le texte, lui, s'adapte : une balise ouverte restera ouverte.
-    expect(scanner).toContain('const ouverte = !!activeBaliseRef.current && !ouvertureDiffereeRef.current')
+  it('le retour clôture la balise ouverte, avec la confirmation de la clôture', () => {
+    expect(scanner).toContain('usePreventRemove(!!activeBalise && !sortieAutorisee')
+    expect(scanner).toContain('void closeBalise().then((cloturee) => {')
+    expect(scanner).toContain('if (!cloturee) return')
+    // Une seule confirmation de clôture, réutilisée : deux dérivent.
+    expect(scanner).not.toContain("titre: 'Quitter le comptage ?'")
   })
 })
 
@@ -97,28 +100,24 @@ describe('quitter le comptage avec une balise ouverte', () => {
     // ⚠️ `beforeRemove` ne retient pas cette pile : l'écran part quand même et
     // la question s'affiche par-dessus l'écran d'arrivée. Essayé, constaté au
     // simulateur, et le runtime le dit lui-même dans son alerte.
-    expect(scanner).toContain('usePreventRemove(!sortieAutorisee')
+    expect(scanner).toContain('usePreventRemove(!!activeBalise && !sortieAutorisee')
     expect(scanner).not.toContain("addListener('beforeRemove'")
   })
 
   /**
-   * ⚠️ **La question du retour a la MÊME forme que celle de la clôture** :
-   * « Annuler » à gauche, l'action à droite en bouton plein. Une carte où le
-   * bouton plein annule et l'autre agit inverse le geste d'un écran à l'autre —
-   * on finit par appuyer à droite sans lire. Demande de Julien le 29 août
-   * 2026, après avoir vu les deux cartes se contredire : « je veux le même pop
-   * up, pas un différent ».
-   *
-   * Le 25 août, la même question portait « Rester » en bouton plein ; c'était
-   * cohérent isolément, et faux à côté de la clôture.
+   * ⚠️ **Pas de question quand rien n'est ouvert.** En phase balise il n'y a
+   * rien à clôturer, donc rien à confirmer : « le bouton retour depuis le scan
+   * des balises n'a pas besoin d'un pop up » (Julien, 29 août 2026). Une carte
+   * qui s'ouvre pour ne rien décider apprend à répondre sans lire.
    */
-  it('la question du retour a la même forme que celle de la clôture', () => {
-    expect(scanner).toContain("titre: 'Quitter le comptage ?'")
-    expect(scanner).toContain("action: 'Quitter'")
-    expect(scanner).toContain("annuler: 'Annuler'")
-    // La clôture, elle, n'a pas bougé.
+  it('ne demande rien quand aucune balise n’est ouverte', () => {
+    expect(scanner).toContain('usePreventRemove(!!activeBalise && !sortieAutorisee')
+  })
+
+  it('la clôture garde sa confirmation, rouge et nommée', () => {
+    expect(scanner).toContain("titre: `Clôturer la balise ${active.code} ?`")
     expect(scanner).toContain("action: 'Clôturer'")
-    expect(scanner).toContain("annuler: 'Annuler'")
+    expect(scanner).toContain("ton: 'danger'")
   })
 
   /**
