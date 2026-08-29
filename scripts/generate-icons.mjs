@@ -121,12 +121,22 @@ const rounded = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   ${glyph}
 </svg>`
 
-// Android adaptive foreground: rounded icon scaled into the centre safe zone
+// Android adaptive icon, in TWO layers — the background carries the purple
+// gradient full-bleed, the foreground carries ONLY the glyph. Putting the
+// whole rounded tile in the foreground (the first attempt) left it floating
+// on the dark backgroundColor: black borders around the icon once Android
+// applied its circular mask.
+const adaptiveBackground = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  ${defs}
+  <rect x="0" y="0" width="512" height="512" fill="url(#bgGrad)"/>
+  <rect x="0" y="0" width="512" height="512" fill="url(#topGlow)"/>
+</svg>`
+
+// Foreground glyph scaled into the centre safe zone (central 66% of the
+// canvas — everything outside may be cropped by the launcher mask).
 const adaptiveForeground = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   ${defs}
-  <g transform="translate(256,256) scale(0.62) translate(-256,-256)">
-    <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#bgGrad)"/>
-    <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#topGlow)"/>
+  <g transform="translate(256,256) scale(0.76) translate(-256,-256)">
     ${glyph}
   </g>
 </svg>`
@@ -142,6 +152,7 @@ function render(svg, size, file, opaque = false) {
 
 render(fullBleed, 1024, 'icon.png', true)
 render(rounded, 1024, 'splash-icon.png')
+render(adaptiveBackground, 1024, 'android-icon-background.png')
 render(adaptiveForeground, 1024, 'android-icon-foreground.png')
 render(rounded, 48, 'favicon.png')
 console.log('Done.')

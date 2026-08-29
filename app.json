@@ -18,6 +18,7 @@
     "android": {
       "package": "com.quantinvo.app",
       "adaptiveIcon": {
+        "backgroundImage": "./assets/images/android-icon-background.png",
         "backgroundColor": "#0A0912",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
