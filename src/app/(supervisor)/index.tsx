@@ -10,6 +10,7 @@ import {
   type GestureResponderEvent,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+import { CorbeilleIcon } from '@/components/ui/Icones'
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -52,18 +53,6 @@ function CadenasIcon({ color }: { color: string }) {
     <Svg width={18} height={18} viewBox="0 0 24 24">
       <Path
         d="M7 11V8a5 5 0 0 1 10 0v3M5.5 11h13v9h-13z"
-        stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none"
-      />
-    </Svg>
-  )
-}
-
-/** Corbeille — un tracé, comme toutes les icônes de l'app. */
-function CorbeilleIcon({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24">
-      <Path
-        d="M4 7h16M10 7V5h4v2M6 7l1 12h10l1-12M10 11v5M14 11v5"
         stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none"
       />
     </Svg>
