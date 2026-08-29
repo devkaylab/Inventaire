@@ -228,6 +228,50 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
 }
 
 // ─── Scanner ──────────────────────────────────────────────────────────────────
+/**
+ * ⚠️ **Une seule définition de la géométrie du cadre**, lue par le dessin *et*
+ * par le filtre. Deux définitions dériveraient au premier ajustement, et le
+ * cadre cesserait de dire la vérité — ce qui est exactement le défaut qu'on
+ * ferme ici.
+ *
+ * Le carré de la phase balise se mesure dans les deux sens : un carré demande
+ * la même valeur en largeur et en hauteur, pas deux pourcentages.
+ */
+export function rectCadre(l: number, h: number, balise: boolean) {
+  if (balise) {
+    const cote = Math.min(l * 0.58, h * 0.62)
+    return { x: (l - cote) / 2, y: (h - cote) / 2, l: cote, h: cote }
+  }
+  const cl = l * 0.84
+  const ch = h * 0.46
+  return { x: (l - cl) / 2, y: (h - ch) / 2, l: cl, h: ch }
+}
+
+/**
+ * Le code visé est-il dans le cadre ? On teste **son centre**, pas son
+ * débordement : un code-barres qui dépasse un peu du cadre a bel et bien été
+ * visé, le refuser serait absurde.
+ *
+ * ⚠️ **On laisse passer quand la position est inconnue.** expo-camera prévient
+ * que `bounds` « peut représenter un rectangle vide » et « ne borne pas
+ * forcément tout le code-barres ». Refuser dans ce cas rendrait certains codes
+ * illisibles sans que rien ne l'explique — mieux vaut un scan de trop.
+ */
+export function viseDansLeCadre(
+  bounds: { origin?: { x: number; y: number }; size?: { width: number; height: number } } | undefined,
+  vue: { l: number; h: number } | null,
+  balise: boolean,
+): boolean {
+  if (!vue || vue.l <= 0 || vue.h <= 0) return true
+  const o = bounds?.origin
+  const s = bounds?.size
+  if (!o || !s || s.width <= 0 || s.height <= 0) return true
+  const cx = o.x + s.width / 2
+  const cy = o.y + s.height / 2
+  const c = rectCadre(vue.l, vue.h, balise)
+  return cx >= c.x && cx <= c.x + c.l && cy >= c.y && cy <= c.y + c.h
+}
+
 export function Scanner({
   sessionId, passNumber, onArticleResolved, initialScans,
   zoneMode = false, mode: baliseMode = 'count', onModeChange, lockMode = false, countedBy,
@@ -393,6 +437,13 @@ export function Scanner({
   const autoScanEnabledRef = useRef(true)
   useEffect(() => { autoScanEnabledRef.current = !balisePhase && autoScan }, [balisePhase, autoScan])
 
+  // Le handler de détection n'est mémoïsé que sur [barcodeReady] : il lit donc
+  // la phase et la taille du viseur par référence, jamais par état.
+  const balisePhaseRef = useRef(balisePhase)
+  useEffect(() => { balisePhaseRef.current = balisePhase }, [balisePhase])
+  const [tailleVue, setTailleVue] = useState<{ l: number; h: number } | null>(null)
+  const tailleVueRef = useRef<{ l: number; h: number } | null>(null)
+
   // Balises déjà terminées (mode courant) — pour revenir corriger une erreur.
   const { data: zoneRows } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
@@ -535,6 +586,11 @@ export function Scanner({
 
   // ── Barcode detection — auto-scan as soon as a code enters the frame ───────
   const handleBarcodeDetected = useCallback((result: BarcodeScanningResult) => {
+    // Le cadre fait loi : ce qui est lu ailleurs dans l'image n'a pas été visé.
+    // Sans ce filtre, un code posé sur la table ou imprimé sur le carton d'à
+    // côté est compté comme si on l'avait cadré.
+    if (!viseDansLeCadre(result.bounds, tailleVueRef.current, balisePhaseRef.current)) return
+
     lastDetectedRef.current = result.data
     if (!barcodeReady) setBarcodeReady(true)
 
@@ -1067,7 +1123,9 @@ export function Scanner({
   // La trace du dernier scan : elle lève le doute « est-ce que ça a pris ? »
   // sans quitter la caméra des yeux. Elle ne remplace jamais un conseil.
   const dernierScan = !balisePhase && recentScans.length > 0
-    ? `Dernier scan · ${recentScans[0].article.label || recentScans[0].article.sku}`
+    // Le CODE, pas le libellé : ce qu'on vérifie d'un coup d'œil, c'est que le
+    // bon code-barres est passé — le nom du produit, on l'a sous les yeux.
+    ? `Dernier scan · ${recentScans[0].article.ean || recentScans[0].article.sku}`
     : null
   const triggerLabel = balisePhase
     ? (barcodeReady ? 'Scanner la balise' : 'Visez une balise…')
@@ -1191,7 +1249,15 @@ export function Scanner({
       {(balisePhase || mode === 'camera') ? (
         permission.granted ? (
           <>
-            <View style={styles.cameraWrapper}>
+            <View
+              style={styles.cameraWrapper}
+              onLayout={e => {
+                const { width, height } = e.nativeEvent.layout
+                const v = { l: width, h: height }
+                tailleVueRef.current = v
+                setTailleVue(v)
+              }}
+            >
               <CameraView
                 ref={cameraRef}
                 style={styles.camera}
@@ -1233,14 +1299,19 @@ export function Scanner({
                   QR de balise, un rectangle large pour un code-barres. C'est
                   la moitié de ce que le viseur enseigne, et elle ne coûte
                   qu'un style. */}
-              <View
-                style={[
-                  styles.scanFrame,
-                  balisePhase ? styles.scanFrameCarre : styles.scanFrameLarge,
-                  barcodeReady && styles.scanFrameReady,
-                ]}
-                pointerEvents="none"
-              />
+              {tailleVue && (() => {
+                const c = rectCadre(tailleVue.l, tailleVue.h, balisePhase)
+                return (
+                  <View
+                    style={[
+                      styles.scanFrame,
+                      { left: c.x, top: c.y, width: c.l, height: c.h },
+                      barcodeReady && styles.scanFrameReady,
+                    ]}
+                    pointerEvents="none"
+                  />
+                )
+              })()}
               {/* Cooldown bar */}
               <Animated.View
                 style={[styles.cooldownBar, { width: cooldownAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
@@ -1597,7 +1668,7 @@ function makeStyles(t: Theme) {
     autoScanPillText: { fontSize: 12, fontFamily: Font.bold, color: t.textMuted },
     autoScanPillTextOn: { color: t.onAccent },
 
-    cameraWrapper: { height: 200, marginHorizontal: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', position: 'relative', backgroundColor: t.cameraBg },
+    cameraWrapper: { height: 340, marginHorizontal: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', position: 'relative', backgroundColor: t.cameraBg },
     camera: { flex: 1 },
     overlay: {
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -1608,10 +1679,6 @@ function makeStyles(t: Theme) {
       position: 'absolute',
       borderWidth: 2, borderColor: FRAME_COLOR_IDLE, borderRadius: Radius.sm,
     },
-    scanFrameLarge: { top: '15%', left: '12%', right: '12%', height: '50%' },
-    // Mesuré sur la hauteur fixe de la caméra (200), plutôt qu'en pourcentages :
-    // un carré demande la même valeur dans les deux sens.
-    scanFrameCarre: { top: 28, height: 144, width: 144, left: '50%', marginLeft: -72 },
     scanFrameReady: { borderColor: FRAME_COLOR_READY, borderWidth: 3 },
     torchBtn: {
       position: 'absolute', top: Spacing.sm, right: Spacing.sm,

@@ -1027,12 +1027,43 @@ describe('le viseur enseigne, une consigne à la fois', () => {
   })
 
   it('la forme du cadre annonce ce qu’on attend', () => {
-    expect(scanner).toContain('balisePhase ? styles.scanFrameCarre : styles.scanFrameLarge')
-    expect(scanner).toContain('scanFrameCarre')
+    // Depuis le 29 août la géométrie est CALCULÉE, plus figée dans deux
+    // styles : `rectCadre` rend un carré en phase balise et un rectangle
+    // large en phase article. Le carré se mesure dans les deux sens.
+    expect(scanner).toContain('rectCadre(tailleVue.l, tailleVue.h, balisePhase)')
+    expect(scanner).toContain('Math.min(l * 0.58, h * 0.62)')
+  })
+
+  /**
+   * ⚠️ Le dessin et le filtre lisent LA MÊME géométrie. Deux définitions
+   * dériveraient au premier ajustement, et le cadre cesserait de dire la
+   * vérité — ce qui est exactement le défaut que le filtre ferme.
+   */
+  it('le cadre fait loi : ce qui est lu ailleurs est écarté', () => {
+    expect(scanner).toContain('viseDansLeCadre(result.bounds, tailleVueRef.current, balisePhaseRef.current)')
+    // Une seule définition de la géométrie.
+    expect(scanner.match(/export function rectCadre/g)?.length).toBe(1)
+  })
+
+  /**
+   * ⚠️ On laisse passer quand la position est inconnue. expo-camera prévient
+   * que `bounds` peut représenter un rectangle vide : refuser dans ce cas
+   * rendrait certains codes illisibles sans que rien ne l'explique.
+   */
+  it('mais il laisse passer quand la position est inconnue', () => {
+    const corps = scanner.split('export function viseDansLeCadre')[1]?.slice(0, 900) ?? ''
+    expect(corps).toContain('if (!vue || vue.l <= 0 || vue.h <= 0) return true')
+    expect(corps).toContain('if (!o || !s || s.width <= 0 || s.height <= 0) return true')
+    // Le centre du code, pas son débordement : un code-barres qui dépasse un
+    // peu du cadre a bel et bien été visé.
+    expect(corps).toContain('s.width / 2')
   })
 
   it('la trace du dernier scan lève le doute, sans voler la place d’un conseil', () => {
     expect(scanner).toContain("`Dernier scan · ")
+    // Le CODE, pas le libellé : ce qu'on vérifie d'un coup d'œil, c'est que le
+    // bon code-barres est passé (demande de Julien, 29 août 2026).
+    expect(scanner).toContain('recentScans[0].article.ean || recentScans[0].article.sku')
     expect(scanner).toContain('conseil ?? dernierScan ?? camHint')
   })
 })
