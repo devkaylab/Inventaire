@@ -37,7 +37,8 @@ import { resolveArticle, setBalise } from '@/lib/offlineSync'
 import { parseBalise } from '@/lib/balises'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
-import { CroixIcon, TorcheIcon } from '@/components/ui/Icones'
+import { CroixIcon, MacroIcon, TorcheIcon } from '@/components/ui/Icones'
+import { ChevronIcon } from '@/components/ui/MenuList'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -323,6 +324,11 @@ export function Scanner({
   const clavierDecaleRef = useRef(false)
   const [resolving, setResolving] = useState(false)
   const [recentScans, setRecentScans] = useState<ScanEntry[]>([])
+  // La liste des scans passe derrière un bouton : pendant qu'on compte, on
+  // regarde le rayon, pas le téléphone. Ce qui rend le geste sûr, c'est que la
+  // question « est-ce que ça a pris ? » a déjà sa réponse dans la ligne
+  // « Dernier scan », sous le viseur.
+  const [feuilleScans, setFeuilleScans] = useState(false)
   const [barcodeReady, setBarcodeReady] = useState(false)
   const [illisibleCode, setIllisibleCode] = useState<string | null>(null)
   const [autoScan, setAutoScan] = useState(true)
@@ -342,6 +348,16 @@ export function Scanner({
   // pas et on garde l'objectif par défaut. La prop est ignorée sur Android.
   const cameraRef = useRef<CameraView>(null)
   const [selectedLens, setSelectedLens] = useState<string | undefined>(undefined)
+  // L'objectif choisi automatiquement, mémorisé pour pouvoir y revenir quand
+  // on quitte la macro.
+  const objectifAutoRef = useRef<string | undefined>(undefined)
+  /**
+   * La macro n'existe que si le téléphone a un ultra grand-angle. Sur les
+   * modèles qui n'en ont pas, la liste ne le contient pas et le bouton
+   * n'apparaît jamais — plutôt qu'un bouton qui ne ferait rien.
+   */
+  const [macroDispo, setMacroDispo] = useState(false)
+  const [macro, setMacro] = useState(false)
 
   const pickCloseFocusLens = useCallback(async () => {
     try {
@@ -357,7 +373,11 @@ export function Scanner({
       // périphérique virtuel.
       const preferred = ['builtInTripleCamera', 'builtInDualWideCamera']
       const best = preferred.find(l => lenses.includes(l))
-      if (best) setSelectedLens(best)
+      if (best) { objectifAutoRef.current = best; setSelectedLens(best) }
+      // L'ultra grand-angle est ce qui rend la macro possible : c'est lui
+      // qu'iOS met en avant quand on s'approche, et c'est lui que le bouton
+      // force quand la bascule automatique ne se fait pas.
+      setMacroDispo(lenses.includes('builtInUltraWideCamera'))
     } catch {
       // Objectif indisponible : l'objectif par défaut reste parfaitement
       // utilisable, le scan ne doit pas échouer pour autant.
@@ -1289,6 +1309,27 @@ export function Scanner({
               >
                 <TorcheIcon color={torch ? '#111' : '#fff'} />
               </Pressable>
+              {/* La macro se force, elle ne se règle pas. iOS bascule seul
+                  sur l'ultra grand-angle quand on s'approche — quand cette
+                  bascule ne se fait pas, ce bouton la demande explicitement.
+                  Il n'existe que si le téléphone a l'objectif qu'il faut. */}
+              {macroDispo && (
+                <Pressable
+                  style={[styles.macroBtn, macro && styles.macroBtnOn]}
+                  onPress={() => {
+                    setMacro(v => {
+                      const actif = !v
+                      setSelectedLens(actif ? 'builtInUltraWideCamera' : objectifAutoRef.current)
+                      return actif
+                    })
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={macro ? 'Désactiver le rapproché' : 'Activer le rapproché'}
+                >
+                  <MacroIcon color={macro ? '#06121a' : FRAME_COLOR_READY} />
+                </Pressable>
+              )}
               {resolving && (
                 <View style={styles.overlay}>
                   <ActivityIndicator color="#fff" size="small" />
@@ -1465,31 +1506,57 @@ export function Scanner({
       ) : (
         /* Phase articles : liste des scans + bouton clôturer la balise */
         <>
-          <View style={styles.listHeader}>
-            <Text style={styles.listHeaderText}>
-              {recentScans.length === 0
-                ? 'En attente de scan…'
-                : `Scans récents — ${totalScanned} unité${totalScanned > 1 ? 's' : ''}`}
-            </Text>
-          </View>
-          <FlatList
-            data={recentScans}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <ScanRow
-                entry={item}
-                onIncrement={() => handleIncrement(item)}
-                onDecrement={() => handleDecrement(item)}
-                onDelete={() => handleDelete(item)}
-              />
-            )}
-            ListEmptyComponent={<Text style={styles.emptyHint}>Scannez un article pour commencer</Text>}
-          />
+          {/* Le bouton n'existe pas tant que rien n'est scanné : « 0 article »
+              n'apprend rien et occuperait la place qu'on vient de gagner. */}
+          {recentScans.length > 0 && (
+            <Pressable
+              style={styles.voirScansBtn}
+              onPress={() => setFeuilleScans(true)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.voirScansTexte}>
+                Voir les {recentScans.length} article{recentScans.length > 1 ? 's' : ''} scanné{recentScans.length > 1 ? 's' : ''}
+              </Text>
+              <ChevronIcon color={theme.textMuted} />
+            </Pressable>
+          )}
           {activeBalise && (
             <Pressable style={styles.closeFooterBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
               <Text style={styles.closeFooterText}>Clôturer la balise {activeBalise.code}</Text>
             </Pressable>
+          )}
+
+          {/* Un voile posé sur l'écran, PAS une `Modal`. iOS refuse de
+              présenter un contrôleur par-dessus un autre : la fiche « article
+              inconnu » en est une, et les deux se bloqueraient. Même leçon que
+              `GeneratingOverlay` le 23 août. */}
+          {feuilleScans && (
+            <View style={styles.feuilleFond} pointerEvents="box-none">
+              <Pressable style={styles.feuilleVoile} onPress={() => setFeuilleScans(false)} />
+              <View style={styles.feuille}>
+                <View style={styles.feuilleTete}>
+                  <Text style={styles.feuilleTitre}>
+                    {totalScanned} unité{totalScanned > 1 ? 's' : ''} · {recentScans.length} article{recentScans.length > 1 ? 's' : ''}
+                  </Text>
+                  <Pressable onPress={() => setFeuilleScans(false)} hitSlop={10} accessibilityLabel="Fermer">
+                    <CroixIcon color={theme.textMuted} />
+                  </Pressable>
+                </View>
+                <FlatList
+                  data={recentScans}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.listContent}
+                  renderItem={({ item }) => (
+                    <ScanRow
+                      entry={item}
+                      onIncrement={() => handleIncrement(item)}
+                      onDecrement={() => handleDecrement(item)}
+                      onDelete={() => handleDelete(item)}
+                    />
+                  )}
+                />
+              </View>
+            </View>
           )}
         </>
       )}
@@ -1687,6 +1754,36 @@ function makeStyles(t: Theme) {
       borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
     },
     torchBtnOn: { backgroundColor: '#F5C518', borderColor: '#F5C518' },
+    // À gauche de la torche, même gabarit : deux réglages de la caméra, deux
+    // pastilles identiques.
+    macroBtn: {
+      position: 'absolute', top: Spacing.sm, right: Spacing.sm + 48,
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1, borderColor: FRAME_COLOR_READY,
+    },
+    macroBtnOn: { backgroundColor: FRAME_COLOR_READY, borderColor: FRAME_COLOR_READY },
+
+    voirScansBtn: {
+      marginHorizontal: Spacing.md, marginTop: Spacing.sm,
+      backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
+      borderRadius: Radius.md, paddingVertical: 14, paddingHorizontal: Spacing.md,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    },
+    voirScansTexte: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },
+
+    feuilleFond: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' },
+    feuilleVoile: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' },
+    feuille: {
+      backgroundColor: t.background, borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg,
+      paddingBottom: Spacing.md, maxHeight: '72%',
+    },
+    feuilleTete: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: t.border,
+    },
+    feuilleTitre: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },
     cooldownBar: {
       position: 'absolute', bottom: 28, left: 0, height: 3,
       backgroundColor: FRAME_COLOR_READY, borderRadius: 2,
