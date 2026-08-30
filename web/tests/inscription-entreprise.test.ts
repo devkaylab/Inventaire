@@ -53,61 +53,17 @@ describe('Grille tarifaire', () => {
     expect(t.chiffres).toBe(3)
   })
 
-  it('reste d’accord avec l’annexe 2 des CGV', () => {
-    // C'est le contrat qui fait foi. Changer un montant ici sans changer les
-    // CGV — ou l'inverse — doit casser la suite : le devis sortirait sinon
-    // avec un prix que le contrat ne prévoit pas.
-    const attendus: [string, string][] = [
-      ["Jusqu'à 10 000 unités", '2 100 €'],
-      ['De 10 001 à 50 000 unités', '4 200 €'],
-      ['De 50 001 à 200 000 unités', '6 600 €'],
-      ['De 200 001 à 500 000 unités', '10 200 €'],
-      ['De 500 001 à 1 000 000 unités', '14 400 €'],
-    ]
-    for (const [libelle, prix] of attendus) {
-      expect(cgv, `${libelle} dans l’annexe 2`).toContain(`| ${libelle} | ${prix} |`)
-    }
-    expect(cgv).toContain('| Au-delà de 1 000 000 unités | Sur devis |')
+  // ⚠️ Trois gardes ont vécu ici jusqu'au 30 août 2026 : elles vérifiaient que
+  // cette grille correspondait à l'annexe 2 des CGV et aux profils du deck.
+  // Elles n'ont plus d'objet — le prix ne suit plus le volume de stock mais le
+  // nombre d'appareils comptant simultanément (hypothèse 4). La garde n'a pas
+  // disparu, elle a DÉMÉNAGÉ dans tests/offres.test.ts, où elle porte sur la
+  // grille qui tarife réellement.
+  //
+  // Ce module reste utilisé pour DIMENSIONNER une installation (MagasinSaisie)
+  // et pour le recoupement stock / surface de lib/secteurs — pas pour établir
+  // un prix. Ne pas y raccrocher les CGV.
 
-    // Et chaque montant du module doit se retrouver dans le contrat.
-    for (const t of TRANCHES) {
-      if (t.prixEuros === null) continue
-      expect(cgv, `${t.prixEuros} € absent des CGV`).toContain(
-        `${t.prixEuros.toLocaleString('fr-FR').replace(/ | /g, ' ')} €`,
-      )
-    }
-  })
-
-  it('nomme les profils de la même façon dans le code, les CGV et le deck', () => {
-    // Les profils s'affichent au prospect sur /inscription et sur la
-    // diapositive « L'offre ». Les laisser diverger d'un support à l'autre
-    // ferait douter, au moment précis où on demande de la confiance.
-    const deck = readFileSync(join(racine, 'docs/entreprise/deck/build.js'), 'utf8')
-    for (const t of TRANCHES) {
-      // Le contrat, lui, nomme toutes les tranches — « sur devis » comprise.
-      expect(cgv, `profil « ${t.profil} » absent des CGV`).toContain(`| ${t.profil} |`)
-      // Le deck ne montre que la grille des prix affichés, et s'arrête donc à
-      // « Très grand magasin ». La tranche au-delà d'un million n'a pas de
-      // prix de grille : c'est une conversation, pas une ligne de tableau, et
-      // l'annoncer sur une diapositive commerciale poserait une question à
-      // laquelle la diapositive ne répond pas. Décision de Julien, 25 août
-      // 2026 — ne pas « compléter » le deck en l'y ajoutant.
-      if (t.prixEuros === null) continue
-      expect(deck, `profil « ${t.profil} » absent du deck`).toContain(t.profil)
-    }
-
-    // Les noms n'engagent pas : seul le volume détermine la tranche, et le
-    // contrat doit le dire — sans quoi un client pourrait plaider son profil.
-    expect(cgv).toContain('Seul le volume de stock détermine la')
-  })
-
-  it('compte en unités, et les CGV le disent', () => {
-    // L'ancienne rédaction laissait le choix ouvert (« nombre de références ou
-    // d'unités »). C'était trois tranches d'écart sur un même magasin.
-    expect(cgv).toContain('unités en stock')
-    expect(cgv).not.toContain('nombre de références ou d’unités')
-    expect(cgv).not.toContain("nombre de références ou d'unités")
-  })
 })
 
 describe('Recoupement stock / surface', () => {

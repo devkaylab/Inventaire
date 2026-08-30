@@ -22,7 +22,7 @@ const COMPRIS = [
 const QUESTIONS = [
   {
     q: 'Qu’est-ce qu’un « appareil qui compte » ?',
-    r: 'Un téléphone ou une tablette qui scanne, en même temps que les autres, pendant un inventaire. Nous mesurons le maximum atteint, pas le nombre de téléphones que vous possédez : changer d’appareil ne change rien à votre facture.',
+    r: 'Un téléphone ou une tablette qui scanne, en même temps que les autres, pendant un inventaire. Nous mesurons le maximum atteint, pas le nombre de téléphones que vous possédez : changer d’appareil ne change rien à votre facture.',
   },
   {
     q: 'Que se passe-t-il si nous dépassons le jour de l’inventaire ?',
@@ -35,6 +35,10 @@ const QUESTIONS = [
   {
     q: 'Faut-il déclarer notre stock ?',
     r: 'Non. Vous n’avez rien à déclarer, rien à justifier, et rien à régulariser en fin d’année. C’est précisément ce que cette façon de facturer supprime.',
+  },
+  {
+    q: 'Puis-je résilier ?',
+    r: 'Au mois, oui, quand vous voulez : vous arrêtez, le mois en cours va à son terme et rien n’est prélevé ensuite. À l’année, la licence court douze mois — vous pouvez y mettre fin, mais l’année reste due et vous gardez l’accès complet jusqu’au terme. C’est la contrepartie du prix réduit.',
   },
   {
     q: 'Mensuel ou annuel, qu’est-ce qui change ?',
@@ -134,11 +138,11 @@ export default function TarifsPage() {
                 Dites-nous combien de personnes comptent chez vous un jour d’inventaire.
                 C’est la seule chose que nous avons besoin de savoir.
               </p>
-              {/* Un texte qui invite à écrire donne l'adresse, ou se tait : sans
+              {/* Un texte qui invite à écrire donne l'adresse, ou se tait : sans
                   NEXT_PUBLIC_CONTACT_EMAIL, on renvoie vers le formulaire. */}
-              {CONTACT_EMAIL ? (
+              {CONTACT_EMAIL ? (
                 <a className="btn btn-primary" href={`mailto:${CONTACT_EMAIL}`}>Nous écrire</a>
-              ) : (
+              ) : (
                 <Link className="btn btn-primary" href="/inscription">Déposer une demande</Link>
               )}
             </div>
@@ -147,7 +151,7 @@ export default function TarifsPage() {
 
         <p className="tarifs-pied">
           <span>Prix hors taxes, par magasin.</span>
-          <span>Sans engagement, résiliable à tout moment.</span>
+          <span>Mensuel sans engagement ; annuel dû jusqu’à son terme.</span>
           <span>Aucun matériel à acheter.</span>
         </p>
       </main>

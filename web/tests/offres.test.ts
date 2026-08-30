@@ -117,6 +117,51 @@ describe('la page tarifs', () => {
   })
 })
 
+describe('le contrat dit la même chose que la page', () => {
+  // Reprise de la garde qui vivait dans inscription-entreprise.test.ts avant le
+  // 30 août 2026 : c'est le contrat qui fait foi, et un montant qui changerait
+  // d'un côté sans l'autre ferait souscrire à un prix que les CGV ne prévoient
+  // pas.
+  const cgv = readFileSync(join(__dirname, '../../docs/entreprise/cgv-quantinvo-brouillon.md'), 'utf8')
+  // Les retours à la ligne du markdown tombent où ils veulent, et le fichier
+  // mêle les deux apostrophes : on compare le texte, pas sa mise en forme.
+  const plat = cgv.replace(/\s+/g, ' ').replace(/\u2019/g, "'")
+  // euros() groupe les milliers par une espace insécable étroite ; le markdown
+  // écrit une espace ordinaire. On compare des montants, pas des blancs.
+  const sansBlanc = (t: string) => t.replace(/\s+/g, ' ')
+
+  it('reprend la grille à l’annexe 2 des CGV', () => {
+    for (const o of OFFRES) {
+      expect(plat, `${o.nom} absente de l’annexe 2`).toContain(`| ${o.nom} |`)
+      expect(plat, `le prix mensuel de ${o.nom}`).toContain(sansBlanc(`| ${euros(o.mois)} |`))
+      expect(plat, `le prix annuel de ${o.nom}`).toContain(sansBlanc(`| ${euros(o.an)} |`))
+    }
+    expect(plat, 'le supplément mensuel').toContain(sansBlanc(`**${euros(SUPPLEMENT.mois)} par mois**`))
+    expect(plat, 'le supplément annuel').toContain(sansBlanc(`**${euros(SUPPLEMENT.an)} par an**`))
+  })
+
+  it('dit que le prix ne suit ni le stock ni le nombre d’inventaires', () => {
+    expect(plat).toContain('Ni le volume de stock')
+    expect(plat).toContain("ni le nombre d'Inventaires réalisés dans l'année")
+  })
+
+  it('énonce les deux engagements, qui ne sont pas les mêmes', () => {
+    // Mensuel sans engagement, annuel dû jusqu'au terme (décision du 30 août
+    // 2026). La page l'annonce, le contrat doit le tenir — et l'inverse.
+    expect(plat, 'le mensuel s’arrête quand on veut').toContain("**aucune somme n'est due au-delà**")
+    expect(plat, 'l’annuel reste dû').toContain("le prix de l'année entière reste dû")
+    expect(plat, 'l’accès est maintenu jusqu’au terme').toContain("conserve l'accès complet au Service jusqu'au terme")
+  })
+
+  it('ne promet aucun remboursement au Client qui résilie de lui-même', () => {
+    // La page dit « sans engagement » en tête : c'est vrai du mensuel, et
+    // seulement de lui. Le contrat ne doit pas laisser croire l'inverse.
+    expect(plat).toContain('ne donne lieu à aucun remboursement, même au prorata')
+    // Mais le prorata reste dû quand le manquement vient de l'Éditeur.
+    expect(plat).toContain('la part de licence non consommée est remboursée au prorata')
+  })
+})
+
 describe('le site ne contredit plus la grille', () => {
   it('ne facture plus au volume de stock sur les pages publiques', () => {
     // La grille au volume a cessé d'être l'assiette le 30 août 2026. Une page

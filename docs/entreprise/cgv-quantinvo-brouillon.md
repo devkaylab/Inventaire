@@ -1,9 +1,15 @@
 # Conditions générales de vente et d'utilisation — Quantinvo (brouillon)
 
-**Statut** : brouillon du 21 août 2026, rédigé par l'assistant de
+**Statut** : brouillon du 21 août 2026, **révisé le 30 août 2026** pour la
+nouvelle assiette tarifaire — le prix ne suit plus le volume de stock déclaré
+mais le **nombre d'appareils comptant simultanément** dans un magasin
+(articles 5, 6, 7 et annexe 2 récrits ; décision consignée dans
+`hypotheses-tarifaires.md`, hypothèse 4). Rédigé par l'assistant de
 développement à partir du fonctionnement réel du produit. **À faire relire par
-un conseil juridique avant toute signature.** Les crochets `[…]` marquent les
-valeurs à compléter une fois la société immatriculée.
+un conseil juridique avant toute signature** — et l'article 7.1, qui rend le
+solde de l'année dû sur une licence annuelle résiliée, est le premier point à
+lui soumettre. Les crochets `[…]` marquent les valeurs à compléter une fois la
+société immatriculée.
 
 ---
 
@@ -31,6 +37,13 @@ Contact : [adresse e-mail de contact], [téléphone].
 - **Inventaire** : une session de comptage ouverte par un superviseur pour un
   magasin, avec les fichiers importés, les scans, les écarts et le rapport
   produits.
+- **Appareil comptant** : un terminal (téléphone ou tablette) sur lequel un
+  Utilisateur enregistre des comptages pour un Magasin. **Seul compte le nombre
+  d'Appareils comptant EN MÊME TEMPS**, mesuré comme le maximum simultané
+  atteint sur la période : le nombre de terminaux que le Client possède, et le
+  remplacement d'un terminal par un autre, sont sans effet.
+- **Offre** : le palier de la grille (annexe 2) correspondant au nombre
+  d'Appareils comptant du Magasin. **Une Offre couvre un seul Magasin.**
 - **Données d'inventaire** : l'ensemble des données saisies ou importées par
   le Client et ses Utilisateurs dans le Service.
 
@@ -60,15 +73,16 @@ raisonnable.
 
 ## 5. Souscription, ouverture des accès
 
-5.1 Le Client adresse une demande depuis le site, en indiquant pour chaque
-magasin son **volume de stock théorique** en unités. L'Éditeur établit un devis
-précisant les magasins couverts, la tranche de volume de stock applicable à
-chacun et le prix annuel correspondant. Le Client répond de l'exactitude des
-volumes qu'il déclare (article 6.4).
+5.1 Le Client souscrit, pour chaque Magasin, l'Offre correspondant au nombre
+d'Appareils comptant qu'il prévoit d'y mobiliser (annexe 2), et choisit son
+rythme de paiement — mensuel ou annuel (article 6.2). La souscription se fait
+**en ligne** pour les trois Offres. Un devis préalable est établi dans deux
+cas : lorsque le Client équipe plusieurs Magasins, et lorsqu'un Magasin dépasse
+cent Appareils comptant.
 
-5.2 À l'acceptation du devis et à l'encaissement, l'Éditeur crée l'entreprise
-du Client dans le Service, ses magasins et leurs codes d'accès, et invite la
-personne désignée comme administrateur d'entreprise.
+5.2 À l'encaissement du premier terme, l'Éditeur crée l'entreprise du Client
+dans le Service, ses magasins et leurs codes d'accès, et invite la personne
+désignée comme administrateur d'entreprise.
 
 5.3 L'administrateur d'entreprise invite ensuite ses superviseurs ; chaque
 superviseur ajoute ses compteurs. **Aucun compte n'est créé sans invitation.**
@@ -81,34 +95,41 @@ prévient l'Éditeur sans délai en cas de divulgation.
 
 ## 6. Prix et paiement
 
-6.1 Le prix est une **licence annuelle par magasin**, déterminée par la tranche
-de volume de stock du magasin. Le volume s'entend en **unités en stock** — le
-nombre de pièces physiques, et non le nombre de références — selon la grille en
-vigueur au jour du devis, reprise en annexe 2 [de 2 100 à 14 400 € HT par an et
-par magasin ; au-delà d'un million d'unités, prix sur devis]. Le prix est
-exprimé hors taxes ; la TVA s'ajoute au taux en vigueur.
+6.1 Le prix est une **licence par Magasin**, déterminée par le nombre
+d'Appareils comptant simultanément dans ce Magasin, selon la grille de
+l'annexe 2. Il est exprimé hors taxes ; la TVA s'ajoute au taux en vigueur.
+**Ni le volume de stock, ni le nombre de références, ni le nombre
+d'Utilisateurs, ni le nombre d'Inventaires réalisés dans l'année n'entrent dans
+la détermination du prix.**
 
-6.2 La licence est payable **d'avance, pour l'année**, à réception de la
-facture, par virement [ou par carte via Stripe lorsque ce moyen sera proposé].
-Les accès sont ouverts à l'encaissement.
+6.2 Le Client choisit l'un des deux rythmes de paiement, au prix indiqué pour
+chacun à l'annexe 2 :
 
-6.3 La tranche est déterminée à partir du **volume de stock théorique déclaré
-par le Client** pour chaque magasin lors de sa demande. Elle est **acquise pour
-toute la période annuelle** : les variations de stock en cours d'année,
-notamment saisonnières, sont sans effet sur le prix déjà facturé.
+- **mensuel** : douze échéances par année de service, prélevées d'avance à
+  chaque date anniversaire mensuelle ;
+- **annuel** : une échéance unique, payable d'avance pour douze mois, à un prix
+  inférieur au total des douze échéances mensuelles.
 
-6.4 Le Service ne mesure pas le stock total d'un magasin : le Client n'y
-importe que le périmètre qu'il choisit de compter — souvent une marque ou une
-zone — et l'import du stock théorique y est facultatif. Le volume déclaré ne
-peut donc être contredit que **par excès** : si le stock théorique importé sur
-un seul inventaire dépasse la tranche souscrite pour ce magasin, il établit que
-le magasin relève au moins de la tranche supérieure. L'Éditeur en informe alors
-le Client et facture le complément au prorata de la période restant à courir ;
-le Client peut, dans les [trente] jours de cette information, préférer résilier
-la licence du magasin concerné et être remboursé au prorata.
+Les accès sont ouverts à l'encaissement du premier terme.
 
-6.5 La tranche est réexaminée à chaque renouvellement sur déclaration du
-Client, selon les mêmes règles.
+6.3 Le nombre d'Appareils comptant est **mesuré par le Service** : il retient,
+pour chaque Magasin, le maximum d'Appareils ayant enregistré des comptages
+simultanément. Cette mesure ne porte que sur des terminaux, jamais sur
+l'identité des personnes qui les utilisent. Le Client n'a aucune déclaration à
+fournir, aucun justificatif à produire et aucune régularisation à opérer en
+fin de période.
+
+6.4 **Un dépassement ne suspend jamais un comptage en cours.** Si le nombre
+d'Appareils comptant d'un Magasin dépasse celui de son Offre, le Service
+continue de fonctionner sans restriction : aucun Appareil n'est refusé, aucun
+Inventaire n'est interrompu. L'Éditeur en informe le Client, qui dispose du
+choix de passer à l'Offre supérieure ou de revenir dans les limites de son
+Offre. À défaut, l'Offre supérieure s'applique **au renouvellement suivant**,
+sans effet rétroactif sur la période en cours.
+
+6.5 Au-delà de cent Appareils comptant sur un même Magasin, un supplément
+s'ajoute à l'Offre la plus élevée, par tranche entamée de dix Appareils, au
+tarif indiqué à l'annexe 2.
 
 6.6 Retard de paiement : pénalités au taux de [trois fois le taux d'intérêt
 légal], exigibles sans rappel, et indemnité forfaitaire de recouvrement de
@@ -121,21 +142,46 @@ effet, l'Éditeur peut suspendre les accès du magasin concerné.
 
 ## 7. Durée, renouvellement, résiliation
 
-7.1 La licence court **douze mois** à compter de l'ouverture des accès du
-magasin.
+7.1 La durée et les conditions de résiliation dépendent du **rythme de paiement
+choisi à l'article 6.2**, et de lui seul.
 
-7.2 Elle se renouvelle par tacite reconduction pour des périodes de douze
-mois, sauf dénonciation par l'une des parties [un] mois avant l'échéance, par
-écrit. L'Éditeur rappelle l'échéance au Client au moins [deux] mois avant.
+**Paiement mensuel — sans engagement.** La licence court par périodes d'un
+mois, reconduites tacitement. Le Client peut résilier **à tout moment**, depuis
+son espace ou par écrit. La résiliation prend effet **au terme du mois en cours
+déjà réglé** ; aucune échéance ultérieure n'est prélevée et **aucune somme
+n'est due au-delà**.
 
-7.3 Chaque partie peut résilier en cas de manquement grave de l'autre non
+**Paiement annuel — douze mois.** La licence court douze mois à compter de
+l'ouverture des accès du Magasin. Le Client peut y mettre fin en cours d'année,
+mais **le prix de l'année entière reste dû** : la licence ayant été réglée
+d'avance, la résiliation vaut renonciation au renouvellement et **ne donne lieu
+à aucun remboursement, même au prorata**. Le Client **conserve l'accès complet
+au Service jusqu'au terme des douze mois**.
+
+⚠️ Le prix annuel est inférieur au total de douze mensualités (annexe 2) :
+c'est la contrepartie de cette durée. Le Client qui souhaite pouvoir
+interrompre à tout moment choisit le paiement mensuel.
+
+7.2 Chaque licence se renouvelle par tacite reconduction — pour un mois ou pour
+douze, selon le rythme — sauf dénonciation par l'une des parties avant
+l'échéance : **immédiatement** pour le rythme mensuel, [un] mois avant
+l'échéance pour le rythme annuel, par écrit. L'Éditeur rappelle l'échéance
+annuelle au Client au moins [deux] mois à l'avance.
+
+7.3 Le Client peut passer du rythme mensuel au rythme annuel à tout moment ; le
+passage de l'annuel au mensuel prend effet au terme de la période annuelle en
+cours.
+
+7.4 Chaque partie peut résilier en cas de manquement grave de l'autre non
 réparé [trente] jours après mise en demeure écrite. En cas de résiliation aux
-torts du Client, les sommes versées restent acquises ; aux torts de l'Éditeur,
-la part de licence non consommée est remboursée au prorata.
+torts du Client, les sommes versées restent acquises ; **aux torts de
+l'Éditeur, la part de licence non consommée est remboursée au prorata**, y
+compris pour une licence annuelle — l'absence de remboursement prévue à
+l'article 7.1 ne vaut que pour une résiliation à l'initiative du Client.
 
-7.4 Le Client peut ajouter un magasin en cours d'année ; la licence du
-magasin ajouté est facturée au prorata jusqu'à l'échéance commune [ou court
-douze mois de sa propre date — choisir].
+7.5 Le Client peut ajouter un Magasin en cours d'année ; la licence du Magasin
+ajouté est facturée au prorata jusqu'à l'échéance commune [ou court douze mois
+de sa propre date — choisir].
 
 ## 8. Obligations de l'Éditeur
 
@@ -295,27 +341,32 @@ sort des données à la fin, audit).
 
 ## Annexe 2 — Grille tarifaire en vigueur
 
-Le volume s'entend en **unités en stock** — le nombre de pièces physiques du
-magasin, et non son nombre de références.
+Prix hors taxes, **par Magasin**. Le palier est déterminé par le nombre
+d'Appareils comptant **simultanément** dans le Magasin (article 6.3).
 
-| Profil | Tranche de volume de stock du magasin | Licence annuelle HT |
-|---|---|---|
-| Boutique | Jusqu'à 10 000 unités | 2 100 € |
-| Magasin | De 10 001 à 50 000 unités | 4 200 € |
-| Grande surface | De 50 001 à 200 000 unités | 6 600 € |
-| Grand magasin | De 200 001 à 500 000 unités | 10 200 € |
-| Très grand magasin | De 500 001 à 1 000 000 unités | 14 400 € |
-| Hypermarché | Au-delà de 1 000 000 unités | Sur devis |
+| Offre | Appareils comptant simultanément | Par mois | Par an |
+|---|---|---|---|
+| Essential | Jusqu'à 2 | 65 € | 690 € |
+| Advanced | De 3 à 20 | 225 € | 2 400 € |
+| Enterprise | De 21 à 100 | 650 € | 6 900 € |
 
-Les noms de profil sont indicatifs et n'ont pas de portée contractuelle : ils
-servent à se repérer dans la grille. **Seul le volume de stock détermine la
-tranche applicable.**
+Au-delà de cent Appareils comptant sur un même Magasin (article 6.5), par
+tranche entamée de dix Appareils supplémentaires : **47 € par mois** ou
+**500 € par an**.
+
+Le paiement annuel représente une économie de 90 €, 300 € et 900 € selon
+l'Offre, par rapport au total de douze mensualités. Cette économie est la
+contrepartie de l'engagement de douze mois prévu à l'article 7.1.
+
+Les Offres couvrent chacune **un seul Magasin**. Un second Magasin souscrit sa
+propre Offre, choisie selon le nombre d'Appareils comptant qui lui est propre.
 
 ---
 
 ## Points à trancher avant relecture juridique
 
-1. Préavis de non-renouvellement : un ou deux mois.
+1. Préavis de non-renouvellement annuel : un ou deux mois. (Le rythme mensuel
+   n'en a pas : c'est ce qui fait le « sans engagement ».)
 2. Plafond de responsabilité : une licence annuelle du magasin, ou de
    l'ensemble des magasins du Client.
 3. Magasin ajouté en cours d'année : prorata à échéance commune, ou cycle
@@ -323,11 +374,21 @@ tranche applicable.**
 4. Engagement de disponibilité chiffré : aucun pour l'instant, à prévoir si
    une enseigne le demande (et alors l'assortir de crédits plutôt que de
    pénalités).
-5. Vérification du volume déclaré : le Service ne sait constater qu'un
-   **plancher** (article 6.4), jamais le stock total du magasin. Le vrai
-   garde-fou est donc commercial — établir le devis sur l'export de stock du
-   prospect, pas sur un chiffre annoncé. À trancher : faut-il en faire une
-   condition d'établissement du devis.
-6. Clause de référence commerciale : à garder ou non.
-7. Conditions d'un essai gratuit ou d'un inventaire pilote, si cette pratique
+5. ⚠️ **Le déséquilibre de l'article 7.1 doit être relu par un juriste.** Le
+   Client qui résilie une licence annuelle ne récupère rien, alors qu'il perd
+   l'usage — même s'il conserve l'accès jusqu'au terme, ce qui est la
+   contrepartie prévue. La clause est courante en B2B et se justifie par
+   l'économie consentie (annexe 2), mais elle mérite d'être vérifiée au regard
+   des clauses abusives entre professionnels (article L. 442-1 du Code de
+   commerce), d'autant que le site annonce « sans engagement » en tête de la
+   page Tarifs.
+6. **Le passage annuel → mensuel** (article 7.3) prend effet au terme : à
+   confirmer que c'est bien l'intention, plutôt qu'un basculement immédiat avec
+   remboursement du solde.
+7. Clause de référence commerciale : à garder ou non.
+8. Conditions d'un essai gratuit ou d'un inventaire pilote, si cette pratique
    commerciale est retenue.
+9. **Le dépassement (article 6.4) n'est assorti d'aucune sanction** : le Client
+   qui dépasse durablement ne paie l'Offre supérieure qu'au renouvellement. À
+   confirmer — c'est un choix commercial assumé (ne jamais bloquer un comptage),
+   pas un oubli, mais il laisse jusqu'à douze mois d'usage non facturé.
