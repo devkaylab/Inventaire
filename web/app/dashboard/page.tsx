@@ -149,6 +149,7 @@ export default function DashboardPage() {
           <section className="tb-kpis">
             <Kpi
               nom="Pièces comptées ce mois-ci"
+              icone="pieces"
               valeur={nb(tb.pieces_mois)}
               precedent={tb.pieces_mois_prec}
               actuel={tb.pieces_mois}
@@ -156,6 +157,7 @@ export default function DashboardPage() {
             />
             <Kpi
               nom="Inventaires clôturés ce mois-ci"
+              icone="clotures"
               valeur={nb(tb.clotures_mois)}
               precedent={tb.clotures_mois_prec}
               actuel={tb.clotures_mois}
@@ -164,6 +166,7 @@ export default function DashboardPage() {
             />
             <Kpi
               nom="Valeur comptée ce mois-ci"
+              icone="valeur"
               valeur={`${money(tb.valeur_mois)} €`}
               precedent={tb.valeur_mois_prec}
               actuel={tb.valeur_mois}
@@ -201,6 +204,13 @@ export default function DashboardPage() {
                 <div className="tb-rangs">
                   {tb.derniers.map((d) => (
                     <Link href={`/dashboard/${d.session_id}`} className="tb-rang" key={d.session_id}>
+                      <span className="tb-vignette" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3.5 9 5 4.5A1 1 0 0 1 6 4h12a1 1 0 0 1 .95.68L20.5 9" />
+                          <path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9" />
+                          <path d="M9.5 20v-5h5v5" />
+                        </svg>
+                      </span>
                       <div className="tb-rang-corps">
                         <div className="tb-rang-titre">{d.nom}</div>
                         <div className="tb-rang-sous">{d.magasin} · {fmtDate(d.cree_le)}</div>
@@ -267,6 +277,35 @@ function initialesDe(nom: string | null): string {
   return (mots[0][0] + (mots.length > 1 ? mots[mots.length - 1][0] : '')).toUpperCase()
 }
 
+/** Les trois icônes des tuiles, celles de la maquette — au trait, grille 24. */
+const KPI_ICONES = {
+  pieces: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 8V6a2 2 0 0 1 2-2h2" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+      <path d="M20 16v2a2 2 0 0 1-2 2h-2" />
+      <path d="M8 20H6a2 2 0 0 1-2-2v-2" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+    </svg>
+  ),
+  clotures: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 4v16h16" />
+      <rect x="7" y="12" width="2.6" height="5" rx="0.5" />
+      <rect x="11.7" y="8" width="2.6" height="9" rx="0.5" />
+      <rect x="16.4" y="5" width="2.6" height="12" rx="0.5" />
+    </svg>
+  ),
+  valeur: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M15 8.5a4 4 0 1 0 0 7" />
+      <line x1="8" y1="10.8" x2="13" y2="10.8" />
+      <line x1="8" y1="13.2" x2="13" y2="13.2" />
+    </svg>
+  ),
+} as const
+
 /**
  * Un indicateur et son évolution contre le mois dernier.
  * `absolu` : la différence en unités plutôt qu'en pourcentage — « 1 de
@@ -274,9 +313,9 @@ function initialesDe(nom: string | null): string {
  * Un mois précédent à zéro n'affiche pas d'évolution : un pourcentage de
  * zéro est un chiffre inventé.
  */
-function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu }: {
+function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu, icone }: {
   nom: string; valeur: string; actuel: number; precedent: number
-  refTexte: string; absolu?: boolean
+  refTexte: string; absolu?: boolean; icone: keyof typeof KPI_ICONES
 }) {
   const delta = actuel - precedent
   let chip: { texte: string; sens: 'plus' | 'moins' } | null = null
@@ -287,7 +326,10 @@ function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu }: {
   }
   return (
     <div className="panel tb-kpi">
-      <div className="tb-kpi-nom">{nom}</div>
+      <div className="tb-kpi-haut">
+        <span className="tb-kpi-ico">{KPI_ICONES[icone]}</span>
+        <span className="tb-kpi-nom">{nom}</span>
+      </div>
       <div className="tb-kpi-bas">
         <span className="tb-kpi-valeur num">{valeur}</span>
         {chip && (

@@ -231,7 +231,7 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
     // glisserait le bord gauche sous le rail dès qu'elle rétrécit.
     expect(css).toContain('.app-rail {')
     expect(css).toContain('position: fixed; top: 0; bottom: 0; left: 0;')
-    expect(css).toContain('calc(var(--rail-l) + max(0px, (100% - var(--rail-l) - 1120px) / 2))')
+    expect(css).toContain('calc(var(--rail-l) + max(0px, (100% - var(--rail-l) - var(--main-l)) / 2))')
   })
 })
 
