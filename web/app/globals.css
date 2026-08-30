@@ -2464,3 +2464,31 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 /* Le recoupement stock / surface d'une vente : il alerte, en ambre. */
 .tb-rang-densite { color: var(--warning-text); }
+
+/* ── La boîte de réception ──────────────────────────────────
+   Un message est un texte, pas une étiquette : il se lit en entier, ses
+   retours à la ligne compris. Voir app/messages/page.tsx. */
+.msg-liste { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; max-width: 760px; }
+.msg-liste > .msg { margin-top: 0; padding: 20px 22px; }
+/* Un message non lu porte un filet d'accent à gauche — discret, et il
+   disparaît dès la première visite. */
+.msg-neuf { border-left: 3px solid var(--accent); }
+.msg-tete { display: flex; align-items: center; gap: 12px; }
+.msg-avatar {
+  width: 38px; height: 38px; border-radius: 999px; flex: none;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.msg-qui { min-width: 0; }
+.msg-de { font-size: 14px; font-weight: 600; }
+.msg-cie { color: var(--text-2); font-weight: 500; }
+.msg-date { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+.msg-sujet {
+  font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin-top: 14px;
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+}
+.msg-corps {
+  margin-top: 6px; color: var(--text-2); font-size: 14.5px; line-height: 1.6;
+  white-space: pre-line; overflow-wrap: anywhere;
+}

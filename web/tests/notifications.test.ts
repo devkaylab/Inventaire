@@ -14,6 +14,8 @@ const message = lire('../components/dashboard/MessageAdmin.tsx')
 const edge = lire('../../supabase/functions/message-admin/index.ts')
 const recherche = lire('../components/dashboard/RechercheGlobale.tsx')
 const tableau = lire('../app/dashboard/page.tsx')
+const boite = lire('../app/messages/page.tsx')
+const migrationBoite = lire('../../supabase/migrations/20260830150001_boite_de_reception.sql')
 
 describe('les notifications', () => {
   it('⚠️ la table ne s’écrit jamais depuis le client', () => {
@@ -126,6 +128,42 @@ describe('le message à l’administrateur', () => {
 
   it('la réponse va à l’expéditeur, pas à une boîte de service', () => {
     expect(edge).toContain('reply_to: userData.user.email')
+  })
+})
+
+describe('la boîte de réception', () => {
+  it('un message se lit en entier, pas seulement en notification', () => {
+    // Constat de Julien au premier message réel : la cloche annonce et
+    // tronque, rien ne permettait d'ouvrir. Le rang mène à la boîte.
+    expect(cloche).toContain("lien: '/messages'")
+    expect(boite).toContain("rpc('mes_messages')")
+    // Un message est un texte : ses retours à la ligne comptent.
+    expect(lire('../app/globals.css')).toContain('.msg-corps {')
+    expect(lire('../app/globals.css')).toContain('white-space: pre-line')
+  })
+
+  it('elle est réservée à qui reçoit', () => {
+    // Un superviseur ordinaire écrit, il ne reçoit pas : l'écran serait vide
+    // à jamais. La garde le renvoie chez lui.
+    expect(boite).toContain('guard.profile.is_company_admin || !!guard.profile.is_admin')
+    expect(boite).toContain("window.location.replace('/dashboard')")
+    // Et le rail ne l'offre qu'aux deux profils concernés.
+    const onglets = shell.split('export function ongletsPour')[1]?.split('\n}\n')[0] ?? ''
+    const superviseur = onglets.split('profile.is_company_admin')[1]?.split('return [')[2] ?? ''
+    expect(superviseur).not.toContain("'/messages'")
+    expect(onglets).toContain("{ href: '/messages', label: 'Messages' }")
+  })
+
+  it('⚠️ ouvrir la boîte ne marque QUE les messages', () => {
+    // Une invitation à un inventaire garde son point tant que la cloche ne
+    // l'a pas montrée : deux gestes de lecture, deux portées.
+    expect(migrationBoite).toContain("and type in ('message_superviseur', 'message_entreprise')")
+    expect(boite).toContain("rpc('marquer_messages_lus')")
+  })
+
+  it('les deux fonctions reposent leurs droits', () => {
+    expect(migrationBoite).toContain('revoke execute on function public.mes_messages() from public, anon;')
+    expect(migrationBoite).toContain('revoke execute on function public.marquer_messages_lus() from public, anon;')
   })
 })
 

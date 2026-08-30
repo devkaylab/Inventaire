@@ -37,6 +37,8 @@ export function ongletsPour(profile: Profile): Onglet[] {
       // L'état de la machine, à côté de ce que les clients en font.
       { href: '/admin/capacite', label: 'Capacité' },
       { href: '/admin/console', label: 'Console' },
+      // Ce que les entreprises clientes nous écrivent.
+      { href: '/messages', label: 'Messages' },
     ]
   }
   const superviseur = profile.role === 'supervisor'
@@ -51,6 +53,8 @@ export function ongletsPour(profile: Profile): Onglet[] {
       { href: '/magasins', label: 'Magasins' },
       { href: '/equipe', label: 'Équipe' },
       { href: '/inventaires', label: 'Inventaires' },
+      // Ce que ses superviseurs lui écrivent.
+      { href: '/messages', label: 'Messages' },
       { href: '/journal', label: 'Journal' },
     ]
   }
@@ -111,6 +115,10 @@ function IconeOnglet({ href }: { href: string }) {
         <path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8z" />
         <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
         <line x1="4" y1="13" x2="20" y2="13" />
+      </>)
+    case '/messages':
+      return d(<>
+        <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.9-.9L3 20l1.2-4.3A8 8 0 0 1 3.5 11.5a8.38 8.38 0 0 1 8.5-8.3 8.38 8.38 0 0 1 9 8.3z" />
       </>)
     case '/journal':
       return d(<>

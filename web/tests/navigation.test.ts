@@ -20,6 +20,7 @@ const PAGES_CONNECTEES = [
   '../app/dashboard/new/page.tsx',
   '../app/dashboard/[sessionId]/page.tsx',
   '../app/equipe/page.tsx',
+  '../app/messages/page.tsx',
   '../app/magasins/page.tsx',
   '../app/outils/page.tsx',
   '../app/account/page.tsx',

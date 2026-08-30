@@ -40,17 +40,19 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
         texte: `${d.nom || 'Un compteur'} s’est connecté pour la première fois : son profil de compteur est prêt.`,
         lien: '/equipe',
       }
+    // Le texte est tronqué par la fenêtre : le rang mène à la boîte, où le
+    // message se lit en entier (constat de Julien, 30 août 2026).
     case 'message_superviseur':
       return {
         titre: `Message de ${d.de || 'un superviseur'}`,
-        texte: `${d.sujet ?? ''} — « ${d.message ?? ''} »`,
-        lien: null,
+        texte: d.sujet ?? '',
+        lien: '/messages',
       }
     case 'message_entreprise':
       return {
         titre: `Message de ${d.de || 'une entreprise'}${d.entreprise ? ` — ${d.entreprise}` : ''}`,
-        texte: `${d.sujet ?? ''} — « ${d.message ?? ''} »`,
-        lien: null,
+        texte: d.sujet ?? '',
+        lien: '/messages',
       }
   }
 }
