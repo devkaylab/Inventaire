@@ -14,7 +14,7 @@ const lire = (p: string) => readFileSync(path.join(here, p), 'utf8')
 
 const migration = lire('../../supabase/migrations/20260821250001_suppression_inventaire_createur_ou_admin_entreprise.sql')
 const policies = lire('../../supabase/migrations/20260821250002_inventaire_cloture_rouvert_par_son_createur.sql')
-const page = lire('../app/dashboard/page.tsx')
+const page = lire('../app/inventaires/page.tsx')
 const menu = lire('../components/dashboard/SessionActionsMenu.tsx')
 
 describe('qui peut supprimer un inventaire', () => {

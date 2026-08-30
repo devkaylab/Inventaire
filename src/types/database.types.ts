@@ -1688,6 +1688,10 @@ export type Database = {
         }
         Returns: Json
       }
+      tableau_de_bord_superviseur: {
+        Args: { p_semaine?: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

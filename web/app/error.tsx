@@ -28,7 +28,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
 
         <button className="btn btn-primary btn-block" onClick={reset}>Réessayer</button>
         <div className="center-link">
-          <Link href="/dashboard">Retour à mes inventaires</Link>
+          <Link href="/inventaires">Retour à mes inventaires</Link>
         </div>
       </div>
     </div>

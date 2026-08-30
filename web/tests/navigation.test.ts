@@ -16,6 +16,7 @@ const compte = lire('../app/account/page.tsx')
 // doit se voir : elle n'aurait ni navigation, ni retour, ni déconnexion.
 const PAGES_CONNECTEES = [
   '../app/dashboard/page.tsx',
+  '../app/inventaires/page.tsx',
   '../app/dashboard/new/page.tsx',
   '../app/dashboard/[sessionId]/page.tsx',
   '../app/equipe/page.tsx',
@@ -38,17 +39,19 @@ describe('la barre de navigation', () => {
   it('ramène au site public', () => {
     // Le retour à l'accueil manquait partout : c'est le premier reproche.
     expect(shell).toContain('href="/"')
-    expect(shell).toContain('retour au site')
+    // Le rail n'a pas la place du libellé « ← retour au site » : le logo
+    // porte la destination en title, comme les onglets portent la leur.
+    expect(shell).toContain('title="Retour au site Quantinvo"')
   })
 
   it('porte le nom, l’entreprise ET le rôle, ensemble', () => {
     // « Entreprise C » seul ne dit pas ce qu'on y fait ; le rôle seul ne dit
-    // pas où. Les deux se lisent sur la même ligne, sous le nom.
-    expect(shell).toContain('who-name')
-    expect(shell).toContain('who-co')
+    // pas où. Le rail n'affiche que l'avatar : les deux se lisent ensemble en
+    // tête de son menu.
+    expect(shell).toContain('who-menu-nom')
+    expect(shell).toContain('who-menu-role')
     expect(shell).toContain('companyName')
-    expect(shell).toContain('roleCourt')
-    expect(shell).toContain('appartenance')
+    expect(shell).toContain('roleLisible')
     // L'administrateur Quantinvo n'a pas d'entreprise : c'est Quantinvo même.
     expect(shell).toContain("'Quantinvo'")
   })
@@ -68,27 +71,24 @@ describe('la barre de navigation', () => {
     // modificateur par page, sinon le bandeau change de dimension d'un
     // onglet à l'autre.
     const css = lire('../app/globals.css')
-    expect(shell).toContain('className="appbar-inner"')
+    expect(shell).toContain('className="app-rail"')
     expect(shell).toContain('className="app-main"')
     expect(css).not.toContain('.app-main-wide')
-    expect(css).not.toContain('.appbar-inner-wide')
+    expect(css).not.toContain('.app-rail-wide')
   })
 
-  it('signale son menu par un vrai chevron, pas par un caractère', () => {
-    // Reproche de Julien, 21 août 2026 : « la flèche proche de l'icône compte
-    // est trop petite, ça ressemble à un point ». C'était « ▾ » à 11 px. Un
-    // tracé SVG reste net à toute taille — et c'est la règle du projet :
-    // icônes dessinées, jamais de caractère ni d'emoji.
-    // Le commentaire du composant cite le caractère pour expliquer le
-    // pourquoi : on ne regarde donc que le code.
+  it('les onglets du rail sont des tracés nommés, jamais des caractères', () => {
+    // Règle du projet : icônes dessinées, jamais de caractère ni d'emoji.
+    // Et un rail d'icônes muettes serait illisible : chaque onglet porte son
+    // nom en `title` et `aria-label`.
     const codeSeul = shell
       .split('\n')
       .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
       .join('\n')
     expect(codeSeul).not.toContain('▾')
-    expect(codeSeul).toContain('ChevronBas')
-    // Il pivote à l'ouverture : il dit dans quel sens va le prochain clic.
-    expect(lire('../app/globals.css')).toContain('.who-btn[aria-expanded="true"] .who-caret')
+    expect(codeSeul).toContain('IconeOnglet')
+    expect(codeSeul).toContain('title={o.label}')
+    expect(codeSeul).toContain('aria-label={o.label}')
   })
 
   it('se referme au clic ailleurs et à Échap', () => {
@@ -97,13 +97,14 @@ describe('la barre de navigation', () => {
   })
 
   it('s’allume sur les sous-pages d’un espace', () => {
-    // Reproche de Julien, 21 août 2026 : le tableau de bord d'un inventaire
-    // portait son propre bandeau — logo, « Mes inventaires », « Mon compte » —
-    // au lieu de la barre. Elle y est ; l'onglet « Inventaires » doit rester
-    // allumé pendant qu'on travaille dans un inventaire.
-    expect(shell).not.toContain("o.href !== '/dashboard'")
+    // L'onglet « Inventaires » reste allumé pendant qu'on travaille dans un
+    // inventaire — or ses sous-pages vivent sous /dashboard/<id> alors que la
+    // liste vit sur /inventaires : la correspondance est écrite en clair.
+    expect(shell).toContain("o.href === '/inventaires' && pathname.startsWith('/dashboard/')")
     // /admin garde son exception : il ne s'allume pas sur /admin/entreprises.
     expect(shell).toContain("o.href !== '/admin'")
+    // Et « Tableau de bord » ne s'allume que sur le tableau de bord lui-même.
+    expect(shell).toContain("o.href !== '/dashboard'")
   })
 })
 
@@ -126,10 +127,10 @@ describe('le tableau de bord d’un inventaire', () => {
   })
 
   it('porte le retour vers la liste au-dessus du titre', () => {
-    // Piste A validée sur maquette (25 août 2026) : l'onglet « Tableau de
-    // bord » mène au même endroit mais ne se lit pas comme un retour. Le lien
-    // nomme sa destination, au-dessus du titre — pas dans la rangée d'actions.
-    expect(page).toContain('<Link href="/dashboard" className="retour-liste">')
+    // Piste A validée sur maquette (25 août 2026) : le lien nomme sa
+    // destination, au-dessus du titre — et depuis le 30 août 2026 la liste
+    // vit sur /inventaires, plus sur /dashboard.
+    expect(page).toContain('<Link href="/inventaires" className="retour-liste">')
     expect(page.indexOf('retour-liste')).toBeLessThan(page.indexOf('className="page-title"'))
   })
 })
@@ -143,16 +144,19 @@ describe('les onglets suivent le rôle', () => {
     expect(onglets).toContain("'/admin/console'")
   })
 
-  it('le superviseur ouvre sur ses inventaires', () => {
-    // Le premier onglet dit ce pour quoi on ouvre le site. La comparaison porte
-    // sur la branche du superviseur seule : celle de l'administrateur la
-    // précède dans le fichier et porte un autre ordre, voulu.
+  it('le superviseur ouvre sur son tableau de bord, la liste juste derrière', () => {
+    // Décision de Julien, 30 août 2026 : /dashboard est l'atterrissage, la
+    // liste complète vit sur /inventaires. Le premier onglet dit ce pour quoi
+    // on ouvre le site. La comparaison porte sur la branche du superviseur
+    // seule : celle de l'administrateur la précède et porte un autre ordre.
     // [2] et non [1] : le premier `return [` est celui de l'administrateur.
     const superviseur = onglets.split('profile.is_company_admin')[1]?.split('return [')[2] ?? ''
     const i = superviseur.indexOf("'/dashboard'")
-    const j = superviseur.indexOf("'/equipe'")
+    const j = superviseur.indexOf("'/inventaires'")
+    const k = superviseur.indexOf("'/equipe'")
     expect(i).toBeGreaterThan(-1)
     expect(i).toBeLessThan(j)
+    expect(j).toBeLessThan(k)
   })
 
   it('l’administrateur d’entreprise ouvre sur son entreprise', () => {
@@ -163,7 +167,10 @@ describe('les onglets suivent le rôle', () => {
     expect(admin + onglets).toContain("'/entreprise'")
     expect(admin + onglets).toContain("'/journal'")
     const branche = onglets.split("if (profile.is_company_admin)")[1]?.split(']')[0] ?? ''
-    expect(branche.indexOf("'/entreprise'")).toBeLessThan(branche.indexOf("'/dashboard'"))
+    // Ses « Inventaires » mènent à la liste : le tableau de bord de
+    // /dashboard est celui d'un superviseur, lui a le sien sur /entreprise.
+    expect(branche.indexOf("'/entreprise'")).toBeLessThan(branche.indexOf("'/inventaires'"))
+    expect(branche).not.toContain("'/dashboard'")
   })
 
   it('la boîte à outils quitte sa barre sans disparaître', () => {
@@ -192,7 +199,7 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
     // En CSS et non en mesure JavaScript : pas de bascule visible au
     // chargement, et le rendu serveur reste le même.
     const bloc = css.split('@media (max-width: 719px)')[1]?.split('\n}')[0] ?? ''
-    expect(bloc, 'la barre et le contenu sont masqués sous 720 px').toContain('.appbar, .app-main, .dash { display: none; }')
+    expect(bloc, 'le rail et le contenu sont masqués sous 720 px').toContain('.app-rail, .app-main, .dash { display: none; }')
     expect(css).toContain('.ordinateur-requis { display: none; }')
   })
 
@@ -218,12 +225,13 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
     }
   })
 
-  it('les onglets passent vraiment à la ligne sur écran étroit', () => {
-    // `flex: 1` (base 0) l'emportait sur `width: 100%` : les onglets ne
-    // passaient jamais à la ligne, ils s'écrasaient à droite de l'avatar et
-    // il n'en restait qu'un, coupé. Le `flex: none` est le correctif.
-    const bloc = css.split('@media (max-width: 900px)').pop() ?? ''
-    expect(bloc).toContain('.appbar-tabs { order: 3; flex: none; width: 100%')
+  it('le contenu ne passe jamais sous le rail', () => {
+    // Le rail est fixe : le contenu se centre dans ce qui RESTE de la
+    // fenêtre. Un `margin: 0 auto` naïf centrerait sur la fenêtre entière et
+    // glisserait le bord gauche sous le rail dès qu'elle rétrécit.
+    expect(css).toContain('.app-rail {')
+    expect(css).toContain('position: fixed; top: 0; bottom: 0; left: 0;')
+    expect(css).toContain('calc(var(--rail-l) + max(0px, (100% - var(--rail-l) - 1120px) / 2))')
   })
 })
 
@@ -631,5 +639,51 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
         expect(m[0], `${page} : chaque couche porte aria-hidden`).toContain('aria-hidden="true"')
       }
     }
+  })
+})
+
+describe('le tableau de bord d’atterrissage du superviseur', () => {
+  const page = lire('../app/dashboard/page.tsx')
+  const liste = lire('../app/inventaires/page.tsx')
+  const migration = lire('../../supabase/migrations/20260830090001_tableau_de_bord_superviseur.sql')
+
+  it('agrège sur le serveur, jamais au navigateur', () => {
+    // La règle de tenue en charge : pas de `select` sur counts côté client.
+    expect(page).toContain("rpc('tableau_de_bord_superviseur'")
+    expect(page).not.toContain("from('counts')")
+  })
+
+  it('⚠️ l’écart suit la même règle que le rapport', () => {
+    // Deux écrans qui montrent le même chiffre doivent le calculer pareil —
+    // leçon du 22 août 2026. La fonction reprend mot pour mot la préférence
+    // du rapport : arbitrage > audit > comptage.
+    expect(migration).toContain('coalesce(a.final_qty, a.qty_pass2, a.qty_pass1, 0)')
+    // Et l'univers du rapport : théorique ∪ compté.
+    expect(migration).toContain('from public.theoretical_stock t')
+  })
+
+  it('la liste complète vit derrière « Tout voir »', () => {
+    expect(page).toContain('href="/inventaires"')
+    expect(liste).toContain('function InventairesPage')
+    // Le bouton « + Nouvel inventaire » ne se masque JAMAIS — il est sur les
+    // deux écrans.
+    expect(page).toContain('Nouvel inventaire')
+    expect(liste).toContain('Nouvel inventaire')
+  })
+
+  it('les contrôles des graphiques sont de vrais boutons', () => {
+    // Une maquette peut dessiner des div ; l'écran, non.
+    expect(page).toContain('type="button"')
+    expect(page).not.toContain('className="tb-segmente"><span')
+  })
+
+  it('un mois précédent à zéro n’invente pas de pourcentage', () => {
+    expect(page).toContain('precedent > 0')
+  })
+
+  it('la fonction repose ses droits dans la même migration', () => {
+    // `create or replace` rend EXECUTE à PUBLIC — leçon de
+    // `get_session_activity`.
+    expect(migration).toContain('revoke execute on function public.tableau_de_bord_superviseur(date) from public, anon;')
   })
 })

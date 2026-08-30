@@ -224,6 +224,13 @@ export async function mockSupabase(
         case 'get_session_detail': return json(route, F.DETAIL)
         case 'recompute_session_audit': return json(route, { success: true, failed: 2, pending: 1, total: 4 })
         case 'get_my_stores': return json(route, F.STORES)
+        // Le tableau de bord d'atterrissage (30 août 2026) : les agrégats
+        // viennent de la base, l'écran ne calcule rien.
+        case 'tableau_de_bord_superviseur': return json(route, F.TABLEAU_DE_BORD)
+        case 'my_team_by_store': return json(route, F.EQUIPE)
+        case 'mes_notifications': return json(route, { non_lues: 0, liste: [] })
+        case 'marquer_notifications_lues': return json(route, { success: true, lues: 0 })
+        case 'deposer_message_admin': return json(route, { success: true, destinataires: 1 })
 
         case 'resolve_audit': {
           const b = body as { p_sku: string; p_zone: string; p_final_qty: number }

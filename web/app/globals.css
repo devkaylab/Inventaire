@@ -1839,67 +1839,52 @@ a { color: inherit; text-decoration: none; }
   .balise-form { grid-template-columns: 1fr; }
 }
 
-/* ── Barre de navigation de l'espace connecté ────────────────
-   Une seule barre pour toutes les pages authentifiées : le logo ramène au
-   site public, les onglets ne portent que le travail, et tout ce qui
-   concerne la personne vit sous son avatar. Voir components/AppShell.tsx. */
-:root { --appbar-h: 64px; }
-.appbar {
-  position: sticky; top: 0; z-index: 30;
-  background: var(--header-bg); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--hairline);
+/* ── Rail de navigation de l'espace connecté ────────────────
+   Un seul rail pour toutes les pages authentifiées (décision de Julien,
+   30 août 2026 : « en finalité on ne gardera que le rail ») : le logo ramène
+   au site public, les onglets ne portent que le travail — en icônes nommées,
+   title + aria-label — et tout ce qui concerne la personne vit sous son
+   avatar, en bas. Voir components/AppShell.tsx.
+   `--appbar-h` reste défini : .dash-rail s'y colle, il vaut simplement 0. */
+:root { --appbar-h: 0px; --rail-l: 76px; }
+.app-rail {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 30;
+  width: var(--rail-l);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 0 18px;
+  background: var(--surface); border-right: 1px solid var(--hairline);
 }
-.appbar-inner {
-  max-width: 1120px; margin: 0 auto; padding: 0 24px;
-  height: 64px; display: flex; align-items: center; gap: 28px;
-}
-.appbar .brand { flex: none; }
-.brand-retour {
-  display: block; margin-top: -3px;
-  font-family: var(--font-inter), sans-serif; font-weight: 500;
-  font-size: 10px; letter-spacing: 0; color: var(--text-3);
-}
-.appbar-tabs { display: flex; align-items: center; gap: 4px; flex: 1; }
-.appbar-tab {
-  font-family: var(--font-sora), var(--font-inter), sans-serif;
-  font-size: 14px; font-weight: 600; color: var(--text-2);
-  padding: 8px 14px; border-radius: 10px; white-space: nowrap;
+.rail-logo { display: block; margin-bottom: 12px; }
+.rail-onglets { display: flex; flex-direction: column; gap: 6px; }
+.rail-onglet {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: grid; place-items: center; color: var(--text-3);
   transition: color .15s ease, background .15s ease;
 }
-.appbar-tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
-.appbar-tab[aria-current="page"] { color: var(--text); background: var(--accent-soft); }
+.rail-onglet:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
+.rail-onglet[aria-current="page"] { color: var(--accent-light); background: var(--accent-soft); }
 
-.appbar-who { position: relative; flex: none; }
+.rail-fin { margin-top: auto; position: relative; }
 .who-btn {
-  display: flex; align-items: center; gap: 12px;
+  display: grid; place-items: center;
   background: none; border: 1px solid transparent; cursor: pointer;
-  padding: 5px 6px 5px 10px; border-radius: 999px; color: inherit;
+  padding: 3px; border-radius: 999px; color: inherit;
   font-family: inherit;
   transition: border-color .15s ease, background .15s ease;
 }
 .who-btn:hover { background: color-mix(in srgb, var(--text) 5%, transparent); border-color: var(--hairline); }
 .who-btn[aria-expanded="true"],
 .who-btn.who-btn-actif { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
-.who-text { text-align: right; line-height: 1.25; display: block; }
-.who-name { display: block; font-size: 13.5px; font-weight: 600; }
-.who-co { display: block; font-size: 12px; color: var(--text-3); }
 .who-avatar {
-  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  width: 36px; height: 36px; border-radius: 50%; flex: none;
   display: grid; place-items: center; font-weight: 700; font-size: 13px;
   background: var(--accent-soft); color: var(--accent-light);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
-.who-caret {
-  color: var(--text-3); flex: none; margin-left: -2px;
-  transition: transform .18s ease, color .15s ease;
-}
-.who-btn:hover .who-caret { color: var(--text-2); }
-/* Le chevron pointe vers le haut quand le menu est ouvert : il dit dans quel
-   sens va le prochain clic, plutôt que de rester figé. */
-.who-btn[aria-expanded="true"] .who-caret { transform: rotate(180deg); color: var(--text-2); }
 
+/* Le menu s'ouvre à droite du rail, ancré en bas — l'avatar y vit. */
 .who-menu {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  position: absolute; bottom: 0; left: calc(100% + 12px); z-index: 40;
   min-width: 236px; padding: 6px;
   background: var(--surface); border: 1px solid var(--border-strong);
   border-radius: 14px; box-shadow: var(--shadow-elev);
@@ -1908,7 +1893,6 @@ a { color: inherit; text-decoration: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .who-menu { animation: none; }
-  .who-caret { transition: none; }
 }
 .who-menu-head { padding: 10px 12px 12px; border-bottom: 1px solid var(--hairline); margin-bottom: 4px; }
 .who-menu-nom { font-size: 14px; font-weight: 600; }
@@ -1922,8 +1906,13 @@ a { color: inherit; text-decoration: none; }
 .who-menu-sortie { color: var(--danger-text); width: 100%; }
 .who-menu-sortie:hover { background: var(--danger-soft); }
 
-/* Le contenu des pages authentifiées, sous la barre. */
-.app-main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 96px; }
+/* Le contenu des pages authentifiées, à droite du rail : centré dans ce qui
+   reste de la fenêtre, jamais sous le rail (il est fixe). */
+.app-main {
+  max-width: 1120px;
+  margin: 0 0 0 calc(var(--rail-l) + max(0px, (100% - var(--rail-l) - 1120px) / 2));
+  padding: 32px 24px 96px;
+}
 .app-main .page-title { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; }
 /* Ce qui situe la page sous son titre — le magasin et le numéro d'un
    inventaire. Une classe plutôt qu'un style en ligne : le jour où un autre
@@ -1958,19 +1947,8 @@ a { color: inherit; text-decoration: none; }
 .signal-densite { margin-top: 5px; font-size: 13px; font-weight: 600; color: var(--warning-text); }
 .kpi-note { color: var(--text-3); font-size: 12px; margin-top: 6px; }
 
-@media (max-width: 900px) {
-  /* La barre passe sur deux rangs : ce qui se colle dessous doit le savoir.
-     Valeur mesurée au navigateur, pas estimée. */
-  :root { --appbar-h: 125px; }
-  .appbar-inner { height: auto; padding: 12px 20px; flex-wrap: wrap; gap: 14px; }
-  /* `flex: none` est indispensable : la règle de base pose `flex: 1`, dont
-     la base 0 l'emportait sur `width: 100%`. Les onglets ne passaient donc
-     jamais à la ligne — ils s'écrasaient à droite de l'avatar et il n'en
-     restait qu'un, coupé, dans un défilement horizontal. */
-  .appbar-tabs { order: 3; flex: none; width: 100%; overflow-x: auto; padding-bottom: 2px; }
-  .appbar-who { margin-left: auto; }
-  .who-text { display: none; }
-}
+/* Le rail garde sa largeur à toutes les tailles : contrairement à l'ancienne
+   barre du haut, rien ne passe sur deux rangs et rien ne se colle dessous. */
 
 /* ── Boutons de téléchargement de l'application ─────────────────────────────
    Dessinés à nos couleurs plutôt qu'en reprenant les images de marque d'Apple
@@ -2005,7 +1983,7 @@ a { color: inherit; text-decoration: none; }
    arrivent par e-mail, donc sur un téléphone. */
 .ordinateur-requis { display: none; }
 @media (max-width: 719px) {
-  .appbar, .app-main, .dash { display: none; }
+  .app-rail, .app-main, .dash { display: none; }
   .ordinateur-requis {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 100dvh; padding: 32px 24px; text-align: center; gap: 4px;
@@ -2142,3 +2120,207 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 .devis-panneau-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* ── Tableau de bord d'atterrissage du superviseur ───────────
+   /dashboard : l'essentiel du mois, les comptages par jour, les écarts par
+   inventaire, les derniers inventaires et l'équipe. Voir app/dashboard/page.tsx
+   — les agrégats viennent de `tableau_de_bord_superviseur`, jamais d'une
+   addition au navigateur. */
+.tb-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.tb-graphes { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.tb-listes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+/* `.panel` porte un margin-top utile ailleurs ; ici l'espacement vient des
+   grilles — même remise à zéro que .dash-rail. */
+.tb-kpis > .panel, .tb-graphes > .panel, .tb-listes > .panel { margin-top: 0; }
+
+.tb-kpi { padding: 18px 20px; }
+.tb-kpi-nom { font-size: 13.5px; font-weight: 600; color: var(--text-2); }
+.tb-kpi-bas { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.tb-kpi-valeur {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.8px; white-space: nowrap;
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+}
+.tb-chip {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+}
+.tb-chip-plus { color: var(--success-text); background: var(--success-soft); }
+/* « Moins » n'est pas une faute : l'ambre signale, il n'accuse pas. */
+.tb-chip-moins { color: var(--warning-text); background: var(--warning-soft); }
+.tb-kpi-ref { font-size: 12.5px; color: var(--text-3); }
+
+.tb-carte-tete { display: flex; align-items: center; gap: 12px; padding: 18px 20px 0; flex-wrap: wrap; }
+.tb-carte-tete h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+.tb-tout { margin-left: auto; color: var(--text-3); font-size: 13px; font-weight: 500; }
+.tb-tout:hover { color: var(--accent-light); }
+.tb-filtres { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.tb-segmente { display: flex; border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; }
+.tb-segmente button {
+  padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--text-3);
+  background: none; border: none; cursor: pointer; font-family: inherit;
+}
+.tb-segmente button:hover { color: var(--text-2); }
+.tb-segmente button.choisi { background: var(--accent-soft); color: var(--accent-light); }
+.tb-filtres select {
+  padding: 6px 10px; font-size: 12.5px; font-weight: 600; color: var(--text-2);
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px;
+  font-family: inherit;
+}
+
+/* Le diagramme en barres de la semaine. */
+.tb-plot { padding: 16px 20px 14px; }
+.tb-grille { position: relative; height: 210px; margin-left: 44px; }
+.tb-grille-ligne { position: absolute; left: 0; right: 0; height: 1px; background: var(--hairline); }
+.tb-grille-ligne span {
+  position: absolute; left: -10px; top: -7px; transform: translateX(-100%);
+  font-size: 11px; color: var(--text-3);
+}
+.tb-barres {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 12px; padding: 0 6px;
+}
+.tb-jour { flex: 1; display: flex; align-items: flex-end; justify-content: center; height: 100%; }
+.tb-barre {
+  position: relative; width: 100%; max-width: 46px;
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  border-radius: 4px 4px 0 0;
+}
+.tb-barre-forte { background: var(--accent); }
+/* L'infobulle vit DANS la barre : `bottom: 100%` la pose au sommet, quelle
+   que soit la hauteur — et z-index, sinon la barre voisine passe devant. */
+.tb-bulle {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  z-index: 2; opacity: 0; pointer-events: none; transition: opacity .12s ease;
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 6px 10px; box-shadow: var(--shadow-card);
+  font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap;
+}
+.tb-jour:hover .tb-bulle { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .tb-bulle { transition: none; } }
+.tb-jours-noms {
+  display: flex; justify-content: space-between; gap: 12px;
+  margin-left: 44px; padding: 8px 6px 0;
+  font-size: 12px; color: var(--text-3);
+}
+.tb-jours-noms span { flex: 1; text-align: center; }
+
+/* L'anneau des écarts. */
+.tb-anneau-corps { display: flex; align-items: center; gap: 20px; padding: 14px 20px 18px; }
+.tb-anneau { position: relative; flex: none; }
+.tb-anneau-centre { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.tb-anneau-gros {
+  font-size: 18px; font-weight: 800; letter-spacing: -0.4px; white-space: nowrap;
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+}
+.tb-anneau-sous { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.tb-legende { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.tb-legende-rang { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.tb-puce { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.tb-legende-nom { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.tb-legende-nom:hover { color: var(--text); }
+.tb-legende-val { margin-left: auto; font-weight: 700; }
+.tb-legende-note { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+
+/* Les deux listes du bas. */
+.tb-rangs { display: flex; flex-direction: column; padding: 8px 8px 10px; }
+.tb-rang { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 12px; color: inherit; }
+.tb-rang + .tb-rang { border-top: 1px solid var(--hairline); }
+a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.tb-rang-corps { flex: 1; min-width: 0; }
+.tb-rang-titre { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-rang-sous { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+.tb-rang-fin { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.tb-rang-valeur { font-size: 14px; font-weight: 700; }
+.tb-attente {
+  display: inline-block; font-size: 11.5px; font-weight: 600;
+  padding: 3px 9px; border-radius: 999px;
+  color: var(--warning-text); background: var(--warning-soft);
+}
+.tb-avatar {
+  width: 38px; height: 38px; border-radius: 999px; flex: none;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  background: var(--surface-2); border: 1px solid var(--hairline); color: var(--text-2);
+}
+.tb-vide { padding: 16px 20px 20px; color: var(--text-2); font-size: 14px; }
+.tb-vide a { color: var(--accent-light); }
+.tb-vide a:hover { text-decoration: underline; }
+
+@media (max-width: 1100px) {
+  .tb-graphes, .tb-listes { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .tb-kpis { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── La cloche du rail et son panneau ──────────────────────── */
+.rail-fin { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rail-notif, .rail-qui { position: relative; }
+.rail-notif .rail-onglet { border: none; background: none; cursor: pointer; position: relative; font-family: inherit; }
+.rail-notif .rail-onglet:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
+.rail-badge {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 1;
+}
+.notif-panneau {
+  position: absolute; bottom: 0; left: calc(100% + 12px); z-index: 40;
+  width: 360px; max-height: 480px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 14px; box-shadow: var(--shadow-elev); padding: 6px;
+  animation: toast-in .14s ease-out;
+}
+@media (prefers-reduced-motion: reduce) { .notif-panneau { animation: none; } }
+.notif-panneau-tete {
+  font-size: 13px; font-weight: 700; padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--hairline); margin-bottom: 4px;
+}
+.notif-vide { padding: 14px 12px; color: var(--text-3); font-size: 13px; }
+.notif-rang {
+  display: flex; gap: 10px; align-items: flex-start; width: 100%;
+  padding: 10px 12px; border-radius: 10px; text-align: left;
+  background: none; border: none; color: inherit; font-family: inherit;
+}
+.notif-rang + .notif-rang { border-top: 1px solid var(--hairline); border-radius: 0 0 10px 10px; }
+.notif-rang-lien { cursor: pointer; }
+.notif-rang-lien:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.notif-corps { min-width: 0; flex: 1; }
+.notif-titre { font-size: 13.5px; font-weight: 600; }
+.notif-texte { font-size: 12.5px; color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
+.notif-date { font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+.notif-point { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; margin-top: 6px; }
+
+/* ── Recherche et message, sur l'en-tête du tableau de bord ── */
+.tb-rond { padding: 11px; border-radius: 999px; }
+.tb-recherche {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  width: 300px; padding: 0 14px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--hairline);
+  color: var(--text-3);
+}
+.tb-recherche:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tb-recherche input {
+  flex: 1; min-width: 0; padding: 10px 0; border: none; background: none;
+  color: var(--text); font-size: 13.5px; font-family: inherit; outline: none;
+}
+.tb-recherche-resultats {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 40;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 14px; box-shadow: var(--shadow-elev); padding: 6px;
+  max-height: 380px; overflow-y: auto;
+}
+.tb-recherche-groupe {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  color: var(--text-3); padding: 8px 12px 4px;
+}
+.tb-recherche-rang {
+  display: block; width: 100%; text-align: left; padding: 8px 12px;
+  border: none; background: none; border-radius: 9px; cursor: pointer;
+  color: inherit; font-family: inherit;
+}
+.tb-recherche-rang:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.tb-recherche-nom { display: block; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.tb-recherche-sous { display: block; font-size: 12px; color: var(--text-3); margin-top: 1px; }
+.tb-recherche-vide { padding: 12px; color: var(--text-3); font-size: 13px; }

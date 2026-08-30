@@ -20,7 +20,7 @@ const migration = lire('../../supabase/migrations/20260822160001_espace_admin_en
 const shell = lire('../components/AppShell.tsx')
 const pageEntreprise = lire('../app/entreprise/page.tsx')
 const pageJournal = lire('../app/journal/page.tsx')
-const pageDashboard = lire('../app/dashboard/page.tsx')
+const pageDashboard = lire('../app/inventaires/page.tsx')
 
 const corpsDe = (fn: string) => migration.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
 
@@ -193,7 +193,7 @@ describe('ses écrans', () => {
 
   it('sa barre est celle d’une console', () => {
     const branche = shell.split('if (profile.is_company_admin)')[1]?.split(']')[0] ?? ''
-    for (const href of ["'/entreprise'", "'/magasins'", "'/equipe'", "'/dashboard'", "'/journal'"]) {
+    for (const href of ["'/entreprise'", "'/magasins'", "'/equipe'", "'/inventaires'", "'/journal'"]) {
       expect(branche, href).toContain(href)
     }
   })

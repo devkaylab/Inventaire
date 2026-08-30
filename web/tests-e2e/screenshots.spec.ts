@@ -36,6 +36,10 @@ test.describe('captures', () => {
         }
 
         await page.goto('/dashboard')
+        await page.waitForSelector('.tb-kpis')
+        await page.screenshot({ path: `screenshots/${theme}-${size.name}-tableau-de-bord.png`, fullPage: true })
+
+        await page.goto('/inventaires')
         await page.waitForSelector('.dash-kpis')
         await page.screenshot({ path: `screenshots/${theme}-${size.name}-liste.png`, fullPage: true })
 

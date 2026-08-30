@@ -1,167 +1,125 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+// Le tableau de bord d'atterrissage du superviseur (30 août 2026).
+//
+// /dashboard était la liste des inventaires ; la liste vit désormais sur
+// /inventaires, derrière « Tout voir ». Ici : l'essentiel du mois (pièces,
+// clôtures, valeur), les comptages par jour, les écarts par inventaire, les
+// derniers inventaires et l'équipe — les « Mot de passe à créer » en premier.
+//
+// Tout est agrégé par `tableau_de_bord_superviseur` côté serveur : la règle
+// de tenue en charge interdit de rapatrier les lignes de `counts` pour
+// additionner au navigateur. L'écart affiché ici suit LA MÊME règle que le
+// rapport (arbitrage > audit > comptage) — la fonction le garantit, et un
+// tableau de bord qui contredirait le rapport serait pire que pas de tableau.
+//
+// Maquette validée par Julien le 30 août 2026 :
+// https://claude.ai/code/artifact/5105e587-7a15-4d59-a1c9-f67286ba951c
+// La recherche globale et « Écrire à l'administrateur » vivent sur cet
+// en-tête ; la cloche de notifications, elle, est dans le RAIL — tous les
+// rôles la voient, y compris l'administrateur qui n'atterrit pas ici.
+
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { getMyCompany } from '@/lib/account'
-import {
-  deleteSession, getAccessibleSessions, groupByStore, STATUS_LABELS, type Session,
-} from '@/lib/inventory'
-import { fmtDate } from '@/lib/format'
+import { supabase } from '@/lib/supabaseClient'
+import { money, nb, relativeTime, fmtDate } from '@/lib/format'
+import { STATUS_LABELS } from '@/lib/inventory'
 import { friendlyError } from '@/lib/errors'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
-import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { RechercheGlobale } from '@/components/dashboard/RechercheGlobale'
+import { MessageAdmin } from '@/components/dashboard/MessageAdmin'
+
+type JourTb = { jour: string; pieces: number; valeur: number }
+type EcartTb = {
+  session_id: string; nom: string; magasin: string; statut: string
+  ecart_qte: number; ecart_valeur: number
+}
+type DernierTb = {
+  session_id: string; nom: string; magasin: string; numero: string
+  statut: string; cree_le: string; pieces: number; valeur: number
+}
+type TableauDeBord = {
+  pieces_mois: number; pieces_mois_prec: number
+  valeur_mois: number; valeur_mois_prec: number
+  clotures_mois: number; clotures_mois_prec: number
+  semaine_debut: string
+  par_jour: JourTb[]
+  ecarts: EcartTb[]
+  derniers: DernierTb[]
+}
+
+type Compteur = {
+  id: string; full_name: string | null; email: string | null
+  is_active: boolean; last_count_at: string | null
+}
+type EquipeRang = Compteur & { magasin: string }
+
+/* Les couleurs de l'anneau — validées pour les daltonismes sur les deux
+   surfaces (validateur du 30 août 2026). L'or et le cyan du thème sombre sont
+   des pas plus foncés que les jetons de marque : les jetons clairs sont trop
+   clairs pour se distinguer sur --surface sombre. « Autres » est neutre. */
+const SERIES_SOMBRE = ['#6366f1', '#bd7f09', '#1590c1']
+const SERIES_CLAIR = ['#4f46e5', '#d97706', '#0aa5d8']
+
+/** Lundi de la semaine d'aujourd'hui, décalé de `retard` semaines. */
+function lundiDeLaSemaine(retard: number): string {
+  const d = new Date()
+  const decalage = (d.getDay() + 6) % 7 // lundi = 0
+  d.setDate(d.getDate() - decalage - retard * 7)
+  return d.toISOString().slice(0, 10)
+}
+
+const JOURS_COURTS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
 export default function DashboardPage() {
   const toast = useToast()
   const guard = useAuthGuard('supervisor')
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
   const [companyName, setCompanyName] = useState<string | null>(null)
-  const confirm = useConfirm()
-  const [selection, setSelection] = useState<string[]>([])
-  const [busy, setBusy] = useState(false)
+  const [tb, setTb] = useState<TableauDeBord | null>(null)
+  const [equipe, setEquipe] = useState<EquipeRang[] | null>(null)
+  const [semaine, setSemaine] = useState(0)
+  const [mesureBarres, setMesureBarres] = useState<'pieces' | 'valeur'>('pieces')
+  const [mesureEcarts, setMesureEcarts] = useState<'valeur' | 'qte'>('valeur')
+  const [chargement, setChargement] = useState(true)
 
   useEffect(() => {
     if (guard.status !== 'ready') return
     getMyCompany().then((c) => setCompanyName(c?.name ?? null)).catch(() => {})
-    let active = true
-    ;(async () => {
-      try {
-        const rows = await getAccessibleSessions()
-        if (active) setSessions(rows)
-      } catch (err) {
-        if (active) toast.error(friendlyError(err))
-      } finally {
-        if (active) setLoading(false)
+    supabase.rpc('my_team_by_store').then(({ data, error }) => {
+      if (error || !data) return
+      const rangs: EquipeRang[] = []
+      for (const s of (data.stores ?? []) as { name: string; counters: Compteur[] }[]) {
+        for (const c of s.counters ?? []) rangs.push({ ...c, magasin: s.name })
       }
-    })()
-    return () => { active = false }
-  }, [guard.status, toast])
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return sessions
-    return sessions.filter(s =>
-      (s.name || '').toLowerCase().includes(q)
-      || s.store_name.toLowerCase().includes(q)
-      || s.inventory_number.toLowerCase().includes(q))
-  }, [sessions, query])
-
-  // Deux listes, pas une : ce qu'on a créé, et ce à quoi on a été invité.
-  // Un inventaire invité ne se rouvre pas et ne se supprime pas — le dire par
-  // la mise en page évite de le découvrir au moment du refus.
-  //
-  // Sauf pour l'administrateur d'entreprise : depuis le 22 août 2026 il voit
-  // tous les inventaires de son entreprise et les gère tous. La distinction
-  // « les miens / ceux où l'on m'a invité » n'a plus d'objet pour lui — ce sont
-  // ceux de son entreprise, rangés par magasin.
-  const profileIdListe = guard.status === 'ready' ? guard.profile.id : null
-  const adminEntreprise = guard.status === 'ready' && !!guard.profile.is_company_admin
-  const miens = useMemo(
-    () => (adminEntreprise
-      ? filtered
-      : filtered.filter(s => !!profileIdListe && s.created_by === profileIdListe)),
-    [filtered, profileIdListe, adminEntreprise],
-  )
-  const invites = useMemo(
-    () => (adminEntreprise
-      ? []
-      : filtered.filter(s => !profileIdListe || s.created_by !== profileIdListe)),
-    [filtered, profileIdListe, adminEntreprise],
-  )
-  const groups = useMemo(() => groupByStore(miens), [miens])
-
-  // Qui peut supprimer : le créateur de l'inventaire, et l'administrateur de
-  // l'entreprise pour tous les siens. Même règle que la base depuis la
-  // migration `20260821250001` — la case n'apparaît pas ailleurs, plutôt que
-  // de laisser découvrir le refus après coup.
-  const profileId = profileIdListe
-  const peutSupprimer = useCallback(
-    (s: Session) => adminEntreprise || (!!profileId && s.created_by === profileId),
-    [adminEntreprise, profileId],
-  )
-
-  // « Tout sélectionner » ne prend que ce qui est à l'écran, filtre de
-  // recherche compris : un « tout » qui déborde de ce qu'on voit est le
-  // meilleur moyen d'effacer autre chose que ce qu'on croyait.
-  const selectionnables = useMemo(() => filtered.filter(peutSupprimer), [filtered, peutSupprimer])
-  const selectionnes = useMemo(
-    () => selectionnables.filter(s => selection.includes(s.id)),
-    [selectionnables, selection],
-  )
-  const toutSelectionne = selectionnables.length > 0 && selectionnes.length === selectionnables.length
-
-  function basculer(id: string) {
-    setSelection(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
-  }
-
-  function basculerTout() {
-    setSelection(toutSelectionne ? [] : selectionnables.map(s => s.id))
-  }
-
-  /**
-   * Suppression, d'une tuile ou d'une sélection.
-   *
-   * Il n'existe pas de suppression groupée en base : on appelle
-   * `delete_session` une fois par inventaire et on **rend compte des échecs**
-   * plutôt que d'annoncer un succès global. Sur dix inventaires, un refus ne
-   * doit pas passer inaperçu.
-   */
-  async function supprimer(cibles: Session[]) {
-    if (cibles.length === 0 || busy) return
-    const ouverts = cibles.filter(s => s.status !== 'closed').length
-    const ok = await confirm({
-      title: cibles.length === 1
-        ? 'Supprimer définitivement cet inventaire ?'
-        : `Supprimer définitivement ${cibles.length} inventaires ?`,
-      message: 'Cette action est irréversible et ne peut pas être annulée.',
-      details: [
-        ...cibles.slice(0, 8).map(s => `${s.name || s.store_name} — ${s.store_name}`),
-        ...(cibles.length > 8 ? [`… et ${cibles.length - 8} autres`] : []),
-        'Comptages, stock théorique, audits, membres et référentiel articles seront effacés.',
-        ...(ouverts > 0
-          ? [ouverts === 1 ? 'Dont 1 inventaire encore en cours.' : `Dont ${ouverts} inventaires encore en cours.`]
-          : []),
-      ],
-      confirmLabel: cibles.length === 1 ? 'Supprimer définitivement' : `Supprimer les ${cibles.length}`,
-      tone: 'danger',
-      requireText: cibles.length === 1 ? cibles[0].inventory_number : undefined,
+      // Les « Mot de passe à créer » d'abord : c'est ce qui appelle un geste.
+      rangs.sort((a, b) => Number(a.is_active) - Number(b.is_active))
+      setEquipe(rangs)
     })
-    if (!ok) return
+  }, [guard.status])
 
-    setBusy(true)
-    const echecs: string[] = []
-    let faits = 0
-    for (const s of cibles) {
-      try {
-        const r = await deleteSession(s.id)
-        if (r.success) faits += 1
-        else echecs.push(`${s.name || s.store_name} : ${r.error ?? 'refus du serveur'}`)
-      } catch (err) {
-        echecs.push(`${s.name || s.store_name} : ${friendlyError(err)}`)
-      }
-    }
-    setBusy(false)
+  useEffect(() => {
+    if (guard.status !== 'ready') return
+    let actif = true
+    setChargement(true)
+    supabase
+      .rpc('tableau_de_bord_superviseur', { p_semaine: lundiDeLaSemaine(semaine) })
+      .then(({ data, error }) => {
+        if (!actif) return
+        if (error) toast.error(friendlyError(error))
+        else setTb(data as TableauDeBord)
+        setChargement(false)
+      })
+    return () => { actif = false }
+  }, [guard.status, semaine, toast])
 
-    const restants = new Set(echecs.map(e => e.split(' : ')[0]))
-    setSessions(prev => prev.filter(s => !cibles.some(c => c.id === s.id) || restants.has(s.name || s.store_name)))
-    setSelection([])
-
-    if (echecs.length === 0) {
-      toast.success(faits === 1 ? 'Inventaire supprimé.' : `${faits} inventaires supprimés.`)
-    } else if (faits === 0) {
-      toast.error(echecs[0])
-    } else {
-      toast.error(`${faits} supprimés, ${echecs.length} refusés. ${echecs[0]}`)
-    }
-  }
-  const activeCount = useMemo(() => sessions.filter(s => s.status !== 'closed').length, [sessions])
-  const storeCount = useMemo(() => new Set(sessions.map(s => s.store_name)).size, [sessions])
+  const prenom = useMemo(() => {
+    if (guard.status !== 'ready') return ''
+    return (guard.profile.full_name ?? '').trim().split(/\s+/)[0] || ''
+  }, [guard])
 
   if (guard.status === 'loading') {
     return <div className="dash"><SkeletonRows rows={3} /></div>
@@ -170,211 +128,365 @@ export default function DashboardPage() {
   return (
     <AppShell profile={guard.profile} companyName={companyName}>
       <div className="app-head">
-        <h1 className="page-title">Inventaires</h1>
+        <div>
+          <h1 className="page-title">{prenom ? `Bonjour, ${prenom}` : 'Tableau de bord'}</h1>
+          <p className="page-sub">L&apos;essentiel de vos inventaires et de votre équipe.</p>
+        </div>
         <div className="app-head-actions">
-          {selectionnables.length > 0 && (
-            <label className="select-all">
-              <input
-                type="checkbox"
-                checked={toutSelectionne}
-                ref={el => { if (el) el.indeterminate = selectionnes.length > 0 && !toutSelectionne }}
-                onChange={basculerTout}
-              />
-              Tout sélectionner
-            </label>
-          )}
+          <RechercheGlobale />
+          {/* Pas de bouton pour l'administrateur d'entreprise : le message lui
+              serait adressé à lui-même, et un bouton qui refuse est pire que
+              pas de bouton. */}
+          {!guard.profile.is_company_admin && <MessageAdmin />}
           <Link href="/dashboard/new" className="btn btn-primary">Nouvel inventaire</Link>
         </div>
       </div>
 
-      {selectionnes.length > 0 && (
-        <div className="select-bar" role="region" aria-label="Sélection">
-          <span className="select-bar-count">
-            {selectionnes.length === 1
-              ? '1 inventaire sélectionné'
-              : `${selectionnes.length} inventaires sélectionnés`}
-          </span>
-          <button type="button" className="select-bar-ghost" onClick={() => setSelection([])}>
-            Tout désélectionner
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger btn-sm"
-            disabled={busy}
-            onClick={() => supprimer(selectionnes)}
-          >
-            {busy ? 'Suppression…' : `Supprimer (${selectionnes.length})`}
-          </button>
-        </div>
-      )}
-
-      <div className="dash-kpis">
-        <div className="dash-kpi">
-          <div className="dash-kpi-value num">{storeCount}</div>
-          <div className="dash-kpi-label">Magasin{storeCount > 1 ? 's' : ''}</div>
-        </div>
-        <div className="dash-kpi">
-          <div className="dash-kpi-value num">{activeCount}</div>
-          <div className="dash-kpi-label">Inventaire{activeCount > 1 ? 's' : ''} en cours</div>
-        </div>
-        <div className="dash-kpi">
-          <div className="dash-kpi-value num">{sessions.length}</div>
-          {/* Libellé arrêté par Julien le 25 août 2026, à l'ordre des mots
-              près (« Nombre d'inventaire total ») : c'est le compte de tout ce
-              que la liste montre, clôturés compris. */}
-          <div className="dash-kpi-label">Nombre total d&apos;inventaires</div>
-        </div>
-      </div>
-
-      {sessions.length > 6 && (
-        <div className="toolbar" style={{ marginTop: 20 }}>
-          <div className="toolbar-grow">
-            <input
-              type="search" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Rechercher un inventaire, un magasin, un numéro…"
-              aria-label="Rechercher un inventaire"
+      {chargement && !tb ? (
+        <div style={{ marginTop: 24 }}><SkeletonRows rows={3} height={110} /></div>
+      ) : tb && (
+        <>
+          <section className="tb-kpis">
+            <Kpi
+              nom="Pièces comptées ce mois-ci"
+              valeur={nb(tb.pieces_mois)}
+              precedent={tb.pieces_mois_prec}
+              actuel={tb.pieces_mois}
+              refTexte={`${nb(tb.pieces_mois_prec)} le mois dernier`}
             />
-          </div>
-        </div>
-      )}
+            <Kpi
+              nom="Inventaires clôturés ce mois-ci"
+              valeur={nb(tb.clotures_mois)}
+              precedent={tb.clotures_mois_prec}
+              actuel={tb.clotures_mois}
+              absolu
+              refTexte={`${nb(tb.clotures_mois_prec)} le mois dernier`}
+            />
+            <Kpi
+              nom="Valeur comptée ce mois-ci"
+              valeur={`${money(tb.valeur_mois)} €`}
+              precedent={tb.valeur_mois_prec}
+              actuel={tb.valeur_mois}
+              refTexte={`${money(tb.valeur_mois_prec)} € le mois dernier`}
+            />
+          </section>
 
-      {loading ? (
-        <div style={{ marginTop: 24 }}><SkeletonRows rows={3} height={96} /></div>
-      ) : sessions.length === 0 ? (
-        <div style={{ marginTop: 24 }}>
-          <EmptyState
-            title="Aucun inventaire pour l’instant"
-            hint="Vous verrez ici les inventaires que vous avez créés, et plus bas ceux auxquels on vous a invité."
-            action={<Link href="/dashboard/new" className="btn btn-primary">Créer mon premier inventaire</Link>}
-          />
-        </div>
-      ) : groups.length === 0 && invites.length === 0 ? (
-        <div style={{ marginTop: 24 }}>
-          <EmptyState title="Aucun résultat" hint={`Rien ne correspond à « ${query} ».`} />
-        </div>
-      ) : (
-        groups.map(({ store, sessions: list }) => {
-          const active = list.filter(s => s.status !== 'closed')
-          const past = list.filter(s => s.status === 'closed')
-          return (
-            <section className="dash-store" key={store}>
-              <h2 className="dash-store-name">{store}</h2>
+          <section className="tb-graphes">
+            <BarresSemaine
+              jours={tb.par_jour}
+              mesure={mesureBarres}
+              onMesure={setMesureBarres}
+              semaine={semaine}
+              onSemaine={setSemaine}
+              enChargement={chargement}
+            />
+            <AnneauEcarts
+              ecarts={tb.ecarts}
+              mesure={mesureEcarts}
+              onMesure={setMesureEcarts}
+            />
+          </section>
 
-              {active.length > 0 && (
-                <div className="dash-grid">
-                  {active.map(s => (
-                    <SessionCard
-                      key={s.id} s={s} live
-                      deletable={peutSupprimer(s)}
-                      selected={selection.includes(s.id)}
-                      onToggle={() => basculer(s.id)}
-                      onDelete={() => supprimer([s])}
-                    />
+          <section className="tb-listes">
+            <div className="panel tb-carte">
+              <div className="tb-carte-tete">
+                <h2>Derniers inventaires</h2>
+                <Link href="/inventaires" className="tb-tout">Tout voir</Link>
+              </div>
+              {tb.derniers.length === 0 ? (
+                <p className="tb-vide">
+                  Aucun inventaire pour l&apos;instant. <Link href="/dashboard/new">Créez le premier</Link>.
+                </p>
+              ) : (
+                <div className="tb-rangs">
+                  {tb.derniers.map((d) => (
+                    <Link href={`/dashboard/${d.session_id}`} className="tb-rang" key={d.session_id}>
+                      <div className="tb-rang-corps">
+                        <div className="tb-rang-titre">{d.nom}</div>
+                        <div className="tb-rang-sous">{d.magasin} · {fmtDate(d.cree_le)}</div>
+                      </div>
+                      <div className="tb-rang-fin">
+                        <div className="tb-rang-valeur num">{money(d.valeur)} €</div>
+                        <span className={`dash-badge dash-badge-${d.statut}`}>
+                          <span className="dash-dot" />{STATUS_LABELS[d.statut as keyof typeof STATUS_LABELS] ?? d.statut}
+                        </span>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               )}
-              {past.length > 0 && (
-                <>
-                  <div className="dash-sub">Clôturés</div>
-                  <div className="dash-grid">
-                    {past.map(s => (
-                      <SessionCard
-                        key={s.id} s={s}
-                        deletable={peutSupprimer(s)}
-                        selected={selection.includes(s.id)}
-                        onToggle={() => basculer(s.id)}
-                        onDelete={() => supprimer([s])}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
-          )
-        })
-      )}
+            </div>
 
-      {!loading && invites.length > 0 && (
-        <section className="dash-store">
-          <h2 className="dash-store-name">Inventaires invités</h2>
-          <p className="muted small" style={{ margin: '-4px 0 12px' }}>
-            Vous participez à ces inventaires sans les avoir créés. Vous pouvez y compter et
-            consulter le rapport ; leur clôture définitive et leur réouverture appartiennent à
-            leur créateur.
-          </p>
-          <div className="dash-grid">
-            {invites.map(s => (
-              <SessionCard
-                key={s.id} s={s}
-                live={s.status !== 'closed'}
-                deletable={peutSupprimer(s)}
-                selected={selection.includes(s.id)}
-                onToggle={() => basculer(s.id)}
-                onDelete={() => supprimer([s])}
-              />
-            ))}
-          </div>
-        </section>
+            <div className="panel tb-carte">
+              <div className="tb-carte-tete">
+                <h2>Mon équipe</h2>
+                <Link href="/equipe" className="tb-tout">Tout voir</Link>
+              </div>
+              {equipe === null ? (
+                <SkeletonRows rows={3} height={44} />
+              ) : equipe.length === 0 ? (
+                <p className="tb-vide">
+                  Personne pour l&apos;instant. <Link href="/equipe">Ajoutez un membre</Link>.
+                </p>
+              ) : (
+                <div className="tb-rangs">
+                  {equipe.slice(0, 4).map((m) => (
+                    <div className="tb-rang" key={m.id}>
+                      <span className="tb-avatar">{initialesDe(m.full_name)}</span>
+                      <div className="tb-rang-corps">
+                        <div className="tb-rang-titre">{m.full_name || m.email || '—'}</div>
+                        {/* Même règle que « Mon équipe » : l'adresse tant que la
+                            personne n'a pas ouvert l'application, son magasin
+                            ensuite. */}
+                        <div className="tb-rang-sous">{m.is_active ? m.magasin : m.email}</div>
+                      </div>
+                      <div className="tb-rang-fin">
+                        {m.is_active ? (
+                          <span className="tb-rang-sous">
+                            {m.last_count_at ? `a compté ${relativeTime(m.last_count_at)}` : 'n’a pas encore compté'}
+                          </span>
+                        ) : (
+                          <span className="tb-attente">Mot de passe à créer</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </>
       )}
     </AppShell>
   )
 }
 
-function SessionCard({ s, live, deletable, selected, onToggle, onDelete }: {
-  s: Session
-  live?: boolean
-  deletable: boolean
-  selected: boolean
-  onToggle: () => void
-  onDelete: () => void
+function initialesDe(nom: string | null): string {
+  const mots = (nom ?? '').trim().split(/\s+/).filter(Boolean)
+  if (mots.length === 0) return '?'
+  return (mots[0][0] + (mots.length > 1 ? mots[mots.length - 1][0] : '')).toUpperCase()
+}
+
+/**
+ * Un indicateur et son évolution contre le mois dernier.
+ * `absolu` : la différence en unités plutôt qu'en pourcentage — « 1 de
+ * moins » se lit, « −14 % » sur 7 inventaires ne veut rien dire.
+ * Un mois précédent à zéro n'affiche pas d'évolution : un pourcentage de
+ * zéro est un chiffre inventé.
+ */
+function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu }: {
+  nom: string; valeur: string; actuel: number; precedent: number
+  refTexte: string; absolu?: boolean
 }) {
-  // La tuile entière est un lien : la case et la corbeille doivent retenir le
-  // clic, sinon cocher ouvrirait l'inventaire.
-  function retenir(e: React.MouseEvent, action: () => void) {
-    e.preventDefault()
-    e.stopPropagation()
-    action()
+  const delta = actuel - precedent
+  let chip: { texte: string; sens: 'plus' | 'moins' } | null = null
+  if (precedent > 0 && delta !== 0) {
+    chip = absolu
+      ? { texte: `${nb(Math.abs(delta))} de ${delta > 0 ? 'plus' : 'moins'}`, sens: delta > 0 ? 'plus' : 'moins' }
+      : { texte: `${nb(Math.round(Math.abs(delta) / precedent * 100))} %`, sens: delta > 0 ? 'plus' : 'moins' }
   }
+  return (
+    <div className="panel tb-kpi">
+      <div className="tb-kpi-nom">{nom}</div>
+      <div className="tb-kpi-bas">
+        <span className="tb-kpi-valeur num">{valeur}</span>
+        {chip && (
+          <span className={`tb-chip tb-chip-${chip.sens}`}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {chip.sens === 'plus' ? <path d="M6 15l6-6 6 6" /> : <path d="M6 9l6 6 6-6" />}
+            </svg>
+            {chip.texte}
+          </span>
+        )}
+        <span className="tb-kpi-ref num">{refTexte}</span>
+      </div>
+    </div>
+  )
+}
+
+const SEMAINES = [
+  { valeur: 0, label: 'Cette semaine' },
+  { valeur: 1, label: 'Semaine dernière' },
+  { valeur: 2, label: 'Il y a 2 semaines' },
+  { valeur: 3, label: 'Il y a 3 semaines' },
+]
+
+function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enChargement }: {
+  jours: JourTb[]
+  mesure: 'pieces' | 'valeur'
+  onMesure: (m: 'pieces' | 'valeur') => void
+  semaine: number
+  onSemaine: (s: number) => void
+  enChargement: boolean
+}) {
+  const valeurs = jours.map(j => (mesure === 'pieces' ? j.pieces : j.valeur))
+  const max = Math.max(...valeurs, 1)
+  // Un plafond « rond » pour que la graduation du haut soit lisible.
+  const plafond = plafondRond(max)
+  const iMax = valeurs.indexOf(Math.max(...valeurs))
 
   return (
-    <Link
-      href={`/dashboard/${s.id}`}
-      className={`dash-card${live ? ' dash-card-live' : ''}${selected ? ' dash-card-selected' : ''}`}
-    >
-      <div className="dash-card-head">
-        {deletable && (
-          <input
-            type="checkbox"
-            className="dash-card-check"
-            checked={selected}
-            aria-label={`Sélectionner ${s.name || s.store_name}`}
-            onClick={e => retenir(e, onToggle)}
-            onChange={() => {}}
-          />
-        )}
-        <span className={`dash-badge dash-badge-${s.status}`}>
-          <span className="dash-dot" />{STATUS_LABELS[s.status] ?? s.status}
-        </span>
-        {s.uses_zones && <span className="dash-tag">Zones</span>}
-        {deletable && (
-          <button
-            type="button"
-            className="dash-card-trash"
-            aria-label={`Supprimer ${s.name || s.store_name}`}
-            title="Supprimer cet inventaire"
-            onClick={e => retenir(e, onDelete)}
+    <div className="panel tb-carte" style={{ opacity: enChargement ? 0.6 : 1 }}>
+      <div className="tb-carte-tete">
+        <h2>{mesure === 'pieces' ? 'Pièces comptées par jour' : 'Valeur comptée par jour'}</h2>
+        <div className="tb-filtres">
+          <div className="tb-segmente" role="group" aria-label="Mesure du graphique">
+            <button type="button" className={mesure === 'pieces' ? 'choisi' : ''} onClick={() => onMesure('pieces')}>Quantité</button>
+            <button type="button" className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
+          </div>
+          <select
+            value={semaine}
+            onChange={(e) => onSemaine(Number(e.target.value))}
+            aria-label="Semaine affichée"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" />
+            {SEMAINES.map(s => <option key={s.valeur} value={s.valeur}>{s.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="tb-plot">
+        <div className="tb-grille">
+          {[0, 0.25, 0.5, 0.75, 1].map(f => (
+            <div className="tb-grille-ligne" style={{ bottom: `${f * 100}%` }} key={f}>
+              <span className="num">{nb(Math.round(plafond * f))}</span>
+            </div>
+          ))}
+          <div className="tb-barres">
+            {jours.map((j, i) => {
+              const v = valeurs[i]
+              const h = Math.round(v / plafond * 100)
+              return (
+                <div className="tb-jour" key={j.jour}>
+                  {v > 0 && (
+                    <div className="tb-bulle num" role="tooltip">
+                      {mesure === 'pieces' ? `${nb(v)} pièces` : `${money(v)} €`}
+                    </div>
+                  )}
+                  <div
+                    className={`tb-barre${i === iMax && v > 0 ? ' tb-barre-forte' : ''}`}
+                    style={{ height: `${Math.max(h, v > 0 ? 2 : 0)}%` }}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="tb-jours-noms">
+          {jours.map((j, i) => <span key={j.jour}>{JOURS_COURTS[i] ?? ''}</span>)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** 4 000 plutôt que 3 846 : la graduation se lit, la barre ne déborde pas. */
+function plafondRond(max: number): number {
+  const puissance = Math.pow(10, Math.floor(Math.log10(max)))
+  const base = max / puissance
+  const facteur = base <= 1 ? 1 : base <= 2 ? 2 : base <= 4 ? 4 : base <= 5 ? 5 : 10
+  return facteur * puissance
+}
+
+function AnneauEcarts({ ecarts, mesure, onMesure }: {
+  ecarts: EcartTb[]
+  mesure: 'valeur' | 'qte'
+  onMesure: (m: 'valeur' | 'qte') => void
+}) {
+  // Trois parts nommées au plus, le reste en « Autres » : la palette est
+  // validée pour trois teintes voisines, au-delà on replie (règle dataviz).
+  const [sombre, setSombre] = useState(true)
+  useEffect(() => {
+    const racine = document.documentElement
+    const lireTheme = () => setSombre(racine.getAttribute('data-theme') !== 'light')
+    lireTheme()
+    const obs = new MutationObserver(lireTheme)
+    obs.observe(racine, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
+  }, [])
+  const series = sombre ? SERIES_SOMBRE : SERIES_CLAIR
+
+  const val = (e: EcartTb) => (mesure === 'valeur' ? e.ecart_valeur : e.ecart_qte)
+  const tetes = ecarts.slice(0, 3)
+  const reste = ecarts.slice(3)
+  const parts: { nom: string; brut: number; couleur: string; session_id?: string }[] = [
+    ...tetes.map((e, i) => ({ nom: e.nom, brut: val(e), couleur: series[i], session_id: e.session_id })),
+    ...(reste.length > 0
+      ? [{ nom: `${reste.length} autre${reste.length > 1 ? 's' : ''}`, brut: reste.reduce((s, e) => s + val(e), 0), couleur: 'var(--text-3)' }]
+      : []),
+  ]
+  const total = parts.reduce((s, p) => s + p.brut, 0)
+  const totalAbs = parts.reduce((s, p) => s + Math.abs(p.brut), 0)
+
+  // Géométrie : r 66, circonférence 414,7, un jour de 4,5 px entre les parts.
+  const C = 2 * Math.PI * 66
+  let offset = 0
+  const arcs = parts.map((p) => {
+    const part = totalAbs > 0 ? Math.abs(p.brut) / totalAbs : 0
+    const longueur = Math.max(part * C - 4.5, 0)
+    const a = { ...p, longueur, offset }
+    offset += part * C
+    return a
+  })
+
+  return (
+    <div className="panel tb-carte">
+      <div className="tb-carte-tete">
+        <h2>Écart</h2>
+        <div className="tb-filtres">
+          <div className="tb-segmente" role="group" aria-label="Mesure de l’écart">
+            <button type="button" className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
+            <button type="button" className={mesure === 'qte' ? 'choisi' : ''} onClick={() => onMesure('qte')}>Quantité</button>
+          </div>
+        </div>
+      </div>
+      {ecarts.length === 0 ? (
+        <p className="tb-vide">
+          Aucun écart sur 30 jours. Seuls les inventaires avec un stock
+          théorique importé entrent dans ce calcul.
+        </p>
+      ) : (
+        <div className="tb-anneau-corps">
+          <div className="tb-anneau">
+            <svg width="150" height="150" viewBox="0 0 180 180" aria-hidden="true">
+              <g transform="rotate(-90 90 90)">
+                {arcs.map((a) => (
+                  <circle
+                    key={a.nom} cx="90" cy="90" r="66" fill="none"
+                    stroke={a.couleur} strokeWidth="24"
+                    strokeDasharray={`${a.longueur.toFixed(1)} ${(C - a.longueur).toFixed(1)}`}
+                    strokeDashoffset={(-a.offset).toFixed(1)}
+                  />
+                ))}
+              </g>
             </svg>
-          </button>
-        )}
-      </div>
-      {live && <div className="dash-live-label">Inventaire en cours</div>}
-      <div className="dash-card-title">{s.name || s.store_name}</div>
-      <div className="dash-card-meta">
-        <span className="num">{s.inventory_number}</span> · {fmtDate(s.created_at)}
-      </div>
-    </Link>
+            <div className="tb-anneau-centre">
+              <div>
+                <div className="tb-anneau-gros num">
+                  {mesure === 'valeur' ? `${money(total)} €` : nb(total)}
+                </div>
+                <div className="tb-anneau-sous">sur 30 jours</div>
+              </div>
+            </div>
+          </div>
+          <div className="tb-legende">
+            {arcs.map((a) => (
+              <div className="tb-legende-rang" key={a.nom}>
+                <span className="tb-puce" style={{ background: a.couleur }} />
+                {a.session_id ? (
+                  <Link href={`/dashboard/${a.session_id}`} className="tb-legende-nom">{a.nom}</Link>
+                ) : (
+                  <span className="tb-legende-nom">{a.nom}</span>
+                )}
+                <span className="tb-legende-val num">
+                  {mesure === 'valeur' ? `${money(a.brut)} €` : nb(a.brut)}
+                </span>
+              </div>
+            ))}
+            {/* L'anneau montre des parts en absolu — le signe se lit sur
+                chaque ligne et au centre, pas dans la taille des parts. */}
+            <div className="tb-legende-note">Parts en écart absolu</div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

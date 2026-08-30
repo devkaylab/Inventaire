@@ -138,3 +138,41 @@ export const STORES = [
 ]
 
 export const IMPORT_STATE = { articles: 21, stock: 21 }
+
+/* Le tableau de bord d'atterrissage (30 août 2026) — les agrégats que rend
+   `tableau_de_bord_superviseur`, cohérents avec RESULTS : l'écart de la
+   session de test vaut -140 € / -7 pièces, comme la somme du rapport. */
+export const TABLEAU_DE_BORD = {
+  pieces_mois: 5, pieces_mois_prec: 0,
+  valeur_mois: 192.5, valeur_mois_prec: 0,
+  clotures_mois: 0, clotures_mois_prec: 1,
+  semaine_debut: '2026-08-24',
+  par_jour: [
+    { jour: '2026-08-24', pieces: 2, valeur: 25 },
+    { jour: '2026-08-25', pieces: 0, valeur: 0 },
+    { jour: '2026-08-26', pieces: 3, valeur: 167.5 },
+    { jour: '2026-08-27', pieces: 0, valeur: 0 },
+    { jour: '2026-08-28', pieces: 0, valeur: 0 },
+    { jour: '2026-08-29', pieces: 0, valeur: 0 },
+    { jour: '2026-08-30', pieces: 0, valeur: 0 },
+  ],
+  ecarts: [
+    { session_id: 'session-1', nom: 'Inventaire de test', magasin: 'La Samaritaine', statut: 'counting', ecart_qte: -7, ecart_valeur: -140 },
+  ],
+  derniers: [
+    { session_id: 'session-1', nom: 'Inventaire de test', magasin: 'La Samaritaine', numero: 'INV-20260823-TEST', statut: 'counting', cree_le: '2026-08-23T18:29:30Z', pieces: 5, valeur: 192.5 },
+  ],
+}
+
+export const EQUIPE = {
+  stores: [
+    {
+      id: 'store-1', name: 'La Samaritaine',
+      counters: [
+        { id: 'cnt-1', full_name: 'Compte Test Compteur', email: 'compteur@test.fr', is_active: true, sessions_counted: 2, last_count_at: '2026-08-29T10:00:00Z' },
+        { id: 'cnt-2', full_name: 'Nadia Test', email: 'nadia@test.fr', is_active: false, sessions_counted: 0, last_count_at: null },
+      ],
+    },
+  ],
+  invitations: [],
+}
