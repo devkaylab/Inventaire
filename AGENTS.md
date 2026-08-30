@@ -232,22 +232,41 @@ dépôt. Lecture `mes_notifications`, marquage `marquer_notifications_lues`
 dans `purge_expired_data`. La cloche vit dans le RAIL : l'admin d'entreprise
 reçoit les messages de ses superviseurs et n'atterrit pas sur /dashboard.
 
-## Messages : chacun écrit un cran au-dessus
+## Messages : des fils, et on répond
 
-Superviseur → administrateur d'entreprise ; administrateur d'entreprise →
-Quantinvo. Même modale (`MessageAdmin`, variante `destinataire`), même edge
-`message-admin` (redéployée, verify_jwt VRAI) :
+⚠️ **Deux jets le même jour, et le second annule une décision du premier.**
+Le premier livrait un dépôt sans réponse et une liste de cartes en lecture
+seule — constat de Julien : « je ne peux rien faire avec ». Une boîte de
+réception est une CONVERSATION.
 
-- **⚠️ Le destinataire se choisit sur le PROFIL de l'appelant, jamais sur la
-  requête** — l'edge lit `is_company_admin` avec le jeton de l'appelant et
-  route vers `deposer_message_admin` ou `deposer_message_quantinvo`, chacune
-  gardée par son rôle. Un test le fige.
-- Notification + e-mail (reply_to = l'expéditeur ; adresses lues par la clé
-  de service APRÈS le dépôt, jamais pour écrire — règle ca-request-store ;
-  Quantinvo via `admin_notify_emails`). Bornes 120/2000 qui REFUSENT.
-- Repli : edge injoignable → RPC directe, message sans e-mail.
-- La garde e-mail « pas de "répondez à ce message" sans adresse » a mordu :
-  le gabarit donne l'adresse de l'expéditeur en toutes lettres.
+Trois tables (`message_fils`, `messages`, `message_participants`), aucune
+policy d'écriture, tout par RPC : `ouvrir_fil`, `repondre_fil`, `mes_fils`,
+`ouvrir_message_fil`. Écran `/messages` en deux panneaux (liste à gauche,
+fil à droite, champ de réponse). Edge `message-admin` : ouverture SANS
+`filId`, réponse AVEC.
+
+- **⚠️ Puisqu'on répond, TOUT LE MONDE a une boîte** — superviseur compris.
+  Le « il écrit sans recevoir » du premier jet était une erreur de
+  conception : il écrit à son administrateur, il doit lire la réponse.
+- **⚠️ La portée d'un fil NEUF se déduit du profil** (administrateur
+  d'entreprise → Quantinvo, superviseur → son administrateur), jamais d'un
+  paramètre. **La garde d'une RÉPONSE est l'appartenance au fil, rien
+  d'autre** : ni rôle ni entreprise — on répond à qui vous a écrit.
+- **⚠️ Vu d'un client, un fil vers nous dit « Quantinvo »**, jamais les noms
+  de nos administrateurs : le produit ne nomme pas son personnel à ses
+  clients.
+- **⚠️ L'état de lecture vit sur le fil, par personne** (`lu_le`) — une seule
+  source. La cloche fait l'UNION notifications + fils non lus, et « tout
+  marquer lu » ne touche QUE les notifications : lire sa cloche n'est pas
+  lire son courrier. Ouvrir UN fil ne lit que lui.
+- L'auteur est FIGÉ dans `auteur_label` : un fil survit à un compte supprimé.
+  Purge à un an sur `dernier_le` — une conversation vivante ne perd pas son
+  début.
+- Les destinataires de l'e-mail SONT les participants du fil ; son bouton
+  mène à `/messages?fil=<id>`. Bornes 120/2000 qui REFUSENT. Repli : edge
+  injoignable → RPC directe, message sans e-mail.
+- `deposer_message_admin` et `deposer_message_quantinvo` restent en base sans
+  appelant (règle : on retire les appels d'abord). Ne plus rien y brancher.
 
 ## Recherche globale (tableau de bord superviseur)
 
