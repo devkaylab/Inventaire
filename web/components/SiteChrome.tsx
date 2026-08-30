@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { AuthLink } from '@/components/AuthLink'
 import { RevealObserver } from '@/components/RevealObserver'
+import { Parallaxe } from '@/components/Parallaxe'
 import { PRIVACY_URL } from '@/lib/links'
 import { mentionsCompletes } from '@/lib/legal'
 
@@ -14,6 +15,7 @@ export function SiteHeader() {
   return (
     <>
     <RevealObserver />
+    <Parallaxe />
     <header className="site-header">
       <div className="container inner">
         <Link href="/" className="brand">

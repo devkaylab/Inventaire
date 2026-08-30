@@ -583,3 +583,53 @@ describe('les deux passes ont la même couleur dans l’app et sur le site', () 
     expect(ecran).not.toContain('btn btn-primary btn-sm')
   })
 })
+
+describe('le héros plein écran et la parallaxe des pages vitrines', () => {
+  const css = lire('../app/globals.css')
+  const accueil = lire('../app/page.tsx')
+  const chrome = lire('../components/SiteChrome.tsx')
+  const parallaxe = lire('../components/Parallaxe.tsx')
+
+  it('le héros de l’accueil occupe le premier écran, et lui seul', () => {
+    expect(accueil).toContain('className="hero hero-plein"')
+    expect(css).toContain('min-height: calc(100vh - 64px)')
+    // Les pages intérieures gardent leur bande d'introduction : on vient y lire.
+    expect(lire('../app/pourquoi-nous-choisir/page.tsx')).not.toContain('hero-plein')
+    expect(lire('../app/inventaire/page.tsx')).not.toContain('hero-plein')
+  })
+
+  it('l’indice de défilement mène à la première section', () => {
+    // Un héros plein écran sans indice laisse croire que la page s'arrête là.
+    expect(accueil).toContain('className="scroll-cue" href="#rythmes"')
+    expect(accueil).toContain('id="rythmes"')
+  })
+
+  it('la parallaxe est montée par l’en-tête commun, comme les apparitions', () => {
+    expect(chrome).toContain('<Parallaxe />')
+    expect(chrome).toContain('<RevealObserver />')
+  })
+
+  it('elle respecte la préférence de réduction des animations', () => {
+    expect(parallaxe).toContain('prefers-reduced-motion')
+    // Et les animations CSS du décor s'éteignent avec elle.
+    expect(css).toContain('.flotte, .flotte-lent, .scroll-cue svg { animation: none; }')
+  })
+
+  it('⚠️ la racine se rogne en clip, jamais en hidden', () => {
+    // `overflow-x: hidden` ferait de la racine un conteneur de défilement :
+    // l'en-tête sticky s'ancrerait dessus et cesserait de coller. Vu sur la
+    // maquette du 30 août 2026 — ne pas « corriger » le clip.
+    expect(css).toContain('overflow-x: clip')
+    expect(css).not.toContain('html { scroll-behavior: smooth; overflow-x: hidden; }')
+  })
+
+  it('les couches de décor sont inertes au doigt et invisibles aux lecteurs d’écran', () => {
+    expect(css).toContain('.plx { position: absolute; pointer-events: none;')
+    for (const page of ['../app/page.tsx', '../app/pourquoi-nous-choisir/page.tsx', '../app/inventaire/page.tsx']) {
+      const src = lire(page)
+      for (const m of src.matchAll(/className="plx [^"]*"[^>]*/g)) {
+        expect(m[0], `${page} : chaque couche porte aria-hidden`).toContain('aria-hidden="true"')
+      }
+    }
+  })
+})

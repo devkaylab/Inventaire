@@ -105,7 +105,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+/* `clip`, surtout pas `hidden` : les cubes de la parallaxe débordent du bord
+   droit, mais `overflow-x: hidden` ferait de la racine un conteneur de
+   défilement et l'en-tête sticky s'ancrerait dessus au lieu du document. */
+html { scroll-behavior: smooth; overflow-x: clip; }
 
 body {
   background: var(--bg);
@@ -234,8 +237,72 @@ a { color: inherit; text-decoration: none; }
 .hero p.lead { max-width: 620px; margin: 22px auto 34px; font-size: 19px; color: var(--text-2); }
 .hero .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
+/* ── Parallaxe des pages vitrines ───────────────────────── */
+/* Les couches portent data-plx (leur vitesse) ; components/Parallaxe.tsx les
+   décale au défilement. Sans JavaScript, tout reste visible à sa position de
+   repos — comme les apparitions, rien n'est jamais masqué. */
+.plx { position: absolute; pointer-events: none; will-change: transform; }
+
+/* Le héros de l'accueil occupe tout le premier écran (moins l'en-tête). */
+.hero-plein {
+  min-height: calc(100vh - 64px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 48px 0 96px;
+}
+.hero-plein::before { content: none; } /* le halo devient une couche animée */
+.hero-voile {
+  inset: -30% -10% auto -10%; height: 130vh;
+  background: radial-gradient(55% 45% at 50% 28%, var(--accent-soft), transparent 70%);
+}
+.hero-plein .container { position: relative; will-change: transform, opacity; }
+
+/* Les cubes filaires prennent leur couleur du calque (currentColor). */
+.cube-a { top: 12%; right: 6%; opacity: 0.5; color: var(--accent-light); }
+.cube-b { bottom: 10%; left: 5%; opacity: 0.35; color: var(--cyan); }
+.cube-c { top: 22%; left: 12%; opacity: 0.28; color: var(--accent); }
+.hero-cube-int-a { top: 16%; right: 7%; opacity: 0.4; color: var(--accent-light); }
+.hero-cube-int-b { top: 30%; left: 6%; opacity: 0.3; color: var(--cyan); }
+.flotte { animation: flotte 7s ease-in-out infinite alternate; }
+.flotte-lent { animation: flotte 11s ease-in-out infinite alternate-reverse; }
+@keyframes flotte {
+  from { transform: translateY(-10px) rotate(-2deg); }
+  to { transform: translateY(12px) rotate(3deg); }
+}
+.scan-trait {
+  left: 50%; top: 58%; width: 420px; height: 2px; margin-left: -210px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0.35;
+}
+
+.scroll-cue {
+  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: var(--text-3); font-size: 12px; font-weight: 600; letter-spacing: 0.6px;
+  text-transform: uppercase; padding: 10px 14px;
+}
+.scroll-cue:hover { color: var(--text-2); }
+.scroll-cue svg { animation: cue 1.8s ease-in-out infinite; }
+@keyframes cue {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+
+.deco-cube { opacity: 0.22; }
+.deco-droite { right: -40px; top: 30%; }
+.deco-gauche { left: -30px; top: 55%; }
+.deco-accent { color: var(--accent); }
+.deco-cyan { color: var(--cyan); }
+
+@media (max-width: 860px) {
+  .cube-a, .cube-b, .cube-c, .scan-trait,
+  .hero-cube-int-a, .hero-cube-int-b, .deco-cube { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flotte, .flotte-lent, .scroll-cue svg { animation: none; }
+}
+
 /* ── Features ───────────────────────────────────────────── */
-.section { padding: 72px 0; }
+.section { position: relative; padding: 72px 0; }
 .section-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
 .section-head h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.8px; }
 .section-head p { margin-top: 14px; color: var(--text-2); font-size: 17px; }
@@ -257,9 +324,16 @@ a { color: inherit; text-decoration: none; }
 
 /* ── CTA band ───────────────────────────────────────────── */
 .cta-band {
+  /* position + z-index : la lueur (.band-glow) se glisse en z-index -1,
+     derrière le texte mais devant le fond de la bande. */
+  position: relative; overflow: hidden; z-index: 0;
   background: linear-gradient(120deg, #211a4d, #14183a);
   border: 1px solid var(--hairline); border-radius: 24px;
   padding: 48px; text-align: center;
+}
+.band-glow {
+  inset: auto -20% -80% -20%; height: 240px; z-index: -1;
+  background: radial-gradient(50% 60% at 50% 100%, var(--accent-soft), transparent 75%);
 }
 :root[data-theme="light"] .cta-band { background: linear-gradient(120deg, #eef0fb, #e6eaf8); }
 .cta-band h2 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; letter-spacing: -0.6px; }
@@ -268,7 +342,10 @@ a { color: inherit; text-decoration: none; }
 /* ── Footer ─────────────────────────────────────────────── */
 .site-footer { border-top: 1px solid var(--hairline); padding: 40px 0; margin-top: 24px; }
 .site-footer .inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.site-footer .links { display: flex; gap: 22px; }
+/* La rangée se replie : sur 375 px elle débordait du bord droit, et depuis
+   que la racine se rogne (clip), un lien tronqué ne se récupère plus en
+   défilant de côté. */
+.site-footer .links { display: flex; gap: 12px 22px; flex-wrap: wrap; }
 .site-footer a { color: var(--text-2); font-size: 14px; }
 .site-footer a:hover { color: var(--text); }
 .muted { color: var(--text-3); font-size: 13px; }

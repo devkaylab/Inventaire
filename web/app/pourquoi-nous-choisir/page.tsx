@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
+import { CubeFilaire } from '@/components/Parallaxe'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
 export const metadata: Metadata = {
@@ -72,6 +73,12 @@ export default function PourquoiPage() {
       <SiteHeader />
       <main>
         <section className="hero" style={{ paddingBottom: 40 }}>
+          <div className="plx hero-cube-int-a" data-plx="0.22" aria-hidden="true">
+            <div className="flotte"><CubeFilaire size={110} /></div>
+          </div>
+          <div className="plx hero-cube-int-b" data-plx="0.5" aria-hidden="true">
+            <div className="flotte-lent"><CubeFilaire size={70} /></div>
+          </div>
           <div className="container">
             <div data-reveal="0"><span className="eyebrow">Pourquoi nous choisir ?</span></div>
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
@@ -85,6 +92,12 @@ export default function PourquoiPage() {
         </section>
 
         <section className="section" style={{ paddingTop: 8 }}>
+          <div className="plx deco-cube deco-droite deco-accent" data-plx="0.3" aria-hidden="true">
+            <CubeFilaire size={110} />
+          </div>
+          <div className="plx deco-cube deco-gauche deco-cyan" data-plx="0.42" aria-hidden="true">
+            <CubeFilaire size={84} />
+          </div>
           <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {RAISONS.map((r, i) => (
               <div className="card" data-reveal="0" style={{ padding: '30px 34px' }} key={r.title}>
@@ -105,6 +118,7 @@ export default function PourquoiPage() {
         <section className="section">
           <div className="container">
             <div className="cta-band" data-reveal="0">
+              <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
               <h2>Équipez votre magasin</h2>
               <p>
                 Déposez votre demande : nous revenons vers vous avec un devis au volume de

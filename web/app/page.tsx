@@ -2,6 +2,7 @@ import { Logo } from '@/components/Logo'
 import { AuthLink } from '@/components/AuthLink'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
+import { CubeFilaire } from '@/components/Parallaxe'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
 const FEATURES = [
@@ -31,8 +32,19 @@ export default function Home() {
       <SiteHeader />
 
       <main>
-        <section className="hero">
-          <div className="container">
+        <section className="hero hero-plein">
+          <div className="plx hero-voile" data-plx="0.45" aria-hidden="true" />
+          <div className="plx cube-a" data-plx="0.18" aria-hidden="true">
+            <div className="flotte"><CubeFilaire size={150} /></div>
+          </div>
+          <div className="plx cube-b" data-plx="0.5" aria-hidden="true">
+            <div className="flotte-lent"><CubeFilaire size={104} /></div>
+          </div>
+          <div className="plx cube-c" data-plx="0.3" aria-hidden="true">
+            <div className="flotte"><CubeFilaire size={64} /></div>
+          </div>
+          <div className="plx scan-trait" data-plx="0.62" aria-hidden="true" />
+          <div className="container" data-hero-exit>
             <div className="logo-glow" data-reveal="0" style={{ display: 'inline-block' }}>
               <Logo size={84} />
             </div>
@@ -47,9 +59,18 @@ export default function Home() {
               <AuthLink className="btn btn-ghost" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
             </div>
           </div>
+          <a className="scroll-cue" href="#rythmes">
+            <span>Découvrir</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </a>
         </section>
 
-        <section className="section">
+        <section className="section" id="rythmes">
+          <div className="plx deco-cube deco-droite deco-accent" data-plx="0.28" aria-hidden="true">
+            <CubeFilaire size={120} />
+          </div>
           <div className="container">
             <div className="section-head" data-reveal="0">
               <h2>Comptez quand vous voulez</h2>
@@ -70,6 +91,9 @@ export default function Home() {
         </section>
 
         <section className="section" id="fonctionnalites">
+          <div className="plx deco-cube deco-gauche deco-cyan" data-plx="0.4" aria-hidden="true">
+            <CubeFilaire size={90} />
+          </div>
           <div className="container">
             <div className="section-head" data-reveal="0">
               <h2>Tout pour un inventaire maîtrisé</h2>
@@ -107,6 +131,7 @@ export default function Home() {
         <section className="section">
           <div className="container">
             <div className="cta-band" data-reveal="0">
+              <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
               <h2>Équipez votre magasin</h2>
               <p>
                 Une licence annuelle par magasin, au volume de votre stock — inventaires et compteurs
