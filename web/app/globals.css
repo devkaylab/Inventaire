@@ -2370,3 +2370,74 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .tb-barre, .tb-anneau circle { transition: none; }
 }
 .tb-rond { padding: 12px; }
+
+/* ── Le tableau de bord scale comme la maquette ──────────────
+   Constat de Julien, captures à l'appui : la planche de la maquette est mise
+   à l'échelle pour remplir sa fenêtre (le zoom du canevas), la prod servait
+   des pixels absolus — textes et tuiles proportionnellement plus petits, et
+   un ratio tuile/texte différent d'un écran à l'autre.
+   La base reproduit ce zoom : min(rapport de largeur, rapport de hauteur)
+   sur le cadre de la maquette (1440−76 × 940). Toutes les tailles du tableau
+   sont en em de cette base : à 1440×900 elles valent celles de la maquette,
+   ailleurs tout grandit ou rétrécit UNIFORMÉMENT — le ratio tient, et la
+   hauteur scalant avec la fenêtre, le plein écran ne défile toujours pas. */
+.tb-plein {
+  font-size: clamp(13px, min(calc((100vw - 76px) * 16 / 1364), calc(100vh * 16 / 940)), 24px);
+}
+.tb-plein .page-title { font-size: 1.625em; }
+.tb-plein .page-sub { font-size: 0.875em; }
+.tb-plein .btn { font-size: 0.9375em; }
+
+.tb-kpi { padding: 1.125em 1.25em; }
+.tb-kpi-haut { gap: 0.625em; }
+.tb-kpi-ico { width: 2.375em; height: 2.375em; border-radius: 0.6875em; }
+.tb-kpi-ico svg { width: 1.25em; height: 1.25em; }
+.tb-kpi-nom { font-size: 0.845em; }
+.tb-kpi-bas { gap: 0.625em; margin-top: 0.625em; }
+.tb-kpi-valeur { font-size: 1.875em; }
+.tb-chip { font-size: 0.75em; padding: 0.25em 0.667em; }
+.tb-chip svg { width: 1em; height: 1em; }
+.tb-kpi-ref { font-size: 0.781em; }
+
+.tb-carte-tete { padding: 1.125em 1.25em 0; gap: 0.75em; }
+.tb-carte-tete h2 { font-size: 0.9375em; }
+.tb-tout { font-size: 0.8125em; }
+.tb-segmente button { font-size: 0.781em; padding: 0.48em 0.96em; }
+.tb-filtres select { font-size: 0.781em; padding: 0.48em 0.8em; }
+
+.tb-plot { padding: 1em 1.25em 0.875em; }
+.tb-grille { min-height: 13.125em; margin-left: 2.75em; }
+.tb-grille-ligne span { font-size: 0.6875em; }
+.tb-barres { gap: 0.75em; }
+.tb-barre { max-width: 2.875em; }
+.tb-bulle { font-size: 0.75em; padding: 0.5em 0.833em; }
+.tb-jours-noms { margin-left: 2.75em; font-size: 0.75em; gap: 0.75em; }
+
+.tb-anneau-corps { gap: 1.25em; padding: 0.875em 1.25em 1.125em; }
+.tb-anneau svg { width: 9.4em; height: 9.4em; }
+.tb-anneau-gros { font-size: 1.1875em; }
+.tb-anneau-sous { font-size: 0.6875em; }
+.tb-legende { gap: 0.625em; }
+.tb-legende-rang { font-size: 0.8125em; gap: 0.625em; }
+.tb-puce { width: 0.625em; height: 0.625em; }
+.tb-legende-note { font-size: 0.719em; }
+
+.tb-rangs { padding: 0.5em 0.5em 0.625em; }
+.tb-rang { gap: 0.875em; padding: 0.75em; }
+.tb-vignette { width: 2.5em; height: 2.5em; border-radius: 0.6875em; }
+.tb-vignette svg { width: 1.25em; height: 1.25em; }
+/* L'avatar porte sa propre font-size : sa largeur se calcule dans SES em. */
+.tb-avatar { font-size: 0.8125em; width: 2.923em; height: 2.923em; }
+.tb-rang-titre { font-size: 0.875em; }
+.tb-rang-sous { font-size: 0.781em; }
+.tb-rang-valeur { font-size: 0.875em; }
+.tb-attente { font-size: 0.719em; padding: 0.26em 0.783em; }
+.tb-vide { font-size: 0.875em; padding: 1em 1.25em 1.25em; }
+
+.tb-recherche { width: 20em; padding: 0 0.875em; gap: 0.5em; }
+.tb-recherche svg { width: 1em; height: 1em; }
+.tb-recherche input { font-size: 0.845em; padding: 0.74em 0; }
+.tb-recherche-nom { font-size: 0.845em; }
+.tb-recherche-sous { font-size: 0.75em; }
+.tb-rond { padding: 0.75em; }
+.tb-rond svg { width: 1.2em; height: 1.2em; }
