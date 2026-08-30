@@ -63,6 +63,8 @@ export function ongletsPour(profile: Profile): Onglet[] {
     { href: '/inventaires', label: 'Inventaires' },
     { href: '/equipe', label: 'Mon équipe' },
     { href: '/magasins', label: 'Magasins' },
+    // Il écrit à son administrateur : il doit lire la réponse.
+    { href: '/messages', label: 'Messages' },
     { href: '/outils', label: 'Boîte à outils' },
   ]
 }

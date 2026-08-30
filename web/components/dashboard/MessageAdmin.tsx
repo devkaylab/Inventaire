@@ -54,10 +54,7 @@ export function MessageAdmin({ destinataire = 'entreprise' }: {
       let refus: string | null = !succes ? (data?.error ?? null) : null
       if (error && !refus) {
         // Edge injoignable : la RPC directe dépose quand même (sans e-mail).
-        const direct = await supabase.rpc(
-          versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin',
-          { p_sujet: sujet, p_message: message },
-        )
+        const direct = await supabase.rpc('ouvrir_fil', { p_sujet: sujet, p_message: message })
         succes = !direct.error && direct.data?.success
         refus = direct.error?.message ?? null
       }

@@ -15,7 +15,7 @@ const edge = lire('../../supabase/functions/message-admin/index.ts')
 const recherche = lire('../components/dashboard/RechercheGlobale.tsx')
 const tableau = lire('../app/dashboard/page.tsx')
 const boite = lire('../app/messages/page.tsx')
-const migrationBoite = lire('../../supabase/migrations/20260830150001_boite_de_reception.sql')
+const migrationFils = lire('../../supabase/migrations/20260830160001_fils_de_messages.sql')
 
 describe('les notifications', () => {
   it('⚠️ la table ne s’écrit jamais depuis le client', () => {
@@ -84,16 +84,16 @@ describe('le message à l’administrateur', () => {
     // Un client qui pourrait nommer son destinataire écrirait à qui il veut.
     // L'edge lit le profil avec le jeton de l'appelant et route ; les deux
     // RPC portent chacune leur garde de rôle.
-    expect(edge).toContain("versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin'")
-    expect(edge.indexOf("select('is_company_admin')")).toBeLessThan(edge.indexOf('deposer_message_quantinvo'))
-    expect(migrationQuantinvo).toContain('not coalesce(v_profil.is_company_admin, false)')
+    expect(edge).toContain("caller.rpc('repondre_fil'")
+    expect(edge).toContain("caller.rpc('ouvrir_fil'")
+    // La portée d'un fil neuf se déduit du profil, dans la fonction.
+    expect(migrationFils).toContain("case when v_profil.is_company_admin then 'quantinvo' else 'entreprise' end")
   })
 
-  it('le canal Quantinvo repose ses droits et fige l’entreprise', () => {
-    expect(migrationQuantinvo).toContain('revoke execute on function public.deposer_message_quantinvo(text, text) from public, anon;')
-    expect(migrationQuantinvo).toContain("'entreprise', coalesce(v_cie, '')")
-    // Et la cloche sait présenter le nouveau type.
-    expect(cloche).toContain("'message_entreprise'")
+  it('l’auteur d’un message reste lisible après son départ', () => {
+    // Libellé figé, comme les journaux : un fil survit à un compte supprimé.
+    expect(migrationFils).toContain('auteur_label text not null')
+    expect(migrationFils).toContain('on delete set null')
   })
 
   it('⚠️ l’edge dépose avec le jeton de l’appelant, la clé de service ne sert qu’après', () => {
@@ -109,21 +109,22 @@ describe('le message à l’administrateur', () => {
   it('aucune adresse d’administrateur ne redescend au client', () => {
     // La RPC ne rend qu'un compte ; les adresses lues par l'edge servent à
     // l'envoi et ne figurent dans aucune de ses réponses JSON.
-    expect(migration).toContain("jsonb_build_object('success', true, 'destinataires', n)")
+    expect(migrationFils).toContain("jsonb_build_object('success', true, 'fil_id', v_fil, 'destinataires', n)")
     expect(edge).not.toMatch(/json\(\{[^)]*adresses/)
   })
 
   it('les bornes refusent, elles ne tronquent pas — et l’écran les connaît', () => {
-    expect(migration).toContain('message_trop_long')
-    expect(migration).not.toContain('left(v_msg')
+    expect(migrationFils).toContain('message_trop_long')
+    expect(migrationFils).not.toContain('left(v_msg')
     expect(message).toContain('maxLength={120}')
     expect(message).toContain('maxLength={2000}')
   })
 
   it('l’edge injoignable retombe sur la RPC directe', () => {
-    // Le message passe alors sans e-mail, plutôt que de ne pas passer — et le
-    // repli suit le même canal que l'edge.
-    expect(message).toContain("versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin'")
+    // Le message passe alors sans e-mail, plutôt que de ne pas passer — à
+    // l'ouverture comme à la réponse.
+    expect(message).toContain("rpc('ouvrir_fil'")
+    expect(boite).toContain("rpc('repondre_fil'")
   })
 
   it('la réponse va à l’expéditeur, pas à une boîte de service', () => {
@@ -132,38 +133,58 @@ describe('le message à l’administrateur', () => {
 })
 
 describe('la boîte de réception', () => {
-  it('un message se lit en entier, pas seulement en notification', () => {
-    // Constat de Julien au premier message réel : la cloche annonce et
-    // tronque, rien ne permettait d'ouvrir. Le rang mène à la boîte.
-    expect(cloche).toContain("lien: '/messages'")
-    expect(boite).toContain("rpc('mes_messages')")
-    // Un message est un texte : ses retours à la ligne comptent.
-    expect(lire('../app/globals.css')).toContain('.msg-corps {')
-    expect(lire('../app/globals.css')).toContain('white-space: pre-line')
+  it('⚠️ une boîte, c’est une conversation — on répond', () => {
+    // Le premier jet listait des cartes en lecture seule. Constat de Julien :
+    // « je ne peux rien faire avec ». Un fil, des messages empilés, une
+    // réponse qui revient à l'expéditeur.
+    expect(migrationFils).toContain('create table public.message_fils')
+    expect(migrationFils).toContain('create or replace function public.repondre_fil')
+    expect(boite).toContain("rpc('mes_fils')")
+    expect(boite).toContain('fil-repondre')
+    expect(boite).toContain('Répondre')
   })
 
-  it('elle est réservée à qui reçoit', () => {
-    // Un superviseur ordinaire écrit, il ne reçoit pas : l'écran serait vide
-    // à jamais. La garde le renvoie chez lui.
-    expect(boite).toContain('guard.profile.is_company_admin || !!guard.profile.is_admin')
-    expect(boite).toContain("window.location.replace('/dashboard')")
-    // Et le rail ne l'offre qu'aux deux profils concernés.
+  it('⚠️ puisqu’on répond, tout le monde a une boîte', () => {
+    // Le « il écrit sans recevoir » du premier jet tombe avec le bouton
+    // Répondre : un superviseur lit la réponse de son administrateur.
     const onglets = shell.split('export function ongletsPour')[1]?.split('\n}\n')[0] ?? ''
     const superviseur = onglets.split('profile.is_company_admin')[1]?.split('return [')[2] ?? ''
-    expect(superviseur).not.toContain("'/messages'")
-    expect(onglets).toContain("{ href: '/messages', label: 'Messages' }")
+    expect(superviseur).toContain("'/messages'")
+    expect(boite).not.toContain("window.location.replace('/dashboard')")
   })
 
-  it('⚠️ ouvrir la boîte ne marque QUE les messages', () => {
-    // Une invitation à un inventaire garde son point tant que la cloche ne
-    // l'a pas montrée : deux gestes de lecture, deux portées.
-    expect(migrationBoite).toContain("and type in ('message_superviseur', 'message_entreprise')")
-    expect(boite).toContain("rpc('marquer_messages_lus')")
+  it('⚠️ la garde d’une réponse est l’appartenance au fil, rien d’autre', () => {
+    // Pas de rôle, pas d'entreprise : on répond à qui vous a écrit.
+    const rep = migrationFils.slice(migrationFils.indexOf('function public.repondre_fil'))
+    expect(rep).toContain('from public.message_participants p')
+    expect(rep).toContain("raise exception 'forbidden'")
   })
 
-  it('les deux fonctions reposent leurs droits', () => {
-    expect(migrationBoite).toContain('revoke execute on function public.mes_messages() from public, anon;')
-    expect(migrationBoite).toContain('revoke execute on function public.marquer_messages_lus() from public, anon;')
+  it('⚠️ ouvrir UN fil ne lit que lui', () => {
+    // Les autres fils gardent leur pastille, et les invitations à un
+    // inventaire ne sont pas concernées : leur lecture vit dans la cloche.
+    const ouvre = migrationFils.slice(migrationFils.indexOf('function public.ouvrir_message_fil'))
+    expect(ouvre).toContain('where fil_id = p_fil and user_id = v_uid')
+    expect(boite).toContain("rpc('ouvrir_message_fil'")
+  })
+
+  it('⚠️ un client ne voit pas les noms de notre personnel', () => {
+    // Un fil vers Quantinvo se lit « Quantinvo » côté client.
+    expect(migrationFils).toContain("then 'Quantinvo'")
+  })
+
+  it('la notification mène au fil, et la cloche compte les non lus', () => {
+    expect(cloche).toContain("`/messages?fil=${d.fil_id}`")
+    expect(migrationFils).toContain("'message'::text as type")
+  })
+
+  it('les fonctions reposent leurs droits, la purge emporte le fil entier', () => {
+    expect(migrationFils).toContain('revoke execute on function public.ouvrir_fil(text, text) from public, anon;')
+    expect(migrationFils).toContain('revoke execute on function public.repondre_fil(uuid, text) from public, anon;')
+    expect(migrationFils).toContain('revoke execute on function public.mes_fils() from public, anon;')
+    // Sur la date du DERNIER message : une conversation vivante ne perd pas
+    // son début.
+    expect(migrationFils).toContain('delete from public.message_fils where dernier_le < now() - messages_ttl;')
   })
 })
 

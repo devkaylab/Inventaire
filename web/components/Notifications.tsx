@@ -17,8 +17,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { relativeTime } from '@/lib/format'
 
 type Notif = {
-  id: number
-  type: 'invitation_inventaire' | 'compteur_actif' | 'message_superviseur' | 'message_entreprise'
+  id: string
+  type: 'invitation_inventaire' | 'compteur_actif' | 'message'
   donnees: Record<string, string | undefined>
   created_at: string
   lu: boolean
@@ -40,19 +40,13 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
         texte: `${d.nom || 'Un compteur'} s’est connecté pour la première fois : son profil de compteur est prêt.`,
         lien: '/equipe',
       }
-    // Le texte est tronqué par la fenêtre : le rang mène à la boîte, où le
-    // message se lit en entier (constat de Julien, 30 août 2026).
-    case 'message_superviseur':
+    // Le rang mène AU FIL : la conversation s'y lit en entier et s'y
+    // poursuit (constat de Julien, 30 août 2026).
+    case 'message':
       return {
-        titre: `Message de ${d.de || 'un superviseur'}`,
+        titre: `Message de ${d.de || 'quelqu’un'}${d.entreprise ? ` — ${d.entreprise}` : ''}`,
         texte: d.sujet ?? '',
-        lien: '/messages',
-      }
-    case 'message_entreprise':
-      return {
-        titre: `Message de ${d.de || 'une entreprise'}${d.entreprise ? ` — ${d.entreprise}` : ''}`,
-        texte: d.sujet ?? '',
-        lien: '/messages',
+        lien: d.fil_id ? `/messages?fil=${d.fil_id}` : '/messages',
       }
   }
 }

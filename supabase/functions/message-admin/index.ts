@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ success: false, error: 'Non authentifié' }, 401)
 
-  let payload: { sujet?: string; message?: string }
+  let payload: { sujet?: string; message?: string; filId?: string }
   try {
     payload = await req.json()
   } catch {
@@ -52,6 +52,8 @@ Deno.serve(async (req) => {
   }
   const sujet = (payload.sujet ?? '').trim()
   const message = (payload.message ?? '').trim()
+  // Avec un fil, c'est une réponse ; sans, c'est une conversation qui s'ouvre.
+  const filId = (payload.filId ?? '').trim() || null
 
   const url = Deno.env.get('SUPABASE_URL')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -61,9 +63,10 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await caller.auth.getUser()
   if (userErr || !userData?.user) return json({ success: false, error: 'Session expirée.' }, 401)
 
-  // Le canal se choisit sur le profil, lu avec le jeton de l'appelant : un
-  // administrateur d'entreprise écrit à Quantinvo, un superviseur ordinaire à
-  // son administrateur. La requête ne porte aucun choix de destinataire.
+  // Le destinataire ne vient JAMAIS de la requête : à l'ouverture d'un fil il
+  // se déduit du profil (un administrateur d'entreprise écrit à Quantinvo, un
+  // superviseur à son administrateur) ; sur une réponse, ce sont les autres
+  // participants du fil, et la RPC vérifie l'appartenance.
   const { data: profilAppelant } = await caller
     .from('profiles')
     .select('is_company_admin')
@@ -71,10 +74,9 @@ Deno.serve(async (req) => {
     .maybeSingle()
   const versQuantinvo = !!profilAppelant?.is_company_admin
 
-  const { data: result, error: rErr } = await caller.rpc(
-    versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin',
-    { p_sujet: sujet, p_message: message },
-  )
+  const { data: result, error: rErr } = filId
+    ? await caller.rpc('repondre_fil', { p_fil: filId, p_message: message })
+    : await caller.rpc('ouvrir_fil', { p_sujet: sujet, p_message: message })
   if (rErr) {
     const code = Object.keys(REFUS).find((c) => rErr.message.includes(c))
     if (code) return json({ success: false, code, error: REFUS[code] }, 400)
@@ -92,40 +94,38 @@ Deno.serve(async (req) => {
 
   try {
     const admin = createClient(url, serviceKey)
-    const [{ data: profil }, { data: destinataires }] = await Promise.all([
-      admin.from('profiles').select('full_name, first_name, company_id, companies(name)')
-        .eq('id', userData.user.id).maybeSingle(),
-      admin.from('profiles').select('id, first_name')
-        .eq('company_id',
-          (await admin.from('profiles').select('company_id').eq('id', userData.user.id).maybeSingle())
-            .data?.company_id ?? '')
-        .eq('is_company_admin', true)
-        .neq('id', userData.user.id),
-    ])
+    const filCible = filId ?? (result?.fil_id as string | undefined)
+    const { data: profil } = await admin
+      .from('profiles').select('full_name, companies(name)')
+      .eq('id', userData.user.id).maybeSingle()
     const nomExpediteur = ((profil as { full_name?: string } | null)?.full_name ?? '').trim() || 'Un superviseur'
     const entreprise = ((profil as { companies?: { name?: string } | null } | null)?.companies?.name ?? '').trim()
 
+    // Les destinataires SONT les autres participants du fil : une réponse
+    // revient à qui a écrit, une ouverture va à ceux que la RPC a inscrits.
     const adresses: string[] = []
-    if (versQuantinvo) {
-      // Les administrateurs Quantinvo, lus en base — le même chemin que tous
-      // les avis internes (admin_notify_emails, service_role seulement).
-      const { data: quantinvo } = await admin.rpc('admin_notify_emails')
-      for (const e of (quantinvo ?? []) as string[]) if (e) adresses.push(e)
-    } else {
-      for (const d of (destinataires ?? []) as { id: string }[]) {
-        const { data: u } = await admin.auth.admin.getUserById(d.id)
+    if (filCible) {
+      const { data: parts } = await admin
+        .from('message_participants').select('user_id')
+        .eq('fil_id', filCible).neq('user_id', userData.user.id)
+      for (const d of (parts ?? []) as { user_id: string }[]) {
+        const { data: u } = await admin.auth.admin.getUserById(d.user_id)
         if (u?.user?.email) adresses.push(u.user.email)
       }
     }
-    if (adresses.length === 0) return sansEmail('aucune adresse d’administrateur')
+    if (adresses.length === 0) return sansEmail('aucune adresse de destinataire')
 
     const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
     const adresseExpediteur = userData.user.email ?? ''
     const { html, text } = emailQuantinvo({
-      titre: versQuantinvo ? 'Message d’une entreprise cliente' : 'Message d’un de vos superviseurs',
-      apercu: `${nomExpediteur} : ${sujet}`,
+      titre: filId
+        ? 'Réponse à votre conversation'
+        : versQuantinvo ? 'Message d’une entreprise cliente' : 'Message d’un de vos superviseurs',
+      apercu: `${nomExpediteur} : ${sujet || message.slice(0, 60)}`,
       paragraphes: [
-        `${nomExpediteur}${entreprise ? ` (${entreprise})` : ''} vous écrit depuis son tableau de bord :`,
+        filId
+          ? `${nomExpediteur}${entreprise ? ` (${entreprise})` : ''} a répondu :`
+          : `${nomExpediteur}${entreprise ? ` (${entreprise})` : ''} vous écrit depuis son tableau de bord :`,
         `« ${message} »`,
         // La règle du projet : un texte qui invite à écrire donne l'adresse.
         adresseExpediteur
@@ -133,16 +133,16 @@ Deno.serve(async (req) => {
           : '',
       ].filter(Boolean),
       details: [
-        { intitule: 'Sujet', valeur: sujet },
+        ...(sujet ? [{ intitule: 'Sujet', valeur: sujet }] : []),
         ...(versQuantinvo && entreprise ? [{ intitule: 'Entreprise', valeur: entreprise }] : []),
         { intitule: 'De', valeur: adresseExpediteur ? `${nomExpediteur} — ${adresseExpediteur}` : nomExpediteur },
       ],
-      bouton: versQuantinvo
-        ? { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` }
-        : { libelle: 'Ouvrir mon espace', lien: `${appUrl}/entreprise` },
-      raison: versQuantinvo
-        ? 'Vous recevez ce message parce que vous administrez Quantinvo.'
-        : 'Vous recevez ce message parce que vous administrez cette entreprise sur Quantinvo.',
+      // Le bouton mène AU FIL : la conversation se lit et se poursuit là.
+      bouton: {
+        libelle: 'Ouvrir la conversation',
+        lien: filCible ? `${appUrl}/messages?fil=${filCible}` : `${appUrl}/messages`,
+      },
+      raison: 'Vous recevez ce message parce que vous participez à cette conversation sur Quantinvo.',
       siteUrl: appUrl,
     })
 
@@ -155,7 +155,9 @@ Deno.serve(async (req) => {
         // La réponse va au superviseur : c'est une conversation entre eux.
         reply_to: userData.user.email ?? undefined,
         to: adresses,
-        subject: `Message de ${nomExpediteur} — ${sujet}`,
+        subject: filId
+        ? `Réponse de ${nomExpediteur}`
+        : `Message de ${nomExpediteur} — ${sujet}`,
         html,
         text,
       }),
