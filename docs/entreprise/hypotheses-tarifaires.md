@@ -8,8 +8,9 @@ volume de stock, au prix fixe par magasin, par magasin et par compteur, et au
 nombre d'appareils qui comptent.
 
 > **DÉCISION DU 30 AOÛT 2026 — c'est l'hypothèse 4 qui est retenue** : trois
-> offres calées sur le **nombre d'appareils qui comptent**, par magasin —
-> Essential 690 €, Advanced 2 400 €, Enterprise 6 900 € HT par an. Elle est
+> offres calées sur le **nombre d'appareils qui comptent**, pour **un
+> magasin** — Essential 65 €/mois ou 690 €/an, Advanced 225 € ou 2 400 €,
+> Enterprise 650 € ou 6 900 € HT, les trois souscrites **en ligne**. Elle est
 > **décidée, pas encore construite** : rien n'existe en base ni dans les
 > écrans, et le nombre d'appareils n'est même pas mesurable aujourd'hui
 > (`DEVICE_KEY` est retirée à chaque lancement de l'app). Lire la section en
@@ -487,19 +488,28 @@ se contrôle pas.
 
 ### La grille
 
-| Offre | Appareils / magasin | Prix HT / an | Net | € par appareil au plafond |
-|---|---|---|---|---|
-| **Essential** | 2 | **690 €** | 411 € | 345 € |
-| **Advanced** | 3 à 20 | **2 400 €** | 1 428 € | 120 € |
-| **Enterprise** | 21 à 100 | **6 900 €** | 4 106 € | 69 € |
-| Au-delà | > 100 | sur devis, +700 € par tranche de 10 | — | 70 € |
+| Offre | Appareils | Par mois | À l'année | Net (annuel) | € / appareil au plafond |
+|---|---|---|---|---|---|
+| **Essential** | 2 | **65 €** | **690 €** | 411 € | 345 € |
+| **Advanced** | 3 à 20 | **225 €** | **2 400 €** | 1 428 € | 120 € |
+| **Enterprise** | 21 à 100 | **650 €** | **6 900 €** | 4 106 € | 69 € |
+| Au-delà | > 100 | +47 € / 10 | +500 € / 10 | — | 50 € |
 
-Prix **par magasin et par an**, hors taxes. Remise réseau à partir du
-quatrième magasin : −10 % de 4 à 10, −20 % de 11 à 30, −30 % au-delà — c'est la
-dégressivité chiffrée le 22 août avec l'hypothèse 3, restée sans emploi jusqu'ici.
+**⚠️ Une licence couvre UN magasin**, et le nombre d'appareils est celui qui
+compte *dans ce magasin*. Un second magasin prend sa propre licence, choisie
+selon la taille de **son** équipe : un entrepôt qui compte à trente et une
+boutique qui compte à deux ne prennent pas la même. Le multi-magasins passe par
+un devis global — voir « la remise réseau est reportée » plus bas.
 
-Maquette de la page publique :
-https://claude.ai/code/artifact/8ef9b98c-a0a7-4295-97d6-1949c105d83c
+**Le mensuel est le prix affiché**, l'annuel est l'option qui économise
+(90 / 300 / 900 €, soit ~11,5 % dans les trois cas). Douze mensualités, pas
+treize : la piste « toutes les 4 semaines » a été essayée le 30 août au soir
+puis écartée — un acheteur B2B compare en mois, et le treizième prélèvement
+découvert sur un relevé se retourne contre le vendeur.
+
+Maquettes des cinq directions de page publique (**la B est retenue** — trois
+colonnes, thème clair, bascule mensuel/annuel) :
+https://claude.ai/code/artifact/c833c707-c76a-4a5d-a127-c602d09ea82f
 
 ### ⚠️ Pourquoi « lier le prix aux dépenses » ne marche pas ici
 
@@ -552,11 +562,11 @@ Le premier jet fusionnait la taille d'un site et la taille d'un parc. Ce sont
 deux axes indépendants :
 
 - **la taille d'un magasin** (appareils simultanés) **nomme l'offre** ;
-- **le nombre de magasins est un multiplicateur avec remise**, jamais un palier.
+- **le nombre de magasins est un multiplicateur**, jamais un palier.
 
 Sans cette séparation, un réseau de 30 boutiques à 4 personnes — le plus gros
-client possible — tomberait dans « Essential × 30 ». Il prend 30 Advanced,
-remise de 20 % comprise : 57 600 €.
+client possible — tomberait dans « Essential × 30 ». Il prend 30 Advanced :
+72 000 € au tarif affiché, et c'est là qu'une remise se négocie.
 
 ⚠️ **Conséquence de vocabulaire à connaître** : « Enterprise » désigne ici **la
 taille d'un magasin**, pas un réseau. Le commercial d'un client à 30 boutiques
@@ -565,6 +575,12 @@ le cas se présente ; rien ne le bloque aujourd'hui.
 
 ### D'où viennent 690, 2 400 et 6 900
 
+- **500 € par tranche de 10 au-delà de 100 appareils** (47 € en mensuel) — et
+  ce chiffre a une histoire à ne pas refaire. Il valait 700 €, c'est-à-dire
+  exactement 6 900 ÷ 100 : le supplément reconduisait le tarif moyen
+  d'Enterprise, alors que **la grille est dégressive à chaque palier**
+  (345 → 120 → 69 € par appareil). 500 € est le cran suivant, soit 50 €. Un
+  magasin à 150 appareils paie 9 400 €, encore sous l'ancre de marché.
 - **6 900 €** est le chiffre déjà établi le 22 août pour le prix unique par
   magasin : le prix de la grande surface dans la grille au volume, et 31 % sous
   l'ancre de marché (Zebra SmartCount, ≈ 10 000 € par magasin et par an,
@@ -680,17 +696,72 @@ d'auteur (`on delete set null`, migration `20260818000001`, effet voulu pour le
 RGPD). **Un appareil n'est pas un salarié** : pas de détachement à la
 suppression de compte, pas de donnée personnelle, et il se mesure.
 
+### Les arbitrages du 30 août au soir
+
+Cinq décisions prises en dessinant la page, chacune avec sa raison.
+
+**1. Les trois offres se souscrivent EN LIGNE, Enterprise comprise.** Elle
+demandait un devis dans le premier jet. Conséquence directe et assumée : un
+client peut engager 6 900 € par carte sans que personne ne lui parle, et **le
+parcours devis existant ne sert plus qu'à deux cas** — le multi-magasins et les
+établissements de plus de 100 appareils. C'est beaucoup moins de travail que
+prévu (six prix Stripe récurrents et rien d'autre), mais c'est un choix
+commercial : plus de qualification avant l'encaissement sur le haut de grille.
+
+**2. La remise réseau est REPORTÉE après le lancement.** Elle était chiffrée
+(−10 / −20 / −30 %) et intégrée aux maquettes ; elle en est retirée. Le
+multi-magasins renvoie vers un devis global, sans prix affiché.
+⚠️ **Ce report a une échéance naturelle** : dès le premier prospect à plusieurs
+magasins, il faudra une réponse chiffrée, et c'est la remise qui reviendra. Ne
+pas la redécouvrir alors — elle est écrite dans l'hypothèse 3, section « ce
+qu'on en garde tout de suite ».
+
+**3. Mensuel affiché par défaut, douze mensualités.** La piste « toutes les
+4 semaines » (13 prélèvements) a été essayée puis écartée : un acheteur B2B
+compare en mois, et un treizième prélèvement découvert sur un relevé est perçu
+comme un piège — l'écart de prix se retourne alors contre le vendeur. L'annuel
+reste l'option qui économise, affichée en euros (90 / 300 / 900 €) et jamais en
+pourcentage : « vous économisez 900 € » pèse plus que « −11,5 % ».
+
+**4. ⚠️ « Lier le supplément aux dépenses » a été calculé, puis écarté — une
+seconde fois.** Julien a demandé le coût réel d'un appareil à plein régime,
+multiplié par 2,5. Le calcul, à garder pour ne pas le refaire :
+
+| Poste (24 journées de comptage par an) | Coût / appareil / an |
+|---|---|
+| Messages temps réel (12 battements/min × 480 min × 24 j, ×3 abonnés) | 1,04 $ |
+| Sortie réseau (catalogue 10 Mo réamorcé à chaque inventaire) | 0,03 $ |
+| Écritures et stockage (~72 000 lignes) | 0,02 $ |
+| Part d'instance (une Large répartie sur les ~2 000 appareils qu'elle encaisse) | 0,66 $ |
+| **Total** | **≈ 1,75 $, soit 1,65 €** |
+
+**× 2,5 = 4,13 € par appareil et par an, soit 41 € par tranche de 10.** Le
+chiffre est juste et inutilisable : 41 € sur une facture de 6 900 € ne vaut pas
+la ligne de facturation. C'est la démonstration, en petit, de ce qui est écrit
+plus haut — **le coût marginal est si proche de zéro qu'aucun multiplicateur
+raisonnable n'en tire un prix**. Le supplément a donc été calé sur la
+dégressivité de la grille, pas sur les dépenses.
+
+**5. La page publique retenue est la direction B** — trois colonnes, thème
+clair, bascule mensuel/annuel au-dessus des cartes, offre du milieu mise en
+avant. Quatre autres directions ont été dessinées et écartées : un sélecteur
+d'appareils, un comparatif dense, une page éditoriale et un simulateur. Elles
+restent dans le canevas si le sujet se rouvre.
+
 ### Conséquences produit
 
-- **Base** : `companies.plan` (`essential` / `advanced` / `enterprise`) et
-  `license_status`, écrits par le seul `service_role` — c'est déjà ce que
-  prévoyait l'offre Solo du 27 août. Plus le relevé d'appareils et son pic.
-- **Stripe** : deux prix récurrents posés en secrets pour Essential et Advanced
-  (jamais créés à la volée), `checkout.session.completed` →
-  `fulfil_solo_subscription`. Enterprise reste sur le parcours devis existant.
+- **Base** : `companies.plan` (`essential` / `advanced` / `enterprise`),
+  `billing_period` (`monthly` / `yearly`) et `license_status`, écrits par le
+  seul `service_role` — c'est déjà ce que prévoyait l'offre Solo du 27 août.
+  Plus le relevé d'appareils et son pic.
+- **Stripe** : **six prix récurrents** posés en secrets (trois offres × deux
+  rythmes), jamais créés à la volée. `checkout.session.completed` →
+  `fulfil_solo_subscription`, et les événements de cycle de vie
+  (`invoice.payment_failed`, `invoice.paid`,
+  `customer.subscription.deleted`).
 - **Page publique `/tarifs`**, hors `AppShell` — elle s'ouvre au téléphone, et
-  c'est le premier prix affiché du produit. La grille standard cessant d'être
-  sur devis, `/inscription` peut afficher l'offre correspondante.
+  c'est le premier prix affiché du produit. La grille cessant d'être sur devis,
+  `/inscription` peut afficher l'offre correspondante.
 - **`MagasinSaisie`** : le stock déclaré ne devise plus. Garder le champ (il
   sert au dimensionnement et au recoupement de densité), changer son texte.
 - **CGV** : les articles 5.1, 6.3, 6.4 et 6.5 portent la déclaration et la
