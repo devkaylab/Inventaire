@@ -8,7 +8,7 @@ import { CONTACT_EMAIL } from '@/lib/contact'
 export const metadata: Metadata = {
   title: 'Tarifs — Quantinvo',
   description:
-    'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 65 €/mois, Advanced 225 €, Enterprise 650 € — sans déclaration de stock et sans terminal à acheter.',
+    'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 65 €/mois, Advanced 225 €, Enterprise 650 € — sans engagement, sans déclaration de stock et sans terminal à acheter.',
 }
 
 /** Ce que le prix comprend, quelle que soit l'offre. */
@@ -57,12 +57,10 @@ export default function TarifsPage() {
           <div className="container">
             <div data-reveal="0"><span className="eyebrow">Tarifs</span></div>
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
-              Un prix par magasin,<br /><span className="grad">et vous savez lequel.</span>
+              Découvrez l’offre <span className="grad">Quantinvo.</span>
             </h1>
             <p className="lead" data-reveal="2">
-              Il dépend du nombre de personnes qui comptent en même temps dans ce
-              magasin. Rien d’autre — ni votre stock, ni vos références, ni votre
-              chiffre d’affaires.
+              Sans engagement et résiliable à tout moment.
             </p>
           </div>
         </section>
@@ -149,7 +147,7 @@ export default function TarifsPage() {
 
         <p className="tarifs-pied">
           <span>Prix hors taxes, par magasin.</span>
-          <span>Engagement de douze mois.</span>
+          <span>Sans engagement, résiliable à tout moment.</span>
           <span>Aucun matériel à acheter.</span>
         </p>
       </main>
