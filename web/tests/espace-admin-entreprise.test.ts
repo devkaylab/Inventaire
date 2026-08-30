@@ -241,7 +241,7 @@ describe('le tableau de bord ne porte plus les magasins', () => {
   })
 
   it('les cinq indicateurs tiennent sur une ligne', () => {
-    expect(pageEntreprise).toContain('dash-kpis dash-kpis-5')
+    expect(pageEntreprise).toContain('tb-kpis tb-kpis-5')
     expect(css).toContain('.dash-kpis-5 { grid-template-columns: repeat(5, minmax(0, 1fr))')
   })
 

@@ -492,9 +492,12 @@ describe('le tableau de bord Quantinvo', () => {
   it('n’affiche pas deux fois le même chiffre', () => {
     // « Inventaires ce mois-ci » en tête et « Inventaires lancés » plus bas
     // donnaient le même nombre : c'est le doublon que la refonte combat.
-    // Une occurrence pour le type, une pour le rendu — pas davantage.
+    // Depuis le 30 août 2026, le trio d'usage vit sur /admin/usage (décision
+    // de Julien) : /admin ne garde le champ que dans son type, et c'est la
+    // page Usage qui le rend — une seule fois.
     const occurrences = (tdb.match(/sessions_month/g) ?? []).length
-    expect(occurrences, 'sessions_month ne doit être rendu qu’une fois').toBe(2)
+    expect(occurrences, 'sessions_month ne se rend plus sur /admin').toBe(1)
+    expect(lire('../app/admin/usage/page.tsx')).toContain('Inventaires lancés ce mois-ci')
     // Les magasins actifs restent visibles, en note de « Magasins sous
     // licence » plutôt qu'en tuile séparée : c'est la même famille d'idée.
     expect(tdb).toContain('active_stores_month')
@@ -689,7 +692,8 @@ describe('le tableau de bord d’atterrissage du superviseur', () => {
   })
 
   it('un mois précédent à zéro n’invente pas de pourcentage', () => {
-    expect(page).toContain('precedent > 0')
+    // La règle vit dans la pièce commune des tableaux de bord.
+    expect(lire('../components/dashboard/TableauDeBord.tsx')).toContain('precedent > 0')
   })
 
   it('la fonction repose ses droits dans la même migration', () => {

@@ -2452,3 +2452,15 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   fill: var(--text); font-variant-numeric: tabular-nums;
 }
 .tb-anneau-sous { font-size: 10.5px; fill: var(--text-3); }
+
+/* Cinq tuiles pour l'entreprise, quatre pour la console — même famille que
+   les trois du superviseur, chiffres resserrés pour tenir le rang. */
+.tb-kpis-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tb-kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tb-kpis-5 .tb-kpi-valeur { font-size: 1.5em; }
+.tb-kpis-4 .tb-kpi-valeur { font-size: 1.625em; }
+@media (max-width: 1100px) {
+  .tb-kpis-5, .tb-kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Le recoupement stock / surface d'une vente : il alerte, en ambre. */
+.tb-rang-densite { color: var(--warning-text); }

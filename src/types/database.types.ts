@@ -498,6 +498,41 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          donnees: Json
+          id: number
+          read_at: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          donnees?: Json
+          id?: never
+          read_at?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          donnees?: Json
+          id?: never
+          read_at?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -1290,6 +1325,7 @@ export type Database = {
         Args: { p_name: string; p_store_id: string }
         Returns: Json
       }
+      admin_revenu_par_entreprise: { Args: never; Returns: Json }
       admin_revoke_company_admin: { Args: { p_user: string }; Returns: Json }
       admin_set_company_request_status: {
         Args: { p_id: string; p_note?: string; p_status: string }
@@ -1411,6 +1447,10 @@ export type Database = {
       delete_session: { Args: { p_session_id: string }; Returns: Json }
       delete_zone: {
         Args: { p_name: string; p_session_id: string }
+        Returns: Json
+      }
+      deposer_message_admin: {
+        Args: { p_message: string; p_sujet: string }
         Returns: Json
       }
       ensure_zone: {
@@ -1602,6 +1642,8 @@ export type Database = {
         Returns: undefined
       }
       marquer_alertes: { Args: { p_cles: string[] }; Returns: number }
+      marquer_notifications_lues: { Args: never; Returns: Json }
+      mes_notifications: { Args: never; Returns: Json }
       my_team_by_store: { Args: never; Returns: Json }
       nom_propre: { Args: { p_nom: string }; Returns: string }
       norm_balise: { Args: { p: string }; Returns: string }

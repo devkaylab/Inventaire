@@ -42,11 +42,26 @@ export default function AdminUsagePage() {
   const [edite, setEdite] = useState<string | null>(null)
   const [saisie, setSaisie] = useState('')
 
+  const [mois, setMois] = useState<{ sessions_month: number; counts_month: number; active_people_month: number } | null>(null)
+
   const charger = useCallback(async () => {
-    const { data, error } = await supabase.rpc('admin_usage_overview', { p_company_id: null })
+    // Le trio du mois vivait sur /admin ; il est ici depuis le 30 août 2026 —
+    // là-bas les affaires, ici l'usage. La vue d'affaires reste sa source :
+    // deux écrans qui montrent le même chiffre le demandent pareil.
+    const [{ data, error }, apercu] = await Promise.all([
+      supabase.rpc('admin_usage_overview', { p_company_id: null }),
+      supabase.rpc('admin_business_overview'),
+    ])
     if (error) { setErr(error.message); return }
     setErr(null)
     setParc(data as Parc)
+    if (apercu.data) {
+      setMois({
+        sessions_month: apercu.data.sessions_month,
+        counts_month: apercu.data.counts_month,
+        active_people_month: apercu.data.active_people_month,
+      })
+    }
   }, [])
 
   useEffect(() => {
@@ -100,6 +115,23 @@ export default function AdminUsagePage() {
       </div>
 
       {err && <p className="muted">Lecture impossible pour l&apos;instant — {err}</p>}
+
+      {mois && (
+        <div className="dash-kpis" style={{ marginBottom: 20 }}>
+          <div className="dash-kpi">
+            <div className="dash-kpi-value num">{mois.sessions_month.toLocaleString('fr-FR')}</div>
+            <div className="dash-kpi-label">Inventaires lancés ce mois-ci</div>
+          </div>
+          <div className="dash-kpi">
+            <div className="dash-kpi-value num">{mois.counts_month.toLocaleString('fr-FR')}</div>
+            <div className="dash-kpi-label">Articles comptés ce mois-ci</div>
+          </div>
+          <div className="dash-kpi">
+            <div className="dash-kpi-value num">{mois.active_people_month.toLocaleString('fr-FR')}</div>
+            <div className="dash-kpi-label">Personnes actives ce mois-ci</div>
+          </div>
+        </div>
+      )}
 
       {!parc ? (
         <p className="muted">Lecture en cours…</p>
