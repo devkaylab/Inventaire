@@ -70,14 +70,17 @@ export function MessageAdmin() {
 
   return (
     <>
+      {/* Le déclencheur vit dans le rail, à côté de la cloche (demande de
+          Julien, 30 août 2026) : écrire à son administrateur ne dépend pas de
+          la page où l'on se trouve. */}
       <button
         type="button"
-        className="btn btn-ghost tb-rond"
+        className="rail-onglet"
         title="Écrire à l’administrateur de votre entreprise"
         aria-label="Écrire à l’administrateur de votre entreprise"
         onClick={() => setOuvert(true)}
       >
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.9-.9L3 20l1.2-4.3A8 8 0 0 1 3.5 11.5a8.38 8.38 0 0 1 8.5-8.3 8.38 8.38 0 0 1 9 8.3z" />
         </svg>
       </button>

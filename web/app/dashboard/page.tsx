@@ -31,7 +31,6 @@ import { friendlyError } from '@/lib/errors'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { RechercheGlobale } from '@/components/dashboard/RechercheGlobale'
-import { MessageAdmin } from '@/components/dashboard/MessageAdmin'
 import {
   Anneau, BarresSemaine, Kpi, lundiDeLaSemaine, type JourTb,
 } from '@/components/dashboard/TableauDeBord'
@@ -121,10 +120,6 @@ export default function DashboardPage() {
         </div>
         <div className="app-head-actions">
           <RechercheGlobale />
-          {/* Pas de bouton pour l'administrateur d'entreprise : le message lui
-              serait adressé à lui-même, et un bouton qui refuse est pire que
-              pas de bouton. */}
-          {!guard.profile.is_company_admin && <MessageAdmin />}
           <Link href="/dashboard/new" className="btn btn-primary">Nouvel inventaire</Link>
         </div>
       </div>

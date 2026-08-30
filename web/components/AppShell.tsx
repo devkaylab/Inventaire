@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { StoreBadges } from '@/components/StoreBadges'
 import { Notifications } from '@/components/Notifications'
+import { MessageAdmin } from '@/components/dashboard/MessageAdmin'
 import { signOut, type Profile } from '@/hooks/useAuthGuard'
 
 type Onglet = { href: string; label: string }
@@ -241,9 +242,15 @@ export function AppShell({
         </div>
 
         <div className="rail-fin">
-          {/* La cloche vit ici et pas sur le tableau de bord : l'administrateur
-              d'entreprise reçoit les messages de ses superviseurs, or il
-              n'atterrit jamais sur /dashboard. Le rail, si. */}
+          {/* Le message et la cloche vivent ici, côte à côte, et pas sur une
+              page : écrire à son administrateur et lire ses notifications ne
+              dépendent pas de l'écran où l'on se trouve. Le bouton d'écriture
+              ne s'offre qu'à qui peut écrire — un superviseur ordinaire ; pour
+              l'administrateur le message serait adressé à lui-même, et la
+              fonction le refuse de toute façon. */}
+          {profile.role === 'supervisor' && !profile.is_company_admin && !profile.is_admin && (
+            <MessageAdmin />
+          )}
           <Notifications />
           <div className="rail-qui" ref={menuRef}>
           <button

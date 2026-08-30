@@ -2254,8 +2254,8 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* ── La cloche du rail et son panneau ──────────────────────── */
 .rail-fin { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .rail-notif, .rail-qui { position: relative; }
-.rail-notif .rail-onglet { border: none; background: none; cursor: pointer; position: relative; font-family: inherit; }
-.rail-notif .rail-onglet:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
+.rail-fin .rail-onglet { border: none; background: none; cursor: pointer; position: relative; font-family: inherit; }
+.rail-fin .rail-onglet:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
 .rail-badge {
   position: absolute; top: 4px; right: 4px;
   min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;

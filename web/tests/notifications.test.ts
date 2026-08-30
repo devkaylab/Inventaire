@@ -63,10 +63,16 @@ describe('les notifications', () => {
 })
 
 describe('le message à l’administrateur', () => {
-  it('le bouton n’apparaît pas pour l’administrateur lui-même', () => {
-    // Le message lui serait adressé — un bouton qui refuse est pire que pas
-    // de bouton, et la RPC le refuse de toute façon (vous_etes_administrateur).
-    expect(tableau).toContain('!guard.profile.is_company_admin && <MessageAdmin />')
+  it('le bouton vit dans le rail, à côté de la cloche, pour qui peut écrire', () => {
+    // Demande de Julien, 30 août 2026 : écrire à son administrateur ne dépend
+    // pas de la page. Réservé au superviseur ordinaire — pour l'administrateur
+    // le message serait adressé à lui-même, un bouton qui refuse est pire que
+    // pas de bouton, et la RPC le refuse de toute façon.
+    expect(shell).toContain("profile.role === 'supervisor' && !profile.is_company_admin && !profile.is_admin && (")
+    const rail = shell.slice(shell.indexOf('className="rail-fin"'))
+    expect(rail.indexOf('<MessageAdmin />')).toBeGreaterThan(-1)
+    expect(rail.indexOf('<MessageAdmin />')).toBeLessThan(rail.indexOf('<Notifications />'))
+    expect(tableau).not.toContain('MessageAdmin')
     expect(migration).toContain('vous_etes_administrateur')
   })
 
