@@ -5215,15 +5215,44 @@ Il faut aussi **ajouter trois événements au point de terminaison Stripe** :
   comme `web/lib/devis.ts` et `_shared/devis.ts`. `web/tests/souscription.test.ts`
   compare les deux montant par montant.
 
-## Une limite connue, et son filet
+## ⚠️ On refuse AVANT d'encaisser — et c'est le premier test qui l'a montré
 
-Si l'adresse de contact porte déjà une invitation dans une AUTRE entreprise,
-`invite_company_admin_after_payment` refuse (`other_company`, constat VR-003 du
-28 août) : l'entreprise est créée **sans administrateur**. Le client a payé et
-n'a pas ses accès. Le filet existe — elle remonte dans `companies_without_admin`
-sur `/admin` —, mais rien ne le lui dit à lui. À reprendre si le cas se
-présente ; il suppose une invitation en attente ailleurs, donc un envoi
-antérieur ayant échoué en cours de route.
+La limite était écrite comme « à reprendre si le cas se présente ». **Elle
+s'est présentée au premier essai réel** : Julien a payé avec son adresse, qui
+appartenait déjà à une autre entreprise ; l'entreprise a été créée, encaissée,
+et `invite_company_admin_after_payment` a refusé l'invitation (garde VR-003 du
+28 août). Résultat : **0 administrateur, 0 compte, 0 invitation** — il avait
+payé sans rien obtenir. Le garde-fou avait bien joué, mais après le paiement.
+
+`deposer_souscription` contrôle donc l'adresse **avant toute écriture et avant
+toute session Stripe** (migration `20260830180002`), en trois cas :
+
+| Code | Quand | Ce qu'on dit |
+|---|---|---|
+| `compte_existant` | l'adresse a un profil rattaché à une entreprise | demandez vos accès à son administrateur |
+| `invitation_en_cours` | une invitation attend ailleurs | ouvrez-la pour créer votre mot de passe |
+| `deja_souscrit` | une souscription payée existe | vérifiez votre boîte de réception |
+
+- **⚠️ L'ordre fait le contrôle** : validation de saisie → limitation de débit →
+  recherche par adresse. Une faute de frappe ne consomme pas le quota, et un
+  script ne peut pas interroger la base à volonté avant d'être freiné (leçon du
+  28 août sur `submit_company_request`).
+- **⚠️ On ne nomme jamais l'entreprise concernée** : le souscripteur apprendrait
+  quelque chose sur un client qui n'est pas le sien. Même règle
+  qu'`other_company` depuis le 22 août. Un test le vérifie.
+- **Compromis assumé** : le message CONFIRME qu'un compte existe. C'est
+  l'oracle d'énumération, déjà accepté le 22 août pour l'invitation d'équipe ;
+  ce sont les cinq essais par heure et par adresse qui le rendent inutilisable
+  pour constituer un annuaire.
+- **À l'écran, un refus n'est pas une panne** : il s'affiche en ambre et non en
+  rouge (`.souscrire-erreur.douce`), parce qu'il arrive avant tout encaissement
+  et qu'il dit quoi faire. Faire réessayer quelqu'un que rien ne débloquera est
+  la pire des réponses.
+
+Le filet en aval **reste** : une entreprise sans administrateur remonte dans
+`companies_without_admin` sur `/admin`. Il ne sert plus qu'aux cas que ce
+contrôle ne peut pas voir — une adresse rattachée entre le dépôt et le
+paiement.
 
 ## Vérifications (30 août 2026)
 
@@ -5242,8 +5271,24 @@ enchaîne `past_due → active → canceled`, son rejeu répond `already`, et un
 abonnement inconnu répond `unknown` sans erreur. **Zéro résidu contrôlé après
 coup**, quota de limitation compris.
 
-**Non vérifié** : un vrai paiement de bout en bout. Il demande les six Prices
-en mode test, puis la carte `4242`. C'est la dernière étape, et elle est à
-Julien.
+**Vérifié en vrai le 30 août 2026** — les six Prices posés en mode test, puis
+un paiement complet par Julien avec la carte `4242` :
+
+- **les six tarifs contrôlés un par un sur les pages Stripe elles-mêmes**
+  (65 €/mois, 690 €/an, 225 €/mois, 2 400 €/an, 650 €/mois, 6 900 €/an) — c'est
+  le contrôle qui comptait, une inversion mensuel/annuel aurait facturé 690 €
+  par mois ;
+- le parcours complet : demande → `created`, entreprise avec `plan=advanced`,
+  `billing_period=monthly`, abonnement et client Stripe liés, licence `active`,
+  magasin à `annual_price_cents = 270000`, journal signé « Stripe » ;
+- **et le défaut ci-dessus**, qui n'aurait pas été trouvé autrement.
+
+Données d'essai supprimées, zéro résidu contrôlé. **Le journal du test est
+conservé** (règle du projet) ; seules les six sondes de vérification des tarifs
+ont été retirées.
+
+⚠️ **L'abonnement Stripe de test reste actif** côté Stripe : il se représentera
+dans un mois. Sans conséquence en mode test, mais à annuler dans le tableau de
+bord.
 
 Tests de garde : `web/tests/souscription.test.ts`.

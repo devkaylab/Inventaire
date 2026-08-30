@@ -36,6 +36,7 @@ function Formulaire() {
   const [storeName, setStoreName] = useState('')
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [saitQuoiFaire, setSaitQuoiFaire] = useState(false)
 
   const offre = OFFRES.find((o) => o.cle === plan)!
 
@@ -72,6 +73,11 @@ function Formulaire() {
     // Déposer la demande quand même laisserait croire à une souscription faite.
     if (error || !data?.success) {
       setEnvoi(false)
+      // ⚠️ Un refus d'adresse n'est pas une panne : il arrive AVANT tout
+      // encaissement (le premier test réel avait payé puis échoué à inviter
+      // l'administrateur), et il dit quoi faire. Le distinguer visuellement
+      // évite de faire réessayer quelqu'un que rien ne débloquera.
+      setSaitQuoiFaire(Boolean(data?.code))
       setErreur(data?.error ?? 'La souscription n’a pas pu s’ouvrir. Réessayez dans un instant.')
       return
     }
@@ -148,7 +154,11 @@ function Formulaire() {
         </div>
       </div>
 
-      {erreur && <p className="souscrire-erreur" role="alert">{erreur}</p>}
+      {erreur && (
+        <p className={saitQuoiFaire ? 'souscrire-erreur douce' : 'souscrire-erreur'} role="alert">
+          {erreur}
+        </p>
+      )}
 
       <button type="submit" className="btn btn-primary btn-block" disabled={envoi}>
         {envoi ? 'Ouverture du paiement…' : `Payer ${euros(annuel ? offre.an : offre.mois)} et créer mon espace`}

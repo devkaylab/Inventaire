@@ -2773,3 +2773,12 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .souscrire, .souscrire-fin { padding: 26px 22px; }
   .souscrire-champs, .souscrire-offres { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Un refus d'adresse n'est pas une panne : il arrive avant tout encaissement
+   et il dit quoi faire. Le ton doit le montrer — l'ambre informe, le rouge
+   alarme, et rien n'est cassé ici. */
+.souscrire-erreur.douce {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+  color: var(--warning-text);
+}

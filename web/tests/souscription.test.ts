@@ -73,6 +73,44 @@ describe('la souscription ne crée rien qu’on ne puisse payer', () => {
   })
 })
 
+describe('on refuse avant d’encaisser', () => {
+  // Le premier test réel (30 août 2026) a créé l'entreprise, encaissé, puis
+  // échoué à inviter l'administrateur : l'adresse appartenait déjà à une autre
+  // entreprise. Le garde-fou VR-003 avait bien joué — APRÈS le paiement.
+  const migration = lire('supabase/migrations/20260830180002_souscription_refuse_avant_encaissement.sql')
+
+  it('vérifie l’adresse avant d’écrire la demande', () => {
+    const posControle = migration.indexOf('LE CONTROLE QUI EVITE')
+    const posInsert = migration.indexOf('insert into public.company_requests')
+    expect(posControle).toBeGreaterThan(-1)
+    expect(posControle, 'le contrôle doit précéder l’écriture').toBeLessThan(posInsert)
+  })
+
+  it('couvre les trois façons d’être déjà connu', () => {
+    for (const code of ['compte_existant', 'invitation_en_cours', 'deja_souscrit']) {
+      expect(migration, `le cas ${code} doit être traité`).toContain(code)
+    }
+  })
+
+  it('ne nomme jamais l’autre entreprise', () => {
+    // Le souscripteur apprendrait quelque chose sur un client qui n'est pas le
+    // sien — même règle que `other_company` depuis le 22 août.
+    const bloc = migration.slice(migration.indexOf('compte_existant'), migration.indexOf('invitation_en_cours'))
+    expect(bloc).not.toMatch(/company_name|c\.name|entreprise_nom/)
+  })
+
+  it('laisse la limitation de débit devant la recherche par adresse', () => {
+    // Un script ne doit pas pouvoir interroger la base autant qu'il veut avant
+    // d'être freiné : c'est l'ordre qui fait le contrôle (leçon du 28 août).
+    expect(migration.indexOf('rate_limit_ok')).toBeLessThan(migration.indexOf('LE CONTROLE QUI EVITE'))
+  })
+
+  it('distingue un refus d’une panne, à l’écran', () => {
+    expect(page).toContain('saitQuoiFaire')
+    expect(lire('web/app/globals.css')).toContain('.souscrire-erreur.douce')
+  })
+})
+
 describe('le paiement se fait chez Stripe, jamais ici', () => {
   it('ne collecte aucune donnée bancaire sur le site', () => {
     for (const motif of ['cc-number', 'card-number', 'cardNumber', 'cvc', 'cvv']) {
