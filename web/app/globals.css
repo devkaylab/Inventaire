@@ -2212,12 +2212,6 @@ a { color: inherit; text-decoration: none; }
 /* L'anneau des écarts. */
 .tb-anneau-corps { display: flex; align-items: center; gap: 20px; padding: 14px 20px 18px; }
 .tb-anneau { position: relative; flex: none; }
-.tb-anneau-centre { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
-.tb-anneau-gros {
-  font-size: 18px; font-weight: 800; letter-spacing: -0.4px; white-space: nowrap;
-  font-family: var(--font-sora), var(--font-inter), sans-serif;
-}
-.tb-anneau-sous { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 .tb-legende { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .tb-legende-rang { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .tb-puce { width: 10px; height: 10px; border-radius: 3px; flex: none; }
@@ -2414,9 +2408,6 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .tb-jours-noms { margin-left: 2.75em; font-size: 0.75em; gap: 0.75em; }
 
 .tb-anneau-corps { gap: 1.25em; padding: 0.875em 1.25em 1.125em; }
-.tb-anneau svg { width: 9.4em; height: 9.4em; }
-.tb-anneau-gros { font-size: 1.1875em; }
-.tb-anneau-sous { font-size: 0.6875em; }
 .tb-legende { gap: 0.625em; }
 .tb-legende-rang { font-size: 0.8125em; gap: 0.625em; }
 .tb-puce { width: 0.625em; height: 0.625em; }
@@ -2441,3 +2432,23 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .tb-recherche-sous { font-size: 0.75em; }
 .tb-rond { padding: 0.75em; }
 .tb-rond svg { width: 1.2em; height: 1.2em; }
+
+/* ── L'anneau remplit sa carte (constat de Julien, 30 août 2026) ──
+   Il gardait sa taille fixe pendant que la carte grandissait : un grand vide
+   autour d'une petite figure. Il s'étire désormais sur la hauteur disponible
+   (borné), l'aspect tenu par le viewBox — et le centre, dessiné DANS le SVG,
+   scale avec lui. Les tailles des textes du centre sont en unités de viewBox,
+   calculées côté page selon la longueur du montant. */
+.tb-anneau-corps { align-items: stretch; }
+.tb-anneau { display: flex; align-items: center; }
+.tb-anneau svg {
+  height: 100%; min-height: 9.4em; max-height: 15em;
+  aspect-ratio: 1 / 1; width: auto;
+}
+.tb-legende { justify-content: center; }
+.tb-anneau-gros {
+  font-family: var(--font-sora), var(--font-inter), sans-serif;
+  font-weight: 800; letter-spacing: -0.4px;
+  fill: var(--text); font-variant-numeric: tabular-nums;
+}
+.tb-anneau-sous { font-size: 10.5px; fill: var(--text-3); }

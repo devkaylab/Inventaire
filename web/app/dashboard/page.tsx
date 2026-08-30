@@ -466,6 +466,11 @@ function AnneauEcarts({ ecarts, mesure, onMesure }: {
   const total = parts.reduce((s, p) => s + p.brut, 0)
   const totalAbs = parts.reduce((s, p) => s + Math.abs(p.brut), 0)
 
+  const texteCentre = mesure === 'valeur' ? `${money(total)} €` : nb(total)
+  // Le trou fait 108 unités de viewBox ; un glyphe de Sora 800 pèse ~0,6 fois
+  // sa taille. On borne pour que le montant tienne, quel qu'il soit.
+  const tailleCentre = Math.min(22, Math.max(11, 164 / Math.max(texteCentre.length, 1)))
+
   // Géométrie : r 66, circonférence 414,7, un jour de 4,5 px entre les parts.
   const C = 2 * Math.PI * 66
   let offset = 0
@@ -496,7 +501,7 @@ function AnneauEcarts({ ecarts, mesure, onMesure }: {
       ) : (
         <div className="tb-anneau-corps">
           <div className="tb-anneau">
-            <svg width="150" height="150" viewBox="0 0 180 180" aria-hidden="true">
+            <svg viewBox="0 0 180 180" aria-hidden="true">
               <g transform="rotate(-90 90 90)">
                 {/* L'anneau de fond : sans lui, un écart nul dans la mesure
                     choisie ferait disparaître la figure entière. */}
@@ -510,15 +515,14 @@ function AnneauEcarts({ ecarts, mesure, onMesure }: {
                   />
                 ))}
               </g>
+              {/* Le centre vit DANS le SVG : il scale avec l'anneau, et sa
+                  taille suit la longueur du montant — le trou fait 108 unités,
+                  un « −40 435,00 € » en taille fixe en débordait. */}
+              <text x="90" y="92" textAnchor="middle" className="tb-anneau-gros" style={{ fontSize: tailleCentre }}>
+                {texteCentre}
+              </text>
+              <text x="90" y="110" textAnchor="middle" className="tb-anneau-sous">sur 30 jours</text>
             </svg>
-            <div className="tb-anneau-centre">
-              <div>
-                <div className="tb-anneau-gros num">
-                  {mesure === 'valeur' ? `${money(total)} €` : nb(total)}
-                </div>
-                <div className="tb-anneau-sous">sur 30 jours</div>
-              </div>
-            </div>
           </div>
           <div className="tb-legende">
             {arcs.map((a) => (
