@@ -127,6 +127,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell profile={guard.profile} companyName={companyName}>
+      <div className="tb-plein">
       <div className="app-head">
         <div>
           <h1 className="page-title">{prenom ? `Bonjour, ${prenom}` : 'Tableau de bord'}</h1>
@@ -267,6 +268,7 @@ export default function DashboardPage() {
           </section>
         </>
       )}
+      </div>
     </AppShell>
   )
 }

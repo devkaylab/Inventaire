@@ -1846,7 +1846,7 @@ a { color: inherit; text-decoration: none; }
    title + aria-label — et tout ce qui concerne la personne vit sous son
    avatar, en bas. Voir components/AppShell.tsx.
    `--appbar-h` reste défini : .dash-rail s'y colle, il vaut simplement 0. */
-:root { --appbar-h: 0px; --rail-l: 76px; --main-l: 1400px; }
+:root { --appbar-h: 0px; --rail-l: 76px; }
 .app-rail {
   position: fixed; top: 0; bottom: 0; left: 0; z-index: 30;
   width: var(--rail-l);
@@ -1906,15 +1906,15 @@ a { color: inherit; text-decoration: none; }
 .who-menu-sortie { color: var(--danger-text); width: 100%; }
 .who-menu-sortie:hover { background: var(--danger-soft); }
 
-/* Le contenu des pages authentifiées, à droite du rail : il PREND la page
-   (constat de Julien sur le premier rendu — la colonne de 1120 px venait de
-   l'ancienne barre du haut et laissait des marges mortes), plafonné à
-   --main-l sur les très grands écrans, centré dans ce qui reste de la
-   fenêtre, jamais sous le rail (il est fixe). Une seule largeur pour tout
-   l'espace connecté, comme avant : la variable est la règle unique. */
+/* Le contenu des pages authentifiées, à droite du rail : il PREND la page,
+   du rail au bord de la fenêtre, quelle que soit sa taille — second constat
+   de Julien, le plafond de 1400 px recréait des marges mortes sur un grand
+   écran. Pas de plafond : les cartes et formulaires portent leurs propres
+   largeurs quand la lecture l'exige. Une seule règle pour tout l'espace
+   connecté, comme avant. */
 .app-main {
-  max-width: var(--main-l);
-  margin: 0 0 0 calc(var(--rail-l) + max(0px, (100% - var(--rail-l) - var(--main-l)) / 2));
+  max-width: none;
+  margin: 0 0 0 var(--rail-l);
   padding: 32px 32px 96px;
 }
 .app-main .page-title { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; }
@@ -2344,3 +2344,20 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   background: var(--accent-soft); color: var(--accent-light);
 }
 .tb-legende-val { white-space: nowrap; }
+
+/* ── Le tableau de bord tient dans l'écran, comme la maquette ─
+   Une colonne qui remplit la hauteur de la fenêtre : l'en-tête et les tuiles
+   gardent leur taille, la rangée des graphiques absorbe le surplus — les
+   barres sont en pourcentages, elles grandissent avec leur carte. Sur une
+   petite fenêtre, min-height rend la main au défilement plutôt que
+   d'écraser les cartes. */
+.app-main:has(.tb-plein) { padding: 20px 32px; }
+.tb-plein { min-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+.tb-plein .app-head { margin-bottom: 2px; }
+.tb-plein .tb-kpis { margin-top: 12px; }
+.tb-plein .tb-graphes, .tb-plein .tb-listes { margin-top: 12px; }
+.tb-graphes { flex: 1; min-height: 330px; }
+.tb-graphes > .panel { display: flex; flex-direction: column; }
+.tb-plot { flex: 1; display: flex; flex-direction: column; }
+.tb-grille { height: auto; flex: 1; min-height: 210px; }
+.tb-anneau-corps { flex: 1; }

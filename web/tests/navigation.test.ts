@@ -225,13 +225,24 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
     }
   })
 
-  it('le contenu ne passe jamais sous le rail', () => {
-    // Le rail est fixe : le contenu se centre dans ce qui RESTE de la
-    // fenêtre. Un `margin: 0 auto` naïf centrerait sur la fenêtre entière et
-    // glisserait le bord gauche sous le rail dès qu'elle rétrécit.
+  it('le contenu prend la page, du rail au bord', () => {
+    // Deux constats de Julien sur les premiers rendus : la colonne de
+    // 1120 px de l'ancienne barre laissait des marges mortes, puis le
+    // plafond de 1400 px les recrÃ©ait sur un grand Ã©cran. Pas de plafond ;
+    // le rail est fixe, le contenu commence aprÃ¨s lui, jamais dessous.
     expect(css).toContain('.app-rail {')
     expect(css).toContain('position: fixed; top: 0; bottom: 0; left: 0;')
-    expect(css).toContain('calc(var(--rail-l) + max(0px, (100% - var(--rail-l) - var(--main-l)) / 2))')
+    expect(css).toContain('margin: 0 0 0 var(--rail-l);')
+    expect(css).not.toContain('--main-l')
+  })
+
+  it('le tableau de bord tient dans l’écran, comme la maquette', () => {
+    // Une colonne pleine hauteur ; la rangée des graphiques absorbe le
+    // surplus (les barres sont en pourcentages). min-height, pas height :
+    // une petite fenêtre rend la main au défilement.
+    expect(css).toContain('.tb-plein { min-height: calc(100vh - 40px); display: flex; flex-direction: column; }')
+    expect(css).toContain('.tb-graphes { flex: 1;')
+    expect(lire('../app/dashboard/page.tsx')).toContain('className="tb-plein"')
   })
 })
 
