@@ -17,7 +17,7 @@
 // part pas n'annule rien : les notifications sont déjà écrites, on répond
 // { success: true, emailed: false }.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo } from '../_shared/email.ts'
+import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -95,36 +95,47 @@ Deno.serve(async (req) => {
   try {
     const admin = createClient(url, serviceKey)
     const filCible = filId ?? (result?.fil_id as string | undefined)
-    const { data: profil } = await admin
-      .from('profiles').select('full_name, companies(name)')
-      .eq('id', userData.user.id).maybeSingle()
-    const nomExpediteur = ((profil as { full_name?: string } | null)?.full_name ?? '').trim() || 'Un superviseur'
+    if (!filCible) return sansEmail('fil introuvable')
+
+    const [{ data: profil }, { data: fil }] = await Promise.all([
+      admin.from('profiles').select('full_name, is_admin, companies(name)')
+        .eq('id', userData.user.id).maybeSingle(),
+      admin.rpc('fil_pour_email', { p_fil: filCible }),
+    ])
+    const jeSuisQuantinvo = !!(profil as { is_admin?: boolean } | null)?.is_admin
     const entreprise = ((profil as { companies?: { name?: string } | null } | null)?.companies?.name ?? '').trim()
+    const sujetFil = ((fil?.sujet as string | undefined) ?? sujet).trim()
+    const versClient = fil?.portee === 'quantinvo' && jeSuisQuantinvo
+
+    // ⚠️ Quantinvo parle d'une seule voix : quand c'est NOUS qui répondons à
+    // un client, l'e-mail ne porte ni le nom ni l'adresse personnelle de
+    // l'administrateur — le client répondrait dans une boîte privée.
+    const nomExpediteur = versClient
+      ? 'Quantinvo'
+      : (((profil as { full_name?: string } | null)?.full_name ?? '').trim() || 'Un superviseur')
+    const adresseExpediteur = versClient
+      ? (adresseDeContact() ?? '')
+      : (userData.user.email ?? '')
 
     // Les destinataires SONT les autres participants du fil : une réponse
     // revient à qui a écrit, une ouverture va à ceux que la RPC a inscrits.
     const adresses: string[] = []
-    if (filCible) {
-      const { data: parts } = await admin
-        .from('message_participants').select('user_id')
-        .eq('fil_id', filCible).neq('user_id', userData.user.id)
-      for (const d of (parts ?? []) as { user_id: string }[]) {
-        const { data: u } = await admin.auth.admin.getUserById(d.user_id)
-        if (u?.user?.email) adresses.push(u.user.email)
-      }
+    for (const d of ((fil?.destinataires ?? []) as { user_id: string }[])) {
+      if (d.user_id === userData.user.id) continue
+      const { data: u } = await admin.auth.admin.getUserById(d.user_id)
+      if (u?.user?.email) adresses.push(u.user.email)
     }
     if (adresses.length === 0) return sansEmail('aucune adresse de destinataire')
 
     const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
-    const adresseExpediteur = userData.user.email ?? ''
     const { html, text } = emailQuantinvo({
       titre: filId
         ? 'Réponse à votre conversation'
         : versQuantinvo ? 'Message d’une entreprise cliente' : 'Message d’un de vos superviseurs',
-      apercu: `${nomExpediteur} : ${sujet || message.slice(0, 60)}`,
+      apercu: `${nomExpediteur} : ${sujetFil || message.slice(0, 60)}`,
       paragraphes: [
         filId
-          ? `${nomExpediteur}${entreprise ? ` (${entreprise})` : ''} a répondu :`
+          ? `${nomExpediteur}${!versClient && entreprise ? ` (${entreprise})` : ''} a répondu :`
           : `${nomExpediteur}${entreprise ? ` (${entreprise})` : ''} vous écrit depuis son tableau de bord :`,
         `« ${message} »`,
         // La règle du projet : un texte qui invite à écrire donne l'adresse.
@@ -133,8 +144,10 @@ Deno.serve(async (req) => {
           : '',
       ].filter(Boolean),
       details: [
-        ...(sujet ? [{ intitule: 'Sujet', valeur: sujet }] : []),
-        ...(versQuantinvo && entreprise ? [{ intitule: 'Entreprise', valeur: entreprise }] : []),
+        // Le sujet figure aussi sur une réponse : sans lui, on ne sait pas de
+        // quelle conversation il s'agit sans cliquer.
+        ...(sujetFil ? [{ intitule: 'Sujet', valeur: sujetFil }] : []),
+        ...(versQuantinvo && !versClient && entreprise ? [{ intitule: 'Entreprise', valeur: entreprise }] : []),
         { intitule: 'De', valeur: adresseExpediteur ? `${nomExpediteur} — ${adresseExpediteur}` : nomExpediteur },
       ],
       // Le bouton mène AU FIL : la conversation se lit et se poursuit là.
@@ -152,12 +165,14 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: fromAddr,
-        // La réponse va au superviseur : c'est une conversation entre eux.
-        reply_to: userData.user.email ?? undefined,
+        // La réponse revient à l'expéditeur — sauf quand Quantinvo écrit à un
+        // client : elle va alors à l'adresse de contact, pas à une boîte
+        // personnelle.
+        reply_to: adresseExpediteur || undefined,
         to: adresses,
         subject: filId
-        ? `Réponse de ${nomExpediteur}`
-        : `Message de ${nomExpediteur} — ${sujet}`,
+        ? `Réponse de ${nomExpediteur} — ${sujetFil}`
+        : `Message de ${nomExpediteur} — ${sujetFil}`,
         html,
         text,
       }),

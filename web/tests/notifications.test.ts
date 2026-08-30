@@ -16,6 +16,7 @@ const recherche = lire('../components/dashboard/RechercheGlobale.tsx')
 const tableau = lire('../app/dashboard/page.tsx')
 const boite = lire('../app/messages/page.tsx')
 const migrationFils = lire('../../supabase/migrations/20260830160001_fils_de_messages.sql')
+const migrationVoix = lire('../../supabase/migrations/20260830170001_quantinvo_ne_se_nomme_pas.sql')
 
 describe('les notifications', () => {
   it('⚠️ la table ne s’écrit jamais depuis le client', () => {
@@ -127,8 +128,13 @@ describe('le message à l’administrateur', () => {
     expect(boite).toContain("rpc('repondre_fil'")
   })
 
-  it('la réponse va à l’expéditeur, pas à une boîte de service', () => {
-    expect(edge).toContain('reply_to: userData.user.email')
+  it('la réponse va à l’expéditeur — sauf quand Quantinvo écrit à un client', () => {
+    // Règle amendée le 30 août 2026, e-mail réel à l'appui : entre deux
+    // personnes du produit, on se répond directement ; quand c'est nous qui
+    // écrivons à un client, c'est l'adresse de contact — pas la boîte
+    // personnelle d'un administrateur.
+    expect(edge).toContain('const adresseExpediteur = versClient')
+    expect(edge).toContain('(userData.user.email ?? \'\')')
   })
 })
 
@@ -168,9 +174,40 @@ describe('la boîte de réception', () => {
     expect(boite).toContain("rpc('ouvrir_message_fil'")
   })
 
-  it('⚠️ un client ne voit pas les noms de notre personnel', () => {
-    // Un fil vers Quantinvo se lit « Quantinvo » côté client.
-    expect(migrationFils).toContain("then 'Quantinvo'")
+  it('⚠️ Quantinvo parle d’une seule voix, PARTOUT', () => {
+    // Défaut vu sur un e-mail réel (30 août 2026) : la règle n'était tenue
+    // que par la liste des fils — le message, la cloche et l'e-mail
+    // nommaient l'administrateur et donnaient son adresse personnelle.
+    // Quatre surfaces, un seul masque.
+    const masque = (migrationVoix.match(/then 'Quantinvo'/g) ?? []).length
+    expect(masque, 'liste, dernier auteur, fil ouvert, cloche').toBeGreaterThanOrEqual(4)
+    // ⚠️ Le masque se pose à la LECTURE : entre nous, le vrai nom reste —
+    // on doit savoir quel collègue a répondu.
+    expect(migrationVoix).toContain('and not v_admin')
+    // Et il survit à la suppression du compte : le drapeau est figé à
+    // l'écriture, une jointure sur profiles rendrait null et démasquerait.
+    expect(migrationVoix).toContain('add column auteur_interne boolean not null default false')
+  })
+
+  it('⚠️ l’e-mail ne donne pas l’adresse personnelle de qui répond', () => {
+    // Un client répondrait dans une boîte privée. Quand c'est nous qui
+    // écrivons à un client, le reply_to est l'adresse de contact.
+    expect(edge).toContain('const versClient = fil?.portee === \'quantinvo\' && jeSuisQuantinvo')
+    expect(edge).toContain("? 'Quantinvo'")
+    expect(edge).toContain('adresseDeContact()')
+    expect(edge).toContain('reply_to: adresseExpediteur || undefined')
+  })
+
+  it('une réponse rappelle son sujet', () => {
+    // Sans lui, on ne sait pas de quelle conversation il s'agit sans cliquer.
+    expect(edge).toContain('`Réponse de ${nomExpediteur} — ${sujetFil}`')
+    expect(edge).toContain("intitule: 'Sujet', valeur: sujetFil")
+  })
+
+  it('⚠️ la fonction qui sert l’e-mail n’est pas appelable par un client', () => {
+    // Elle rend des identifiants de participants : le serveur seul.
+    expect(migrationVoix).toContain('revoke execute on function public.fil_pour_email(uuid) from public, anon, authenticated;')
+    expect(migrationVoix).toContain('grant execute on function public.fil_pour_email(uuid) to service_role;')
   })
 
   it('la notification mène au fil, et la cloche compte les non lus', () => {
