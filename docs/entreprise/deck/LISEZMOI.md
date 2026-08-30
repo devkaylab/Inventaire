@@ -1,24 +1,29 @@
 # Les présentations Quantinvo
 
-Trois présentations PowerPoint, générées par trois scripts qui partagent une
-même charte (`charte.js`). Fond blanc, règle « Papier » de la charte v1.1 :
-encre en texte, indigo profond pour les titres, indigo en accent, et le cyan
-réservé à la ligne de scan sous l'en-tête.
+Six présentations PowerPoint, générées par six scripts qui partagent une même
+charte (`charte.js`). Fond blanc, règle « Papier » de la charte v1.1 : encre en
+texte, indigo profond pour les titres, indigo en accent, et le cyan réservé à
+la ligne de scan sous l'en-tête.
 
 | Script | Fichier produit | Pour qui | Pages |
 |---|---|---|---|
-| `build.js` | `Quantinvo-presentation.pptx` | Direction, achats : la présentation commerciale | 12 |
-| `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, déploiement MDM, comptes, sécurité, RGPD | 12 |
-| `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs : le guide de prise en main | 19 |
-| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor (sans/avec, Zebra) | 15 |
+| `build.js` | `Quantinvo-presentation.pptx` | Direction, achats : la présentation longue | 14 |
+| `build-court.js` | `Quantinvo-essentiel.pptx` | Le prospect qui a déjà une solution : dix pages, vingt minutes | 10 |
+| `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, téléchargement, déploiement, mise en place, prise en main, comptes, sécurité, audits, RGPD | 17 |
+| `build-tarifs.js` | `Quantinvo-tarification.pptx` | Celui qui décide du budget : l'assiette, la grille, le dépassement, la souscription | 11 |
+| `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs, après la signature | 19 |
+| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 15 |
+
+Les six partagent `charte.js` (la mise en page), `blocs.js` (la grille des
+offres) et `offres.js` (les prix).
 
 ## Générer
 
 ```
 npm install pptxgenjs sharp
-node build.js
-node build-dsi.js
-node build-prise-en-main.js
+for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js; do
+  node $f && FONT_MODE=brand node $f
+done
 ```
 
 `FONT_MODE=brand node build.js` produit la variante `-marque` (Sora et Inter,
@@ -51,6 +56,43 @@ avec une icône dans un rond, titres-slogans. Tout a été repris, et la charte
   réserve sans réseau, le fichier à reformater, le mardi matin avant
   l'ouverture). Les notes du présentateur sont écrites pour être lues par
   Julien, pas pour être projetées.
+
+## Refaire les captures du site
+
+⚠️ **Les recadrages sont calés sur la mise en page AU RAIL** (30 août 2026).
+Ceux d'avant visaient la barre du haut, qui n'existe plus : réutilisés tels
+quels, ils décalent toutes les captures d'une centaine de pixels.
+
+Deux jeux de captures, tous deux dans `web/screenshots/` :
+
+- **le tableau de bord** (`light-desktop-suivi/ecarts/rapport/setup`), par
+  `npx playwright test screenshots -g "light desktop"` ;
+- **les pages publiques** (`light-desktop-tarifs/souscrire`,
+  `light-mobile-telechargement`), par `npx playwright test captures-publiques`.
+
+Depuis `web/`, avec un `next dev` déjà lancé :
+
+```bash
+CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+  npx playwright test -c playwright.captures.config.ts
+```
+
+Trois pièges, tous rencontrés :
+
+- **la config principale démarre son propre serveur sur le port 3100**, ce que
+  Next 16 refuse tant qu'un `next dev` tourne pour le même dossier. D'où
+  `playwright.captures.config.ts`, qui se branche sur celui du port 3000 ;
+- **`CHROMIUM_PATH` n'est pas facultatif** : la config principale vise le
+  navigateur d'une image Docker, absent d'un Mac ;
+- **l'indicateur de développement de Next** (la pastille « N » en bas à
+  gauche) et le bouton de thème sont **masqués à la capture** par le CSS
+  `MASQUE` de `captures-publiques.spec.ts`. Sans lui, ils partent chez le
+  client — c'est arrivé sur la capture du hub de téléchargement.
+
+⚠️ **Le magasin d'essai s'appelle « Oberlin Lyon »**, comme celui des captures
+de l'application. Il portait le nom d'un prospect réel jusqu'au 30 août 2026 :
+montrer le nom d'un client dans le deck d'un autre n'est pas une option. Le nom
+vit dans `web/tests-e2e/fixtures.ts`.
 
 ## Refaire les captures de l'application
 
@@ -85,15 +127,29 @@ l'essentiel est en bas (une feuille qui monte, une alerte) ne peut pas passer
 dans un téléphone qui déborde : il lui faut `ecranEntier`, plus étroit mais
 complet.
 
-## Ce qu'il faut savoir avant de modifier
+## ⚠️ Aucun prix ne s'écrit dans un deck (30 août 2026)
 
-- **La grille de l'offre** (deck commercial, page 11) suit la grille au
-  volume de stock révisée le 21 août 2026 : 2 100 / 4 200 / 6 600 / 10 200 /
-  14 400 € par an et par magasin, puis sur devis au-delà d'un million
-  d'unités. Les noms de profil sont ceux de `web/lib/tarifs.ts` et de
-  l'annexe 2 des CGV. Le volume se compte en **unités**, jamais en
-  références. Le prix ne s'affiche plus sur le site côté client ; il reste
-  dans le deck parce qu'on le présente en face à face, et au devis.
+`offres.js` **lit la grille dans `web/lib/offres.ts`**, la source du site, et
+`blocs.js` la dessine — les quatre decks qui l'affichent la dessinent donc à
+l'identique. Ce n'est pas une élégance : les decks du 24 août ont porté la
+grille au volume de stock pendant une semaine **après son remplacement**, et
+le deck Samaritaine promettait encore « compteurs illimités » et « pas
+d'abonnement par appareil », soit l'inverse de ce qu'on facture.
+
+La lecture à la source fait qu'un deck régénéré dit forcément le prix en
+vigueur, et qu'une grille remaniée sans que le module suive **fait échouer la
+génération** au lieu de sortir un document faux. Ne jamais recopier un montant
+à la main, même « juste pour cette page ».
+
+Ce qui reste à savoir sur l'offre : le prix suit le nombre d'appareils qui
+comptent **en même temps dans un magasin** (Essential / Advanced / Enterprise),
+une licence couvre **un** magasin, le mensuel est annoncé par défaut et
+l'annuel se présente comme une économie **en euros**, jamais en pourcentage.
+Le plafond est **souple** — on ne refuse jamais un appareil pendant un
+comptage, et les decks le disent. Le raisonnement complet vit dans
+`hypotheses-tarifaires.md` (hypothèse 4).
+
+## Ce qu'il faut savoir avant de modifier
 - **Le dossier DSI recopie des faits** de `deploiement-mdm.md` (identifiants,
   adresses réseau), de `docs/privacy.html` (sous-traitants) et d'AGENTS.md
   (audit, mots de passe, sessions). Si l'un bouge, la page correspondante

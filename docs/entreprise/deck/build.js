@@ -1,18 +1,41 @@
 // Deck commercial Quantinvo — fond blanc, charte « Papier » v1.1.
 // node build.js                 → Quantinvo-presentation.pptx        (Arial)
 // FONT_MODE=brand node build.js → Quantinvo-presentation-marque.pptx (Sora/Inter)
+//
+// C'est la présentation longue, celle qu'on déroule en rendez-vous. Le deck
+// court (`build-court.js`) en est la version dix pages, pour un prospect qui
+// a déjà une solution.
+//
+// ⚠️ La grille tarifaire n'est PAS écrite ici : `offres.js` la lit dans
+// `web/lib/offres.ts`. Ce deck a porté pendant une semaine une grille au
+// volume de stock remplacée depuis — c'est ce qui a fait écrire ce module.
 
-const { P, FONT, FONTD, W, M, COL, RX, RW, preparer, ecrire, capture } = require('./charte')
+const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer } = require('./charte')
+const { GRILLE, grilleOffres, auDela, euros, economie } = require('./blocs')
 
 async function main() {
   const d = await preparer({ titre: 'Quantinvo — présentation' })
   const { pres } = d
   const PIED = 'Quantinvo · présentation'
 
-  // Captures du tableau de bord (données d'essai), recadrées hors en-tête.
-  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 254, width: 1232, height: 446 })
-  const capEcarts = await capture('light-desktop-ecarts.png', { left: 444, top: 440, width: 892, height: 340 })
-  const capRapport = await capture('light-desktop-rapport.png', { left: 444, top: 250, width: 892, height: 600 })
+  // Captures du tableau de bord (données d'essai), recadrées hors en-tête et
+  // hors nom du magasin. Les coordonnées suivent la mise en page au rail,
+  // posée le 30 août 2026 : un recadrage d'avant décalerait tout.
+  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 155, width: 1330, height: 505 })
+  const capEcarts = await capture('light-desktop-ecarts.png', { left: 448, top: 375, width: 964, height: 370 })
+  const capRapport = await capture('light-desktop-rapport.png', { left: 448, top: 160, width: 964, height: 660 })
+
+  const BAS = H - 0.72
+  const MARGE = 0.34
+  async function troisEcrans(s, cartes, { y = 2.2 } = {}) {
+    const gap = 0.3
+    const cw = (W - 2 * M - gap * (cartes.length - 1)) / cartes.length
+    const hCarte = BAS - (y + 0.42 + 0.68)
+    for (const [i, c] of cartes.entries()) {
+      const tel = await cadrer(c.fichier, { w: cw - 2 * MARGE, h: hCarte })
+      d.ecran(s, { x: M + i * (cw + gap), y, w: cw, titre: c.titre, texte: c.texte, tel, fill: c.fill, marge: MARGE, bas: BAS })
+    }
+  }
 
   // ════ 1. Couverture ════
   {
@@ -71,7 +94,7 @@ async function main() {
     const rows = [
       ['Une date par an, imposée par le calendrier.', "Vos dates. En janvier, en juin, un mardi matin avant l'ouverture. Autant de fois que vous voulez."],
       ['Des équipes externes, ou du papier.', 'Vos équipes, avec le téléphone qu’elles ont déjà.'],
-      ["On sait où on en est à la fin.", 'On le voit pendant, zone par zone, depuis le bureau.'],
+      ['On sait où on en est à la fin.', 'On le voit pendant, zone par zone, depuis le bureau.'],
       ['Les écarts se découvrent au rapport.', "Les écarts se règlent sur place, pendant que ça compte."],
       ['Un fichier à reformater avant chaque import.', 'Vos fichiers tels quels. Quantinvo reconnaît vos colonnes.'],
     ]
@@ -111,61 +134,84 @@ async function main() {
     s.addNotes("Insister sur l'import : « importez vos fichiers tels quels ». C'est ce que le prospect vérifie dès le premier essai, et c'est là qu'on gagne la confiance.")
   }
 
-  // ════ 6. Pendant que ça compte ════
+  // ════ 6. L'application ════
+  {
+    const s = pres.addSlide()
+    d.entete(s, "L'application")
+    d.titreLarge(s, 'Ce que voit la personne qui compte', { y: 1.3, size: 26 })
+    await troisEcrans(s, [
+      { titre: 'Les balises s’impriment', texte: "Une planche d'étiquettes numérotées, en PDF. Elles délimitent les zones et se collent en rayon.", fichier: 'creer-balises.png', fill: P.MIST },
+      { titre: 'On scanne, ça compte', texte: "Caméra, saisie manuelle ou douchette Bluetooth. La quantité se corrige d'un appui.", fichier: 'comptage.png', fill: P.TINT },
+      { titre: 'L’audit repasse derrière', texte: "Un second passage sur la même zone, par quelqu'un d'autre. C'est ce qui fiabilise le comptage.", fichier: 'audit.png', fill: P.MIST },
+    ], { y: 2.05 })
+    d.pied(s, 6, PIED)
+    s.addNotes("De vraies captures. Le point à faire remarquer : il n'y a rien d'autre sur ces écrans. Un compteur n'a pas de menu à apprendre.")
+  }
+
+  // ════ 7. Pendant que ça compte ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Le tableau de bord')
     d.titreLarge(s, 'Pendant que ça compte, vous voyez où ça en est.')
-    d.para(s, "Depuis le bureau, sur le site : combien d'appareils comptent, combien auditent, l'avancement zone par zone, les derniers scans. Ce que vous ne voyez pas, et c'est voulu : qui fait quoi. Le suivi est agrégé, on pilote le travail, pas les personnes.", { x: M, y: 2.3, w: W - 2 * M, h: 0.8, size: 12.5 })
-    const cw = 3.55 * capSuivi.ratio, cx = (W - cw) / 2
-    const g = d.cadre(s, capSuivi, { x: cx, y: 3.15, w: cw })
-    d.legende(s, 'Onglet Suivi, données d’essai.', { x: cx, y: 3.15 + g.h + 0.15, w: RW })
-    d.pied(s, 6, PIED)
+    d.para(s, "Depuis le bureau, sur le site : combien d'appareils comptent, combien auditent, l'avancement zone par zone, les derniers scans. Ce que vous ne voyez pas, et c'est voulu : qui fait quoi. Le suivi est agrégé, on pilote le travail, pas les personnes.", { x: M, y: 2.25, w: W - 2 * M, h: 0.8, size: 12.5 })
+    const cw = 3.3 * capSuivi.ratio, cx = (W - cw) / 2
+    const g = d.cadre(s, capSuivi, { x: cx, y: 3.1, w: cw })
+    d.legende(s, 'Onglet Suivi, données d’essai.', { x: cx, y: 3.1 + g.h + 0.14, w: RW })
+    d.pied(s, 7, PIED)
     s.addNotes("Montrer la capture, ne pas la commenter ligne à ligne. L'argument du suivi agrégé parle aux RH et au CSE : le dire ici évite une objection plus tard.")
   }
 
-  // ════ 7. Les écarts ════
+  // ════ 8. Les écarts ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Les écarts')
     d.titreLarge(s, "Un écart se règle pendant l'inventaire, pas trois jours après.")
-    d.para(s, "Quand une balise a été comptée puis auditée, les deux quantités s'affichent côte à côte, avec l'écart en pièces et en valeur d'achat. Le superviseur retient l'une, l'autre, ou une troisième qu'il a vérifiée lui-même. Tant qu'il n'a pas tranché, le rapport le lui rappelle.", { x: M, y: 2.3, w: W - 2 * M, h: 0.8, size: 12.5 })
-    const g = d.cadre(s, capEcarts, { x: M + 1.6, y: 3.15, w: W - 2 * M - 3.2 })
-    d.legende(s, "Onglet Écarts d'audit, données d'essai.", { x: M + 1.6, y: 3.15 + g.h + 0.15, w: RW })
-    d.pied(s, 7, PIED)
-    s.addNotes("Le point qui compte pour un responsable de magasin : trancher à chaud, avec le compteur encore dans le rayon.")
+    d.para(s, "Quand une balise a été comptée puis auditée, les deux quantités s'affichent côte à côte, avec l'écart en pièces et en valeur d'achat. Le superviseur retient l'une, l'autre, ou une troisième qu'il a vérifiée lui-même — en un appui. Tant qu'il n'a pas tranché, le rapport le lui rappelle.", { x: M, y: 2.25, w: W - 2 * M, h: 0.8, size: 12.5 })
+    const g = d.cadre(s, capEcarts, { x: M + 1.6, y: 3.1, w: W - 2 * M - 3.2 })
+    d.legende(s, "Onglet Écarts d'audit, données d'essai.", { x: M + 1.6, y: 3.1 + g.h + 0.14, w: RW })
+    d.pied(s, 8, PIED)
+    s.addNotes("Le point qui compte pour un responsable de magasin : trancher à chaud, avec le compteur encore dans le rayon. Les deux boutons portent la quantité de chacun — un appui suffit.")
   }
 
-  // ════ 8. Le rapport ════
+  // ════ 9. Le rapport ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Le rapport')
     d.titre(s, "À la fin, un rapport qui dit aussi ce qui n'a pas été compté.", { size: 24 })
     d.para(s, "Le rapport part du stock attendu, pas seulement de ce qui a été scanné. Un article attendu et jamais trouvé y figure, avec son manque. C'est la démarque que l'inventaire est censé révéler.", { x: M, y: 3.4, w: COL, h: 1.5, size: 12.5 })
     d.para(s, "Export Excel en un clic, prêt pour la correction du stock.", { x: M, y: 4.95, w: COL, h: 0.6, size: 12.5 })
-    const g = d.cadre(s, capRapport, { x: RX, y: 1.5, w: RW, h: 5.0 })
-    d.legende(s, "Onglet Rapport, données d'essai.", { x: RX, y: 1.5 + g.h + 0.15, w: RW })
-    d.pied(s, 8, PIED)
+    const g = d.cadre(s, capRapport, { x: RX, y: 1.5, w: RW, h: 4.9 })
+    d.legende(s, "Onglet Rapport, données d'essai.", { x: RX, y: 1.5 + g.h + 0.14, w: RW })
+    d.pied(s, 9, PIED)
     s.addNotes("La règle : le fichier qui fait foi est le stock théorique. Sans fichier théorique, le rapport ne montre que ce qui a été compté.")
   }
 
-  // ════ 9. Ce qu'on ne promet pas ════
+  // ════ 10. Mise en route ════
   {
     const s = pres.addSlide()
-    d.entete(s, 'Pour être clair')
-    d.titre(s, "Ce qu'on ne vous promet pas.")
-    d.para(s, "Autant le dire avant la démonstration qu'après.", { x: M, y: 3.7, w: COL, h: 0.6, size: 12.5, italic: true, color: P.SLATE })
-    d.alineas(s, [
-      ["L'inventaire fiscal certifié.", "Si votre commissaire aux comptes exige un comptage par un tiers, ce comptage reste. Quantinvo fait tout le reste de l'année, et il le prépare."],
-      ['Une connexion à votre ERP.', "Pas encore. Quantinvo importe vos fichiers et rend un Excel. C'est ce qui permet de démarrer en une journée, sans projet informatique."],
-      ['Android.', "L'application est sur iPhone aujourd'hui. La version Android est en cours."],
-      ['La connexion par votre annuaire.', "Les comptes sont nominatifs, créés par invitation. Pas de SAML ni d'Entra ID pour l'instant ; dites-nous si c'est une exigence."],
-    ], { y: 1.5, h: 4.8, size: 14, gap: 14 })
-    d.pied(s, 9, PIED)
-    s.addNotes("Cette page désarme les objections. Ne pas la sauter : un prospect qui découvre une limite après coup perd confiance, un prospect averti la comprend.")
+    d.entete(s, 'Mise en route')
+    d.titreLarge(s, 'De la souscription au premier comptage')
+    const steps = [
+      ['Le jour même', "Vous souscrivez en ligne, votre espace est créé dès l'encaissement. Vous recevez vos accès par e-mail."],
+      ['Dans l’heure', "Vous invitez votre équipe — prénom, nom, adresse. Chacun reçoit son lien, choisit son mot de passe et installe l'application."],
+      ['Le premier rayon', "Vous importez vos fichiers, vous imprimez une planche de balises, et deux personnes comptent un rayon pour prendre la main."],
+      ['Ensuite', "Vous comptez à votre rythme : un rayon par semaine, une marque, un magasin entier. Le prix ne bouge pas."],
+    ]
+    const n = steps.length, cw = (W - 2 * M - 0.4 * (n - 1)) / n
+    const yl = 2.6
+    d.filet(s, M + 0.2, yl + 0.21, W - 2 * M - 0.4, P.HAIR)
+    steps.forEach(([h4, txt], i) => {
+      const x = M + i * (cw + 0.4)
+      d.numero(s, i + 1, x, yl, 0.42)
+      s.addText(h4, { x, y: yl + 0.65, w: cw, h: 0.4, fontFace: FONTD, fontSize: 16, bold: true, color: P.DEEP, margin: 0 })
+      s.addText(txt, { x, y: yl + 1.08, w: cw, h: 2.0, fontFace: FONT, fontSize: 12, color: P.INK2, margin: 0, lineSpacingMultiple: 1.18 })
+    })
+    d.encadre(s, 'Pas de projet informatique', "Aucun serveur à installer, aucune intégration obligatoire, aucun développement. L'échange se fait par fichiers : vous importez un CSV ou un Excel, vous récupérez un Excel.", { x: M, y: 5.6, w: W - 2 * M, h: 1.0 })
+    d.pied(s, 10, PIED)
+    s.addNotes("Cette page répond à la question qui bloque tous les achats logiciels : « combien de temps avant que ça serve ? ». La réponse est : le jour même.")
   }
 
-  // ════ 10. Confiance ════
+  // ════ 11. Confiance ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Confiance')
@@ -179,51 +225,43 @@ async function main() {
       ['Les accès sont nominatifs.', "Pas d'inscription libre : on entre sur invitation. Administrateur, superviseur, compteur, chacun voit son périmètre. Double authentification pour qui le souhaite."],
       ['Aucun traceur.', "Pas de cookie publicitaire, pas de mesure d'audience, pas de revente. L'outil travaille, il n'observe pas."],
     ], { x: M + cw + 0.6, y: 2.5, w: cw, h: 3.2, size: 12.5, gap: 12 })
-    d.encadre(s, 'Pour votre direction informatique', "Un dossier technique séparé répond aux questions d'une DSI : architecture, hébergement, déploiement par votre catalogue d'entreprise, comptes, sécurité. Demandez-le.", { x: M, y: 5.75, w: W - 2 * M, h: 1.0 })
-    d.pied(s, 10, PIED)
+    d.encadre(s, 'Pour votre direction informatique', "Un dossier technique séparé répond aux questions d'une DSI : architecture, hébergement, distribution de l'application, mise en place, comptes, sécurité. Demandez-le.", { x: M, y: 5.75, w: W - 2 * M, h: 1.0 })
+    d.pied(s, 11, PIED)
     s.addNotes("Conformité réelle, suivi agrégé, données en Europe. Le dossier DSI existe : le proposer tout de suite évite six semaines d'aller-retour.")
   }
 
-  // ════ 11. L'offre ════
+  // ════ 12. L'offre ════
   {
     const s = pres.addSlide()
     d.entete(s, "L'offre")
-    d.titre(s, 'Une licence par magasin, à l’année, comptages illimités.', { size: 24, h: 1.8 })
-    d.para(s, "Le prix suit la taille de votre stock, en unités physiques. Il ne dépend ni du nombre de compteurs, ni du nombre d'inventaires dans l'année.", { x: M, y: 3.35, w: COL, h: 1.3, size: 12.5 })
-    d.para(s, "Tout est compris : l'application, le tableau de bord, les mises à jour. Un réseau active une licence par magasin, à son rythme.", { x: M, y: 4.6, w: COL, h: 1.2, size: 12.5 })
-
-    // Grille au volume de stock, en unités (pièces physiques, jamais en
-    // références). Les noms de profil sont ceux de `web/lib/tarifs.ts` et de
-    // l'annexe 2 des CGV. La borne à 200 000 sépare la grande surface du
-    // grand magasin.
-    const TIERS = [
-      ['Boutique', 'jusqu’à 10 000 unités', '2 100 €', false],
-      ['Magasin', '10 001 à 50 000 unités', '4 200 €', true],
-      ['Grande surface', '50 001 à 200 000 unités', '6 600 €', false],
-      ['Grand magasin', '200 001 à 500 000 unités', '10 200 €', false],
-      ['Très grand magasin', '500 001 à 1 000 000 unités', '14 400 €', false],
-      ['Au-delà', 'plus d’un million d’unités', 'sur devis', false],
-    ]
-    let y = 1.5
-    s.addText('Profil du magasin', { x: RX, y, w: 3, h: 0.3, fontFace: FONT, fontSize: 10, bold: true, color: P.SLATE, margin: 0 })
-    s.addText('par an et par magasin, HT', { x: RX + RW - 3.2, y, w: 3.2, h: 0.3, fontFace: FONT, fontSize: 10, bold: true, color: P.SLATE, align: 'right', margin: 0 })
-    y += 0.38
-    d.filet(s, RX, y, RW)
-    for (const [profil, bornes, prix, hot] of TIERS) {
-      const rh = 0.72
-      if (hot) s.addShape('rect', { x: RX - 0.15, y: y + 0.02, w: RW + 0.3, h: rh - 0.04, fill: { color: P.TINT }, line: { color: P.TINT, width: 0 } })
-      s.addText(profil, { x: RX, y: y + 0.12, w: 3.6, h: 0.3, fontFace: FONTD, fontSize: 13.5, bold: true, color: P.INK, margin: 0 })
-      s.addText(bornes, { x: RX, y: y + 0.42, w: 3.6, h: 0.26, fontFace: FONT, fontSize: 10.5, color: P.SLATE, margin: 0 })
-      if (hot) s.addText('le plus courant', { x: RX + 3.6, y: y + 0.22, w: 1.8, h: 0.3, fontFace: FONT, fontSize: 10, italic: true, color: P.ACCENT, margin: 0 })
-      s.addText(prix, { x: RX + RW - 3.2, y: y + 0.12, w: 3.2, h: 0.5, fontFace: FONTD, fontSize: 20, bold: true, color: P.DEEP, align: 'right', margin: 0 })
-      y += rh
-      d.filet(s, RX, y, RW)
-    }
-    d.pied(s, 11, PIED)
-    s.addNotes("Parler en budget d'inventaire annuel, jamais en prix d'application. Le volume se lit dans le fichier de stock du prospect ; il le déclare au devis. Un grand magasin dépasse 200 000 pièces : c'est la borne qui parle dans le métier. Tarifs confirmés au devis.")
+    d.titreLarge(s, 'Une licence par magasin, comptages illimités', { y: 1.3, size: 26 })
+    d.para(s, "Le prix suit le nombre d'appareils qui comptent en même temps — la seule chose que vous puissiez vérifier vous-même. Ni le volume de votre stock, ni le nombre de comptes, ni le nombre d'inventaires dans l'année.", { x: M, y: 1.95, w: W - 2 * M, h: 0.5, size: 11.5, color: P.SLATE })
+    grilleOffres(d, s, { x: M, y: 2.55, w: W - 2 * M, h: 3.0, rythme: 'mois', points: false })
+    d.alineas(s, [
+      ['Tout est compris.', "L'application, le tableau de bord, les rapports, les mises à jour. Aucun terminal à acheter. Un réseau active une licence par magasin, à son rythme."],
+    ], { x: M, y: 5.75, w: W - 2 * M, h: 0.7, size: 12.5 })
+    d.para(s, auDela(), { x: M, y: 6.45, w: W - 2 * M, h: 0.4, size: 10.5, italic: true, color: P.SLATE })
+    d.pied(s, 12, PIED)
+    s.addNotes(`Parler en budget d'inventaire annuel, jamais en prix d'application : comparer au prestataire et au matériel. Annoncer le mensuel ; l'annuel économise ${euros(economie(GRILLE.offres[1]))} sur Advanced. Le détail vit dans le deck tarification.`)
   }
 
-  // ════ 12. Pour finir ════
+  // ════ 13. Ce qu'on ne promet pas ════
+  {
+    const s = pres.addSlide()
+    d.entete(s, 'Pour être clair')
+    d.titre(s, "Ce qu'on ne vous promet pas.")
+    d.para(s, "Autant le dire avant la démonstration qu'après.", { x: M, y: 3.7, w: COL, h: 0.6, size: 12.5, italic: true, color: P.SLATE })
+    d.alineas(s, [
+      ["L'inventaire fiscal certifié.", "Si votre commissaire aux comptes exige un comptage par un tiers, ce comptage reste. Quantinvo fait tout le reste de l'année, et il le prépare."],
+      ['Une connexion à votre ERP.', "Pas encore. Quantinvo importe vos fichiers et rend un Excel. C'est ce qui permet de démarrer en une journée, sans projet informatique."],
+      ['Android sur les boutiques.', "L'application tourne sur Android, et elle est disponible sur iPhone. La mise en ligne sur Google Play est en cours ; d'ici là, l'installation passe par votre catalogue d'entreprise."],
+      ['La connexion par votre annuaire.', "Les comptes sont nominatifs, créés par invitation. Pas de SAML ni d'Entra ID pour l'instant ; dites-nous si c'est une exigence."],
+    ], { y: 1.5, h: 4.8, size: 14, gap: 14 })
+    d.pied(s, 13, PIED)
+    s.addNotes("Cette page désarme les objections. Ne pas la sauter : un prospect qui découvre une limite après coup perd confiance, un prospect averti la comprend.")
+  }
+
+  // ════ 14. Pour finir ════
   {
     const s = pres.addSlide()
     d.finale(s, {

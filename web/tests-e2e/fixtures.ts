@@ -19,7 +19,7 @@ export const SESSION = {
   id: SESSION_ID,
   inventory_number: 'INV-20260807-C255',
   name: 'Test',
-  store_name: 'La Samaritaine',
+  store_name: 'Oberlin Lyon',
   store_id: 'store-1',
   status: 'open',
   current_pass: 1,
@@ -133,7 +133,7 @@ export const DETAIL = [
 ]
 
 export const STORES = [
-  { id: 'store-1', name: 'La Samaritaine' },
+  { id: 'store-1', name: 'Oberlin Lyon' },
   { id: 'store-2', name: 'Magasin centre-ville' },
 ]
 
@@ -157,17 +157,17 @@ export const TABLEAU_DE_BORD = {
     { jour: '2026-08-30', pieces: 0, valeur: 0 },
   ],
   ecarts: [
-    { session_id: 'session-1', nom: 'Inventaire de test', magasin: 'La Samaritaine', statut: 'counting', ecart_qte: -7, ecart_valeur: -140 },
+    { session_id: 'session-1', nom: 'Inventaire de test', magasin: 'Oberlin Lyon', statut: 'counting', ecart_qte: -7, ecart_valeur: -140 },
   ],
   derniers: [
-    { session_id: 'session-1', nom: 'Inventaire de test', magasin: 'La Samaritaine', numero: 'INV-20260823-TEST', statut: 'counting', cree_le: '2026-08-23T18:29:30Z', pieces: 5, valeur: 192.5 },
+    { session_id: 'session-1', nom: 'Inventaire de test', magasin: 'Oberlin Lyon', numero: 'INV-20260823-TEST', statut: 'counting', cree_le: '2026-08-23T18:29:30Z', pieces: 5, valeur: 192.5 },
   ],
 }
 
 export const EQUIPE = {
   stores: [
     {
-      id: 'store-1', name: 'La Samaritaine',
+      id: 'store-1', name: 'Oberlin Lyon',
       counters: [
         { id: 'cnt-1', full_name: 'Compte Test Compteur', email: 'compteur@test.fr', is_active: true, sessions_counted: 2, last_count_at: '2026-08-29T10:00:00Z' },
         { id: 'cnt-2', full_name: 'Nadia Test', email: 'nadia@test.fr', is_active: false, sessions_counted: 0, last_count_at: null },

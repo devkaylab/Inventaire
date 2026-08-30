@@ -3,7 +3,7 @@
 // texte, indigo profond pour les titres, indigo en accent, et le cyan réservé
 // à la ligne de scan sous l'en-tête — le seul endroit où il apparaît.
 //
-// Les trois générateurs (commercial, DSI, prise en main) partagent ce module.
+// Les six générateurs partagent ce module (voir LISEZMOI.md).
 // Parti pris de mise en page : des pages de document, pas des grilles de
 // cartes. Une colonne de titre à gauche, du texte courant à droite, des
 // filets, des captures réelles du produit. Pas d'icône décorative.
@@ -83,7 +83,11 @@ async function capture(fichier, { left, top, width, height }) {
  * Les captures vivent dans `captures/`, préparées par `preparer-captures.js`.
  */
 async function cadrer(fichier, { w, h }) {
-  const chemin = path.join(MOBILE, fichier)
+  // Un nom simple désigne une capture de l'application, dans `captures/`. Un
+  // chemin (avec un séparateur) est résolu depuis ce fichier : c'est ce qui
+  // permet d'encadrer aussi une capture web prise en format téléphone, comme
+  // le hub de téléchargement du dossier DSI.
+  const chemin = fichier.includes('/') ? path.resolve(__dirname, fichier) : path.join(MOBILE, fichier)
   const meta = await sharp(chemin).metadata()
   const PW = meta.width, PH = meta.height
   // Rayon et bezel proportionnels à la largeur : même géométrie que l'écran

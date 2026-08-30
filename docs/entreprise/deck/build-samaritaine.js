@@ -10,6 +10,7 @@
 // L'Inventory Control ne garde que le rapport, la validation et l'ajustement.
 
 const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer } = require('./charte')
+const { GRILLE, grilleOffres, euros } = require('./blocs')
 
 async function main() {
   const d = await preparer({ titre: 'Quantinvo — proposition pour La Samaritaine' })
@@ -18,9 +19,9 @@ async function main() {
 
   // Captures du tableau de bord (données d'essai), mêmes recadrages que le
   // deck commercial : hors en-tête et hors nom du magasin d'essai.
-  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 254, width: 1232, height: 446 })
-  const capEcarts = await capture('light-desktop-ecarts.png', { left: 444, top: 440, width: 892, height: 340 })
-  const capRapport = await capture('light-desktop-rapport.png', { left: 444, top: 250, width: 892, height: 600 })
+  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 155, width: 1330, height: 505 })
+  const capEcarts = await capture('light-desktop-ecarts.png', { left: 448, top: 375, width: 964, height: 370 })
+  const capRapport = await capture('light-desktop-rapport.png', { left: 448, top: 160, width: 964, height: 660 })
 
   // Captures de l'application (celles du guide de prise en main), dans un
   // téléphone dessiné. Même mécanique que build-prise-en-main.js : le
@@ -226,13 +227,13 @@ async function main() {
     const cw = (W - 2 * M - 0.6) / 2
     d.alineas(s, [
       ['Le matériel.', "SmartCount repose sur une flotte de terminaux dédiés : à charger, configurer, vérifier avant chaque session — un métier en soi, celui qu'on cherche justement à ne plus faire. Quantinvo tourne sur les iPhone que vos équipes ont déjà, et une douchette Bluetooth s'y branche pour les gros volumes."],
-      ['Le coût.', "Une licence par magasin, à l'année, comptages et compteurs illimités. Pas de coût par terminal, pas d'abonnement par appareil. Faire compter tout un floor un matin ne coûte rien de plus."],
+      ['Le coût.', "Une licence par magasin, sans un euro de matériel : ni terminal à acheter, ni flotte à entretenir, ni remplacement à budgéter. Les inventaires sont illimités — compter chaque semaine coûte le même prix que compter une fois par an."],
     ], { x: M, y: 2.5, w: cw, h: 3.2, size: 12.5, gap: 12 })
     d.alineas(s, [
       ['La réconciliation.', "SmartCount rend un rapport de variance, à consolider ensuite avec le stock théorique. Quantinvo rend ce croisement déjà fait : l'attendu, le compté, le non-compté, l'écart en valeur."],
       ["La taille de l'éditeur.", "SmartCount est un module au catalogue d'un géant du matériel. Quantinvo ne fait qu'une chose — l'inventaire — et la personne qui l'a dessiné répond elle-même à vos questions."],
     ], { x: M + cw + 0.6, y: 2.5, w: cw, h: 3.2, size: 12.5, gap: 12 })
-    d.encadre(s, 'Pour être honnête', "Un terminal durci encaisse mieux les chocs qu'un téléphone, et si votre flotte est déjà amortie, l'argument du matériel pèse moins. Les nôtres ne bougent pas : un outil que le floor prend en main sans briefing, aucun plafond au nombre de compteurs, et une réconciliation qui n'existe plus.", { x: M, y: 5.7, w: W - 2 * M, h: 1.2 })
+    d.encadre(s, 'Pour être honnête', "Un terminal durci encaisse mieux les chocs qu'un téléphone, et si votre flotte est déjà amortie, l'argument du matériel pèse moins. Les nôtres ne bougent pas : un outil que le floor prend en main sans briefing, des comptages illimités toute l'année, et une réconciliation qui n'existe plus.", { x: M, y: 5.7, w: W - 2 * M, h: 1.2 })
     d.pied(s, 12, PIED)
     s.addNotes("Ne jamais citer de prix Zebra — on n'en parle pas, même en réponse à une question. L'argument décisif ici : un outil expert suppose un service expert pour le servir ; c'est incompatible avec le transfert au floor.")
   }
@@ -246,7 +247,7 @@ async function main() {
     d.alineas(s, [
       ["L'inventaire fiscal certifié.", "Si votre commissaire aux comptes exige un comptage par un tiers, ce comptage reste. Quantinvo fait tout le reste de l'année, et il le prépare."],
       ['Une connexion à votre ERP.', "Quantinvo importe vos fichiers et rend un Excel. L'ajustement du stock reste un geste dans votre système — c'est d'ailleurs le seul qui doive le rester."],
-      ['Android.', "L'application est sur iPhone aujourd'hui. La version Android est en cours."],
+      ['Android sur les boutiques.', "L'application tourne sur Android, et elle est disponible sur iPhone. La mise en ligne sur Google Play est en cours ; d'ici là, l'installation passe par votre catalogue d'entreprise."],
       ['La connexion par votre annuaire.', "Les comptes sont nominatifs, créés par invitation. Pas de SAML ni d'Entra ID pour l'instant ; dites-nous si c'est une exigence."],
     ], { y: 1.5, h: 4.8, size: 14, gap: 14 })
     d.pied(s, 13, PIED)
@@ -257,15 +258,15 @@ async function main() {
   {
     const s = pres.addSlide()
     d.entete(s, "L'offre")
-    d.titre(s, 'Une licence par magasin, à l’année, comptages illimités.', { size: 24, h: 1.8 })
-    d.chiffre(s, '0', 'terminal à acheter, à louer ou à configurer.', { y: 4.1 })
+    d.titreLarge(s, 'Une licence par magasin, inventaires illimités', { y: 1.3, size: 26 })
+    d.para(s, "Le prix suit le nombre d'appareils qui comptent en même temps dans le magasin — la seule chose que vous puissiez vérifier vous-même. Ni le volume de votre stock, ni le nombre de comptes, ni le nombre d'inventaires dans l'année.", { x: M, y: 1.95, w: W - 2 * M, h: 0.5, size: 11.5, color: P.SLATE })
+    grilleOffres(d, s, { x: M, y: 2.55, w: W - 2 * M, h: 3.0, rythme: 'mois', points: false })
     d.alineas(s, [
-      ["Le prix suit le stock, pas l'usage.", "La licence se calcule sur le volume de stock du magasin, en unités. Elle ne dépend ni du nombre de compteurs, ni du nombre d'inventaires — tournants, aléatoires ou complets — dans l'année. Chaque chef d'équipe peut compter son rayon quand il le décide : ça ne coûte rien de plus."],
-      ['Tout est compris.', "L'application, le tableau de bord, les rapports, les mises à jour. Le chiffrage précis se fait au devis, sur votre volume de stock déclaré."],
-      ['Un déploiement en jours, pas en mois.', "Pas de projet informatique : les comptes se créent par invitation, l'application s'installe — y compris par votre catalogue d'entreprise —, et le premier inventaire peut se faire la semaine de la signature."],
-    ], { y: 1.5, h: 4.8, size: 13.5, gap: 14 })
+      ['Ce que ça change pour l’inventaire tournant.', "À l'intérieur d'un palier, compter davantage ne coûte rien : un chef d'équipe qui décide de compter son rayon un mardi matin n'a aucun budget à demander. C'est ce qui rend le transfert au floor tenable dans la durée."],
+      ['Zéro matériel.', "Aucun terminal à acheter, à louer, à configurer ou à remplacer. L'application, le tableau de bord, les rapports et les mises à jour sont compris."],
+    ], { x: M, y: 5.7, w: W - 2 * M, h: 1.1, size: 12, gap: 9 })
     d.pied(s, 14, PIED)
-    s.addNotes("Parler en budget d'inventaire annuel, jamais en prix d'application. La grille au volume est dans le deck commercial et se confirme au devis ; ici, l'argument est que le modèle encourage précisément le transfert : plus le floor compte, plus la licence est rentabilisée.")
+    s.addNotes("Le palier se choisit sur le nombre de personnes qui comptent EN MÊME TEMPS, pas sur l'effectif : un floor de cent vendeurs dont vingt comptent le mardi matin relève d'Advanced. Le dépassement ne bloque jamais un comptage, il se règle au renouvellement. Au-delà de cent appareils sur un même magasin, ou pour plusieurs magasins, on établit un devis.")
   }
 
   // ════ 15. Pour finir ════

@@ -15,9 +15,11 @@ async function main() {
   const PIED = 'Quantinvo · prise en main · août 2026'
 
   // ── Captures du tableau de bord (site), recadrées hors en-tête ──
-  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 254, width: 1232, height: 446 })
-  const capEcarts = await capture('light-desktop-ecarts.png', { left: 444, top: 440, width: 892, height: 340 })
-  const capRapport = await capture('light-desktop-rapport.png', { left: 444, top: 250, width: 892, height: 600 })
+  // ⚠️ Recadrages calés sur la mise en page AU RAIL (30 août 2026) : ceux
+  // d'avant visaient la barre du haut et décalaient les trois captures.
+  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 155, width: 1330, height: 505 })
+  const capEcarts = await capture('light-desktop-ecarts.png', { left: 448, top: 375, width: 964, height: 370 })
+  const capRapport = await capture('light-desktop-rapport.png', { left: 448, top: 160, width: 964, height: 660 })
 
   // ── Captures de l'application, dans un téléphone dessiné ──
   // ⚠️ Le recadrage se calcule à partir de la place réellement disponible,
