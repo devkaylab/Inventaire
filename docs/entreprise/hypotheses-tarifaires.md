@@ -3,18 +3,28 @@
 **Établi le** : 21 août 2026.
 **Objet** : garder côte à côte les façons de facturer Quantinvo, avec ce que
 chacune rapporte et ce qu'elle coûte, pour que le choix se fasse sur des
-chiffres et non sur une impression. Trois hypothèses au 22 août 2026 : au
-volume de stock (retenue), au prix fixe par magasin (écartée), par magasin et
-par compteur (écartée).
+chiffres et non sur une impression. Quatre hypothèses au 30 août 2026 : au
+volume de stock, au prix fixe par magasin, par magasin et par compteur, et au
+nombre d'appareils qui comptent.
 
-> **Décision du 21 août 2026 — c'est la tarification au volume de stock qui est
-> retenue** (hypothèse 1). Le prix fixe par magasin a été chiffré puis écarté.
+> **DÉCISION DU 30 AOÛT 2026 — c'est l'hypothèse 4 qui est retenue** : trois
+> offres calées sur le **nombre d'appareils qui comptent**, par magasin —
+> Essential 690 €, Advanced 2 400 €, Enterprise 6 900 € HT par an. Elle est
+> **décidée, pas encore construite** : rien n'existe en base ni dans les
+> écrans, et le nombre d'appareils n'est même pas mesurable aujourd'hui
+> (`DEVICE_KEY` est retirée à chaque lancement de l'app). Lire la section en
+> fin de document avant d'écrire la moindre ligne.
 >
-> **Rouvert le 22 août 2026** : la grille au volume ne se contrôle pas, et le
-> prix de l'offre concurrente (≈ 10 000 € par magasin et par an) montre que le
-> prix fixe avait été calé deux fois trop bas. Voir la « Reprise du 22 août »
-> en fin de document — recommandation : **6 900 € par magasin**, décision en
-> attente sur le sort de la boutique indépendante.
+> Les trois hypothèses précédentes sont conservées telles quelles : elles
+> portent le raisonnement, et l'hypothèse 1 (au volume de stock) est ce que le
+> produit applique encore aujourd'hui — CGV, devis, `stores.annual_price_cents`
+> et modèles de facture n'ont pas bougé.
+>
+> Historique des décisions : **21 août** — le volume est retenu, le prix fixe
+> écarté. **22 août** — rouvert (la grille au volume ne se contrôle pas), le
+> prix unique recalé à 6 900 € sur l'ancre de marché, puis **le volume est
+> gardé « pour ne pas influencer le client »**. **30 août** — le motif du
+> contrôle l'emporte, et l'assiette change : on facture ce qui se mesure.
 
 > Comme la check-list de création, ce document est une grille de travail, pas
 > un conseil comptable. Les taux d'imposition utilisés sont ceux connus début
@@ -22,8 +32,8 @@ par compteur (écartée).
 
 ## Le net, et comment on y arrive
 
-Les deux hypothèses affichent des prix **hors taxes**, et le net se calcule de
-la même façon dans les deux cas — hypothèse SASU à l'impôt sur les sociétés,
+Les quatre hypothèses affichent des prix **hors taxes**, et le net se calcule
+de la même façon dans tous les cas — hypothèse SASU à l'impôt sur les sociétés,
 rémunération en dividendes :
 
 | Étape | Effet | Reste sur 100 € |
@@ -35,7 +45,7 @@ rémunération en dividendes :
 **Un euro facturé laisse 0,595 € en poche**, d'où le coefficient de 1,68 pour
 remonter d'un net voulu au prix à afficher.
 
-Trois choses à ne pas oublier, valables pour les deux hypothèses :
+Trois choses à ne pas oublier, valables pour toutes :
 
 - **la TVA ne coûte rien** : elle s'ajoute au prix HT et se reverse. En B2B le
   client la récupère. Ce n'est qu'un sujet de trésorerie ;
@@ -464,3 +474,230 @@ premier prospect à un seul magasin testera la règle. Deux réponses tenables,
   haute — mais son texte doit cesser d'annoncer une tranche tarifaire.
 - Les articles 5.1, 6.3, 6.4 et 6.5 des CGV (déclaration et régularisation du
   volume) se réduisent à une phrase sur la borne.
+
+---
+
+## Hypothèse 4 — au nombre d'appareils qui comptent (RETENUE le 30 août 2026)
+
+Demande de Julien : *« l'idéal est de facturer sur ce qu'on peut contrôler, le
+nombre d'appareils connectés, le nombre de magasins »*, avec trois offres et la
+règle que **la plus petite coûte le plus cher à l'unité**. C'est la réponse
+directe au motif qui avait rouvert le sujet le 22 août : la grille au volume ne
+se contrôle pas.
+
+### La grille
+
+| Offre | Appareils / magasin | Prix HT / an | Net | € par appareil au plafond |
+|---|---|---|---|---|
+| **Essential** | 2 | **690 €** | 411 € | 345 € |
+| **Advanced** | 3 à 20 | **2 400 €** | 1 428 € | 120 € |
+| **Enterprise** | 21 à 100 | **6 900 €** | 4 106 € | 69 € |
+| Au-delà | > 100 | sur devis, +700 € par tranche de 10 | — | 70 € |
+
+Prix **par magasin et par an**, hors taxes. Remise réseau à partir du
+quatrième magasin : −10 % de 4 à 10, −20 % de 11 à 30, −30 % au-delà — c'est la
+dégressivité chiffrée le 22 août avec l'hypothèse 3, restée sans emploi jusqu'ici.
+
+Maquette de la page publique :
+https://claude.ai/code/artifact/8ef9b98c-a0a7-4295-97d6-1949c105d83c
+
+### ⚠️ Pourquoi « lier le prix aux dépenses » ne marche pas ici
+
+C'était la consigne de départ, inspirée de Neon et Supabase. **Elle a été
+écartée après calcul, et le calcul mérite d'être gardé** : il se représentera à
+chaque révision de la grille.
+
+Coût marginal annuel d'un client Enterprise (40 appareils, 4 inventaires par an) :
+
+| Poste | Coût annuel |
+|---|---|
+| Messages temps réel (~460 000 par inventaire, forfait Pro à 5 M/mois) | ~5 € |
+| Sortie réseau (catalogue de 10 Mo par appareil, forfait 250 Go) | < 1 € |
+| Stockage, écritures | ~0 € |
+| **Stripe (1,4 % + 0,25 €)** | **~97 €** |
+| **Total** | **~105 € sur 6 900 € facturés, soit 1,5 %** |
+
+Deux conclusions :
+
+- **97 % du coût variable est Stripe**, donc un pourcentage fixe du prix. Sur
+  Essential le ratio est identique (~10 € sur 690 €). **Les dépenses ne
+  segmentent rien** : indexer la grille dessus donne trois prix proportionnels
+  au même prix, et fait retomber sur le forfait à 30-60 €/mois que la mémoire
+  projet interdit — l'erreur de facteur dix.
+- Neon et Supabase indexent sur les dépenses parce que **leur coût marginal est
+  leur produit** (calcul, stockage). Ici il est nul. La bonne référence est
+  Claude Pro / Max : des paliers qui reflètent l'intensité d'usage, un prix calé
+  sur la valeur.
+
+**Ce qui segmente vraiment, c'est le temps de service.** À une personne, environ
+350 h de support par an :
+
+| | Clients servis | Chiffre d'affaires |
+|---|---|---|
+| Enterprise, ~10 h par client et par an | 35 | **241 500 €** |
+| Advanced, ~6 h par client et par an | 58 | **139 200 €** |
+
+Un petit commerçant non technique ne consomme pas moins de support qu'un grand
+magasin — souvent davantage, il n'a pas d'informaticien. **C'est la
+justification économique de la règle du prix à l'unité**, et elle est plus
+solide que l'argument du « pack de coca » : à temps de service égal, le haut de
+gamme rapporte 1,7 fois plus.
+
+Corollaire à tenir en interface : **Essential se vend sans support humain**,
+souscription en ligne et aide en ligne. C'est ce qui rend son prix défendable.
+
+### Les deux axes ne se confondent pas
+
+Le premier jet fusionnait la taille d'un site et la taille d'un parc. Ce sont
+deux axes indépendants :
+
+- **la taille d'un magasin** (appareils simultanés) **nomme l'offre** ;
+- **le nombre de magasins est un multiplicateur avec remise**, jamais un palier.
+
+Sans cette séparation, un réseau de 30 boutiques à 4 personnes — le plus gros
+client possible — tomberait dans « Essential × 30 ». Il prend 30 Advanced,
+remise de 20 % comprise : 57 600 €.
+
+⚠️ **Conséquence de vocabulaire à connaître** : « Enterprise » désigne ici **la
+taille d'un magasin**, pas un réseau. Le commercial d'un client à 30 boutiques
+voudra l'appeler Enterprise alors qu'il relève d'Advanced. À trancher le jour où
+le cas se présente ; rien ne le bloque aujourd'hui.
+
+### D'où viennent 690, 2 400 et 6 900
+
+- **6 900 €** est le chiffre déjà établi le 22 août pour le prix unique par
+  magasin : le prix de la grande surface dans la grille au volume, et 31 % sous
+  l'ancre de marché (Zebra SmartCount, ≈ 10 000 € par magasin et par an,
+  **confidentielle, ne se cite dans aucun livrable**). Le plafond ne monte pas
+  au-delà : passé ce niveau, on sort sur devis.
+- **690 €** vient d'une correction. Julien proposait un Solo à 280 €, puis à
+  490 € pour un utilisateur. Passé à **deux** utilisateurs, l'offre change de
+  nature : elle permet un vrai inventaire à deux, donc l'audit en seconde passe
+  et l'arbitrage des écarts — la fonction qui sépare *compter* de *fiabiliser*.
+  690 €/an, soit 58 €/mois, reste un prix d'appel.
+- **2 400 €** est le prix de la frontière, pas celui du milieu. Avec Essential à
+  deux appareils, on passe d'offre pour **un seul appareil de plus** : à 2 900 €
+  la facture était multipliée par 4,2 sur ce pas, et cette frontière devenait
+  l'endroit où le client a le plus intérêt à sous-déclarer. À 2 400 € le pas est
+  de 3,5.
+
+### La règle du prix à l'unité tient sans verrou juridique
+
+345 € > 120 € > 69 €. Et surtout, l'empilement est perdant :
+
+| Ce qu'on voudrait empiler | Coût | L'offre juste |
+|---|---|---|
+| 10 Essential pour 20 appareils | 6 900 € | 2 400 € |
+| 50 Essential pour 100 appareils | 34 500 € | 6 900 € |
+
+⚠️ **Un premier calage avait échoué sur ce point exact** (Essential à 290 € et
+un palier à 1 900 € : cinq Essential coûtaient 1 450 €, donc moins). Il avait
+été rattrapé par un verrou — « Essential = 1 magasin, non cumulable » — et
+c'était le mauvais réflexe : **un prix qui a besoin d'un verrou pour tenir est
+un prix mal calé.** Le verrou reste, mais il ne porte plus la grille.
+
+Le verrou d'usage vaut d'être connu quand même : cinq Essential sont **cinq
+magasins séparés, cinq inventaires séparés** — aucun comptage partagé, pas
+d'audit à deux passes, pas de supervision. On ne compte pas à dix dans un
+magasin avec cinq Essential.
+
+### ⚠️ Ce qu'elle coûte, et il faut le savoir avant de signer
+
+**À taille de magasin égale, elle facture nettement moins que la grille au
+volume.** En convertissant par la règle de métier « un compteur pour 5 000
+unités » (celle qui avait servi à caler l'hypothèse 3) :
+
+| Appareils | Stock équivalent | Hypothèse 1 | Hypothèse 4 | Écart |
+|---|---|---|---|---|
+| 2 | 10 000 | 2 100 € | 690 € | −67 % |
+| 20 | 100 000 | 6 600 € | 2 400 € | −64 % |
+| 100 | 500 000 | 14 400 € | 6 900 € | −52 % |
+
+Deux lectures, et la seconde atténue la première :
+
+1. **La conversion surestime.** « Un compteur pour 5 000 unités » décrit ce
+   qu'il faut mobiliser pour compter un magasin **en une journée**. Un
+   inventaire tournant — le différenciateur qu'on vend — mobilise peu de monde
+   longtemps. Un magasin de 100 000 unités compté à cinq relève d'Advanced.
+2. **C'est le reproche fait à l'hypothèse 3**, et il est réel : on fait payer
+   moins le client qui se sert le mieux du produit. La différence est que le
+   palier est **large** (3 à 20) : un client qui passe de 5 à 15 personnes ne
+   change pas de prix, là où l'hypothèse 3 facturait chaque tranche. La
+   granularité grossière est ce qui rend l'effet supportable — **ne pas
+   resserrer les paliers en croyant affiner.**
+
+L'arbitrage assumé : on renonce à une part du haut de marché en échange d'une
+assiette **vérifiable**, et on déplace la charge de la preuve du client vers la
+mesure.
+
+### ⚠️ Les trois décisions passées qu'elle déplace
+
+1. **« Pas de plafond de compteurs » (23 août 2026)** — la licence était par
+   magasin, utilisateurs illimités. Cette hypothèse la contredit frontalement.
+   La note prévoyait sa réouverture « sur une demande entrante de tarification
+   au poste » ; c'est Julien qui rouvre, avec une raison neuve — le contrôle.
+   **Mais son argument le plus fort reste vrai** : *un plafond mal calé dit non à
+   22 h, un soir de comptage.* D'où la règle non négociable ci-dessous.
+2. **L'offre Solo (27 août 2026)** — 49 €/mois, 1 magasin, **1 utilisateur**,
+   plafond de 2 000 unités. Elle est remplacée par Essential : deux
+   utilisateurs, 690 €/an, pas de plafond de pièces. Son verrou « 1 utilisateur »
+   passait par un refus sec dans la policy `team_invitations` ; à deux, ce n'est
+   plus un refus mais **un décompte**.
+3. **L'hypothèse 1, au volume de stock** — elle cesse d'être l'assiette. Le
+   stock déclaré reste utile au dimensionnement et au recoupement
+   (`alerteDensite`), il ne tarife plus.
+
+### ⚠️ Le plafond est SOUPLE, et ce n'est pas un détail d'implémentation
+
+**On ne refuse jamais un appareil pendant un inventaire.** On mesure le pic, on
+l'affiche au client, et le dépassement se règle au renouvellement — ou bascule
+automatiquement au palier suivant. C'est ce que font Claude et Neon : ils ne
+coupent pas, ils facturent.
+
+Un refus dur rejouerait exactement le risque asymétrique décrit le 23 août : le
+plafond dit non au pire moment, et il n'y a personne pour le lever à 22 h.
+
+### ⚠️ Ce qui n'est pas mesurable aujourd'hui
+
+**`DEVICE_KEY` est tirée à chaque lancement de l'application** (const de module,
+`src/lib/presence.ts` — voir la section « Tenue en charge » d'AGENTS.md, où
+cette valeur a été remontée au module précisément pour qu'un même téléphone ne
+compte pas double entre deux écrans). Elle ne survit pas à la fermeture de
+l'app : **un même iPhone compte pour dix appareils sur dix lancements.**
+
+Avant toute facturation à l'appareil, il faut donc :
+
+- **persister la clé** (SecureStore, comme le jeton de session) ;
+- **l'enregistrer côté serveur** avec son magasin ;
+- **mesurer un pic simultané sur une fenêtre**, jamais un cumul — sinon un
+  magasin qui renouvelle ses téléphones fait exploser son quota sans avoir
+  changé sa façon de compter.
+
+Bonne nouvelle au passage : cela **débloque ce qui avait disqualifié
+l'hypothèse 3**. Elle avait été écartée aussi parce que *facturer au compteur
+n'est pas mesurable a posteriori* — 97 lignes de comptage sur 207 n'ont plus
+d'auteur (`on delete set null`, migration `20260818000001`, effet voulu pour le
+RGPD). **Un appareil n'est pas un salarié** : pas de détachement à la
+suppression de compte, pas de donnée personnelle, et il se mesure.
+
+### Conséquences produit
+
+- **Base** : `companies.plan` (`essential` / `advanced` / `enterprise`) et
+  `license_status`, écrits par le seul `service_role` — c'est déjà ce que
+  prévoyait l'offre Solo du 27 août. Plus le relevé d'appareils et son pic.
+- **Stripe** : deux prix récurrents posés en secrets pour Essential et Advanced
+  (jamais créés à la volée), `checkout.session.completed` →
+  `fulfil_solo_subscription`. Enterprise reste sur le parcours devis existant.
+- **Page publique `/tarifs`**, hors `AppShell` — elle s'ouvre au téléphone, et
+  c'est le premier prix affiché du produit. La grille standard cessant d'être
+  sur devis, `/inscription` peut afficher l'offre correspondante.
+- **`MagasinSaisie`** : le stock déclaré ne devise plus. Garder le champ (il
+  sert au dimensionnement et au recoupement de densité), changer son texte.
+- **CGV** : les articles 5.1, 6.3, 6.4 et 6.5 portent la déclaration et la
+  régularisation du volume. Ils sont remplacés par une clause sur le nombre
+  d'appareils et le dépassement.
+- **Interface** : bandeau de dépassement côté client, remontée dans
+  `admin_pipeline` (c'est du revenu qui attend), et écrans d'équipe allégés pour
+  Essential.
+- **Le sort des clients déjà devisés au volume reste à trancher** — aucun n'est
+  signé à ce jour, la question est donc ouverte sans urgence.
