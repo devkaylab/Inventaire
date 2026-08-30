@@ -1,5 +1,9 @@
-// Edge function : un superviseur écrit à l'administrateur de son entreprise
-// (30 août 2026 — le « ticket » de la maquette du tableau de bord).
+// Edge function : les messages internes du produit (30 août 2026).
+//
+// Deux canaux, choisis d'après le PROFIL de l'appelant — jamais d'après la
+// requête : un superviseur ordinaire écrit à l'administrateur de son
+// entreprise ; un administrateur d'entreprise écrit à Quantinvo (adresses
+// lues par admin_notify_emails, comme tous les avis internes).
 //
 // Elle n'ajoute aucun droit : le dépôt passe par la RPC
 // `deposer_message_admin`, appelée **avec le jeton de l'appelant** — c'est
@@ -30,6 +34,7 @@ const REFUS: Record<string, string> = {
   message_vide: 'Le sujet et le message sont requis.',
   message_trop_long: 'Le message est trop long (120 caractères pour le sujet, 2 000 pour le message).',
   aucune_entreprise: 'Votre compte n’est rattaché à aucune entreprise.',
+  aucun_administrateur_quantinvo: 'Personne chez Quantinvo ne peut recevoir ce message pour le moment.',
 }
 
 Deno.serve(async (req) => {
@@ -56,10 +61,20 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await caller.auth.getUser()
   if (userErr || !userData?.user) return json({ success: false, error: 'Session expirée.' }, 401)
 
-  const { data: result, error: rErr } = await caller.rpc('deposer_message_admin', {
-    p_sujet: sujet,
-    p_message: message,
-  })
+  // Le canal se choisit sur le profil, lu avec le jeton de l'appelant : un
+  // administrateur d'entreprise écrit à Quantinvo, un superviseur ordinaire à
+  // son administrateur. La requête ne porte aucun choix de destinataire.
+  const { data: profilAppelant } = await caller
+    .from('profiles')
+    .select('is_company_admin')
+    .eq('id', userData.user.id)
+    .maybeSingle()
+  const versQuantinvo = !!profilAppelant?.is_company_admin
+
+  const { data: result, error: rErr } = await caller.rpc(
+    versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin',
+    { p_sujet: sujet, p_message: message },
+  )
   if (rErr) {
     const code = Object.keys(REFUS).find((c) => rErr.message.includes(c))
     if (code) return json({ success: false, code, error: REFUS[code] }, 400)
@@ -91,16 +106,23 @@ Deno.serve(async (req) => {
     const entreprise = ((profil as { companies?: { name?: string } | null } | null)?.companies?.name ?? '').trim()
 
     const adresses: string[] = []
-    for (const d of (destinataires ?? []) as { id: string }[]) {
-      const { data: u } = await admin.auth.admin.getUserById(d.id)
-      if (u?.user?.email) adresses.push(u.user.email)
+    if (versQuantinvo) {
+      // Les administrateurs Quantinvo, lus en base — le même chemin que tous
+      // les avis internes (admin_notify_emails, service_role seulement).
+      const { data: quantinvo } = await admin.rpc('admin_notify_emails')
+      for (const e of (quantinvo ?? []) as string[]) if (e) adresses.push(e)
+    } else {
+      for (const d of (destinataires ?? []) as { id: string }[]) {
+        const { data: u } = await admin.auth.admin.getUserById(d.id)
+        if (u?.user?.email) adresses.push(u.user.email)
+      }
     }
     if (adresses.length === 0) return sansEmail('aucune adresse d’administrateur')
 
     const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
     const adresseExpediteur = userData.user.email ?? ''
     const { html, text } = emailQuantinvo({
-      titre: 'Message d’un de vos superviseurs',
+      titre: versQuantinvo ? 'Message d’une entreprise cliente' : 'Message d’un de vos superviseurs',
       apercu: `${nomExpediteur} : ${sujet}`,
       paragraphes: [
         `${nomExpediteur}${entreprise ? ` (${entreprise})` : ''} vous écrit depuis son tableau de bord :`,
@@ -112,10 +134,15 @@ Deno.serve(async (req) => {
       ].filter(Boolean),
       details: [
         { intitule: 'Sujet', valeur: sujet },
+        ...(versQuantinvo && entreprise ? [{ intitule: 'Entreprise', valeur: entreprise }] : []),
         { intitule: 'De', valeur: adresseExpediteur ? `${nomExpediteur} — ${adresseExpediteur}` : nomExpediteur },
       ],
-      bouton: { libelle: 'Ouvrir mon espace', lien: `${appUrl}/entreprise` },
-      raison: 'Vous recevez ce message parce que vous administrez cette entreprise sur Quantinvo.',
+      bouton: versQuantinvo
+        ? { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` }
+        : { libelle: 'Ouvrir mon espace', lien: `${appUrl}/entreprise` },
+      raison: versQuantinvo
+        ? 'Vous recevez ce message parce que vous administrez Quantinvo.'
+        : 'Vous recevez ce message parce que vous administrez cette entreprise sur Quantinvo.',
       siteUrl: appUrl,
     })
 

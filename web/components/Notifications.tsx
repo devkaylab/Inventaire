@@ -18,7 +18,7 @@ import { relativeTime } from '@/lib/format'
 
 type Notif = {
   id: number
-  type: 'invitation_inventaire' | 'compteur_actif' | 'message_superviseur'
+  type: 'invitation_inventaire' | 'compteur_actif' | 'message_superviseur' | 'message_entreprise'
   donnees: Record<string, string | undefined>
   created_at: string
   lu: boolean
@@ -43,6 +43,12 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
     case 'message_superviseur':
       return {
         titre: `Message de ${d.de || 'un superviseur'}`,
+        texte: `${d.sujet ?? ''} — « ${d.message ?? ''} »`,
+        lien: null,
+      }
+    case 'message_entreprise':
+      return {
+        titre: `Message de ${d.de || 'une entreprise'}${d.entreprise ? ` — ${d.entreprise}` : ''}`,
         texte: `${d.sujet ?? ''} — « ${d.message ?? ''} »`,
         lien: null,
       }

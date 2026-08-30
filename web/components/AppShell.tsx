@@ -243,13 +243,13 @@ export function AppShell({
 
         <div className="rail-fin">
           {/* Le message et la cloche vivent ici, côte à côte, et pas sur une
-              page : écrire à son administrateur et lire ses notifications ne
-              dépendent pas de l'écran où l'on se trouve. Le bouton d'écriture
-              ne s'offre qu'à qui peut écrire — un superviseur ordinaire ; pour
-              l'administrateur le message serait adressé à lui-même, et la
-              fonction le refuse de toute façon. */}
-          {profile.role === 'supervisor' && !profile.is_company_admin && !profile.is_admin && (
-            <MessageAdmin />
+              page : écrire à qui l'on rend compte ne dépend pas de l'écran où
+              l'on se trouve. Chacun écrit un cran au-dessus — le superviseur à
+              l'administrateur de son entreprise, l'administrateur à Quantinvo.
+              L'administrateur Quantinvo n'a personne au-dessus : pas de
+              bouton. */}
+          {profile.role === 'supervisor' && !profile.is_admin && (
+            <MessageAdmin destinataire={profile.is_company_admin ? 'quantinvo' : 'entreprise'} />
           )}
           <Notifications />
           <div className="rail-qui" ref={menuRef}>

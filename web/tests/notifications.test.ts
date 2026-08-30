@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const migration = lire('../../supabase/migrations/20260830110001_notifications.sql')
+const migrationQuantinvo = lire('../../supabase/migrations/20260830140001_message_quantinvo.sql')
 const cloche = lire('../components/Notifications.tsx')
 const shell = lire('../components/AppShell.tsx')
 const message = lire('../components/dashboard/MessageAdmin.tsx')
@@ -63,23 +64,40 @@ describe('les notifications', () => {
 })
 
 describe('le message à l’administrateur', () => {
-  it('le bouton vit dans le rail, à côté de la cloche, pour qui peut écrire', () => {
-    // Demande de Julien, 30 août 2026 : écrire à son administrateur ne dépend
-    // pas de la page. Réservé au superviseur ordinaire — pour l'administrateur
-    // le message serait adressé à lui-même, un bouton qui refuse est pire que
-    // pas de bouton, et la RPC le refuse de toute façon.
-    expect(shell).toContain("profile.role === 'supervisor' && !profile.is_company_admin && !profile.is_admin && (")
+  it('le bouton vit dans le rail, à côté de la cloche — chacun écrit un cran au-dessus', () => {
+    // Demande de Julien, 30 août 2026 : écrire à qui l'on rend compte ne
+    // dépend pas de la page. Le superviseur écrit à son administrateur,
+    // l'administrateur d'entreprise à Quantinvo ; l'administrateur Quantinvo
+    // n'a personne au-dessus — pas de bouton.
+    expect(shell).toContain("profile.role === 'supervisor' && !profile.is_admin && (")
+    expect(shell).toContain("destinataire={profile.is_company_admin ? 'quantinvo' : 'entreprise'}")
     const rail = shell.slice(shell.indexOf('className="rail-fin"'))
-    expect(rail.indexOf('<MessageAdmin />')).toBeGreaterThan(-1)
-    expect(rail.indexOf('<MessageAdmin />')).toBeLessThan(rail.indexOf('<Notifications />'))
+    expect(rail.indexOf('<MessageAdmin')).toBeGreaterThan(-1)
+    expect(rail.indexOf('<MessageAdmin')).toBeLessThan(rail.indexOf('<Notifications />'))
     expect(tableau).not.toContain('MessageAdmin')
     expect(migration).toContain('vous_etes_administrateur')
+  })
+
+  it('⚠️ le canal se choisit sur le PROFIL, jamais sur la requête', () => {
+    // Un client qui pourrait nommer son destinataire écrirait à qui il veut.
+    // L'edge lit le profil avec le jeton de l'appelant et route ; les deux
+    // RPC portent chacune leur garde de rôle.
+    expect(edge).toContain("versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin'")
+    expect(edge.indexOf("select('is_company_admin')")).toBeLessThan(edge.indexOf('deposer_message_quantinvo'))
+    expect(migrationQuantinvo).toContain('not coalesce(v_profil.is_company_admin, false)')
+  })
+
+  it('le canal Quantinvo repose ses droits et fige l’entreprise', () => {
+    expect(migrationQuantinvo).toContain('revoke execute on function public.deposer_message_quantinvo(text, text) from public, anon;')
+    expect(migrationQuantinvo).toContain("'entreprise', coalesce(v_cie, '')")
+    // Et la cloche sait présenter le nouveau type.
+    expect(cloche).toContain("'message_entreprise'")
   })
 
   it('⚠️ l’edge dépose avec le jeton de l’appelant, la clé de service ne sert qu’après', () => {
     // Règle de ca-request-store : le service_role lit les adresses pour
     // l'e-mail, il n'écrit jamais la demande.
-    const depot = edge.indexOf("caller.rpc('deposer_message_admin'")
+    const depot = edge.indexOf('caller.rpc(')
     const service = edge.indexOf('createClient(url, serviceKey)')
     expect(depot).toBeGreaterThan(-1)
     expect(service).toBeGreaterThan(-1)
@@ -101,8 +119,9 @@ describe('le message à l’administrateur', () => {
   })
 
   it('l’edge injoignable retombe sur la RPC directe', () => {
-    // Le message passe alors sans e-mail, plutôt que de ne pas passer.
-    expect(message).toContain("rpc('deposer_message_admin'")
+    // Le message passe alors sans e-mail, plutôt que de ne pas passer — et le
+    // repli suit le même canal que l'edge.
+    expect(message).toContain("versQuantinvo ? 'deposer_message_quantinvo' : 'deposer_message_admin'")
   })
 
   it('la réponse va à l’expéditeur, pas à une boîte de service', () => {
