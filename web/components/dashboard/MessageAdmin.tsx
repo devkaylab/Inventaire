@@ -11,7 +11,7 @@
 // formulaire le temps qu'on corrige, jamais dans une notification qui
 // s'efface.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useToast } from '@/components/ui/Toast'
 
@@ -27,6 +27,16 @@ export function MessageAdmin() {
     setOuvert(false)
     setErreur(null)
   }
+
+  // Échap referme, comme toutes les surfaces volantes du produit.
+  useEffect(() => {
+    if (!ouvert) return
+    function auClavier(e: KeyboardEvent) {
+      if (e.key === 'Escape') fermer()
+    }
+    document.addEventListener('keydown', auClavier)
+    return () => document.removeEventListener('keydown', auClavier)
+  }, [ouvert])
 
   async function envoyer(e: React.FormEvent) {
     e.preventDefault()
@@ -86,7 +96,7 @@ export function MessageAdmin() {
             <div className="field" style={{ marginTop: 16 }}>
               <label htmlFor="message-admin-sujet">Sujet</label>
               <input
-                id="message-admin-sujet" type="text" maxLength={120} required
+                id="message-admin-sujet" type="text" maxLength={120} required autoFocus
                 value={sujet} onChange={(e) => setSujet(e.target.value)}
                 placeholder="Balises, accès, magasin…"
               />

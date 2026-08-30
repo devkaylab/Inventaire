@@ -375,8 +375,8 @@ function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enChargeme
         <h2>{mesure === 'pieces' ? 'Pièces comptées par jour' : 'Valeur comptée par jour'}</h2>
         <div className="tb-filtres">
           <div className="tb-segmente" role="group" aria-label="Mesure du graphique">
-            <button type="button" className={mesure === 'pieces' ? 'choisi' : ''} onClick={() => onMesure('pieces')}>Quantité</button>
-            <button type="button" className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
+            <button type="button" aria-pressed={mesure === 'pieces'} className={mesure === 'pieces' ? 'choisi' : ''} onClick={() => onMesure('pieces')}>Quantité</button>
+            <button type="button" aria-pressed={mesure === 'valeur'} className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
           </div>
           <select
             value={semaine}
@@ -422,12 +422,18 @@ function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enChargeme
   )
 }
 
-/** 4 000 plutôt que 3 846 : la graduation se lit, la barre ne déborde pas. */
+/**
+ * 4 000 plutôt que 3 846 : la graduation se lit, la barre ne déborde pas.
+ * Le plafond vaut 4 pas « ronds » (1, 2, 5 × 10^n) : les cinq graduations
+ * sont toujours entières et toutes différentes — une semaine vide affichait
+ * « 0, 0, 1, 1, 1 » avec l'ancien calcul.
+ */
 function plafondRond(max: number): number {
-  const puissance = Math.pow(10, Math.floor(Math.log10(max)))
-  const base = max / puissance
-  const facteur = base <= 1 ? 1 : base <= 2 ? 2 : base <= 4 ? 4 : base <= 5 ? 5 : 10
-  return facteur * puissance
+  const cible = Math.max(max, 4) / 4
+  const puissance = Math.pow(10, Math.floor(Math.log10(cible)))
+  const base = cible / puissance
+  const pas = (base <= 1 ? 1 : base <= 2 ? 2 : base <= 5 ? 5 : 10) * puissance
+  return 4 * pas
 }
 
 function AnneauEcarts({ ecarts, mesure, onMesure }: {
@@ -477,8 +483,8 @@ function AnneauEcarts({ ecarts, mesure, onMesure }: {
         <h2>Écart</h2>
         <div className="tb-filtres">
           <div className="tb-segmente" role="group" aria-label="Mesure de l’écart">
-            <button type="button" className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
-            <button type="button" className={mesure === 'qte' ? 'choisi' : ''} onClick={() => onMesure('qte')}>Quantité</button>
+            <button type="button" aria-pressed={mesure === 'valeur'} className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
+            <button type="button" aria-pressed={mesure === 'qte'} className={mesure === 'qte' ? 'choisi' : ''} onClick={() => onMesure('qte')}>Quantité</button>
           </div>
         </div>
       </div>
@@ -492,6 +498,9 @@ function AnneauEcarts({ ecarts, mesure, onMesure }: {
           <div className="tb-anneau">
             <svg width="150" height="150" viewBox="0 0 180 180" aria-hidden="true">
               <g transform="rotate(-90 90 90)">
+                {/* L'anneau de fond : sans lui, un écart nul dans la mesure
+                    choisie ferait disparaître la figure entière. */}
+                <circle cx="90" cy="90" r="66" fill="none" stroke="var(--hairline)" strokeWidth="24" />
                 {arcs.map((a) => (
                   <circle
                     key={a.nom} cx="90" cy="90" r="66" fill="none"

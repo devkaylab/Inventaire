@@ -2361,3 +2361,12 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .tb-plot { flex: 1; display: flex; flex-direction: column; }
 .tb-grille { height: auto; flex: 1; min-height: 210px; }
 .tb-anneau-corps { flex: 1; }
+
+/* Finition du 30 août 2026 : les barres et les arcs glissent au changement
+   de mesure, la cible du bouton message atteint 45 px. */
+.tb-barre { transition: height .2s ease, background .15s ease; }
+.tb-anneau circle { transition: stroke-dasharray .2s ease, stroke-dashoffset .2s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .tb-barre, .tb-anneau circle { transition: none; }
+}
+.tb-rond { padding: 12px; }
