@@ -171,6 +171,96 @@ jalon des balises, lui, reste posé (« 2 sur 3 »), comme prévu.
 Tests de garde : `tests/compte.test.ts`, bloc « le bandeau de démarrage » et
 « Revoir les repères » se voit tout de suite ».
 
+# Le rail, les tableaux de bord vivants et les messages (30 août 2026)
+
+Journée en cinq chantiers enchaînés, tous validés sur maquette avant code
+(canevas : https://claude.ai/code/artifact/5105e587-7a15-4d59-a1c9-f67286ba951c).
+
+## Le rail remplace la barre du haut, partout
+
+Décision de Julien : « en finalité on ne gardera que le rail ». `AppShell`
+porte un rail d'icônes fixe à gauche (76 px), tous rôles. Points tenus :
+
+- **⚠️ La porte < 720 px ferme `.app-rail`**, plus `.appbar` — le test du gate
+  a suivi. `--appbar-h` vaut 0 mais reste défini (`.dash-rail` s'y colle).
+- **Le contenu prend la page, du rail au bord** : deux constats successifs de
+  Julien ont tué la colonne 1120 puis le plafond 1400. `.app-main` n'a plus de
+  max-width ; `margin-left: var(--rail-l)`, jamais un `margin auto` qui
+  glisserait sous le rail.
+- **`/dashboard` est l'atterrissage du superviseur, la liste vit sur
+  `/inventaires`** — les sous-pages `/dashboard/<id>` allument l'onglet
+  Inventaires, pas Tableau de bord.
+- En bas du rail : message, cloche, avatar (menu à droite du rail).
+
+## Les trois tableaux de bord parlent la même langue
+
+`web/components/dashboard/TableauDeBord.tsx` : tuile (Kpi), diagramme de la
+semaine (BarresSemaine), anneau (Anneau). Servis par `/dashboard`,
+`/entreprise`, `/admin`.
+
+- **⚠️ Tout est agrégé en base** (`tableau_de_bord_superviseur(p_semaine)`,
+  `admin_revenu_par_entreprise`) — jamais de lignes de `counts` au navigateur.
+- **⚠️ L'écart du tableau = l'écart du rapport**, même règle
+  (`coalesce(final_qty, qty_pass2, qty_pass1)`, univers théorique ∪ compté),
+  vérifié identique au centime ; seuls les inventaires AVEC stock théorique
+  entrent dans l'anneau. `/entreprise` le groupe PAR MAGASIN (même fonction,
+  clé `ecarts_magasins`) — l'admin est un superviseur au périmètre entier.
+- **⚠️ L'anneau du revenu totalise l'ARR de la tuile** : même constante
+  `370000` (panier moyen) qu'`admin_business_overview` — les deux bougent
+  ensemble. Dates en Europe/Paris partout.
+- **⚠️ Plein viewport à l'échelle de la maquette** : une maquette validée sur
+  le canevas est vue ZOOMÉE ; `.tb-plein` reproduit ce zoom (base fluide
+  min(largeur, hauteur) sur 1364×940, tout en em). Voir la mémoire
+  « feedback-maquette-echelle ». `overflow-x: clip` sur la racine, jamais
+  `hidden` (l'en-tête sticky décrocherait).
+- **L'anneau** : 3 parts nommées max + « Autres » (palette validée pour 3
+  teintes voisines, sombre #6366f1/#bd7f09/#1590c1, clair
+  #4f46e5/#d97706/#0aa5d8) ; parts en écart ABSOLU ; centre dessiné DANS le
+  SVG, taille selon la longueur du montant — il ne peut pas déborder.
+- Le plafond du diagramme vaut 4 pas ronds (1, 2, 5 × 10ⁿ) : graduations
+  entières, jamais « 0, 0, 1, 1, 1 » sur une semaine vide.
+- Le trio Inventaires lancés / Articles comptés / Personnes actives vit sur
+  `/admin/usage` (décision de Julien) — la garde du doublon le vérifie.
+
+## Notifications (web)
+
+Table `notifications` : **aucune policy d'écriture** — deux déclencheurs
+(`session_members` INSERT ; `auth.users` UPDATE quand `last_sign_in_at`
+passe de nul à non nul, la définition EXACTE d'is_active) et les RPC de
+dépôt. Lecture `mes_notifications`, marquage `marquer_notifications_lues`
+(ouvrir la cloche marque lu). Libellés FIGÉS à l'écriture. Purge à 90 jours
+dans `purge_expired_data`. La cloche vit dans le RAIL : l'admin d'entreprise
+reçoit les messages de ses superviseurs et n'atterrit pas sur /dashboard.
+
+## Messages : chacun écrit un cran au-dessus
+
+Superviseur → administrateur d'entreprise ; administrateur d'entreprise →
+Quantinvo. Même modale (`MessageAdmin`, variante `destinataire`), même edge
+`message-admin` (redéployée, verify_jwt VRAI) :
+
+- **⚠️ Le destinataire se choisit sur le PROFIL de l'appelant, jamais sur la
+  requête** — l'edge lit `is_company_admin` avec le jeton de l'appelant et
+  route vers `deposer_message_admin` ou `deposer_message_quantinvo`, chacune
+  gardée par son rôle. Un test le fige.
+- Notification + e-mail (reply_to = l'expéditeur ; adresses lues par la clé
+  de service APRÈS le dépôt, jamais pour écrire — règle ca-request-store ;
+  Quantinvo via `admin_notify_emails`). Bornes 120/2000 qui REFUSENT.
+- Repli : edge injoignable → RPC directe, message sans e-mail.
+- La garde e-mail « pas de "répondez à ce message" sans adresse » a mordu :
+  le gabarit donne l'adresse de l'expéditeur en toutes lettres.
+
+## Recherche globale (tableau de bord superviseur)
+
+`RechercheGlobale` : inventaires + équipe dans un champ, AUCUNE surface
+serveur nouvelle — `getAccessibleSessions` + `my_team_by_store`, une fois au
+premier focus, filtre sur place. Une RPC de recherche ne se justifiera qu'à
+un volume qu'aucun compte n'a.
+
+Tests de garde : `web/tests/notifications.test.ts`, et les blocs rail /
+tableau de bord de `web/tests/navigation.test.ts`. Non vérifié à l'écran
+avec une vraie session : les trois pages en production, et les e-mails des
+deux canaux dans une vraie boîte.
+
 # Le chemin jusqu'au premier scan (28 août 2026)
 
 Julien, après la correction du bandeau : *« j'ai l'impression qu'il manque
