@@ -252,9 +252,25 @@ fil à droite, champ de réponse). Edge `message-admin` : ouverture SANS
   d'entreprise → Quantinvo, superviseur → son administrateur), jamais d'un
   paramètre. **La garde d'une RÉPONSE est l'appartenance au fil, rien
   d'autre** : ni rôle ni entreprise — on répond à qui vous a écrit.
-- **⚠️ Vu d'un client, un fil vers nous dit « Quantinvo »**, jamais les noms
-  de nos administrateurs : le produit ne nomme pas son personnel à ses
-  clients.
+- **⚠️ Vu d'un client, un fil vers nous dit « Quantinvo »** — et ce masque
+  vaut aux QUATRE surfaces : la liste (`avec` ET `dernier_auteur`), le fil
+  ouvert, la cloche, l'e-mail. Défaut vu sur un e-mail réel le soir même : la
+  règle n'était tenue que par la liste, et « Admin a répondu » partait chez le
+  client avec l'adresse Gmail personnelle en reply_to.
+  · **Le masque se pose à la LECTURE, jamais à l'écriture** : entre nous, le
+    vrai nom reste — on doit savoir quel collègue a répondu.
+  · **Il tient par `messages.auteur_interne`, figé à l'écriture.** Une
+    jointure sur `profiles` rendrait null après une suppression de compte et
+    démasquerait précisément ce qu'on cache.
+  · **Côté e-mail**, quand Quantinvo écrit à un client : expéditeur
+    « Quantinvo », `reply_to` = `adresseDeContact()`, et l'entreprise du
+    destinataire n'est pas répétée. Entre deux personnes du produit, on se
+    répond directement — la règle « la réponse va à l'expéditeur » vaut
+    partout ailleurs.
+  · `fil_pour_email` sert ces décisions à l'edge : elle rend des identifiants
+    de participants, donc **`service_role` seul**, jamais `authenticated`.
+- **Toute réponse rappelle son sujet** (titre du mail et encadré) : sans lui
+  on ne sait pas de quelle conversation il s'agit sans cliquer.
 - **⚠️ L'état de lecture vit sur le fil, par personne** (`lu_le`) — une seule
   source. La cloche fait l'UNION notifications + fils non lus, et « tout
   marquer lu » ne touche QUE les notifications : lire sa cloche n'est pas
@@ -276,9 +292,22 @@ premier focus, filtre sur place. Une RPC de recherche ne se justifiera qu'à
 un volume qu'aucun compte n'a.
 
 Tests de garde : `web/tests/notifications.test.ts`, et les blocs rail /
-tableau de bord de `web/tests/navigation.test.ts`. Non vérifié à l'écran
-avec une vraie session : les trois pages en production, et les e-mails des
-deux canaux dans une vraie boîte.
+tableau de bord de `web/tests/navigation.test.ts`.
+
+## Ce que Julien a vérifié lui-même le 30 août 2026
+
+- **La messagerie, de bout en bout** : écriture, réponse, boîte à deux
+  panneaux, et **les e-mails reçus dans une vraie boîte** — dont celui qui a
+  révélé le défaut « une seule voix », puis sa correction (« Quantinvo a
+  répondu », reply_to `contact@quantinvo.com`, sujet rappelé).
+- **Les trois tableaux de bord**, en session réelle : « ont l'air d'être
+  prêts, reste plus qu'à attendre une utilisation réelle au quotidien ».
+
+Ce que seul l'usage dira, et qu'il ne sert à rien de fixer d'ici là : les
+échelles et l'anneau sur un vrai mois d'activité (les données d'essai sont
+maigres), et le rythme des notifications — prévient-elle au bon moment, ou
+bavarde-t-elle. La RPC de recherche reste à écrire le jour où un compte aura
+trop d'inventaires pour le filtrage sur place ; pas avant.
 
 # Le chemin jusqu'au premier scan (28 août 2026)
 
