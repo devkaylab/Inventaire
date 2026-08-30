@@ -5135,3 +5135,115 @@ inventaire clôturé. `current_pass` n'est plus lu nulle part — la passe se d�
 du mode choisi par chaque participant (Comptage→1, Audit→2). Si les passes
 globales reviennent, il faudra rendre le GRANT **et** ajouter la garde
 `status <> 'closed'` dans les deux fonctions.
+
+# La souscription en ligne (30 août 2026)
+
+*« Branche Stripe pour la souscription en ligne. »* Les trois offres se
+souscrivent par carte, sans devis : le prix est public et le client l'a choisi
+sur `/tarifs`. Grille et raisonnement : `docs/entreprise/hypotheses-tarifaires.md`,
+hypothèse 4.
+
+## Le parcours réutilise celui du devis — c'est le point porteur
+
+Une souscription **est** une `company_requests`, née directement en
+**`accepted`** : il n'y a rien à négocier. Le webhook existant la mène à
+`created` par `fulfil_paid_request`, sans que sa garde de transition change —
+elle exige `accepted`, elle le trouve.
+
+**Ne pas écrire un second chemin de création d'entreprise.** C'est ce qui a
+évité, jusqu'ici, que deux façons de créer divergent — la même raison qui fait
+qu'`admin_fulfil_store_request` appelle `admin_add_store` au lieu de recopier
+la génération du code.
+
+Migrations `20260830130001` (colonnes + `fulfil_paid_request`) et
+`20260830130002` (`deposer_souscription`, `sync_subscription_status`).
+
+## Ce qu'il reste à faire pour que ça encaisse vraiment
+
+⚠️ **Rien n'est encaissable tant que les six Prices ne sont pas posés.** Ils se
+créent dans le tableau de bord Stripe (Produits → Prix récurrents), puis
+s'ajoutent en **secrets d'edge functions**, un par couple offre × rythme :
+
+```
+STRIPE_PRICE_ESSENTIAL_MONTHLY    STRIPE_PRICE_ESSENTIAL_YEARLY
+STRIPE_PRICE_ADVANCED_MONTHLY     STRIPE_PRICE_ADVANCED_YEARLY
+STRIPE_PRICE_ENTERPRISE_MONTHLY   STRIPE_PRICE_ENTERPRISE_YEARLY
+```
+
+⚠️ **Les Prices ne sont JAMAIS créés par le code.** Un prix créé à la volée est
+un prix que personne n'a relu, et il serait facturé à un vrai client. Un test
+refuse `price_data` dans le mode abonnement.
+
+Tant qu'un secret manque, l'offre répond **503 `indisponible`** — vérifié en
+direct sur la fonction déployée — et **aucune demande n'est écrite** : le Price
+est lu AVANT le dépôt, sinon on laisserait une ligne morte et un client
+persuadé d'avoir souscrit. Un test compare les deux positions dans le fichier.
+
+Il faut aussi **ajouter trois événements au point de terminaison Stripe** :
+`invoice.payment_failed`, `invoice.paid`, `customer.subscription.deleted`.
+
+## Points à ne pas défaire
+
+- **⚠️ Carte seule, pas de SEPA.** Le prélèvement convient à une facture
+  annuelle d'enseigne ; son délai de règlement ferait attendre l'ouverture des
+  accès plusieurs jours, après que la personne a cliqué « Souscrire ». Le
+  parcours devis, lui, garde le SEPA.
+- **⚠️ Un impayé ne coupe RIEN.** `sync_subscription_status` passe la licence
+  en `past_due`, jamais en suspension d'accès. Couper un magasin sur un
+  incident de carte, c'est bloquer un inventaire un soir de comptage — même
+  règle que le plafond souple. La relance est commerciale, pas technique. Un
+  test refuse les mots `suspend`, `revoke`, `delete from` et `disable` dans le
+  webhook.
+- **⚠️ Un abonnement inconnu répond 200**, pas une erreur : les événements de
+  Stripe peuvent se croiser, et `invoice.paid` arriver avant que
+  `checkout.session.completed` n'ait créé l'entreprise. Lever ferait rejouer
+  Stripe sans fin sur un événement sans objet.
+- **⚠️ L'ancienne signature à cinq arguments de `fulfil_paid_request` est
+  SUPPRIMÉE.** `p_subscription_id` ayant un défaut, Postgres garderait les deux
+  et un appel à cinq deviendrait ambigu. Même piège que `p_event_id` le 28 août
+  et `ca_request_store` le 22.
+- **`annual_price_cents` du magasin vaut douze mensualités** quand le rythme est
+  mensuel : c'est ce que `admin_business_overview` somme pour le revenu annuel.
+- **La page `/souscrire` n'a AUCUN repli sur une RPC directe**, contrairement à
+  `/inscription`. Sans la fonction edge il n'y a pas de session Stripe, donc
+  rien à payer : déposer la demande quand même laisserait croire à une
+  souscription faite.
+- **Aucune donnée bancaire ne transite par le site.** La carte se saisit chez
+  Stripe. Un test refuse les attributs `cc-number`, `cvc` et voisins sur la page.
+- **La grille est dupliquée** dans `subscribe-online` (centimes) et
+  `web/lib/offres.ts` (euros) — le site et les edge ne compilent pas ensemble,
+  comme `web/lib/devis.ts` et `_shared/devis.ts`. `web/tests/souscription.test.ts`
+  compare les deux montant par montant.
+
+## Une limite connue, et son filet
+
+Si l'adresse de contact porte déjà une invitation dans une AUTRE entreprise,
+`invite_company_admin_after_payment` refuse (`other_company`, constat VR-003 du
+28 août) : l'entreprise est créée **sans administrateur**. Le client a payé et
+n'a pas ses accès. Le filet existe — elle remonte dans `companies_without_admin`
+sur `/admin` —, mais rien ne le lui dit à lui. À reprendre si le cas se
+présente ; il suppose une invitation en attente ailleurs, donc un envoi
+antérieur ayant échoué en cours de route.
+
+## Vérifications (30 août 2026)
+
+**Sur les fonctions déployées** : `subscribe-online` répond 405 sur GET (donc
+le code est atteint sans JWT), 400 sur un corps illisible, « Offre inconnue »
+sur un plan invalide, et **503 `indisponible` sur une offre valide** — les
+Prices n'étant pas encore posés. `stripe-webhook` répond toujours 400
+« signature absente ».
+
+**En base, en transaction annulée** : dépôt → `accepted` avec plan, rythme et
+ligne de devis ; `fulfil_paid_request` crée l'entreprise **avec son plan, son
+rythme, son abonnement et son client Stripe**, et le magasin avec
+`annual_price_cents = 270000` pour un mensuel à 225 € ; le rejeu du même
+événement répond `already` sans créer de seconde entreprise ; le cycle de vie
+enchaîne `past_due → active → canceled`, son rejeu répond `already`, et un
+abonnement inconnu répond `unknown` sans erreur. **Zéro résidu contrôlé après
+coup**, quota de limitation compris.
+
+**Non vérifié** : un vrai paiement de bout en bout. Il demande les six Prices
+en mode test, puis la carte `4242`. C'est la dernière étape, et elle est à
+Julien.
+
+Tests de garde : `web/tests/souscription.test.ts`.

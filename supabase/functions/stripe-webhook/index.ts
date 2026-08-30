@@ -4,9 +4,16 @@
 // signature qui garde la porte** (`verifierWebhook`, `STRIPE_WEBHOOK_SECRET`),
 // et rien n'est lu avant qu'elle soit vérifiée sur le corps brut.
 //
-// Un seul événement compte : `checkout.session.completed` avec
-// `payment_status = paid`. Tout le reste répond 200 sans rien faire — Stripe
-// ne doit pas relancer ce qu'on ignore exprès.
+// Deux familles d'événements comptent, et rien d'autre :
+//
+//   . `checkout.session.completed` (payé) → création de l'entreprise ou du
+//     magasin, que le paiement soit unique (devis) ou un abonnement
+//     (souscription en ligne du 30 août 2026) ;
+//   . le cycle de vie d'un abonnement — impayé, résiliation, retour à la
+//     normale → `sync_subscription_status`.
+//
+// Tout le reste répond 200 sans rien faire : Stripe ne doit pas relancer ce
+// qu'on ignore exprès.
 //
 // Rejeu : Stripe renvoie un événement tant qu'il n'a pas reçu 200. La RPC
 // `fulfil_paid_request` répond `already: true` sur une session déjà traitée,
@@ -31,7 +38,29 @@ type Session = {
   customer?: string | null
   invoice?: string | null
   payment_intent?: string | null
+  subscription?: string | null
+  mode?: string
   metadata?: Record<string, string>
+}
+
+/** Ce que Stripe envoie sur les événements d'abonnement et de facture. */
+type Abonnement = {
+  id?: string
+  status?: string
+  subscription?: string | null
+}
+
+/**
+ * L'état de licence que dit un événement de cycle de vie.
+ *
+ * ⚠️ `invoice.paid` ne remet en `active` que ce qui était `past_due` : c'est
+ * `sync_subscription_status` qui garde cette logique, on ne fait qu'ici la
+ * traduction de l'événement.
+ */
+const CYCLE: Record<string, string> = {
+  'invoice.payment_failed': 'past_due',
+  'invoice.paid': 'active',
+  'customer.subscription.deleted': 'canceled',
 }
 
 Deno.serve(async (req) => {
@@ -48,6 +77,31 @@ Deno.serve(async (req) => {
     return json({ error: e instanceof Error ? e.message : 'signature' }, 400)
   }
 
+  const url = Deno.env.get('SUPABASE_URL')!
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  // --- cycle de vie d'un abonnement -----------------------------------------
+  const etat = typeof event.type === 'string' ? CYCLE[event.type] : undefined
+  if (etat) {
+    const objet = ((event.data as { object?: Abonnement })?.object ?? {}) as Abonnement
+    // Sur une facture, l'abonnement est dans `subscription` ; sur l'objet
+    // abonnement lui-même, c'est son propre `id`.
+    const abonnement = typeof objet.subscription === 'string' ? objet.subscription : objet.id
+    if (!abonnement) return json({ received: true, ignored: `${event.type} sans abonnement` })
+
+    const client = createClient(url, serviceKey)
+    const { data, error } = await client.rpc('sync_subscription_status', {
+      p_subscription_id: abonnement,
+      p_status: etat,
+      p_event_id: typeof event.id === 'string' ? event.id : null,
+    })
+    // ⚠️ Une erreur répond 500 pour que Stripe réessaie ; un abonnement
+    // inconnu répond 200 — il n'y a rien à rejouer, et Stripe boucherait
+    // sinon indéfiniment sur un événement sans objet.
+    if (error) return json({ error: error.message }, 500)
+    return json({ received: true, cycle: etat, ...data })
+  }
+
   if (event.type !== 'checkout.session.completed') return json({ received: true, ignored: event.type })
   const session = ((event.data as { object?: Session })?.object ?? {}) as Session
   if (session.payment_status && session.payment_status !== 'paid') {
@@ -56,8 +110,6 @@ Deno.serve(async (req) => {
     return json({ received: true, ignored: `payment_status=${session.payment_status}` })
   }
 
-  const url = Deno.env.get('SUPABASE_URL')!
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const client = createClient(url, serviceKey)
 
   const { data: result, error } = await client.rpc('fulfil_paid_request', {
@@ -70,6 +122,10 @@ Deno.serve(async (req) => {
     // n'est volontairement pas fait ici — le faire avant l'appel rendrait tout
     // échec définitif, puisque le rejeu serait alors écarté comme « déjà vu ».
     p_event_id: typeof event.id === 'string' ? event.id : null,
+    // En mode abonnement il n'y a pas de payment_intent : c'est l'abonnement
+    // qui identifie la licence, et c'est par lui que le cycle de vie la
+    // retrouvera.
+    p_subscription_id: typeof session.subscription === 'string' ? session.subscription : null,
   })
   if (error) return json({ error: error.message }, 500)
   if (!result?.success) return json({ error: result?.error ?? 'refus' }, 500)

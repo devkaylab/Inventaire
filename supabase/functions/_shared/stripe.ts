@@ -108,6 +108,69 @@ export async function creerSessionCheckout(
 }
 
 /**
+ * Une session Checkout pour un ABONNEMENT (souscription en ligne, 30 août 2026).
+ *
+ * Trois différences avec la précédente, et chacune compte :
+ *
+ * - `mode: subscription`, et le montant n'est PAS envoyé : il vient du Price
+ *   posé dans le tableau de bord Stripe. ⚠️ Les Prices ne sont jamais créés à
+ *   la volée — un prix créé par du code est un prix que personne n'a relu, et
+ *   il se retrouverait facturé à un vrai client.
+ * - **carte seule.** Le prélèvement SEPA convient à une facture annuelle
+ *   d'enseigne, pas à un abonnement en libre-service : son délai de règlement
+ *   ferait attendre l'ouverture des accès de plusieurs jours, après que la
+ *   personne a cliqué « Souscrire ».
+ * - pas d'`invoice_creation` : en mode abonnement Stripe produit la facture de
+ *   chaque échéance sans qu'on le demande.
+ *
+ * La clé d'idempotence reste l'identifiant de la demande : un second clic
+ * rouvre la même session, jamais une seconde.
+ */
+export async function creerAbonnementCheckout(
+  cle: string,
+  p: {
+    requestId: string
+    priceId: string
+    label: string
+    customerEmail: string
+    successUrl: string
+    cancelUrl: string
+    plan: string
+    billingPeriod: string
+    tentative?: number
+  },
+): Promise<SessionCheckout> {
+  const corps = formulaire({
+    mode: 'subscription',
+    customer_email: p.customerEmail,
+    payment_method_types: ['card'],
+    line_items: [{ quantity: 1, price: p.priceId }],
+    subscription_data: {
+      description: p.label,
+      metadata: { request_id: p.requestId, plan: p.plan, billing_period: p.billingPeriod },
+    },
+    metadata: { request_id: p.requestId, kind: 'company', plan: p.plan, billing_period: p.billingPeriod },
+    client_reference_id: p.requestId,
+    success_url: p.successUrl,
+    cancel_url: p.cancelUrl,
+    locale: 'fr',
+    billing_address_collection: 'required',
+  })
+  const resp = await fetch(`${API}/checkout/sessions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key': `abonnement-${p.requestId}-${p.tentative ?? 0}`,
+    },
+    body: corps,
+  })
+  const data = await resp.json()
+  if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+  return { id: data.id, url: data.url, customer: data.customer ?? null }
+}
+
+/**
  * Relit une session Checkout. Rend son adresse si elle est encore ouverte,
  * `null` si elle est expirée ou déjà réglée — il faudra en ouvrir une autre.
  */

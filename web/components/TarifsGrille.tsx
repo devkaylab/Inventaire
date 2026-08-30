@@ -90,8 +90,10 @@ export function TarifsGrille() {
                 ))}
               </ul>
 
+              {/* Le rythme voyage avec l'offre : la page de souscription
+                  s'ouvre sur ce que le visiteur regardait. */}
               <Link
-                href="/inscription"
+                href={`/souscrire?offre=${o.cle}${annuel ? '&rythme=annuel' : ''}`}
                 className={phare ? 'btn btn-primary' : 'btn btn-ghost'}
               >
                 Choisir {o.nom}
