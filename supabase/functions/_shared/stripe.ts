@@ -123,6 +123,12 @@ export async function creerSessionCheckout(
  * - pas d'`invoice_creation` : en mode abonnement Stripe produit la facture de
  *   chaque échéance sans qu'on le demande.
  *
+ * ⚠️ `taxRateId` porte la TVA. Nos prix sont HORS TAXES : sans lui, Stripe
+ * encaisserait 225 € au lieu de 270 €, et la TVA due sortirait de la poche de
+ * l'éditeur. Le taux doit être créé dans le tableau de bord Stripe en mode
+ * **exclusif** (la taxe s'ajoute au prix) — un taux inclusif ferait l'inverse,
+ * il découperait 225 € en 187,50 € + TVA.
+ *
  * La clé d'idempotence reste l'identifiant de la demande : un second clic
  * rouvre la même session, jamais une seconde.
  */
@@ -137,6 +143,8 @@ export async function creerAbonnementCheckout(
     cancelUrl: string
     plan: string
     billingPeriod: string
+    /** Le taux de TVA à appliquer (`txr_…`). Sans lui, rien n'est facturé en sus. */
+    taxRateId?: string | null
     tentative?: number
   },
 ): Promise<SessionCheckout> {
@@ -144,7 +152,11 @@ export async function creerAbonnementCheckout(
     mode: 'subscription',
     customer_email: p.customerEmail,
     payment_method_types: ['card'],
-    line_items: [{ quantity: 1, price: p.priceId }],
+    line_items: [{
+      quantity: 1,
+      price: p.priceId,
+      ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+    }],
     subscription_data: {
       description: p.label,
       metadata: { request_id: p.requestId, plan: p.plan, billing_period: p.billingPeriod },

@@ -5254,6 +5254,35 @@ Le filet en aval **reste** : une entreprise sans administrateur remonte dans
 contrôle ne peut pas voir — une adresse rattachée entre le dépôt et le
 paiement.
 
+## ⚠️ La TVA : un taux fixe, et un garde-fou contre l'oubli
+
+Les prix sont **hors taxes** (c'est l'usage en B2B, et ce que dit la page).
+Sans taux de TVA, Stripe encaisserait 225 € là où 270 € sont dus, et la
+différence sortirait de la poche de l'éditeur **à chaque échéance** — une
+erreur qui ne se voit qu'à la déclaration.
+
+Un septième secret porte donc le taux : **`STRIPE_TAX_RATE`**, un `txr_…` créé
+dans Stripe (Paramètres → Taxes → *Taux de taxe*), en mode **EXCLUSIF**.
+
+- ⚠️ **Exclusif, jamais inclusif.** Un taux inclusif ne s'ajoute pas au prix, il
+  le découpe : 225 € deviendraient 187,50 € HT + 37,50 € de TVA. Le client
+  paierait le bon montant affiché, et l'éditeur encaisserait moins.
+- ⚠️ **Il est facultatif en TEST, exigé en LIVE**, et c'est la clé Stripe qui le
+  dit : `sk_live_` sans taux → refus (`tva_absente`, 503). C'est le seul endroit
+  du produit où un oubli de configuration coûte de l'argent en silence, donc le
+  seul qui mérite un refus plutôt qu'un repli.
+- **Le taux de `web/lib/offres.ts` (`TVA = 0.2`) n'AFFICHE que.** C'est le taux
+  Stripe qui fait foi sur la facture. Les deux doivent bouger ensemble ; un test
+  vérifie que le module rappelle où vit l'autre.
+- **Le TTC s'affiche sur `/souscrire` et nulle part ailleurs** : c'est le
+  montant qui sera prélevé, et le bouton l'annonce (« Payer 270 € TTC »).
+  Partout ailleurs le prix reste hors taxes. Annoncer le HT jusqu'au bout ferait
+  découvrir l'écart sur le relevé bancaire.
+
+Stripe Tax (calcul automatique selon le pays, autoliquidation
+intracommunautaire) reste la suite naturelle le jour où un client hors de
+France souscrit : il remplace le taux fixe sans rien changer d'autre.
+
 ## Vérifications (30 août 2026)
 
 **Sur les fonctions déployées** : `subscribe-online` répond 405 sur GET (donc

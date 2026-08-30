@@ -116,6 +116,26 @@ export const SUPPLEMENT = { par: 10, mois: 47, an: 500 } as const
 /** Le plafond au-delà duquel le tarif se construit avec le client. */
 export const APPAREILS_MAX = 100
 
+/**
+ * Le taux de TVA appliqué en France.
+ *
+ * ⚠️ Tous les prix de ce module sont HORS TAXES — c'est ce qu'affiche la page
+ * de tarifs, et c'est l'usage en B2B. Mais au moment de payer, le client voit
+ * le montant qu'on va réellement débiter : annoncer 225 € et prélever 270 €
+ * est le genre d'écart qui fait abandonner un panier, ou pire, contester un
+ * prélèvement.
+ *
+ * Côté Stripe, le taux vit dans le tableau de bord (`STRIPE_TAX_RATE`, en mode
+ * exclusif) et non ici : c'est lui qui fait foi sur la facture. Cette
+ * constante ne sert qu'à AFFICHER. Les deux doivent bouger ensemble.
+ */
+export const TVA = 0.2
+
+/** Le montant toutes taxes comprises, pour l'afficher au moment de payer. */
+export function ttc(ht: number): number {
+  return Math.round(ht * (1 + TVA) * 100) / 100
+}
+
 /** Ce que le paiement annuel fait économiser sur douze mensualités. */
 export function economie(o: Offre): number {
   return o.mois * 12 - o.an

@@ -129,6 +129,36 @@ describe('le paiement se fait chez Stripe, jamais ici', () => {
   })
 })
 
+describe('la TVA', () => {
+  it('est exigée en mode live, tolérée en test', () => {
+    // Le seul endroit où l'oubli coûte de l'argent : sans taux, Stripe
+    // encaisserait 225 € là où 270 € sont dus, et l'écart sortirait de la
+    // poche de l'éditeur à chaque échéance. La clé dit dans quel mode on est.
+    expect(edgeNu).toContain("stripeKey.startsWith('sk_live_')")
+    expect(edgeNu).toContain("code: 'tva_absente'")
+    expect(edgeNu).toContain('STRIPE_TAX_RATE')
+  })
+
+  it('voyage jusqu’à la ligne de facturation', () => {
+    const abonnement = stripe.slice(stripe.indexOf('creerAbonnementCheckout'))
+    expect(abonnement).toContain('tax_rates')
+  })
+
+  it('affiche le montant réellement prélevé au moment de payer', () => {
+    // Annoncer le HT jusqu'au bout ferait découvrir l'écart sur le relevé.
+    expect(page).toContain('ttc(')
+    expect(page).toContain('TTC et créer mon espace')
+  })
+
+  it('garde le taux d’affichage et celui de Stripe alignés', () => {
+    // La constante n'affiche que ; c'est le taux Stripe qui fait foi sur la
+    // facture. Les deux doivent bouger ensemble — d'où ce rappel.
+    const offres = lire('web/lib/offres.ts')
+    expect(offres).toContain('export const TVA = 0.2')
+    expect(offres).toContain('STRIPE_TAX_RATE')
+  })
+})
+
 describe('le webhook suit le cycle de vie', () => {
   it('traduit les trois événements d’abonnement', () => {
     for (const e of ['invoice.payment_failed', 'invoice.paid', 'customer.subscription.deleted']) {

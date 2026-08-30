@@ -20,6 +20,10 @@
 //   STRIPE_PRICE_ENTERPRISE_MONTHLY / _YEARLY
 // Tant qu'un secret manque, l'offre correspondante répond « indisponible » —
 // et le client n'est jamais envoyé sur une page de paiement vide.
+//
+// ⚠️ Un septième secret porte la TVA : `STRIPE_TAX_RATE` (un `txr_…` créé dans
+// Stripe, en mode EXCLUSIF). Facultatif en test, **exigé en live** — voir le
+// garde-fou plus bas.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { creerAbonnementCheckout } from '../_shared/stripe.ts'
 
@@ -89,6 +93,24 @@ Deno.serve(async (req) => {
     }, 503)
   }
 
+  // ⚠️ LA TVA, ET LE GARDE-FOU QUI EMPÊCHE DE L'OUBLIER EN PRODUCTION.
+  //
+  // Nos prix sont hors taxes : sans taux de TVA, Stripe encaisserait 225 € là
+  // où 270 € sont dus, et la différence sortirait de la poche de l'éditeur à
+  // chaque échéance — une erreur qui ne se voit qu'à la déclaration.
+  //
+  // En mode TEST on tolère son absence : on valide le parcours avant d'avoir
+  // tout configuré. En mode LIVE on REFUSE — c'est le seul endroit où l'oubli
+  // coûte de l'argent, et la clé dit dans quel mode on est.
+  const taxRateId = Deno.env.get('STRIPE_TAX_RATE') ?? null
+  if (!taxRateId && stripeKey.startsWith('sk_live_')) {
+    return json({
+      success: false,
+      code: 'tva_absente',
+      error: 'La souscription en ligne est momentanément indisponible. Écrivez-nous, nous ouvrons vos accès.',
+    }, 503)
+  }
+
   const tarif = GRILLE[plan]
   const montant = rythme === 'monthly' ? tarif.monthly : tarif.yearly
   // Ce que le magasin vaut à l'année : c'est `stores.annual_price_cents`, que
@@ -127,6 +149,7 @@ Deno.serve(async (req) => {
       cancelUrl: `${site}/tarifs`,
       plan,
       billingPeriod: rythme,
+      taxRateId,
     })
   } catch (e) {
     // La demande est écrite, la page de paiement n'a pas pu s'ouvrir. On le

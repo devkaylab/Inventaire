@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { supabase } from '@/lib/supabaseClient'
-import { OFFRES, economie, euros, type CleOffre } from '@/lib/offres'
+import { OFFRES, economie, euros, ttc, type CleOffre } from '@/lib/offres'
 import { CONTACT_EMAIL } from '@/lib/contact'
 
 /**
@@ -120,6 +120,12 @@ function Formulaire() {
         <div className="souscrire-total">
           <strong>{euros(annuel ? offre.an : offre.mois)}</strong>
           <span>{annuel ? 'HT par an, pour un magasin' : 'HT par mois, pour un magasin'}</span>
+          {/* ⚠️ Le TTC s'affiche ici et nulle part ailleurs : c'est le montant
+              qui sera réellement prélevé. Annoncer le HT jusqu'au bout ferait
+              découvrir l'écart sur le relevé bancaire. */}
+          <span className="souscrire-ttc">
+            soit {euros(ttc(annuel ? offre.an : offre.mois))} TTC, TVA 20 % incluse
+          </span>
           <em>
             {annuel
               ? `Vous économisez ${euros(economie(offre))} par rapport au paiement mensuel. L’année est due jusqu’à son terme.`
@@ -161,7 +167,7 @@ function Formulaire() {
       )}
 
       <button type="submit" className="btn btn-primary btn-block" disabled={envoi}>
-        {envoi ? 'Ouverture du paiement…' : `Payer ${euros(annuel ? offre.an : offre.mois)} et créer mon espace`}
+        {envoi ? 'Ouverture du paiement…' : `Payer ${euros(ttc(annuel ? offre.an : offre.mois))} TTC et créer mon espace`}
       </button>
       <p className="souscrire-note">
         Paiement par carte, sur la page sécurisée de Stripe. Nous ne voyons jamais votre

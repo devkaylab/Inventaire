@@ -2782,3 +2782,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   border-color: var(--warning);
   color: var(--warning-text);
 }
+
+/* Le montant réellement prélevé, sous le prix hors taxes. Discret mais présent :
+   c'est lui qui apparaîtra sur le relevé bancaire. */
+.souscrire-ttc { font-size: 13.5px; color: var(--text-2); }
