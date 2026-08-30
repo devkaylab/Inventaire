@@ -1,5 +1,6 @@
 import { Logo } from '@/components/Logo'
 import { AuthLink } from '@/components/AuthLink'
+import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { CubeFilaire } from '@/components/Parallaxe'
@@ -134,10 +135,10 @@ export default function Home() {
               <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
               <h2>Équipez votre magasin</h2>
               <p>
-                Une licence annuelle par magasin, au volume de votre stock — inventaires et compteurs
-                illimités. Déposez votre demande : nous revenons vers vous avec un devis, puis
-                vos codes entreprise et magasins. Votre entreprise utilise déjà Quantinvo ?
-                Son administrateur vous ouvre l&apos;accès depuis son espace.
+                Une licence par magasin, calée sur le nombre de personnes qui comptent en même
+                temps — inventaires illimités. À partir de 65 € par mois :{' '}
+                <Link href="/tarifs">voir les tarifs</Link>. Votre entreprise utilise déjà
+                Quantinvo ? Son administrateur vous ouvre l&apos;accès depuis son espace.
               </p>
               <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
             </div>

@@ -1,0 +1,128 @@
+import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, economie, parAppareil, offrePour, euros } from '../lib/offres'
+
+const lire = (p: string) => readFileSync(join(__dirname, p), 'utf8')
+
+describe('la grille tarifaire', () => {
+  it('couvre les appareils sans trou ni recouvrement', () => {
+    expect(OFFRES[0].min).toBe(1)
+    for (let i = 1; i < OFFRES.length; i++) {
+      expect(OFFRES[i].min, `${OFFRES[i].nom} doit reprendre où ${OFFRES[i - 1].nom} s’arrête`)
+        .toBe(OFFRES[i - 1].max + 1)
+    }
+    expect(OFFRES[OFFRES.length - 1].max).toBe(APPAREILS_MAX)
+  })
+
+  it('reste dégressive : le prix par appareil baisse à chaque palier', () => {
+    // C'est la règle posée par Julien — la petite offre coûte le plus cher à
+    // l'unité — et c'est elle qui rend l'empilement perdant.
+    const parAppareils = OFFRES.map(parAppareil)
+    for (let i = 1; i < parAppareils.length; i++) {
+      expect(parAppareils[i], `${OFFRES[i].nom} doit coûter moins par appareil`)
+        .toBeLessThan(parAppareils[i - 1])
+    }
+    // Et le supplément au-delà du plafond continue de descendre : à 700 € il
+    // reconduisait exactement 6 900 ÷ 100 et figeait la dégressivité.
+    const dernier = parAppareils[parAppareils.length - 1]
+    expect(SUPPLEMENT.an / SUPPLEMENT.par).toBeLessThan(dernier)
+  })
+
+  it('rend l’empilement perdant, sans avoir besoin d’un verrou', () => {
+    // Un prix qui a besoin d'une clause juridique pour tenir est mal calé :
+    // couvrir un palier en cumulant l'offre du dessous doit coûter plus cher.
+    for (let i = 1; i < OFFRES.length; i++) {
+      const cible = OFFRES[i]
+      const dessous = OFFRES[i - 1]
+      const licences = Math.ceil(cible.max / dessous.max)
+      expect(licences * dessous.an, `${licences} ${dessous.nom} doivent coûter plus que ${cible.nom}`)
+        .toBeGreaterThan(cible.an)
+    }
+  })
+
+  it('récompense le paiement annuel dans les trois offres', () => {
+    for (const o of OFFRES) {
+      expect(economie(o), `${o.nom} doit être moins cher à l’année`).toBeGreaterThan(0)
+      // Douze mensualités, pas treize : la piste « toutes les 4 semaines » a
+      // été écartée le 30 août 2026.
+      expect(o.mois * 12).toBeGreaterThan(o.an)
+    }
+    expect(OFFRES.map(economie)).toEqual([90, 300, 900])
+  })
+
+  it('désigne la bonne offre pour un nombre d’appareils', () => {
+    expect(offrePour(1)?.nom).toBe('Essential')
+    expect(offrePour(2)?.nom).toBe('Essential')
+    expect(offrePour(3)?.nom).toBe('Advanced')
+    expect(offrePour(20)?.nom).toBe('Advanced')
+    expect(offrePour(21)?.nom).toBe('Enterprise')
+    expect(offrePour(100)?.nom).toBe('Enterprise')
+    expect(offrePour(101), 'au-delà du plafond, le tarif se construit').toBeNull()
+  })
+
+  it('met en forme les montants sans dépendre d’ICU', () => {
+    // Le séparateur de milliers d'ICU diffère entre Node et le navigateur
+    // selon les versions : une page rendue des deux côtés se désynchronise.
+    expect(euros(690)).toBe('690 €')
+    expect(euros(2400)).toBe('2 400 €')
+    expect(euros(6900)).toBe('6 900 €')
+  })
+})
+
+describe('la page tarifs', () => {
+  const page = lire('../app/tarifs/page.tsx')
+  const grille = lire('../components/TarifsGrille.tsx')
+
+  it('reste hors de la coquille', () => {
+    // Elle s'ouvre au téléphone — c'est la première page qu'un prospect
+    // regarde, souvent depuis un lien. AppShell la fermerait sous 720 px.
+    expect(page).not.toContain('<AppShell')
+    expect(page).toContain('<SiteHeader />')
+    expect(page).toContain('<SiteFooter />')
+  })
+
+  it('n’écrit aucun prix en dur', () => {
+    // Une seule définition : lib/tarifs.ts. Un prix recopié dans le JSX
+    // divergerait au premier ajustement.
+    for (const montant of ['690', '2 400', '2 400', '6 900', '6 900', '225 €', '650 €']) {
+      expect(grille, `le montant ${montant} ne doit pas être écrit en dur`).not.toContain(montant)
+    }
+    expect(grille).toContain("from '@/lib/offres'")
+  })
+
+  it('affiche le mensuel par défaut', () => {
+    // Le mensuel est le chiffre auquel un acheteur compare ; l'annuel est
+    // présenté comme une économie.
+    expect(grille).toContain('useState(false)')
+    expect(grille).toContain('economie(o)')
+  })
+
+  it('met en avant une seule offre, celle du milieu', () => {
+    expect(OFFRE_PHARE).toBe('advanced')
+    expect(OFFRES.filter((o) => o.cle === OFFRE_PHARE)).toHaveLength(1)
+  })
+
+  it('n’annonce pas la remise réseau, reportée après le lancement', () => {
+    // Elle est chiffrée dans docs/entreprise/hypotheses-tarifaires.md mais
+    // n'existe pas encore : l'annoncer serait une promesse sans tarif.
+    for (const texte of [page, grille, lire('../lib/offres.ts').split('export type')[1] ?? '']) {
+      expect(texte).not.toMatch(/−\s?(10|20|30)\s?%/)
+    }
+  })
+
+  it('figure dans la navigation publique', () => {
+    const chrome = lire('../components/SiteChrome.tsx')
+    expect(chrome.match(/href="\/tarifs"/g) ?? [], 'en-tête et pied').toHaveLength(2)
+  })
+})
+
+describe('le site ne contredit plus la grille', () => {
+  it('ne facture plus au volume de stock sur les pages publiques', () => {
+    // La grille au volume a cessé d'être l'assiette le 30 août 2026. Une page
+    // qui l'annonce encore promet un devis qu'on n'établit plus ainsi.
+    for (const p of ['../app/page.tsx', '../app/pourquoi-nous-choisir/page.tsx', '../app/inscription/page.tsx']) {
+      expect(lire(p), `${p} annonce encore l’ancienne grille`).not.toContain('au volume de votre stock')
+    }
+  })
+})

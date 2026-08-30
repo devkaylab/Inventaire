@@ -382,8 +382,9 @@ export default function CompanyRequestPage() {
               montant se lit sur le devis, pas en face du champ qui le
               détermine. */}
           <p className="devis-note">
-            Votre devis est établi à partir de ces informations. La licence est annuelle,
-            par magasin, comptages et compteurs illimités.
+            Ces informations nous servent à dimensionner votre installation. La licence est
+            par magasin, calée sur le nombre de personnes qui comptent en même temps,
+            comptages illimités.
           </p>
 
           <div className="field">

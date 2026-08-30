@@ -2576,3 +2576,133 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .boite { grid-template-columns: minmax(0, 1fr); }
   .boite-liste { max-height: 260px; }
 }
+
+/* ============================================================================
+   Page Tarifs (/tarifs)
+   ----------------------------------------------------------------------------
+   Direction retenue le 30 août 2026 : trois colonnes, bascule mensuel/annuel,
+   l'offre du milieu mise en avant. Tout passe par les jetons — la maquette
+   était en thème clair, la page suit celui du visiteur.
+
+   ⚠️ La carte mise en avant se distingue par sa BORDURE et son ombre, pas par
+   une seconde teinte : l'accent du produit est l'indigo, et l'or est réservé
+   au mode audit.
+   ========================================================================== */
+
+.tarifs-bloc { display: flex; flex-direction: column; align-items: center; }
+
+.tarifs-bascule {
+  display: flex; gap: 5px; padding: 5px;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+}
+/* 11 px de rembourrage vertical, pas 9 : à 9 le bouton tombait à 40 px de
+   haut, sous la cible tactile de 44 — et cette page s'ouvre au téléphone. */
+.tarifs-bascule button {
+  font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  border: none; background: transparent; color: var(--text-2);
+  padding: 11px 19px; border-radius: 10px; transition: background .16s ease, color .16s ease;
+}
+.tarifs-bascule button:hover { color: var(--text); }
+.tarifs-bascule button.actif { background: var(--accent); color: var(--on-accent); }
+.tarifs-bascule button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .tarifs-bascule button { transition: none; } }
+
+.tarifs-note-bascule { margin: 12px 0 0; font-size: 14px; color: var(--text-3); text-align: center; }
+
+.tarifs-grille {
+  width: 100%; margin-top: 30px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start;
+}
+
+.tarifs-carte {
+  display: flex; flex-direction: column; gap: 16px;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--radius); padding: 30px 26px;
+}
+.tarifs-carte.phare {
+  border: 2px solid var(--accent); padding: 26px 25px 30px; box-shadow: var(--shadow-elev);
+}
+.tarifs-carte h2 { font-size: 25px; font-weight: 800; letter-spacing: -0.5px; }
+.tarifs-marqueur {
+  font-size: 11px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--accent-light);
+}
+.tarifs-pour { margin: 0; font-size: 14.5px; color: var(--text-2); min-height: 44px; }
+
+.tarifs-prix {
+  display: flex; flex-direction: column; gap: 3px;
+  border-top: 1px solid var(--hairline); padding-top: 18px;
+}
+.tarifs-prix .montant { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tarifs-prix .montant strong {
+  font-size: 37px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums;
+}
+.tarifs-prix .montant span { font-size: 13.5px; color: var(--text-3); }
+.tarifs-alt { font-size: 13.5px; color: var(--text-2); }
+.tarifs-economie {
+  align-self: flex-start; margin-top: 8px;
+  font-size: 13px; font-weight: 600; color: var(--success-text);
+  background: var(--success-soft); border-radius: 8px; padding: 5px 11px;
+}
+
+.tarifs-plage {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--accent-soft); border-radius: 10px; padding: 11px 14px;
+  font-size: 13.5px; font-weight: 500; color: var(--accent-light);
+}
+.tarifs-plage svg { flex: none; }
+
+.tarifs-points { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.tarifs-points li {
+  display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: start;
+  font-size: 14px; color: var(--text-2);
+}
+.tarifs-points svg { margin-top: 5px; color: var(--accent); }
+
+/* Dans une colonne flex, un bouton s'étire : le ramener à sa taille et le
+   coller en bas pour que les trois cartes alignent leur action. */
+.tarifs-carte .btn { margin-top: auto; justify-content: center; }
+
+.tarifs-hors-grille {
+  margin: 20px 0 0; font-size: 14px; color: var(--text-2); text-align: center; max-width: 74ch;
+}
+
+.tarifs-licence {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 36px; align-items: center;
+  padding: 28px 32px;
+}
+.tarifs-licence h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.tarifs-licence p { margin: 8px 0 0; font-size: 15px; color: var(--text-2); }
+.tarifs-licence .btn { flex: none; }
+
+.tarifs-titre { font-size: 26px; font-weight: 800; letter-spacing: -0.7px; }
+.tarifs-sous-titre { margin: 8px 0 0; font-size: 15.5px; color: var(--text-2); max-width: 74ch; }
+
+.tarifs-compris {
+  margin-top: 26px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px;
+}
+.tarifs-compris h3 { font-size: 16px; font-weight: 700; }
+.tarifs-compris p { margin: 7px 0 0; font-size: 14px; color: var(--text-2); }
+
+.tarifs-faq { margin-top: 8px; }
+.tarifs-faq .collapsible > summary { font-size: 15.5px; }
+
+.tarifs-pied {
+  display: flex; gap: 12px 28px; flex-wrap: wrap; justify-content: center;
+  margin: 0 auto 56px; padding: 0 24px;
+  font-size: 13.5px; color: var(--text-3);
+}
+
+@media (max-width: 900px) {
+  .tarifs-grille { grid-template-columns: minmax(0, 1fr); }
+  .tarifs-carte.phare { padding: 30px 26px; }
+  .tarifs-compris { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tarifs-licence { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .tarifs-licence .btn { justify-self: start; }
+}
+
+@media (max-width: 560px) {
+  .tarifs-compris { grid-template-columns: minmax(0, 1fr); }
+  .tarifs-bascule button { padding: 11px 14px; font-size: 13.5px; }
+}

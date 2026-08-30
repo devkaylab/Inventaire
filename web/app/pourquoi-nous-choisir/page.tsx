@@ -7,7 +7,7 @@ import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from 
 export const metadata: Metadata = {
   title: 'Pourquoi choisir Quantinvo — l’outil d’inventaire pour le commerce',
   description:
-    'Vos équipes comptent avec leur téléphone, vous pilotez en direct, le stock validé est fiable. Import sans reformater, audit des écarts, licence annuelle par magasin : les raisons de choisir Quantinvo.',
+    'Vos équipes comptent avec leur téléphone, vous pilotez en direct, le stock validé est fiable. Import sans reformater, audit des écarts, licence par magasin à partir de 65 € par mois : les raisons de choisir Quantinvo.',
 }
 
 const RAISONS = [
@@ -52,7 +52,7 @@ const RAISONS = [
     title: 'Libre, toute l’année',
     points: [
       'Tournant, ciblé ou complet : vous choisissez la date, le périmètre et la fréquence. Un mardi matin en janvier vaut autant qu’une nuit de décembre.',
-      'La licence est annuelle, par magasin, au volume de votre stock — et les comptages sont illimités. Compter plus souvent ne coûte pas un euro de plus.',
+      'La licence est par magasin, calée sur le nombre de personnes qui comptent en même temps — et les comptages sont illimités. Compter plus souvent ne coûte pas un euro de plus.',
       'Un réseau équipe ses magasins un à un, au rythme qu’il choisit, et chaque magasin garde ses codes, ses équipes et ses inventaires.',
     ],
   },
@@ -121,8 +121,8 @@ export default function PourquoiPage() {
               <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
               <h2>Équipez votre magasin</h2>
               <p>
-                Déposez votre demande : nous revenons vers vous avec un devis au volume de
-                votre stock, puis vos codes entreprise et magasins.
+                Trois offres, un prix par magasin, affiché : à partir de 65 € par mois.
+                Déposez votre demande et nous ouvrons vos accès.
               </p>
               <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
             </div>
