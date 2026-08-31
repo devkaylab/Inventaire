@@ -115,6 +115,51 @@ chez le client sur deux écrans (Mon compte, Mon équipe). Les remplacements
 utilisent le domaine réservé `.example`, qui ne peut appartenir à personne.
 Une capture nouvelle qui montre une adresse doit être ajoutée à `MASQUES`.
 
+### ⚠️ L'écran de lancement ne s'obtient qu'en Release
+
+`lancement.png` (le logo animé sur fond sombre) est le seul écran qui **ne peut
+pas** être capturé sur le build habituel : en Debug, le bandeau LogBox « Open
+debugger to view warnings » de React Native s'affiche par-dessus, et il partirait
+chez le client. Il faut donc un build Release, où LogBox n'existe pas :
+
+```bash
+xcodebuild -workspace ios/Inventaire.xcworkspace -scheme Inventaire \
+  -configuration Release -destination "platform=iOS Simulator,id=<UDID>" \
+  -derivedDataPath ios/build/dd-release build
+node node_modules/expo-constants/scripts/getAppConfig.js "$PWD" \
+  ios/build/dd-release/Build/Products/Release-iphonesimulator/Inventaire.app/EXConstants.bundle
+xcrun simctl install <UDID> ios/build/dd-release/Build/Products/Release-iphonesimulator/Inventaire.app
+```
+
+⚠️ **Ne pas sauter l'étape `getAppConfig.js`** : en Release, l'application se
+ferme sans rien dire si `app.config` n'est pas déposé dans `EXConstants.bundle`
+(c'est le piège que `scripts/simulateur.sh` règle pour le build Debug).
+
+⚠️ **Remettre le build Debug ensuite** — sinon le rechargement par Metro ne
+fonctionne plus, et une modification du code semble sans effet :
+`xcrun simctl install <UDID> ios/build/dd/Build/Products/Debug-iphonesimulator/Inventaire.app`.
+
+Deux pièges de la capture elle-même :
+
+- **`xcrun simctl terminate` ne tue pas toujours l'application** — il rend 0, et
+  le `launch` qui suit rend le MÊME identifiant de processus, donc pas de
+  démarrage, donc pas d'écran de lancement. Le processus tourne sur le Mac :
+  `pkill -f "Inventaire.app/Inventaire"` le termine pour de bon ;
+- **l'écran ne dure que 2,8 s** (650 ms d'entrée, 1,7 s de maintien, 450 ms de
+  sortie), et il faut d'abord attendre que le splash natif blanc s'efface. On
+  prend donc une rafale — `for i in $(seq 1 40); do xcrun simctl io <UDID>
+  screenshot f$i.png; done`, environ 0,17 s par image — et on garde une image
+  du maintien. Elles se repèrent à leur poids : le dégradé sombre compresse mal
+  (~1,9 Mo), le reste de l'application fait le quart.
+
+## Poser une capture sur une diapositive
+
+`node encadrer.js <capture>` écrit `<capture>-encadre.png` : la capture dans le
+téléphone dessiné des decks, fond transparent, **téléphone entier**. Les decks
+n'en ont pas besoin — `cadrer()` fait le même travail à la volée et coupe le bas
+pour que le téléphone déborde de sa carte — mais une page dont le téléphone est
+le sujet le veut complet.
+
 ⚠️ **Le simulateur doit être en français.** Sinon la feuille de partage et les
 menus système sortent en anglais au milieu d'un document français
 (`xcrun simctl spawn booted defaults write .GlobalPreferences AppleLanguages -array fr-FR en`,

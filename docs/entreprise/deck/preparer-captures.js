@@ -22,6 +22,10 @@ const LARGEUR = 603
 
 // Les écrans repris dans le deck. Ajouter ici une capture nouvelle.
 const ECRANS = [
+  // `lancement` est l'écran de démarrage (logo animé sur fond sombre).
+  // ⚠️ Il ne s'obtient QUE sur un build Release : en Debug, le bandeau LogBox
+  // « Open debugger to view warnings » s'affiche par-dessus.
+  'lancement',
   'accueil-superviseur', 'nouvel-inventaire', 'zones', 'importer',
   'fiche-inventaire', 'inventaire-superviseur', 'mon-equipe', 'boite-a-outils',
   'creer-balises', 'ajouter-membre', 'mon-compte',
