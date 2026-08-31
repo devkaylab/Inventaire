@@ -4961,15 +4961,27 @@ sur-signale, et la première lecture allait faire « corriger » la torche
 **Le nombre pointe, le code tranche** — vérifier le `hitSlop` avant de toucher.
 
 ⚠️ **Et deux `hitSlop` voisins ne doivent pas se chevaucher.** Les deux boutons
-d'en-tête faisaient 32 dp avec un slop de 8, séparés de 8 : leurs zones
-mordaient l'une sur l'autre de 8 dp, et dans cette bande c'est **le dernier
-rendu** qui prend l'appui. Ils passent à **40 dp avec un slop de 4** — 48 de
-zone, et l'écart de 8 les sépare exactement. C'est aussi la convention Material
-(icône 40, cible 48).
+d'en-tête font 32 dp avec un slop de 8, séparés de 8 : leurs zones mordaient
+l'une sur l'autre de 8 dp, et dans cette bande c'est **le dernier rendu** qui
+prend l'appui. **L'écart passe à 16** — les deux zones de 48 se touchent
+exactement au milieu.
+
+⚠️ **La pastille, elle, NE GRANDIT PAS, et c'est une leçon payée.** Premier
+jet : 32 → 40 dp avec un slop de 4. Aucun gain — elle était **déjà** à 48 de
+cible — et sur **iOS 26** les ronds remplissaient alors la **capsule que le
+système dessine lui-même** autour des boutons de barre (Liquid Glass), d'où un
+double habillage. Constat de Julien, capture à l'appui : « problème avec les
+boutons sous iOS uniquement ». Reverti le jour même.
+· `react-native-screens` expose bien `hidesSharedBackground` / `sharesBackground`
+  pour cette capsule, mais **react-navigation ne les remonte pas** : on ne peut
+  pas la désactiver depuis le code de l'app.
+· La règle qui reste : **c'est le `hitSlop` qui fait la cible, pas le dessin.**
+  Mesurer avant d'agrandir, et n'agrandir que ce qui est réellement sous 48
+  zone tactile comprise.
 
 | cible | avant | après |
 |---|---|---|
-| bouton thème, bouton profil | 32 dp, zones qui se chevauchent | **40 dp**, slop 4 |
+| bouton thème, bouton profil | zones qui se chevauchent | **écart porté à 16 dp** |
 | onglets Caméra / Manuel / Douchette | 39 dp | `minHeight: 48` |
 | champ balise et bouton « Ouvrir » | 47 et 46 dp | `minHeight: 48` |
 | « Quitter l'inventaire » | 45 dp | `minHeight: 48` |

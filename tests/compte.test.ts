@@ -2026,13 +2026,15 @@ describe('le thème suit le système, et Android ne le repeint pas', () => {
  * empiéter, au lieu de 32 + 8 qui mordait de 8 dp.
  */
 describe('les cibles tactiles atteignent 48 dp', () => {
-  it('les boutons d’en-tête font 40 dp et ne se chevauchent pas', () => {
+  it('les boutons d’en-tête gardent 32 dp et ne se chevauchent pas', () => {
+    // ⚠️ La pastille NE DOIT PAS grandir : 32 + 2×8 fait déjà 48 de cible.
+    // L'agrandir à 40 le 31 août n'a rien gagné et a fait remplir, sur iOS 26,
+    // la capsule que le système dessine autour des boutons de barre.
     const src = readFileSync(path.join(here, '..', 'src', 'components', 'HeaderActions.tsx'), 'utf8')
-    expect(src).toMatch(/width: 40, height: 40, borderRadius: 20/)
-    expect(src).not.toMatch(/width: 32, height: 32/)
-    // 40 + 2×4 = 48, et l'écart de 8 les sépare exactement.
-    expect(src.match(/hitSlop=\{4\}/g)).toHaveLength(2)
-    expect(src).toMatch(/gap: 8/)
+    expect(src).toMatch(/width: 32, height: 32, borderRadius: 16/)
+    expect(src.match(/hitSlop=\{8\}/g)).toHaveLength(2)
+    // C'est l'écart de 16 qui sépare les deux zones de 48.
+    expect(src).toMatch(/gap: 16/)
   })
 
   it('les cibles de l’écran de comptage ne descendent plus sous 48', () => {

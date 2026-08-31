@@ -62,7 +62,7 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
       {onProfile && (
         <Pressable
           onPress={onProfile}
-          hitSlop={4}
+          hitSlop={8}
           style={styles.btn}
           accessibilityRole="button"
           accessibilityLabel="Mon compte"
@@ -72,7 +72,7 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
       )}
       <Pressable
         onPress={() => setPreference(NEXT_PREF[preference])}
-        hitSlop={4}
+        hitSlop={8}
         style={styles.btn}
         accessibilityRole="button"
         accessibilityLabel={`Thème : ${preference === 'system' ? 'système' : preference === 'light' ? 'clair' : 'sombre'}`}
@@ -84,14 +84,19 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, marginRight: 2 },
-  // ⚠️ 40 dp et un hitSlop de 4, et c'est le couple qui compte : 48 dp de zone
-  // tactile (le minimum Android) SANS que les deux boutons se chevauchent —
-  // l'écart de 8 dp les sépare exactement. À 32 dp il fallait `hitSlop={8}`,
-  // et les deux zones mordaient l'une sur l'autre : dans les 8 dp du milieu,
-  // c'est le dernier rendu qui prenait l'appui.
+  // ⚠️ L'écart de 16 n'est pas décoratif : chaque bouton fait 32 dp avec un
+  // `hitSlop` de 8, donc 48 de zone tactile — sa zone déborde de 8 de chaque
+  // côté. À 8 d'écart les deux zones mordaient l'une sur l'autre, et dans
+  // cette bande c'est le dernier rendu qui prenait l'appui. À 16, elles se
+  // touchent exactement au milieu, sans se chevaucher.
+  row: { flexDirection: 'row', gap: 16, marginRight: 2 },
+  // ⚠️ NE PAS agrandir la pastille pour gagner de la cible : elle est déjà à
+  // 48 grâce au `hitSlop`. Essayé le 31 août 2026 (32 → 40) — aucun gain, et
+  // sur iOS 26 les ronds remplissaient alors la capsule que le système dessine
+  // lui-même autour des boutons de barre : double habillage, constat de Julien
+  // capture à l'appui. C'est le `hitSlop` qui fait la cible, pas le dessin.
   btn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
