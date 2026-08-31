@@ -4579,6 +4579,62 @@ table du PC est celle d'AOSP, déduite, pas observée. Le jour où une douchette
 tourne sur le Pixel, c'est le premier point à contrôler — et un code d'essai
 doit porter un **6 et un 8**.
 
+## ⚠️ La douchette ne peut pas dépendre du suffixe « Entrée » (31 août 2026)
+
+Constat de Julien sur le **Pixel** : *« android : mode douchette non
+fonctionnel »*. Le code s'inscrivait entièrement dans le champ — `à'('ç-'é_é_à`
+— **et y restait**. Aucun article compté.
+
+**Le redressement de clavier n'y était pour rien**, et c'est le premier
+enseignement : cette chaîne se redresse correctement en `045496428280`
+(vérifié en rejouant le module sur la chaîne exacte lue à l'écran). Elle
+confirmait même l'analyse Android de la veille — apostrophes **droites** (pas
+de ponctuation intelligente hors iOS), `-` et `_` pour les touches 6 et 8
+(AZERTY de PC). Le scan n'avait simplement **jamais été soumis** : le champ se
+vide au tout début de `handleHardwareSubmit`, donc du texte resté à l'écran
+prouve que la fonction n'a pas tourné.
+
+**Et Android n'est pas en cause non plus.** Vérifié sur l'appareil, en
+injectant les touches par `adb` : `KEYCODE_ENTER` **et**
+`KEYCODE_NUMPAD_ENTER` déclenchent tous deux `onSubmitEditing`, le champ se
+vide et la fiche « Article inconnu » s'ouvre. C'est donc **le suffixe de la
+douchette qui manque à l'appel** — intermittent, et impossible à reproduire
+sans l'appareil et le scanner en main.
+
+D'où un second chemin de validation, qui ne dépend d'aucun suffixe :
+`frappeDouchette` mesure l'écart entre frappes et valide quand le champ se
+tait. **Une douchette tape tout le code en un dixième de seconde, un doigt n'y
+arrive pas.**
+
+- **⚠️ Il DOUBLE `onSubmitEditing`, il ne le remplace pas.** Quand le suffixe
+  arrive — c'est le cas sur l'iPhone — il tombe bien avant la temporisation et
+  rien ne change.
+- **⚠️ Les deux seuils protègent la saisie au clavier**, que l'écran promet
+  juste au-dessus (« La saisie au clavier fonctionne aussi ») : 35 ms d'écart
+  **moyen** sur au moins 4 caractères. Aucun doigt ne tient ce rythme. Ne pas
+  les relâcher.
+- **Un suffixe reçu comme caractère** (CR dans le texte plutôt qu'en touche,
+  ce que font certaines douchettes) vaut validation immédiate.
+- **La rafale ne survit ni à la validation, ni au changement de mode, ni au
+  démontage** : une minuterie qui se réveille après coup validerait un scan
+  sous les yeux de personne.
+
+⚠️ **Ce que la séance n'a PAS prouvé** : que la fin de rafale corrige le cas
+réel. La douchette n'était pas appairée au moment du diagnostic, et des
+comptages sont ensuite passés normalement (12:47-12:48) — le défaut est donc
+**intermittent**. La fin de rafale rend le mode indépendant du suffixe, ce qui
+couvre la panne quelle qu'en soit la cause ; elle n'est pas la démonstration
+que la cause est bien celle-là.
+
+### Piège de méthode : le champ affiche le brut, toujours
+
+Le champ de capture est **non contrôlé** depuis le 25 août : ce qu'on y lit est
+la frappe telle qu'elle arrive, jamais le résultat du redressement. Une capture
+du champ ne dit donc **rien** sur le redressement — seulement si le scan a été
+soumis (champ vide) ou non (texte resté). Sur l'iPhone c'était la fiche
+« Article inconnu » qui portait la preuve ; ici c'est l'inverse, et lire la
+capture comme la veille aurait envoyé chercher un défaut de table.
+
 ## ⚠️ Un champ de capture ne se pilote pas par un état React (25 août 2026)
 
 Deux caractères sur treize **manquaient** dans le même scan (`//09?52559/`

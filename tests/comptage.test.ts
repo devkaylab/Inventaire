@@ -200,3 +200,49 @@ describe('quitter le comptage avec une balise ouverte', () => {
     expect(bloc).toContain("surtitre: 'Confirmation'")
   })
 })
+
+/**
+ * Le mode douchette ne dépend plus du suffixe « Entrée ».
+ *
+ * Constat de Julien le 31 août 2026 sur le Pixel : le code s'inscrivait
+ * entièrement dans le champ **et y restait** — jamais validé, aucun article
+ * compté. Le redressement de clavier n'y était pour rien (la chaîne reçue se
+ * redresse correctement) : c'est le suffixe de la douchette qui n'arrivait
+ * pas. Vérifié sur l'appareil, `KEYCODE_ENTER` comme `KEYCODE_NUMPAD_ENTER`
+ * déclenchent bien `onSubmitEditing` — Android n'est pas en cause.
+ */
+describe('la douchette valide même sans suffixe', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+
+  it('le champ passe par la mesure de rafale, pas par une affectation nue', () => {
+    expect(scanner).toContain('onChangeText={frappeDouchette}')
+    expect(scanner).not.toContain('onChangeText={t => { hwBufRef.current = t }}')
+    // ⚠️ La fin de rafale DOUBLE le suffixe, elle ne le remplace pas : quand
+    // Entrée arrive, elle tombe bien avant la temporisation.
+    expect(scanner).toContain('onSubmitEditing={handleHardwareSubmit}')
+  })
+
+  it('les deux seuils protègent la saisie au clavier', () => {
+    // Aucun doigt ne tient 35 ms d'écart moyen sur quatre caractères — c'est
+    // ce qui permet de promettre « la saisie au clavier fonctionne aussi ».
+    expect(scanner).toMatch(/RAFALE_ECART_MAX\s*=\s*35\b/)
+    expect(scanner).toMatch(/RAFALE_MIN\s*=\s*4\b/)
+    const corps = scanner.slice(scanner.indexOf('hwMinuterieRef.current = setTimeout'))
+    expect(corps).toContain('code.length >= RAFALE_MIN && moyen <= RAFALE_ECART_MAX')
+  })
+
+  it('un suffixe reçu comme caractère vaut validation', () => {
+    // Certaines douchettes envoient CR dans le texte plutôt qu'en touche.
+    const frappe = scanner.slice(scanner.indexOf('function frappeDouchette'))
+    expect(frappe.slice(0, frappe.indexOf('hwMinuterieRef.current = setTimeout')))
+      .toMatch(/test\(t\)[\s\S]*handleHardwareSubmit/)
+  })
+
+  it('une rafale ne survit ni à la validation, ni au mode, ni à l’écran', () => {
+    const submit = scanner.slice(scanner.indexOf('async function handleHardwareSubmit'))
+    expect(submit.slice(0, submit.indexOf('const brut'))).toContain('oublierRafale()')
+    expect(scanner).toContain('useEffect(() => () => oublierRafale(), [])')
+    const mode = scanner.slice(scanner.indexOf("hwBufRef.current = ''"))
+    expect(mode.slice(0, mode.indexOf('if (mode !=='))).toContain('oublierRafale()')
+  })
+})

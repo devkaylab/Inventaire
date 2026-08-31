@@ -320,6 +320,11 @@ export function Scanner({
   // jour à chaque frappe et lue au moment de valider.
   const hwBufRef = useRef('')
   const hwInputRef = useRef<TextInput>(null)
+  // Fin de rafale : une douchette tape tout le code en un dixième de seconde,
+  // un doigt n'y arrive pas. Voir `finDeRafale` plus bas.
+  const hwFrappeRef = useRef(0)          // horodatage de la frappe précédente
+  const hwEcartRef = useRef(0)           // somme des écarts entre frappes
+  const hwMinuterieRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const baliseBufRef = useRef('')
   const baliseInputRef = useRef<TextInput>(null)
   // Une douchette QWERTY sur un iPhone AZERTY écrit &é"' au lieu de 1234.
@@ -593,6 +598,7 @@ export function Scanner({
     // l'être aussi, sinon un scan resté en cours ressortirait plus tard sous
     // les yeux de personne.
     hwBufRef.current = ''
+    oublierRafale()
     if (mode !== 'hardware' || balisePhase || illisibleCode !== null) return
     const id = setTimeout(() => hwInputRef.current?.focus(), 60)
     return () => clearTimeout(id)
@@ -600,6 +606,11 @@ export function Scanner({
 
   // Même raison pour le champ d'ouverture d'une balise.
   useEffect(() => { baliseBufRef.current = '' }, [balisePhase])
+
+  // Une rafale en cours ne survit pas à l'écran : sans ça, une minuterie
+  // validerait un scan après le démontage.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => oublierRafale(), [])
 
   // ── Cooldown: animated bar drains over COOLDOWN_MS after each auto-scan ────
   function startCooldown() {
@@ -1026,8 +1037,80 @@ export function Scanner({
     setManualInput('')
   }
 
+  // ── Douchette : fin de rafale ─────────────────────────────────────────────
+  /**
+   * ⚠️ **Le suffixe « Entrée » n'arrive pas toujours.** Le mode douchette n'a
+   * longtemps eu qu'une seule façon de savoir qu'un scan est fini :
+   * `onSubmitEditing`, donc la touche Entrée que la douchette ajoute au code.
+   * Constat de Julien le 31 août 2026 sur le Pixel : le code s'inscrivait
+   * entièrement dans le champ **et y restait** — jamais validé, aucun article
+   * compté. Rien à voir avec le redressement de clavier : la chaîne reçue
+   * (`à'('ç-'é_é_à`) se redresse correctement, elle n'a simplement jamais été
+   * soumise. Vérifié sur l'appareil : `KEYCODE_ENTER` **et**
+   * `KEYCODE_NUMPAD_ENTER` injectés déclenchent bien `onSubmitEditing` — c'est
+   * donc le suffixe de la douchette qui manque à l'appel, pas Android.
+   *
+   * D'où ce second chemin, qui ne dépend d'aucun suffixe : **une douchette
+   * tape tout le code en un dixième de seconde, un doigt n'y arrive pas**. On
+   * mesure l'écart moyen entre frappes ; s'il est celui d'une machine et que
+   * le champ se tait, on valide.
+   *
+   * ⚠️ **Il ne remplace pas `onSubmitEditing`, il le double.** Quand le
+   * suffixe arrive — c'est le cas sur l'iPhone — il tombe bien avant la
+   * temporisation, et rien ne change.
+   *
+   * ⚠️ **Les deux seuils protègent la saisie au clavier**, que l'écran promet
+   * juste au-dessus : à 35 ms d'écart moyen sur quatre caractères, aucun doigt
+   * ne déclenche la validation automatique. Ne pas les relâcher.
+   */
+  const RAFALE_ECART_MAX = 35   // ms entre deux frappes — au-delà, c'est humain
+  const RAFALE_MIN = 4          // caractères — un code plus court ne s'invente pas
+  const RAFALE_SILENCE = 110    // ms de silence qui closent la rafale
+
+  function oublierRafale() {
+    if (hwMinuterieRef.current) clearTimeout(hwMinuterieRef.current)
+    hwMinuterieRef.current = null
+    hwFrappeRef.current = 0
+    hwEcartRef.current = 0
+  }
+
+  function frappeDouchette(t: string) {
+    const avant = hwBufRef.current
+    hwBufRef.current = t
+    const maintenant = Date.now()
+    // Un champ qui se vide (validation, effacement) repart d'une rafale neuve.
+    if (!t) { oublierRafale(); return }
+    if (avant && t.length > avant.length && hwFrappeRef.current) {
+      hwEcartRef.current += maintenant - hwFrappeRef.current
+    } else {
+      hwEcartRef.current = 0
+    }
+    hwFrappeRef.current = maintenant
+
+    // Certaines douchettes envoient leur suffixe comme un caractère plutôt que
+    // comme une touche : le champ le reçoit alors dans son texte.
+    if (/[\r\n]/.test(t)) {
+      hwBufRef.current = t.replace(/[\r\n]+/g, '')
+      oublierRafale()
+      void handleHardwareSubmit()
+      return
+    }
+
+    if (hwMinuterieRef.current) clearTimeout(hwMinuterieRef.current)
+    hwMinuterieRef.current = setTimeout(() => {
+      hwMinuterieRef.current = null
+      const code = hwBufRef.current
+      const ecarts = code.length - 1
+      const moyen = ecarts > 0 ? hwEcartRef.current / ecarts : Infinity
+      if (code.length >= RAFALE_MIN && moyen <= RAFALE_ECART_MAX) {
+        void handleHardwareSubmit()
+      }
+    }, RAFALE_SILENCE)
+  }
+
   // ── Douchette : une frappe-clavier terminée par Entrée (suffixe DataWedge) ──
   async function handleHardwareSubmit() {
+    oublierRafale()
     const brut = hwBufRef.current
     hwBufRef.current = ''
     hwInputRef.current?.clear()
@@ -1455,7 +1538,7 @@ export function Scanner({
             ref={hwInputRef}
             style={[styles.manualInput, tabular]}
             defaultValue=""
-            onChangeText={t => { hwBufRef.current = t }}
+            onChangeText={frappeDouchette}
             onSubmitEditing={handleHardwareSubmit}
             blurOnSubmit={false}
             showSoftInputOnFocus={false}
