@@ -1955,3 +1955,45 @@ describe('un écart d’audit s’arbitre, il ne se supprime pas', () => {
     expect(ecran).toContain(".replace(',', '.')")
   })
 })
+
+/**
+ * ⚠️ Deux réglages qui ne valent que l'un par l'autre (31 août 2026).
+ *
+ * `userInterfaceStyle` a valu « light » jusqu'à ce jour : expo-system-ui posait
+ * alors MODE_NIGHT_NO sur l'activité Android, `useColorScheme()` rendait
+ * toujours 'light', et la préférence « Système » du sélecteur de thème ne
+ * pouvait JAMAIS donner le sombre — sur les deux plateformes. Le remettre à
+ * « light » recasserait ce choix sans qu'aucun écran ne le signale.
+ *
+ * Et le plugin de force-dark est l'autre moitié : sans lui, « automatic »
+ * laisse Android repeindre l'application lui-même dès que le système passe en
+ * sombre. Constat de Julien, capture à l'appui : « l'app garde son bandeau
+ * blanc au lieu de suivre le mode système » — c'était l'inversion d'Android
+ * sur un bandeau volontairement sombre.
+ */
+describe('le thème suit le système, et Android ne le repeint pas', () => {
+  const appJson = JSON.parse(readFileSync(path.join(here, '..', 'app.json'), 'utf8'))
+
+  it('userInterfaceStyle vaut « automatic », sans quoi « Système » est mort', () => {
+    expect(appJson.expo.userInterfaceStyle).toBe('automatic')
+  })
+
+  it('et le plugin qui retire l’app du force-dark d’Android est branché', () => {
+    expect(appJson.expo.plugins).toContain('./plugins/withAndroidForceDark')
+    const plugin = readFileSync(path.join(here, '..', 'plugins', 'withAndroidForceDark.js'), 'utf8')
+    expect(plugin).toContain('android:forceDarkAllowed')
+    expect(plugin).toContain("'false'")
+  })
+
+  it('le bandeau est sombre dans les DEUX palettes — ce n’est pas un défaut', () => {
+    // Le « bandeau encre » de la charte. Un correctif qui le rendrait clair en
+    // thème clair défairait une décision de marque, pas un bug.
+    const ink = readFileSync(src('constants/ink.ts'), 'utf8')
+    const bandeaux = [...ink.matchAll(/headerBg:\s*'(#[0-9A-Fa-f]{6})'/g)].map(m => m[1])
+    expect(bandeaux).toHaveLength(2)
+    for (const c of bandeaux) {
+      const l = parseInt(c.slice(1, 3), 16) + parseInt(c.slice(3, 5), 16) + parseInt(c.slice(5, 7), 16)
+      expect(l).toBeLessThan(120) // les deux sont sombres
+    }
+  })
+})

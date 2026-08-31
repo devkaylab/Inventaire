@@ -21,6 +21,12 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  // ⚠️ `useColorScheme()` ne dit la vérité que si `userInterfaceStyle` vaut
+  // « automatic » dans app.json. Il a valu « light » jusqu'au 31 août 2026 :
+  // expo-system-ui posait alors MODE_NIGHT_NO sur l'activité, ce hook rendait
+  // toujours 'light', et la préférence « Système » de l'application ne pouvait
+  // JAMAIS donner le thème sombre — sur les deux plateformes. Les deux
+  // réglages vont ensemble ; un test le vérifie.
   const systemScheme = useColorScheme() // 'light' | 'dark' | null
   const [preference, setPreferenceState] = useState<Preference>(DEFAULT_PREFERENCE)
 

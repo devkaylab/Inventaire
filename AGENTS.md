@@ -4854,45 +4854,67 @@ jamais sur la constante de 340 pt.
 Vérifié sur l'appareil, au pixel : les deux écarts valent maintenant **8 dp**
 (1841→1862 et 2000→2021), contre 0 avant.
 
-## 2. ⚠️ Le thème panaché : DIAGNOSTIQUÉ, PAS CORRIGÉ
+## 2. Le bandeau blanc : Android repeignait l'app — CORRIGÉ
 
-*« La page balises comptées change de couleur dark puis clair ou vice versa. »*
-Reproduit, et c'est pire que ce que le mot « change » laisse entendre :
-**l'écran affiche deux thèmes EN MÊME TEMPS**, durablement.
+*« La page balises comptées change de couleur dark puis clair »*, puis, la
+capture à l'appui : *« quand je passe en dark mode, l'app garde son bandeau
+blanc au lieu de suivre le mode système ».*
 
-Mesuré dans une seule et même carte de `CountedBalisesList` :
+⚠️ **Une première version de cette note concluait « ce n'est pas le force dark ».
+C'était faux**, et l'erreur vaut d'être racontée : j'avais posé
+`forceDarkAllowed=false`, vérifié qu'il était bien dans l'APK (`aapt2 dump`,
+`0x0101058c=false`), constaté que le défaut persistait, et conclu trop vite. Ce
+que je n'avais pas : **l'option développeur « Forcer le mode sombre » était
+active sur le Pixel**, et elle est faite pour **ignorer l'opt-out des
+applications** — c'est tout son objet.
 
-| ce qu'on lit | valeur | palette |
+**La preuve, en deux mesures.** Système en sombre, application relancée :
+
+| | force-dark actif | `setprop debug.hwui.force_dark false` |
 |---|---|---|
-| fond de la carte | `#151A27` | **sombre** (`surface`) |
-| titre de la carte | `#0B0D11` | **clair** (`textPrimary` `#0B0F19`) |
-| fond de la page | `#EFF3FF` | **ni l'une ni l'autre** |
+| bandeau | `#EFF3FF` (blanc) | `#0B0F19` — la vraie valeur |
+| corps | `#08090C` | `#F7F8FA` — la vraie valeur |
+| bouton « Rejoindre » | `#7361C9` délavé | l'indigo de la charte |
 
-Un titre sombre sur une carte sombre : illisible. La troisième valeur
-n'appartient à aucune de nos deux palettes — c'est le fond de fenêtre
-**d'Android** qui transparaît.
+⚠️ **Le bouton est le témoin qui ne trompe pas** : `#7361C9` n'existe dans
+aucune des deux palettes. C'est une **inversion de luminance à teinte
+conservée** — la signature de l'algorithme d'Android, que le thème sombre de
+l'app ne produit jamais (son accent est `#6366F1`, saturé). Quand une couleur
+observée n'est dans aucune palette, ce n'est pas le code qui peint.
 
-**Ce qui a été essayé et qui n'était pas la cause** (à ne pas refaire) :
+⚠️ **Et le bandeau sombre n'est PAS un défaut** : `headerBg` vaut `#0B0F19` en
+clair et `#060910` en sombre — le « bandeau encre » de la charte, sombre dans
+les deux thèmes, comme sur le site. C'est justement parce qu'il est
+volontairement sombre que l'inversion d'Android le rendait **blanc**. Ne pas
+« corriger » ça : un test fige les deux valeurs.
 
-- **le *force dark* d'Android.** Piste sérieuse — le gabarit Expo produit
-  `Theme.AppCompat.DayNight`, le Pixel était en mode nuit **auto**, et les
-  valeurs hors palette y ressemblaient. Le plugin `plugins/withAndroidForceDark.js`
-  a été écrit et **il fonctionne** (`0x0101058c=false` vérifié dans l'APK
-  installé par `aapt2 dump`), mais **le défaut persiste à l'identique**. Le
-  plugin reste : opter hors du force dark est juste de toute façon pour une app
-  qui gère son thème elle-même. Ce n'est pas le correctif.
-- **les cinq fichiers du gabarit Expo** (`themed-text`, `themed-view`,
-  `hint-row`, `app-tabs.web`, et leur `@/constants/theme`) : ils forment un
-  **second système de thème**, la famille exacte du bandeau blanc du 29 août —
-  mais **aucun n'a d'appelant réel**, ils ne se citent qu'entre eux. Code mort,
-  à supprimer un jour ; pas la cause.
+**Deux réglages, et ils ne valent que l'un par l'autre :**
 
-**La piste qui reste, et par où reprendre** : `ThemeProvider` démarre sur
-`dark` puis **relit AsyncStorage dans un effet** et bascule. Tout ce qui a été
-monté avant la bascule et que React ne réveille pas — cellules de `FlatList`,
-closures qui capturent `makeStyles(theme)` — garde le premier thème. Commencer
-par là : rendre la préférence lisible **avant le premier rendu**, ou forcer les
-listes à se re-rendre au changement de thème.
+- **`plugins/withAndroidForceDark.js`** pose `android:forceDarkAllowed=false`.
+  Il protège tout le monde — sauf qui a activé l'option développeur, et là il
+  n'y a rien à faire depuis le code. Cela ne peut pas passer par `app.json`
+  (`userInterfaceStyle` n'écrit qu'une chaîne lue par expo-system-ui) et
+  `android/` est généré : d'où le plugin.
+- **`userInterfaceStyle` passe de `light` à `automatic`** — et c'est un **second
+  défaut, réel**, trouvé en démontant le premier. Avec `light`, expo-system-ui
+  posait `MODE_NIGHT_NO` sur l'activité, **`useColorScheme()` rendait toujours
+  'light'**, et la préférence « Système » du sélecteur de thème ne pouvait
+  **jamais** donner le sombre. Sur les deux plateformes, depuis toujours.
+
+⚠️ **Les deux ensemble, jamais l'un sans l'autre** : `automatic` sans le plugin
+laisserait Android repeindre l'app dès que le système passe en sombre. Un test
+de `tests/compte.test.ts` refuse qu'on défasse l'un des deux.
+
+**Ce qui a été écarté en chemin** : les cinq fichiers du gabarit Expo
+(`themed-text`, `themed-view`, `hint-row`, `app-tabs.web` et leur
+`@/constants/theme`) forment un **second système de thème** — la famille exacte
+du bandeau blanc du 29 août — mais **aucun n'a d'appelant réel**, ils ne se
+citent qu'entre eux. Code mort à supprimer un jour ; ce n'était pas la cause.
+
+⚠️ **Sur le Pixel de Julien, l'option développeur reste à couper à la main** :
+Options pour les développeurs → « Forcer le mode sombre ». J'ai posé
+`debug.hwui.force_dark false` par adb pour la démonstration — ça ne survit pas
+à un redémarrage.
 
 ## 3. L'audit déterministe, et ce qu'il a trouvé
 
