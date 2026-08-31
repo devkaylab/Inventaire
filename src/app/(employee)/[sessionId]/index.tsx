@@ -21,6 +21,7 @@ import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
+import { Astuce, Fort } from '@/components/Astuce'
 import { demander, signaler } from '@/lib/dialogue'
 
 export default function EmployeeProgressScreen() {
@@ -37,6 +38,10 @@ export default function EmployeeProgressScreen() {
   // affichées pour toujours. Elles s'effacent au premier « Compter » —
   // la personne a lu, elle agit, l'explication a fait son travail.
   const { aVoir: expliquer, marquerVu: expliqueVu } = useRepere('compter-auditer', profile?.id)
+  // ⚠️ Il ne se montre QUE lorsqu'une balise est réellement en attente. Tant
+  // que tout remonte, il n'y a rien à expliquer — et une explication donnée
+  // avant le problème n'est pas lue.
+  const { aVoir: expliquerFile, marquerVu: fileVue } = useRepere('file-attente', profile?.id)
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -82,10 +87,10 @@ export default function EmployeeProgressScreen() {
     // Partir avec des balises non remontées, c'est perdre le comptage : on le
     // dit avant, pas après.
     const warning = queue.pending > 0
-      ? `\n\nAttention : ${queue.pending} balise${queue.pending > 1 ? 's' : ''} (${baliseSummary(queue.balises, 5)}) n'${queue.pending > 1 ? 'ont' : 'a'} pas encore été remontée${queue.pending > 1 ? 's' : ''}. Retrouvez du réseau avant de quitter.`
+      ? `\n\nAttention : ${queue.pending} balise${queue.pending > 1 ? 's' : ''} (${baliseSummary(queue.balises, 5)}) n'${queue.pending > 1 ? 'ont' : 'a'} pas encore été remontée${queue.pending > 1 ? 's' : ''}. Retrouvez du réseau avant de quitter.`
       : ''
     void demander({
-      titre: 'Quitter l’inventaire ?',
+      titre: 'Quitter l’inventaire ?',
       texte: `Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l'équipe.${warning}`,
       action: 'Quitter',
       ton: 'danger',
@@ -129,6 +134,32 @@ export default function EmployeeProgressScreen() {
                 </View>
                 <Chevron color={theme.warning} />
               </Pressable>
+            )}
+
+            {/* C1 — la seule question qui compte avant de quitter le magasin.
+                Les deux écrans existent depuis toujours ; leur différence
+                n'était écrite nulle part. */}
+            {queue.pending > 0 && expliquerFile && (
+              <View style={styles.astuceEncart}>
+                <Astuce titre="Deux listes, et la différence compte" onCompris={fileVue}>
+                  <Fort>Balises comptées</Fort> vient du serveur&nbsp;: ce travail est sauvé, même si
+                  vous perdez le téléphone. <Fort>En attente</Fort> est encore ici, sur cet
+                  appareil. Retrouvez du réseau avant de partir&nbsp;; l&apos;envoi se fait tout seul.
+                </Astuce>
+              </View>
+            )}
+
+            {/* C2 — l'état inverse, et c'est lui qui rend l'autre lisible :
+                sans un « tout est remonté » franc, « en attente » ne se
+                remarque jamais. Ce n'est pas un repère, il revient à chaque
+                fois que la file se vide. */}
+            {queue.pending === 0 && countedPieces > 0 && (
+              <View style={styles.astuceEncart}>
+                <Astuce titre="Tout est remonté" ton="succes">
+                  Vos <Fort>{countedPieces}&nbsp;pièce{countedPieces > 1 ? 's' : ''}</Fort> sont sur le
+                  serveur. Rien n&apos;attend sur cet appareil&nbsp;: vous pouvez quitter le magasin.
+                </Astuce>
+              </View>
             )}
 
             <Pressable
@@ -198,6 +229,9 @@ function makeStyles(t: Theme) {
     pendingTitle: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
     pendingCodes: { fontSize: 13, fontFamily: Font.bold, color: t.textPrimary, marginTop: 2, ...tabular },
     pendingHint: { fontSize: 12, fontFamily: Font.medium, color: t.textSecondary, marginTop: 2 },
+    // Mêmes marges que `pendingRow` et `navRow` — l'astuce s'aligne sur les
+    // cartes de l'écran, elle ne crée pas une seconde gouttière.
+    astuceEncart: { marginHorizontal: Spacing.lg, marginTop: Spacing.md },
     navRow: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
       backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg,

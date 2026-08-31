@@ -2062,3 +2062,79 @@ describe('les cibles tactiles atteignent 48 dp', () => {
     expect(header).toMatch(/accessibilityLabel="Mon compte"/)
   })
 })
+
+/**
+ * Le tour de l'application — profil compteur (31 août 2026).
+ *
+ * Maquette validée avant codage :
+ * https://claude.ai/code/artifact/ebdfe136-f726-4c5f-b55e-eb5e2e56a3f4
+ *
+ * Quatre pièces, et leur MOMENT est ce qui les rend lisibles : une explication
+ * donnée avant que la question ne se pose n'est pas lue.
+ */
+describe('le tour de l’application, côté compteur', () => {
+  const progression = lire('app/(employee)/[sessionId]/index.tsx')
+  const scan = lire('components/scanner.tsx')
+
+  it('les trois repères sont déclarés ET effaçables par « Revoir les repères »', () => {
+    const src = lire('lib/reperes.ts')
+    for (const r of ['file-attente', 'modes-de-scan', 'corriger-scan']) {
+      expect(src).toContain(`'${r}'`)
+      // ⚠️ Déclarer sans ajouter à `oublierReperes` rendrait le repère
+      // définitif : « Revoir les repères » ne le ramènerait jamais.
+      expect(new RegExp(`const cles: Repere\\[\\][^\\n]*'${r}'`).test(src), `${r} doit être dans oublierReperes`).toBe(true)
+    }
+  })
+
+  it('⚠️ « comptées / en attente » attend qu’une balise soit vraiment en attente', () => {
+    // Tant que tout remonte, il n'y a rien à expliquer.
+    expect(progression).toMatch(/queue\.pending > 0 && expliquerFile/)
+  })
+
+  it('⚠️ « tout est remonté » est un ÉTAT, pas un repère', () => {
+    // Il revient chaque fois que la file se vide — c'est lui qui rend
+    // « en attente » remarquable. Donc pas de `useRepere`, pas de marquage.
+    expect(progression).toMatch(/queue\.pending === 0 && countedPieces > 0/)
+    expect(progression).not.toMatch(/useRepere\('tout-remonte'/)
+  })
+
+  it('⚠️ « corriger un scan » se déclenche au DEUXIÈME scan du même article', () => {
+    // Posé dans la branche où la ligne existe déjà, pas au montage de l'écran.
+    const bloc = scan.slice(scan.indexOf('const idx = prev.findIndex'))
+    expect(bloc.slice(0, 600)).toMatch(/setVolet\(\{ genre: 'corriger' \}\)/)
+  })
+
+  it('⚠️ et jamais deux aides à la fois', () => {
+    // « Corriger » ne s'ouvre pas par-dessus un volet en cours, et « trois
+    // façons de scanner » attend que celui de la balise soit refermé.
+    expect(scan).toMatch(/!voletRef\.current\) setVolet\(\{ genre: 'corriger' \}\)/)
+    expect(scan).toMatch(/if \(balisePhase \|\| volet !== null \|\| !repereModes\.aVoir\) return/)
+  })
+
+  it('⚠️ sur l’écran de comptage, un repère RECOUVRE — il ne pousse pas', () => {
+    // La colonne est à hauteur fixe (bandeau, bascule, scan auto, caméra,
+    // déclencheur, liste, clôture) et atteint déjà la hauteur utile d'un petit
+    // iPhone. Une carte insérée y ferait sortir le bas de l'écran.
+    expect(scan).not.toContain('astuceEncart')
+    expect(scan).not.toMatch(/from '@\/components\/Astuce'/)
+  })
+
+  it('l’astuce en ligne ne sert que sur un écran qui défile', () => {
+    // L'écran de progression est un `ScrollView` : là, une carte ne peut rien
+    // faire déborder. C'est le seul endroit où elle est posée.
+    expect(progression).toMatch(/<ScrollView/)
+    expect(progression).toMatch(/from '@\/components\/Astuce'/)
+    const astuce = lire('components/Astuce.tsx')
+    expect(astuce).not.toContain('Modal')
+    expect(astuce).toContain('flexShrink: 1')
+  })
+
+  it('et l’astuce n’invente pas un style à elle', () => {
+    // Fond `surface`, filet `hairline`, rayon `lg` : la carte des autres
+    // écrans. Un repère qui se dessine autrement se lit comme une publicité.
+    const astuce = lire('components/Astuce.tsx')
+    expect(astuce).toMatch(/backgroundColor: t\.surface/)
+    expect(astuce).toMatch(/borderColor: t\.hairline/)
+    expect(astuce).toMatch(/borderRadius: Radius\.lg/)
+  })
+})

@@ -16,7 +16,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import Svg, { Path } from 'react-native-svg'
+import Svg, { Circle, Path } from 'react-native-svg'
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera'
 import { useNavigation } from 'expo-router'
 // ⚠️ Chemin interne, faute de mieux : expo-router embarque react-navigation
@@ -417,9 +417,29 @@ export function Scanner({
   // vient ensuite. Chacun sa clé, chacun vu une fois — jamais une chaîne.
   const { profile } = useAuth()
   const repereOuverture = useRepere('premiere-balise', profile?.id)
+  /* ⚠️ CES DEUX REPÈRES PASSENT PAR LE VOLET, PAS PAR UNE CARTE EN LIGNE.
+   *
+   * Premier jet : deux cartes glissées dans la colonne, comme sur la maquette.
+   * Compté avant de le construire, et ça ne tient pas : cet écran est une
+   * colonne à HAUTEUR FIXE — bandeau de zone, bascule des modes, scan
+   * automatique, caméra, déclencheur, liste, clôture. Sur un iPhone SE la
+   * somme atteint déjà la hauteur utile ; une carte de plus, et le bas sort de
+   * l'écran, même avec la caméra réduite à son minimum.
+   *
+   * Le volet recouvre au lieu de pousser : il ne peut rien faire déborder, et
+   * c'est déjà le format des deux repères du premier scan sur cet écran.
+   */
+  const repereModes = useRepere('modes-de-scan', profile?.id)
+  const repereCorriger = useRepere('corriger-scan', profile?.id)
   const repereCloture = useRepere('balise-terminee', profile?.id)
   const [volet, setVolet] = useState<null | { genre: 'ouverte'; code: string; nom: string | null }
-    | { genre: 'terminee'; code: string; nom: string | null; pieces: number; refs: number }>(null)
+    | { genre: 'terminee'; code: string; nom: string | null; pieces: number; refs: number }
+    | { genre: 'modes' } | { genre: 'corriger' }>(null)
+  // Miroirs : lus depuis `setRecentScans`, où l'état capturé au rendu ment.
+  const voletRef = useRef(false)
+  voletRef.current = volet !== null
+  const repereCorrigerRef = useRef(false)
+  repereCorrigerRef.current = repereCorriger.aVoir
   // Refs miroir : resolveAndRecord est capturé par un callback mémoïsé et doit
   // lire les valeurs courantes (mode, balise active) sans closure périmée.
   const activeBaliseRef = useRef<{ code: string; name: string | null } | null>(null)
@@ -595,6 +615,35 @@ export function Scanner({
       unloadScanSound()
     }
   }, [])
+
+  /**
+   * « Trois façons de scanner », une fois, en phase article.
+   *
+   * ⚠️ Il attend que le volet « balise ouverte » soit refermé. Les deux se
+   * déclenchent au même instant — on ouvre une balise, on passe en phase
+   * article — et deux volets d'affilée, c'est une aide qu'on ferme sans lire.
+   * Règle du projet : on ne sert jamais deux aides à la fois.
+   */
+  useEffect(() => {
+    if (balisePhase || volet !== null || !repereModes.aVoir) return
+    const id = setTimeout(() => setVolet(v => (v === null ? { genre: 'modes' } : v)), 700)
+    return () => clearTimeout(id)
+  }, [balisePhase, volet, repereModes.aVoir])
+
+  /**
+   * Fermer un volet, c'est avoir lu — donc marquer le repère correspondant.
+   *
+   * ⚠️ Les deux volets du premier scan étaient marqués ailleurs, à leur
+   * ouverture ; les deux nouveaux le sont ICI, parce qu'ils expliquent au lieu
+   * d'annoncer : tant que la personne n'a pas fermé, elle n'a rien lu.
+   */
+  const fermerVolet = useCallback(() => {
+    setVolet(v => {
+      if (v?.genre === 'modes') repereModes.marquerVu()
+      if (v?.genre === 'corriger') repereCorriger.marquerVu()
+      return null
+    })
+  }, [repereModes, repereCorriger])
 
   // ── Mode douchette : maintient le focus sur le champ de capture pour recevoir
   // les frappes de la douchette, sauf pendant la saisie « article inconnu ». ──
@@ -1017,6 +1066,11 @@ export function Scanner({
     setRecentScans(prev => {
       const idx = prev.findIndex(e => e.article.sku === article.sku)
       if (idx >= 0) {
+        // Le deuxième scan d'un même article est le moment EXACT où la
+        // question « comment j'enlève ? » se pose. Avant, elle ne se pose pas.
+        // ⚠️ `voletRef` : on ne sert jamais deux aides à la fois, et ce code
+        // tourne dans un `setState` — l'état capturé au rendu ment déjà.
+        if (repereCorrigerRef.current && !voletRef.current) setVolet({ genre: 'corriger' })
         const updated = [...prev]
         updated[idx] = { ...updated[idx], qty: updated[idx].qty + 1, timestamp: Date.now() }
         updated.sort((a, b) => b.timestamp - a.timestamp)
@@ -1683,27 +1737,40 @@ export function Scanner({
           il dit ce qui vient de se passer ET ce qui vient ensuite, dans la
           charte, avec un seul geste. Il ne reviendra pas. */}
       {volet && (
-        <Modal transparent animationType="slide" onRequestClose={() => setVolet(null)}>
-          <Pressable style={styles.voletFond} onPress={() => setVolet(null)}>
+        <Modal transparent animationType="slide" onRequestClose={fermerVolet}>
+          <Pressable style={styles.voletFond} onPress={fermerVolet}>
             <Pressable style={styles.volet} onPress={() => {}}>
               <View style={styles.voletPoignee} />
+              {/* La coche annonce un événement (balise ouverte, balise finie) ;
+                  l'anneau explique ce qu'on a sous les yeux. Deux natures, deux
+                  dessins — sinon « trois façons de scanner » se lit comme une
+                  confirmation de quelque chose qu'on aurait fait. */}
               <View style={[styles.voletIcone, volet.genre === 'terminee' && styles.voletIconeOk]}>
                 <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
-                     stroke={volet.genre === 'terminee' ? theme.success : '#38C9FF'} strokeWidth={2.2}>
-                  <Path d="M5 12l4 4L19 6" />
+                     stroke={volet.genre === 'terminee' ? theme.success : '#38C9FF'} strokeWidth={2.2}
+                     strokeLinecap="round" strokeLinejoin="round">
+                  {volet.genre === 'modes' || volet.genre === 'corriger' ? (
+                    <>
+                      <Circle cx={12} cy={12} r={9} />
+                      <Path d="M12 11v5M12 8h.01" />
+                    </>
+                  ) : (
+                    <Path d="M5 12l4 4L19 6" />
+                  )}
                 </Svg>
               </View>
-              {volet.genre === 'ouverte' ? (
+              {volet.genre === 'ouverte' && (
                 <>
                   <Text style={styles.voletTitre}>Balise {volet.code} ouverte</Text>
-                  {volet.nom && <Text style={styles.voletSous}>{volet.nom}</Text>}
+                  {volet.nom && <Text style={styles.voletSous} numberOfLines={2}>{volet.nom}</Text>}
                   <Text style={styles.voletTexte}>
-                    Scannez maintenant les articles de ce rayon. Chaque lecture ajoute une pièce ;
+                    Scannez maintenant les articles de ce rayon. Chaque lecture ajoute une pièce ;
                     la quantité s&apos;ajuste dans la liste. Quand le rayon est fini, touchez
                     <Text style={styles.voletFort}> Clôturer</Text>.
                   </Text>
                 </>
-              ) : (
+              )}
+              {volet.genre === 'terminee' && (
                 <>
                   <Text style={styles.voletTitre}>Première balise terminée</Text>
                   <Text style={styles.voletTexte}>
@@ -1719,9 +1786,38 @@ export function Scanner({
                   </Text>
                 </>
               )}
-              <Pressable style={styles.voletBtn} onPress={() => setVolet(null)}>
+              {volet.genre === 'modes' && (
+                <>
+                  <Text style={styles.voletTitre}>Trois façons de scanner</Text>
+                  <Text style={styles.voletTexte}>
+                    La <Text style={styles.voletFort}>caméra</Text> du téléphone, la saisie{' '}
+                    <Text style={styles.voletFort}>manuelle</Text> d&apos;un code, ou une{' '}
+                    <Text style={styles.voletFort}>douchette</Text> Bluetooth appairée au téléphone.
+                  </Text>
+                  <View style={styles.voletFilet} />
+                  <Text style={styles.voletNote}>
+                    La douchette est bien plus rapide sur un gros rayon. Le choix se fait en haut
+                    de l&apos;écran, et il tient pour tout le comptage.
+                  </Text>
+                </>
+              )}
+              {volet.genre === 'corriger' && (
+                <>
+                  <Text style={styles.voletTitre}>Une erreur se corrige</Text>
+                  <Text style={styles.voletTexte}>
+                    Vous venez de scanner deux fois le même article. Ouvrez la liste des articles
+                    scannés : le <Text style={styles.voletFort}>−</Text> retire une pièce.
+                  </Text>
+                  <View style={styles.voletFilet} />
+                  <Text style={styles.voletNote}>
+                    Rien n&apos;est effacé sur le serveur : une correction est une ligne de plus.
+                    Votre superviseur voit le total juste, pas l&apos;erreur.
+                  </Text>
+                </>
+              )}
+              <Pressable style={styles.voletBtn} onPress={fermerVolet}>
                 <Text style={styles.voletBtnText}>
-                  {volet.genre === 'ouverte' ? 'Compris' : 'Balise suivante'}
+                  {volet.genre === 'terminee' ? 'Balise suivante' : 'Compris'}
                 </Text>
               </Pressable>
             </Pressable>
