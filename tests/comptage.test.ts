@@ -202,51 +202,30 @@ describe('quitter le comptage avec une balise ouverte', () => {
 })
 
 /**
- * Le mode douchette ne dépend plus du suffixe « Entrée ».
+ * ⚠️ La douchette valide sur son suffixe « Entrée », et rien d'autre.
  *
- * Constat de Julien le 31 août 2026 sur le Pixel : le code s'inscrivait
- * entièrement dans le champ **et y restait** — jamais validé, aucun article
- * compté. Le redressement de clavier n'y était pour rien (la chaîne reçue se
- * redresse correctement) : c'est le suffixe de la douchette qui n'arrivait
- * pas. Vérifié sur l'appareil, `KEYCODE_ENTER` comme `KEYCODE_NUMPAD_ENTER`
- * déclenchent bien `onSubmitEditing` — Android n'est pas en cause.
+ * Une temporisation de « fin de rafale » a été écrite le 31 août 2026 sur un
+ * diagnostic faux : le champ gardait son texte, j'en avais conclu que le scan
+ * n'était pas soumis — il l'était, la base le disait. Elle a été retirée le
+ * jour même, parce qu'elle **couperait un code en deux** dès qu'une douchette
+ * marque un temps au milieu de sa transmission, et fabriquerait un article
+ * inconnu à partir d'un code valide. Ne pas la réintroduire sans preuve qu'un
+ * suffixe manque vraiment.
  */
-describe('la douchette valide même sans suffixe', () => {
+describe('la douchette valide sur son suffixe, et rien d’autre', () => {
   const scanner = lire('../src/components/scanner.tsx')
 
-  it('le champ passe par la mesure de rafale, pas par une affectation nue', () => {
-    expect(scanner).toContain('onChangeText={frappeDouchette}')
-    expect(scanner).not.toContain('onChangeText={t => { hwBufRef.current = t }}')
-    // ⚠️ La fin de rafale DOUBLE le suffixe, elle ne le remplace pas : quand
-    // Entrée arrive, elle tombe bien avant la temporisation.
+  it('aucune validation par minuterie', () => {
+    const frappe = scanner.slice(scanner.indexOf('function frappeDouchette'))
+    const corps = frappe.slice(0, frappe.indexOf('\n  }'))
+    expect(corps).not.toContain('setTimeout')
     expect(scanner).toContain('onSubmitEditing={handleHardwareSubmit}')
   })
 
-  it('les deux seuils protègent la saisie au clavier', () => {
-    // Aucun doigt ne tient 35 ms d'écart moyen sur quatre caractères — c'est
-    // ce qui permet de promettre « la saisie au clavier fonctionne aussi ».
-    expect(scanner).toMatch(/RAFALE_ECART_MAX\s*=\s*35\b/)
-    expect(scanner).toMatch(/RAFALE_MIN\s*=\s*4\b/)
-    const corps = scanner.slice(scanner.indexOf('hwMinuterieRef.current = setTimeout'))
-    expect(corps).toContain('code.length >= RAFALE_MIN && moyen <= RAFALE_ECART_MAX')
-  })
-
-  it('un suffixe reçu comme caractère vaut validation', () => {
+  it('un suffixe reçu comme caractère vaut quand même validation', () => {
     // Certaines douchettes envoient CR dans le texte plutôt qu'en touche.
     const frappe = scanner.slice(scanner.indexOf('function frappeDouchette'))
-    expect(frappe.slice(0, frappe.indexOf('hwMinuterieRef.current = setTimeout')))
-      .toMatch(/test\(t\)[\s\S]*handleHardwareSubmit/)
-  })
-
-  it('une rafale ne survit ni à la validation, ni au mode, ni à l’écran', () => {
-    // La validation vide le champ, et vider le champ oublie la rafale.
-    const submit = scanner.slice(scanner.indexOf('async function handleHardwareSubmit'))
-    expect(submit.slice(0, submit.indexOf('if (!brut.trim())'))).toContain('viderChampDouchette()')
-    const vider = scanner.slice(scanner.indexOf('function viderChampDouchette'))
-    expect(vider.slice(0, vider.indexOf('function oublierRafale'))).toContain('oublierRafale()')
-    expect(scanner).toContain('useEffect(() => () => oublierRafale(), [])')
-    const mode = scanner.slice(scanner.indexOf("hwBufRef.current = ''"))
-    expect(mode.slice(0, mode.indexOf('if (mode !=='))).toContain('oublierRafale()')
+    expect(frappe.slice(0, frappe.indexOf('\n  }'))).toMatch(/test\(t\)[\s\S]*handleHardwareSubmit/)
   })
 })
 
@@ -267,9 +246,12 @@ describe('le champ de la douchette se vide et se relit', () => {
     // ⚠️ `clear()` ne tient pas : une vue neuve part de defaultValue="".
     expect(scanner).toContain('key={`hw-${hwSeq}`}')
     const vider = scanner.slice(scanner.indexOf('function viderChampDouchette'))
-    const corps = vider.slice(0, vider.indexOf('function oublierRafale'))
+    const corps = vider.slice(0, vider.indexOf('\n  }'))
     expect(corps).toContain('setHwSeq(n => n + 1)')
     expect(corps).toContain("hwBufRef.current = ''")
+    // Et toute validation passe par là, avant même le garde du champ vide.
+    const submit = scanner.slice(scanner.indexOf('async function handleHardwareSubmit'))
+    expect(submit.slice(0, submit.indexOf('if (!brut.trim())'))).toContain('viderChampDouchette()')
   })
 
   it('offre une sortie à la main — il n’y a pas de clavier logiciel', () => {
