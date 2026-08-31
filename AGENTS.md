@@ -4614,6 +4614,53 @@ table du PC est celle d'AOSP, déduite, pas observée. Le jour où une douchette
 tourne sur le Pixel, c'est le premier point à contrôler — et un code d'essai
 doit porter un **6 et un 8**.
 
+## « Est-ce qu'elle lit TOUS les EAN ? » — le balayage (31 août 2026)
+
+Question de Julien après le troisième correctif. Elle méritait mieux qu'un
+exemple : les trois défauts avaient été trouvés un par un, chaque fois avec le
+code-barres qu'il avait sous la main, et **chaque code d'essai révélait le
+défaut que le précédent ne pouvait pas montrer** (8809652585598 n'a ni 3 ni 4 ;
+045496428280 n'a pas de 3). On ne répond donc plus par un exemple.
+
+`tests/douchette.test.ts` passe **les dix chiffres à tous les rangs** d'un
+EAN-13 (220 codes : chaque chiffre × chaque position, plus les cent couples),
+sur les deux dispositions, sous **six modèles de ponctuation** (guillemet
+ouvrant et fermant, insécable étroite, insécable, espace ordinaire), plus les
+quatre longueurs normalisées (EAN-8, UPC-A, EAN-13, ITF-14).
+
+**Réponse : oui pour tout ce qui est un EAN.** Et deux gains au passage.
+
+### Règle 2 bis : la rangée du haut, tirets compris
+
+Le balayage a montré un vrai trou, hors EAN : un nombre **sans clé de
+contrôle** contenant un 6 ou un 8 restait faux sur Android — `20000-_` au lieu
+de `2000068`. Cela vise les codes internes, les compléments EAN-5 des livres,
+et les étiquettes maison dont la clé est fausse.
+
+- **⚠️ Ce qui autorise la conversion, c'est que rien d'autre qu'un nombre ne
+  s'écrit avec ces seuls signes.** Une vraie référence porte des lettres
+  (REF-12, SKU_01, M&S-001) : elle sort de l'ensemble, on n'y touche pas.
+- **Deux gardes, et il faut les deux** : au moins un caractère de la rangée
+  STRICTE (un « - » seul ne prouve rien), et la conversion n'est retenue que si
+  elle rend **des chiffres et rien d'autre**.
+
+### ⚠️ La limite qui reste, et pourquoi on la garde
+
+Sur Android, un nombre **sans clé** composé des **seuls chiffres 6 et 8**
+arrive en « -_ » et n'est pas redressé : ces deux signes s'écrivent dans de
+vraies références, et aucun autre chiffre n'est là pour prouver le décalage.
+Aucune longueur normalisée n'est concernée — la clé les arbitre toutes — et le
+champ d'une balise tranche par `redresserNumero`. Sur iOS la question ne se
+pose pas : « § » et « ! » n'ont aucun autre sens. Un test fige cette limite
+plutôt que de la taire.
+
+### ⚠️ Ce que le balayage ne prouve pas
+
+Il vérifie la conformité à **notre modèle** du clavier et de la ponctuation
+d'iOS, pas au comportement réel d'iOS. Ce modèle a été corrigé trois fois en une
+journée par des scans réels. Un quatrième écart reste possible ; ce qui a changé,
+c'est qu'il ne pourra plus venir d'un chiffre ou d'une position non essayés.
+
 ## ⚠️ Le champ de la douchette ne se vidait pas (31 août 2026)
 
 Constat de Julien sur le **Pixel** : *« android : mode douchette non

@@ -150,11 +150,16 @@ describe('douchette — la clé de contrôle tranche', () => {
 
 
   it('le numéro de balise se redresse aussi sur l’AZERTY de PC (Android)', () => {
-    // Sur Android, 6 et 8 arrivent en « - » et « _ ». `redresserSaisie` les
-    // laisse passer — ils s'écrivent dans de vraies références — mais le champ
-    // d'une balise n'attend qu'un nombre : la question est tranchée.
-    expect(redresserSaisie('&-_')).toBe('&-_')
+    // Sur Android, 6 et 8 arrivent en « - » et « _ ». Un code fait de la
+    // SEULE rangée du haut est un nombre : les deux fonctions le redressent.
+    expect(redresserSaisie('&-_')).toBe('168')
     expect(redresserNumero('&-_')).toBe('168')
+    // Mais dès qu'une lettre entre, ce sont de vraies références : on n'y
+    // touche pas, et c'est là que `redresserNumero` seul tranche.
+    expect(redresserSaisie('REF-12')).toBe('REF-12')
+    expect(redresserSaisie('SKU_01', true)).toBe('SKU_01')
+    expect(redresserSaisie('-')).toBe('-')
+    expect(redresserNumero('-_')).toBe('68')
     // iOS d'abord : un iPhone n'emprunte jamais la table du PC.
     expect(redresserNumero('&§!')).toBe('168')
     expect(redresserNumero(commeIOS('1000'))).toBe('1000')
@@ -197,5 +202,116 @@ describe('douchette — la clé de contrôle tranche', () => {
     const brut = [...'8809652585598'].map(d => win[d]).join('')
     expect(brut).toBe('__àç-(é(_((ç_')
     expect(redresserSaisie(brut)).toBe('8809652585598')
+  })
+})
+
+/**
+ * Balayage : « est-ce que la douchette lit TOUS les EAN ? »
+ *
+ * Question de Julien, le 31 août 2026. Trois défauts avaient été trouvés un par
+ * un, chaque fois avec le code-barres qu'il avait sous la main — et chaque fois
+ * le code d'essai suivant révélait le défaut que le précédent ne pouvait pas
+ * montrer (8809652585598 n'a ni 3 ni 4 ; 045496428280 n'a pas de 3). On ne
+ * répond donc plus par un exemple : on passe **les dix chiffres à tous les
+ * rangs**, sur les deux dispositions, sous toutes les ponctuations connues.
+ */
+const CLAVIER_IOS: Record<string, string> =
+  { '0': 'à', '1': '&', '2': 'é', '3': '"', '4': "'", '5': '(', '6': '§', '7': 'è', '8': '!', '9': 'ç' }
+/** L'AZERTY de PC — Android : 6 et 8 y donnent « - » et « _ ». */
+const CLAVIER_PC: Record<string, string> = { ...CLAVIER_IOS, '6': '-', '8': '_' }
+
+/** Les substitutions qu'iOS peut appliquer, dans les deux sens de guillemet. */
+const PONCTUATIONS: ((c: string) => string)[] = [
+  c => c,
+  c => (c === '"' ? '\u202F\u00BB' : c === "'" ? '\u2019' : c),  // fermant, insécable étroite
+  c => (c === '"' ? '\u00A0\u00BB' : c === "'" ? '\u2019' : c),  // fermant, insécable
+  c => (c === '"' ? ' \u00BB' : c === "'" ? '\u2019' : c),        // fermant, espace ordinaire
+  c => (c === '"' ? '\u00AB\u202F' : c === "'" ? '\u2018' : c),  // ouvrant
+  c => (c === '"' ? '\u00AB ' : c === "'" ? '\u2018' : c),
+]
+
+function cleGtin(sansCle: string): string {
+  const d = [...sansCle].map(Number).reverse()
+  let somme = 0
+  d.forEach((c, i) => { somme += c * (i % 2 === 0 ? 3 : 1) })
+  return String((10 - (somme % 10)) % 10)
+}
+const frappe = (code: string, clavier: Record<string, string>, p: (c: string) => string) =>
+  [...code].map(d => p(clavier[d])).join('')
+
+/** Chaque chiffre à chaque rang d'un EAN-13, plus les cent couples. */
+const CODES: string[] = []
+for (let rang = 0; rang < 12; rang++) {
+  for (let d = 0; d <= 9; d++) {
+    const base = [...'701234567890']
+    base[rang] = String(d)
+    const douze = base.join('')
+    CODES.push(douze + cleGtin(douze))
+  }
+}
+for (let a = 0; a <= 9; a++) {
+  for (let b = 0; b <= 9; b++) {
+    const douze = `${a}${b}`.repeat(6)
+    CODES.push(douze + cleGtin(douze))
+  }
+}
+
+describe('douchette — tous les chiffres, à tous les rangs', () => {
+  it('iOS : les 220 codes reviennent justes, quelle que soit la ponctuation', () => {
+    const echecs: string[] = []
+    for (const code of CODES) {
+      expect(gtinValide(code)).toBe(true)
+      for (const [n, p] of PONCTUATIONS.entries()) {
+        const sortie = redresserSaisie(frappe(code, CLAVIER_IOS, p))
+        if (sortie !== code) echecs.push(`ponctuation ${n} · ${code} → ${sortie}`)
+      }
+    }
+    expect(echecs.slice(0, 5)).toEqual([])
+  })
+
+  it('Android : les mêmes codes sur l’AZERTY de PC', () => {
+    const echecs: string[] = []
+    for (const code of CODES) {
+      const sortie = redresserSaisie(frappe(code, CLAVIER_PC, c => c))
+      if (sortie !== code) echecs.push(`${code} → ${sortie}`)
+    }
+    expect(echecs.slice(0, 5)).toEqual([])
+  })
+
+  it('les quatre longueurs normalisées, des deux côtés', () => {
+    // EAN-8, UPC-A, EAN-13, ITF-14.
+    for (const code of ['96385074', '045496428280', '5056635611789', '10614141543219']) {
+      expect(gtinValide(code)).toBe(true)
+      for (const clavier of [CLAVIER_IOS, CLAVIER_PC]) {
+        expect(redresserSaisie(frappe(code, clavier, c => c))).toBe(code)
+      }
+    }
+  })
+
+  it('et les nombres SANS clé de contrôle : code interne, clé fausse', () => {
+    // Une étiquette maison, un complément EAN-5, un code interne : aucune clé
+    // ne les arbitre. C'est la rangée du haut, tirets compris, qui tranche.
+    for (const code of ['2000068', '5056635611788', '00068', '12345']) {
+      for (const clavier of [CLAVIER_IOS, CLAVIER_PC]) {
+        expect(redresserSaisie(frappe(code, clavier, c => c))).toBe(code)
+      }
+    }
+  })
+
+  it('⚠️ la limite qui reste : sur Android, un nombre fait des SEULS 6 et 8', () => {
+    // « 68 » arrive en « -_ », et ces deux signes s'écrivent dans de vraies
+    // références (SKU_01, REF-12) : sans un autre chiffre pour prouver le
+    // décalage, on ne touche à rien. Il faudrait un code sans clé de contrôle
+    // composé uniquement de 6 et de 8 — aucune longueur normalisée ne le
+    // permet, la clé les arbitre toutes.
+    expect(redresserSaisie(frappe('68', CLAVIER_PC, c => c))).toBe('-_')
+    // Le champ d'une balise, lui, n'attend qu'un nombre : il tranche.
+    expect(redresserNumero(frappe('68', CLAVIER_PC, c => c))).toBe('68')
+    // Et sur iOS la question ne se pose pas : § et ! n'ont aucun autre sens.
+    expect(redresserSaisie(frappe('68', CLAVIER_IOS, c => c))).toBe('68')
+  })
+
+  it('un code déjà juste n’est jamais abîmé, même le décalage constaté', () => {
+    for (const code of CODES) expect(redresserSaisie(code, true)).toBe(code)
   })
 })

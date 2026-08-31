@@ -207,6 +207,24 @@ for (const c of [...ACCENTS]) ACCENTS.add(c.toUpperCase())
  */
 const RANGEE_DU_HAUT = new Set([...'&é"\'(§è!çà'])
 
+/**
+ * La même rangée, **tirets compris** — pour les nombres sans clé de contrôle.
+ *
+ * ⚠️ Sur l'AZERTY de PC (Android), les touches 6 et 8 donnent « - » et « _ ».
+ * Un code numérique **sans clé** qui en contient — un code interne, un
+ * complément EAN-5 de livre, une étiquette maison dont la clé est fausse — n'a
+ * donc ni preuve ni arbitrage : `20000-_` restait tel quel là où iOS rendait
+ * `2000068`.
+ *
+ * ⚠️ Ce qui autorise la conversion, c'est que **rien d'autre qu'un nombre ne
+ * s'écrit avec ces seuls signes** : une vraie référence porte des lettres
+ * (REF-12, SKU_01, M&S-001), elle sort donc de l'ensemble. Deux gardes en
+ * plus, et il faut les deux : il faut au moins un caractère de la rangée
+ * STRICTE — un « - » seul ne prouve rien — et la conversion n'est retenue que
+ * si elle rend **des chiffres et rien d'autre**.
+ */
+const RANGEE_ETENDUE = new Set([...RANGEE_DU_HAUT, ...AMBIGUS])
+
 /** Le texte porte-t-il la marque d'un clavier décalé ? */
 export function clavierDecale(brut: string): boolean {
   if (!brut) return false
@@ -262,6 +280,18 @@ export function redresserSaisie(brut: string, force = false): string {
   for (const table of [IOS, WINDOWS]) {
     const essai = convertir(texte, table)
     if (gtinValide(essai)) return essai
+  }
+
+  // Règle 2 bis : un code entièrement fait de la rangée du haut, tirets
+  // compris, est un nombre déformé — rien d'autre ne s'écrit ainsi. C'est ce
+  // qui rattrape, sur Android, les nombres que la clé de contrôle n'arbitre
+  // pas.
+  if ([...texte].some(c => RANGEE_DU_HAUT.has(c)) &&
+      [...texte].every(c => RANGEE_ETENDUE.has(c))) {
+    for (const table of [IOS, WINDOWS]) {
+      const essai = convertir(texte, table)
+      if (/^\d+$/.test(essai)) return essai
+    }
   }
 
   // Règle 3 : à défaut de clé — un SKU, une balise, un EAN mal lu — les
