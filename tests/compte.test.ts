@@ -2096,6 +2096,10 @@ describe('le tour de l’application, côté compteur', () => {
     // « en attente » remarquable. Donc pas de `useRepere`, pas de marquage.
     expect(progression).toMatch(/queue\.pending === 0 && countedPieces > 0/)
     expect(progression).not.toMatch(/useRepere\('tout-remonte'/)
+    // ⚠️ Et il tient en UNE LIGNE : un état permanent se lit à chaque
+    // ouverture. Un paragraphe qu'on relit chaque fois cesse d'être lu, et
+    // vole la place de l'encart ambre d'en face.
+    expect(progression).toMatch(/<Astuce titre="Aucune balise en attente" ton="succes" \/>/)
   })
 
   it('⚠️ « corriger un scan » se déclenche au DEUXIÈME scan du même article', () => {

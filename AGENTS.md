@@ -5016,7 +5016,7 @@ de la maquette, **existait déjà** depuis le 28 août.
 | pièce | quand | nature |
 |---|---|---|
 | Deux listes, et la différence compte | à la première mise en attente | repère `file-attente` |
-| Tout est remonté | dès que la file se vide | **état**, rejoué |
+| Aucune balise en attente | dès que la file se vide | **état**, rejoué, une ligne |
 | Trois façons de scanner | entrée en phase article | repère `modes-de-scan` |
 | Une erreur se corrige | deuxième scan du même article | repère `corriger-scan` |
 
@@ -5047,9 +5047,18 @@ test fige les deux règles.
   lorsqu'une balise est **réellement** en attente : une explication donnée
   avant que la question ne se pose n'est pas lue. Et « une erreur se corrige »
   attend le deuxième scan du même article.
-- **« Tout est remonté » n'est pas un repère mais un ÉTAT**, sans marquage : il
-  revient chaque fois que la file se vide. C'est lui qui rend « en attente »
-  remarquable — sans le contraste, l'ambre ne se voit pas.
+- **« Aucune balise en attente » n'est pas un repère mais un ÉTAT**, sans
+  marquage : il revient chaque fois que la file se vide. C'est lui qui rend
+  « en attente » remarquable — sans le contraste, l'ambre ne se voit pas.
+  · **⚠️ Il tient en UNE LIGNE, sans corps de texte** (demande de Julien, dans
+    ces termes : « un message plus court, type *no pending stickers* »). Un
+    état permanent se relit à chaque ouverture : un paragraphe y cesse d'être
+    lu et vole la place de ce qu'il faut vraiment voir, l'encart ambre d'en
+    face. D'où `children` facultatif sur `Astuce` — un **repère** explique donc
+    il a un corps, un **état** se contente de son titre.
+  · Le libellé est le **miroir exact** de l'encart ambre (« N balises en
+    attente d'envoi ») : même mot, même grammaire, la comparaison se fait sans
+    y penser.
 - **Les nouveaux volets se marquent à la FERMETURE**, pas à l'ouverture comme
   les deux anciens : ils expliquent au lieu d'annoncer, donc tant qu'on n'a pas
   fermé, on n'a rien lu.

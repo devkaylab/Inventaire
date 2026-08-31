@@ -21,6 +21,11 @@ import { useTheme } from '@/lib/theme'
  * @param onCompris  absent = l'astuce est un **état**, elle revient quand les
  *                 faits reviennent et ne se marque pas. Présent = c'est un
  *                 **repère**, il se ferme et ne revient plus.
+ * @param children  ⚠️ Facultatif, et c'est une règle de dosage : un **repère**
+ *                 explique, donc il a un corps ; un **état** affiché en
+ *                 permanence se contente de son titre. Un paragraphe qu'on
+ *                 relit à chaque ouverture cesse d'être lu, et vole la place
+ *                 de ce qu'il faut vraiment voir — l'encart ambre d'en face.
  */
 export function Astuce({
   titre,
@@ -30,7 +35,8 @@ export function Astuce({
   libelleCompris = 'Compris',
 }: {
   titre: string
-  children: React.ReactNode
+  /** Absent : l'astuce tient en une ligne. Un ÉTAT permanent n'explique pas. */
+  children?: React.ReactNode
   ton?: 'info' | 'succes'
   onCompris?: () => void
   libelleCompris?: string
@@ -59,7 +65,7 @@ export function Astuce({
             hors de la carte au lieu de passer à la ligne. */}
         <Text style={styles.titre}>{titre}</Text>
       </View>
-      <Text style={styles.texte}>{children}</Text>
+      {children ? <Text style={styles.texte}>{children}</Text> : null}
       {onCompris && (
         <Pressable
           style={styles.bouton}

@@ -155,10 +155,12 @@ export default function EmployeeProgressScreen() {
                 fois que la file se vide. */}
             {queue.pending === 0 && countedPieces > 0 && (
               <View style={styles.astuceEncart}>
-                <Astuce titre="Tout est remonté" ton="succes">
-                  Vos <Fort>{countedPieces}&nbsp;pièce{countedPieces > 1 ? 's' : ''}</Fort> sont sur le
-                  serveur. Rien n&apos;attend sur cet appareil&nbsp;: vous pouvez quitter le magasin.
-                </Astuce>
+                {/* ⚠️ Une ligne, pas un paragraphe. C'est un état PERMANENT :
+                    il se lit à chaque ouverture, donc il doit se lire d'un
+                    coup d'œil. Le miroir exact de l'encart ambre d'en face
+                    (« N balises en attente d'envoi ») — même mot, même
+                    grammaire, la comparaison se fait sans y penser. */}
+                <Astuce titre="Aucune balise en attente" ton="succes" />
               </View>
             )}
 
