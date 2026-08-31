@@ -1803,7 +1803,14 @@ function makeStyles(t: Theme) {
     reopenName: { fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
     reopenMeta: { fontSize: 12, color: t.textMuted, ...tabular },
     reopenAction: { fontSize: 13, fontFamily: Font.bold, color: t.accent },
-    closeFooterBtn: { marginHorizontal: Spacing.md, marginBottom: Spacing.md, backgroundColor: t.danger, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
+    // ⚠️ `marginTop` ET `flexShrink: 0`, et il faut les deux. Ce bouton porte
+    // une élévation (`shadowButton`) : sur Android, un élément élevé se dessine
+    // AU-DESSUS de ses voisins. Sans marge il touchait la carte du dessus, et
+    // sans `flexShrink` il se faisait comprimer quand la colonne déborde — le
+    // rouge passait alors PAR-DESSUS « Voir les N articles » ou « En attente
+    // d'un code ». Constat de Julien le 31 août 2026 : « ça dépend du moment »
+    // — c'est l'apparition de la rangée des scans qui change la hauteur totale.
+    closeFooterBtn: { marginHorizontal: Spacing.md, marginTop: Spacing.sm, marginBottom: Spacing.md, flexShrink: 0, backgroundColor: t.danger, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
     closeFooterText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
 
     modeToggle: {
@@ -1831,7 +1838,12 @@ function makeStyles(t: Theme) {
     autoScanPillText: { fontSize: 12, fontFamily: Font.bold, color: t.textMuted },
     autoScanPillTextOn: { color: t.onAccent },
 
-    cameraWrapper: { height: 340, marginHorizontal: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', position: 'relative', backgroundColor: t.cameraBg },
+    // ⚠️ La caméra est le SEUL élément qui cède la place. 340 pt est la taille
+    // validée le 29 août ; `flexShrink: 1` ne l'entame que si la colonne ne
+    // tient pas — un petit écran, ou la rangée des scans qui apparaît. Le
+    // cadre suit : `rectCadre` travaille sur la hauteur MESURÉE (`onLayout`),
+    // jamais sur cette constante.
+    cameraWrapper: { height: 340, minHeight: 200, flexShrink: 1, marginHorizontal: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', position: 'relative', backgroundColor: t.cameraBg },
     camera: { flex: 1 },
     overlay: {
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -1852,7 +1864,7 @@ function makeStyles(t: Theme) {
     torchBtnOn: { backgroundColor: '#F5C518', borderColor: '#F5C518' },
 
     voirScansBtn: {
-      marginHorizontal: Spacing.md, marginTop: Spacing.sm,
+      marginHorizontal: Spacing.md, marginTop: Spacing.sm, flexShrink: 0,
       backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
       borderRadius: Radius.md, paddingVertical: 14, paddingHorizontal: Spacing.md,
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

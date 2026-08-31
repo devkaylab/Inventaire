@@ -4825,6 +4825,99 @@ Au passage, confirmé à l'écran : `autoCapitalize="characters"` **fait bien
 remonter `À` plutôt que `à`** — d'où les majuscules accentuées ajoutées à la
 table et aux preuves. Sans elles, un scan sur deux serait resté faux.
 
+# Les écrans du compteur, mesurés (31 août 2026)
+
+*« Je pense qu'on a beaucoup travaillé sur le compte superviseur mais pas
+compteur, sers-toi des skills de design pour vérifier les bugs d'affichage. »*
+Deux défauts signalés, plus un audit.
+
+## 1. « Clôturer la balise » chevauchait son voisin — CORRIGÉ
+
+*« Le bouton clôturer en bas de page chevauche les autres boutons au-dessus,
+voir les articles ou en attente de code, ça dépend du moment. »*
+
+Mesuré sur le Pixel : **écart de 0 px**, le rouge dessiné PAR-DESSUS le coin
+inférieur de la carte. Trois causes qui se cumulent, et il faut les trois :
+
+- **`closeFooterBtn` n'avait pas de `marginTop`** — son voisin `voirScansBtn`
+  n'a pas de `marginBottom`, donc rien ne les séparait ;
+- **il porte une élévation** (`shadowButton`) : sur Android, un élément élevé se
+  dessine **au-dessus** de ses frères. D'où « chevauche » et non « colle » ;
+- **la colonne débordait**, et c'est ce qui explique « ça dépend du moment » :
+  l'apparition de la rangée « Voir les N articles » change la hauteur totale.
+
+⚠️ **La caméra est le seul élément qui cède la place** (`flexShrink: 1`,
+`minHeight: 200`), les deux boutons sont en `flexShrink: 0`. Ne pas inverser :
+le cadre suit, `rectCadre` travaille sur la hauteur **mesurée** (`onLayout`),
+jamais sur la constante de 340 pt.
+
+Vérifié sur l'appareil, au pixel : les deux écarts valent maintenant **8 dp**
+(1841→1862 et 2000→2021), contre 0 avant.
+
+## 2. ⚠️ Le thème panaché : DIAGNOSTIQUÉ, PAS CORRIGÉ
+
+*« La page balises comptées change de couleur dark puis clair ou vice versa. »*
+Reproduit, et c'est pire que ce que le mot « change » laisse entendre :
+**l'écran affiche deux thèmes EN MÊME TEMPS**, durablement.
+
+Mesuré dans une seule et même carte de `CountedBalisesList` :
+
+| ce qu'on lit | valeur | palette |
+|---|---|---|
+| fond de la carte | `#151A27` | **sombre** (`surface`) |
+| titre de la carte | `#0B0D11` | **clair** (`textPrimary` `#0B0F19`) |
+| fond de la page | `#EFF3FF` | **ni l'une ni l'autre** |
+
+Un titre sombre sur une carte sombre : illisible. La troisième valeur
+n'appartient à aucune de nos deux palettes — c'est le fond de fenêtre
+**d'Android** qui transparaît.
+
+**Ce qui a été essayé et qui n'était pas la cause** (à ne pas refaire) :
+
+- **le *force dark* d'Android.** Piste sérieuse — le gabarit Expo produit
+  `Theme.AppCompat.DayNight`, le Pixel était en mode nuit **auto**, et les
+  valeurs hors palette y ressemblaient. Le plugin `plugins/withAndroidForceDark.js`
+  a été écrit et **il fonctionne** (`0x0101058c=false` vérifié dans l'APK
+  installé par `aapt2 dump`), mais **le défaut persiste à l'identique**. Le
+  plugin reste : opter hors du force dark est juste de toute façon pour une app
+  qui gère son thème elle-même. Ce n'est pas le correctif.
+- **les cinq fichiers du gabarit Expo** (`themed-text`, `themed-view`,
+  `hint-row`, `app-tabs.web`, et leur `@/constants/theme`) : ils forment un
+  **second système de thème**, la famille exacte du bandeau blanc du 29 août —
+  mais **aucun n'a d'appelant réel**, ils ne se citent qu'entre eux. Code mort,
+  à supprimer un jour ; pas la cause.
+
+**La piste qui reste, et par où reprendre** : `ThemeProvider` démarre sur
+`dark` puis **relit AsyncStorage dans un effet** et bascule. Tout ce qui a été
+monté avant la bascule et que React ne réveille pas — cellules de `FlatList`,
+closures qui capturent `makeStyles(theme)` — garde le premier thème. Commencer
+par là : rendre la préférence lisible **avant le premier rendu**, ou forcer les
+listes à se re-rendre au changement de thème.
+
+## 3. L'audit déterministe, et ce qu'il a trouvé
+
+⚠️ **Le script du skill `deterministic-design` exige un DOM : inapplicable.**
+C'est la **méthode** qui se porte — mesurer plutôt que se fier à l'œil — et
+l'équivalent Android existe : `uiautomator dump` donne les bounds exacts de
+chaque nœud, la capture donne les couleurs. Outil dans le bac à sable
+(`audit.mjs`) : collisions, alignements, rythme vertical, cibles tactiles.
+
+Constat systématique sur les cinq écrans du compteur : **les cibles tactiles
+sont sous le minimum Android de 48 dp**, et les pires sont partagées avec le
+superviseur.
+
+| cible | mesure | où |
+|---|---|---|
+| bouton thème et bouton profil | **32 × 32 dp** | `HeaderActions`, tous les écrans |
+| « Clôturer » du bandeau de zone | **77 × 34 dp** | écran de scan |
+| onglets Caméra / Manuel / Douchette | 39 dp de haut | écran de scan |
+| « Quitter l'inventaire » | 45 dp | Ma progression |
+| « Ouvrir » et le champ balise | 46 et 47 dp | écran de scan |
+| lampe torche, et un bouton d'accueil | 40 × 40 dp, **sans libellé** | scan, accueil |
+
+Rien de tout cela n'est corrigé — c'est une passe à part, et elle touche les
+deux rôles.
+
 # L'écran de scan : le cadre, le retour, l'objectif (29 août 2026)
 
 Trois défauts trouvés en exerçant le comptage sur un vrai téléphone.

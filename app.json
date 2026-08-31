@@ -61,7 +61,8 @@
       "expo-image",
       "expo-sharing",
       "expo-notifications",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withAndroidForceDark"
     ],
     "experiments": {
       "typedRoutes": true
