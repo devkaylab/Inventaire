@@ -46,7 +46,7 @@ import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
 import { demander, signaler } from '@/lib/dialogue'
-import { redresserSaisie, clavierDecale } from '@/lib/douchette'
+import { redresserSaisie, redresserNumero, clavierDecale } from '@/lib/douchette'
 
 interface ScannerProps {
   sessionId: string
@@ -958,11 +958,12 @@ export function Scanner({
   async function openBaliseManual() {
     const brut = baliseBufRef.current.trim()
     if (!brut) return
-    // Ce champ reçoit la frappe de la douchette comme celle du clavier : même
-    // redressement qu'en mode douchette. Un numéro tapé au pavé numérique
-    // traverse sans bouger — les chiffres ne sont jamais retouchés.
+    // Ce champ reçoit la frappe de la douchette comme celle du clavier, et il
+    // n'attend qu'un nombre : `redresserNumero` s'en sert pour lever
+    // l'ambiguïté des touches 6 et 8 d'un AZERTY de PC (Android). Un numéro
+    // tapé au pavé numérique traverse sans bouger.
     if (clavierDecale(brut)) clavierDecaleRef.current = true
-    const code = redresserSaisie(brut, clavierDecaleRef.current)
+    const code = redresserNumero(brut, clavierDecaleRef.current)
     Keyboard.dismiss()
     setResolving(true)
     try {

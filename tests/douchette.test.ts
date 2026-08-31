@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clavierDecale, gtinValide, normaliserPonctuation, redresserSaisie } from '@/lib/douchette'
+import { clavierDecale, gtinValide, normaliserPonctuation, redresserNumero, redresserSaisie } from '@/lib/douchette'
 
 /**
  * Ce que produit une douchette QWERTY sur un iPhone réglé en français —
@@ -146,6 +146,22 @@ describe('douchette — la clé de contrôle tranche', () => {
     expect(redresserSaisie('&é\u201D\u2019')).toBe('1234')
     // Et la marque du décalage se lit sur le texte normalisé.
     expect(clavierDecale('&é\u00BB\u2019')).toBe(true)
+  })
+
+
+  it('le numéro de balise se redresse aussi sur l’AZERTY de PC (Android)', () => {
+    // Sur Android, 6 et 8 arrivent en « - » et « _ ». `redresserSaisie` les
+    // laisse passer — ils s'écrivent dans de vraies références — mais le champ
+    // d'une balise n'attend qu'un nombre : la question est tranchée.
+    expect(redresserSaisie('&-_')).toBe('&-_')
+    expect(redresserNumero('&-_')).toBe('168')
+    // iOS d'abord : un iPhone n'emprunte jamais la table du PC.
+    expect(redresserNumero('&§!')).toBe('168')
+    expect(redresserNumero(commeIOS('1000'))).toBe('1000')
+    // Un nombre déjà juste ne bouge pas, un QR de balise retombe sur l'autre.
+    expect(redresserNumero('1000')).toBe('1000')
+    expect(redresserNumero('SCB&M&é"')).toBe('SCB1:123')
+    expect(redresserNumero('')).toBe('')
   })
 
   it('rattrape aussi un clavier français Windows', () => {

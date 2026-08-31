@@ -4548,6 +4548,37 @@ redressement sans bouger, et le code sortait mutilé.
 Tests de garde : `tests/douchette.test.ts`, blocs « défait la ponctuation
 typographique d'iOS » et « normalise les quatre substitutions ».
 
+### Et sur Android (même jour)
+
+**La ponctuation intelligente est propre à iOS** : Android ne substitue rien à
+la frappe d'un clavier physique. La normalisation y est une non-opération, elle
+ne casse rien.
+
+**Mais Android a sa propre disposition, et c'est celle du PC** — l'AZERTY
+d'AOSP, où les touches **6 et 8** donnent « - » et « _ », là où iOS donne « § »
+et « ! ». Conséquences, dans l'ordre où elles comptent :
+
+- **Tout code-barres réel passe déjà** : la clé de contrôle arbitre, et la table
+  Windows est essayée pour ça depuis le 25 août (test « rattrape aussi un
+  clavier français Windows »). Rien à faire de ce côté.
+- **⚠️ Restait le numéro de balise**, qui n'a pas de clé : « 168 » arrivait en
+  `&-_` et ne se redressait pas, parce que « - » et « _ » ne sont dans aucune
+  table — ils s'écrivent dans de vraies références (SKU_01, REF-12) et les
+  convertir à l'aveugle les détruirait.
+  · `redresserNumero` lève l'ambiguïté **par l'attente du champ** : il n'accepte
+    qu'un nombre, donc une table qui en rend un a raison. C'est le seul endroit
+    du module où ces deux signes se convertissent, et ça ne doit pas s'étendre
+    à `redresserSaisie`.
+  · **L'ordre des tables compte** : iOS d'abord, pour qu'un iPhone n'emprunte
+    jamais celle du PC.
+- **Un SKU contenant un 6 ou un 8 scanné sur Android reste ambigu**, et le
+  reste volontairement — même arbitrage que « - » et « _ » sur iOS.
+
+⚠️ **Rien de tout cela n'a été vérifié avec une douchette sur un Android** : la
+table du PC est celle d'AOSP, déduite, pas observée. Le jour où une douchette
+tourne sur le Pixel, c'est le premier point à contrôler — et un code d'essai
+doit porter un **6 et un 8**.
+
 ## ⚠️ Un champ de capture ne se pilote pas par un état React (25 août 2026)
 
 Deux caractères sur treize **manquaient** dans le même scan (`//09?52559/`

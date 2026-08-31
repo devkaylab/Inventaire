@@ -183,6 +183,33 @@ export function clavierDecale(brut: string): boolean {
 }
 
 /**
+ * Redresse la saisie d'un **numéro de balise**, et rien d'autre.
+ *
+ * ⚠️ **C'est le seul endroit où « - » et « _ » se convertissent**, et c'est
+ * l'attente du champ qui l'autorise : il ne peut recevoir qu'un nombre. Sur
+ * l'AZERTY de PC — celui d'**Android** — les touches 6 et 8 donnent « - » et
+ * « _ », que `redresserSaisie` laisse passer parce qu'ils s'écrivent dans de
+ * vraies références (SKU_01, REF-12). Ici la question ne se pose pas : si une
+ * table rend un nombre là où la saisie n'en était pas un, elle a raison.
+ *
+ * L'ordre des tables compte : celle d'iOS d'abord, donc un iPhone n'emprunte
+ * jamais celle du PC — sur iOS les touches 6 et 8 donnent « § » et « ! », que
+ * la première table connaît déjà.
+ *
+ * Un QR de balise scanné à la douchette (`SCB1:123`) n'est pas un nombre : il
+ * retombe sur `redresserSaisie`, qui sait le lire.
+ */
+export function redresserNumero(brut: string, force = false): string {
+  const texte = normaliserPonctuation(brut)
+  if (!texte || /^\d+$/.test(texte)) return texte
+  for (const table of [IOS, WINDOWS]) {
+    const essai = convertir(texte, table)
+    if (/^\d+$/.test(essai)) return essai
+  }
+  return redresserSaisie(texte, force)
+}
+
+/**
  * Redresse une saisie de douchette.
  *
  * @param brut   ce que le champ a reçu, avant normalisation typographique
