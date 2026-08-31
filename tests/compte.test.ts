@@ -1978,6 +1978,15 @@ describe('le thème suit le système, et Android ne le repeint pas', () => {
     expect(appJson.expo.userInterfaceStyle).toBe('automatic')
   })
 
+  it('⚠️ et le Info.plist iOS ne fige plus l’apparence', () => {
+    // `ios/` est VERSIONNÉ : contrairement à `android/`, il ne se régénère pas
+    // au build. `UIUserInterfaceStyle = Light` y figeait `useColorScheme()`
+    // sur 'light', donc la préférence « Système » était morte sur iPhone comme
+    // sur Android. Retirer la clé — c'est ce que « automatic » veut dire.
+    const plist = readFileSync(path.join(here, '..', 'ios', 'Inventaire', 'Info.plist'), 'utf8')
+    expect(plist).not.toContain('UIUserInterfaceStyle')
+  })
+
   it('et le plugin qui retire l’app du force-dark d’Android est branché', () => {
     expect(appJson.expo.plugins).toContain('./plugins/withAndroidForceDark')
     const plugin = readFileSync(path.join(here, '..', 'plugins', 'withAndroidForceDark.js'), 'utf8')

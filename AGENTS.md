@@ -4901,6 +4901,15 @@ volontairement sombre que l'inversion d'Android le rendait **blanc**. Ne pas
   'light'**, et la préférence « Système » du sélecteur de thème ne pouvait
   **jamais** donner le sombre. Sur les deux plateformes, depuis toujours.
 
+⚠️ **Et côté iOS, la même clé vit dans un fichier VERSIONNÉ.**
+`ios/Inventaire/Info.plist` portait `UIUserInterfaceStyle = Light`, qui fige
+`useColorScheme()` sur 'light' exactement comme MODE_NIGHT_NO le fait sur
+Android. Contrairement à `android/`, `ios/` ne se régénère pas au build :
+changer `app.json` ne suffisait pas, il a fallu **retirer la clé à la main** —
+c'est ce que « automatic » veut dire. Un test le fige. Le piège se reposera à
+chaque réglage de `app.json` qui touche l'iOS : vérifier ce que le plist
+versionné en dit.
+
 ⚠️ **Les deux ensemble, jamais l'un sans l'autre** : `automatic` sans le plugin
 laisserait Android repeindre l'app dès que le système passe en sombre. Un test
 de `tests/compte.test.ts` refuse qu'on défasse l'un des deux.
