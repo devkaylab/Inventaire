@@ -320,6 +320,12 @@ export function Scanner({
   // jour à chaque frappe et lue au moment de valider.
   const hwBufRef = useRef('')
   const hwInputRef = useRef<TextInput>(null)
+  // ⚠️ `clear()` ne suffit pas à vider le champ (voir `viderChampDouchette`) :
+  // ce compteur le REMONTE, ce qui est la seule façon sûre.
+  const [hwSeq, setHwSeq] = useState(0)
+  // Le champ est non contrôlé : cet état ne dit QUE s'il est vide ou non, donc
+  // il bascule une fois par scan et non à chaque frappe.
+  const [hwPlein, setHwPlein] = useState(false)
   // Fin de rafale : une douchette tape tout le code en un dixième de seconde,
   // un doigt n'y arrive pas. Voir `finDeRafale` plus bas.
   const hwFrappeRef = useRef(0)          // horodatage de la frappe précédente
@@ -344,6 +350,10 @@ export function Scanner({
   useEffect(() => { feuilleScansRef.current = feuilleScans }, [feuilleScans])
   const [barcodeReady, setBarcodeReady] = useState(false)
   const [illisibleCode, setIllisibleCode] = useState<string | null>(null)
+  // Miroir : `handleHardwareSubmit` reprend la main APRÈS l'await, quand la
+  // valeur capturée au rendu ne dit plus la vérité.
+  const illisibleRef = useRef<string | null>(null)
+  illisibleRef.current = illisibleCode
   const [autoScan, setAutoScan] = useState(true)
   const [torch, setTorch] = useState(false)
   const seededRef = useRef(false)
@@ -704,6 +714,7 @@ export function Scanner({
       const article = await resolveArticle(sessionId, value)
       if (!article) {
         playErrorSound()
+        illisibleRef.current = value
         setIllisibleCode(value)
         return
       }
@@ -1067,6 +1078,32 @@ export function Scanner({
   const RAFALE_MIN = 4          // caractères — un code plus court ne s'invente pas
   const RAFALE_SILENCE = 110    // ms de silence qui closent la rafale
 
+  /**
+   * Vide le champ de capture, pour de bon.
+   *
+   * ⚠️ **`clear()` seul ne tient pas.** Constat de Julien le 31 août 2026 :
+   * après un scan pourtant ENREGISTRÉ (ABC1235 compté à 13:00:13, vérifié en
+   * base), le code brut restait affiché — `à'('ç-'é('é(`. Deux conséquences,
+   * et ce sont exactement les deux qu'il a rapportées : on croit que le scan
+   * n'est pas passé, et le scan suivant **se colle** au précédent, fabriquant
+   * un article inconnu à partir de deux codes valides.
+   *
+   * Le champ n'ayant pas de clavier logiciel (`showSoftInputOnFocus={false}`,
+   * et un clavier physique appairé empêche de toute façon le clavier tactile
+   * d'apparaître), **il n'existait aucun moyen de l'effacer à la main.**
+   *
+   * Le remontage par `key` est la seule remise à zéro qui ne dépende pas de la
+   * synchronisation JS ↔ natif : une vue neuve part de `defaultValue=""`.
+   * `clear()` reste, il ne coûte rien et suffit le plus souvent.
+   */
+  function viderChampDouchette() {
+    hwBufRef.current = ''
+    oublierRafale()
+    hwInputRef.current?.clear()
+    setHwSeq(n => n + 1)
+    setHwPlein(false)
+  }
+
   function oublierRafale() {
     if (hwMinuterieRef.current) clearTimeout(hwMinuterieRef.current)
     hwMinuterieRef.current = null
@@ -1077,6 +1114,7 @@ export function Scanner({
   function frappeDouchette(t: string) {
     const avant = hwBufRef.current
     hwBufRef.current = t
+    if (!!t !== hwPlein) setHwPlein(!!t)
     const maintenant = Date.now()
     // Un champ qui se vide (validation, effacement) repart d'une rafale neuve.
     if (!t) { oublierRafale(); return }
@@ -1110,10 +1148,8 @@ export function Scanner({
 
   // ── Douchette : une frappe-clavier terminée par Entrée (suffixe DataWedge) ──
   async function handleHardwareSubmit() {
-    oublierRafale()
     const brut = hwBufRef.current
-    hwBufRef.current = ''
-    hwInputRef.current?.clear()
+    viderChampDouchette()
     if (!brut.trim()) return
     // La douchette envoie des touches, pas des caractères : sur un iPhone
     // français, une douchette QWERTY sortie d'usine écrit &é"' pour 1234.
@@ -1121,7 +1157,10 @@ export function Scanner({
     const value = redresserSaisie(brut, clavierDecaleRef.current)
     await resolveAndRecord(value)
     // Garde le champ à l'écoute pour le scan suivant (scan continu).
-    hwInputRef.current?.focus()
+    // ⚠️ Sauf si « Article inconnu » vient de s'ouvrir : reprendre le focus
+    // derrière la feuille y renverrait le scan suivant, qui se collerait au
+    // code déjà saisi. C'est la seconde moitié du défaut du 31 août 2026.
+    if (illisibleRef.current === null) hwInputRef.current?.focus()
   }
 
   // ── Illisible confirmed ────────────────────────────────────────────────────
@@ -1535,6 +1574,9 @@ export function Scanner({
             Scannez avec la douchette (Zebra, Honeywell ou Bluetooth). La saisie au clavier fonctionne aussi.
           </Text>
           <TextInput
+            /* ⚠️ La clé REMONTE le champ à chaque validation : c'est la seule
+               remise à zéro sûre, `clear()` ne tenait pas. */
+            key={`hw-${hwSeq}`}
             ref={hwInputRef}
             style={[styles.manualInput, tabular]}
             defaultValue=""
@@ -1542,7 +1584,7 @@ export function Scanner({
             onSubmitEditing={handleHardwareSubmit}
             blurOnSubmit={false}
             showSoftInputOnFocus={false}
-            autoFocus
+            autoFocus={illisibleCode === null}
             autoCapitalize="characters"
             autoCorrect={false}
             placeholder="En attente d'un scan…"
@@ -1553,6 +1595,22 @@ export function Scanner({
               }
             }}
           />
+          {/* Ce que le champ montre est la FRAPPE BRUTE — sur une douchette
+              QWERTY et un téléphone français, des symboles. Sans cette ligne,
+              un scan réussi ressemble à un scan raté : constat de Julien le
+              31 août 2026, alors que l'article était bien compté. */}
+          {hwPlein ? (
+            <Pressable onPress={viderChampDouchette} style={styles.hwEffacer} hitSlop={12}>
+              <Text style={styles.hwEffacerText}>Effacer le champ</Text>
+            </Pressable>
+          ) : dernierScan ? (
+            <View style={styles.hwDernier}>
+              <View style={styles.hwDernierPuce} />
+              <Text style={styles.hwDernierText} numberOfLines={1}>
+                {dernierScan}{recentScans[0].article.label ? ` · ${recentScans[0].article.label}` : ''}
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : (
         <View style={styles.manualContainer}>
@@ -1935,6 +1993,11 @@ function makeStyles(t: Theme) {
     hwHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 2 },
     hwDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#34C759' },
     hwTitle: { fontSize: 14, fontFamily: Font.bold, color: t.textPrimary },
+    hwDernier: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.sm },
+    hwDernierPuce: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
+    hwDernierText: { flex: 1, fontSize: 12, color: t.textMuted, fontFamily: Font.regular },
+    hwEffacer: { alignSelf: 'flex-start', marginTop: Spacing.sm },
+    hwEffacerText: { fontSize: 12, color: t.accent, fontFamily: Font.medium },
     manualRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
     manualInput: {
       borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,

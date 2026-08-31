@@ -239,10 +239,56 @@ describe('la douchette valide même sans suffixe', () => {
   })
 
   it('une rafale ne survit ni à la validation, ni au mode, ni à l’écran', () => {
+    // La validation vide le champ, et vider le champ oublie la rafale.
     const submit = scanner.slice(scanner.indexOf('async function handleHardwareSubmit'))
-    expect(submit.slice(0, submit.indexOf('const brut'))).toContain('oublierRafale()')
+    expect(submit.slice(0, submit.indexOf('if (!brut.trim())'))).toContain('viderChampDouchette()')
+    const vider = scanner.slice(scanner.indexOf('function viderChampDouchette'))
+    expect(vider.slice(0, vider.indexOf('function oublierRafale'))).toContain('oublierRafale()')
     expect(scanner).toContain('useEffect(() => () => oublierRafale(), [])')
     const mode = scanner.slice(scanner.indexOf("hwBufRef.current = ''"))
     expect(mode.slice(0, mode.indexOf('if (mode !=='))).toContain('oublierRafale()')
+  })
+})
+
+/**
+ * Le champ de capture se vide vraiment, et il dit ce qui est passé.
+ *
+ * Constat de Julien le 31 août 2026, sur les deux systèmes : après un scan
+ * **pourtant enregistré** (ABC1235 compté à 13:00:13, vérifié en base), le
+ * code brut restait affiché — donc on croit que le scan a échoué, et le scan
+ * suivant se colle au précédent et fabrique un article inconnu à partir de
+ * deux codes valides. Le champ n'ayant aucun clavier logiciel, il n'existait
+ * aucun moyen de l'effacer à la main.
+ */
+describe('le champ de la douchette se vide et se relit', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+
+  it('se vide par REMONTAGE, pas seulement par clear()', () => {
+    // ⚠️ `clear()` ne tient pas : une vue neuve part de defaultValue="".
+    expect(scanner).toContain('key={`hw-${hwSeq}`}')
+    const vider = scanner.slice(scanner.indexOf('function viderChampDouchette'))
+    const corps = vider.slice(0, vider.indexOf('function oublierRafale'))
+    expect(corps).toContain('setHwSeq(n => n + 1)')
+    expect(corps).toContain("hwBufRef.current = ''")
+  })
+
+  it('offre une sortie à la main — il n’y a pas de clavier logiciel', () => {
+    expect(scanner).toContain('onPress={viderChampDouchette}')
+    expect(scanner).toContain('Effacer le champ')
+  })
+
+  it('confirme le dernier scan en clair sous le champ', () => {
+    // Le champ montre la FRAPPE BRUTE (des symboles) : sans cette ligne, un
+    // scan réussi ressemble à un scan raté.
+    const bloc = scanner.slice(scanner.indexOf('key={`hw-${hwSeq}`}'))
+    expect(bloc.slice(0, bloc.indexOf('</View>'))).toContain('dernierScan')
+  })
+
+  it('ne reprend pas le focus derrière « Article inconnu »', () => {
+    // Sinon le scan suivant se colle au code déjà saisi dans la feuille.
+    const submit = scanner.slice(scanner.indexOf('async function handleHardwareSubmit'))
+    expect(submit.slice(0, submit.indexOf('\n  }')))
+      .toContain('if (illisibleRef.current === null) hwInputRef.current?.focus()')
+    expect(scanner).toContain('autoFocus={illisibleCode === null}')
   })
 })

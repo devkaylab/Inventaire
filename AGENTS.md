@@ -4626,6 +4626,52 @@ comptages sont ensuite passés normalement (12:47-12:48) — le défaut est donc
 couvre la panne quelle qu'en soit la cause ; elle n'est pas la démonstration
 que la cause est bien celle-là.
 
+### ⚠️ Et il ne se vidait pas — le vrai défaut du jour
+
+Second retour de Julien, le même jour : *« le code-barres affiché est en
+symbole, pas en chiffre, ce qui laisse penser que le scan n'est pas passé […]
+un code inconnu reste dans la barre et impossible à supprimer, donc se cumule
+avec le scan suivant, créant un inconnu »* — **sur les deux systèmes**.
+
+**Le scan était passé.** Le champ contenait `à'('ç-'é('é(` (soit
+045496425425), et `ABC1235` avait bien été compté à **13:00:13**, vérifié en
+base. Le code brut était simplement resté affiché : `hwInputRef.current
+?.clear()` ne tient pas — la re-render qui suit `resolveAndRecord` le défait.
+
+⚠️ **C'est ce qui rend le diagnostic contre-intuitif** : le symptôme visible
+(« des symboles ») ressemble à un défaut de redressement, alors que c'est un
+défaut de vidage. La base tranche en une requête ; l'écran, non.
+
+Deux conséquences, et ce sont exactement celles qu'il a rapportées :
+
+1. on croit que le scan a échoué, et on rescanne ;
+2. **le scan suivant se colle au précédent** et fabrique un article inconnu à
+   partir de deux codes valides.
+
+Et **aucun moyen de l'effacer à la main** : `showSoftInputOnFocus={false}`, et
+un clavier physique appairé empêche de toute façon le clavier tactile
+d'apparaître. Pas de retour arrière, pas de croix.
+
+Trois gestes :
+
+- **⚠️ Le champ se vide par REMONTAGE** (`key={\`hw-${hwSeq}\`}`), pas par
+  `clear()`. Une vue neuve part de `defaultValue=""` : c'est la seule remise à
+  zéro qui ne dépende pas de la synchronisation JS ↔ natif. `clear()` reste, il
+  ne coûte rien et suffit le plus souvent. **Ne pas « simplifier » en le
+  retirant.**
+- **Une ligne de confirmation sous le champ** — « Dernier scan · 045496425425 ·
+  <libellé> ». Le champ montre la frappe brute et continuera de le faire ; c'est
+  cette ligne, pas lui, qui répond à « est-ce que ça a pris ? ». Le mode
+  douchette n'avait **aucun** retour, contrairement au viseur.
+- **« Effacer le champ »**, visible seulement quand il y a quelque chose à
+  effacer. `hwPlein` est un booléen — il bascule une fois par scan, pas à chaque
+  frappe : ce n'est pas le `value` que la note du 25 août interdit.
+
+⚠️ **Et le focus ne revient pas derrière « Article inconnu »** : reprendre la
+main sous la feuille y renverrait le scan suivant, qui se collerait au code déjà
+saisi. C'est la seconde moitié du même défaut. `illisibleRef` sert à ça — l'état
+capturé au rendu ne dit plus la vérité après l'`await`.
+
 ### Piège de méthode : le champ affiche le brut, toujours
 
 Le champ de capture est **non contrôlé** depuis le 25 août : ce qu'on y lit est
