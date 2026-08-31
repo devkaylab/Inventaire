@@ -136,7 +136,7 @@ export default function Home() {
               <h2>Équipez votre magasin</h2>
               <p>
                 Une licence par magasin, calée sur le nombre de personnes qui comptent en même
-                temps — inventaires illimités. À partir de 65 € par mois :{' '}
+                temps — inventaires illimités. À partir de 89 € par mois :{' '}
                 <Link href="/tarifs">voir les tarifs</Link>. Votre entreprise utilise déjà
                 Quantinvo ? Son administrateur vous ouvre l&apos;accès depuis son espace.
               </p>

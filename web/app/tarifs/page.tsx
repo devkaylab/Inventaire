@@ -8,7 +8,7 @@ import { CONTACT_EMAIL } from '@/lib/contact'
 export const metadata: Metadata = {
   title: 'Tarifs — Quantinvo',
   description:
-    'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 65 €/mois, Advanced 225 €, Enterprise 650 € — sans engagement, sans déclaration de stock et sans terminal à acheter.',
+    'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 89 €/mois, Advanced 310 €, Enterprise 890 € — sans engagement, sans déclaration de stock et sans terminal à acheter.',
 }
 
 /** Ce que le prix comprend, quelle que soit l'offre. */

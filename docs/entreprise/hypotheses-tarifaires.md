@@ -9,8 +9,9 @@ nombre d'appareils qui comptent.
 
 > **DÉCISION DU 30 AOÛT 2026 — c'est l'hypothèse 4 qui est retenue** : trois
 > offres calées sur le **nombre d'appareils qui comptent**, pour **un
-> magasin** — Essential 65 €/mois ou 690 €/an, Advanced 225 € ou 2 400 €,
-> Enterprise 650 € ou 6 900 € HT, les trois souscrites **en ligne**. Elle est
+> magasin**, les trois souscrites **en ligne**. **Revalorisées le 31 août
+> 2026** (+36,9 %) : Essential 89 €/mois ou 950 €/an, Advanced 310 € ou
+> 3 300 €, Enterprise 890 € ou 9 450 € HT. Elle est
 > **décidée, pas encore construite** : rien n'existe en base ni dans les
 > écrans, et le nombre d'appareils n'est même pas mesurable aujourd'hui
 > (`DEVICE_KEY` est retirée à chaque lancement de l'app). Lire la section en
@@ -490,10 +491,19 @@ se contrôle pas.
 
 | Offre | Appareils | Par mois | À l'année | Net (annuel) | € / appareil au plafond |
 |---|---|---|---|---|---|
-| **Essential** | 2 | **65 €** | **690 €** | 411 € | 345 € |
-| **Advanced** | 3 à 20 | **225 €** | **2 400 €** | 1 428 € | 120 € |
-| **Enterprise** | 21 à 100 | **650 €** | **6 900 €** | 4 106 € | 69 € |
-| Au-delà | > 100 | +47 € / 10 | +500 € / 10 | — | 50 € |
+| **Essential** | 2 | **89 €** | **950 €** | 565 € | 475 € |
+| **Advanced** | 3 à 20 | **310 €** | **3 300 €** | 1 964 € | 165 € |
+| **Enterprise** | 21 à 100 | **890 €** | **9 450 €** | 5 623 € | 94,5 € |
+| Au-delà | > 100 | +64 € / 10 | +690 € / 10 | — | 69 € |
+
+**⚠️ Revalorisation du 31 août 2026.** Julien a posé Enterprise à 890 €/mois et
+demandé que les deux autres suivent **le même pourcentage** (+36,9 %), dans un
+but explicite : *maximiser la marge sur Advanced*. Les mensuels sont l'arrondi
+de ce calcul (65 → 89, 225 → 310 — arrondi vers le haut, c'est l'offre qu'on
+veut faire rendre —, 650 → 890) ; les annuels gardent le rapport d'environ 10,6
+mensualités de la grille d'origine. **Essential est assumé trop cher en
+l'état** — 950 € pour deux appareils n'est plus un prix d'appel — et sera revu
+séparément : ce n'est pas un oubli, c'est un report.
 
 **⚠️ Une licence couvre UN magasin**, et le nombre d'appareils est celui qui
 compte *dans ce magasin*. Un second magasin prend sa propre licence, choisie
@@ -502,7 +512,7 @@ boutique qui compte à deux ne prennent pas la même. Le multi-magasins passe pa
 un devis global — voir « la remise réseau est reportée » plus bas.
 
 **Le mensuel est le prix affiché**, l'annuel est l'option qui économise
-(90 / 300 / 900 €, soit ~11,5 % dans les trois cas). Douze mensualités, pas
+(118 / 420 / 1 230 €, soit ~11 % dans les trois cas). Douze mensualités, pas
 treize : la piste « toutes les 4 semaines » a été essayée le 30 août au soir
 puis écartée — un acheteur B2B compare en mois, et le treizième prélèvement
 découvert sur un relevé se retourne contre le vendeur.
@@ -524,13 +534,13 @@ Coût marginal annuel d'un client Enterprise (40 appareils, 4 inventaires par an
 | Messages temps réel (~460 000 par inventaire, forfait Pro à 5 M/mois) | ~5 € |
 | Sortie réseau (catalogue de 10 Mo par appareil, forfait 250 Go) | < 1 € |
 | Stockage, écritures | ~0 € |
-| **Stripe (1,4 % + 0,25 €)** | **~97 €** |
-| **Total** | **~105 € sur 6 900 € facturés, soit 1,5 %** |
+| **Stripe (1,4 % + 0,25 €)** | **~132 €** |
+| **Total** | **~140 € sur 9 450 € facturés, soit 1,5 %** |
 
 Deux conclusions :
 
 - **97 % du coût variable est Stripe**, donc un pourcentage fixe du prix. Sur
-  Essential le ratio est identique (~10 € sur 690 €). **Les dépenses ne
+  Essential le ratio est identique (~13 € sur 950 €). **Les dépenses ne
   segmentent rien** : indexer la grille dessus donne trois prix proportionnels
   au même prix, et fait retomber sur le forfait à 30-60 €/mois que la mémoire
   projet interdit — l'erreur de facteur dix.
@@ -544,8 +554,8 @@ Deux conclusions :
 
 | | Clients servis | Chiffre d'affaires |
 |---|---|---|
-| Enterprise, ~10 h par client et par an | 35 | **241 500 €** |
-| Advanced, ~6 h par client et par an | 58 | **139 200 €** |
+| Enterprise, ~10 h par client et par an | 35 | **330 750 €** |
+| Advanced, ~6 h par client et par an | 58 | **191 400 €** |
 
 Un petit commerçant non technique ne consomme pas moins de support qu'un grand
 magasin — souvent davantage, il n'a pas d'informaticien. **C'est la
@@ -566,45 +576,58 @@ deux axes indépendants :
 
 Sans cette séparation, un réseau de 30 boutiques à 4 personnes — le plus gros
 client possible — tomberait dans « Essential × 30 ». Il prend 30 Advanced :
-72 000 € au tarif affiché, et c'est là qu'une remise se négocie.
+99 000 € au tarif affiché, et c'est là qu'une remise se négocie.
 
 ⚠️ **Conséquence de vocabulaire à connaître** : « Enterprise » désigne ici **la
 taille d'un magasin**, pas un réseau. Le commercial d'un client à 30 boutiques
 voudra l'appeler Enterprise alors qu'il relève d'Advanced. À trancher le jour où
 le cas se présente ; rien ne le bloque aujourd'hui.
 
-### D'où viennent 690, 2 400 et 6 900
+### D'où viennent 950, 3 300 et 9 450
 
-- **500 € par tranche de 10 au-delà de 100 appareils** (47 € en mensuel) — et
-  ce chiffre a une histoire à ne pas refaire. Il valait 700 €, c'est-à-dire
-  exactement 6 900 ÷ 100 : le supplément reconduisait le tarif moyen
-  d'Enterprise, alors que **la grille est dégressive à chaque palier**
-  (345 → 120 → 69 € par appareil). 500 € est le cran suivant, soit 50 €. Un
-  magasin à 150 appareils paie 9 400 €, encore sous l'ancre de marché.
-- **6 900 €** est le chiffre déjà établi le 22 août pour le prix unique par
-  magasin : le prix de la grande surface dans la grille au volume, et 31 % sous
-  l'ancre de marché (Zebra SmartCount, ≈ 10 000 € par magasin et par an,
-  **confidentielle, ne se cite dans aucun livrable**). Le plafond ne monte pas
-  au-delà : passé ce niveau, on sort sur devis.
-- **690 €** vient d'une correction. Julien proposait un Solo à 280 €, puis à
-  490 € pour un utilisateur. Passé à **deux** utilisateurs, l'offre change de
-  nature : elle permet un vrai inventaire à deux, donc l'audit en seconde passe
-  et l'arbitrage des écarts — la fonction qui sépare *compter* de *fiabiliser*.
-  690 €/an, soit 58 €/mois, reste un prix d'appel.
-- **2 400 €** est le prix de la frontière, pas celui du milieu. Avec Essential à
-  deux appareils, on passe d'offre pour **un seul appareil de plus** : à 2 900 €
-  la facture était multipliée par 4,2 sur ce pas, et cette frontière devenait
-  l'endroit où le client a le plus intérêt à sous-déclarer. À 2 400 € le pas est
-  de 3,5.
+Les trois montants sont ceux du 30 août 2026 (690, 2 400, 6 900) revalorisés du
+même pourcentage le 31 août. **Le raisonnement d'origine est conservé
+ci-dessous** : il dit pourquoi les rapports entre les paliers sont ce qu'ils
+sont, et la revalorisation les a précisément préservés.
+
+- **690 € par tranche de 10 au-delà de 100 appareils** (64 € en mensuel) — et
+  ce chiffre a une histoire à ne pas refaire. Le premier calage le posait au
+  tarif moyen d'Enterprise : le supplément reconduisait le palier au lieu de le
+  prolonger, alors que **la grille est dégressive à chaque palier**
+  (475 → 165 → 94,5 € par appareil). 69 € par appareil est le cran suivant.
+  ⚠️ **Un magasin à 150 appareils paie désormais 12 900 €, donc AU-DESSUS de
+  l'ancre de marché** (≈ 10 000 €) — ce n'était pas le cas avant la
+  revalorisation. Au-delà de cent appareils, on sort de toute façon sur devis :
+  c'est là que la question se traite, pas dans la grille affichée.
+- **9 450 €** vient de 6 900 €, le chiffre établi le 22 août pour le prix unique
+  par magasin — le prix de la grande surface dans la grille au volume, alors
+  31 % sous l'ancre de marché (Zebra SmartCount, ≈ 10 000 € par magasin et par
+  an, **confidentielle, ne se cite dans aucun livrable**). ⚠️ **Cette marge de
+  31 % a été dépensée** : à 9 450 € on est à ~5 % sous l'ancre. C'est le vrai
+  coût de la revalorisation, et il se paiera en négociation face à Zebra. Le
+  plafond ne monte pas au-delà : passé ce niveau, on sort sur devis.
+- **950 €** vient de 690 €, lui-même une correction : Julien proposait un Solo à
+  280 €, puis à 490 € pour un utilisateur. Passé à **deux** utilisateurs,
+  l'offre change de nature — elle permet un vrai inventaire à deux, donc l'audit
+  en seconde passe et l'arbitrage des écarts, la fonction qui sépare *compter*
+  de *fiabiliser*. ⚠️ **Mais 950 €/an, soit 79 €/mois, n'est plus un prix
+  d'appel**, et Julien le sait : il l'a dit en demandant la hausse. Essential
+  est à revoir séparément — c'est le seul palier dont la revalorisation
+  proportionnelle n'a pas de justification propre.
+- **3 300 €** reste le prix de la frontière, pas celui du milieu. Avec Essential
+  à deux appareils, on passe d'offre pour **un seul appareil de plus** : c'est
+  l'endroit où le client a le plus intérêt à sous-déclarer, donc le pas doit
+  rester tenable. Il vaut 3,47 (950 → 3 300), exactement celui du 30 août
+  (3,48) — la hausse proportionnelle n'a pas déplacé cette frontière.
 
 ### La règle du prix à l'unité tient sans verrou juridique
 
-345 € > 120 € > 69 €. Et surtout, l'empilement est perdant :
+475 € > 165 € > 94,5 €. Et surtout, l'empilement est perdant :
 
 | Ce qu'on voudrait empiler | Coût | L'offre juste |
 |---|---|---|
-| 10 Essential pour 20 appareils | 6 900 € | 2 400 € |
-| 50 Essential pour 100 appareils | 34 500 € | 6 900 € |
+| 10 Essential pour 20 appareils | 9 500 € | 3 300 € |
+| 50 Essential pour 100 appareils | 47 500 € | 9 450 € |
 
 ⚠️ **Un premier calage avait échoué sur ce point exact** (Essential à 290 € et
 un palier à 1 900 € : cinq Essential coûtaient 1 450 €, donc moins). Il avait
@@ -625,9 +648,9 @@ unités » (celle qui avait servi à caler l'hypothèse 3) :
 
 | Appareils | Stock équivalent | Hypothèse 1 | Hypothèse 4 | Écart |
 |---|---|---|---|---|
-| 2 | 10 000 | 2 100 € | 690 € | −67 % |
-| 20 | 100 000 | 6 600 € | 2 400 € | −64 % |
-| 100 | 500 000 | 14 400 € | 6 900 € | −52 % |
+| 2 | 10 000 | 2 100 € | 950 € | −55 % |
+| 20 | 100 000 | 6 600 € | 3 300 € | −50 % |
+| 100 | 500 000 | 14 400 € | 9 450 € | −34 % |
 
 Deux lectures, et la seconde atténue la première :
 
@@ -656,7 +679,7 @@ mesure.
    22 h, un soir de comptage.* D'où la règle non négociable ci-dessous.
 2. **L'offre Solo (27 août 2026)** — 49 €/mois, 1 magasin, **1 utilisateur**,
    plafond de 2 000 unités. Elle est remplacée par Essential : deux
-   utilisateurs, 690 €/an, pas de plafond de pièces. Son verrou « 1 utilisateur »
+   utilisateurs, 950 €/an, pas de plafond de pièces. Son verrou « 1 utilisateur »
    passait par un refus sec dans la policy `team_invitations` ; à deux, ce n'est
    plus un refus mais **un décompte**.
 3. **L'hypothèse 1, au volume de stock** — elle cesse d'être l'assiette. Le
@@ -702,7 +725,7 @@ Cinq décisions prises en dessinant la page, chacune avec sa raison.
 
 **1. Les trois offres se souscrivent EN LIGNE, Enterprise comprise.** Elle
 demandait un devis dans le premier jet. Conséquence directe et assumée : un
-client peut engager 6 900 € par carte sans que personne ne lui parle, et **le
+client peut engager 9 450 € par carte sans que personne ne lui parle, et **le
 parcours devis existant ne sert plus qu'à deux cas** — le multi-magasins et les
 établissements de plus de 100 appareils. C'est beaucoup moins de travail que
 prévu (six prix Stripe récurrents et rien d'autre), mais c'est un choix
@@ -736,7 +759,7 @@ multiplié par 2,5. Le calcul, à garder pour ne pas le refaire :
 | **Total** | **≈ 1,75 $, soit 1,65 €** |
 
 **× 2,5 = 4,13 € par appareil et par an, soit 41 € par tranche de 10.** Le
-chiffre est juste et inutilisable : 41 € sur une facture de 6 900 € ne vaut pas
+chiffre est juste et inutilisable : 41 € sur une facture de 9 450 € ne vaut pas
 la ligne de facturation. C'est la démonstration, en petit, de ce qui est écrit
 plus haut — **le coût marginal est si proche de zéro qu'aucun multiplicateur
 raisonnable n'en tire un prix**. Le supplément a donc été calé sur la

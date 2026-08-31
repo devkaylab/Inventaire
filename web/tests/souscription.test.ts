@@ -132,7 +132,7 @@ describe('le paiement se fait chez Stripe, jamais ici', () => {
 describe('la TVA', () => {
   it('est exigée en mode live, tolérée en test', () => {
     // Le seul endroit où l'oubli coûte de l'argent : sans taux, Stripe
-    // encaisserait 225 € là où 270 € sont dus, et l'écart sortirait de la
+    // encaisserait 310 € là où 372 € sont dus, et l'écart sortirait de la
     // poche de l'éditeur à chaque échéance. La clé dit dans quel mode on est.
     expect(edgeNu).toContain("stripeKey.startsWith('sk_live_')")
     expect(edgeNu).toContain("code: 'tva_absente'")
@@ -212,6 +212,6 @@ describe('la page de souscription', () => {
   })
 
   it('affiche des montants et non des centimes', () => {
-    expect(euros(OFFRES[1].mois)).toBe('225 €')
+    expect(euros(OFFRES[1].mois)).toBe('310 €')
   })
 })

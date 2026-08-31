@@ -124,10 +124,10 @@ export async function creerSessionCheckout(
  *   chaque échéance sans qu'on le demande.
  *
  * ⚠️ `taxRateId` porte la TVA. Nos prix sont HORS TAXES : sans lui, Stripe
- * encaisserait 225 € au lieu de 270 €, et la TVA due sortirait de la poche de
+ * encaisserait 310 € au lieu de 372 €, et la TVA due sortirait de la poche de
  * l'éditeur. Le taux doit être créé dans le tableau de bord Stripe en mode
  * **exclusif** (la taxe s'ajoute au prix) — un taux inclusif ferait l'inverse,
- * il découperait 225 € en 187,50 € + TVA.
+ * il découperait 310 € en 258,33 € + TVA.
  *
  * La clé d'idempotence reste l'identifiant de la demande : un second clic
  * rouvre la même session, jamais une seconde.

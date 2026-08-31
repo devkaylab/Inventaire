@@ -23,8 +23,9 @@ describe('la grille tarifaire', () => {
       expect(parAppareils[i], `${OFFRES[i].nom} doit coûter moins par appareil`)
         .toBeLessThan(parAppareils[i - 1])
     }
-    // Et le supplément au-delà du plafond continue de descendre : à 700 € il
-    // reconduisait exactement 6 900 ÷ 100 et figeait la dégressivité.
+    // Et le supplément au-delà du plafond continue de descendre : au tarif
+    // moyen d'Enterprise (9 450 ÷ 100) il reconduirait le palier au lieu de le
+    // prolonger, et figerait la dégressivité.
     const dernier = parAppareils[parAppareils.length - 1]
     expect(SUPPLEMENT.an / SUPPLEMENT.par).toBeLessThan(dernier)
   })
@@ -48,7 +49,7 @@ describe('la grille tarifaire', () => {
       // été écartée le 30 août 2026.
       expect(o.mois * 12).toBeGreaterThan(o.an)
     }
-    expect(OFFRES.map(economie)).toEqual([90, 300, 900])
+    expect(OFFRES.map(economie)).toEqual([118, 420, 1230])
   })
 
   it('désigne la bonne offre pour un nombre d’appareils', () => {

@@ -21,6 +21,13 @@
 // Tant qu'un secret manque, l'offre correspondante répond « indisponible » —
 // et le client n'est jamais envoyé sur une page de paiement vide.
 //
+// ⚠️ COROLLAIRE DE LA REVALORISATION DU 31 AOÛT 2026 : la grille ci-dessous ne
+// décide de RIEN au moment de payer. Elle sert à l'affichage et à
+// `annual_price_cents` ; le montant prélevé est celui du Price Stripe. Les six
+// Price doivent donc être recréés aux nouveaux montants et les six secrets
+// remplacés — sans quoi le site annonce 310 € et Stripe encaisse 225 €, et
+// l'écart ne se voit qu'au relevé.
+//
 // ⚠️ Un septième secret porte la TVA : `STRIPE_TAX_RATE` (un `txr_…` créé dans
 // Stripe, en mode EXCLUSIF). Facultatif en test, **exigé en live** — voir le
 // garde-fou plus bas.
@@ -45,9 +52,9 @@ const cors = {
  * les deux — s'ils divergent, la suite échoue.
  */
 const GRILLE = {
-  essential: { monthly: 6500, yearly: 69000, nom: 'Essential' },
-  advanced: { monthly: 22500, yearly: 240000, nom: 'Advanced' },
-  enterprise: { monthly: 65000, yearly: 690000, nom: 'Enterprise' },
+  essential: { monthly: 8900, yearly: 95000, nom: 'Essential' },
+  advanced: { monthly: 31000, yearly: 330000, nom: 'Advanced' },
+  enterprise: { monthly: 89000, yearly: 945000, nom: 'Enterprise' },
 } as const
 
 type Plan = keyof typeof GRILLE
@@ -95,8 +102,8 @@ Deno.serve(async (req) => {
 
   // ⚠️ LA TVA, ET LE GARDE-FOU QUI EMPÊCHE DE L'OUBLIER EN PRODUCTION.
   //
-  // Nos prix sont hors taxes : sans taux de TVA, Stripe encaisserait 225 € là
-  // où 270 € sont dus, et la différence sortirait de la poche de l'éditeur à
+  // Nos prix sont hors taxes : sans taux de TVA, Stripe encaisserait 310 € là
+  // où 372 € sont dus, et la différence sortirait de la poche de l'éditeur à
   // chaque échéance — une erreur qui ne se voit qu'à la déclaration.
   //
   // En mode TEST on tolère son absence : on valide le parcours avant d'avoir

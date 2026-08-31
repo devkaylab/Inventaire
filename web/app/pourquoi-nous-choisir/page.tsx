@@ -7,7 +7,7 @@ import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from 
 export const metadata: Metadata = {
   title: 'Pourquoi choisir Quantinvo — l’outil d’inventaire pour le commerce',
   description:
-    'Vos équipes comptent avec leur téléphone, vous pilotez en direct, le stock validé est fiable. Import sans reformater, audit des écarts, licence par magasin à partir de 65 € par mois : les raisons de choisir Quantinvo.',
+    'Vos équipes comptent avec leur téléphone, vous pilotez en direct, le stock validé est fiable. Import sans reformater, audit des écarts, licence par magasin à partir de 89 € par mois : les raisons de choisir Quantinvo.',
 }
 
 const RAISONS = [
@@ -121,7 +121,7 @@ export default function PourquoiPage() {
               <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
               <h2>Équipez votre magasin</h2>
               <p>
-                Trois offres, un prix par magasin, affiché : à partir de 65 € par mois.
+                Trois offres, un prix par magasin, affiché : à partir de 89 € par mois.
                 Déposez votre demande et nous ouvrons vos accès.
               </p>
               <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>

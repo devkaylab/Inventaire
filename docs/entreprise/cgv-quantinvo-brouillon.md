@@ -346,15 +346,15 @@ d'Appareils comptant **simultanément** dans le Magasin (article 6.3).
 
 | Offre | Appareils comptant simultanément | Par mois | Par an |
 |---|---|---|---|
-| Essential | Jusqu'à 2 | 65 € | 690 € |
-| Advanced | De 3 à 20 | 225 € | 2 400 € |
-| Enterprise | De 21 à 100 | 650 € | 6 900 € |
+| Essential | Jusqu'à 2 | 89 € | 950 € |
+| Advanced | De 3 à 20 | 310 € | 3 300 € |
+| Enterprise | De 21 à 100 | 890 € | 9 450 € |
 
 Au-delà de cent Appareils comptant sur un même Magasin (article 6.5), par
-tranche entamée de dix Appareils supplémentaires : **47 € par mois** ou
-**500 € par an**.
+tranche entamée de dix Appareils supplémentaires : **64 € par mois** ou
+**690 € par an**.
 
-Le paiement annuel représente une économie de 90 €, 300 € et 900 € selon
+Le paiement annuel représente une économie de 118 €, 420 € et 1 230 € selon
 l'Offre, par rapport au total de douze mensualités. Cette économie est la
 contrepartie de l'engagement de douze mois prévu à l'article 7.1.
 
