@@ -4516,6 +4516,38 @@ et c'est ce qui évitera le prochain aller-retour :
 « REF-12 » et « SKU_01 » existent, les redresser les détruirait. Sur iOS ils
 ne portent plus aucun chiffre de toute façon.
 
+## ⚠️ iOS remplace les apostrophes — donc les touches 3 et 4 (31 août 2026)
+
+Constat de Julien, douchette sur son iPhone : le code **045496428280** arrivait
+dans le champ en `À’(’Ç§’é!é!À` et ressortait en **`0’5’96’28280`** — dix
+chiffres sur douze redressés, les trois « 4 » perdus, fiche « Article inconnu ».
+
+**Ce n'était pas la table, c'était le champ de saisie.** iOS applique sa
+**ponctuation intelligente** au texte tapé : `'` devient `’`, `"` devient `«` ou
+`»`. Or sur la disposition française ces deux touches sont **les chiffres 4 et
+3**. Le caractère qui arrivait n'était donc dans aucune table, il traversait le
+redressement sans bouger, et le code sortait mutilé.
+
+- **⚠️ `autoCorrect={false}` ne la désactive pas**, et React Native n'expose pas
+  le réglage iOS (`UITextSmartQuotesType`) qui le ferait. La correction ne peut
+  vivre que dans le module — ce qui la rend testable, et vraie sur les deux
+  champs (douchette et ouverture de balise).
+- **⚠️ Ce n'est pas une régression : le défaut était là depuis le premier jour.**
+  Le scan qui avait servi de preuve le 25 août — 8809652585598 — ne porte **ni 3
+  ni 4**. Il ne pouvait pas le montrer. À retenir : un code d'essai ne vaut que
+  s'il contient les dix chiffres, ou au moins ceux dont la touche est
+  substituable.
+- **⚠️ La normalisation passe AVANT tout le reste**, clé de contrôle comprise :
+  un code ainsi maquillé n'est ni valide ni convertible, donc les trois règles
+  suivantes ne peuvent rien pour lui. `normaliserPonctuation` est appelée à
+  l'entrée de `redresserSaisie` **et** de `clavierDecale`.
+- Le signe indiqué par l'ancienne note du simulateur (« la touche 3 peut arriver
+  en `»` ») décrivait déjà ce défaut ; il avait été classé comme une bizarrerie
+  du simulateur, alors que c'est le comportement d'iOS.
+
+Tests de garde : `tests/douchette.test.ts`, blocs « défait la ponctuation
+typographique d'iOS » et « normalise les quatre substitutions ».
+
 ## ⚠️ Un champ de capture ne se pilote pas par un état React (25 août 2026)
 
 Deux caractères sur treize **manquaient** dans le même scan (`//09?52559/`

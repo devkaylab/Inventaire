@@ -20,8 +20,12 @@
  * pris pour la touche « / » du bas de clavier. La table ci-dessous est celle
  * d'iOS ; la table Windows ne sert plus qu'à l'arbitrage par clé de contrôle.
  *
- * Trois règles portent la sûreté de ce module :
+ * Quatre règles portent la sûreté de ce module :
  *
+ * 0. **La ponctuation typographique d'iOS est défaite d'abord** (voir
+ *    `normaliserPonctuation`) : le champ de saisie remplace ' par ’ et " par
+ *    « », donc les touches 3 et 4 arrivaient sous une forme qu'aucune table ne
+ *    connaît.
  * 1. **Les chiffres ne sont jamais retouchés.** Sur AZERTY ils s'obtiennent
  *    avec Majuscule, donc une saisie déjà correcte (au clavier tactile, ou
  *    avec une douchette bien réglée) traverse la fonction sans bouger.
@@ -47,6 +51,38 @@ const IOS_FR_MAJ = '#1234567890°_AZERTYUIOP¨*£QSDFGHJKLM%WXCVBN?./+'
 /** La même chose sur un clavier français **Windows** — pour l'arbitrage seul. */
 const WIN_FR = '²&é"\'(-è_çà)=azertyuiop^$*qsdfghjklmùwxcvbn,;:!'
 const WIN_FR_MAJ = '~1234567890°+AZERTYUIOP¨£µQSDFGHJKLM%WXCVBN?./§'
+
+/**
+ * ⚠️ **iOS remplace les apostrophes et les guillemets par leurs jumeaux
+ * typographiques**, et c'est une substitution du champ de saisie — pas de la
+ * disposition. `autoCorrect={false}` ne la désactive pas, et React Native
+ * n'expose pas le réglage iOS qui le ferait. Elle frappe précisément les
+ * touches **3** (« ) et **4** (') : tout code-barres contenant un 3 ou un 4
+ * arrivait donc avec un caractère absent de toutes les tables, qui traversait
+ * le redressement sans bouger.
+ *
+ * Constat de Julien le 31 août 2026, douchette sur son iPhone : le code
+ * 045496428280 arrivait en `À’(’Ç§’é!é!À` et ressortait en `0’5’96’28280` —
+ * dix chiffres sur douze redressés, les trois « 4 » perdus, article inconnu.
+ * Le scan du 25 août (8809652585598) ne portait ni 3 ni 4 : le défaut était
+ * là depuis le début, il ne s'était simplement jamais montré.
+ *
+ * ⚠️ La normalisation vient **avant tout le reste**, y compris avant la clé
+ * de contrôle : un code ainsi maquillé n'est ni valide ni convertible.
+ */
+const TYPOGRAPHIQUES: Record<string, string> = {
+  '\u2018': "'", '\u2019': "'", '\u201A': "'", '\u2032': "'",
+  '\u201C': '"', '\u201D': '"', '\u201E': '"', '\u2033': '"',
+  '\u00AB': '"', '\u00BB': '"',
+  '\u2013': '-', '\u2014': '-', '\u2212': '-',
+}
+
+/** Défait les substitutions typographiques du champ de saisie iOS. */
+export function normaliserPonctuation(texte: string): string {
+  let out = ''
+  for (const c of texte) out += TYPOGRAPHIQUES[c] ?? c
+  return out
+}
 
 /**
  * Ce qui s'écrit dans de vraies références, et ne sera donc jamais pris pour
@@ -138,8 +174,9 @@ for (const c of [...ACCENTS]) ACCENTS.add(c.toUpperCase())
 const RANGEE_DU_HAUT = new Set([...'&é"\'(§è!çà'])
 
 /** Le texte porte-t-il la marque d'un clavier décalé ? */
-export function clavierDecale(texte: string): boolean {
-  if (!texte) return false
+export function clavierDecale(brut: string): boolean {
+  if (!brut) return false
+  const texte = normaliserPonctuation(brut)
   for (const c of texte) if (ACCENTS.has(c)) return true
   for (const c of texte) if (!RANGEE_DU_HAUT.has(c)) return false
   return true
@@ -148,14 +185,15 @@ export function clavierDecale(texte: string): boolean {
 /**
  * Redresse une saisie de douchette.
  *
- * @param texte  ce que le champ a reçu
+ * @param brut   ce que le champ a reçu, avant normalisation typographique
  * @param force  vrai une fois le décalage constaté sur un scan précédent. Il
  *               ne se corrigera pas tout seul en cours de comptage : c'est ce
  *               qui rattrape les codes qui ne portent aucune preuve — une
  *               référence sans chiffre, ou un nombre fait des seuls 3, 4 et 5.
  */
-export function redresserSaisie(texte: string, force = false): string {
-  if (!texte) return texte
+export function redresserSaisie(brut: string, force = false): string {
+  if (!brut) return brut
+  const texte = normaliserPonctuation(brut)
 
   // Règle 2 : la clé de contrôle passe avant tout le reste, dans les deux
   // sens. Un code déjà valide ne se touche pas, même sous `force`.

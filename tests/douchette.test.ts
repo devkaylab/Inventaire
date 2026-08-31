@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clavierDecale, gtinValide, redresserSaisie } from '@/lib/douchette'
+import { clavierDecale, gtinValide, normaliserPonctuation, redresserSaisie } from '@/lib/douchette'
 
 /**
  * Ce que produit une douchette QWERTY sur un iPhone réglé en français —
@@ -126,6 +126,26 @@ describe('douchette — la clé de contrôle tranche', () => {
     // Une douchette bien réglée au milieu d'un comptage décalé : le drapeau
     // `force` ne doit pas abîmer ce qui est juste.
     expect(redresserSaisie('8809652585598', true)).toBe('8809652585598')
+  })
+
+
+  it('défait la ponctuation typographique d’iOS — le scan du 31 août 2026', () => {
+    // Le champ de saisie remplace ' par ’ et " par « » : la substitution
+    // frappe les touches 4 et 3, donc tout code portant un 3 ou un 4. Le code
+    // 045496428280 arrivait en `À’(’Ç§’é!é!À` et ressortait en `0’5’96’28280`
+    // — dix chiffres sur douze, article inconnu.
+    const brut = 'À\u2019(\u2019Ç§\u2019é!é!À'
+    expect(redresserSaisie(brut)).toBe('045496428280')
+    expect(gtinValide('045496428280')).toBe(true)
+  })
+
+  it('normalise les quatre substitutions, guillemets français compris', () => {
+    expect(normaliserPonctuation('\u2018\u2019\u201C\u201D\u00AB\u00BB')).toBe('\'\'""""')
+    // La touche 3 arrive en « ou » selon la position dans la saisie.
+    expect(redresserSaisie('&é\u00BB\u2019')).toBe('1234')
+    expect(redresserSaisie('&é\u201D\u2019')).toBe('1234')
+    // Et la marque du décalage se lit sur le texte normalisé.
+    expect(clavierDecale('&é\u00BB\u2019')).toBe(true)
   })
 
   it('rattrape aussi un clavier français Windows', () => {
