@@ -212,7 +212,7 @@ function makeStyles(t: Theme) {
     auditBtn: { backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', ...t.shadowElevated },
     auditBtnText: { color: AUDIT_ON, fontSize: 16, fontFamily: Font.bold },
     aide: { color: t.textSecondary, fontSize: 12.5, fontFamily: Font.regular, textAlign: 'center', lineHeight: 17, marginTop: Spacing.xs, marginBottom: Spacing.sm, paddingHorizontal: Spacing.sm },
-    leaveBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
+    leaveBtn: { paddingVertical: Spacing.md, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
     leaveBtnText: { color: t.danger, fontSize: 14, fontFamily: Font.semibold },
   })
 }

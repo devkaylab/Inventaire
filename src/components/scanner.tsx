@@ -1289,7 +1289,17 @@ export function Scanner({
               <Text style={styles.zoneBannerText} numberOfLines={1}>
                 Zone ouverte · {activeBalise.name ?? 'Sans nom'} · balise {activeBalise.code}
               </Text>
-              <Pressable style={styles.zoneCloseBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
+              {/*
+                * ⚠️ `hitSlop` plutôt qu'une pastille plus haute : le bandeau
+                * doit rester compact, et la clôture est confirmée — un appui
+                * de travers ne coûte rien, un appui qu'on rate coûte.
+                */}
+              <Pressable
+                style={styles.zoneCloseBtn}
+                onPress={() => { void closeBalise() }}
+                disabled={resolving}
+                hitSlop={{ top: 7, bottom: 7, left: 8, right: 8 }}
+              >
                 <Text style={styles.zoneCloseText}>Clôturer</Text>
               </Pressable>
             </View>
@@ -1399,6 +1409,8 @@ export function Scanner({
                 style={[styles.torchBtn, torch && styles.torchBtnOn]}
                 onPress={() => setTorch(v => !v)}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
               >
                 <TorcheIcon color={torch ? '#111' : '#fff'} />
               </Pressable>
@@ -1818,7 +1830,7 @@ function makeStyles(t: Theme) {
       borderRadius: Radius.md, borderWidth: 1, borderColor: t.hairline,
       overflow: 'hidden', backgroundColor: t.surface, ...t.shadowCard,
     },
-    modeBtn: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+    modeBtn: { flex: 1, minHeight: 48, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
     modeBtnActive: { backgroundColor: t.accent },
     modeBtnText: { fontSize: 13, color: t.textSecondary, fontFamily: Font.semibold },
     modeBtnTextActive: { color: t.onAccent, fontFamily: Font.bold },
@@ -1951,10 +1963,10 @@ function makeStyles(t: Theme) {
     manualRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
     manualInput: {
       borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
-      paddingHorizontal: Spacing.lg, paddingVertical: 11, fontSize: 16,
+      paddingHorizontal: Spacing.lg, paddingVertical: 11, minHeight: 48, fontSize: 16,
       backgroundColor: t.surface, color: t.textPrimary, fontFamily: Font.regular, ...tabular,
     },
-    manualBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: Spacing.xl, paddingVertical: 11, ...t.shadowButton },
+    manualBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: Spacing.xl, paddingVertical: 11, minHeight: 48, justifyContent: 'center', ...t.shadowButton },
     manualBtnText: { color: t.onAccent, fontFamily: Font.bold, fontSize: 16 },
 
     listHeader: {

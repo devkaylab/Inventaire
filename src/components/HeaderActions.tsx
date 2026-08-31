@@ -60,14 +60,21 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
   return (
     <View style={styles.row}>
       {onProfile && (
-        <Pressable onPress={onProfile} hitSlop={8} style={styles.btn}>
+        <Pressable
+          onPress={onProfile}
+          hitSlop={4}
+          style={styles.btn}
+          accessibilityRole="button"
+          accessibilityLabel="Mon compte"
+        >
           <ProfileIcon />
         </Pressable>
       )}
       <Pressable
         onPress={() => setPreference(NEXT_PREF[preference])}
-        hitSlop={8}
+        hitSlop={4}
         style={styles.btn}
+        accessibilityRole="button"
         accessibilityLabel={`Thème : ${preference === 'system' ? 'système' : preference === 'light' ? 'clair' : 'sombre'}`}
       >
         <ThemeIcon preference={preference} />
@@ -78,8 +85,13 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8, marginRight: 2 },
+  // ⚠️ 40 dp et un hitSlop de 4, et c'est le couple qui compte : 48 dp de zone
+  // tactile (le minimum Android) SANS que les deux boutons se chevauchent —
+  // l'écart de 8 dp les sépare exactement. À 32 dp il fallait `hitSlop={8}`,
+  // et les deux zones mordaient l'une sur l'autre : dans les 8 dp du milieu,
+  // c'est le dernier rendu qui prenait l'appui.
   btn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',

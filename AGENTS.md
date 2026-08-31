@@ -4940,6 +4940,48 @@ superviseur.
 Rien de tout cela n'est corrigé — c'est une passe à part, et elle touche les
 deux rôles.
 
+## 4. La passe sur les cibles tactiles (31 août 2026)
+
+Le minimum est **48 dp sur Android**, 44 pt sur iOS. Relevé écran par écran sur
+le Pixel, puis corrigé.
+
+⚠️ **Une cible se mesure zone tactile comprise, pas au rectangle de la vue.**
+`hitSlop` n'apparaît PAS dans l'arbre d'accessibilité : la mesure brute
+sur-signale, et la première lecture allait faire « corriger » la torche
+(40 + 2×8 = 56, très bien) et les boutons d'en-tête (32 + 2×8 = 48, corrects).
+**Le nombre pointe, le code tranche** — vérifier le `hitSlop` avant de toucher.
+
+⚠️ **Et deux `hitSlop` voisins ne doivent pas se chevaucher.** Les deux boutons
+d'en-tête faisaient 32 dp avec un slop de 8, séparés de 8 : leurs zones
+mordaient l'une sur l'autre de 8 dp, et dans cette bande c'est **le dernier
+rendu** qui prend l'appui. Ils passent à **40 dp avec un slop de 4** — 48 de
+zone, et l'écart de 8 les sépare exactement. C'est aussi la convention Material
+(icône 40, cible 48).
+
+| cible | avant | après |
+|---|---|---|
+| bouton thème, bouton profil | 32 dp, zones qui se chevauchent | **40 dp**, slop 4 |
+| onglets Caméra / Manuel / Douchette | 39 dp | `minHeight: 48` |
+| champ balise et bouton « Ouvrir » | 47 et 46 dp | `minHeight: 48` |
+| « Quitter l'inventaire » | 45 dp | `minHeight: 48` |
+| « Clôturer » du bandeau de zone | 34 dp | 34 + slop 7 = **48** |
+
+⚠️ **« Clôturer » garde sa pastille compacte** et gagne du `hitSlop` plutôt que
+de la hauteur : le bandeau de zone doit rester une rangée, pas un bloc. Le
+risque d'appui accidentel est couvert — la clôture demande confirmation depuis
+le 25 août.
+
+**Deux boutons en icône seule étaient muets** pour un lecteur d'écran : la
+lampe torche et le bouton de compte. Ils portent un `accessibilityLabel`, et
+celui de la lampe dit son **effet** (« Allumer » / « Éteindre »), pas son nom.
+
+⚠️ **Ce qui n'a PAS été touché** : les cartes de la liste (104 dp), les champs
+de saisie (51 dp) et les boutons pleins (56 dp) étaient déjà au-dessus. Une
+passe de ce genre se juge sur ce qu'elle laisse tranquille.
+
+Tests de garde : `tests/compte.test.ts`, bloc « les cibles tactiles atteignent
+48 dp ».
+
 # L'écran de scan : le cadre, le retour, l'objectif (29 août 2026)
 
 Trois défauts trouvés en exerçant le comptage sur un vrai téléphone.

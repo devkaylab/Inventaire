@@ -1997,3 +1997,57 @@ describe('le thème suit le système, et Android ne le repeint pas', () => {
     }
   })
 })
+
+/**
+ * Les cibles tactiles du parcours de comptage (31 août 2026).
+ *
+ * Relevées en mesurant l'arbre d'accessibilité d'un Pixel, écran par écran :
+ * le bouton thème et le bouton profil à 32 dp, « Clôturer » du bandeau à 34,
+ * les onglets de mode à 39, « Quitter l'inventaire » à 45. Le minimum Android
+ * est 48, celui d'iOS 44.
+ *
+ * ⚠️ **Une cible se mesure zone tactile comprise, pas au rectangle de la vue.**
+ * `hitSlop` n'apparaît pas dans l'arbre d'accessibilité : la mesure brute
+ * sur-signale, et la première lecture a failli faire « corriger » des boutons
+ * qui allaient très bien. Le nombre pointe, le code tranche.
+ *
+ * ⚠️ Et deux `hitSlop` voisins ne doivent pas se chevaucher : dans la zone
+ * commune, c'est le dernier rendu qui prend l'appui. D'où 40 dp + 4 de slop
+ * pour les deux boutons d'en-tête, séparés de 8 — ils se touchent sans
+ * empiéter, au lieu de 32 + 8 qui mordait de 8 dp.
+ */
+describe('les cibles tactiles atteignent 48 dp', () => {
+  it('les boutons d’en-tête font 40 dp et ne se chevauchent pas', () => {
+    const src = readFileSync(path.join(here, '..', 'src', 'components', 'HeaderActions.tsx'), 'utf8')
+    expect(src).toMatch(/width: 40, height: 40, borderRadius: 20/)
+    expect(src).not.toMatch(/width: 32, height: 32/)
+    // 40 + 2×4 = 48, et l'écart de 8 les sépare exactement.
+    expect(src.match(/hitSlop=\{4\}/g)).toHaveLength(2)
+    expect(src).toMatch(/gap: 8/)
+  })
+
+  it('les cibles de l’écran de comptage ne descendent plus sous 48', () => {
+    const src = readFileSync(path.join(here, '..', 'src', 'components', 'scanner.tsx'), 'utf8')
+    for (const style of ['modeBtn', 'manualBtn', 'manualInput']) {
+      const bloc = new RegExp(`${style}: \\{[^}]*minHeight: 48`)
+      expect(bloc.test(src), `${style} doit porter minHeight: 48`).toBe(true)
+    }
+    // « Clôturer » du bandeau garde sa pastille compacte : c'est le hitSlop
+    // qui l'amène à 48 (34 + 2×7).
+    expect(src).toMatch(/hitSlop=\{\{ top: 7, bottom: 7, left: 8, right: 8 \}\}/)
+  })
+
+  it('« Quitter l’inventaire » aussi', () => {
+    const src = readFileSync(path.join(here, '..', 'src', 'app', '(employee)', '[sessionId]', 'index.tsx'), 'utf8')
+    expect(src).toMatch(/leaveBtn: \{[^}]*minHeight: 48/)
+  })
+
+  it('et les boutons en icône seule se nomment', () => {
+    // Une icône sans libellé n'existe pas pour un lecteur d'écran. La lampe et
+    // le bouton de compte étaient muets.
+    const scanner = readFileSync(path.join(here, '..', 'src', 'components', 'scanner.tsx'), 'utf8')
+    expect(scanner).toMatch(/accessibilityLabel=\{torch \? 'Éteindre la lampe' : 'Allumer la lampe'\}/)
+    const header = readFileSync(path.join(here, '..', 'src', 'components', 'HeaderActions.tsx'), 'utf8')
+    expect(header).toMatch(/accessibilityLabel="Mon compte"/)
+  })
+})
