@@ -4548,6 +4548,41 @@ redressement sans bouger, et le code sortait mutilé.
 Tests de garde : `tests/douchette.test.ts`, blocs « défait la ponctuation
 typographique d'iOS » et « normalise les quatre substitutions ».
 
+### ⚠️ Et iOS pose une ESPACE avec ses guillemets (31 août 2026, au soir)
+
+Seconde moitié du même défaut, trouvée par Julien après validation d'Android :
+*« le mode douchette n'est pas capable de lire tous les codes-barres, problème
+uniquement sous iOS »*. Le code **5056635611789** (Blu-ray PM Studios) arrivait
+en `50566 35611789`.
+
+**Les treize chiffres étaient justes.** Rien n'était perdu, rien n'était faux :
+une **espace** s'était insérée entre le cinquième et le sixième. Ce n'est pas un
+défaut de lecture, c'est un caractère de trop — et l'article restait inconnu.
+
+iOS ne se contente pas de remplacer `"` par `«` ou `»` : en français, la
+typographie veut une **espace insécable à l'intérieur des guillemets**, et le
+champ l'insère. La touche `"` étant celle du **chiffre 3**, tout code-barres
+contenant un 3 arrivait avec une espace parasite.
+
+- **⚠️ C'est le sens du guillemet qui place l'espace**, et c'est ce qui a permis
+  de trancher : elle était **avant** le 3, donc iOS avait choisi un guillemet
+  **fermant** (`»`), qui prend son espace devant. Un ouvrant (`«`) l'aurait
+  posée derrière. `normaliserPonctuation` traite les deux sens.
+- **⚠️ Les insécables partent sans condition** (U+00A0, U+202F, U+2009, U+2007,
+  U+2060) : une douchette transmet de l'ASCII, elle ne peut pas en produire.
+- **⚠️ Une espace ORDINAIRE ne part que collée à un guillemet qu'on convertit.**
+  Elle s'écrit dans de vraies désignations — même arbitrage que « - » et « _ ».
+  Un test le fige (`normaliserPonctuation('REF 001')` inchangé).
+- **⚠️ Le correctif du matin ne pouvait pas le voir** : il rendait bien `"` à
+  partir de `»`, et s'arrêtait là. Et le code d'essai du matin — 045496428280 —
+  **ne porte pas de 3**. Troisième fois que le code d'essai décide de ce qu'on
+  trouve : 8809652585598 n'avait ni 3 ni 4, 045496428280 n'a pas de 3. **Un
+  code d'essai ne vaut que s'il porte les dix chiffres.**
+
+Tests de garde : `tests/douchette.test.ts`, blocs « retire l'espace qu'iOS pose
+avec les guillemets » et « mais une espace ordinaire reste dans une
+désignation ».
+
 ### Et sur Android (même jour)
 
 **La ponctuation intelligente est propre à iOS** : Android ne substitue rien à

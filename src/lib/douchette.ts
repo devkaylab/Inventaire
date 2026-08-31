@@ -77,10 +77,44 @@ const TYPOGRAPHIQUES: Record<string, string> = {
   '\u2013': '-', '\u2014': '-', '\u2212': '-',
 }
 
+/**
+ * Les guillemets français s'accompagnent d'une espace, et iOS la pose.
+ *
+ * ⚠️ **C'est la seconde moitié du défaut du 31 août 2026, et elle ne se voyait
+ * pas.** iOS ne se contente pas de remplacer `"` par `«` ou `»` : en français,
+ * la typographie veut une espace insécable à l'intérieur des guillemets, et le
+ * champ l'insère. Le code-barres **5056635611789** arrivait donc en
+ * `50566 35611789` — les treize chiffres justes, plus une espace juste avant le
+ * « 3 » (que le champ avait maquillé en `»`). Aucun chiffre perdu, et pourtant
+ * article inconnu.
+ *
+ * Deux gestes, et il faut les deux :
+ *
+ * - **les espaces insécables partent sans condition** — une douchette transmet
+ *   de l'ASCII, elle ne peut pas en produire, et aucun code-barres n'en
+ *   contient ;
+ * - **une espace ORDINAIRE ne part que collée à un guillemet** qu'on convertit,
+ *   parce qu'elle s'écrit dans de vraies désignations. Même arbitrage que « - »
+ *   et « _ » : on ne touche qu'à ce dont on est sûr.
+ */
+const INSECABLES = new Set(['\u00A0', '\u202F', '\u2009', '\u2007', '\u2060'])
+
 /** Défait les substitutions typographiques du champ de saisie iOS. */
 export function normaliserPonctuation(texte: string): string {
   let out = ''
-  for (const c of texte) out += TYPOGRAPHIQUES[c] ?? c
+  let avalerEspace = false
+  for (const c of texte) {
+    if (INSECABLES.has(c)) continue
+    if (avalerEspace && c === ' ') { avalerEspace = false; continue }
+    avalerEspace = false
+    if (c === '\u00AB') { out += '"'; avalerEspace = true; continue }   // « ouvrant : l'espace suit
+    if (c === '\u00BB') {                                              // » fermant : l'espace précède
+      if (out.endsWith(' ')) out = out.slice(0, -1)
+      out += '"'
+      continue
+    }
+    out += TYPOGRAPHIQUES[c] ?? c
+  }
   return out
 }
 

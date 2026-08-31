@@ -164,6 +164,28 @@ describe('douchette — la clé de contrôle tranche', () => {
     expect(redresserNumero('')).toBe('')
   })
 
+
+  it('retire l’espace qu’iOS pose avec les guillemets — le scan du 31 août 2026', () => {
+    // Le code-barres 5056635611789 (Blu-ray, PM Studios) arrivait en
+    // « 50566 35611789 » : les treize chiffres justes, plus une espace juste
+    // avant le « 3 ». iOS avait maquillé la touche 3 en guillemet fermant, et
+    // la typographie française lui colle une espace insécable.
+    const brut = '(à(§§\u202F»(§&&è!ç'
+    expect(redresserSaisie(brut)).toBe('5056635611789')
+    expect(gtinValide('5056635611789')).toBe(true)
+    // Espace insécable ordinaire, et guillemet ouvrant (l'espace suit).
+    expect(redresserSaisie('(à(§§\u00A0»(§&&è!ç')).toBe('5056635611789')
+    expect(redresserSaisie('(à(§§«\u00A0(§&&è!ç')).toBe('5056635611789')
+  })
+
+  it('mais une espace ordinaire reste dans une désignation', () => {
+    // Elle ne part que collée à un guillemet qu'on convertit — même arbitrage
+    // que « - » et « _ » : on ne touche qu'à ce dont on est sûr.
+    expect(normaliserPonctuation('REF 001')).toBe('REF 001')
+    expect(normaliserPonctuation('A B C')).toBe('A B C')
+    expect(normaliserPonctuation('A \u00BB B')).toBe('A" B')
+  })
+
   it('rattrape aussi un clavier français Windows', () => {
     // Un Android, ou un iPhone d'une autre génération : 6 arrive en « - » et
     // 8 en « _ ». Ces deux signes ne sont dans aucune table — c'est la clé,
