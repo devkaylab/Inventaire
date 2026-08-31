@@ -4643,6 +4643,18 @@ main sous la feuille y renverrait le scan suivant, qui se collerait au code déj
 saisi. C'est la seconde moitié du même défaut. `illisibleRef` sert à ça — l'état
 capturé au rendu ne dit plus la vérité après l'`await`.
 
+### Vérifié
+
+**Par Julien, sur le Pixel, le 31 août 2026** : « le test est bon, ça marche
+sur Android ». C'est la seule preuve qui vaille pour ce défaut — un simulateur
+n'a pas de douchette, et la capture du champ ne dit rien (voir juste après).
+**iOS reste à vérifier** : le correctif est le même, il demande un build de son
+côté.
+
+De mon côté, sur l'appareil : APK à jour (source 13:37, APK 13:40, installé à
+13:40:09), aucun crash, et **zéro résidu** de mes essais en base — les touches
+injectées et le « Ignorer » n'ont écrit ni comptage ni article.
+
 ### Piège de méthode : le champ affiche le brut, toujours
 
 Le champ de capture est **non contrôlé** depuis le 25 août : ce qu'on y lit est
