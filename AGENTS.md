@@ -5016,7 +5016,7 @@ de la maquette, **existait déjà** depuis le 28 août.
 | pièce | quand | nature |
 |---|---|---|
 | Deux listes, et la différence compte | à la première mise en attente | repère `file-attente` |
-| Aucune balise en attente | dès que la file se vide | **état**, rejoué, une ligne |
+| Aucune balise en attente | quand la file **se vide après** s'être remplie | **état**, rejoué, une ligne |
 | Trois façons de scanner | entrée en phase article | repère `modes-de-scan` |
 | Une erreur se corrige | deuxième scan du même article | repère `corriger-scan` |
 
@@ -5059,6 +5059,14 @@ test fige les deux règles.
   · Le libellé est le **miroir exact** de l'encart ambre (« N balises en
     attente d'envoi ») : même mot, même grammaire, la comparaison se fait sans
     y penser.
+  · **⚠️ Et il n'apparaît QU'APRÈS une attente**, jamais en permanence (second
+    constat de Julien, le même soir). Affiché tout le temps, il annonce un
+    non-événement à quelqu'un qui n'a jamais rien vu attendre — du vert en haut
+    de l'écran, tous les jours, qu'on cesse de voir. Le verrou `attenteVue` se
+    met quand la file se remplit et ne se relâche pas : **c'est la séquence qui
+    informe** — l'encart ambre, sa disparition, puis la ligne verte — pas la
+    ligne seule. Deux constats de dosage sur le même élément en une heure : un
+    état permanent coûte plus cher qu'il n'en a l'air.
 - **Les nouveaux volets se marquent à la FERMETURE**, pas à l'ouverture comme
   les deux anciens : ils expliquent au lieu d'annoncer, donc tant qu'on n'a pas
   fermé, on n'a rien lu.

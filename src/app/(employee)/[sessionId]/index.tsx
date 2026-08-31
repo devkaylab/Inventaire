@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useEffect, useState } from 'react'
 import Svg, { Path } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -70,6 +71,21 @@ export default function EmployeeProgressScreen() {
   // l'écran qu'on consulte avant de partir, et « ai-je tout remonté ? » est la
   // question qu'on s'y pose.
   const queue = useOfflineQueue(sessionId)
+  /**
+   * « Aucune balise en attente » ne s'affiche qu'après une attente.
+   *
+   * ⚠️ Demande de Julien, et elle corrige une erreur de dosage de ma part : ce
+   * message n'a de sens que comme **résolution**. Affiché en permanence, il
+   * annonce un non-événement à quelqu'un qui n'a jamais rien vu attendre — du
+   * bruit vert en haut de l'écran, tous les jours.
+   *
+   * Le verrou se met quand la file se remplit et ne se relâche pas : on voit
+   * l'encart ambre, il disparaît, la ligne verte confirme. C'est la séquence
+   * entière qui informe, pas la ligne seule — et le libellé est le miroir
+   * exact de l'encart qu'il remplace.
+   */
+  const [attenteVue, setAttenteVue] = useState(false)
+  useEffect(() => { if (queue.pending > 0) setAttenteVue(true) }, [queue.pending])
 
   const queryClient = useQueryClient()
   const leaveMutation = useMutation({
@@ -153,7 +169,7 @@ export default function EmployeeProgressScreen() {
                 sans un « tout est remonté » franc, « en attente » ne se
                 remarque jamais. Ce n'est pas un repère, il revient à chaque
                 fois que la file se vide. */}
-            {queue.pending === 0 && countedPieces > 0 && (
+            {queue.pending === 0 && attenteVue && (
               <View style={styles.astuceEncart}>
                 {/* ⚠️ Une ligne, pas un paragraphe. C'est un état PERMANENT :
                     il se lit à chaque ouverture, donc il doit se lire d'un

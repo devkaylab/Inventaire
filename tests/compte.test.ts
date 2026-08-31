@@ -2094,7 +2094,11 @@ describe('le tour de l’application, côté compteur', () => {
   it('⚠️ « tout est remonté » est un ÉTAT, pas un repère', () => {
     // Il revient chaque fois que la file se vide — c'est lui qui rend
     // « en attente » remarquable. Donc pas de `useRepere`, pas de marquage.
-    expect(progression).toMatch(/queue\.pending === 0 && countedPieces > 0/)
+    // ⚠️ Et il n'apparaît QU'APRÈS une attente : affiché en permanence, il
+    // annonce un non-événement à quelqu'un qui n'a jamais rien vu attendre.
+    // C'est la séquence — encart ambre, puis ligne verte — qui informe.
+    expect(progression).toMatch(/queue\.pending === 0 && attenteVue/)
+    expect(progression).toMatch(/if \(queue\.pending > 0\) setAttenteVue\(true\)/)
     expect(progression).not.toMatch(/useRepere\('tout-remonte'/)
     // ⚠️ Et il tient en UNE LIGNE : un état permanent se lit à chaque
     // ouverture. Un paragraphe qu'on relit chaque fois cesse d'être lu, et
