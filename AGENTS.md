@@ -4727,11 +4727,12 @@ capturé au rendu ne dit plus la vérité après l'`await`.
 
 ### Vérifié
 
-**Par Julien, sur le Pixel, le 31 août 2026** : « le test est bon, ça marche
-sur Android ». C'est la seule preuve qui vaille pour ce défaut — un simulateur
-n'a pas de douchette, et la capture du champ ne dit rien (voir juste après).
-**iOS reste à vérifier** : le correctif est le même, il demande un build de son
-côté.
+**Par Julien, sur le Pixel puis sur son iPhone, le 31 août 2026** : « le test
+est bon, ça marche sur Android », puis, après le correctif de l'espace des
+guillemets et un build iOS, « le scan passe, c'est bon des deux côtés » — le
+Blu-ray 5056635611789, celui qui porte un 3, servant de preuve. C'est la seule
+preuve qui vaille pour ces défauts : un simulateur n'a pas de douchette, et la
+capture du champ ne dit rien (voir juste après).
 
 De mon côté, sur l'appareil : APK à jour (source 13:37, APK 13:40, installé à
 13:40:09), aucun crash, et **zéro résidu** de mes essais en base — les touches
