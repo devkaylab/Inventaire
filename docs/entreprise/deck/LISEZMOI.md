@@ -12,7 +12,7 @@ la ligne de scan sous l'en-tête.
 | `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, téléchargement, déploiement, mise en place, prise en main, comptes, sécurité, audits, RGPD | 17 |
 | `build-tarifs.js` | `Quantinvo-tarification.pptx` | Celui qui décide du budget : l'assiette, la grille, le dépassement, la souscription | 11 |
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs, après la signature | 19 |
-| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 15 |
+| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 11 |
 
 Les six partagent `charte.js` (la mise en page), `blocs.js` (la grille des
 offres) et `offres.js` (les prix).
@@ -56,6 +56,79 @@ avec une icône dans un rond, titres-slogans. Tout a été repris, et la charte
   réserve sans réseau, le fichier à reformater, le mardi matin avant
   l'ouverture). Les notes du présentateur sont écrites pour être lues par
   Julien, pas pour être projetées.
+
+## Le deck Samaritaine, resserré (1er septembre 2026)
+
+Constat de Julien : *« il y a beaucoup de répétition »*. La répétition était
+structurelle, pas rédactionnelle : **quatre pages sur quinze racontaient le
+même avant / après**.
+
+- « Aujourd'hui » déroulait leur journée en quatre étapes ;
+- « Le constat » la redécoupait en quatre casquettes ;
+- « La même journée, conduite par le floor » la rejouait à l'identique, seul
+  le sujet des phrases changeant ;
+- « Sans, avec » la reprenait une quatrième fois, en tableau.
+
+Elles sont devenues **deux** : leur journée telle qu'elle est (page 3, leur
+document mot pour mot), puis **un seul tableau** qui la remet en regard ligne
+à ligne (page 4), dont la dernière rangée — « Au total » — porte les quatre
+casquettes **et** le pivot de la proposition.
+
+Deux autres fusions, même motif :
+
+- « Pendant le comptage » et « L'audit » disaient toutes deux « le chef
+  d'équipe voit et tranche en direct ». Une seule page, **avec les deux
+  captures** : elles, montrent bien deux choses différentes.
+- « Pourquoi pas Zebra » et « Ce qu'on ne promet pas » sont devenues « Pour
+  être clair », en deux colonnes.
+
+« Qu'est-ce que Quantinvo » a disparu : sa citation ouvre le deck, et son
+seul fait neuf — application, tableau de bord, rapport — est la ligne
+d'accroche de « Qui fait quoi ».
+
+Ce qu'il ne faut pas défaire :
+
+- **Ne pas réintroduire de page miroir.** Un déroulement raconté deux fois de
+  suite se lit comme du remplissage — c'est exactement ce qui a été vu.
+- **L'attaque en gras du tableau n'est portée QUE par la colonne de gauche.**
+  Écrite des deux côtés, « La veille. » se lisait deux fois sur la même
+  rangée. Les deux cellules sont alignées : cela suffit à dire de quelle
+  étape on parle.
+- **Les faits ne se répètent qu'à bon escient**, chaque fois dans un registre
+  différent : « aucune flotte » dans le tableau puis dans la comparaison
+  SmartCount, la règle d'audit dans leur journée puis sur la page qui la
+  montre, le rapport croisé dans le tableau puis sur sa page. Tout le reste a
+  été retiré de ses autres emplacements — c'est la moitié du travail.
+- **La page 3 n'a volontairement aucune capture.** C'est leur document : y
+  poser un écran de notre produit mettrait notre réponse avant leur constat.
+- **⚠️ La page 9 est tendue.** Sept alinéas et un encadré : au premier rendu,
+  le quatrième alinéa de droite passait *sous* le bloc gris. Les textes sont
+  taillés pour trois lignes chacun ; les rallonger rouvre le défaut.
+
+### L'écran d'entrée est l'écran de lancement
+
+Demande de Julien : *« un screen d'entrée avec le logo de Quantinvo sur
+l'écran de l'iPhone »*. La page 1 porte donc le téléphone **entier** — pas
+débordant comme ailleurs : ici c'est le sujet de la page —, la marque, la
+citation d'origine et sa signature. La couverture, avec le titre et le
+sous-titre, suit en page 2.
+
+⚠️ La capture est `captures/lancement.png`, et elle **ne s'obtient qu'en
+Release** (voir plus bas). Ne pas la remplacer par une capture prise sur un
+build de développement : le bandeau LogBox de React Native s'y afficherait
+par-dessus.
+
+### Une capture de plus, sur l'inventaire aléatoire
+
+`nouvel-inventaire.png` illustre « un inventaire ciblé se crée en quelques
+minutes » — l'écran le montre en trois champs. Le deck porte huit captures
+sur onze pages, contre six sur quinze : la densité double.
+
+⚠️ **Les captures de l'application datent du 27 août 2026**, et l'écran
+de comptage a changé depuis (viseur, liste des scans derrière un bouton, trace
+« Dernier scan »). C'est le même vieillissement que celui signalé par
+`CAPTURES_A_REFAIRE` sur `/outils/prise-en-main` : une passe de captures les
+remettra à jour d'un coup, decks et guide du site ensemble.
 
 ## Refaire les captures du site
 
@@ -209,15 +282,16 @@ comptage, et les decks le disent. Le raisonnement complet vit dans
   inventaire tournant », août 2026) : la page « Aujourd'hui », la règle
   d'audit 100 % W&J / 30 %, la consolidation SKU Variance / stock théorique
   et le projet d'inventaire aléatoire en viennent tels quels. Si leur
-  procédure change, la page 2 change. **L'angle, fixé par Julien le
+  procédure change, la page 3 change. **L'angle, fixé par Julien le
   27 août 2026 : l'inventaire est RENDU au floor** — balisage compris —,
   chefs d'équipe en superviseurs, vendeurs en compteurs ; l'Inventory
   Control ne garde que le rapport, la validation et l'ajustement. Ne pas
   ramollir en « alléger la charge ». La page « Qui fait quoi » réutilise
   trois captures du guide de prise en main. **Jamais de prix Zebra** dans
   ce deck ni en présentation : l'ancre SmartCount est confidentielle. La
-  page « Pourquoi pas Zebra » reste factuelle et garde son encadré honnête
-  (terminaux durcis, flotte amortie).
+  page « Pour être clair » reste factuelle et garde son encadré honnête
+  (terminaux durcis, flotte amortie). Il a été **resserré de 15 à 11 pages
+  le 1er septembre 2026** — voir la section qui suit.
 - **Contact** : `contact@quantinvo.com` partout, jamais l'adresse Gmail.
 - Les couleurs et le logo sont ceux de `web/app/globals.css` et de
   `web/components/Logo.tsx` : si la charte bouge, reprendre `charte.js`.
