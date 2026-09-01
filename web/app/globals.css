@@ -2786,3 +2786,76 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* Le montant réellement prélevé, sous le prix hors taxes. Discret mais présent :
    c'est lui qui apparaîtra sur le relevé bancaire. */
 .souscrire-ttc { font-size: 13.5px; color: var(--text-2); }
+
+/* ─── Prise en main ────────────────────────────────────────────────────────
+   Le guide de l'application mobile, dans la boîte à outils. Rien de neuf en
+   couleurs ni en typographie : ce sont les jetons de l'espace connecté. */
+
+.pem-actions { margin-left: auto; }
+
+/* Les captures ont une date, et quand elles ont vieilli la page le dit. */
+.pem-avis { border-color: var(--warning); background: var(--warning-soft); }
+.pem-avis p { color: var(--text); margin: 0; }
+
+.pem-onglets {
+  display: flex; gap: 4px; margin-top: 16px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+  width: fit-content; max-width: 100%; flex-wrap: wrap;
+}
+.pem-onglet {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2);
+  padding: 8px 16px; border-radius: 9px; line-height: 1.5;
+}
+.pem-onglet-on { background: var(--accent); color: #fff; }
+.pem-onglet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.pem-cache { display: none; }
+.pem-parcours { margin-top: 22px; }
+.pem-titre { font-size: 20px; font-weight: 700; margin: 0; }
+.pem-intro { color: var(--text-2); margin-top: 6px; max-width: 68ch; }
+
+/* `auto-fit` plutôt qu'un nombre de colonnes : le guide se lit aussi bien sur
+   un portable que sur l'écran d'un poste de réserve, sans point de rupture à
+   tenir. `minmax(0, …)` évite qu'une capture large ne déborde sa colonne. */
+.pem-etapes {
+  list-style: none; margin: 18px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px;
+}
+.pem-etape {
+  min-width: 0;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.pem-shot { position: relative; background: var(--bg); border-bottom: 1px solid var(--hairline); }
+.pem-shot img { display: block; width: 100%; height: auto; }
+.pem-num {
+  position: absolute; top: 10px; left: 10px;
+  width: 26px; height: 26px; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 700; line-height: 26px; text-align: center;
+}
+.pem-txt { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.pem-txt h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.pem-txt p { font-size: 13.5px; color: var(--text-2); margin: 0; line-height: 1.55; }
+/* Le repère cité mot pour mot : ce qui relie le guide à l'application. */
+.pem-repere {
+  color: var(--accent) !important; font-weight: 600; font-size: 12.5px !important;
+  border-top: 1px solid var(--hairline); padding-top: 9px; margin-top: 3px !important;
+}
+.pem-pied { color: var(--text-3); font-size: 13px; margin-top: 26px; }
+
+/* ⚠️ Le guide s'imprime : une feuille affichée en réserve vaut mieux qu'un
+   lien. On sort le rail, l'en-tête et les commandes, on montre LES DEUX
+   parcours (l'onglet caché à l'écran ne l'est plus sur le papier), et on
+   empêche une étape d'être coupée en deux par un saut de page. */
+@media print {
+  .app-rail, .pem-actions, .pem-onglets, .pem-avis { display: none !important; }
+  .app-main { margin-left: 0 !important; padding: 0 !important; }
+  .pem-cache { display: block !important; }
+  .pem-etape { break-inside: avoid; page-break-inside: avoid; border-color: #CCC; }
+  .pem-parcours { break-before: page; }
+  .pem-parcours:first-of-type { break-before: auto; }
+  .pem-etapes { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  body { background: #fff; }
+}
