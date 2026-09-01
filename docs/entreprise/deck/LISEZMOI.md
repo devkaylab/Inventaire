@@ -12,7 +12,7 @@ la ligne de scan sous l'en-tête.
 | `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, téléchargement, déploiement, mise en place, prise en main, comptes, sécurité, audits, RGPD | 17 |
 | `build-tarifs.js` | `Quantinvo-tarification.pptx` | Celui qui décide du budget : l'assiette, la grille, le dépassement, la souscription | 11 |
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs, après la signature | 19 |
-| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 11 |
+| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 12 |
 
 Les six partagent `charte.js` (la mise en page), `blocs.js` (la grille des
 offres) et `offres.js` (les prix).
@@ -90,8 +90,23 @@ Le deck suit maintenant **trois temps**, dans cet ordre :
 2. **Ce que ça demande** — les irritants, hiérarchisés ;
 3. **Avec Quantinvo** — les réponses, dans l'ordre des irritants.
 
-Le tableau miroir a disparu. **Deux pages de mise en situation sur onze** : le
-reste est le produit.
+Le tableau miroir a disparu. **Deux pages de mise en situation sur douze** :
+le reste est le produit.
+
+⚠️ **Une page de TRANSITION sépare le problème de la réponse** (page 5,
+demande de Julien : « une transition qui annonce un peu la suite sans la
+répétition »). Elle dit la **méthode**, jamais le contenu : le produit retire
+au lieu d'ajouter, et les pages suivantes le montrent dans le même ordre. Y
+reprendre les quatre irritants, ou nommer les quatre réponses, ferait de la
+page 6 une redite — le défaut que tout ce deck a été récrit pour supprimer.
+C'est la seule page qui ne démontre rien : ni capture, ni alinéas, ni encadré.
+Le vide fait le travail.
+
+⚠️ **La colonne « Ce qu'on ne vous promet pas » a été retirée** le même jour
+(décision de Julien). Elle listait l'inventaire fiscal certifié, la connexion
+à l'ERP, l'annuaire d'entreprise et Google Play. Ces limites ne disparaissent
+pas du corpus — `build-dsi.js` les porte pour l'audience qui les demande —
+mais elles ne sont plus dans le deck commercial. Ne pas les y réintroduire.
 
 ### ⚠️ Les quatre irritants, et celui qui n'en est pas un
 
@@ -128,34 +143,37 @@ de Julien du 27 août — la mesure porte sur les promesses, pas sur la thèse.
   la page 5 répondent au balisage, au briefing puis à la conduite, la flotte
   étant réglée par la phrase d'accroche ; la page 6 finit le premier irritant
   (la surveillance) ; la page 7 le fichier.
-- **La page 9 est tendue.** Sept alinéas et un encadré : au premier rendu, le
-  quatrième alinéa de droite passait *sous* le bloc gris. Les textes sont
-  taillés pour trois lignes chacun.
+- **Une page à deux colonnes d'alinéas et un encadré ne tient pas.** C'était
+  la forme de « Pour être clair » : au rendu, le quatrième alinéa de droite
+  passait *sous* le bloc gris. La page est passée à une colonne pleine largeur
+  en perdant sa seconde moitié ; si l'envie revient d'y remettre deux
+  colonnes, se souvenir que ça ne rentre pas.
 
-### L'écran d'entrée est l'écran de lancement
+### L'écran d'entrée est l'écran de lancement, et il ne dit rien
 
 Demande de Julien : *« un screen d'entrée avec le logo de Quantinvo sur
 l'écran de l'iPhone »*. La page 1 porte le téléphone **entier** — pas
-débordant comme ailleurs : ici c'est le sujet de la page —, la marque, la
-citation d'origine et sa signature. La couverture suit en page 2.
+débordant comme ailleurs : ici c'est le sujet de la page —, la marque, le
+filet cyan. **Rien d'autre.** La couverture suit en page 2.
+
+⚠️ **Aucune phrase sur cette page, et c'est une décision.** Elle a d'abord
+porté une citation signée sur l'origine du produit, puis sept variantes
+centrées sur l'application : aucune ne tenait. Une page d'entrée n'a rien à
+démontrer. Ne pas y remettre de baseline, de citation ni de signature — ce
+qui n'est pas dit ne peut pas sonner faux.
 
 ⚠️ La capture est `captures/lancement.png`, et elle **ne s'obtient qu'en
 Release** (voir plus bas). Ne pas la remplacer par une capture prise sur un
 build de développement : le bandeau LogBox de React Native s'y afficherait
 par-dessus.
 
-⚠️ **La citation de la page 1 reste à trancher.** Julien a demandé des
-variantes « qui tournent plus autour de l'app que de moi » ; elles lui ont été
-proposées, aucune n'a été retenue à ce jour, et la citation d'origine est
-restée. Le sujet est ouvert.
-
 ### Les captures
 
-Huit captures sur onze pages, contre six sur quinze : `nouvel-inventaire.png`
+Huit captures sur douze pages, contre six sur quinze : `nouvel-inventaire.png`
 a rejoint la page de l'inventaire aléatoire, et l'écran de lancement ouvre le
-deck. Les deux pages de mise en situation n'en portent **aucune**, et c'est
-voulu : une capture du produit sur la page du problème donnerait la réponse
-avant que la question soit posée.
+deck. Les deux pages de mise en situation et la transition n'en portent
+**aucune**, et c'est voulu : une capture du produit sur la page du problème
+donnerait la réponse avant que la question soit posée.
 
 ⚠️ **Les captures de l'application datent du 27 août 2026**, et l'écran de
 comptage a changé depuis (viseur, liste des scans derrière un bouton, trace
@@ -324,9 +342,9 @@ comptage, et les decks le disent. Le raisonnement complet vit dans
   ramollir en « alléger la charge ». La page « Qui fait quoi » réutilise
   trois captures du guide de prise en main. **Jamais de prix Zebra** dans
   ce deck ni en présentation : l'ancre SmartCount est confidentielle. La
-  page « Pour être clair » reste factuelle et garde son encadré honnête
-  (terminaux durcis, flotte amortie). Il a été **resserré de 15 à 11 pages
-  le 1er septembre 2026** — voir la section qui suit.
+  page « Pourquoi nous » reste factuelle et garde son encadré honnête
+  (terminaux durcis, flotte amortie). Le deck a été **entièrement récrit le
+  1er septembre 2026** — voir la section qui suit.
 - **Contact** : `contact@quantinvo.com` partout, jamais l'adresse Gmail.
 - Les couleurs et le logo sont ceux de `web/app/globals.css` et de
   `web/components/Logo.tsx` : si la charte bouge, reprendre `charte.js`.

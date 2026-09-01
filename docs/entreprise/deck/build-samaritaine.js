@@ -76,21 +76,27 @@ async function main() {
   // Le téléphone est ENTIER ici, pas débordant : c'est le sujet de la page.
   // On lui donne une hauteur généreuse à `cadrer`, qui ne coupe que si la
   // place manque.
+  //
+  // ⚠️ AUCUNE PHRASE SUR CETTE PAGE, et c'est une décision (Julien,
+  // 1er septembre 2026). Elle a d'abord porté une citation signée, puis des
+  // variantes centrées sur l'application : aucune ne tenait. Une page
+  // d'entrée n'a rien à démontrer — la marque, l'écran, et le titre arrive
+  // en page 2. Ne pas y remettre de baseline, de citation ni de signature :
+  // ce qui n'est pas dit ne peut pas sonner faux.
+  //
+  // Le bloc de marque est centré en hauteur sur le téléphone : son milieu
+  // optique tombe à H/2, comme celui de l'écran en face.
   {
     const s = pres.addSlide()
     s.background = { color: P.PAPER }
+    const HT = 5.5
     const tel = await cadrer('lancement.png', { w: 3, h: 7 })
-    d.ecranEntier(s, { x: W - M - 5.1 * tel.ratio, y: (H - 5.1) / 2, h: 5.1, tel })
-    s.addImage({ data: d.logo, x: M, y: 1.55, w: 0.62, h: 0.62 })
-    s.addText('Quantinvo', { x: M + 0.78, y: 1.52, w: 5, h: 0.68, fontFace: FONTD, fontSize: 24, bold: true, color: P.INK, margin: 0, valign: 'middle' })
-    s.addShape('rect', { x: M, y: 2.42, w: 2.6, h: 0.028, fill: { color: P.CYAN }, line: { color: P.CYAN, width: 0 } })
-    d.citation(s, "J'ai dessiné Quantinvo pendant des inventaires, pas dans une salle de réunion.", { x: M, y: 3.05, w: 7.0, h: 2.0, size: 25 })
-    // La signature suit la citation d'assez près pour lui appartenir, et laisse
-    // la place d'une troisième ligne : en Sora (variante `-marque`) elle en
-    // prend une de plus qu'en Arial.
-    d.para(s, 'Julien Thiong-kay, Devkaylab', { x: M, y: 4.6, w: 7.0, h: 0.4, size: 12.5, color: P.SLATE })
-    d.para(s, "L'outil d'inventaire pour le commerce.", { x: M, y: 6.05, w: 7.0, h: 0.35, size: 10.5, color: P.SLATE })
-    s.addNotes("Poser le téléphone sur la table en même temps que la page s'affiche. Ne rien vendre encore : on montre l'objet, on dit d'où il vient, et on enchaîne.")
+    d.ecranEntier(s, { x: W - M - HT * tel.ratio, y: (H - HT) / 2, h: HT, tel })
+    const yb = 3.30
+    s.addImage({ data: d.logo, x: M, y: yb, w: 0.62, h: 0.62 })
+    s.addText('Quantinvo', { x: M + 0.78, y: yb - 0.03, w: 5, h: 0.68, fontFace: FONTD, fontSize: 24, bold: true, color: P.INK, margin: 0, valign: 'middle' })
+    s.addShape('rect', { x: M, y: yb + 0.87, w: 2.6, h: 0.028, fill: { color: P.CYAN }, line: { color: P.CYAN, width: 0 } })
+    s.addNotes("Laisser la page respirer deux secondes, sans commenter. On montre l'objet ; le titre et l'objet de la proposition arrivent à la page suivante.")
   }
 
   // ════ 2. Couverture ════
@@ -151,7 +157,32 @@ async function main() {
     s.addNotes("La page du problème. Lire l'encadré à voix haute : c'est lui qui articule tout le deck — un inventaire tournant suppose de compter souvent, et ce qu'on vient d'énumérer est précisément ce qui l'en empêche. Ne pas en rajouter : ces quatre points suffisent, et ils sont vrais.")
   }
 
-  // ════ 5. La réponse, dans l'ordre des irritants ════
+  // ════ 5. Transition ════
+  //
+  // ⚠️ Elle ANNONCE SANS LISTER (demande de Julien, 1er septembre 2026 :
+  // « une transition qui annonce un peu la suite sans la répétition »).
+  // Reprendre ici les quatre irritants, ou nommer les quatre réponses,
+  // ferait de la page suivante une redite — le défaut que tout ce deck a
+  // été récrit pour supprimer. Elle dit donc la MÉTHODE, pas le contenu :
+  // le produit retire au lieu d'ajouter, et les pages qui suivent le
+  // montrent dans le même ordre.
+  //
+  // Le vide fait le travail : ni capture, ni alinéas, ni encadré. C'est la
+  // seule page du deck qui ne démontre rien, et c'est ce qui la rend
+  // lisible comme une respiration entre le problème et la réponse.
+  {
+    const s = pres.addSlide()
+    d.entete(s, 'Avec Quantinvo')
+    s.addText("Quantinvo n’ajoute pas un outil de plus.\nIl retire ce qu’il faut monter autour d’un comptage.", {
+      x: M, y: 2.75, w: W - 2 * M, h: 1.9, fontFace: FONTD, fontSize: 30, bold: true,
+      color: P.DEEP, margin: 0, lineSpacingMultiple: 1.12,
+    })
+    d.para(s, "Les pages qui suivent le montrent, dans l'ordre où ces contraintes se présentent aujourd'hui.", { x: M, y: 4.75, w: W - 2 * M, h: 0.4, size: 13, color: P.SLATE })
+    d.pied(s, 5, PIED)
+    s.addNotes("La respiration du deck. Une phrase, un silence, on tourne. Ne rien ajouter à l'oral : si on se met à énumérer ce qui vient, la page suivante n'a plus rien à apprendre. La seconde ligne suffit à dire que les réponses arrivent dans l'ordre des contraintes.")
+  }
+
+  // ════ 6. La réponse, dans l'ordre des irritants ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Avec Quantinvo')
@@ -162,11 +193,11 @@ async function main() {
       { ecran: 'comptage', titre: 'Ils comptent au rayon', texte: "Scanner l'étiquette, puis les articles. Le geste ne demande pas de briefing.", fill: P.TINT },
       { ecran: 'audit', titre: 'Il audite selon votre règle', texte: "La deuxième passe se lance du même téléphone, pendant que le comptage continue.", fill: P.MIST },
     ], { y: 2.5 })
-    d.pied(s, 5, PIED)
+    d.pied(s, 6, PIED)
     s.addNotes("Les trois cartes répondent aux irritants dans leur ordre d'apparition : le balisage, le briefing, puis la conduite. La flotte est réglée par la phrase du haut. Les écrans sont de vraies captures. Et l'Inventory Control ? Il n'a pas d'écran sur cette page — c'est le message ; le sien arrive deux pages plus loin.")
   }
 
-  // ════ 6. Pendant le comptage : le suivi et l'arbitrage ════
+  // ════ 7. Pendant le comptage : le suivi et l'arbitrage ════
   //
   // Fusion des deux anciennes pages « surveillance » et « audit » : elles
   // disaient toutes deux « le chef d'équipe voit et tranche en direct ». Les
@@ -190,11 +221,11 @@ async function main() {
     const yLeg = yc + Math.max(g1.h, g2.h) + 0.14
     d.legende(s, "Onglet Suivi, données d'essai.", { x: M, y: yLeg, w: cw })
     d.legende(s, "Onglet Écarts d'audit, données d'essai.", { x: M + cw + 0.5, y: yLeg, w: cw })
-    d.pied(s, 6, PIED)
+    d.pied(s, 7, PIED)
     s.addNotes("La réponse au premier irritant : le poste de surveillance n'est pas supprimé, il est distribué. Chaque chef d'équipe voit son rayon ; vous voyez tout sans avoir à rester dessus. Le recomptage ne disparaît pas — il se décide à chaud. Le suivi est agrégé, personne n'est suivi nominativement en direct : cela parle aux RH et au CSE d'une maison de cette taille.")
   }
 
-  // ════ 7. Ce qui vous revient : le rapport ════
+  // ════ 8. Ce qui vous revient : le rapport ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Après le comptage')
@@ -203,11 +234,11 @@ async function main() {
     d.para(s, "Export Excel en un clic. Restent la validation, selon la valeur de l'écart, et l'ajustement du stock.", { x: M, y: 4.35, w: COL, h: 1.2, size: 12.5 })
     const g = d.cadre(s, capRapport, { x: RX, y: 1.5, w: RW, h: 5.0 })
     d.legende(s, "Onglet Rapport, données d'essai.", { x: RX, y: 1.5 + g.h + 0.15, w: RW })
-    d.pied(s, 7, PIED)
+    d.pied(s, 8, PIED)
     s.addNotes("La page de l'Inventory Control : son travail commence ici. Ne pas survendre — le recoupement n'était pas le plus dur de la journée, c'est simplement une chose de moins à faire, et le circuit de validation ne change pas.")
   }
 
-  // ════ 8. L'inventaire aléatoire ════
+  // ════ 9. L'inventaire aléatoire ════
   {
     const s = pres.addSlide()
     d.entete(s, "L'inventaire aléatoire")
@@ -224,44 +255,36 @@ async function main() {
       ['Le comptage.', "Rien à sortir, rien à monter la veille : c'est ce qui permet à un inventaire ciblé de rester discret, au lieu d'être annoncé par sa préparation."],
       ['Le contrôle.', "L'écart se lit en direct. S'il dépasse votre seuil, l'Inventory Control reprend la main, et le rapport nourrit l'enquête."],
     ], { x: M, y: 2.75, w: W - 2 * M - wTel - 0.6, h: 3.9, size: 13, gap: 14 })
-    d.pied(s, 8, PIED)
+    d.pied(s, 9, PIED)
     s.addNotes("Leur document dit « en cours d'élaboration » : la page montre que l'outil le rend possible sans rien construire. La répartition est la même que pour le tournant — vous choisissez quoi et quand, le floor compte, vous contrôlez l'écart.")
   }
 
-  // ════ 9. Pour être clair : la comparaison, et les limites ════
+  // ════ 10. Pourquoi nous, plutôt que SmartCount ════
   //
   // ⚠️ JAMAIS de prix Zebra, ni sur la page ni en réponse à une question :
-  // l'ancre SmartCount est confidentielle. L'encadré honnête reste, il fait
+  // l'ancre SmartCount est confidentielle. L'encadré honnête reste — il fait
   // la moitié de la crédibilité de la page.
+  //
+  // ⚠️ La colonne « Ce qu'on ne vous promet pas » a été RETIRÉE le
+  // 1er septembre 2026 (décision de Julien). Elle listait l'inventaire fiscal
+  // certifié, la connexion à l'ERP, l'annuaire d'entreprise et Google Play.
+  // Ces limites ne disparaissent pas du corpus : `build-dsi.js` les porte
+  // pour l'audience qui les demande. Ne pas les réintroduire ici.
   {
     const s = pres.addSlide()
-    d.entete(s, 'Pour être clair')
-    d.titreLarge(s, "Pourquoi nous — et ce que nous ne promettons pas.", { y: 1.25, size: 25 })
-    const cw = (W - 2 * M - 0.7) / 2
-    const x2 = M + cw + 0.7
-    s.addText('Plutôt que SmartCount', { x: M, y: 1.95, w: cw, h: 0.3, fontFace: FONT, fontSize: 10.5, bold: true, color: P.DEEP, margin: 0 })
-    s.addText("Ce qu'on ne vous promet pas", { x: x2, y: 1.95, w: cw, h: 0.3, fontFace: FONT, fontSize: 10.5, bold: true, color: P.SLATE, margin: 0 })
-    d.filet(s, M, 2.3, W - 2 * M)
+    d.entete(s, 'Pourquoi nous')
+    d.titreLarge(s, 'Pourquoi Quantinvo, et pas SmartCount ?', { y: 1.25, size: 26 })
     d.alineas(s, [
-      ['Le matériel.', "SmartCount repose sur une flotte de terminaux dédiés : à charger, configurer, vérifier avant chaque session — le métier qu'on cherche justement à ne plus faire. Quantinvo tourne sur les iPhone que vos équipes ont déjà, et une douchette Bluetooth s'y branche pour les gros volumes."],
-      ['La réconciliation.', "SmartCount rend un rapport de variance, à consolider ensuite avec le stock théorique. Quantinvo rend ce croisement déjà fait : l'attendu, le compté, le non-compté, l'écart en valeur."],
+      ['Le matériel.', "SmartCount repose sur une flotte de terminaux dédiés : à charger, configurer, vérifier avant chaque session — le travail qu'on cherche justement à ne plus faire. Quantinvo tourne sur les iPhone que vos équipes ont déjà, et une douchette Bluetooth s'y branche pour les gros volumes."],
+      ['Le fichier.', "SmartCount rend un rapport de variance, à recouper ensuite avec le stock théorique. Quantinvo rend ce croisement déjà fait : l'attendu, le compté, le non-compté, l'écart en valeur."],
       ["L'éditeur.", "SmartCount est un module au catalogue d'un géant du matériel. Quantinvo ne fait qu'une chose — l'inventaire — et la personne qui l'a dessiné répond elle-même à vos questions."],
-    ], { x: M, y: 2.5, w: cw, h: 2.9, size: 11.5, gap: 10 })
-    // ⚠️ Sept alinéas et un encadré sur une page : le quatrième de droite
-    // passait SOUS le bloc gris, vu au rendu. Les textes sont taillés pour
-    // trois lignes chacun — les rallonger rouvre le défaut.
-    d.alineas(s, [
-      ["L'inventaire fiscal certifié.", "Si votre commissaire aux comptes exige un comptage par un tiers, ce comptage reste. Quantinvo fait tout le reste de l'année, et il le prépare."],
-      ['Une connexion à votre ERP.', "Quantinvo importe vos fichiers et rend un Excel. L'ajustement du stock reste un geste dans votre système — le seul qui doive le rester."],
-      ['La connexion par votre annuaire.', "Les comptes sont nominatifs, créés par invitation. Pas de SAML ni d'Entra ID ; dites-nous si c'est une exigence."],
-      ['Android sur les boutiques.', "L'application tourne sur Android et sur iPhone. Sa mise en ligne sur Google Play est en cours ; d'ici là, elle passe par votre catalogue d'entreprise."],
-    ], { x: x2, y: 2.5, w: cw, h: 2.9, size: 11.5, gap: 10 })
-    d.encadre(s, 'Pour être honnête', "Un terminal durci encaisse mieux les chocs qu'un téléphone, et si votre flotte est déjà amortie, l'argument du matériel pèse moins. Ce qui ne bouge pas : un outil que le floor prend en main sans briefing, et une réconciliation qui n'existe plus.", { x: M, y: 5.65, w: W - 2 * M, h: 1.15 })
-    d.pied(s, 9, PIED)
-    s.addNotes("Deux pages en une : la comparaison et les limites. Ne pas la sauter — un prospect qui découvre une limite après coup perd confiance, un prospect averti la comprend. L'argument décisif de la colonne de gauche : un outil expert suppose un service expert pour le servir, ce qui est incompatible avec le transfert au floor. Un dossier technique séparé existe pour la DSI : le proposer ici.")
+    ], { x: M, y: 2.2, w: W - 2 * M, h: 2.6, size: 13, gap: 16 })
+    d.encadre(s, 'Pour être honnête', "Un terminal durci encaisse mieux les chocs qu'un téléphone, et si votre flotte est déjà amortie, l'argument du matériel pèse moins. Ce qui ne bouge pas : un outil que le floor prend en main sans briefing, et un fichier qui arrive déjà croisé.", { x: M, y: 4.9, w: W - 2 * M, h: 1.15 })
+    d.pied(s, 10, PIED)
+    s.addNotes("L'argument décisif est le premier : un outil expert suppose un service expert pour le servir, ce qui est incompatible avec le transfert au floor. Ne jamais citer de prix Zebra, même en réponse à une question. Et lire l'encadré : c'est lui qui rend le reste crédible. Un dossier technique séparé existe pour la DSI — le proposer ici, il porte les limites du produit.")
   }
 
-  // ════ 10. L'offre ════
+  // ════ 11. L'offre ════
   //
   // ⚠️ Aucun montant n'est écrit ici : `grilleOffres` lit la grille du site
   // (`web/lib/offres.ts`). Un prix recopié à la main a déjà été présenté
@@ -275,11 +298,11 @@ async function main() {
     d.alineas(s, [
       ["Ce que ça change pour l'inventaire tournant.", "À l'intérieur d'un palier, compter davantage ne coûte rien : un chef d'équipe qui décide de compter son rayon un mardi matin n'a aucun budget à demander. C'est ce qui rend le transfert au floor tenable dans la durée. L'application, le tableau de bord, les rapports et les mises à jour sont compris."],
     ], { x: M, y: 5.75, w: W - 2 * M, h: 1.0, size: 12, gap: 9 })
-    d.pied(s, 10, PIED)
+    d.pied(s, 11, PIED)
     s.addNotes("Le palier se choisit sur le nombre de personnes qui comptent EN MÊME TEMPS, pas sur l'effectif : un floor de cent vendeurs dont vingt comptent le mardi matin relève d'Advanced. Le dépassement ne bloque jamais un comptage, il se règle au renouvellement. Au-delà de cent appareils sur un même magasin, ou pour plusieurs magasins, on établit un devis.")
   }
 
-  // ════ 11. Pour finir ════
+  // ════ 12. Pour finir ════
   {
     const s = pres.addSlide()
     d.finale(s, {
