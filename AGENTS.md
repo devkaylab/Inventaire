@@ -5095,9 +5095,10 @@ succès, **titre de trois lignes avec un nombre à sept chiffres et
 débordement, aucun signe double en tête de ligne, l'icône alignée sur la
 première ligne dans les quatre cas.
 
-⚠️ **Non vérifié à l'écran : les deux nouveaux volets.** Ils reprennent un
-composant éprouvé et n'en changent que le texte, de longueur comparable — mais
-ça reste une déduction. À regarder au premier build sur appareil.
+**Les deux nouveaux volets sont validés** par Julien sur le Pixel le 31 août
+2026 au soir — « j'ai vu les volets, c'est bon ». C'était le dernier point que
+je n'avais pu que déduire : je ne les ai pas provoqués moi-même, le second
+demandant de scanner deux fois le même article, donc d'écrire dans sa session.
 
 ⚠️ **Piège de méthode du jour** : `./scripts/pixel.sh | tail -5` rend le code de
 sortie de `tail`, pas celui du script. Un build qui n'a **pas** pu installer
