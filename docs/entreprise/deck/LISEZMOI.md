@@ -57,75 +57,108 @@ avec une icône dans un rond, titres-slogans. Tout a été repris, et la charte
   l'ouverture). Les notes du présentateur sont écrites pour être lues par
   Julien, pas pour être projetées.
 
-## Le deck Samaritaine, resserré (1er septembre 2026)
+## Le deck Samaritaine, récrit (1er septembre 2026)
 
-Constat de Julien : *« il y a beaucoup de répétition »*. La répétition était
-structurelle, pas rédactionnelle : **quatre pages sur quinze racontaient le
-même avant / après**.
+**Deux passes le même jour, et la seconde corrige la première.** Il faut les
+lire dans l'ordre : la première a réglé un problème réel, la seconde a réglé
+celui qu'elle avait laissé.
 
-- « Aujourd'hui » déroulait leur journée en quatre étapes ;
-- « Le constat » la redécoupait en quatre casquettes ;
-- « La même journée, conduite par le floor » la rejouait à l'identique, seul
-  le sujet des phrases changeant ;
-- « Sans, avec » la reprenait une quatrième fois, en tableau.
+### Première passe — la répétition, 15 pages à 11
 
-Elles sont devenues **deux** : leur journée telle qu'elle est (page 3, leur
-document mot pour mot), puis **un seul tableau** qui la remet en regard ligne
-à ligne (page 4), dont la dernière rangée — « Au total » — porte les quatre
-casquettes **et** le pivot de la proposition.
+Constat de Julien : *« il y a beaucoup de répétition »*. Elle était
+structurelle : **quatre pages sur quinze racontaient le même avant / après** —
+« Aujourd'hui » (leur journée en quatre étapes), « Le constat » (la même,
+redécoupée en quatre casquettes), « La même journée conduite par le floor »
+(la même, sujet des phrases changé) et « Sans, avec » (la même, en tableau).
+Elles sont devenues deux, et deux autres fusions ont suivi : « Pendant le
+comptage » + « L'audit » en une page mais **avec les deux captures**, et
+« Pourquoi pas Zebra » + « Ce qu'on ne promet pas » en « Pour être clair ».
 
-Deux autres fusions, même motif :
+### Seconde passe — le deck parlait de leur process, pas de Quantinvo
 
-- « Pendant le comptage » et « L'audit » disaient toutes deux « le chef
-  d'équipe voit et tranche en direct ». Une seule page, **avec les deux
-  captures** : elles, montrent bien deux choses différentes.
-- « Pourquoi pas Zebra » et « Ce qu'on ne promet pas » sont devenues « Pour
-  être clair », en deux colonnes.
+*« Je voulais que tu t'inspires du document de la Samaritaine, pas que tu
+fasses ton ppt autour que de ça »*, et *« n'oublie pas, le sujet c'est
+Quantinvo, pas leur process d'inventaire »*. La première passe avait supprimé
+la répétition **sans toucher au squelette** : une page citait leur procédure
+étape par étape, la suivante la rejouait ligne à ligne en tableau. Deux pages
+sur onze pour décrire le produit du client.
 
-« Qu'est-ce que Quantinvo » a disparu : sa citation ouvre le deck, et son
-seul fait neuf — application, tableau de bord, rapport — est la ligne
-d'accroche de « Qui fait quoi ».
+Le deck suit maintenant **trois temps**, dans cet ordre :
 
-Ce qu'il ne faut pas défaire :
+1. **Aujourd'hui** — le déroulement d'un inventaire tournant de grand magasin,
+   écrit en général ;
+2. **Ce que ça demande** — les irritants, hiérarchisés ;
+3. **Avec Quantinvo** — les réponses, dans l'ordre des irritants.
 
-- **Ne pas réintroduire de page miroir.** Un déroulement raconté deux fois de
-  suite se lit comme du remplissage — c'est exactement ce qui a été vu.
-- **L'attaque en gras du tableau n'est portée QUE par la colonne de gauche.**
-  Écrite des deux côtés, « La veille. » se lisait deux fois sur la même
-  rangée. Les deux cellules sont alignées : cela suffit à dire de quelle
-  étape on parle.
-- **Les faits ne se répètent qu'à bon escient**, chaque fois dans un registre
-  différent : « aucune flotte » dans le tableau puis dans la comparaison
-  SmartCount, la règle d'audit dans leur journée puis sur la page qui la
-  montre, le rapport croisé dans le tableau puis sur sa page. Tout le reste a
-  été retiré de ses autres emplacements — c'est la moitié du travail.
-- **La page 3 n'a volontairement aucune capture.** C'est leur document : y
-  poser un écran de notre produit mettrait notre réponse avant leur constat.
-- **⚠️ La page 9 est tendue.** Sept alinéas et un encadré : au premier rendu,
-  le quatrième alinéa de droite passait *sous* le bloc gris. Les textes sont
-  taillés pour trois lignes chacun ; les rallonger rouvre le défaut.
+Le tableau miroir a disparu. **Deux pages de mise en situation sur onze** : le
+reste est le produit.
+
+### ⚠️ Les quatre irritants, et celui qui n'en est pas un
+
+Confirmés un par un par Julien, dans cet ordre — le service mobilisé en tête,
+les trois autres comme ses causes :
+
+1. un service mobilisé du début à la fin ;
+2. une flotte de terminaux à préparer avant chaque session ;
+3. un briefing à chaque équipe, à chaque inventaire ;
+4. un balisage la veille.
+
+⚠️ **Le rapprochement avec le stock théorique N'EN FAIT PAS PARTIE.** Une
+version l'avait mis en tête, comme « le plus long et le plus dur » : c'est
+faux, et Julien l'a donné en exemple de ce qu'il ne faut pas exagérer. Il se
+cite **en demi-phrase, sans rang ni adjectif**, à la fin du premier alinéa, et
+se montre côté Quantinvo comme un gain, platement (« le recoupement n'est plus
+à faire »). Ne pas lui redonner de page, ni d'adjectif.
+
+Même règle partout ailleurs : la page du rapport ne parle plus de « la
+démarque que l'inventaire est censé révéler », la page de l'aléatoire ne dit
+plus « ce qui rend l'aléatoire réellement aléatoire ». **Ce qui ne se ramollit
+pas, en revanche, c'est l'angle** : l'inventaire est rendu au floor, décision
+de Julien du 27 août — la mesure porte sur les promesses, pas sur la thèse.
+
+### Ce qu'il ne faut pas défaire
+
+- **Ne pas réintroduire de citation étape par étape de leur procédure**, ni de
+  tableau qui la rejoue. Deux versions successives l'ont fait.
+- **Ne pas réintroduire de page miroir** : un déroulement raconté deux fois de
+  suite se lit comme du remplissage.
+- **Pas de vocabulaire interne du client.** « Horlogerie et joaillerie », pas
+  leur sigle maison ; « rapport d'inventaire », pas le nom de leur extraction.
+- **Les pages de réponse suivent l'ordre des irritants** : les trois cartes de
+  la page 5 répondent au balisage, au briefing puis à la conduite, la flotte
+  étant réglée par la phrase d'accroche ; la page 6 finit le premier irritant
+  (la surveillance) ; la page 7 le fichier.
+- **La page 9 est tendue.** Sept alinéas et un encadré : au premier rendu, le
+  quatrième alinéa de droite passait *sous* le bloc gris. Les textes sont
+  taillés pour trois lignes chacun.
 
 ### L'écran d'entrée est l'écran de lancement
 
 Demande de Julien : *« un screen d'entrée avec le logo de Quantinvo sur
-l'écran de l'iPhone »*. La page 1 porte donc le téléphone **entier** — pas
+l'écran de l'iPhone »*. La page 1 porte le téléphone **entier** — pas
 débordant comme ailleurs : ici c'est le sujet de la page —, la marque, la
-citation d'origine et sa signature. La couverture, avec le titre et le
-sous-titre, suit en page 2.
+citation d'origine et sa signature. La couverture suit en page 2.
 
 ⚠️ La capture est `captures/lancement.png`, et elle **ne s'obtient qu'en
 Release** (voir plus bas). Ne pas la remplacer par une capture prise sur un
 build de développement : le bandeau LogBox de React Native s'y afficherait
 par-dessus.
 
-### Une capture de plus, sur l'inventaire aléatoire
+⚠️ **La citation de la page 1 reste à trancher.** Julien a demandé des
+variantes « qui tournent plus autour de l'app que de moi » ; elles lui ont été
+proposées, aucune n'a été retenue à ce jour, et la citation d'origine est
+restée. Le sujet est ouvert.
 
-`nouvel-inventaire.png` illustre « un inventaire ciblé se crée en quelques
-minutes » — l'écran le montre en trois champs. Le deck porte huit captures
-sur onze pages, contre six sur quinze : la densité double.
+### Les captures
 
-⚠️ **Les captures de l'application datent du 27 août 2026**, et l'écran
-de comptage a changé depuis (viseur, liste des scans derrière un bouton, trace
+Huit captures sur onze pages, contre six sur quinze : `nouvel-inventaire.png`
+a rejoint la page de l'inventaire aléatoire, et l'écran de lancement ouvre le
+deck. Les deux pages de mise en situation n'en portent **aucune**, et c'est
+voulu : une capture du produit sur la page du problème donnerait la réponse
+avant que la question soit posée.
+
+⚠️ **Les captures de l'application datent du 27 août 2026**, et l'écran de
+comptage a changé depuis (viseur, liste des scans derrière un bouton, trace
 « Dernier scan »). C'est le même vieillissement que celui signalé par
 `CAPTURES_A_REFAIRE` sur `/outils/prise-en-main` : une passe de captures les
 remettra à jour d'un coup, decks et guide du site ensemble.
@@ -278,11 +311,13 @@ comptage, et les decks le disent. Le raisonnement complet vit dans
   « Revenir sur une balise », « Rejoindre un inventaire », « Balise hors
   plage », les onglets Suivi / Set up / Écarts d'audit / Rapport / Équipe.
   Un libellé qui change dans l'application change ici — et la capture avec.
-- **Le deck La Samaritaine suit leur propre document** (« Déroulement
-  inventaire tournant », août 2026) : la page « Aujourd'hui », la règle
-  d'audit 100 % W&J / 30 %, la consolidation SKU Variance / stock théorique
-  et le projet d'inventaire aléatoire en viennent tels quels. Si leur
-  procédure change, la page 3 change. **L'angle, fixé par Julien le
+- **Le deck La Samaritaine s'INSPIRE de leur document** (« Déroulement
+  inventaire tournant », août 2026) sans se bâtir dessus : la page
+  « Aujourd'hui » décrit un inventaire tournant de grand magasin en général,
+  et n'en garde que des touches — la règle d'audit, le rapport d'inventaire,
+  le projet d'inventaire aléatoire. **Leur vocabulaire interne n'y figure
+  pas** : « horlogerie et joaillerie », pas leur sigle ; « rapport
+  d'inventaire », pas le nom de leur extraction. **L'angle, fixé par Julien le
   27 août 2026 : l'inventaire est RENDU au floor** — balisage compris —,
   chefs d'équipe en superviseurs, vendeurs en compteurs ; l'Inventory
   Control ne garde que le rapport, la validation et l'ajustement. Ne pas

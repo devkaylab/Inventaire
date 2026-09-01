@@ -2,27 +2,33 @@
 // node build-samaritaine.js                 → Quantinvo-Samaritaine.pptx        (Arial)
 // FONT_MODE=brand node build-samaritaine.js → Quantinvo-Samaritaine-marque.pptx (Sora/Inter)
 //
-// Le fil du deck suit le document « Déroulement inventaire tournant » remis
-// par La Samaritaine : chaque étape citée sur la page « Aujourd'hui » vient
-// de ce document, pas de notre imagination. L'angle de vente, précisé par
-// Julien : l'inventaire est RENDU aux équipes de vente — balisage compris —
-// avec les chefs d'équipe en superviseurs et les vendeurs en compteurs.
-// L'Inventory Control ne garde que le rapport, la validation et l'ajustement.
+// L'angle de vente, fixé par Julien le 27 août 2026 : l'inventaire est RENDU
+// aux équipes de vente — balisage compris —, chefs d'équipe en superviseurs et
+// vendeurs en compteurs. L'Inventory Control fixe la règle, reçoit le rapport,
+// valide et ajuste. Ne pas ramollir en « alléger la charge ».
 //
-// ⚠️ RESSERRÉ LE 1er SEPTEMBRE 2026, de 15 pages à 11. Constat de Julien :
-// « beaucoup de répétition ». Quatre pages disaient le même avant / après —
-// « Aujourd'hui », « Le constat » (les quatre casquettes), « La même journée
-// conduite par le floor » et le tableau « Sans / avec ». Elles sont devenues
-// DEUX : leur journée telle qu'elle est, puis un seul tableau qui la remet
-// en regard, dont la dernière ligne porte les quatre casquettes et le pivot
-// de la proposition. Ne pas réintroduire de page miroir : un déroulement
-// raconté deux fois de suite se lit comme un remplissage.
+// ⚠️ TROIS TEMPS, ET DANS CET ORDRE (1er septembre 2026, demande de Julien) :
+// « aujourd'hui ça se passe comme ça » → « voici ce que ça demande » → « voici
+// ce que Quantinvo change ». Les pages de réponse suivent l'ordre des
+// irritants, et le problème est posé EN ENTIER avant qu'on parle du produit.
 //
-// Les faits ne se répètent plus qu'à bon escient : « aucune flotte » se dit
-// dans le tableau puis dans la comparaison SmartCount (deux registres), la
-// règle d'audit dans leur journée puis sur la page d'audit, le rapport croisé
-// dans le tableau puis sur la page qui le montre. Tout le reste a été retiré
-// de ses autres emplacements — c'est la moitié du travail de cette révision.
+// ⚠️ LE DOCUMENT DE LA SAMARITAINE INSPIRE, IL NE SERT PLUS DE SQUELETTE.
+// Deux versions successives ont été bâties dessus : une page qui le citait
+// étape par étape, puis un tableau qui le rejouait ligne à ligne. Constat de
+// Julien : « je voulais que tu t'en inspires, pas que tu fasses ton ppt
+// autour que de ça ». La page « Aujourd'hui » décrit donc un inventaire
+// tournant de grand magasin en général, et ne garde de leur procédure que
+// des TOUCHES (la règle d'audit, le rapport d'inventaire), sans leur
+// vocabulaire interne — « horlogerie et joaillerie », pas leur sigle. Ne pas
+// réintroduire de citation étape par étape, ni de tableau miroir.
+//
+// ⚠️ NE PAS EXAGÉRER LES IRRITANTS. Les quatre retenus sont ceux que Julien a
+// confirmés : le service mobilisé du début à la fin, la flotte de terminaux,
+// le briefing avant chaque comptage, le balisage de la veille. Le
+// rapprochement avec le stock théorique N'EN FAIT PAS PARTIE — une version
+// précédente en avait fait la douleur principale, ce qui était faux : « c'est
+// pas le truc le plus long et dur à faire ». Il se cite en demi-phrase, sans
+// rang ni adjectif, et se montre côté Quantinvo comme un gain, platement.
 
 const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer } = require('./charte')
 const { GRILLE, grilleOffres, euros } = require('./blocs')
@@ -99,89 +105,65 @@ async function main() {
     s.addNotes("Ouvrir sur l'idée, pas sur le produit : l'inventaire cesse d'être une opération de l'Inventory Control pour devenir un geste des équipes de vente. Le deck suit leur propre document de déroulement.")
   }
 
-  // ════ 3. Aujourd'hui : leur journée, d'après leur document ════
+  // ════ 3. Aujourd'hui : le déroulement, en général ════
   //
-  // ⚠️ Page volontairement SANS capture. C'est leur document, mot pour mot :
-  // une capture de notre produit y mettrait notre réponse avant leur constat.
+  // ⚠️ Écrite pour un grand magasin en inventaire tournant, PAS comme une
+  // citation de leur procédure. Leurs spécificités ne sont que des touches —
+  // la règle d'audit, le rapport d'inventaire — et leur vocabulaire interne
+  // n'y figure pas : « horlogerie et joaillerie », pas leur sigle maison.
+  // Deux pages de mise en situation sur onze, et pas une de plus : le sujet
+  // du deck est Quantinvo.
   {
     const s = pres.addSlide()
     d.entete(s, "Aujourd'hui")
-    d.titre(s, "Votre journée d'inventaire, telle qu'elle se déroule.", { h: 1.7 })
-    d.para(s, "Reprise de votre déroulement d'inventaire tournant, étape par étape. Chaque ligne est tirée de votre document — et chaque ligne est portée par l'Inventory Control.", { x: M, y: 3.2, w: COL, h: 1.2, size: 12, italic: true, color: P.SLATE })
+    d.titre(s, 'Un inventaire tournant, aujourd’hui.', { h: 1.6 })
+    d.para(s, "Le déroulement est le même partout, quel que soit l'outil de comptage.", { x: M, y: 3.1, w: COL, h: 1.0, size: 12, italic: true, color: P.SLATE })
     d.alineas(s, [
-      ['La veille.', "Balisage des zones à inventorier, stickers posés avec une personne du floor ou du relay."],
-      ['Le matin.', "Télécharger le stock théorique du jour, ouvrir la session SmartCount, connecter les terminaux Zebra un par un — en vérifiant la date et la localisation de chacun (101 floor / BOH, 902 relay). Puis briefer les compteurs sur le maniement des terminaux et la procédure."],
-      ['Pendant.', "Déclencher l'audit des zones comptées — 100 % pour la W&J, 30 % au moins ailleurs —, guetter les failed audits sur SmartCount, faire recompter les zones en désaccord."],
-      ['Après.', "Extraire le rapport SKU Variance, le consolider à la main avec le stock théorique, faire valider les résultats selon la valeur de l'écart (Inventory Control, PSM ou AGM), puis ajuster le stock."],
+      ['La veille.', "On balise les zones à inventorier : quelqu'un passe dans le magasin poser les étiquettes, rayon par rayon."],
+      ['Le matin.', "On télécharge le stock théorique du jour, on ouvre la session, on prépare les terminaux un par un — charge, date, localisation — puis on briefe les compteurs sur le maniement du matériel et sur la procédure."],
+      ['Pendant.', "Les équipes comptent. On déclenche l'audit selon la règle du magasin — 100 % sur l'horlogerie et la joaillerie, 30 % au moins ailleurs — et on fait recompter les zones en désaccord."],
+      ['Après.', "On sort le rapport d'inventaire, on le recoupe avec le stock théorique, on fait valider selon la valeur de l'écart, puis on ajuste le stock."],
     ], { y: 1.5, h: 5.2, size: 13, gap: 16 })
     d.pied(s, 3, PIED)
-    s.addNotes("Ne rien commenter : lire, et laisser la page faire son effet. C'est leur document, ils s'y reconnaissent. La question qui vient toute seule : pourquoi tout cela passe-t-il par l'Inventory Control ?")
+    s.addNotes("Poser le décor, sans commenter : c'est leur journée, ils s'y reconnaissent. Ne pas s'attarder — cette page n'est pas le sujet, elle prépare la suivante.")
   }
 
-  // ════ 4. Le même déroulement, conduit par le floor ════
+  // ════ 4. Ce que cette journée demande ════
   //
-  // ⚠️ Cette page en remplace TROIS (les quatre casquettes, la journée miroir,
-  // l'ancien tableau sans / avec). La dernière ligne porte à la fois le compte
-  // des casquettes et le pivot de la proposition : c'est elle qu'on lit à voix
-  // haute, pas les cinq.
+  // ⚠️ Les quatre irritants confirmés par Julien, le service mobilisé en tête
+  // et les trois autres comme ses causes. Le rapprochement avec le stock
+  // théorique n'a PAS de rang ici : il tient dans la fin du premier alinéa,
+  // sans adjectif. En faire la douleur principale serait faux.
   {
     const s = pres.addSlide()
-    d.entete(s, 'Ce qui change')
-    d.titreLarge(s, "Le déroulement ne change pas. Ce qui change, c'est qui le porte.", { y: 1.25, size: 25 })
-    d.para(s, "Votre journée, ligne à ligne, et la même conduite par les équipes de vente.", { x: M, y: 2.0, w: W - 2 * M, h: 0.4, size: 12, italic: true, color: P.SLATE })
-
-    // ⚠️ `wc` et `x2` se déduisent de la marge : à 5,75 la colonne de droite
-    // dépassait le filet de deux dixièmes de pouce, et « tranche » touchait le
-    // bord de la page.
-    const wc = (W - 2 * M - 0.6) / 2
-    const x1 = M, x2 = M + wc + 0.6
-    let y = 2.55
-    s.addText("Aujourd'hui", { x: x1, y, w: wc, h: 0.3, fontFace: FONT, fontSize: 10.5, bold: true, color: P.SLATE, margin: 0 })
-    s.addText('Avec Quantinvo', { x: x2, y, w: wc, h: 0.3, fontFace: FONT, fontSize: 10.5, bold: true, color: P.DEEP, margin: 0 })
-    y += 0.38
-    d.filet(s, M, y, W - 2 * M)
-    // [attaque, aujourd'hui, avec Quantinvo] — l'attaque en gras tient les deux
-    // colonnes alignées sur la même étape de la journée.
-    const rangs = [
-      ['La veille.', "Balisage par l'Inventory Control, stickers posés avec une personne du floor ou du relay.", "Le chef d'équipe imprime ses balises — une planche d'étiquettes numérotées, en PDF — et les pose avec son équipe."],
-      ['Le matin.', "Stock théorique à télécharger, session à ouvrir, terminaux à connecter et vérifier un par un, briefing sur le matériel.", "Il importe le stock théorique tel quel, colonnes reconnues, et ouvre l'inventaire. Chaque vendeur le rejoint depuis son téléphone."],
-      ['Pendant.', "Quelqu'un reste posté sur la plateforme pour guetter les failed audits et faire recompter les zones.", "Le chef d'équipe suit l'avancement, audite selon votre règle et tranche les désaccords au rayon, en direct."],
-      ['Après.', "Le SKU Variance à extraire, puis à consolider à la main avec le stock théorique.", "Le rapport arrive déjà croisé avec l'attendu, prêt pour la validation."],
-      ['Au total.', "Quatre casquettes pour l'Inventory Control : préparer, surveiller, réconcilier, corriger.", "Une seule vous reste : valider l'écart, ajuster le stock."],
-    ]
-    // ⚠️ L'attaque en gras n'est portée QUE par la colonne de gauche. Écrite
-    // des deux côtés, « La veille. » se lisait deux fois sur la même ligne —
-    // la répétition que cette page est justement chargée de supprimer. Les
-    // deux cellules sont sur la même rangée : l'alignement suffit à dire de
-    // quelle étape on parle.
-    for (const t of rangs) {
-      y += 0.14
-      const opts = { w: wc, h: 0.6, fontFace: FONT, fontSize: 11.5, margin: 0, lineSpacingMultiple: 1.15 }
-      s.addText([
-        { text: t[0] + ' ', options: { bold: true, color: P.INK } },
-        { text: t[1], options: { color: P.INK2 } },
-      ], { ...opts, x: x1, y })
-      s.addText(t[2], { ...opts, x: x2, y, color: P.INK })
-      y += 0.62
-      d.filet(s, M, y, W - 2 * M)
-    }
+    d.entete(s, 'Ce que ça demande')
+    d.titreLarge(s, "Le comptage est fait par les équipes. Tout ce qui l’entoure est fait par vous.", { y: 1.25, size: 24 })
+    d.alineas(s, [
+      ['Un service mobilisé du début à la fin.', "Quelqu'un de l'Inventory Control prépare l'inventaire, reste disponible pendant le comptage, puis reprend le fichier pour le recouper avec le théorique."],
+      ['Une flotte à préparer.', "Les terminaux se chargent, se connectent et se vérifient un par un avant chaque session — date, localisation. C'est un travail en soi, et il ne compte aucun article."],
+      ['Un briefing à chaque fois.', "Le maniement du matériel s'explique à chaque équipe et à chaque inventaire. Les compteurs changent, la procédure se réapprend."],
+      ['Un balisage la veille.', "Il faut mobiliser quelqu'un du magasin pour poser les étiquettes, avant même que le comptage ait commencé."],
+    // Le titre prend deux lignes : les alinéas descendent d'autant, sinon le
+    // premier vient toucher le « vous. » de la seconde.
+    ], { x: M, y: 2.5, w: W - 2 * M, h: 3.0, size: 13, gap: 14 })
+    d.encadre(s, 'Ce que ça coûte vraiment', "Ce n'est pas le comptage qui pèse — il est fait par les équipes de vente, et il se fait bien. C'est tout ce qu'il faut monter autour, à chaque fois, et qui interdit de compter souvent.", { x: M, y: 5.6, w: W - 2 * M, h: 1.15 })
     d.pied(s, 4, PIED)
-    s.addNotes("Ne pas lire les cinq lignes : lire « La veille », puis descendre directement sur « Au total ». Chaque ligne de gauche est portée par l'Inventory Control, chaque ligne de droite par le floor — sauf la dernière, la seule qui vous reste. C'est le pivot de toute la proposition : on ne propose pas d'alléger votre charge, on propose de la transférer.")
+    s.addNotes("La page du problème. Lire l'encadré à voix haute : c'est lui qui articule tout le deck — un inventaire tournant suppose de compter souvent, et ce qu'on vient d'énumérer est précisément ce qui l'en empêche. Ne pas en rajouter : ces quatre points suffisent, et ils sont vrais.")
   }
 
-  // ════ 5. Qui fait quoi — les écrans ════
+  // ════ 5. La réponse, dans l'ordre des irritants ════
   {
     const s = pres.addSlide()
-    d.entete(s, 'Qui fait quoi')
-    d.titreLarge(s, "L'inventaire appartient au floor. Voici leurs écrans.", { y: 1.25, size: 24 })
-    d.para(s, "Une application sur l'iPhone des compteurs, un tableau de bord pour celui qui pilote, un rapport à la fin. Rien d'autre à installer, rien à acheter.", { x: M, y: 1.9, w: W - 2 * M, h: 0.4, size: 12, color: P.SLATE })
+    d.entete(s, 'Avec Quantinvo')
+    d.titreLarge(s, 'Le chef d’équipe conduit. Ses vendeurs comptent.', { y: 1.25, size: 25 })
+    d.para(s, "Une application sur les iPhone que vos équipes ont déjà, un tableau de bord pour celui qui pilote, un rapport à la fin. Rien à charger la veille, rien à briefer, aucune flotte à préparer.", { x: M, y: 1.95, w: W - 2 * M, h: 0.4, size: 12, color: P.SLATE })
     await troisEcrans(s, [
-      { ecran: 'balises', titre: "Le chef d'équipe prépare", texte: "Il choisit la numérotation et imprime sa planche d'étiquettes.", fill: P.MIST },
-      { ecran: 'comptage', titre: 'Les vendeurs comptent', texte: "Ils scannent la balise du rayon, puis les articles. Le geste qu'ils connaissent.", fill: P.TINT },
-      { ecran: 'audit', titre: "Le chef d'équipe repasse", texte: "Il audite la zone selon votre règle, pendant que le comptage continue ailleurs.", fill: P.MIST },
-    ], { y: 2.45 })
+      { ecran: 'balises', titre: 'Il imprime ses balises', texte: "Une planche d'étiquettes numérotées, en PDF. Personne d'autre à mobiliser la veille.", fill: P.MIST },
+      { ecran: 'comptage', titre: 'Ils comptent au rayon', texte: "Scanner l'étiquette, puis les articles. Le geste ne demande pas de briefing.", fill: P.TINT },
+      { ecran: 'audit', titre: 'Il audite selon votre règle', texte: "La deuxième passe se lance du même téléphone, pendant que le comptage continue.", fill: P.MIST },
+    ], { y: 2.5 })
     d.pied(s, 5, PIED)
-    s.addNotes("Les écrans sont de vraies captures de l'application, celles du guide de prise en main. Et l'Inventory Control ? Il n'a pas d'écran sur cette page — c'est le message. Le sien arrive deux pages plus loin : le rapport.")
+    s.addNotes("Les trois cartes répondent aux irritants dans leur ordre d'apparition : le balisage, le briefing, puis la conduite. La flotte est réglée par la phrase du haut. Les écrans sont de vraies captures. Et l'Inventory Control ? Il n'a pas d'écran sur cette page — c'est le message ; le sien arrive deux pages plus loin.")
   }
 
   // ════ 6. Pendant le comptage : le suivi et l'arbitrage ════
@@ -194,7 +176,7 @@ async function main() {
     const s = pres.addSlide()
     d.entete(s, 'Pendant le comptage')
     d.titreLarge(s, "Vous fixez la règle d'audit. Le floor l'applique.", { y: 1.25, size: 25 })
-    d.para(s, "100 % de la W&J, 30 % au moins ailleurs : la règle reste la vôtre. Un failed audit ne s'attend plus dans un rapport — les deux comptages s'affichent côte à côte, l'écart en pièces et en valeur d'achat, et il se tranche pendant que le compteur est encore au rayon. L'Inventory Control ouvre la même vue sur n'importe quel inventaire en cours, sans en conduire aucun.", { x: M, y: 1.95, w: W - 2 * M, h: 0.85, size: 12.5 })
+    d.para(s, "La règle d'audit reste la vôtre — 100 % sur l'horlogerie et la joaillerie, 30 % au moins ailleurs. Le désaccord entre les deux comptages ne s'attend plus dans un fichier : ils s'affichent côte à côte, l'écart en pièces et en valeur d'achat, et il se tranche pendant que le compteur est encore devant l'article. L'Inventory Control ouvre la même vue sur n'importe quel inventaire en cours, sans avoir à s'y tenir.", { x: M, y: 1.95, w: W - 2 * M, h: 0.85, size: 12.5 })
 
     const cw = (W - 2 * M - 0.5) / 2
     const yc = 3.55
@@ -209,20 +191,20 @@ async function main() {
     d.legende(s, "Onglet Suivi, données d'essai.", { x: M, y: yLeg, w: cw })
     d.legende(s, "Onglet Écarts d'audit, données d'essai.", { x: M + cw + 0.5, y: yLeg, w: cw })
     d.pied(s, 6, PIED)
-    s.addNotes("Le poste de surveillance n'est pas supprimé, il est distribué : chaque chef d'équipe voit son rayon, et vous voyez tout sans rien opérer. Le recomptage ne disparaît pas non plus — il se décide à chaud plutôt que d'être découvert sur la plateforme. Le suivi est agrégé, personne n'est suivi nominativement en direct : cela parle aux RH et au CSE d'une maison de cette taille.")
+    s.addNotes("La réponse au premier irritant : le poste de surveillance n'est pas supprimé, il est distribué. Chaque chef d'équipe voit son rayon ; vous voyez tout sans avoir à rester dessus. Le recomptage ne disparaît pas — il se décide à chaud. Le suivi est agrégé, personne n'est suivi nominativement en direct : cela parle aux RH et au CSE d'une maison de cette taille.")
   }
 
   // ════ 7. Ce qui vous revient : le rapport ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Après le comptage')
-    d.titre(s, 'Ce qui vous revient : un rapport déjà consolidé.', { size: 24, h: 1.5 })
-    d.para(s, "Le rapport part du stock théorique, pas seulement de ce qui a été scanné. Un article attendu et jamais trouvé y figure, avec son manque : la démarque que l'inventaire est censé révéler est déjà dans le fichier.", { x: M, y: 3.15, w: COL, h: 1.6, size: 12.5 })
-    d.para(s, "Export Excel en un clic. Il ne reste que la validation — Inventory Control, PSM ou AGM selon la valeur de l'écart — et l'ajustement du stock.", { x: M, y: 4.7, w: COL, h: 1.2, size: 12.5 })
+    d.titre(s, 'Le rapport arrive déjà croisé.', { size: 26, h: 1.2 })
+    d.para(s, "Il part du stock théorique, pas seulement de ce qui a été scanné : un article attendu et jamais trouvé y figure, avec son manque. Le recoupement n'est plus à faire.", { x: M, y: 2.85, w: COL, h: 1.5, size: 12.5 })
+    d.para(s, "Export Excel en un clic. Restent la validation, selon la valeur de l'écart, et l'ajustement du stock.", { x: M, y: 4.35, w: COL, h: 1.2, size: 12.5 })
     const g = d.cadre(s, capRapport, { x: RX, y: 1.5, w: RW, h: 5.0 })
     d.legende(s, "Onglet Rapport, données d'essai.", { x: RX, y: 1.5 + g.h + 0.15, w: RW })
     d.pied(s, 7, PIED)
-    s.addNotes("C'est la page de l'Inventory Control : son travail commence ici, sur un fichier déjà croisé avec le théorique. Le circuit de validation ne change pas — il s'exerce sur un fichier mieux rangé, et plus tôt dans la journée.")
+    s.addNotes("La page de l'Inventory Control : son travail commence ici. Ne pas survendre — le recoupement n'était pas le plus dur de la journée, c'est simplement une chose de moins à faire, et le circuit de validation ne change pas.")
   }
 
   // ════ 8. L'inventaire aléatoire ════
@@ -239,7 +221,7 @@ async function main() {
     d.alineas(s, [
       ['La sélection.', "Elle reste chez vous : variances négatives répétées, articles sensibles, slow movers. Les rapports des inventaires précédents donnent les chiffres d'où cette sélection se tire."],
       ['Le déclenchement.', "Un inventaire ciblé se crée en quelques minutes — une marque, un rayon, une liste d'articles — le jour même s'il le faut. Les équipes concernées sont invitées depuis l'outil."],
-      ['Le comptage.', "Rien à sortir, rien à monter : c'est ce qui rend l'aléatoire réellement aléatoire, et non un rendez-vous annoncé par la préparation qu'il demande."],
+      ['Le comptage.', "Rien à sortir, rien à monter la veille : c'est ce qui permet à un inventaire ciblé de rester discret, au lieu d'être annoncé par sa préparation."],
       ['Le contrôle.', "L'écart se lit en direct. S'il dépasse votre seuil, l'Inventory Control reprend la main, et le rapport nourrit l'enquête."],
     ], { x: M, y: 2.75, w: W - 2 * M - wTel - 0.6, h: 3.9, size: 13, gap: 14 })
     d.pied(s, 8, PIED)
