@@ -232,9 +232,17 @@ export default function SessionDetailScreen() {
   }
 
   function confirmClose() {
+    // ⚠️ La confirmation COMPTE CE QUI RESTE. Elle disait déjà ce que la
+    // clôture empêche ; elle ne disait pas ce qu'on laisse derrière soi — et
+    // des balises jamais comptées partent alors dans le rapport comme des
+    // manques. C'est le seul chiffre qui puisse faire changer d'avis, donc il
+    // passe avant le reste.
+    const reste = usesZones && zoneMissing.length > 0
+      ? `${zoneMissing.length} balise${zoneMissing.length > 1 ? 's' : ''} sur ${zoneTotal} n${zoneMissing.length > 1 ? "'ont" : "'a"} pas été comptée${zoneMissing.length > 1 ? 's' : ''}. Elle${zoneMissing.length > 1 ? 's' : ''} compteront pour zéro dans le rapport.\n\n`
+      : ''
     void demander({
       titre: 'Clôturer l’inventaire ?',
-      texte: 'Il passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.',
+      texte: `${reste}Il passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.`,
       note: 'Toutes les données sont conservées et le rapport reste disponible. Vous pourrez le rouvrir si besoin.',
       action: 'Clôturer',
     }).then((ok) => { if (ok) closeMutation.mutate() })

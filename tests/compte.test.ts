@@ -2146,3 +2146,65 @@ describe('le tour de l’application, côté compteur', () => {
     expect(astuce).toMatch(/borderRadius: Radius\.lg/)
   })
 })
+
+/**
+ * Le tour de l'application — profil superviseur (31 août 2026).
+ *
+ * ⚠️ **Quatre pièces, pas cinq.** La maquette en proposait une cinquième,
+ * « la progression compte des balises » : l'écran le dit DÉJÀ, mot pour mot
+ * (« % des balises comptées »). Un repère qui explique ce qui est écrit à
+ * l'écran n'est pas un repère, c'est du bruit — il a été abandonné.
+ *
+ * ⚠️ Et deux des quatre ne sont pas des repères mais des **adaptations de
+ * texte** : la règle posée par Julien était « tu ne changes rien, tu adaptes
+ * uniquement le contenu ». Le choix du mode et la confirmation de clôture
+ * gardent donc exactement leur forme.
+ */
+describe('le tour de l’application, côté superviseur', () => {
+  const nouvelle = lire('app/(supervisor)/new-session.tsx')
+  const zones = lire('app/(supervisor)/[sessionId]/zones.tsx')
+  const imports = lire('app/(supervisor)/[sessionId]/import.tsx')
+  const fiche = lire('app/(supervisor)/[sessionId]/index.tsx')
+
+  it('les deux repères sont déclarés et effaçables', () => {
+    const src = lire('lib/reperes.ts')
+    for (const r of ['balises-vocabulaire', 'fichiers-roles']) {
+      expect(src).toContain(`'${r}'`)
+      expect(new RegExp(`const cles: Repere\\[\\][^\\n]*'${r}'`).test(src), `${r} doit être dans oublierReperes`).toBe(true)
+    }
+  })
+
+  it('⚠️ le choix du mode dit qu’il est DÉFINITIF', () => {
+    // C'est la seule chose qu'on ne peut pas deviner, et elle se vit pendant
+    // tout l'inventaire. Le reste du texte décrit ce que le choix change.
+    expect(nouvelle).toMatch(/ne se change plus après la création/)
+    // ⚠️ Et la forme ne bouge pas : c'est toujours un `Switch`, pas deux
+    // cartes comme la maquette le montrait.
+    expect(nouvelle).toContain('<Switch')
+  })
+
+  it('⚠️ la clôture compte ce qui reste', () => {
+    // Des balises jamais comptées partent dans le rapport comme des manques.
+    // C'est le seul chiffre qui puisse faire changer d'avis : il passe devant.
+    expect(fiche).toMatch(/zoneMissing\.length > 0/)
+    expect(fiche).toMatch(/compteront pour zéro dans le rapport/)
+    // La confirmation garde sa forme : même `demander`, mêmes champs.
+    expect(fiche).toMatch(/titre: 'Clôturer l’inventaire \?'/)
+  })
+
+  it('les deux repères sont posés sur des écrans qui DÉFILENT', () => {
+    // Même règle que côté compteur : une carte ne s'insère que là où elle ne
+    // peut rien faire déborder.
+    for (const src of [zones, imports]) {
+      expect(src).toMatch(/<ScrollView/)
+      expect(src).toMatch(/from '@\/components\/Astuce'/)
+    }
+  })
+
+  it('⚠️ et « la progression compte des balises » n’a PAS été ajouté', () => {
+    // L'écran le dit déjà. Un test le fige pour qu'on ne le « complète » pas
+    // un jour en croyant qu'il manque.
+    expect(fiche).toMatch(/% des balises comptées/)
+    expect(lire('lib/reperes.ts')).not.toContain('progression-balises')
+  })
+})

@@ -26,6 +26,8 @@ export type Repere =
   | 'file-attente'       // « comptées » vient du serveur, « en attente » non
   | 'modes-de-scan'      // caméra, saisie, douchette — la douchette est invisible
   | 'corriger-scan'      // le « − » de la liste, au deuxième scan d'un article
+  | 'balises-vocabulaire' // balise, emplacement, plage — les trois mots du produit
+  | 'fichiers-roles'      // référencement vs stock théorique : lequel fait foi
 
 const cle = (repere: Repere, userId: string) => `repere.${repere}.${userId}`
 
@@ -78,7 +80,7 @@ export async function marquerRepereVu(repere: Repere, userId: string): Promise<v
 
 /** Oublie tous les repères d'un compte — « Revoir les repères », Mon compte. */
 export async function oublierReperes(userId: string): Promise<void> {
-  const cles: Repere[] = ['bienvenue', 'guide-demarrage', 'compter-auditer', 'premiere-balise', 'balise-terminee', 'balayage', 'menu-inventaire', 'notifications', 'file-attente', 'modes-de-scan', 'corriger-scan']
+  const cles: Repere[] = ['bienvenue', 'guide-demarrage', 'compter-auditer', 'premiere-balise', 'balise-terminee', 'balayage', 'menu-inventaire', 'notifications', 'file-attente', 'modes-de-scan', 'corriger-scan', 'balises-vocabulaire', 'fichiers-roles']
   try {
     await AsyncStorage.multiRemove(cles.map(r => cle(r, userId)))
   } catch {

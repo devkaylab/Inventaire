@@ -5,6 +5,9 @@ import { Stack, router, useLocalSearchParams } from 'expo-router'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
+import { Astuce, Fort } from '@/components/Astuce'
+import { useRepere } from '@/lib/reperes'
+import { useAuth } from '@/lib/auth'
 import { AlerteIcon, AstuceIcon, CocheIcon, FichierIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -48,6 +51,11 @@ export default function ImportScreen() {
   // sessions list. Hide it and offer a "Commencer l'inventaire" CTA instead.
   const fromNew = from === 'new'
   const theme = useTheme()
+  const { profile } = useAuth()
+  // ⚠️ Les deux imports se ressemblent à l'écran et n'ont rien à voir. Un
+  // inventaire préparé sans stock théorique se compte très bien — et le
+  // rapport est alors vide de la seule chose qu'on attendait.
+  const repereFichiers = useRepere('fichiers-roles', profile?.id)
   const styles = makeStyles(theme)
   const [catalog, setCatalog] = useState<StepState>(initialState)
   const [stock, setStock] = useState<StepState>(initialState)
@@ -150,6 +158,16 @@ export default function ImportScreen() {
         <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
       )}
       <ScrollView contentContainerStyle={styles.container}>
+        {repereFichiers.aVoir && (
+          <View style={styles.astuceEncart}>
+            <Astuce titre="Deux fichiers, deux rôles" onCompris={repereFichiers.marquerVu}>
+              Le <Fort>référencement</Fort> nomme les articles&nbsp;: sans lui, tout ce qui est
+              scanné ressort en « article inconnu ». Le <Fort>stock théorique</Fort> donne les
+              quantités attendues — c&apos;est lui, et lui seul, qui fait apparaître les écarts.
+            </Astuce>
+          </View>
+        )}
+
         <Text style={styles.info}>
           CSV ou Excel (.xlsx) acceptés. Les fichiers volumineux peuvent prendre quelques secondes.
         </Text>
@@ -206,6 +224,7 @@ export default function ImportScreen() {
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
+    astuceEncart: { marginBottom: Spacing.md },
     container: { padding: Spacing.lg, gap: Spacing.lg },
     info: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
     warningBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, borderLeftWidth: 3, borderLeftColor: t.warning },

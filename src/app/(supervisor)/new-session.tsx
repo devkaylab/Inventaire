@@ -168,8 +168,15 @@ export default function NewSessionScreen() {
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.switchLabel}>Utiliser des zones / balises</Text>
+              {/* ⚠️ Ce texte n'explique plus le mécanisme, il dit ce que le
+                  choix CHANGE pour la personne — et qu'il est définitif. Le
+                  mécanisme, elle le découvrira à l'écran suivant ; ce qu'elle
+                  ne peut pas deviner, c'est qu'on ne revient pas là-dessus. */}
               <Text style={styles.hint}>
-                {"Le comptage s'organise par zones ouvertes en scannant une balise (sticker). Vous définirez les plages de balises après la création."}
+                {"Chaque rayon porte une étiquette à scanner : plusieurs personnes comptent en parallèle sans se gêner, et l'avancement se lit rayon par rayon. Sans balises, on scanne les articles sans découpage — plus simple sur un petit stock."}
+              </Text>
+              <Text style={styles.hintFort}>
+                {"Ce choix ne se change plus après la création."}
               </Text>
             </View>
             <Switch
@@ -207,6 +214,9 @@ function makeStyles(t: Theme) {
     regenBtn: { backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
     regenText: { color: t.accent, fontFamily: Font.semibold, fontSize: 14 },
     hint: { fontSize: 13, color: t.textSecondary, lineHeight: 18, fontFamily: Font.regular },
+    // Le même texte que `hint`, dans la couleur du texte courant : ce n'est
+    // pas une alerte, c'est la seule phrase qu'on ne peut pas deviner.
+    hintFort: { fontSize: 13, color: t.textPrimary, lineHeight: 18, fontFamily: Font.semibold, marginTop: 6 },
     switchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.xs },
     switchLabel: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary, marginBottom: 2 },
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.lg, ...t.shadowButton },

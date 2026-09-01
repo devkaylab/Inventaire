@@ -20,6 +20,9 @@ import { errorMessage } from '@/lib/errors'
 import { BaliseCreator } from '@/components/BaliseCreator'
 import { CorbeilleIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
+import { Astuce, Fort } from '@/components/Astuce'
+import { useRepere } from '@/lib/reperes'
+import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
 
@@ -50,6 +53,10 @@ export default function ZonesScreen() {
   const fromNew = from === 'new'
   const queryClient = useQueryClient()
   const theme = useTheme()
+  const { profile } = useAuth()
+  // Les trois mots du produit — et le seul concept qui demande vraiment
+  // une explication. Une fois, sur l'écran où on affecte les plages.
+  const repereBalises = useRepere('balises-vocabulaire', profile?.id)
   const styles = makeStyles(theme)
 
   const [name, setName] = useState('')
@@ -139,6 +146,17 @@ export default function ZonesScreen() {
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.textMuted} />}
         >
+          {repereBalises.aVoir && (
+            <View style={styles.astuceEncart}>
+              <Astuce titre="Balise, emplacement, plage" onCompris={repereBalises.marquerVu}>
+                Une <Fort>balise</Fort> est l&apos;étiquette collée sur un rayon. Un{' '}
+                <Fort>emplacement</Fort> est le nom que vous lui donnez — Surface de vente,
+                Réserve. Une <Fort>plage</Fort> relie les deux&nbsp;: les balises 1000 à 1049
+                sont la Surface de vente. Imprimez d&apos;abord, collez, puis affectez ici.
+              </Astuce>
+            </View>
+          )}
+
           {totals.total > 0 && (
             <View style={styles.summary}>
               <View style={styles.stat}>
@@ -233,6 +251,8 @@ export default function ZonesScreen() {
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
+    // Une seule gouttière : l'encart s'aligne sur les cartes de l'écran.
+    astuceEncart: { marginBottom: Spacing.md },
     container: { padding: Spacing.lg, gap: Spacing.md },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.background },
     summary: { flexDirection: 'row', gap: Spacing.md },
