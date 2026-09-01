@@ -276,13 +276,39 @@ Deux pièges de la capture elle-même :
   du maintien. Elles se repèrent à leur poids : le dégradé sombre compresse mal
   (~1,9 Mo), le reste de l'application fait le quart.
 
-## Poser une capture sur une diapositive
+## `encadrees/` — les captures dans le téléphone, prêtes à l'emploi
 
-`node encadrer.js <capture>` écrit `<capture>-encadre.png` : la capture dans le
-téléphone dessiné des decks, fond transparent, **téléphone entier**. Les decks
-n'en ont pas besoin — `cadrer()` fait le même travail à la volée et coupe le bas
-pour que le téléphone déborde de sa carte — mais une page dont le téléphone est
-le sujet le veut complet.
+**Toutes les captures existent aussi encadrées**, dans `encadrees/` : la même
+image posée dans le téléphone dessiné des decks, fond transparent, téléphone
+entier. Elles se reprennent telles quelles dans un document, un e-mail, une
+page ou une diapositive, sans repasser par une présentation.
+
+```
+node encadrer.js                      # encadrees/, toutes les captures
+node encadrer.js lancement            # lancement-encadre.png, à la racine
+node encadrer.js lancement mon-titre  # mon-titre.png
+```
+
+⚠️ **`preparer-captures.js` les régénère d'office**, à la fin de son passage
+(demande de Julien, 1er septembre 2026). C'est volontairement automatique : un
+jeu encadré qu'il faut penser à refaire finit toujours par montrer un écran que
+l'application n'a plus.
+
+⚠️ **La géométrie du téléphone n'est pas recopiée dans `encadrer.js`** — bezel,
+rayon et filet viennent de `cadrer()`, comme pour les decks. Deux dessins du
+même téléphone divergeraient au premier ajustement, et les images remises au
+client cesseraient de ressembler aux présentations.
+
+⚠️ **La résolution de sortie est celle de l'entrée**, jamais plus. `captures/`
+est en demi-résolution (603 px), donc les téléphones sortent à **~637 px de
+large**. C'est assez pour un écran, juste pour du papier. Pour une version
+pleine résolution, encadrer les captures **brutes** du simulateur, avant leur
+passage par `preparer-captures.js`.
+
+Les decks, eux, n'utilisent pas `encadrees/` : `cadrer()` fait le même travail à
+la volée et coupe le bas pour que le téléphone déborde de sa carte. Une page
+dont le téléphone est le sujet, elle, le veut complet — c'est le cas de la
+page 1 du deck Samaritaine.
 
 ⚠️ **Le simulateur doit être en français.** Sinon la feuille de partage et les
 menus système sortent en anglais au milieu d'un document français

@@ -11,11 +11,18 @@
 // remplacement sont fictionnelles et utilisent le domaine réservé `.example`,
 // qui ne peut appartenir à personne.
 //
+// ⚠️ La passe produit AUSSI `encadrees/` — les mêmes captures posées dans le
+// téléphone dessiné des decks, fond transparent, prêtes à être reprises
+// ailleurs sans repasser par une présentation. C'est délibérément automatique
+// (demande de Julien, 1er septembre 2026) : un jeu encadré qu'il faut penser à
+// régénérer finit toujours par montrer un écran que l'application n'a plus.
+//
 //   node preparer-captures.js <dossier-des-captures-brutes>
 
 const sharp = require('sharp')
 const fs = require('fs')
 const path = require('path')
+const { toutes: encadrerToutes } = require('./encadrer')
 
 const SORTIE = path.join(__dirname, 'captures')
 const LARGEUR = 603
@@ -86,6 +93,7 @@ async function main() {
     faits++
   }
   console.log(`OK ${faits}/${ECRANS.length} captures dans captures/`)
+  await encadrerToutes()
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
