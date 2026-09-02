@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Stack, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { usePorteVisible } from '@/lib/porte'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -46,11 +47,14 @@ const ECRANS_SUR_FOND = ['login', 'signup', 'company-setup']
 
 function BarreEtat() {
   const { name } = useThemeControls()
+  // La porte de bienvenue couvre l'écran sans être une route : sans ce
+  // signal, son fond clair porterait une heure blanche. Voir `lib/porte.ts`.
+  const porte = usePorteVisible()
   // `useSegments` est typé sur les routes connues, mais rend un tableau vide
   // sur l'écran d'attente : d'où la lecture du premier segment, pas de la
   // longueur — cet écran est lui aussi sur le fond de page.
   const premier = useSegments()[0] as string | undefined
-  const surFond = !premier || ECRANS_SUR_FOND.includes(premier)
+  const surFond = porte || !premier || ECRANS_SUR_FOND.includes(premier)
   // Texte sombre seulement là où le haut de l'écran est clair : sur le fond
   // de page, en thème clair. Partout ailleurs le haut est sombre — en-tête
   // presque noir, ou fond de page en thème sombre.

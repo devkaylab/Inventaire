@@ -23,12 +23,14 @@
  * le vérifie. `replace` et non `push`, pour ne pas empiler un second accueil
  * au-dessus de Mon compte ni laisser une flèche de retour qui y revient.
  */
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useAuth } from '@/lib/auth'
 import { useRepere } from '@/lib/reperes'
 import { getMyAssignedStores, getMyCompany, getSessions } from '@/lib/queries'
 import { Bienvenue, type RoleBienvenue } from '@/components/Bienvenue'
+import { poserPorteVisible } from '@/lib/porte'
 
 export function PorteBienvenue() {
   const { profile, mfaRequired } = useAuth()
@@ -40,13 +42,21 @@ export function PorteBienvenue() {
   const entrepriseQ = useQuery({ queryKey: ['bienvenue-entreprise'], queryFn: getMyCompany, enabled: aVoir })
   const sessionsQ = useQuery({ queryKey: ['bienvenue-sessions'], queryFn: getSessions, enabled: aVoir })
 
-  if (!profile || mfaRequired || !aVoir) return null
-
   // ⚠️ On attend les trois réponses avant d'afficher. Sans cela, l'écran
   // s'ouvrait sur « Vous supervisez un magasin. » puis basculait sur le vrai
   // nom une fraction de seconde plus tard — et le bouton changeait de
   // libellé sous le doigt.
-  if (magasinsQ.isPending || entrepriseQ.isPending || sessionsQ.isPending) return null
+  const pret = !magasinsQ.isPending && !entrepriseQ.isPending && !sessionsQ.isPending
+  const montrer = !!profile && !mfaRequired && aVoir && pret
+
+  // La barre d'état doit passer en texte sombre le temps que la porte couvre
+  // l'écran : elle n'est pas une route, personne d'autre ne peut le savoir.
+  useEffect(() => {
+    poserPorteVisible(montrer)
+    return () => poserPorteVisible(false)
+  }, [montrer])
+
+  if (!montrer) return null
 
   const role: RoleBienvenue = profile.is_company_admin
     ? 'company_admin'

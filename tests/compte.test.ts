@@ -679,6 +679,21 @@ describe('onboarding (23 août 2026)', () => {
     expect(porte).toContain('mfaRequired')
   })
 
+  it('la barre d’état passe en sombre pendant la porte de bienvenue', () => {
+    // ⚠️ La porte n'est pas une route : `BarreEtat` décide à partir du segment,
+    // elle ne pouvait donc pas la voir, et l'heure sortait en blanc sur son
+    // fond clair (capture du 2 septembre 2026). Le signal de `lib/porte.ts`
+    // est le seul lien entre les deux — et un `<StatusBar>` posé par la porte
+    // ne le remplace pas : expo-status-bar ne restaure rien au démontage.
+    const layout = lire('app/_layout.tsx')
+    expect(existsSync(src('lib/porte.ts'))).toBe(true)
+    expect(porte).toContain('poserPorteVisible(montrer)')
+    expect(porte).toContain('poserPorteVisible(false)')
+    expect(layout).toContain('const porte = usePorteVisible()')
+    expect(layout).toContain('const surFond = porte ||')
+    expect(porte).not.toContain('<StatusBar')
+  })
+
   it('les étapes se cochent sur des faits, jamais à la main', () => {
     expect(bandeau).toContain('faite: faits.balisesImprimees')
     expect(bandeau).toContain('faite: faits.equipeConstituee')
