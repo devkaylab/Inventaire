@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.quantinvo.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "La caméra sert à lire les balises de zone et les codes-barres des articles pendant l'inventaire. Aucune photo n'est enregistrée.",
         "ITSAppUsesNonExemptEncryption": false
@@ -17,6 +18,7 @@
     },
     "android": {
       "package": "com.quantinvo.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundImage": "./assets/images/android-icon-background.png",
         "backgroundColor": "#0A0912",
@@ -64,7 +66,8 @@
       "expo-sharing",
       "expo-notifications",
       "expo-secure-store",
-      "./plugins/withAndroidForceDark"
+      "./plugins/withAndroidForceDark",
+      "./plugins/withAndroidSigning"
     ],
     "experiments": {
       "typedRoutes": true

@@ -2458,3 +2458,48 @@ describe('l’iPad n’est pas un iPhone agrandi', () => {
     expect(lire('components/Bienvenue.tsx')).toContain('contenuColonne')
   })
 })
+
+describe('la publication Android ne part pas avec la clé de debug', () => {
+  const app = JSON.parse(readFileSync(path.join(here, '..', 'app.json'), 'utf8'))
+  const plugin = readFileSync(path.join(here, '..', 'plugins', 'withAndroidSigning.js'), 'utf8')
+  const script = readFileSync(path.join(here, '..', 'scripts', 'play.sh'), 'utf8')
+
+  it('un plugin pose la signature, parce qu’android/ est généré', () => {
+    // ⚠️ Le gabarit Expo signe le release avec la clé de DEBUG — celle du SDK,
+    // que tout le monde possède. Google Play la refuse. Et `android/` étant
+    // regénéré à chaque prebuild, la correction ne peut pas y vivre.
+    const plugins = app.expo.plugins.map((p: unknown) => (Array.isArray(p) ? p[0] : p))
+    expect(plugins).toContain('./plugins/withAndroidSigning')
+  })
+
+  it('la clé est lue sur la machine, jamais dans le dépôt', () => {
+    // Un dépôt privé reste un dépôt : une clé de signature qui fuit permet de
+    // publier une mise à jour à notre place.
+    expect(plugin).toContain('QUANTINVO_UPLOAD_STORE_FILE')
+    expect(plugin).not.toMatch(/storePassword\s+["']/)
+    expect(plugin).not.toMatch(/keyPassword\s+["']/)
+    expect(JSON.stringify(app)).not.toMatch(/keystore|storePassword/i)
+  })
+
+  it('sans la clé, le build de test continue mais la publication refuse', () => {
+    // Deux exigences opposées, et c'est voulu : `pixel.sh` doit produire un APK
+    // installable sans rien demander, `play.sh` doit refuser plutôt que de
+    // sortir un bundle signé en debug.
+    expect(plugin).toContain("project.hasProperty('QUANTINVO_UPLOAD_STORE_FILE')")
+    expect(script).toContain('exit 1')
+    expect(script).toContain('bundleRelease')
+  })
+
+  it('la signature du bundle est contrôlée après coup', () => {
+    // ⚠️ Un build qui réussit ne prouve pas que la bonne clé a servi : sans les
+    // propriétés, Gradle serait retombé sur la clé de debug SANS RIEN DIRE.
+    expect(script).toContain('Android Debug')
+  })
+
+  it('les numéros de build sont explicites, pour pouvoir être incrémentés', () => {
+    // Les deux boutiques exigent un numéro qui augmente à chaque dépôt. Une
+    // valeur implicite ne se voit pas, donc ne se remonte pas.
+    expect(app.expo.ios.buildNumber).toBeTruthy()
+    expect(typeof app.expo.android.versionCode).toBe('number')
+  })
+})
