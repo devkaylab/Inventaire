@@ -10,13 +10,22 @@
 // signature — d'où on télécharge l'application, comment on met en place, et ce
 // que chaque rôle a à apprendre. Ces trois parties étaient dans trois
 // documents différents, et personne ne les recevait ensemble.
+//
+// ⚠️ Les captures de l'application (page 10) datent du 27 août 2026, et deux
+// d'entre elles montrent des écrans que l'application n'a plus : le viseur de
+// `scanner-balise` est devenu carré en phase balise le 28 août, et la liste de
+// `comptage` est passée derrière un bouton le 29. Elles se refont dans la
+// passe de captures — voir « Ce qu'il reste à faire » dans LISEZMOI.md.
 
 const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer } = require('./charte')
 
 async function main() {
   const d = await preparer({ titre: 'Quantinvo — dossier technique' })
   const { pres } = d
-  const PIED = 'Quantinvo · dossier technique · août 2026'
+  // ⚠️ Le mois est celui de la DERNIÈRE RÉVISION du contenu, pas la date du
+  // jour : il ne se calcule pas. Un pied qui avance tout seul à chaque
+  // génération promettrait une fraîcheur que le document n'a pas.
+  const PIED = 'Quantinvo · dossier technique · septembre 2026'
 
   const capTelechargement = await cadrer('../../../web/screenshots/light-mobile-telechargement.png', { w: 1, h: 99 })
   const capSetup = await capture('light-desktop-setup.png', { left: 448, top: 155, width: 964, height: 620 })
@@ -261,7 +270,7 @@ async function main() {
       { titre: '3 — Scanner les articles', texte: "Caméra, saisie manuelle ou douchette. La quantité se corrige d'un appui, la zone se clôture à la fin.", fichier: 'comptage.png', fill: P.MIST },
     ], { y: 2.05 })
     d.pied(s, 10, PIED)
-    s.addNotes("Trois gestes, dix minutes de prise en main, aucun briefing matériel. C'est ce qui permet de faire compter des équipes de vente plutôt qu'un service spécialisé. Un guide illustré complet est remis après la signature.")
+    s.addNotes("Trois gestes, dix minutes de prise en main, aucun briefing matériel. C'est ce qui permet de faire compter des équipes de vente plutôt qu'un service spécialisé. Le guide illustré complet est remis après la signature — et depuis septembre 2026 il vit aussi dans le produit : le superviseur l'ouvre depuis sa boîte à outils, sur le site, et peut l'imprimer pour la réserve.")
   }
 
   // ════ 11. Comptes et accès ════
@@ -387,7 +396,7 @@ async function main() {
     const s = pres.addSlide()
     d.finale(s, {
       titre: 'Ce qu’on vous remet, et à qui.',
-      texte: "La fiche de déploiement MDM pour l'équipe parc. La politique de confidentialité, les clauses article 28 et les synthèses d'audit pour votre DPO. Le guide de prise en main pour vos superviseurs. La note d'information aux salariés pour vos RH. Et un interlocuteur qui répond.",
+      texte: "La fiche de déploiement MDM pour l'équipe parc. La politique de confidentialité, les clauses article 28 et les synthèses d'audit pour votre DPO. Le guide de prise en main pour vos superviseurs — remis en présentation, et consultable à tout moment depuis leur espace, où il s'imprime pour la réserve. La note d'information aux salariés pour vos RH. Et un interlocuteur qui répond.",
       contact: 'contact@quantinvo.com   ·   www.quantinvo.com',
       bas: 'Quantinvo, par Devkaylab. L’outil d’inventaire pour le commerce.',
     })
