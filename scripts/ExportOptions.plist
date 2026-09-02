@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Options d'export de l'archive iOS, employées par scripts/appstore.sh.
+
+  `method = app-store-connect` : le seul mode que la boutique accepte. Les
+  autres (development, ad-hoc, enterprise) produisent un binaire signé pour
+  autre chose, qu'App Store Connect refuse à l'envoi.
+
+  `uploadSymbols` reste à true : sans les symboles, un rapport de plantage
+  arrive illisible, et on ne saura pas ce qui s'est passé chez un client.
+
+  `signingStyle = automatic` : Xcode crée et renouvelle le certificat de
+  distribution et le profil tout seul, à condition que le compte Apple
+  Developer soit dans Xcode → Réglages → Comptes. C'est ce que fait l'option
+  -allowProvisioningUpdates du script.
+-->
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>teamID</key>
+  <string>8YL7866PHB</string>
+  <key>signingStyle</key>
+  <string>automatic</string>
+  <key>uploadSymbols</key>
+  <true/>
+  <key>destination</key>
+  <string>export</string>
+</dict>
+</plist>
