@@ -229,6 +229,13 @@ describe('le formulaire porte les appareils', () => {
 
     const saisie = lire('../components/MagasinSaisie.tsx')
     expect(saisie).toContain("from '@/lib/offres'")
+    // ⚠️ LES DEUX RYTHMES (demande de Julien, 2 septembre 2026) : un prospect
+    // qui ne lit qu'un montant annuel n'a aucun moyen de savoir que le mensuel
+    // existe, alors que le devis se règle dans les deux.
+    expect(saisie).toContain("prixCents(appareils, 'monthly')")
+    expect(saisie).toContain("prixCents(appareils, 'yearly')")
+    expect(pageInscription).toContain("total('monthly')")
+    expect(pageInscription).toContain("total('yearly')")
     for (const [nom, source] of [
       ['la carte de saisie', saisie],
       ['la demande de magasin', pageMagasins],

@@ -450,6 +450,11 @@ a { color: inherit; text-decoration: none; }
   font-variant-numeric: tabular-nums;
 }
 .magasin-offre strong { color: var(--accent-light); font-weight: 700; }
+/* ⚠️ Un prix ne se coupe jamais. `euros()` groupe les milliers par une espace
+   ORDINAIRE : sans cette règle, « 3 300 € / an HT » se casse entre le 3 et les
+   300 sur un téléphone, et le montant devient illisible. Vaut pour les deux
+   rythmes affichés côte à côte. */
+.magasin-offre .prix, .devis-note .prix { white-space: nowrap; }
 
 .magasin-top { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
 /* Le nom du magasin n'avait aucun habillage : dans la carte étroite de

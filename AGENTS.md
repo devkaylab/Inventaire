@@ -5887,8 +5887,16 @@ et la demande d'ajout de magasin.
 - **Ce qui NE change pas** : le recoupement stock / surface ne sort toujours pas
   de la console, et aucun montant n'est écrit en dur — tout passe par
   `lib/offres`, sinon la grille se met à exister en deux endroits.
-- `/inscription` totalise en pied de formulaire, et **seulement si tous les
-  magasins portent un chiffre** : un total partiel se lirait comme un total.
+- **⚠️ Les DEUX rythmes s'affichent** — « Advanced — 310 € / mois ou 3 300 € /
+  an HT par magasin ». Un prospect qui ne lit qu'un montant annuel n'a aucun
+  moyen de savoir que le mensuel existe, alors que le devis se règle dans les
+  deux. Même paire que la page publique des tarifs.
+- `/inscription` totalise en pied de formulaire, **dans les deux rythmes**, et
+  **seulement si tous les magasins portent un chiffre** : un total partiel se
+  lirait comme un total.
+- **⚠️ Un prix ne se coupe pas** (`.prix { white-space: nowrap }`) : `euros()`
+  groupe les milliers par une espace ORDINAIRE, et sans cette règle
+  « 3 300 € / an » se casse entre le 3 et les 300 sur un téléphone.
 
 ## Le devis se règle à l'année OU au mois
 

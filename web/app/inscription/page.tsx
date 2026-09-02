@@ -131,13 +131,15 @@ export default function CompanyRequestPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Somme des offres, quand chaque magasin porte un nombre d'appareils. Un
-  // seul magasin sans chiffre et il n'y a plus d'estimation à donner : un total
-  // partiel se lirait comme un total.
-  const prixMagasins = magasins.map((m) => prixCents(nombreOuNull(m.appareils), 'yearly'))
-  const estimation: number | null = prixMagasins.some((p) => p === null)
-    ? null
-    : prixMagasins.reduce<number>((t, p) => t + (p ?? 0), 0)
+  // Somme des offres, DANS LES DEUX RYTHMES, quand chaque magasin porte un
+  // nombre d'appareils. Un seul magasin sans chiffre et il n'y a plus
+  // d'estimation à donner : un total partiel se lirait comme un total.
+  const total = (rythme: 'monthly' | 'yearly'): number | null => {
+    const prix = magasins.map((m) => prixCents(nombreOuNull(m.appareils), rythme))
+    return prix.some((p) => p === null) ? null : prix.reduce<number>((t, p) => t + (p ?? 0), 0)
+  }
+  const parMois = total('monthly')
+  const parAn = total('yearly')
 
   const alerteSiren = messageSiren(siren)
   const sirenOk = siren.length > 0 && sirenValide(siren)
@@ -386,15 +388,16 @@ export default function CompanyRequestPage() {
               qu'elle est une estimation : le montant qui engage est celui du
               devis, et il se négocie — surtout sur un réseau. */}
           <p className="devis-note">
-            {estimation === null ? (
+            {parMois === null || parAn === null ? (
               <>
                 La licence est par magasin, calée sur le nombre d’appareils qui comptent en même
                 temps. Inventaires et comptages illimités.
               </>
             ) : (
               <>
-                Estimation : <strong>{euros(estimation / 100)} par an HT</strong> pour{' '}
-                {magasins.length} magasin{magasins.length > 1 ? 's' : ''}. Nous revenons vers vous
+                Estimation pour {magasins.length} magasin{magasins.length > 1 ? 's' : ''} :{' '}
+                <strong className="prix">{euros(parMois / 100)} par mois</strong> ou{' '}
+                <strong className="prix">{euros(parAn / 100)} par an</strong>, hors taxes. Nous revenons vers vous
                 avec un devis — sur un réseau, il se discute.
               </>
             )}

@@ -60,7 +60,15 @@ export function MagasinSaisie({
 }) {
   const appareils = nombreOuNull(valeur.appareils)
   const offre = nomOffre(appareils)
-  const prix = prixCents(appareils, 'yearly')
+  // Les DEUX rythmes (demande de Julien, 2 septembre 2026) : le devis se règle
+  // à l'année ou au mois, et un prospect qui ne lit qu'un montant annuel n'a
+  // aucun moyen de savoir que le mensuel existe. C'est la même paire que la
+  // page publique des tarifs.
+  // ⚠️ Aucun montant n'est écrit ici, jamais : tout passe par `lib/offres`,
+  // sinon la grille se met à exister en deux endroits. Un test le vérifie —
+  // sur le fichier ENTIER, commentaires compris.
+  const mois = prixCents(appareils, 'monthly')
+  const an = prixCents(appareils, 'yearly')
 
   return (
     <div className="magasin">
@@ -103,9 +111,11 @@ export function MagasinSaisie({
         {/* L'offre se lit à la frappe : les trois prix sont publics, et c'est
             ce que le devis reprendra. Rien n'est promis pour autant — un devis
             se négocie, et le montant qui part est celui que Quantinvo établit. */}
-        {offre && prix !== null && (
+        {offre && mois !== null && an !== null && (
           <p className="magasin-offre">
-            <strong>{offre}</strong> — {euros(prix / 100)} / an HT par magasin
+            <strong>{offre}</strong> — <span className="prix">{euros(mois / 100)} / mois</span>
+            {' ou '}
+            <span className="prix">{euros(an / 100)} / an</span> HT par magasin
           </p>
         )}
       </div>
