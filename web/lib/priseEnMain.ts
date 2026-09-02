@@ -14,16 +14,16 @@
  */
 
 /** Le jour où les captures ont été prises. À remonter à chaque nouvelle passe. */
-export const CAPTURES_LE = '24 août 2026'
+export const CAPTURES_LE = '2 septembre 2026'
 
 /**
- * ⚠️ Les captures antérieures au 29 août ne montrent PLUS l'écran réel.
- * L'écran de comptage a changé trois fois depuis (cadre du viseur, liste des
- * scans passée derrière un bouton, trace « Dernier scan »), et les quatre
- * repères du compteur datent du 31 août. Tant que ce drapeau est vrai, la page
- * le dit au lecteur plutôt que de le laisser croire ce qu'il voit.
+ * ⚠️ Le drapeau ne se baisse QUE dans le commit qui refait les captures, et
+ * `CAPTURES_LE` monte avec lui. Repassé à faux le 2 septembre 2026 : la passe
+ * a été refaite après les trois changements de l'écran de comptage (cadre du
+ * viseur, liste des scans derrière un bouton, trace « Dernier scan ») et après
+ * les quatre repères du compteur du 31 août, qui figurent sur les captures.
  */
-export const CAPTURES_A_REFAIRE = true
+export const CAPTURES_A_REFAIRE = false
 
 export interface Etape {
   /** Le fichier dans `public/prise-en-main/`, sans extension. */

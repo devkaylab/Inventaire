@@ -38,7 +38,7 @@ const ECRANS = [
   'creer-balises', 'ajouter-membre', 'mon-compte',
   'bienvenue-compteur', 'accueil-compteur', 'inventaire-compteur',
   'scanner-balise', 'comptage', 'balise-terminee', 'audit',
-  'balise-hors-plage', 'balises-comptees-detail',
+  'balise-hors-plage', 'balises-comptees-detail', 'rapport',
 ]
 
 /**

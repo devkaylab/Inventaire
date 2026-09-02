@@ -41,33 +41,35 @@ celle qu'on envoie, elle s'affiche à l'identique partout.
 Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
 retouche serait écrasée à la prochaine génération. On modifie le script.
 
-## ⚠️ Ce qu'il reste à faire (au 2 septembre 2026)
+## Ce qu'il reste à faire (au 2 septembre 2026)
 
-Une seule chose, mais elle traîne : **les captures ont vieilli**, et c'est
-exactement ce qui a tué le tutoriel intégré de l'application — il décrivait des
-écrans disparus. Les recettes sont plus bas ; ce qui suit dit quoi refaire et
-dans quel ordre.
+**1. Les captures de l'application — FAIT le 2 septembre 2026.** Les vingt et
+une captures de `captures/` (et les `encadrees/` qui en découlent) ont été
+reprises le même jour, sur le compte d'essai reconstruit le 1er septembre. Le
+jeu montre donc l'écran de comptage d'après ses trois refontes (cadre du
+viseur, liste des scans derrière un bouton, trace « Dernier scan ») et les
+repères du compteur et du superviseur du 31 août. `CAPTURES_A_REFAIRE` est
+repassé à `false` dans `web/lib/priseEnMain.ts`, `CAPTURES_LE` au 2 septembre,
+et les treize images de `web/public/prise-en-main/` ont suivi.
 
-**1. Les captures de l'application** (`captures/`, puis `encadrees/`). Leur
-contenu date du **27 août 2026**, et l'écran de comptage a changé trois fois
-depuis : cadre du viseur, liste des scans passée derrière un bouton, trace
-« Dernier scan ». S'y ajoutent les quatre repères du compteur du 31 août.
+Trois choses à savoir si la passe est à refaire :
 
-- il faut le **simulateur iOS et une session connectée** — c'est le seul
-  obstacle, aucun conteneur ne peut le faire ;
-- `preparer-captures.js` réduit, masque les adresses du compte d'essai **et
-  régénère `encadrees/` d'office** : une seule commande pour les deux jeux ;
-- **dans le même commit**, passer `CAPTURES_A_REFAIRE` à `false` dans
-  `web/lib/priseEnMain.ts` et avancer `CAPTURES_LE`. La page
-  `/outils/prise-en-main` du site sert les mêmes images et porte le même
-  aveu ; le drapeau ne se baisse jamais avant les captures.
-
-⚠️ **Deux écrans ont DÉJÀ été repris le 2 septembre 2026**, et ils vivent dans
-`../fiche-produit/` : `ecarts-audit.png` et `rapport.png`. Le premier remplace
-`audit.png`, dont la capture montrait l'interface d'avant la refonte du
-29 août (les deux boutons Compteur / Auditeur n'existaient pas) ; le second
-n'existait dans aucun jeu. À la prochaine passe, les reverser dans `captures/`
-sous leurs noms définitifs et retirer l'exception du dossier de la fiche.
+- **`ecarts-audit.png` est devenu `audit.png`**, le nom que les decks
+  emploient, et `rapport.png` est entré dans `ECRANS`. Les trois PNG locaux de
+  `../fiche-produit/` ont été supprimés : la fiche lit désormais `encadrees/`
+  comme tout le monde, l'exception a disparu.
+- **⚠️ Le simulateur ne peut pas servir les appuis MCP et l'écriture de
+  `simctl` dans la même session** — voir la mémoire projet. La passe s'est donc
+  faite **sans un seul appui** : un aiguillage temporaire dans
+  `src/app/index.tsx` (`CAPTURE_CIBLE`) redirige vers la route voulue, un
+  second (`CAPTURE_LOGIN`) bascule de compte par `signInWithPassword`, et les
+  quatre écrans à état (balise ouverte, balise terminée, balise hors plage,
+  modale des balises) s'obtiennent en forçant l'état initial du `useState`
+  concerné. Tout est retiré à la fin, `git status` contrôlé.
+- **⚠️ `mon-equipe` se capture AVANT la première connexion de Nadia**, sinon le
+  badge « Mot de passe à créer » disparaît. Il est là sur le jeu du
+  2 septembre ; `last_sign_in_at` de Nadia est désormais renseigné, une
+  prochaine passe devra le remettre à nul avant de capturer cet écran.
 
 **2. Les captures du site** (`web/screenshots/`). Les trois du tableau de bord
 ont été **reconstituées depuis le `.pptx` précédent** : ce dossier est dans le

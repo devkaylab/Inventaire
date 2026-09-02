@@ -22,21 +22,22 @@
 // il doit s'ouvrir à l'identique sur le poste du client, qui n'a ni Sora ni
 // Inter installées. Même arbitrage que la version sans suffixe des decks.
 //
-// ⚠️ **Les téléphones viennent de `../deck/encadrees/`**, sauf `accueil-superviseur.png`
-// qui est local : il a été repris le 2 septembre 2026, alors que le jeu du deck
-// date du 27 août. À la prochaine passe de captures, il rejoindra les autres et
-// cette exception disparaîtra — voir « Ce qu'il reste à faire » dans
-// `../deck/LISEZMOI.md`.
+// ⚠️ **Les téléphones viennent TOUS de `../deck/encadrees/`.** Les trois
+// exceptions locales (`accueil-superviseur.png`, `ecarts-audit.png`,
+// `rapport.png`) ont disparu le 2 septembre 2026 avec la passe de captures :
+// le jeu du deck est désormais du même jour, il n'y a plus rien à rattraper
+// ici. `img()` garde son repli local — il sert le jour où un écran devrait
+// être repris avant la passe suivante —, mais aucun fichier ne l'emprunte.
 //
-// ⚠️ **Trois des cinq écrans viennent du jeu du 27 août**, et ce sont ceux qui
-// n'ont PAS changé depuis. Les deux autres — écarts d'audit et rapport — ont
-// été repris le 2 septembre 2026 : l'écran des écarts avait été récrit le
-// 29 août (les deux boutons Compteur / Auditeur), sa vieille capture montrait
-// une interface disparue.
+// ⚠️ **L'écran des écarts s'appelle `audit.png`**, pas `ecarts-audit.png` :
+// c'est le nom que les decks emploient, et la passe du 2 septembre l'a versé
+// sous ce nom dans `captures/`. Le fichier local qui portait l'autre nom a été
+// supprimé — ne pas le recréer, il masquerait le jeu partagé.
 //
-// L'écran de comptage reste absent pour la même raison, et lui n'a pas pu être
-// repris : sa capture montre une liste de scans que l'application affiche
-// désormais derrière un bouton. Il entrera à la prochaine passe de captures.
+// L'écran de comptage est disponible (`comptage.png`) depuis cette passe. Il
+// n'entre pas dans le bandeau : cinq téléphones à 36 mm remplissent déjà la
+// largeur utile, et passer à six les rendrait illisibles. Si on veut le
+// montrer, c'est un écran à remplacer, pas un de plus.
 
 const fs = require('fs')
 const path = require('path')
@@ -207,7 +208,7 @@ const doc = (LOGO) => new Document({
             tel('accueil-superviseur.png', 'Les inventaires'),
             tel('inventaire-superviseur.png', 'Le suivi'),
             tel('zones.png', 'Zones et balises'),
-            tel('ecarts-audit.png', 'Écarts d’audit'),
+            tel('audit.png', 'Écarts d’audit'),
             tel('rapport.png', 'Rapport et écarts'),
           ],
         }),
