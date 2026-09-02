@@ -2416,3 +2416,45 @@ describe('l’application ne demande que ce qu’elle utilise', () => {
     expect(pv).toMatch(/<key>NSPrivacyTracking<\/key>\s*<false\/>/)
   })
 })
+
+describe('l’iPad n’est pas un iPhone agrandi', () => {
+  const layouts = [
+    'app/_layout.tsx', 'app/(supervisor)/_layout.tsx',
+    'app/(employee)/_layout.tsx', 'app/(compte)/_layout.tsx',
+  ]
+
+  it('chaque pile borne la largeur de son contenu', () => {
+    // ⚠️ Sur un iPad 13" (1032 points), la mise en page du téléphone s'étalait
+    // d'un bord à l'autre : champs de connexion sur toute la largeur, cartes
+    // de 1000 points, un vide au milieu. C'est ce qu'Apple refuse en 2.4.1 —
+    // une application iPhone agrandie. Constaté au simulateur le 2 septembre
+    // 2026, avant la première soumission.
+    for (const f of layouts) {
+      expect(lire(f)).toContain('contentStyle: contenuColonne')
+    }
+  })
+
+  it('la borne ne s’applique qu’au contenu, jamais à l’en-tête', () => {
+    // Un bandeau rétréci au milieu de l'écran ferait « application de
+    // téléphone dans une fenêtre » — le défaut qu'on corrige.
+    const c = lire('constants/layout.ts')
+    expect(c).toContain('maxWidth: COLONNE_MAX')
+    expect(c).toContain("alignSelf: 'center'")
+    for (const f of layouts) {
+      expect(lire(f)).not.toContain('headerStyle: contenuColonne')
+    }
+  })
+
+  it('aucun iPhone n’atteint la borne, donc rien ne bouge sur téléphone', () => {
+    // Le plus large des iPhone fait 440 points. Descendre COLONNE_MAX sous
+    // cette valeur rétrécirait tous les écrans de téléphone d'un coup.
+    const { COLONNE_MAX } = { COLONNE_MAX: Number(lire('constants/layout.ts').match(/COLONNE_MAX = (\d+)/)![1]) }
+    expect(COLONNE_MAX).toBeGreaterThan(440)
+  })
+
+  it('la porte de bienvenue suit la même colonne', () => {
+    // Elle est en surcouche, hors de toute pile : la borne des piles ne
+    // l'atteint pas.
+    expect(lire('components/Bienvenue.tsx')).toContain('contenuColonne')
+  })
+})

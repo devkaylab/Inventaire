@@ -1,4 +1,5 @@
 import { Redirect, router, Stack } from 'expo-router'
+import { contenuColonne } from '@/constants/layout'
 import { useAuth } from '@/lib/auth'
 import { ActivityIndicator, View } from 'react-native'
 import { useTheme } from '@/lib/theme'
@@ -38,7 +39,7 @@ export default function SupervisorLayout() {
   )
 
   return (
-    <Stack>
+    <Stack screenOptions={{ contentStyle: contenuColonne }}>
       <Stack.Screen name="index" options={{ title: 'Inventaires', ...headerBase, headerRight: actionsProfileRight }} />
       <Stack.Screen name="new-session" options={{ title: 'Nouvel inventaire', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Inventaire', ...headerBase, headerRight: actionsProfileRight }} />

@@ -3,6 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Stack, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { usePorteVisible } from '@/lib/porte'
+import { contenuColonne } from '@/constants/layout'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -105,7 +106,7 @@ export default function RootLayout() {
                 chaque écran, et rester visible quelle que soit la page. */}
             <OfflineTopBanner />
             <RoutageNotifications />
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: contenuColonne }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="login" />
               <Stack.Screen name="signup" />

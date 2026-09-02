@@ -1,4 +1,5 @@
 import { Redirect, router, Stack } from 'expo-router'
+import { contenuColonne } from '@/constants/layout'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { useAuth } from '@/lib/auth'
@@ -91,7 +92,7 @@ export default function CompteLayout() {
   const actionsRight = () => <HeaderActions />
 
   return (
-    <Stack>
+    <Stack screenOptions={{ contentStyle: contenuColonne }}>
       <Stack.Screen
         name="account"
         options={{

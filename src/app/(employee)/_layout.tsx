@@ -1,4 +1,5 @@
 import { Redirect, router, Stack } from 'expo-router'
+import { contenuColonne } from '@/constants/layout'
 import { useAuth } from '@/lib/auth'
 import { ActivityIndicator, View } from 'react-native'
 import { useTheme } from '@/lib/theme'
@@ -39,7 +40,7 @@ export default function EmployeeLayout() {
   )
 
   return (
-    <Stack>
+    <Stack screenOptions={{ contentStyle: contenuColonne }}>
       <Stack.Screen name="index" options={{ title: 'Rejoindre un inventaire', ...headerBase, headerRight: actionsProfileRight }} />
       <Stack.Screen name="[sessionId]/index" options={{ title: 'Ma progression', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: actionsRight }} />

@@ -14,6 +14,7 @@
  * (règle Apple HIG, reprise dans la maquette du 23 août 2026).
  */
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { contenuColonne } from '@/constants/layout'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { AppLogo } from '@/components/AppLogo'
@@ -148,7 +149,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   // (constaté sur l'iPhone de Julien, 23 août 2026). Il faut couvrir.
   // zIndex sous celui du splash (100), qui doit rester au-dessus.
   safe: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, backgroundColor: t.background },
-  corps: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xxl, paddingBottom: Spacing.lg },
+  corps: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xxl, paddingBottom: Spacing.lg, ...contenuColonne },
   eyebrow: { color: t.textMuted, fontSize: 11, fontFamily: Font.semibold, letterSpacing: 1, textTransform: 'uppercase', marginTop: Spacing.xxxl },
   titre: { color: t.textPrimary, fontSize: 30, fontFamily: Font.bold, letterSpacing: -0.6, marginTop: Spacing.xs },
   place: { color: t.textSecondary, fontSize: 15, fontFamily: Font.regular, lineHeight: 22, marginTop: Spacing.sm },
@@ -159,7 +160,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   icone: { width: 34, height: 34, borderRadius: Radius.md, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
   rangTitre: { color: t.textPrimary, fontSize: 14, fontFamily: Font.semibold },
   rangTexte: { color: t.textSecondary, fontSize: 13, fontFamily: Font.regular, lineHeight: 18, marginTop: 1 },
-  pied: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg, gap: Spacing.xs },
+  pied: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg, gap: Spacing.xs, ...contenuColonne },
   btn: { height: 48, borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
   btnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
   lien: { alignItems: 'center', paddingVertical: Spacing.md },
