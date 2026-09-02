@@ -4,7 +4,9 @@
 // en ligne (le fichier source est docs/privacy.html). L'URL ci-dessous
 // correspond à un hébergement GitHub Pages ; remplacez-la si vous hébergez
 // la page ailleurs.
-export const PRIVACY_URL = 'https://devkaylab.github.io/Inventaire/privacy.html'
+// ⚠️ Effectif au PROCHAIN BUILD seulement : les applications installées
+// continuent d'ouvrir l'ancienne adresse, qui reste en ligne pour elles.
+export const PRIVACY_URL = 'https://www.quantinvo.com/confidentialite'
 
 // Site public. Personne ne s'inscrit depuis l'app : un superviseur est invité
 // par l'administrateur de son entreprise (page Mon équipe du site), un

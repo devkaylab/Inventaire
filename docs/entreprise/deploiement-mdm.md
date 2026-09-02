@@ -94,7 +94,7 @@ votre MDM, qui verrouille le terminal sur Quantinvo, est compatible.
 Les données sont hébergées **dans l'Union européenne** (Irlande). La politique
 de confidentialité, la liste des sous-traitants et les durées de conservation
 sont publiées à l'adresse
-https://devkaylab.github.io/Inventaire/privacy.html.
+https://www.quantinvo.com/confidentialite.
 
 ## Ce qui n'existe pas encore
 

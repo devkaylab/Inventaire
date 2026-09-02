@@ -62,3 +62,47 @@ describe('politique de confidentialité', () => {
     expect(politique).toMatch(/Aucun nom n['’]y figure/)
   })
 })
+
+/**
+ * La politique est servie par le site depuis le 2 septembre 2026.
+ *
+ * Décision de Julien : une communication commerciale porte une adresse du
+ * domaine, pas celle d'un hébergeur de code.
+ */
+describe('la politique est servie par le site', () => {
+  const page = lire('../app/confidentialite/page.tsx')
+  const liens = lire('../lib/links.ts')
+
+  it('⚠️ elle LIT le document, elle ne le recopie pas', () => {
+    // Recopier une politique de confidentialité, c'est garantir que les deux
+    // versions divergeront — et c'est le document où ça se paie le plus cher.
+    expect(page).toContain("'..', 'docs', 'privacy.html'")
+    // Aucun titre de section n'est réécrit dans la page : le corps est injecté.
+    expect(page).toContain('dangerouslySetInnerHTML')
+    expect(page).not.toContain('Qui décide de l’usage')
+  })
+
+  it('et une lecture ratée fait ÉCHOUER la construction', () => {
+    // Mieux vaut un build rouge qu'une page de confidentialité vide en ligne.
+    expect(page).toContain('throw new Error')
+  })
+
+  it('les liens du produit pointent vers le domaine', () => {
+    expect(liens).toContain("'https://www.quantinvo.com/confidentialite'")
+    const sansCommentaires = liens
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    expect(sansCommentaires).not.toContain('devkaylab.github.io')
+  })
+
+  it('la page publique reste hors de la coquille connectée', () => {
+    // Elle s'ouvre depuis un e-mail, souvent au téléphone — et l'espace
+    // connecté se ferme sous 720 px.
+    // ⚠️ Sur l'IMPORT, et sur le code sans ses commentaires : l'en-tête du
+    // fichier explique justement pourquoi la page reste dehors, donc il cite
+    // `AppShell`. Troisième fois aujourd'hui qu'une garde échoue sur sa propre
+    // documentation.
+    const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    expect(code).not.toMatch(/import .*AppShell/)
+    expect(code).toContain('legal-wrap')
+  })
+})

@@ -60,7 +60,7 @@ réclamation auprès de la CNIL (www.cnil.fr).
 ### Pour aller plus loin
 
 Le traitement des données par l'éditeur de l'application est décrit dans sa
-politique de confidentialité : https://devkaylab.github.io/Inventaire/privacy.html
+politique de confidentialité : https://www.quantinvo.com/confidentialite
 
 ---
 

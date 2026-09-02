@@ -257,7 +257,7 @@ const doc = (LOGO) => new Document({
               fait('Catégorie', 'Professionnel (Business)'),
               fait('Classification', '4+ — aucun contenu sensible.'),
               fait('Éditeur', 'Devkaylab'),
-              fait('Confidentialité', 'devkaylab.github.io/Inventaire/privacy.html'),
+              fait('Confidentialité', 'www.quantinvo.com/confidentialite'),
               fait('Assistance', 'contact@quantinvo.com · www.quantinvo.com'),
             ], COL, { pad: mm(2), padL: mm(3), padR: mm(3), shade: P.MIST }),
           ],

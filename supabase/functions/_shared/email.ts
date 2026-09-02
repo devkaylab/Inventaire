@@ -42,7 +42,11 @@ const POLICE =
 
 /** Adresse du site, reprise du pied de page et des liens légaux. */
 export const SITE_PAR_DEFAUT = 'https://www.quantinvo.com'
-export const POLITIQUE_URL = 'https://devkaylab.github.io/Inventaire/privacy.html'
+// ⚠️ Effectif au REDÉPLOIEMENT de chaque fonction edge : c'est une constante,
+// pas une variable d'environnement lue à l'exécution. Les messages partis
+// d'ici gardent l'ancienne adresse tant que la fonction n'est pas redéployée —
+// et cette adresse reste en ligne, donc rien ne casse entre-temps.
+export const POLITIQUE_URL = 'https://www.quantinvo.com/confidentialite'
 /**
  * Le logo est servi par le site (`web/public/email/`), en PNG : Gmail retire
  * les SVG et bloque les `data:` en source d'image. Il suit donc `siteUrl`,
