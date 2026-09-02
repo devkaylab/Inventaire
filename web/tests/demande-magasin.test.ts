@@ -203,12 +203,23 @@ describe('le formulaire porte les appareils', () => {
     }
   })
 
-  it('la demande transporte les appareils', () => {
+  it('la demande transporte les appareils, du navigateur jusqu’à la RPC', () => {
     expect(pageMagasins).toContain('p_devices')
     expect(pageMagasins).not.toContain('p_units')
     for (const fn of ['ca_list_store_requests', 'admin_list_store_requests']) {
       expect(corpsDe(fn), fn).toContain("'units', r.units")
     }
+
+    // ⚠️ ET LA FONCTION EDGE, qui est le chemin NOMINAL — la RPC directe n'est
+    // qu'un repli. Elle avait été oubliée le 2 septembre 2026 : la page envoyait
+    // `devices`, l'edge appelait encore `p_units`/`p_sqm`, donc l'ancienne
+    // signature, devenue un refus lisible. Toute demande de magasin passant par
+    // le chemin normal répondait « rechargez la page ». Rien ne l'avait vu :
+    // ce test ne regardait que le navigateur.
+    const edge = lire('../../supabase/functions/ca-request-store/index.ts')
+    expect(edge).toContain('p_devices: devices')
+    expect(edge).not.toContain('p_units')
+    expect(edge).not.toContain('p_sqm')
   })
 
   it('le prix s’affiche au formulaire, le recoupement de densité reste en console', () => {

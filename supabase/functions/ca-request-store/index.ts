@@ -11,6 +11,7 @@
 // choix que pour `submit-supervisor-request`.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
+import { nomOffre } from '../_shared/devis.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -29,7 +30,9 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ success: false, error: 'Non authentifié' }, 401)
 
-  let payload: { name?: string; message?: string; units?: number | null; sqm?: number | null }
+  // ⚠️ L'assiette est le nombre d'appareils depuis le 2 septembre 2026. Le stock
+  // et la surface ne sont plus demandés : ils ne tarifent plus rien.
+  let payload: { name?: string; message?: string; devices?: number | null }
   try {
     payload = await req.json()
   } catch {
@@ -37,8 +40,7 @@ Deno.serve(async (req) => {
   }
   const name = (payload.name ?? '').trim()
   const message = (payload.message ?? '').trim()
-  const units = typeof payload.units === 'number' ? Math.round(payload.units) : null
-  const sqm = typeof payload.sqm === 'number' ? Math.round(payload.sqm) : null
+  const devices = typeof payload.devices === 'number' ? Math.round(payload.devices) : null
   if (!name) return json({ success: false, error: 'Le nom du magasin est requis.' }, 400)
 
   const url = Deno.env.get('SUPABASE_URL')!
@@ -49,11 +51,12 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await caller.auth.getUser()
   if (userErr || !userData?.user) return json({ success: false, error: 'Session expirée.' }, 401)
 
+  // La borne (1 à 1 000) et le message de refus vivent dans la RPC : l'edge ne
+  // redit pas la règle, il la laisse parler.
   const { data: result, error: rErr } = await caller.rpc('ca_request_store', {
     p_name: name,
     p_message: message,
-    p_units: units,
-    p_sqm: sqm,
+    p_devices: devices,
   })
   if (rErr) return json({ success: false, error: rErr.message }, 500)
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Demande impossible.' }, 403)
@@ -77,9 +80,12 @@ Deno.serve(async (req) => {
   const prenom = (profil?.first_name ?? '').trim()
 
   const appUrl = Deno.env.get('APP_PUBLIC_URL') ?? 'https://www.quantinvo.com'
+  const appareils = devices !== null && devices > 0
+    ? `${nb(devices)} appareil${devices > 1 ? 's' : ''}`
+    : null
   const details: { intitule: string; valeur: string }[] = [{ intitule: 'Magasin', valeur: name }]
-  if (units !== null) details.push({ intitule: 'Stock théorique', valeur: `${nb(units)} pièces` })
-  if (sqm !== null) details.push({ intitule: 'Surface de vente', valeur: `${nb(sqm)} m²` })
+  if (appareils) details.push({ intitule: 'Appareils', valeur: appareils })
+  if (appareils) details.push({ intitule: 'Offre', valeur: nomOffre(devices) })
 
   const { html, text } = emailQuantinvo({
     titre: 'Votre demande de magasin est bien reçue',
@@ -116,7 +122,7 @@ Deno.serve(async (req) => {
 
   // L'avis à Quantinvo : c'est du revenu qui attend, il doit se voir sans
   // ouvrir le tableau de bord. Administrateurs lus en base, comme ailleurs.
-  // Le nom de l'entreprise vient du profil ; les volumes déclarés suivent.
+  // Le nom de l'entreprise vient du profil ; l'assiette déclarée suit.
   try {
     const admin = createClient(url, serviceKey)
     const [{ data: admins }, { data: profil2 }] = await Promise.all([
@@ -127,23 +133,21 @@ Deno.serve(async (req) => {
     if (dest.length > 0) {
       const entreprise = ((profil2 as { companies?: { name?: string } | null } | null)?.companies?.name ?? '').trim()
       const demandeur = ((profil2 as { full_name?: string } | null)?.full_name ?? '').trim() || email
-      const volume = [
-        units !== null ? `${nb(units)} pièces` : 'stock non déclaré',
-        sqm !== null ? `${nb(sqm)} m²` : null,
-        units !== null && sqm !== null && sqm > 0 ? `${nb(Math.round(units / sqm))} pièces/m²` : null,
-      ].filter(Boolean).join(' · ')
+      const declare = appareils
+        ? `${appareils} · ${nomOffre(devices)}`
+        : 'appareils non déclarés'
       const avis = emailQuantinvo({
         titre: 'Nouvelle demande de magasin',
         apercu: `${entreprise || 'Une entreprise'} demande l’ajout de « ${name} ».`,
         paragraphes: [
           `${entreprise || 'Une entreprise cliente'} vient de demander l’ajout du magasin « ${name} ». Demande faite par ${demandeur}.`,
           message ? `Son message : « ${message} »` : 'Pas de message joint.',
-          'Le devis s’établit depuis le tableau de bord — le recoupement stock / surface y est affiché.',
+          'Le devis s’établit depuis le tableau de bord — l’offre proposée y suit le nombre d’appareils.',
         ],
         details: [
           ...(entreprise ? [{ intitule: 'Entreprise', valeur: entreprise }] : []),
           { intitule: 'Magasin', valeur: name },
-          { intitule: 'Déclaré', valeur: volume },
+          { intitule: 'Déclaré', valeur: declare },
         ],
         bouton: { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
         raison: 'Vous recevez ce message parce que vous suivez les ventes Quantinvo.',

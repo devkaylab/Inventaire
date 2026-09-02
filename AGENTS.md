@@ -5984,13 +5984,65 @@ aux nouvelles offres »*. Trois défauts réels, tous antérieurs à ce chantier
   quatre paramètres n'ont plus de défaut — c'est ce qui interdit l'ambiguïté
   avec la nouvelle sur un appel à deux arguments.
 
+## ⚠️ La fonction edge de la demande de magasin avait été OUBLIÉE
+
+Trouvé au moment de déployer, et c'est le défaut le plus instructif de ce
+chantier. La page `/magasins` envoyait `devices` et la RPC avait sa nouvelle
+signature — mais **`ca-request-store/index.ts` n'avait jamais été touchée** :
+elle appelait encore `p_units` / `p_sqm`, donc l'ancienne signature, devenue un
+refus lisible. **Toute demande de magasin passant par le chemin normal aurait
+répondu « rechargez la page »** ; seul le repli RPC direct du navigateur
+fonctionnait.
+
+- **⚠️ Rien ne l'avait vu, et c'est la vraie leçon.** Le test
+  « la demande transporte les appareils » ne regardait que la page. Une fonction
+  edge est le chemin **nominal** — la RPC directe n'est qu'un repli —, donc une
+  garde qui s'arrête au navigateur ne garde que la moitié du parcours. Le test
+  lit désormais aussi `ca-request-store/index.ts` (`p_devices` présent,
+  `p_units` et `p_sqm` absents).
+- **Le balayage qui a suivi est le geste à refaire** : pour chaque RPC dont la
+  signature bouge, chercher **tous** ses appelants dans `supabase/functions`,
+  pas seulement dans `web/`. Les autres — `stripe-webhook`, `subscribe-online`,
+  `admin-fulfil-store-request`, `decline-quote` — ont été vérifiés un par un et
+  restent compatibles (signatures inchangées).
+- L'accusé et l'avis interne disent maintenant les appareils et l'offre
+  (`nomOffre` du module partagé, jamais un nom d'offre réinventé sur place) ; la
+  phrase sur le « recoupement stock / surface » a disparu, elle n'a plus d'objet.
+
+## Les quatre fonctions edge sont déployées (2 septembre 2026)
+
+`quote-pdf` (v16), `ca-request-store` (v14), `admin-send-quote` (v14),
+`accept-quote` (v16). `verify_jwt` contrôlé après coup et **inchangé** : faux
+pour les deux publiques, vrai pour les deux autres.
+
+⚠️ **Déployées par la console MCP, pas par le CLI** — contrairement à la règle
+posée pour `stripe-webhook`. Le CLI n'était pas joignable depuis l'agent (pas de
+`SUPABASE_ACCESS_TOKEN`, et les binaires GitHub bloqués par le proxy), et
+l'accès réseau sortant vers `*.supabase.co` l'était aussi. **La règle reste
+valable et `stripe-webhook` n'a pas été touchée** : elle porte la vérification
+de signature, et son bundle garde sa propre copie de `_shared/stripe.ts` — la
+version déployée avant ce jour, dont `verifierWebhook` n'a pas changé.
+
+**Ce qui a été vérifié, et par quel moyen** — l'accès sortant étant fermé, tout
+est passé par `pg_net` depuis Postgres :
+
+- `quote-pdf` : 404 « Devis introuvable » sur un jeton inconnu ;
+- `accept-quote` : 405 sur GET, et sur POST **elle atteint la base** (le
+  « Lien invalide. » vient de `accept_quote_by_token`) — donc `email.ts`,
+  `devis.ts` **et** `stripe.ts` se chargent ;
+- **le PDF se dessine vraiment** : devis d'essai posé en base, `quote-pdf` rend
+  200 · `application/pdf` · `%PDF-1.7`, en **mensuel puis en annuel**, avec une
+  ligne sans appareils déclarés. C'est la preuve qui compte : un libellé
+  nouveau qu'Helvetica n'encoderait pas ferait lever `drawText` et la fonction
+  répondrait 500. Données d'essai supprimées, **zéro résidu contrôlé**.
+
+⚠️ **Ce qui n'est PAS prouvé : l'identité à l'octet près avec le dépôt.** La
+console MCP fait retranscrire les fichiers, et le `supabase functions download`
+puis `diff` du projet demande le CLI. À refaire depuis le Mac au prochain
+passage — c'est le seul contrôle qui ferme le sujet.
+
 ## Ce qui reste à faire, et que je ne peux pas faire
 
-- **⚠️ REDÉPLOYER CINQ FONCTIONS EDGE** — le dépôt ne déploie rien :
-  `ca-request-store`, `admin-send-quote`, `accept-quote`, `quote-pdf`
-  (`--no-verify-jwt` pour les trois publiques, voir la règle du webhook).
-  Tant que `ca-request-store` n'est pas redéployée, une demande de magasin
-  tombe sur le refus lisible de l'ancienne signature.
 - **Les six Price Stripe restent à recréer** aux montants du 31 août : c'est le
   point qui coûte de l'argent, et il ne se voit nulle part dans le code.
 - **⚠️ Un magasin ajouté en abonnement mensuel crée un SECOND abonnement
