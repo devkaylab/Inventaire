@@ -25,6 +25,10 @@ import {
   getCachedProfile,
   getCachedSession,
   getCachedSessionList,
+  addCachedArticle,
+  articleFromInsert,
+  eanNorm,
+  enqueueArticle,
   enqueueBalise,
   enqueueCount,
   failedOps,
@@ -35,6 +39,7 @@ import {
   migrateLegacy,
   newId,
   NO_BALISE,
+  pendingArticles,
   pendingBaliseCount,
   pendingBalises,
   pendingCounts,
@@ -76,10 +81,13 @@ const count = (sku: string, zoneCode: string | null, qty = 1) => ({
 function okDeps() {
   const counts: unknown[] = []
   const balises: unknown[] = []
+  const articles: unknown[] = []
   return {
     counts,
     balises,
+    articles,
     insertCount: async (c: unknown) => void counts.push(c),
+    insertArticle: async (a: unknown) => void articles.push(a),
     setBalise: async (
       sessionId: string,
       code: string,
@@ -222,6 +230,7 @@ describe('synchronisation', () => {
     const ordre: string[] = []
     await flush(S, {
       insertCount: async () => void ordre.push('count'),
+      insertArticle: async () => {},
       setBalise: async (_s, _c, _m, open) => void ordre.push(open ? 'ouvre' : 'cloture'),
     })
     expect(ordre).toEqual(['ouvre', 'count', 'cloture'])
@@ -237,6 +246,7 @@ describe('synchronisation', () => {
         n += 1
         if (n === 2) throw { message: 'Network request failed' }
       },
+      insertArticle: async () => {},
       setBalise: async () => {},
     })
     expect(r.interrupted).toBe(true)
@@ -254,6 +264,7 @@ describe('synchronisation', () => {
     await enqueueCount(S, count('B', '5375'))
     const r = await flush(S, {
       insertCount: async () => { throw { code: 'PGRST301', message: 'JWT expired' } },
+      insertArticle: async () => {},
       setBalise: async () => {},
     })
     expect(r.interrupted).toBe(true)
@@ -270,6 +281,7 @@ describe('synchronisation', () => {
     await enqueueCount(S, count('A', '5375'))
     const r = await flush(S, {
       insertCount: async () => { throw { code: '42501', message: 'row-level security policy' } },
+      insertArticle: async () => {},
       setBalise: async () => {},
     })
     expect(r.interrupted).toBe(false)
@@ -285,6 +297,7 @@ describe('synchronisation', () => {
         n += 1
         if (n === 2) throw { message: 'Network request failed' }
       },
+      insertArticle: async () => {},
       setBalise: async () => {},
     })
     const deps = okDeps()
@@ -298,6 +311,7 @@ describe('synchronisation', () => {
       insertCount: async () => {
         throw { code: '23505', message: 'duplicate key value violates unique constraint' }
       },
+      insertArticle: async () => {},
       setBalise: async () => {},
     })
     expect(r.sent).toBe(1)
@@ -317,6 +331,7 @@ describe('synchronisation', () => {
         }
         await deps.insertCount(c)
       },
+      insertArticle: async () => {},
       setBalise: deps.setBalise,
     })
     expect(r.sent).toBe(1)
@@ -479,5 +494,114 @@ describe('la déconnexion fait le ménage, sans perdre le travail', () => {
 
     const apres = await pendingCounts(SID)
     expect(apres.length).toBe(2)
+  })
+})
+
+// ── « Article inconnu » sans réseau ─────────────────────────────────────────
+//
+// Constat de Julien, 1er septembre 2026 : saisir un article inconnu en réserve
+// répondait « fetch failed » (les deux plateformes), et le compteur restait
+// devant une étiquette bien réelle sans moyen d'avancer.
+describe("un article créé hors ligne", () => {
+  const insert = (over: Record<string, unknown> = {}) => ({
+    session_id: S,
+    sku: '3760999999999',
+    ean: '03760999999999',
+    brand: '',
+    label: 'INCONNU',
+    unit_purchase_price: 0,
+    ...over,
+  })
+
+  it('part avec les comptages de sa balise, et dans cet ordre', async () => {
+    await enqueueArticle(S, '5375', insert())
+    await enqueueCount(S, count('3760999999999', '5375'))
+    const ordre: string[] = []
+    await flush(S, {
+      insertCount: async () => void ordre.push('count'),
+      insertArticle: async () => void ordre.push('article'),
+      setBalise: async () => {},
+    })
+    // L'article d'abord : le rapport lit le libellé dans `articles`, un
+    // comptage arrivé seul s'afficherait sous une référence nue.
+    expect(ordre).toEqual(['article', 'count'])
+  })
+
+  it("n'envoie jamais `ean_norm`, colonne générée côté serveur", async () => {
+    await enqueueArticle(S, '5375', insert({ ean_norm: '3760999999999' }))
+    const envoye: Record<string, unknown>[] = []
+    await flush(S, {
+      insertCount: async () => {},
+      insertArticle: async (a) => void envoye.push(a as Record<string, unknown>),
+      setBalise: async () => {},
+    })
+    expect(envoye).toHaveLength(1)
+    expect(envoye[0]).not.toHaveProperty('ean_norm')
+    expect(envoye[0].sku).toBe('3760999999999')
+  })
+
+  it('rend sa balise visible dans le bandeau même sans comptage', async () => {
+    await enqueueArticle(S, '5375', insert())
+    const [b] = await pendingBalises(S)
+    expect(b.code).toBe('5375')
+    expect(b.articles).toBe(1)
+    // Un article n'est pas un scan : le compteur d'unités ne bouge pas.
+    expect(b.scans).toBe(0)
+    expect(b.units).toBe(0)
+  })
+
+  it('se relit depuis la file, ce qui le protège de primeOfflineCache', async () => {
+    await enqueueArticle(S, NO_BALISE, insert())
+    const [a] = await pendingArticles(S)
+    expect(a.sku).toBe('3760999999999')
+    // `ean_norm` est recalculé localement — c'est lui que l'index utilise pour
+    // retrouver un EAN dont Excel a mangé les zéros de tête.
+    expect(a.ean_norm).toBe('3760999999999')
+  })
+
+  it('se retrouve au scan suivant, sans rouvrir « Article inconnu »', async () => {
+    await cacheArticles(S, [article()])
+    await addCachedArticle(S, articleFromInsert(insert()))
+    // Par son SKU, par son EAN, et par l'EAN sans zéro de tête.
+    expect((await resolveArticleOffline(S, '3760999999999'))?.label).toBe('INCONNU')
+    expect((await resolveArticleOffline(S, '03760999999999'))?.label).toBe('INCONNU')
+    // Le référentiel d'origine n'a pas bougé.
+    expect((await resolveArticleOffline(S, 'SKU1'))?.label).toBe('Article')
+  })
+
+  it('remplace par SKU, jamais en double', async () => {
+    await cacheArticles(S, [])
+    await addCachedArticle(S, articleFromInsert(insert({ label: 'PREMIER' })))
+    await addCachedArticle(S, articleFromInsert(insert({ label: 'CORRIGÉ' })))
+    expect((await resolveArticleOffline(S, '3760999999999'))?.label).toBe('CORRIGÉ')
+  })
+
+  it('un rejeu retombe sur la clé et sort de la file', async () => {
+    await enqueueArticle(S, '5375', insert())
+    const r = await flush(S, {
+      insertCount: async () => {},
+      insertArticle: async () => { throw { code: '23505', message: 'duplicate key' } },
+      setBalise: async () => {},
+    })
+    expect(r.sent).toBe(1)
+    expect(r.failed).toBe(0)
+    expect(await pendingArticles(S)).toEqual([])
+  })
+
+  it('une coupure pendant l’envoi le garde en file', async () => {
+    await enqueueArticle(S, '5375', insert())
+    const r = await flush(S, {
+      insertCount: async () => {},
+      insertArticle: async () => { throw { message: 'Network request failed' } },
+      setBalise: async () => {},
+    })
+    expect(r.interrupted).toBe(true)
+    expect(await pendingArticles(S)).toHaveLength(1)
+  })
+
+  it('eanNorm reproduit la colonne générée', () => {
+    expect(eanNorm('0012300')).toBe('12300')
+    expect(eanNorm('0000')).toBe(null)
+    expect(eanNorm(null)).toBe(null)
   })
 })

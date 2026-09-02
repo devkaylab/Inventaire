@@ -28,12 +28,16 @@ import { usePreventRemove } from 'expo-router/build/react-navigation/core/usePre
 import type { NavigationAction as ActionNavigation } from 'expo-router/build/react-navigation/routers'
 import { useKeepAwake } from 'expo-keep-awake'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMyScanEntries, getZoneDashboard, insertArticle } from '@/lib/queries'
+import { getZoneDashboard } from '@/lib/queries'
 import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
-// Résolution d'article et ouverture/clôture de balise passent par la couche
-// hors ligne : mêmes signatures, avec repli sur le cache local et mise en
-// attente quand le réseau tombe. Voir `@/lib/offlineSync`.
-import { resolveArticle, setBalise } from '@/lib/offlineSync'
+// Résolution d'article, création d'un article inconnu et ouverture/clôture de
+// balise passent par la couche hors ligne : mêmes signatures, avec repli sur le
+// cache local et mise en attente quand le réseau tombe. Voir `@/lib/offlineSync`.
+//
+// ⚠️ `insertArticle` vient de là, PAS de `@/lib/queries`. Il en venait jusqu'au
+// 1er septembre 2026, et c'est ce qui faisait échouer « Article inconnu » en
+// réserve avec « fetch failed » — sur les deux plateformes.
+import { getScanEntries, insertArticle, resolveArticle, setBalise } from '@/lib/offlineSync'
 import { parseBalise } from '@/lib/balises'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
@@ -88,11 +92,14 @@ interface ScanEntry {
 interface IllisibleModalProps {
   scannedCode: string
   sessionId: string
+  /** Balise ouverte, pour que l'article parte avec les comptages du même
+   *  endroit quand il est mis en attente. `null` hors mode zones. */
+  zone: string | null
   onConfirm: (article: Article) => void
   onCancel: () => void
 }
 
-function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: IllisibleModalProps) {
+function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: IllisibleModalProps) {
   const theme = useTheme()
   const styles = makeStyles(theme)
   // The triggering code is usually a scanned barcode → pre-fill EAN.
@@ -121,7 +128,7 @@ function IllisibleModal({ scannedCode, sessionId, onConfirm, onCancel }: Illisib
         brand: brand.trim(),
         label: label.trim() || 'INCONNU',
         unit_purchase_price: 0,
-      })
+      }, zone)
       onConfirm(article)
     } catch (e) {
       signaler.erreur('Erreur', errorMessage(e))
@@ -572,12 +579,17 @@ export function Scanner({
     const code = activeBalise?.code
     if (!code) { setRecentScans([]); return }
     let cancelled = false
-    getMyScanEntries(sessionId, passNumber, countedBy ?? '', code)
+    // ⚠️ `getScanEntries`, pas `getMyScanEntries` : hors ligne, la liste se
+    // reconstruit depuis la file d'attente. Et l'échec **vide** la liste — le
+    // `.catch` d'avant ne faisait rien, si bien que les scans de la balise
+    // précédente restaient affichés sous la nouvelle, et un « − » posé là
+    // écrivait une correction dans la mauvaise balise.
+    getScanEntries(sessionId, passNumber, countedBy ?? '', code)
       .then((entries) => {
         if (cancelled) return
         setRecentScans(entries.map((e) => ({ id: `${e.article.sku}-${e.timestamp}`, article: e.article, qty: e.qty, timestamp: e.timestamp })))
       })
-      .catch(() => { /* liste vide si erreur */ })
+      .catch(() => { if (!cancelled) setRecentScans([]) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBalise?.code, zoneMode, passNumber])
@@ -1728,6 +1740,7 @@ export function Scanner({
         <IllisibleModal
           scannedCode={illisibleCode}
           sessionId={sessionId}
+          zone={activeBalise?.code ?? null}
           onConfirm={handleIllisibleConfirm}
           onCancel={() => setIllisibleCode(null)}
         />

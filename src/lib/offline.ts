@@ -71,6 +71,20 @@ export type BaliseMode = 'count' | 'audit'
 
 export type PendingOp =
   | { kind: 'count'; id: string; at: number; count: TablesInsert<'counts'> }
+  /**
+   * Article créé par « Article inconnu » alors que le réseau était tombé.
+   *
+   * Il part **avant** les comptages de sa balise (même tranche, même ordre) :
+   * `counts` ne référence pas `articles`, donc rien ne l'exige, mais le
+   * rapport lit le libellé dans `articles` — un comptage qui arrive sans son
+   * article s'affiche sous une référence nue.
+   *
+   * `ean_norm` est une colonne **générée** côté serveur : elle n'est jamais
+   * dans la charge envoyée (Postgres refuse une écriture dessus). Elle vit en
+   * revanche dans la copie mise en cache, qui sert à retrouver l'article au
+   * scan suivant.
+   */
+  | { kind: 'article'; id: string; at: number; sessionId: string; article: TablesInsert<'articles'> }
   | {
       kind: 'balise'
       id: string
@@ -95,6 +109,8 @@ export type PendingBalise = {
   scans: number
   /** Somme des quantités en attente (les corrections sont négatives). */
   units: number
+  /** Articles créés hors ligne (« Article inconnu ») encore à envoyer. */
+  articles: number
   /** `true` si une ouverture ou une clôture de balise attend aussi. */
   hasBaliseOp: boolean
   /** Horodatage du scan le plus ancien encore en attente. */
@@ -196,6 +212,50 @@ function buildIndex(sessionId: string, articles: Article[]): ArticleIndex {
 export async function cacheArticles(sessionId: string, articles: Article[]): Promise<void> {
   await AsyncStorage.setItem(articlesKey(sessionId), JSON.stringify(articles))
   articleIndex = buildIndex(sessionId, articles)
+}
+
+/**
+ * `ean_norm` tel que le serveur le calcule : `NULLIF(ltrim(ean, '0'), '')`.
+ *
+ * La colonne est **générée STORED** en base — on ne l'écrit jamais. Mais un
+ * article créé hors ligne doit être retrouvable au scan suivant, et l'index
+ * local indexe cette forme : sans elle, rescanner le code qu'on vient de
+ * saisir rouvrirait « Article inconnu ».
+ */
+export function eanNorm(ean: string | null | undefined): string | null {
+  const stripped = (ean ?? '').replace(/^0+/, '')
+  return stripped === '' ? null : stripped
+}
+
+/**
+ * Ajoute (ou remplace) un article dans le cache local et l'index en mémoire.
+ *
+ * Sert des deux côtés du réseau : en ligne, l'article que le serveur vient de
+ * créer entre dans le cache pour que la descente en réserve qui suit le
+ * connaisse déjà ; hors ligne, c'est le seul endroit où il existe.
+ *
+ * Le remplacement se fait **par SKU** — c'est la clé d'unicité de la table
+ * (`articles_session_sku_key`) : deux entrées pour un même SKU rendraient la
+ * résolution dépendante de l'ordre de lecture.
+ */
+export async function addCachedArticle(sessionId: string, article: Article): Promise<void> {
+  const list = await getCachedArticles(sessionId)
+  const i = list.findIndex((a) => a.sku === article.sku)
+  if (i >= 0) list[i] = article
+  else list.push(article)
+  await AsyncStorage.setItem(articlesKey(sessionId), JSON.stringify(list))
+  // L'index n'est reconstruit que s'il porte une autre session : le rebâtir à
+  // chaque ajout relirait le catalogue entier, ce que l'index existe pour
+  // éviter. Ici on n'ajoute que les clés du nouvel article.
+  if (articleIndex?.sessionId === sessionId) {
+    if (article.sku) articleIndex.byCode.set(article.sku, article)
+    if (article.ean) articleIndex.byCode.set(article.ean, article)
+    const norm = (article as Article & { ean_norm?: string | null }).ean_norm
+    if (norm) articleIndex.byCode.set(norm, article)
+    articleIndex.size = i >= 0 ? articleIndex.size : articleIndex.size + 1
+  } else {
+    articleIndex = buildIndex(sessionId, list)
+  }
 }
 
 export async function getCachedArticles(sessionId: string): Promise<Article[]> {
@@ -454,6 +514,35 @@ export async function enqueueCount(
   return id
 }
 
+/**
+ * Met en attente la création d'un article (« Article inconnu » hors ligne).
+ *
+ * Il rejoint la tranche de **sa balise**, avant le comptage qui le suit : les
+ * deux gestes appartiennent au même endroit du magasin, et la file les envoie
+ * dans l'ordre où ils ont eu lieu.
+ *
+ * ⚠️ `ean_norm` est retiré de la charge : la colonne est générée côté serveur,
+ * et Postgres refuse toute écriture dessus (`428C9`). Un article mis en file
+ * avec cette clé serait rejeté à la synchronisation — donc perdu — alors que
+ * rien à l'écran ne l'aurait laissé deviner.
+ */
+export async function enqueueArticle(
+  sessionId: string,
+  bucket: string,
+  article: TablesInsert<'articles'>,
+): Promise<void> {
+  const { ean_norm: _norm, ...payload } = article as TablesInsert<'articles'> & {
+    ean_norm?: string | null
+  }
+  await append(sessionId, bucket || NO_BALISE, {
+    kind: 'article',
+    id: newId(),
+    at: Date.now(),
+    sessionId,
+    article: payload,
+  })
+}
+
 export async function enqueueBalise(
   sessionId: string,
   code: string,
@@ -497,11 +586,13 @@ export async function pendingBalises(sessionId: string): Promise<PendingBalise[]
     }
     const cur =
       byCode.get(parsedKey.code) ??
-      ({ code: parsedKey.code, name: null, scans: 0, units: 0, hasBaliseOp: false, since: Infinity } as PendingBalise)
+      ({ code: parsedKey.code, name: null, scans: 0, units: 0, articles: 0, hasBaliseOp: false, since: Infinity } as PendingBalise)
     for (const op of ops) {
       if (op.kind === 'count') {
         cur.scans += 1
         cur.units += Number(op.count.qty ?? 0)
+      } else if (op.kind === 'article') {
+        cur.articles += 1
       } else {
         cur.hasBaliseOp = true
       }
@@ -511,7 +602,10 @@ export async function pendingBalises(sessionId: string): Promise<PendingBalise[]
   }
 
   const names = await zoneNameMap(sessionId)
-  const out = [...byCode.values()].filter((b) => b.scans > 0 || b.hasBaliseOp)
+  // Une balise dont il ne reste qu'un article à créer compte aussi : sinon
+  // elle disparaîtrait du bandeau tout en gardant une tranche sur le disque,
+  // et le compteur croirait avoir tout remonté.
+  const out = [...byCode.values()].filter((b) => b.scans > 0 || b.articles > 0 || b.hasBaliseOp)
   for (const b of out) b.name = names.get(b.code) ?? null
   // Les plus anciennes d'abord : ce sont celles dont l'absence inquiète le plus.
   out.sort((a, b) => a.since - b.since)
@@ -539,6 +633,47 @@ export async function pendingCounts(sessionId: string): Promise<TablesInsert<'co
     }
   }
   return out
+}
+
+/**
+ * Les articles créés hors ligne et pas encore remontés.
+ *
+ * ⚠️ **C'est ce qui les protège de `primeOfflineCache`.** Chaque entrée sur
+ * l'écran de scan retélécharge le référentiel et réécrit le cache : sans cette
+ * relecture de la file, un article saisi en réserve disparaîtrait du cache dès
+ * la première barre de réseau, et le code redeviendrait inconnu — pendant que
+ * son comptage, lui, attend toujours dans la file.
+ */
+export async function pendingArticles(sessionId: string): Promise<Article[]> {
+  const keys = await chunkKeysFor(sessionId)
+  const rows = await AsyncStorage.multiGet(keys)
+  const out: Article[] = []
+  for (const [, raw] of rows) {
+    if (!raw) continue
+    try {
+      for (const op of JSON.parse(raw) as PendingOp[]) {
+        if (op.kind === 'article') out.push(articleFromInsert(op.article))
+      }
+    } catch {
+      // Tranche illisible : ignorée ici, la synchro s'en occupera.
+    }
+  }
+  return out
+}
+
+/** Complète une charge d'insertion en ligne de cache (défauts du serveur). */
+export function articleFromInsert(a: TablesInsert<'articles'>): Article {
+  return {
+    id: a.id ?? newId(),
+    session_id: a.session_id,
+    sku: a.sku,
+    ean: a.ean ?? null,
+    ean_norm: eanNorm(a.ean),
+    brand: a.brand ?? '',
+    label: a.label ?? '',
+    unit_purchase_price: Number(a.unit_purchase_price ?? 0),
+    updated_at: a.updated_at ?? new Date().toISOString(),
+  } as Article
 }
 
 export async function failedOps(sessionId: string): Promise<FailedOp[]> {
@@ -587,7 +722,12 @@ export async function migrateLegacy(sessionId: string): Promise<number> {
     if (!raw) continue
     try {
       const op = JSON.parse(raw) as PendingOp
-      const code = op.kind === 'count' ? op.count.zone || NO_BALISE : op.code
+      // La file v1 n'a jamais porté d'op `article` (elle est née avec le
+      // format par balise) — le cas est traité pour la complétude du type.
+      const code =
+        op.kind === 'count' ? op.count.zone || NO_BALISE
+        : op.kind === 'article' ? NO_BALISE
+        : op.code
       await append(sessionId, code, op)
       moved += 1
     } catch {
@@ -618,6 +758,7 @@ export async function flush(
   sessionId: string,
   deps: {
     insertCount: (count: TablesInsert<'counts'>) => Promise<unknown>
+    insertArticle: (article: TablesInsert<'articles'>) => Promise<unknown>
     setBalise: (
       sessionId: string,
       code: string,
@@ -652,6 +793,7 @@ export async function flush(
       }
       try {
         if (op.kind === 'count') await deps.insertCount(op.count)
+        else if (op.kind === 'article') await deps.insertArticle(op.article)
         else await deps.setBalise(op.sessionId, op.code, op.mode, op.open, op.allowCreate)
         sent += 1
       } catch (e) {
