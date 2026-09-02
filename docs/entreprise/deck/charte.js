@@ -389,4 +389,4 @@ async function ecrire(pres, base) {
   console.log('OK', fichier)
 }
 
-module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer }
+module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, logoPng }

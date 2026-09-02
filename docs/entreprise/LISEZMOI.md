@@ -13,6 +13,7 @@ finit souvent par sortir, et il vaut mieux savoir lequel.
 | [`deck/`](deck/LISEZMOI.md) — présentation commerciale | Direction, achats | Avant-vente |
 | [`deck/`](deck/LISEZMOI.md) — dossier technique (`Quantinvo-dossier-DSI.pptx`) | Direction informatique, RSSI | Avant-vente, dès que la DSI entre dans la boucle |
 | [`deck/`](deck/LISEZMOI.md) — guide de prise en main (`Quantinvo-prise-en-main.pptx`) | Superviseurs, compteurs | Après signature, avant le premier inventaire |
+| [`fiche-produit/`](fiche-produit/Quantinvo-fiche-produit.pdf) — fiche produit A4 de l'application | Direction informatique, achats, boutiques | Avant-vente, et à la publication sur les boutiques |
 | [`../conformite/synthese-audit-2026-08.pptx`](../conformite/LISEZMOI-synthese.md) — synthèse RGPD et sécurité | Direction, DPO | Avant-vente, dès que la question de la conformité arrive |
 | [`modeles/devis.html`](modeles/LISEZMOI.md) — devis | Achats | Proposition |
 | [`cgv-quantinvo-brouillon.md`](cgv-quantinvo-brouillon.md) — conditions générales | Juridique | Signature. **Encore un brouillon : à faire relire.** |

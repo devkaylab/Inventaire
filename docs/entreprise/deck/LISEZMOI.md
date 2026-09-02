@@ -20,11 +20,18 @@ offres) et `offres.js` (les prix).
 ## Générer
 
 ```
-npm install pptxgenjs sharp
+npm install
 for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js; do
   node $f && FONT_MODE=brand node $f
 done
 ```
+
+⚠️ **`npm install` sans argument, jamais `npm install <paquet>`.** Les
+dépendances sont déclarées dans `package.json` depuis le 2 septembre 2026, et
+c'est ce qui protège d'un accident réel : lancer `npm install docx` dans ce
+dossier quand il n'y avait pas de `package.json` a **élagué `node_modules`** —
+npm a écrit un manifeste ne listant que `docx` et retiré `pptxgenjs` et
+`sharp`. Les six decks ne se généraient plus.
 
 `FONT_MODE=brand node build.js` produit la variante `-marque` (Sora et Inter,
 les polices de la charte), à présenter depuis un poste où elles sont
