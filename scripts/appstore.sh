@@ -69,23 +69,40 @@ if [[ ! -d "$ARCHIVE" ]]; then
   exit 1
 fi
 
-# ── 4. ⚠️ app.config doit être DANS le bundle, sinon l'app se ferme ────────
-# En Release, l'application se ferme sans rien dire si `app.config` n'a pas été
-# déposé dans EXConstants.bundle. C'est le piège que simulateur.sh règle à la
-# main pour le Debug ; ici, l'étape Gradle/Xcode d'Expo devrait le faire, mais
-# « devrait » ne suffit pas pour un binaire qui part chez Apple : une archive
-# amputée passe la revue automatique, s'installe, et se ferme au lancement.
+# ── 4. ⚠️ Les clés doivent être DANS le bundle JS ──────────────────────────
+# Le vrai risque silencieux est ici. L'adresse et la clé Supabase viennent de
+# `process.env.EXPO_PUBLIC_*`, que Babel remplace par leur valeur AU MOMENT du
+# bundling. Si `.env.local` manque à ce moment-là, le build réussit, l'archive
+# se signe, Apple la valide, elle s'installe — et l'application ne peut se
+# connecter à rien, pour tout le monde, sans un message d'erreur qui le dise.
+# On regarde donc dans le bundle produit, pas dans le code source.
 APP="$ARCHIVE/Products/Applications/Inventaire.app"
-CONF="$APP/EXConstants.bundle/app.config"
-if [[ ! -f "$CONF" ]]; then
-  echo "✗ app.config absent de EXConstants.bundle."
-  echo "  L'application se fermerait au lancement, sans message."
-  echo "  Le déposer puis réarchiver :"
-  echo "    node node_modules/expo-constants/scripts/getAppConfig.js \"\$PWD\" \\"
-  echo "      \"$APP/EXConstants.bundle\""
+BUNDLE="$APP/main.jsbundle"
+if [[ ! -f "$BUNDLE" ]]; then
+  echo "✗ main.jsbundle absent de l'archive."
   exit 1
 fi
-echo "→ app.config présent dans EXConstants.bundle ($(wc -c < "$CONF") octets)"
+if ! grep -aq "supabase.co" "$BUNDLE"; then
+  echo "✗ L'adresse Supabase n'est pas dans le bundle JS."
+  echo '  .env.local manquait au moment du bundling : l’application'
+  echo '  s’installerait et ne se connecterait à rien.'
+  exit 1
+fi
+echo "→ Clés présentes dans le bundle ($(grep -ao 'https://[a-z]*\.supabase\.co' "$BUNDLE" | head -1))"
+
+# ── 4 bis. app.config — un avertissement, pas un refus ─────────────────────
+# ⚠️ Note corrigée le 2 septembre 2026. `app.config` est bien absent de
+# `EXConstants.bundle` sur une archive Xcode, et ce n'est PAS grave pour cette
+# application : `expo-constants` n'a qu'un seul appelant (`lib/push.ts`, pour
+# l'identifiant de projet EAS), et il porte une valeur de repli en dur. Les
+# clés Supabase, elles, ne passent pas par là — elles sont inlinées ci-dessus.
+#
+# Le jour où un écran lira `Constants.expoConfig` sans repli, cet
+# avertissement devra redevenir un refus.
+if [[ ! -f "$APP/EXConstants.bundle/app.config" ]]; then
+  echo "→ app.config absent d'EXConstants.bundle — sans effet ici :"
+  echo "  le seul lecteur d'expo-constants (lib/push.ts) a un repli en dur."
+fi
 
 # ── 5. Exporter ────────────────────────────────────────────────────────────
 echo "→ Export pour App Store Connect…"
@@ -102,16 +119,27 @@ if [[ -z "$IPA" ]]; then
   exit 1
 fi
 
-# ── 6. ⚠️ Contrôler qui a signé, pas le code de sortie ─────────────────────
-SIGNATURE=$(codesign -dvvv "$APP" 2>&1 | grep "Authority=" | head -1)
+# ── 6. ⚠️ Contrôler la signature DU .IPA, pas celle de l'archive ──────────
+# L'application contenue dans l'archive porte la signature du build — souvent
+# « Apple Development ». C'est normal : l'export la RESIGNE pour la
+# distribution. Contrôler l'archive reviendrait donc à contrôler la mauvaise
+# copie, et à refuser un export parfaitement valable — le pendant exact du
+# défaut trouvé le même jour dans play.sh, qui interrogeait le trousseau au
+# lieu du bundle.
+CTRL=$(mktemp -d)
+unzip -q "$IPA" -d "$CTRL"
+IPAAPP=$(ls -d "$CTRL"/Payload/*.app | head -1)
+SIGNATURE=$(codesign -dvvv "$IPAAPP" 2>&1 | grep -m1 "Authority=" | sed 's/^Authority=//')
+rm -rf "$CTRL"
+
 if ! echo "$SIGNATURE" | grep -q "Apple Distribution"; then
-  echo "✗ L'archive n'est pas signée pour la distribution : $SIGNATURE"
+  echo "✗ Le .ipa n'est pas signé pour la distribution : ${SIGNATURE:-aucune signature lue}"
   exit 1
 fi
 
 echo
 echo "✓ Archive prête : $IPA"
-echo "  $SIGNATURE"
+echo "  Signé par : $SIGNATURE"
 ls -lh "$IPA" | awk '{print "  Taille : " $5}'
 echo
 echo "  Envoi : ouvrir Transporter (App Store, gratuit) et y déposer le .ipa,"
