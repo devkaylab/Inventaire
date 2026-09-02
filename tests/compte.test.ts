@@ -1676,10 +1676,13 @@ describe('rouvrir une balise déjà comptée', () => {
     expect(scanner).toContain('allowCreate || sansAvertir ? null : baliseDejaFaite(code)')
   })
 
-  it('lit le statut du mode en cours, pas celui de l’autre passe', () => {
+  it('lit le mode en cours, pas l’autre passe', () => {
     // Une balise comptée mais pas auditée ne doit pas déclencher
-    // l'avertissement quand on vient l'auditer.
-    expect(scanner).toContain("(compte ? z.count_status : z.audit_status) !== 'done'")
+    // l'avertissement quand on vient l'auditer. ⚠️ L'écriture a changé le
+    // 2 septembre 2026 — la condition ne porte plus sur « clôturée » mais sur
+    // « des pièces d'autrui » — l'intention, elle, est la même.
+    expect(scanner).toContain('compte ? z.count_units_autres : z.audit_units_autres')
+    expect(scanner).toContain("(compte ? z.count_status : z.audit_status) === 'done'")
   })
 
   it('normalise le code comme la base', () => {
@@ -2206,5 +2209,85 @@ describe('le tour de l’application, côté superviseur', () => {
     // un jour en croyant qu'il manque.
     expect(fiche).toMatch(/% des balises comptées/)
     expect(lire('lib/reperes.ts')).not.toContain('progression-balises')
+  })
+})
+
+/**
+ * Deux superviseurs sur la même balise.
+ *
+ * Constat de Julien, 2 septembre 2026, sur l'inventaire « Seouliste 020926 » :
+ * deux superviseurs ont compté la même balise et leurs relevés se sont
+ * additionnés sans que rien ne les prévienne. L'addition est le modèle —
+ * `counts` est un journal en ajout pur — mais l'avertissement ne se déclenchait
+ * que sur une balise CLÔTURÉE, jamais sur une balise laissée ouverte.
+ */
+describe('quelqu’un d’autre a compté sur cette balise', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+  const dialogue = lire('../src/lib/dialogue.ts')
+  const carte = lire('../src/components/ui/Dialogue.tsx')
+  const requetes = lire('../src/lib/queries.ts')
+
+  it('l’avertissement ne demande plus que la balise soit clôturée', () => {
+    const bloc = scanner.slice(scanner.indexOf('function baliseDejaFaite'))
+    const corps = bloc.slice(0, bloc.indexOf('\n  }'))
+    // Le seul refus est « personne d'autre n'a compté ici ».
+    expect(corps).toContain('if (!(unites > 0)) return null')
+    expect(corps).not.toMatch(/!==\s*'done'\s*\)?\s*return null/)
+  })
+
+  it('il se tait sur sa propre balise — les colonnes « autres » le portent', () => {
+    // ⚠️ C'est ce qui remplace une colonne « propriétaire » sur `zones`, qui
+    // aurait été fausse dès que deux personnes se relaient sur un rayon.
+    expect(scanner).toContain('count_units_autres')
+    expect(scanner).toContain('audit_units_autres')
+  })
+
+  it('et il ne nomme personne', () => {
+    const bloc = scanner.slice(scanner.indexOf('const choix = await demanderChoix'))
+    const carteTexte = bloc.slice(0, bloc.indexOf('})'))
+    for (const mot of ['full_name', 'counted_by', 'par ' + '${']) {
+      expect(carteTexte).not.toContain(mot)
+    }
+    expect(carteTexte).toContain('Quelqu’un')
+  })
+
+  it('« Reprendre à zéro » n’est jamais le défaut : il est le second bouton', () => {
+    expect(scanner).toContain("alternative: 'Reprendre à zéro'")
+    // Le bouton plein reste le geste qui ne détruit rien.
+    expect(scanner).toMatch(/action: compte \? 'Continuer le comptage'/)
+  })
+
+  it('et il repasse par une confirmation qui nomme ce qu’on perd', () => {
+    const bloc = scanner.slice(scanner.indexOf('async function reprendreAZero'))
+    const corps = bloc.slice(0, bloc.indexOf('\n  async function openBaliseCode'))
+    expect(corps).toContain("ton: 'danger'")
+    expect(corps).toContain('Effacer les comptages de la balise')
+    expect(corps).toContain('audits compris')
+    // La confirmation vient AVANT l'effacement, jamais après.
+    expect(corps.indexOf('await demander(')).toBeLessThan(corps.indexOf('viderBalise('))
+  })
+
+  it('vider une balise ne part jamais en file d’attente', () => {
+    // ⚠️ La file sert à ne rien perdre ; y mettre un effacement ferait
+    // l'inverse. `viderBalise` vient de `@/lib/queries`, pas d'`offlineSync`.
+    expect(scanner).toMatch(/import \{[^}]*viderBalise[^}]*\} from '@\/lib\/queries'/)
+    const sync = lire('../src/lib/offlineSync.ts')
+    expect(sync).not.toContain('viderBalise')
+    expect(requetes).toContain('export async function viderBalise')
+  })
+
+  it('trois choix s’empilent, deux restent côte à côte', () => {
+    // À trois pastilles sur la largeur d'un téléphone, les libellés cassent.
+    expect(carte).toContain('question.alternative ? styles.boutonsColonne : styles.boutons')
+    // ⚠️ Le balisage écrit le plein en premier (ordre d'une colonne) : la
+    // rangée doit donc s'inverser pour que le plein reste à droite.
+    expect(carte).toContain("flexDirection: 'row-reverse'")
+  })
+
+  it('et `demander` rend toujours un booléen', () => {
+    // Aucun des appels existants ne change : seul `demanderChoix` voit les
+    // trois issues.
+    expect(dialogue).toContain('export function demander(question: Question): Promise<boolean>')
+    expect(dialogue).toContain("return demanderChoix(question).then((r) => r === 'action')")
   })
 })

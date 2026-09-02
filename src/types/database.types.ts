@@ -208,24 +208,39 @@ export type Database = {
       companies: {
         Row: {
           balise_count: number
+          billing_period: string | null
           created_at: string
           id: string
           join_code: string
+          license_status: string
           name: string
+          plan: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
         }
         Insert: {
           balise_count?: number
+          billing_period?: string | null
           created_at?: string
           id?: string
           join_code: string
+          license_status?: string
           name: string
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Update: {
           balise_count?: number
+          billing_period?: string | null
           created_at?: string
           id?: string
           join_code?: string
+          license_status?: string
           name?: string
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Relationships: []
       }
@@ -275,6 +290,7 @@ export type Database = {
           accepted_at: string | null
           admin_note: string
           ape: string | null
+          billing_period: string | null
           company_id: string | null
           company_name: string
           contact_email: string
@@ -287,6 +303,7 @@ export type Database = {
           id: string
           message: string
           paid_at: string | null
+          plan: string | null
           quote_amount_cents: number | null
           quote_expires_at: string | null
           quote_lines: Json
@@ -307,6 +324,7 @@ export type Database = {
           accepted_at?: string | null
           admin_note?: string
           ape?: string | null
+          billing_period?: string | null
           company_id?: string | null
           company_name: string
           contact_email: string
@@ -319,6 +337,7 @@ export type Database = {
           id?: string
           message?: string
           paid_at?: string | null
+          plan?: string | null
           quote_amount_cents?: number | null
           quote_expires_at?: string | null
           quote_lines?: Json
@@ -339,6 +358,7 @@ export type Database = {
           accepted_at?: string | null
           admin_note?: string
           ape?: string | null
+          billing_period?: string | null
           company_id?: string | null
           company_name?: string
           contact_email?: string
@@ -351,6 +371,7 @@ export type Database = {
           id?: string
           message?: string
           paid_at?: string | null
+          plan?: string | null
           quote_amount_cents?: number | null
           quote_expires_at?: string | null
           quote_lines?: Json
@@ -494,6 +515,129 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_fils: {
+        Row: {
+          company_id: string | null
+          cree_le: string
+          cree_par: string | null
+          dernier_le: string
+          id: string
+          portee: string
+          sujet: string
+        }
+        Insert: {
+          company_id?: string | null
+          cree_le?: string
+          cree_par?: string | null
+          dernier_le?: string
+          id?: string
+          portee: string
+          sujet: string
+        }
+        Update: {
+          company_id?: string | null
+          cree_le?: string
+          cree_par?: string | null
+          dernier_le?: string
+          id?: string
+          portee?: string
+          sujet?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_fils_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_fils_cree_par_fkey"
+            columns: ["cree_par"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_participants: {
+        Row: {
+          fil_id: string
+          lu_le: string | null
+          user_id: string
+        }
+        Insert: {
+          fil_id: string
+          lu_le?: string | null
+          user_id: string
+        }
+        Update: {
+          fil_id?: string
+          lu_le?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_participants_fil_id_fkey"
+            columns: ["fil_id"]
+            isOneToOne: false
+            referencedRelation: "message_fils"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          auteur: string | null
+          auteur_interne: boolean
+          auteur_label: string
+          corps: string
+          cree_le: string
+          fil_id: string
+          id: number
+        }
+        Insert: {
+          auteur?: string | null
+          auteur_interne?: boolean
+          auteur_label?: string
+          corps: string
+          cree_le?: string
+          fil_id: string
+          id?: never
+        }
+        Update: {
+          auteur?: string | null
+          auteur_interne?: boolean
+          auteur_label?: string
+          corps?: string
+          cree_le?: string
+          fil_id?: string
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_auteur_fkey"
+            columns: ["auteur"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_fil_id_fkey"
+            columns: ["fil_id"]
+            isOneToOne: false
+            referencedRelation: "message_fils"
             referencedColumns: ["id"]
           },
         ]
@@ -701,10 +845,12 @@ export type Database = {
         Row: {
           accepted_at: string | null
           admin_note: string
+          billing_period: string | null
           company_id: string
           created_at: string
           decline_reason: string
           declined_at: string | null
+          devices: number | null
           handled_at: string | null
           id: string
           kind: string
@@ -731,10 +877,12 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           admin_note?: string
+          billing_period?: string | null
           company_id: string
           created_at?: string
           decline_reason?: string
           declined_at?: string | null
+          devices?: number | null
           handled_at?: string | null
           id?: string
           kind?: string
@@ -761,10 +909,12 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           admin_note?: string
+          billing_period?: string | null
           company_id?: string
           created_at?: string
           decline_reason?: string
           declined_at?: string | null
+          devices?: number | null
           handled_at?: string | null
           id?: string
           kind?: string
@@ -883,6 +1033,7 @@ export type Database = {
           annual_price_cents: number | null
           company_id: string
           created_at: string
+          devices: number | null
           id: string
           join_code: string
           name: string
@@ -893,6 +1044,7 @@ export type Database = {
           annual_price_cents?: number | null
           company_id: string
           created_at?: string
+          devices?: number | null
           id?: string
           join_code: string
           name: string
@@ -903,6 +1055,7 @@ export type Database = {
           annual_price_cents?: number | null
           company_id?: string
           created_at?: string
+          devices?: number | null
           id?: string
           join_code?: string
           name?: string
@@ -1170,7 +1323,9 @@ export type Database = {
       accept_quote_by_token: { Args: { p_token: string }; Returns: Json }
       admin_add_store: {
         Args: {
+          p_annual_price_cents?: number
           p_company_id: string
+          p_devices?: number
           p_name: string
           p_sqm?: number
           p_units?: number
@@ -1296,6 +1451,7 @@ export type Database = {
       admin_quote_company_request: {
         Args: {
           p_amount_cents: number
+          p_billing_period?: string
           p_id: string
           p_lines?: Json
           p_note?: string
@@ -1306,6 +1462,7 @@ export type Database = {
       admin_quote_store_request: {
         Args: {
           p_amount_cents: number
+          p_billing_period?: string
           p_id: string
           p_lines?: Json
           p_note?: string
@@ -1349,6 +1506,14 @@ export type Database = {
       }
       admin_usage_overview: { Args: { p_company_id?: string }; Returns: Json }
       advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      annuel_du_devis: {
+        Args: {
+          p_amount_cents: number
+          p_billing_period: string
+          p_lines: Json
+        }
+        Returns: number
+      }
       anomalies_a_signaler: { Args: never; Returns: Json }
       attach_checkout_session: {
         Args: {
@@ -1381,15 +1546,20 @@ export type Database = {
         Args: { p_name: string; p_store_id: string }
         Returns: Json
       }
-      ca_request_store: {
-        Args: {
-          p_message?: string
-          p_name: string
-          p_sqm?: number
-          p_units?: number
-        }
-        Returns: Json
-      }
+      ca_request_store:
+        | {
+            Args: { p_devices?: number; p_message?: string; p_name: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_message: string
+              p_name: string
+              p_sqm: number
+              p_units: number
+            }
+            Returns: Json
+          }
       ca_request_store_removal: {
         Args: { p_message?: string; p_store_id: string }
         Returns: Json
@@ -1412,6 +1582,10 @@ export type Database = {
       cancel_my_invitation: { Args: { p_id: string }; Returns: Json }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
       client_ip: { Args: never; Returns: string }
+      cloturer_audit_balise: {
+        Args: { p_code: string; p_session_id: string }
+        Returns: Json
+      }
       compose_full_name: {
         Args: { p_fallback?: string; p_first: string; p_last: string }
         Returns: string
@@ -1453,11 +1627,30 @@ export type Database = {
         Args: { p_message: string; p_sujet: string }
         Returns: Json
       }
+      deposer_message_quantinvo: {
+        Args: { p_message: string; p_sujet: string }
+        Returns: Json
+      }
+      deposer_souscription: {
+        Args: {
+          p_amount_cents: number
+          p_annual_cents: number
+          p_billing_period: string
+          p_company_name: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_plan: string
+          p_store_name: string
+        }
+        Returns: Json
+      }
       ensure_zone: {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
       }
       export_my_data: { Args: never; Returns: Json }
+      fil_pour_email: { Args: { p_fil: string }; Returns: Json }
       find_user_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -1474,6 +1667,7 @@ export type Database = {
           p_invoice_id?: string
           p_payment_intent_id?: string
           p_session_id: string
+          p_subscription_id?: string
         }
         Returns: Json
       }
@@ -1483,6 +1677,19 @@ export type Database = {
       generate_zones: {
         Args: { p_count: number; p_session_id: string }
         Returns: Json
+      }
+      get_balise_detail: {
+        Args: { p_code: string; p_session_id: string }
+        Returns: {
+          audit_status: string
+          audited_qty: number
+          brand: string
+          counted_qty: number
+          ean: string
+          final_qty: number
+          label: string
+          sku: string
+        }[]
       }
       get_company_directory: {
         Args: never
@@ -1567,12 +1774,16 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: {
           audit_lines: number
+          audit_lines_autres: number
           audit_status: string
           audit_units: number
+          audit_units_autres: number
           code: string
           count_lines: number
+          count_lines_autres: number
           count_status: string
           count_units: number
+          count_units_autres: number
           id: string
           name: string
         }[]
@@ -1642,11 +1853,19 @@ export type Database = {
         Returns: undefined
       }
       marquer_alertes: { Args: { p_cles: string[] }; Returns: number }
+      marquer_messages_lus: { Args: never; Returns: Json }
       marquer_notifications_lues: { Args: never; Returns: Json }
+      mes_fils: { Args: never; Returns: Json }
+      mes_messages: { Args: never; Returns: Json }
       mes_notifications: { Args: never; Returns: Json }
       my_team_by_store: { Args: never; Returns: Json }
       nom_propre: { Args: { p_nom: string }; Returns: string }
       norm_balise: { Args: { p: string }; Returns: string }
+      ouvrir_fil: {
+        Args: { p_message: string; p_sujet: string }
+        Returns: Json
+      }
+      ouvrir_message_fil: { Args: { p_fil: string }; Returns: Json }
       purge_expired_data: { Args: never; Returns: Json }
       quote_by_token: { Args: { p_token: string }; Returns: Json }
       rate_limit_ok: {
@@ -1669,6 +1888,10 @@ export type Database = {
       }
       remove_session_member: {
         Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
+      repondre_fil: {
+        Args: { p_fil: string; p_message: string }
         Returns: Json
       }
       request_account_deletion: { Args: never; Returns: Json }
@@ -1730,8 +1953,20 @@ export type Database = {
         }
         Returns: Json
       }
+      sync_subscription_status: {
+        Args: {
+          p_event_id?: string
+          p_status: string
+          p_subscription_id: string
+        }
+        Returns: Json
+      }
       tableau_de_bord_superviseur: {
         Args: { p_semaine?: string }
+        Returns: Json
+      }
+      vider_balise: {
+        Args: { p_code: string; p_session_id: string }
         Returns: Json
       }
     }
@@ -1752,12 +1987,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1781,11 +2016,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1806,11 +2041,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1831,11 +2066,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1848,11 +2083,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -28,7 +28,7 @@ import { usePreventRemove } from 'expo-router/build/react-navigation/core/usePre
 import type { NavigationAction as ActionNavigation } from 'expo-router/build/react-navigation/routers'
 import { useKeepAwake } from 'expo-keep-awake'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getZoneDashboard } from '@/lib/queries'
+import { getZoneDashboard, viderBalise } from '@/lib/queries'
 import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
 // Résolution d'article, création d'un article inconnu et ouverture/clôture de
 // balise passent par la couche hors ligne : mêmes signatures, avec repli sur le
@@ -49,7 +49,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
-import { demander, signaler } from '@/lib/dialogue'
+import { demander, demanderChoix, signaler } from '@/lib/dialogue'
 import { redresserSaisie, redresserNumero, clavierDecale } from '@/lib/douchette'
 
 interface ScannerProps {
@@ -560,16 +560,39 @@ export function Scanner({
     return (compte ? z.count_status : z.audit_status) === 'done' ? z : null
   }
 
-  function baliseDejaFaite(code: string): { unites: number; refs: number } | null {
+  /**
+   * Ce que QUELQU'UN D'AUTRE a déjà compté sur cette balise.
+   *
+   * ⚠️ **Trois choses ont changé le 2 septembre 2026**, après le test de Julien
+   * où deux superviseurs ont compté la même balise sans que rien ne les
+   * prévienne :
+   *
+   * 1. **on ne demande plus que la balise soit CLÔTURÉE.** C'était le trou :
+   *    un collègue qui laisse sa balise ouverte n'était signalé nulle part, et
+   *    les deux relevés s'additionnaient en silence — `counts` est un journal
+   *    en ajout pur ;
+   * 2. **on ne compte que les pièces des AUTRES** (`*_autres`, servi par
+   *    `get_zone_dashboard`). Rouvrir sa propre balise ne demande donc rien :
+   *    une carte qui s'affiche à chaque retour devient une carte qu'on ferme
+   *    sans lire ;
+   * 3. la carte dit **si le comptage est clôturé ou en cours** — ce ne sont pas
+   *    les mêmes gestes derrière, et pas la même phrase.
+   *
+   * ⚠️ Elle ne nomme personne, et ne le doit pas : un compteur ne voit que ses
+   * propres lignes (`counts_select_own`), et le suivi a été dépersonnalisé le
+   * 19 août. Le nombre de pièces suffit à comprendre qu'on n'est pas seul.
+   */
+  function baliseDejaFaite(
+    code: string,
+  ): { unites: number; refs: number; cloturee: boolean } | null {
     const cible = normBalise(code)
     const z = (zoneRows ?? []).find((r) => normBalise(r.code) === cible)
     if (!z) return null
     const compte = baliseModeRef.current === 'count'
-    if ((compte ? z.count_status : z.audit_status) !== 'done') return null
-    return {
-      unites: Math.round(Number(compte ? z.count_units : z.audit_units)),
-      refs: Number(compte ? z.count_lines : z.audit_lines),
-    }
+    const unites = Math.round(Number(compte ? z.count_units_autres : z.audit_units_autres))
+    const refs = Number(compte ? z.count_lines_autres : z.audit_lines_autres)
+    if (!(unites > 0)) return null
+    return { unites, refs, cloturee: (compte ? z.count_status : z.audit_status) === 'done' }
   }
 
   // Réamorce la liste avec le contenu de la balise ouverte (tous compteurs),
@@ -790,24 +813,93 @@ export function Scanner({
    *                     question, courte, depuis le 25 août 2026 : voir
    *                     `rouvrirDepuisListe`.
    */
+  /**
+   * « Reprendre à zéro » : vider la balise, puis l'ouvrir neuve.
+   *
+   * ⚠️ **Une seconde carte, et elle nomme ce qu'on perd.** Le premier bouton
+   * ouvre une possibilité, celui-ci l'exécute — et il efface le travail de
+   * toute l'équipe sur ce rayon, audits compris. Le site exige d'y retaper le
+   * numéro de la balise ; ici la confirmation le NOMME et compte les pièces,
+   * ce qui est la même exigence que pour supprimer un inventaire entier depuis
+   * l'application. Demander une saisie au clavier serait plus strict sur une
+   * balise que sur l'inventaire qui la contient — et ferait monter le clavier
+   * par-dessus la carte sur l'écran même où il pose déjà problème.
+   *
+   * ⚠️ **Rien ne part en file d'attente.** Sans réseau on refuse et on n'ouvre
+   * pas : mettre un effacement en attente reviendrait à détruire plus tard
+   * quelque chose qu'on n'a pas regardé.
+   */
+  async function reprendreAZero(
+    code: string, faite: { unites: number; refs: number },
+  ): Promise<boolean> {
+    const p = faite.unites > 1 ? 's' : ''
+    const r = faite.refs > 1 ? 's' : ''
+    const ok = await demander({
+      titre: `Effacer les comptages de la balise ${code} ?`,
+      texte: `${faite.unites} pièce${p} sur ${faite.refs} référence${r} comptée${p} par `
+        + `l’équipe seront effacée${p}, audits compris. La balise redeviendra à faire, `
+        + 'et vous la compterez comme neuve.',
+      note: 'Rien n’est récupérable ensuite. Le rayon, lui, est toujours là : '
+        + 'il se recompte.',
+      action: 'Effacer et recompter',
+      annuler: 'Annuler',
+      ton: 'danger',
+    })
+    if (!ok) return false
+    try {
+      const res = await viderBalise(sessionId, code)
+      if (!res.success) {
+        playErrorSound()
+        signaler.erreur('Balise', res.error ?? 'Impossible de vider cette balise.')
+        return false
+      }
+      await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      setRecentScans([])
+      signaler.succes(`Balise ${code} remise à zéro`, 'Vous pouvez la compter comme neuve.')
+      return true
+    } catch (e) {
+      playErrorSound()
+      signaler.erreur('Balise', errorMessage(e))
+      return false
+    }
+  }
+
   async function openBaliseCode(
     code: string, closePrev: boolean, allowCreate = false, sansAvertir = false,
   ) {
     const compte = baliseModeRef.current === 'count'
     const faite = allowCreate || sansAvertir ? null : baliseDejaFaite(code)
-    if (faite && faite.unites > 0) {
+    if (faite) {
       const p = faite.unites > 1 ? 's' : ''
       const r = faite.refs > 1 ? 's' : ''
-      const ok = await demander({
-        titre: `Balise ${code} déjà ${compte ? 'comptée' : 'auditée'}`,
-        texte: `${faite.unites} pièce${p} sur ${faite.refs} référence${r} y sont déjà enregistrée${p}. `
-          + 'Vos scans viendront s’ajouter à ce total : rien ne sera remplacé.',
-        note: 'Vous revenez corriger une erreur ? Continuez. Vous pensiez ouvrir une '
-          + 'balise neuve ? Vérifiez le numéro sur l’étiquette.',
-        action: compte ? 'Compter quand même' : 'Auditer quand même',
+      const dejaLa = `${faite.unites} pièce${p} sur ${faite.refs} référence${r} y sont déjà `
+        + `enregistrée${p}`
+      const choix = await demanderChoix({
+        // Clôturée : quelqu'un a fini. En cours : quelqu'un est peut-être
+        // encore dessus — ce n'est pas la même chose à savoir.
+        titre: faite.cloturee
+          ? `Balise ${code} déjà ${compte ? 'comptée' : 'auditée'}`
+          : `Quelqu’un ${compte ? 'compte' : 'audite'} sur la balise ${code}`,
+        surtitre: faite.cloturee ? undefined : 'Attention',
+        texte: faite.cloturee
+          ? `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} a été clôturé. `
+            + 'Vos scans viendront s’ajouter à ce total.'
+          : `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} n’est pas clôturé. `
+            + 'Vos scans viendront s’ajouter à ce total.',
+        note: faite.cloturee
+          ? 'Vous revenez corriger une erreur ? Continuez. Vous pensiez ouvrir une '
+            + 'balise neuve ? Vérifiez le numéro sur l’étiquette.'
+          : 'Vous vous partagez le rayon ? Continuez. Vous pensiez ouvrir une '
+            + 'balise neuve ? Vérifiez le numéro sur l’étiquette.',
+        action: compte ? 'Continuer le comptage' : 'Continuer l’audit',
+        alternative: 'Reprendre à zéro',
         annuler: 'Ne pas ouvrir',
       })
-      if (!ok) return
+      if (choix === 'annuler') return
+      // ⚠️ Le remplacement n'est JAMAIS le défaut, il est le second bouton — et
+      // il repasse par sa propre confirmation, qui nomme ce qu'on perd. Le
+      // modèle en ajout pur reste : rien ne s'écrase en silence.
+      if (choix === 'alternative' && !(await reprendreAZero(code, faite))) return
     }
     try {
       if (closePrev && activeBaliseRef.current && !ouvertureDiffereeRef.current) {

@@ -752,6 +752,18 @@ export type ZoneDashboardRow = {
   count_lines: number
   audit_units: number
   audit_lines: number
+  /**
+   * Ce que QUELQU'UN D'AUTRE a compté sur la balise — jamais qui.
+   *
+   * ⚠️ C'est ce qui permet à l'écran de scan de prévenir quand un collègue est
+   * déjà passé, et de se TAIRE quand on rouvre sa propre balise. Une colonne
+   * « propriétaire » sur `zones` aurait répondu à une autre question, et serait
+   * devenue fausse dès que deux personnes se relaient sur un rayon.
+   */
+  count_units_autres: number
+  count_lines_autres: number
+  audit_units_autres: number
+  audit_lines_autres: number
 }
 
 /** Toutes les balises d'une session (RLS : superviseur de la compagnie ou membre). */
@@ -789,6 +801,29 @@ export async function deleteZone(sessionId: string, name: string) {
 
 /** Scan d'une balise : ouvre (open=true) ou clôture (open=false) pour le mode donné.
  *  allowCreate : crée la balise si elle est inconnue lors de l'ouverture. */
+/**
+ * Efface les comptages ET les audits d'une balise, et la remet « à faire ».
+ *
+ * ⚠️ **Ce n'est pas la suppression en masse fermée par VR-007.** Le périmètre
+ * est fixé par le serveur — une balise, entière, nommée — comme
+ * `delete_audit_line` est bornée à un SKU dans une zone, et la fonction
+ * journalise ce qu'elle efface dans `company_audit_log`. Ne jamais l'élargir à
+ * une liste de balises ni à un filtre choisi par le client.
+ *
+ * ⚠️ **Aucun chemin hors ligne, et c'est délibéré.** La file d'attente sert à
+ * ne rien perdre ; mettre en attente un geste qui EFFACE ferait exactement
+ * l'inverse — on ne saurait pas, au moment de l'envoi, ce qu'il détruit. Sans
+ * réseau, l'écran le dit et n'ouvre rien.
+ */
+export async function viderBalise(sessionId: string, code: string) {
+  const { data, error } = await supabase.rpc('vider_balise', {
+    p_session_id: sessionId,
+    p_code: code,
+  })
+  if (error) throwSupabase('viderBalise', error)
+  return data as { success: boolean; error?: string; code?: string; lignes?: number; pieces?: number }
+}
+
 export async function setBalise(
   sessionId: string, code: string, mode: BaliseMode, open: boolean, allowCreate = false
 ) {

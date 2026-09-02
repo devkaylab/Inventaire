@@ -87,7 +87,13 @@ describe('VR-007 · les comptages ne s’effacent plus en masse', () => {
       '../../src/lib/queries.ts',
       '../../src/app/(supervisor)/[sessionId]/audits.tsx',
     ]) {
+      // ⚠️ **Sans les commentaires.** Ces fichiers RACONTENT le retrait, donc
+      // ils citent le nom de la fonction ; une garde qui lit le texte brut
+      // échoue sur sa propre documentation. Piège déjà rencontré sur
+      // `formulaires-publics.test.ts` et sur le comptage des `for update`.
       const code = readFileSync(path.join(here, f), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
       expect(code, f).not.toContain('delete_audit_line')
       expect(code, f).not.toContain('deleteAuditLine')
     }

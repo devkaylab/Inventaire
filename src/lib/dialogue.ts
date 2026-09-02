@@ -34,6 +34,16 @@
  */
 
 export type TonQuestion = 'neutre' | 'danger'
+
+/**
+ * Ce qu'une carte peut rendre.
+ *
+ * ⚠️ Trois réponses, pas deux — mais `demander` continue de rendre un booléen,
+ * et **aucun appel existant ne change**. Le troisième choix n'existe que pour
+ * les cartes qui portent une `alternative` : un geste destructeur qui doit
+ * être atteignable au moment où la question se pose, sans devenir le défaut.
+ */
+export type Reponse = 'action' | 'alternative' | 'annuler'
 export type TonNouvelle = 'succes' | 'erreur' | 'info'
 
 export interface Question {
@@ -52,6 +62,15 @@ export interface Question {
   ton?: TonQuestion
   /** Un seul bouton, pleine largeur : rien à refuser, seulement à lire. */
   seul?: boolean
+  /**
+   * Libellé d'un TROISIÈME choix, destructeur, en contour rouge.
+   *
+   * ⚠️ Sa présence fait passer les boutons en colonne. Trois pastilles côte à
+   * côte sur la largeur d'un téléphone cassent leurs libellés sur trois lignes
+   * — constaté sur la barre de sélection multiple en août 2026. Empilés, ils
+   * gardent leur texte et leur cible de 48 dp.
+   */
+  alternative?: string
 }
 
 export interface Nouvelle {
@@ -63,7 +82,7 @@ export interface Nouvelle {
 
 interface QuestionPosee extends Question {
   id: number
-  repondre: (accepte: boolean) => void
+  repondre: (reponse: Reponse) => void
 }
 
 interface Etat {
@@ -103,13 +122,12 @@ export function lireDialogue() {
 }
 
 /**
- * Pose une question et attend la réponse.
+ * Pose une question à trois issues et attend la réponse.
  *
- * La promesse se résout à `true` sur le bouton plein, `false` sur « Annuler ».
  * ⚠️ Elle ne se résout qu'après le démontage de la carte — voir l'entête.
  */
-export function demander(question: Question): Promise<boolean> {
-  return new Promise<boolean>((resoudre) => {
+export function demanderChoix(question: Question): Promise<Reponse> {
+  return new Promise<Reponse>((resoudre) => {
     const posee: QuestionPosee = { ...question, id: ++compteur, repondre: resoudre }
     if (etat.question) file.push(posee)
     else publier({ ...etat, question: posee })
@@ -117,15 +135,26 @@ export function demander(question: Question): Promise<boolean> {
 }
 
 /**
+ * Pose une question et attend la réponse.
+ *
+ * La promesse se résout à `true` sur le bouton plein, `false` sur « Annuler ».
+ * C'est la forme que prennent tous les appels du produit ; `demanderChoix` ne
+ * sert qu'aux rares cartes qui portent un troisième geste.
+ */
+export function demander(question: Question): Promise<boolean> {
+  return demanderChoix(question).then((r) => r === 'action')
+}
+
+/**
  * À appeler quand la carte a fini de disparaître : c'est là que la réponse
  * part, et que la question suivante prend la place.
  */
-export function questionRefermee(id: number, accepte: boolean) {
+export function questionRefermee(id: number, reponse: Reponse) {
   const courante = etat.question
   if (!courante || courante.id !== id) return
   const suivante = file.shift() ?? null
   publier({ ...etat, question: suivante })
-  courante.repondre(accepte)
+  courante.repondre(reponse)
 }
 
 function annoncer(ton: TonNouvelle, titre: string, texte?: string) {
@@ -158,8 +187,8 @@ export function retirerNouvelle(id: number) {
 
 /** Pour les tests : remet tout à zéro sans laisser de promesse en suspens. */
 export function reinitialiserDialogue() {
-  for (const q of file) q.repondre(false)
+  for (const q of file) q.repondre('annuler')
   file.length = 0
-  etat.question?.repondre(false)
+  etat.question?.repondre('annuler')
   publier({ question: null, nouvelles: [] })
 }

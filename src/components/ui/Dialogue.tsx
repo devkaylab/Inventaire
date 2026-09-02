@@ -39,6 +39,7 @@ import {
   questionRefermee,
   retirerNouvelle,
   type Nouvelle,
+  type Reponse,
   type TonNouvelle,
 } from '@/lib/dialogue'
 import { useTheme } from '@/lib/theme'
@@ -65,7 +66,7 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
   const theme = useTheme()
   const styles = makeStyles(theme)
   // La réponse est retenue le temps que la carte disparaisse.
-  const reponse = useRef<{ id: number; accepte: boolean } | null>(null)
+  const reponse = useRef<{ id: number; choix: Reponse } | null>(null)
   // ⚠️ **Rien ne synchronise `visible` sur `question` dans un effet.** Un
   // `setState` dans un effet déclenche un rendu en cascade (la règle
   // `react-hooks/set-state-in-effect`, déjà rencontrée sur ce projet). La
@@ -74,9 +75,9 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
   // du fondu — c'est elle qui laisse `onDismiss` arriver.
   const [fermeture, setFermeture] = useState(false)
 
-  const repondre = (accepte: boolean) => {
+  const repondre = (choix: Reponse) => {
     if (!question) return
-    reponse.current = { id: question.id, accepte }
+    reponse.current = { id: question.id, choix }
     setFermeture(true)
     // Android n'appelle pas `onDismiss` : on relaie à la main.
     if (Platform.OS !== 'ios') setTimeout(vider, FERMETURE_MS)
@@ -87,7 +88,7 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
     if (!r) return
     reponse.current = null
     setFermeture(false)
-    questionRefermee(r.id, r.accepte)
+    questionRefermee(r.id, r.choix)
   }
 
   if (!question) return null
@@ -103,7 +104,7 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
       animationType="fade"
       onDismiss={vider}
       // Le retour matériel d'Android vaut « Annuler » : c'est la réponse sûre.
-      onRequestClose={() => repondre(false)}
+      onRequestClose={() => repondre('annuler')}
       statusBarTranslucent
     >
       <View style={styles.voile}>
@@ -117,29 +118,54 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
               <Text style={styles.note}>{question.note}</Text>
             </>
           )}
-          <View style={styles.boutons}>
+          {/* ⚠️ Trois choix s'EMPILENT, deux restent côte à côte. Sur la
+              largeur d'un téléphone, trois pastilles cassent leurs libellés sur
+              trois lignes — et l'ordre compte : le geste qui ne détruit rien
+              d'abord, le destructeur qu'on va chercher ensuite, la sortie en
+              dernier. Même règle que les volets de la liste d'inventaires. */}
+          <View style={question.alternative ? styles.boutonsColonne : styles.boutons}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.btnPlein,
+                question.alternative && styles.btnLarge,
+                { backgroundColor: teinte },
+                pressed && styles.presse,
+              ]}
+              onPress={() => repondre('action')}
+              accessibilityRole="button"
+            >
+              <Text style={styles.btnPleinText}>{question.action ?? 'Confirmer'}</Text>
+            </Pressable>
+            {!!question.alternative && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnContour, styles.btnLarge,
+                  { borderColor: theme.danger },
+                  pressed && styles.presse,
+                ]}
+                onPress={() => repondre('alternative')}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.btnContourText, { color: theme.danger }]}>
+                  {question.alternative}
+                </Text>
+              </Pressable>
+            )}
             {/* Un avertissement n'a rien à refuser : son bouton prend toute
                 la largeur plutôt que de laisser un vide à côté. */}
             {!question.seul && (
               <Pressable
-                style={({ pressed }) => [styles.btnContour, pressed && styles.presse]}
-                onPress={() => repondre(false)}
+                style={({ pressed }) => [
+                  question.alternative ? styles.btnFantome : styles.btnContour,
+                  question.alternative && styles.btnLarge,
+                  pressed && styles.presse,
+                ]}
+                onPress={() => repondre('annuler')}
                 accessibilityRole="button"
               >
                 <Text style={styles.btnContourText}>{question.annuler ?? 'Annuler'}</Text>
               </Pressable>
             )}
-            <Pressable
-              style={({ pressed }) => [
-                styles.btnPlein,
-                { backgroundColor: teinte },
-                pressed && styles.presse,
-              ]}
-              onPress={() => repondre(true)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.btnPleinText}>{question.action ?? 'Confirmer'}</Text>
-            </Pressable>
           </View>
         </View>
       </View>
@@ -269,7 +295,19 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     color: t.textMuted, fontSize: 13, fontFamily: Font.regular,
     lineHeight: 18, marginTop: Spacing.md,
   },
-  boutons: { flexDirection: 'row', gap: Spacing.sm + 2, marginTop: Spacing.xl },
+  // ⚠️ `row-reverse`, et ce n'est pas une coquetterie. Le balisage écrit le
+  // bouton plein EN PREMIER, parce que c'est l'ordre d'une colonne à trois
+  // choix. En rangée, le plein doit rester à DROITE comme partout ailleurs
+  // dans l'application : l'inversion le remet à sa place sans qu'on ait à
+  // écrire deux fois les mêmes boutons.
+  boutons: { flexDirection: 'row-reverse', gap: Spacing.sm + 2, marginTop: Spacing.xl },
+  boutonsColonne: { flexDirection: 'column', gap: Spacing.sm, marginTop: Spacing.xl },
+  // Empilé, un bouton prend toute la largeur : `flex: 1` étirerait la hauteur.
+  btnLarge: { flex: 0, alignSelf: 'stretch', minHeight: 48 },
+  btnFantome: {
+    flex: 1, minHeight: 44, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center',
+  },
   // 44 px : la cible tactile minimale, et la hauteur des boutons de la charte.
   //
   // ⚠️ **`minHeight`, pas `height`.** Les deux boutons sont à `flex: 1`, donc

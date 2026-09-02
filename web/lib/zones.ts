@@ -24,6 +24,18 @@ export type ZoneDashboardRow = {
   count_lines: number
   audit_units: number
   audit_lines: number
+  /**
+   * Ce que QUELQU'UN D'AUTRE a compté sur la balise — jamais qui.
+   *
+   * ⚠️ C'est ce qui permet à l'écran de scan de prévenir quand un collègue est
+   * déjà passé, et de se TAIRE quand on rouvre sa propre balise. Une colonne
+   * « propriétaire » sur `zones` aurait répondu à une autre question, et serait
+   * devenue fausse dès que deux personnes se relaient sur un rayon.
+   */
+  count_units_autres: number
+  count_lines_autres: number
+  audit_units_autres: number
+  audit_lines_autres: number
 }
 
 export type BaliseMode = 'count' | 'audit'
