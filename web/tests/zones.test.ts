@@ -234,3 +234,75 @@ describe('l’écran de la balise', () => {
     expect(ACTIONS.balise_videe).toBeTypeOf('function')
   })
 })
+
+// ── Clôturer un audit que personne n'a fait (2 septembre 2026) ──────────────
+//
+// Constat de Julien : « marquer auditée alors qu'il n'y a pas de quantité
+// auditée doit prendre le compte d'origine, c'est-à-dire celui du compteur ».
+// Sans cela, ranger un audit jamais fait déclarait l'écart calculable et
+// sortait toute la balise à moins la totalité du comptage — une démarque
+// intégrale fabriquée par un clic de rangement.
+describe('clôturer l’audit d’une balise', () => {
+  const fn = derniereDefinition('cloturer_audit_balise').corps
+
+  it('reprend le comptage quand la balise n’a AUCUNE ligne d’audit', () => {
+    expect(fn).toContain('c.pass_number = 2')
+    expect(fn).toContain('insert into public.counts')
+    // La reprise écrit de la passe 2 à partir de la passe 1.
+    expect(fn).toMatch(/select p_session_id, c\.sku, 2, sum\(c\.qty\)/)
+    expect(fn).toContain('c.pass_number = 1')
+  })
+
+  it('ne reprend jamais référence par référence', () => {
+    // ⚠️ La garde qui protège la démarque : un auditeur passé qui n'a PAS
+    // retrouvé un article compté est exactement ce que l'inventaire révèle.
+    // La condition porte sur la balise entière (`not exists`), pas sur le SKU.
+    const bloc = fn.slice(fn.indexOf('if not exists'), fn.indexOf('get diagnostics'))
+    expect(bloc).toContain('not exists')
+    expect(bloc).not.toMatch(/c2?\.sku\s*=\s*\w+\.sku/)
+  })
+
+  it('écarte une référence ramenée à zéro', () => {
+    expect(fn).toContain('having sum(c.qty) > 0')
+  })
+
+  it('attribue la reprise au superviseur qui la déclenche', () => {
+    // Le rapport doit pouvoir nommer qui a pris cette responsabilité.
+    expect(fn).toContain('auth.uid()')
+  })
+
+  it('recalcule article_audit, qui est dérivée de counts', () => {
+    // Poser `final_qty` à la main serait défait au premier recalcul.
+    expect(fn).toContain('recompute_session_audit')
+  })
+
+  it('refuse un inventaire clôturé et un non-superviseur', () => {
+    expect(fn).toContain("s.status <> 'closed'")
+    expect(fn).toContain('can_access_session')
+  })
+
+  it('n’est ouverte ni à anon ni à public', () => {
+    const fichier = fichierDe('cloturer_audit_balise')
+    expect(fichier).toMatch(/revoke all on function public\.cloturer_audit_balise\(uuid, text\) from public, anon/)
+  })
+})
+
+describe('« Marquer auditée » sur l’écran', () => {
+  const ecran = lire('../components/dashboard/BaliseDetail.tsx')
+  const nu = ecran.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+  it('n’appelle plus setBalise en mode audit', () => {
+    expect(nu).toContain('cloturerAuditBalise(sessionId, z.code)')
+    expect(nu).not.toMatch(/setBalise\([^)]*'audit'/)
+  })
+
+  it('prévient avant de reprendre le comptage', () => {
+    // Ce n'est plus un simple changement d'état : des lignes sont écrites.
+    expect(nu).toContain('z.audit_lines === 0')
+    expect(nu).toContain('Reprendre le comptage')
+  })
+
+  it('« Marquer comptée » reste un simple changement d’état', () => {
+    expect(nu).toMatch(/setBalise\(sessionId, z\.code, 'count', false\)/)
+  })
+})

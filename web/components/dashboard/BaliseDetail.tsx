@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  ecartLigne, getBaliseDetail, setBalise, viderBalise,
+  cloturerAuditBalise, ecartLigne, getBaliseDetail, setBalise, viderBalise,
   type BaliseLigne, type ZoneDashboardRow,
 } from '@/lib/zones'
 import { friendlyError } from '@/lib/errors'
@@ -30,11 +30,52 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
   const confirm = useConfirm()
   const [selected, setSelected] = useState<ZoneDashboardRow | null>(null)
 
-  async function onCloturer(z: ZoneDashboardRow, mode: 'count' | 'audit') {
+  async function onMarquerComptee(z: ZoneDashboardRow) {
     try {
-      const r = await setBalise(sessionId, z.code, mode, false)
+      const r = await setBalise(sessionId, z.code, 'count', false)
       if (!r.success) { toast.error(r.error ?? 'Action impossible.'); return }
-      toast.success(`Balise ${z.code} marquée ${mode === 'count' ? 'comptée' : 'auditée'}.`)
+      toast.success(`Balise ${z.code} marquée comptée.`)
+      setSelected(null)
+      await onChanged()
+    } catch (err) {
+      toast.error(friendlyError(err))
+    }
+  }
+
+  /**
+   * ⚠️ Passe par `cloturerAuditBalise`, PAS par `setBalise`.
+   *
+   * Basculer le statut seul déclarait l'audit terminé, donc l'écart
+   * calculable : toute la balise sortait à moins la totalité du comptage,
+   * comme si l'auditeur était passé et n'avait rien trouvé. Ranger un audit que
+   * personne n'a fait fabriquait une démarque intégrale sur ce rayon.
+   *
+   * Quand rien n'a été audité, le serveur reprend le comptage — et l'écran le
+   * dit avant, parce que ce n'est plus un simple changement d'état : des lignes
+   * sont écrites.
+   */
+  async function onMarquerAuditee(z: ZoneDashboardRow) {
+    if (z.audit_lines === 0) {
+      const ok = await confirm({
+        title: `Marquer la balise ${z.code} auditée ?`,
+        message: 'Personne n’a audité cette balise. Les quantités du comptage seront reprises telles quelles.',
+        details: [
+          `${z.count_lines} référence${z.count_lines > 1 ? 's' : ''} reprise${z.count_lines > 1 ? 's' : ''}, ${Math.round(z.count_units)} pièce${z.count_units > 1 ? 's' : ''}`,
+          'La balise sortira donc sans écart : le comptage fait foi.',
+          'Pour auditer réellement, ouvrez la balise en audit depuis l’application.',
+        ],
+        confirmLabel: 'Reprendre le comptage',
+      })
+      if (!ok) return
+    }
+    try {
+      const r = await cloturerAuditBalise(sessionId, z.code)
+      if (!r.success) { toast.error(r.error ?? 'Action impossible.'); return }
+      toast.success(
+        r.reprises
+          ? `Balise ${z.code} marquée auditée — ${r.reprises} référence(s) reprise(s) du comptage.`
+          : `Balise ${z.code} marquée auditée.`,
+      )
       setSelected(null)
       await onChanged()
     } catch (err) {
@@ -86,11 +127,11 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
           <div className="dash-info-grid" style={{ marginTop: 16 }}>
             <BaliseCycle
               label="Comptage" statut={selected.count_status} readOnly={readOnly}
-              action="Marquer comptée" onCloturer={() => onCloturer(selected, 'count')}
+              action="Marquer comptée" onCloturer={() => onMarquerComptee(selected)}
             />
             <BaliseCycle
               label="Audit" statut={selected.audit_status} readOnly={readOnly}
-              action="Marquer auditée" onCloturer={() => onCloturer(selected, 'audit')}
+              action="Marquer auditée" onCloturer={() => onMarquerAuditee(selected)}
             />
           </div>
 

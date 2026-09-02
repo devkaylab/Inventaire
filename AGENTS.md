@@ -6500,4 +6500,42 @@ motif que la suppression d'un compte.
   les deux marqueurs, un libellé long et une quantité à six chiffres — aucun
   débordement horizontal, ni du document ni du tableau.
 
+## ⚠️ « Marquer auditée » reprend le comptage quand personne n'a audité
+
+Constat de Julien le jour même : *« marquer auditée alors qu'il n'y a pas de
+quantité auditée doit prendre le compte d'origine, c'est-à-dire celui du
+compteur »*. Il avait raison, et le défaut était **antérieur à ce chantier** :
+ce bouton ne faisait que basculer `zones.audit_status`, et la conséquence se
+lisait ailleurs. L'audit déclaré terminé, l'écart devient calculable — et toutes
+les références de la balise sortaient à **moins la totalité du comptage**, comme
+si l'auditeur était passé et n'avait rien trouvé. Ranger un audit que personne
+n'a fait fabriquait une démarque intégrale sur ce rayon.
+
+`cloturer_audit_balise` remplace `set_balise` **pour ce seul bouton**.
+
+- **⚠️ La reprise n'a lieu que si la balise n'a AUCUNE ligne de passe 2, jamais
+  référence par référence.** C'est la garde qui protège le produit : quand
+  personne n'est passé, il n'existe aucun jugement d'auditeur à contredire ; mais
+  un auditeur qui est passé et n'a **pas retrouvé** un article compté, c'est
+  précisément la démarque que l'inventaire existe pour révéler — la reprendre
+  l'effacerait en silence. Une balise auditée à moitié garde donc ses écarts.
+  Vérifié : sur une balise partiellement auditée, `reprises` vaut 0 et rien ne
+  bouge. Ne pas « compléter » cette fonction en la passant par SKU.
+- **⚠️ Elle écrit de vraies lignes de comptage en passe 2**, et c'est
+  obligatoire : `article_audit` est **dérivée** de `counts` par
+  `recompute_session_audit`. Poser `final_qty` à la main serait défait au premier
+  recalcul, que l'onglet Écarts déclenche à la demande. La fonction recalcule
+  elle-même dans la foulée, sans quoi l'onglet afficherait l'état d'avant.
+- **`counted_by` est le superviseur qui déclenche**, pas le compteur d'origine :
+  c'est lui qui prend la responsabilité de la reprise, et le rapport doit
+  pouvoir le nommer.
+- **Une référence ramenée à zéro n'est pas reprise** (`having sum(c.qty) > 0`) :
+  il n'y a rien à confirmer.
+- **⚠️ L'application mobile garde `set_balise`.** Un auditeur physiquement
+  devant le rayon qui n'a rien scanné n'a **rien trouvé** — lui reprendre le
+  comptage effacerait son constat. La reprise est un geste de bureau.
+- L'écran prévient avant : ce n'est plus un changement d'état, des lignes sont
+  écrites. La confirmation annonce combien de références seront reprises et dit
+  que la balise sortira sans écart.
+
 Tests de garde : `web/tests/zones.test.ts`.

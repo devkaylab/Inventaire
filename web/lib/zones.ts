@@ -99,6 +99,30 @@ export async function setBalise(
 }
 
 /**
+ * Clôture l'audit d'une balise, en reprenant le comptage si personne n'a
+ * audité.
+ *
+ * ⚠️ **Ne pas remplacer par `setBalise(..., 'audit', false)`.** Ce dernier ne
+ * bascule que le statut : l'audit devenant « terminé », l'écart devient
+ * calculable, et toutes les références de la balise sortaient à **moins la
+ * totalité du comptage** — une démarque intégrale fabriquée par le seul fait de
+ * ranger un audit que personne n'a fait (constat de Julien, 2 septembre 2026).
+ *
+ * La reprise n'a lieu que si la balise n'a **aucune** ligne d'audit. Une balise
+ * auditée à moitié garde ses écarts : là, quelqu'un est passé, et ne pas avoir
+ * retrouvé un article est justement ce que l'inventaire révèle.
+ */
+export async function cloturerAuditBalise(
+  sessionId: string, code: string,
+): Promise<{ success: boolean; reprises?: number; error?: string }> {
+  const { data, error } = await supabase.rpc('cloturer_audit_balise', {
+    p_session_id: sessionId, p_code: code,
+  })
+  if (error) fail('cloturerAuditBalise', error)
+  return data as { success: boolean; reprises?: number; error?: string }
+}
+
+/**
  * Ce qui a été compté sur UNE balise.
  *
  * ⚠️ Passe par `get_balise_detail`, jamais par `getSessionDetail` filtré au
