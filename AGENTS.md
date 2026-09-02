@@ -6805,9 +6805,17 @@ un test le vérifie sur les neuf écrans à champs.
 - **Chemin interne d'expo-router**, comme `usePreventRemove` : un test vérifie
   que le fichier existe, sans quoi une mise à jour d'Expo ferait retomber le
   décalage à zéro **en silence**.
-- **Rien sur Android** : `behavior` y reste indéfini, c'est le système qui
-  redimensionne (`android:windowSoftInputMode="adjustResize"`, vérifié dans le
-  manifeste généré). Un décalage y décalerait une mise en page déjà juste.
+- **⚠️ ANDROID SUIT LA MÊME RÈGLE, et c'est un renversement de ce que le projet
+  croyait.** Le motif laissait `behavior` indéfini là-bas, en s'appuyant sur
+  `android:windowSoftInputMode="adjustResize"` — bien présent dans le manifeste
+  généré. Mais le thème est **bord à bord** (`statusBarColor` et
+  `navigationBarColor` transparents) et la cible est l'API 36 : depuis
+  Android 15, le système n'y redimensionne plus la fenêtre, c'est à
+  l'application de consommer l'encart du clavier. **Le garde-clavier ne faisait
+  donc RIEN DU TOUT sur le Pixel**, quelle que soit la taille de l'écran —
+  constaté appareil en main, champ et bouton sous le clavier. `padding` est sûr
+  dans les deux mondes : si une version d'Android redimensionne encore, la
+  hauteur mesurée exclut déjà le clavier et le calcul rend zéro.
 - Plus aucun `KeyboardAvoidingView` nu dans l'application — treize écrans
   convertis, un test refuse la réapparition.
 
@@ -6838,6 +6846,22 @@ Quatre tests ont échoué aujourd'hui sur leur propre documentation — le fichi
 explique pourquoi il n'utilise pas telle fonction, donc il la cite. Le motif
 était déjà écrit pour `formulaires-publics.test.ts` et pour le comptage des
 `for update` ; il vaut désormais pour toute assertion en `not.toContain`.
+
+## Ce qui est prouvé, et ce qui ne l'est pas
+
+- **iOS : réglé et vérifié.** Champ ET bouton dégagés, clavier ouvert, sur le
+  dernier champ de « Mot de passe ».
+- **Android : très amélioré, pas parfait.** Avant, rien ne bougeait du tout.
+  Maintenant le contenu défile et **le champ visé est visible**, ce qui était la
+  plainte. Le bouton de validation, lui, demande encore de faire défiler ou de
+  refermer le clavier. ⚠️ **Et sur Android un glissement REFERME le clavier**,
+  donc on ne fait pas défiler en tapant : mesuré, `mInputShown` passe à faux au
+  premier `swipe`. Reprendre ce point avec un vrai formulaire long si quelqu'un
+  s'en plaint ; ne pas y toucher au jugé.
+- **Non vérifié : un écran plus petit que ceux dont je dispose.** Le simulateur
+  n'a pas d'iPhone SE installé, et le plus petit appareil disponible est un
+  6,1 pouces. La correction est mesurée sur la mécanique (le champ passe
+  au-dessus du clavier), pas sur l'écran exact de la plainte.
 
 Tests de garde : `tests/compte.test.ts`, bloc « le clavier ne cache plus les
 champs ».

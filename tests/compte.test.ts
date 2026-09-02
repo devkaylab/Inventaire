@@ -2321,8 +2321,11 @@ describe('le clavier ne cache plus les champs', () => {
     // ⚠️ Le CONTEXTE, pas `useHeaderHeight()` : ce hook lève une exception sur
     // un écran sans en-tête, et deux des nôtres n'en ont pas.
     expect(codeSeul).not.toContain('useHeaderHeight')
-    // Rien sur Android : le système redimensionne déjà la fenêtre.
-    expect(composant).toContain("Platform.OS === 'ios' ? (entete ?? 0) : 0")
+    // ⚠️ La MÊME règle sur Android : le thème est bord à bord et la cible est
+    // l'API 36, donc le système n'y redimensionne plus la fenêtre. Le
+    // garde-clavier n'y faisait rien du tout — vérifié sur le Pixel.
+    expect(composant).toContain('behavior="padding"')
+    expect(composant).toContain('keyboardVerticalOffset={entete ?? 0}')
   })
 
   it('le chemin interne d’expo-router existe encore', () => {

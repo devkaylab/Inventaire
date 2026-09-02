@@ -36,10 +36,19 @@ import { HeaderHeightContext } from 'expo-router/build/react-navigation/elements
  * balises. Le contexte rend `undefined` dans ce cas, ce qui est exactement la
  * réponse voulue : aucun décalage.
  *
- * ⚠️ **Rien de tout cela ne s'applique à Android**, où `behavior` reste
- * indéfini : c'est le système qui redimensionne la fenêtre
- * (`android:windowSoftInputMode="adjustResize"`, vérifié dans le manifeste
- * généré). Poser un décalage là-bas décalerait une mise en page déjà juste.
+ * ⚠️ **ANDROID A LA MÊME RÈGLE, et c'est un renversement.** Le motif du projet
+ * laissait `behavior` indéfini là-bas, en s'appuyant sur
+ * `android:windowSoftInputMode="adjustResize"` — bien présent dans le manifeste
+ * généré. Mais le thème est **bord à bord** (barres transparentes) et la cible
+ * est l'API 36 : depuis Android 15, le système n'y redimensionne plus la
+ * fenêtre, c'est à l'application de consommer l'encart du clavier. Le
+ * garde-clavier ne faisait donc **rien du tout** sur le Pixel, quelle que soit
+ * la taille de l'écran — vérifié appareil en main, clavier ouvert, champ et
+ * bouton sous le clavier.
+ *
+ * `padding` est sûr dans les deux mondes : si une version d'Android
+ * redimensionne encore, la hauteur mesurée exclut déjà le clavier et le calcul
+ * rend zéro.
  *
  * ⚠️ **IL EN FAUT DEUX, ET C'EST MESURÉ, PAS DÉDUIT.** Les trois
  * configurations ont été photographiées au simulateur, clavier logiciel ouvert,
@@ -68,8 +77,8 @@ export function ClavierEvite({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? (entete ?? 0) : 0}
+      behavior="padding"
+      keyboardVerticalOffset={entete ?? 0}
       style={style ?? { flex: 1 }}
     >
       {children}
