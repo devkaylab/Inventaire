@@ -106,3 +106,30 @@ describe('la politique est servie par le site', () => {
     expect(code).toContain('legal-wrap')
   })
 })
+
+describe('l’adresse publiée est celle du domaine', () => {
+  // ⚠️ La politique publiait `devkaylab@gmail.com` comme adresse des demandes
+  // RGPD — sur une page désormais liée depuis Google Play et depuis
+  // l'application. Décision de Julien, 2 septembre 2026 : c'est
+  // `contact@quantinvo.com` partout où un client la lit. La boîte est la même
+  // (ImprovMX redirige), seule l'adresse affichée change.
+  //
+  // ⚠️ AGENTS.md garde la mention du Gmail : elle documente la redirection,
+  // c'est un fait technique, pas une adresse publiée.
+  const publics = [
+    ['la politique de confidentialité', '../../docs/privacy.html'],
+    ['les mentions légales', '../app/mentions-legales/page.tsx'],
+    ['l’identité de l’éditeur', '../lib/legal.ts'],
+    ['le modèle de devis', '../../docs/entreprise/modeles/devis.html'],
+    ['le modèle de facture', '../../docs/entreprise/modeles/facture.html'],
+    ['le générateur des modèles', '../../docs/entreprise/modeles/generer.py'],
+  ] as const
+
+  it.each(publics)('%s ne porte aucune adresse personnelle', (_, chemin) => {
+    expect(lire(chemin)).not.toContain('devkaylab@gmail.com')
+  })
+
+  it('la politique donne bien une adresse de contact', () => {
+    expect(lire('../../docs/privacy.html')).toContain('contact@quantinvo.com')
+  })
+})

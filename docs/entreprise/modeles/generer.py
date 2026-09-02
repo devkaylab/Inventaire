@@ -236,7 +236,7 @@ def page(kind):
          <span class="vide">[Code postal Ville]</span><br>
          <span class="l">SIREN</span> <span class="vide">[000 000 000]</span> — <span class="l">RCS</span> <span class="vide">[Ville]</span><br>
          <span class="l">TVA</span> <span class="vide">[FR00 000000000]</span><br>
-         devkaylab@gmail.com · <span class="vide">[téléphone]</span></p>
+         contact@quantinvo.com · <span class="vide">[téléphone]</span></p>
     </div>
     <div class="bloc">
       <h2>Client</h2>

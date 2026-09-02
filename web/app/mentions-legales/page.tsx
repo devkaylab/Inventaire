@@ -97,7 +97,7 @@ export default function MentionsLegalesPage() {
           <h2>Contact</h2>
           <p>
             Pour toute question relative au site ou à ces mentions :{' '}
-            <a href="mailto:devkaylab@gmail.com">devkaylab@gmail.com</a>.
+            <a href="mailto:contact@quantinvo.com">contact@quantinvo.com</a>.
           </p>
         </section>
       </main>

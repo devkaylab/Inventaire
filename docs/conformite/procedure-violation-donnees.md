@@ -58,7 +58,7 @@ salariés ?), **combien de personnes**, **quelles conséquences plausibles**
   besoin, ne pas attendre d'avoir un compte pour travailler le dossier).
 - Contenu attendu : nature de la violation, catégories et nombre approximatif
   de personnes et d'enregistrements, conséquences probables, mesures prises et
-  prévues, point de contact (devkaylab@gmail.com).
+  prévues, point de contact (contact@quantinvo.com).
 - **On peut notifier en deux temps** : une notification initiale avec ce qu'on
   sait dans les 72 h, complétée ensuite. Dépasser 72 h se justifie, mais se
   motive dans la notification.

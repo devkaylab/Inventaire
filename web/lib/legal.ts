@@ -41,7 +41,7 @@ export const EDITEUR: Mention[] = [
     requis: true,
     aide: "Adresse du siège, ou domicile pour une entreprise individuelle.",
   },
-  { libelle: 'Courrier électronique', valeur: 'devkaylab@gmail.com', requis: true },
+  { libelle: 'Courrier électronique', valeur: 'contact@quantinvo.com', requis: true },
   {
     libelle: 'Téléphone',
     valeur: null,

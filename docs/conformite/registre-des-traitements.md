@@ -1,6 +1,6 @@
 # Registre des activités de traitement
 
-**Responsable** : Devkaylab, éditeur de Quantinvo — devkaylab@gmail.com
+**Responsable** : Devkaylab, éditeur de Quantinvo — contact@quantinvo.com
 **Dernière mise à jour** : 19 août 2026
 **Base** : article 30 du RGPD (constat M5 de l'audit du 13 août 2026)
 

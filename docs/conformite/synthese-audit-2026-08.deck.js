@@ -806,7 +806,7 @@ function pastille(slide, code, x, y, couleur, taille = 0.52) {
     })
   })
 
-  s.addText('Devkaylab · éditeur de Quantinvo · devkaylab@gmail.com', {
+  s.addText('Devkaylab · éditeur de Quantinvo · contact@quantinvo.com', {
     x: M, y: 6.05, w: 8.5, h: 0.35,
     fontFace: BODY_FONT, fontSize: 12.5, color: '8FA6C4', margin: 0,
   })
