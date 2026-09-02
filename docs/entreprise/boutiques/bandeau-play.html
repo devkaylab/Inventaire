@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Quantinvo — bandeau Google Play</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500&display=swap">
+<style>
+  /* ⚠️ Ce fichier EST le bandeau, à sa taille exacte : 1024 × 500. Il se rend
+     en PNG par `produire.mjs`. Ne pas retoucher l'image produite — elle serait
+     écrasée à la génération suivante ; c'est ici qu'on modifie.
+
+     Les polices sont celles de la charte (Sora, Inter). Elles sont installées
+     sur le poste de Julien, donc le rendu tient même hors ligne ; le lien
+     Google Fonts n'est qu'un filet. `produire.mjs` refuse de sortir l'image si
+     Sora n'a pas été résolue — un bandeau tombé en Helvetica ne se voit pas
+     sur une capture, mais se voit sur la fiche. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1024px; height: 500px; overflow: hidden; }
+  body {
+    position: relative;
+    background: #0B0F19;
+    font-family: Sora, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .voile {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 140% at 18% 8%, rgba(116,102,244,.34) 0%, rgba(11,15,25,0) 58%),
+      linear-gradient(140deg, #17123A 0%, #0B0F19 52%, #090C14 100%);
+  }
+  .contenu {
+    position: absolute; inset: 0;
+    padding: 62px 104px;
+    display: flex; flex-direction: column; justify-content: center; gap: 26px;
+  }
+  .marque { display: flex; align-items: center; gap: 16px; }
+  .marque svg { width: 46px; height: 46px; display: block; }
+  .mot {
+    font-weight: 800; font-size: 30px; letter-spacing: .01em; color: #FFFFFF;
+  }
+  .titre {
+    font-weight: 700; font-size: 68px; line-height: 1.08;
+    letter-spacing: -.025em; color: #FFFFFF;
+  }
+  .titre span { color: #38C9FF; }
+  .sous {
+    font-family: Inter, sans-serif; font-weight: 400; font-size: 25px;
+    color: #A8B0C2; letter-spacing: .002em;
+  }
+</style>
+</head>
+<body>
+  <div class="voile"></div>
+  <div class="contenu">
+    <div class="marque">
+      <svg viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7466F4"/>
+            <stop offset=".52" stop-color="#4636B0"/>
+            <stop offset="1" stop-color="#1C153F"/>
+          </linearGradient>
+        </defs>
+        <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
+        <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
+        <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
+        <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
+        <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF"/>
+      </svg>
+      <span class="mot">Quantinvo</span>
+    </div>
+    <h1 class="titre">La fiabilité du stock<br><span>au quotidien</span></h1>
+    <p class="sous">Balises, scan, audit, rapport — sans louer de matériel.</p>
+  </div>
+</body>
+</html>
