@@ -2379,3 +2379,40 @@ describe('le clavier ne cache plus les champs', () => {
     expect(login).not.toContain('container: { flex: 1')
   })
 })
+
+describe('l’application ne demande que ce qu’elle utilise', () => {
+  const app = JSON.parse(readFileSync(path.join(here, '..', 'app.json'), 'utf8'))
+
+  it('une seule permission Android demandée : la caméra', () => {
+    // ⚠️ `expo-audio` ne sert qu'à jouer un bip au scan. Le micro, le service
+    // au premier plan et sa variante « lecture de média » étaient déclarés
+    // pour rien — et un inventaire qui demande le micro, c'est un refus chez
+    // Google et une alerte chez la DSI du client. La fiche produit annonce la
+    // caméra et rien d'autre : le manifeste doit dire la même chose.
+    expect(app.expo.android.permissions).toEqual(['android.permission.CAMERA'])
+  })
+
+  it('les permissions du gabarit sont retirées, nommément', () => {
+    const bloquees = app.expo.android.blockedPermissions
+    expect(bloquees).toContain('android.permission.RECORD_AUDIO')
+    expect(bloquees).toContain('android.permission.FOREGROUND_SERVICE')
+    expect(bloquees).toContain('android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK')
+    // « Par-dessus les autres applications » vient du gabarit React Native et
+    // ne sert qu'au menu de développement.
+    expect(bloquees).toContain('android.permission.SYSTEM_ALERT_WINDOW')
+  })
+
+  it('la caméra dit à quoi elle sert, et que rien n’est enregistré', () => {
+    const texte = app.expo.ios.infoPlist.NSCameraUsageDescription
+    expect(texte).toContain('codes-barres')
+    expect(texte).toContain('Aucune photo')
+  })
+
+  it('le manifeste de confidentialité iOS existe et ne déclare aucun pistage', () => {
+    // Exigé par Apple dès qu'on touche une « required reason API ».
+    const pv = readFileSync(path.join(here, '..', 'ios', 'Inventaire', 'PrivacyInfo.xcprivacy'), 'utf8')
+    expect(pv).toContain('NSPrivacyAccessedAPICategoryUserDefaults')
+    expect(pv).toContain('NSPrivacyAccessedAPICategoryFileTimestamp')
+    expect(pv).toMatch(/<key>NSPrivacyTracking<\/key>\s*<false\/>/)
+  })
+})
