@@ -420,6 +420,20 @@ Le plafond est **souple** — on ne refuse jamais un appareil pendant un
 comptage, et les decks le disent. Le raisonnement complet vit dans
 `hypotheses-tarifaires.md` (hypothèse 4).
 
+## ⚠️ La baseline, pour les documents à venir (2 septembre 2026)
+
+**« La fiabilité du stock au quotidien »**, posée par Julien en créant le
+bandeau Google Play. Tout **nouveau** document la porte.
+
+⚠️ **Les six decks existants ne sont PAS à reprendre.** Ils portent « Outil
+d'inventaire » et Julien a explicitement écarté l'alignement — il a retravaillé
+ces documents ailleurs. Ne pas les « harmoniser » en croyant rattraper un
+oubli ; c'est une décision, pas une dette.
+
+La règle de vocabulaire, elle, ne bouge pas : Quantinvo est un **outil
+d'inventaire**, jamais « une app » ; « application » ne désigne que le
+composant mobile.
+
 ## Ce qu'il faut savoir avant de modifier
 - **Le dossier DSI recopie des faits** de `deploiement-mdm.md` (identifiants,
   adresses réseau), de `docs/privacy.html` (sous-traitants) et d'AGENTS.md

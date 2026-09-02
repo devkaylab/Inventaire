@@ -62,10 +62,14 @@ La piste « la phrase », écartée, mettait la baseline en grand et ne risquait
 rien au recadrage — c'est la solution de repli si la fiche paraît muette.
 
 **La baseline est « La fiabilité du stock au quotidien »** (Julien, 2 septembre
-2026). ⚠️ Elle est **nouvelle** : elle n'existait nulle part ailleurs dans le
-produit au moment de sa création — ni sur le site, ni dans les decks, ni dans
-la fiche produit, qui portent encore « Outil d'inventaire ». Si elle devient la
-baseline officielle, c'est un alignement à faire partout, pas seulement ici.
+2026), et elle vaut **pour ce qui vient**.
+
+⚠️ **L'existant n'est PAS repris, et c'est une décision.** Le site, les six
+decks et la fiche produit portent encore « Outil d'inventaire » : Julien a
+écarté la reprise (« j'ai travaillé sur des decks différents donc pas besoin
+d'aligner, mais pour les prochains oui »). Ne pas « harmoniser » ces documents
+en croyant rattraper un oubli. Tout **nouveau** livrable, lui, porte la
+baseline.
 
 Ce que Google impose, et qui est tenu :
 
