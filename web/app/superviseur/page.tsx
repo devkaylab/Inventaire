@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 
 export const metadata: Metadata = {
-  title: 'Accès superviseur — Quantinvo',
+  alternates: { canonical: '/superviseur' },
+  title: 'Accès superviseur',
   description:
     'Un accès superviseur Quantinvo est ouvert par l’administrateur de votre entreprise, ou par Quantinvo pour les entreprises qui n’en ont pas encore.',
 }

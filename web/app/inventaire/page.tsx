@@ -4,6 +4,7 @@ import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { CubeFilaire } from '@/components/Parallaxe'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/inventaire' },
   title: 'L’inventaire : pourquoi compter son stock, et comment bien le faire',
   description:
     'Inventaire annuel, tournant, ciblé : ce qu’est un inventaire, ce que révèle l’écart entre stock théorique et stock réel — démarque inconnue, vol, casse, erreurs de gestion — et comment fiabiliser son stock toute l’année.',

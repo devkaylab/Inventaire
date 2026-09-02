@@ -1,4 +1,5 @@
 import { Logo } from '@/components/Logo'
+import { LogicielJsonLd } from '@/components/DonneesStructurees'
 import { AuthLink } from '@/components/AuthLink'
 import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
@@ -33,6 +34,7 @@ export default function Home() {
       <SiteHeader />
 
       <main>
+        <LogicielJsonLd />
         <section className="hero hero-plein">
           <div className="plx hero-voile" data-plx="0.45" aria-hidden="true" />
           <div className="plx cube-a" data-plx="0.18" aria-hidden="true">

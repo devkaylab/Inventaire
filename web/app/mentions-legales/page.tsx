@@ -12,7 +12,8 @@ import { PRIVACY_URL } from '@/lib/links'
  * cherche, mais n'est pas présentée comme une identification valable.
  */
 export const metadata: Metadata = {
-  title: 'Mentions légales — Quantinvo',
+  alternates: { canonical: '/mentions-legales' },
+  title: 'Mentions légales',
   description: "Informations légales relatives à l'éditeur et à l'hébergeur du site Quantinvo.",
   robots: mentionsCompletes() ? undefined : { index: false, follow: false },
 }

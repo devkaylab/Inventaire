@@ -29,7 +29,8 @@ import { CONTACT_EMAIL } from '@/lib/contact'
  * e-mail, souvent au téléphone, et l'espace connecté se ferme sous 720 px.
  */
 export const metadata: Metadata = {
-  title: 'Politique de confidentialité — Quantinvo',
+  alternates: { canonical: '/confidentialite' },
+  title: 'Politique de confidentialité',
   description:
     'Quelles données personnelles Quantinvo traite, pourquoi, avec qui elles sont partagées, '
     + 'combien de temps elles sont conservées et quels sont vos droits.',

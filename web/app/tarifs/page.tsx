@@ -6,7 +6,8 @@ import { TarifsGrille } from '@/components/TarifsGrille'
 import { CONTACT_EMAIL } from '@/lib/contact'
 
 export const metadata: Metadata = {
-  title: 'Tarifs — Quantinvo',
+  alternates: { canonical: '/tarifs' },
+  title: 'Tarifs',
   description:
     'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 89 €/mois, Advanced 310 €, Enterprise 890 € — sans engagement, sans déclaration de stock et sans terminal à acheter.',
 }

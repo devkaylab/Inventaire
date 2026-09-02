@@ -5,7 +5,8 @@ import { CubeFilaire } from '@/components/Parallaxe'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 
 export const metadata: Metadata = {
-  title: 'Pourquoi choisir Quantinvo — l’outil d’inventaire pour le commerce',
+  alternates: { canonical: '/pourquoi-nous-choisir' },
+  title: 'Pourquoi choisir Quantinvo',
   description:
     'Vos équipes comptent avec leur téléphone, vous pilotez en direct, le stock validé est fiable. Import sans reformater, audit des écarts, licence par magasin à partir de 89 € par mois : les raisons de choisir Quantinvo.',
 }

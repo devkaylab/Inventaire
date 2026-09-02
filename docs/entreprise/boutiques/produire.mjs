@@ -38,17 +38,23 @@ const { chromium } = depuisSite('playwright')
 const sharp = depuisDeck('sharp')
 
 const BANDEAU = { l: 1024, h: 500 }
+const OG = { l: 1200, h: 630 }
 const ICONE = 512
 
-async function bandeau() {
+/**
+ * Rend un fichier HTML de taille fixe en PNG, en vérifiant que Sora a bien été
+ * résolue. Le contrôle est la partie qui compte : une police absente ne lève
+ * aucune erreur, le navigateur retombe en silence sur une fonte système.
+ */
+async function rendre({ fichier, sortie, l, h, quoi }) {
   const exe = process.env.CHROMIUM_PATH
   if (exe && !existsSync(exe)) throw new Error(`CHROMIUM_PATH introuvable : ${exe}`)
   const navigateur = await chromium.launch({ executablePath: exe })
   const page = await navigateur.newPage({
-    viewport: { width: BANDEAU.l, height: BANDEAU.h },
+    viewport: { width: l, height: h },
     deviceScaleFactor: 1,
   })
-  await page.goto('file://' + path.join(ici, 'bandeau-play.html'))
+  await page.goto('file://' + path.join(ici, fichier))
   await page.waitForTimeout(1200)
 
   // Le contrôle de fonte : Sora est très différente d'une grotesque système,
@@ -73,15 +79,14 @@ async function bandeau() {
     )
   }
 
-  const sortie = path.join(ici, 'bandeau-play-1024x500.png')
-  await page.screenshot({ path: sortie, clip: { x: 0, y: 0, ...{ width: BANDEAU.l, height: BANDEAU.h } } })
+  await page.screenshot({ path: sortie, clip: { x: 0, y: 0, width: l, height: h } })
   await navigateur.close()
 
   const m = await sharp(sortie).metadata()
-  if (m.width !== BANDEAU.l || m.height !== BANDEAU.h) {
-    throw new Error(`bandeau à ${m.width}×${m.height}, attendu ${BANDEAU.l}×${BANDEAU.h}`)
+  if (m.width !== l || m.height !== h) {
+    throw new Error(`${quoi} à ${m.width}×${m.height}, attendu ${l}×${h}`)
   }
-  console.log(`OK bandeau-play-1024x500.png (${m.width}×${m.height})`)
+  console.log(`OK ${quoi} (${m.width}×${m.height}) → ${path.relative(racine, sortie)}`)
 }
 
 async function icone() {
@@ -95,5 +100,19 @@ async function icone() {
   console.log(`OK icone-512.png (${m.width}×${m.height}, alpha ${m.hasAlpha ? 'oui' : 'non'})`)
 }
 
-await bandeau()
+await rendre({
+  fichier: 'bandeau-play.html',
+  sortie: path.join(ici, 'bandeau-play-1024x500.png'),
+  l: BANDEAU.l, h: BANDEAU.h, quoi: 'bandeau Play',
+})
+
+// ⚠️ L'image de partage sort dans `web/public/`, pas ici : c'est le site qui
+// la sert, et une copie dans deux dossiers finirait par diverger. C'est le
+// seul fichier que ce script écrit hors de son dossier.
+await rendre({
+  fichier: 'og.html',
+  sortie: path.join(racine, 'web', 'public', 'og.png'),
+  l: OG.l, h: OG.h, quoi: 'image de partage',
+})
+
 await icone()

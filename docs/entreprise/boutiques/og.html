@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Quantinvo — image de partage</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500&display=swap">
+<style>
+  /* ⚠️ Ce fichier EST l'image de partage, à sa taille exacte : 1200 × 630 —
+     celle qu'attendent Open Graph et les cartes LinkedIn, Slack, iMessage.
+     Elle se rend en PNG par `produire.mjs`, qui l'écrit dans `web/public/`.
+
+     Même geste que le bandeau Play — cube débordant, ligne de scan qui le
+     prolonge — mais recomposé pour un format bien moins large : le cube passe
+     à gauche en haut, le texte occupe le bas. Reprendre la mise en page du
+     bandeau telle quelle laisserait un vide au milieu.
+
+     ⚠️ **La ligne reste posée à la hauteur de la barre cyan du cube**
+     (56,25 % de sa hauteur). C'est ce qui la fait lire comme le prolongement
+     du logo ; la déplacer au milieu de l'image en ferait un trait décoratif.
+
+     ⚠️ **La barre interne du cube est retirée**, comme sur le bandeau : elle
+     ferait doublon avec la ligne qui la prolonge. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    position: relative;
+    background: #0B0F19;
+    font-family: Sora, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .voile {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 130% at 12% 6%, rgba(116,102,244,.36) 0%, rgba(11,15,25,0) 60%),
+      linear-gradient(150deg, #17123A 0%, #0B0F19 54%, #090C14 100%);
+  }
+
+  /* Cube de 300 px, débordant de 54 px à gauche, haut à 62 px.
+     Sa barre cyan tomberait à 62 + 300 × 0,5625 = 231 px du haut. */
+  .cube {
+    position: absolute; left: -54px; top: 62px;
+    width: 300px; height: 300px; display: block;
+  }
+  .ligne {
+    position: absolute; left: 0; right: 0; top: 231px; height: 6px;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg,
+      rgba(56,201,255,0) 0%, #38C9FF 11%, #38C9FF 89%, rgba(56,201,255,0) 100%);
+  }
+  /* ⚠️ Le nom est POSÉ SUR la ligne, pas centré dessus : centré, la ligne
+     barrait les lettres. Il s'arrête 22 px au-dessus (155 + 54 = 209, ligne à
+     231), de sorte que la ligne file dessous sans le toucher. */
+  .mot {
+    position: absolute; right: 84px; top: 155px;
+    font-weight: 800; font-size: 54px; letter-spacing: -.015em;
+    color: #FFFFFF; line-height: 1;
+  }
+
+  .bas { position: absolute; left: 84px; right: 84px; bottom: 76px; }
+  .titre {
+    font-weight: 700; font-size: 66px; line-height: 1.1;
+    letter-spacing: -.025em; color: #FFFFFF;
+  }
+  .titre span { color: #38C9FF; }
+  .sous {
+    font-family: Inter, sans-serif; font-weight: 400; font-size: 26px;
+    color: #A8B0C2; margin-top: 26px;
+  }
+</style>
+</head>
+<body>
+  <div class="voile"></div>
+
+  <svg class="cube" viewBox="0 0 512 512" aria-hidden="true">
+    <defs>
+      <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7466F4"/>
+        <stop offset=".52" stop-color="#4636B0"/>
+        <stop offset="1" stop-color="#1C153F"/>
+      </linearGradient>
+    </defs>
+    <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
+    <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
+    <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
+    <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
+  </svg>
+
+  <div class="ligne"></div>
+  <div class="mot">Quantinvo</div>
+
+  <div class="bas">
+    <div class="titre">La fiabilité du stock<br><span>au quotidien</span></div>
+    <p class="sous">L’outil d’inventaire pour le commerce de détail.</p>
+  </div>
+</body>
+</html>
