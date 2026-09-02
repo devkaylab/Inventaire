@@ -10,25 +10,27 @@
      en PNG par `produire.mjs`. Ne pas retoucher l'image produite — elle serait
      écrasée à la génération suivante ; c'est ici qu'on modifie.
 
-     Piste retenue : « le geste ». Le cube déborde du cadre à gauche et la
-     ligne de scan le prolonge sur toute la largeur. C'est le seul geste
-     graphique que la marque possède, joué en grand.
+     ⚠️ **Piste retenue : « la phrase » (B)**, choisie par Julien le 2 septembre
+     2026, avec sa baseline. Une première version produisait la piste « le
+     geste » (C) — cube débordant, marque en grand, phrase en sous-titre — avec
+     le texte de la B. C'était le contraire de ce qui avait été choisi, et le
+     défaut n'était pas cosmétique : B a été retenue parce que **ce n'est plus
+     la marque qui parle, c'est ce que fait le produit**. La personne qui voit
+     ce bandeau vient de chercher « inventaire » et ne sait pas ce qu'est
+     Quantinvo ; le logo, lui, est déjà affiché juste à côté par Play.
 
-     ⚠️ **La ligne est posée à la hauteur de la barre cyan du cube**, pas au
-     milieu de l'image : c'est ce qui la fait lire comme le prolongement du
-     logo plutôt que comme un trait décoratif posé par-dessus. La barre du cube
-     est à 56,25 % de sa hauteur (y = 288 sur 512) — si la taille du cube
-     change, cette valeur se recalcule.
+     Donc : la phrase occupe la place, la marque passe en petit au-dessus.
 
-     ⚠️ **La barre interne du cube est retirée ici, et seulement ici.** Elle
-     ferait doublon avec la ligne qui la prolonge. Le logo de l'application, du
-     site et des e-mails la garde.
+     ⚠️ **Rien d'important ne touche les bords** — Play recadre le bandeau selon
+     les surfaces. Le texte tient dans une marge de 84 px.
 
-     Les polices sont celles de la charte (Sora, Inter). Elles sont installées
-     sur le poste de Julien, donc le rendu tient même hors ligne ; le lien
-     Google Fonts n'est qu'un filet. `produire.mjs` refuse de sortir l'image si
-     Sora n'a pas été résolue — un bandeau tombé en Helvetica ne se voit pas
-     sur une capture, mais se voit sur la fiche. */
+     ⚠️ **Lisible à 336 px de large**, la taille où Play l'affiche le plus
+     souvent : c'est la contrainte qui a fait écarter les compositions où la
+     phrase est un sous-titre. À cette échelle, le titre fait encore 24 px.
+
+     Les polices sont celles de la charte (Sora, Inter). `produire.mjs` refuse
+     de sortir l'image si Sora n'a pas été résolue — un bandeau tombé en
+     Helvetica ne se voit pas sur une capture, mais se voit sur la fiche. */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1024px; height: 500px; overflow: hidden; }
   body {
@@ -40,65 +42,63 @@
   .voile {
     position: absolute; inset: 0;
     background:
-      radial-gradient(120% 140% at 18% 8%, rgba(116,102,244,.34) 0%, rgba(11,15,25,0) 58%),
+      radial-gradient(120% 140% at 16% 6%, rgba(116,102,244,.36) 0%, rgba(11,15,25,0) 60%),
       linear-gradient(140deg, #17123A 0%, #0B0F19 52%, #090C14 100%);
   }
 
-  /* Le cube : 348 px, débordant de 62 px à gauche, centré verticalement.
-     Sa barre cyan tomberait à 76 + 348 × 0,5625 = 272 px du haut. */
-  .cube {
-    position: absolute; left: -62px; top: 76px;
-    width: 348px; height: 348px; display: block;
-  }
-  .ligne {
-    position: absolute; left: 0; right: 0; top: 272px; height: 6px;
-    transform: translateY(-50%);
-    background: linear-gradient(90deg,
-      rgba(56,201,255,0) 0%, #38C9FF 13%, #38C9FF 87%, rgba(56,201,255,0) 100%);
+  .contenu {
+    position: absolute; inset: 0;
+    padding: 62px 84px;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 26px;
   }
 
-  /* Le texte est aligné à droite mais s'arrête à 104 px du bord : Play recadre
-     le bandeau selon les surfaces, rien d'important ne doit toucher les bords.
-     C'est le cube qui accepte d'être coupé, pas les mots. */
-  .texte {
-    position: absolute; right: 104px; top: 272px;
-    transform: translateY(-50%);
-    display: flex; flex-direction: column; align-items: flex-end;
-    gap: 40px;
-  }
+  /* La marque, en petit : elle situe, elle n'annonce pas. */
+  .marque { display: flex; align-items: center; gap: 16px; }
+  .marque svg { width: 48px; height: 48px; display: block; }
   .mot {
-    font-weight: 800; font-size: 58px; letter-spacing: -.015em; color: #FFFFFF;
-    line-height: 1;
+    font-weight: 800; font-size: 30px; letter-spacing: -.01em;
+    color: #FFFFFF; line-height: 1;
   }
-  .phrase {
+
+  /* Le sujet de l'image. */
+  .titre {
+    font-weight: 700; font-size: 74px; line-height: 1.08;
+    letter-spacing: -.025em; color: #FFFFFF;
+  }
+  .titre span { color: #38C9FF; }
+
+  .sous {
     font-family: Inter, sans-serif; font-weight: 400; font-size: 26px;
-    color: #C9CEDD; line-height: 1;
+    color: #A8B0C2; line-height: 1.3;
   }
-  .phrase span { color: #FFFFFF; font-weight: 500; }
 </style>
 </head>
 <body>
   <div class="voile"></div>
 
-  <svg class="cube" viewBox="0 0 512 512" aria-hidden="true">
-    <defs>
-      <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#7466F4"/>
-        <stop offset=".52" stop-color="#4636B0"/>
-        <stop offset="1" stop-color="#1C153F"/>
-      </linearGradient>
-    </defs>
-    <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
-    <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
-    <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
-    <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
-  </svg>
+  <div class="contenu">
+    <div class="marque">
+      <svg viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7466F4"/>
+            <stop offset=".52" stop-color="#4636B0"/>
+            <stop offset="1" stop-color="#1C153F"/>
+          </linearGradient>
+        </defs>
+        <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
+        <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
+        <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
+        <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
+        <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF"/>
+      </svg>
+      <span class="mot">Quantinvo</span>
+    </div>
 
-  <div class="ligne"></div>
+    <h1 class="titre">La fiabilité du stock<br><span>au quotidien</span></h1>
 
-  <div class="texte">
-    <div class="mot">Quantinvo</div>
-    <p class="phrase">La fiabilité du stock <span>au quotidien</span></p>
+    <p class="sous">Balises, scan, audit, rapport — sans louer de matériel.</p>
   </div>
 </body>
 </html>
