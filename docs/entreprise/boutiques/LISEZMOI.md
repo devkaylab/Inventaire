@@ -43,10 +43,23 @@ Trois pistes présentées, chacune vue en grand **et à 336 px** — la taille o
 Play l'affiche le plus souvent, et donc celle qui décide. Maquette :
 https://claude.ai/code/artifact/73d58469-dc29-458e-9f23-177c372713d8
 
-Retenue : **la phrase**. Le nom passe en petit, la promesse occupe la place.
-La personne qui voit ce bandeau vient de chercher « inventaire » et ne sait pas
-ce qu'est Quantinvo ; répéter le logo, déjà affiché à côté dans la fiche,
-n'apprend rien.
+Retenue par Julien : **le geste**. Le cube déborde du cadre à gauche et la
+ligne de scan le prolonge sur toute la largeur ; le nom et la baseline sont à
+droite, de part et d'autre de la ligne.
+
+⚠️ **La ligne est posée à la hauteur de la barre cyan du cube** (56,25 % de sa
+hauteur), pas au milieu de l'image : c'est ce qui la fait lire comme le
+prolongement du logo plutôt que comme un trait décoratif. Si la taille du cube
+change, cette valeur se recalcule.
+
+⚠️ **La barre interne du cube est retirée sur ce bandeau, et seulement là** —
+elle ferait doublon avec la ligne qui la prolonge. Le logo de l'application, du
+site et des e-mails la garde.
+
+⚠️ **Le risque connu, accepté** : c'est la piste dont le cube déborde, donc
+celle qui perd le plus si Play recadre. Le texte, lui, reste à 104 px du bord.
+La piste « la phrase », écartée, mettait la baseline en grand et ne risquait
+rien au recadrage — c'est la solution de repli si la fiche paraît muette.
 
 **La baseline est « La fiabilité du stock au quotidien »** (Julien, 2 septembre
 2026). ⚠️ Elle est **nouvelle** : elle n'existait nulle part ailleurs dans le
