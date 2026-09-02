@@ -5,7 +5,6 @@ import {
   AppState,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -51,6 +50,7 @@ import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
 import { demander, demanderChoix, signaler } from '@/lib/dialogue'
 import { redresserSaisie, redresserNumero, clavierDecale } from '@/lib/douchette'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 interface ScannerProps {
   sessionId: string
@@ -139,10 +139,7 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onCancel}>
-      <KeyboardAvoidingView
-        style={styles.illBackdrop}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <ClavierEvite style={styles.illBackdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
         <View style={styles.illSheet}>
           {/* Header */}
@@ -230,7 +227,7 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </Modal>
   )
 }
@@ -1411,10 +1408,7 @@ export function Scanner({
   const barreTexte = (resolving || barcodeReady) ? camHint : (conseil ?? dernierScan ?? camHint)
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <ClavierEvite style={styles.container}>
       {/* Bandeau : passe (mode classique) ou zone/balise (mode zones) */}
       {zoneMode ? (
         <View>
@@ -1929,7 +1923,7 @@ export function Scanner({
           </Pressable>
         </Modal>
       )}
-    </KeyboardAvoidingView>
+    </ClavierEvite>
   )
 }
 

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,6 +19,7 @@ import { AppLogo } from '@/components/AppLogo'
 import { PASSWORD_FORGOT_URL, PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { avertir, signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function LoginScreen() {
   const { signIn, signOut, session, profile, loading: authLoading, mfaRequired, recheckMfa } = useAuth()
@@ -115,7 +116,13 @@ export default function LoginScreen() {
   if (mfaRequired) {
     return (
       <SafeAreaView key="etape-code" style={styles.safe}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+        <ClavierEvite>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <View style={styles.logoMark}>
               <AppLogo size={84} />
@@ -159,14 +166,21 @@ export default function LoginScreen() {
               <Text style={styles.linkText}>Se déconnecter et changer de compte</Text>
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+          </ScrollView>
+      </ClavierEvite>
       </SafeAreaView>
     )
   }
 
   return (
     <SafeAreaView key="etape-mot-de-passe" style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+      <ClavierEvite>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.header}>
           <View style={styles.logoMark}>
             <AppLogo size={84} />
@@ -235,7 +249,8 @@ export default function LoginScreen() {
             <Text style={styles.privacyLinkText}>Politique de confidentialité</Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+        </ScrollView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }
@@ -243,7 +258,11 @@ export default function LoginScreen() {
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
-    container: { flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.xxl },
+    // ⚠️ `flexGrow`, jamais `flex` : c'est ce qui permet à la carte de rester
+    // centrée quand l'écran est grand ET de défiler quand le clavier a mangé
+    // la moitié de la hauteur. Avec `flex: 1`, le contenu est contraint à la
+    // zone visible et le bouton devient inatteignable.
+    container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: Spacing.xxl },
     header: { alignItems: 'center', marginBottom: 40 },
     logoMark: {
       marginBottom: Spacing.lg,

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -18,6 +17,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
  * Modifier son nom.
@@ -52,11 +52,9 @@ export default function NameScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ClavierEvite style={{ flex: 1 }}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.label}>Prénom et nom</Text>
             <TextInput
@@ -90,7 +88,7 @@ export default function NameScreen() {
             rôle et votre entreprise sont fixés par votre administrateur.
           </Text>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

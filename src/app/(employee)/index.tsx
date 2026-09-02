@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
@@ -24,6 +23,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
 import { activerNotifications, etatNotifications, registerForPushNotifications } from '@/lib/push'
 import { useRepere } from '@/lib/reperes'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -112,8 +112,9 @@ export default function EmployeeHomeScreen() {
         <Text style={styles.welcome}>Bonjour, <Text style={styles.welcomeName}>{profile?.full_name}</Text></Text>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ClavierEvite style={{ flex: 1 }}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.textMuted} />}
@@ -227,7 +228,7 @@ export default function EmployeeHomeScreen() {
           </View>
 
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

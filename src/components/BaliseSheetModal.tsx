@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -18,6 +17,7 @@ import {
   type BaliseFormat,
   type BaliseSeries,
 } from '@/lib/baliseSeries'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 interface Props {
   visible: boolean
@@ -60,7 +60,7 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.backdrop}>
+      <ClavierEvite style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.card}>
           <Text style={styles.title}>Créer des balises</Text>
@@ -122,7 +122,7 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </Modal>
   )
 }

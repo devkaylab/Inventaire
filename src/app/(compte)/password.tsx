@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
@@ -23,6 +22,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
  * Changer son mot de passe depuis l'app.
@@ -97,11 +97,9 @@ export default function PasswordScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ClavierEvite>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.intro}>
               Le nouveau mot de passe remplace l&apos;ancien tout de suite, sur le téléphone comme
@@ -172,7 +170,7 @@ export default function PasswordScreen() {
             la disposition des attaquants.
           </Text>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

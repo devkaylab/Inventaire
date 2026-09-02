@@ -1,5 +1,4 @@
 import {
-  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
  * Plus d'inscription depuis l'application.
@@ -34,7 +34,7 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ClavierEvite>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Text style={styles.title}>Créer mon compte</Text>
@@ -78,7 +78,7 @@ export default function SignupScreen() {
             </Pressable>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

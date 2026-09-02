@@ -1,5 +1,4 @@
 import {
-  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
  * Écran de repli : un compte superviseur sans entreprise rattachée.
@@ -38,7 +38,7 @@ export default function CompanySetupScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ClavierEvite>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Text style={styles.title}>
@@ -61,7 +61,7 @@ export default function CompanySetupScreen() {
             </Pressable>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

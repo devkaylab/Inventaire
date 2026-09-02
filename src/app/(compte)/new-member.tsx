@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +18,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { avertir, signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function NewMemberScreen() {
   const { profile } = useAuth()
@@ -107,8 +107,9 @@ export default function NewMemberScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ClavierEvite style={{ flex: 1 }}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
             Pré-inscrivez un compteur de votre équipe. Il recevra un e-mail, vérifiera son prénom et
             son nom, et choisira son propre mot de passe. Son rattachement au magasin est automatique
@@ -188,7 +189,7 @@ export default function NewMemberScreen() {
             )}
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

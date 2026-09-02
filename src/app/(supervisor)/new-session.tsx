@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -20,6 +19,7 @@ import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 function generateCode(): string {
   return Math.random().toString(36).toUpperCase().slice(2, 8)
@@ -103,8 +103,9 @@ export default function NewSessionScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ClavierEvite style={{ flex: 1 }}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.sectionTitle}>Informations de l&apos;inventaire</Text>
 
           <Text style={styles.label}>{"Nom de l'inventaire"}</Text>
@@ -191,7 +192,7 @@ export default function NewSessionScreen() {
             {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Créer l&apos;inventaire</Text>}
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

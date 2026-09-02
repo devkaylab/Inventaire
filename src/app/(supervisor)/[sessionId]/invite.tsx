@@ -22,7 +22,6 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -50,6 +49,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function InviteToSessionScreen() {
   const { sessionId, from } = useLocalSearchParams<{ sessionId: string; from?: string }>()
@@ -246,8 +246,9 @@ export default function InviteToSessionScreen() {
           }}
         />
       )}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ClavierEvite style={{ flex: 1 }}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
             {equipeVide
               ? "Qui comptera sur cet inventaire ? Créez le compte de votre premier compteur, ou partagez-lui les identifiants s'il a déjà l'application."
@@ -414,7 +415,7 @@ export default function InviteToSessionScreen() {
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

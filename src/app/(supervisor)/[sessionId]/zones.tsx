@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
@@ -25,6 +24,7 @@ import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 type ZoneGroup = { name: string; total: number; counted: number; audited: number; codes: string[] }
 
@@ -140,8 +140,9 @@ export default function ZonesScreen() {
       {fromNew && (
         <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
       )}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ClavierEvite style={{ flex: 1 }}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.textMuted} />}
@@ -243,7 +244,7 @@ export default function ZonesScreen() {
             </Pressable>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </ClavierEvite>
     </SafeAreaView>
   )
 }

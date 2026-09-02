@@ -2291,3 +2291,73 @@ describe('quelqu’un d’autre a compté sur cette balise', () => {
     expect(dialogue).toContain("return demanderChoix(question).then((r) => r === 'action')")
   })
 })
+
+/**
+ * Le clavier ne recouvre plus les champs.
+ *
+ * Constat de Julien, 2 septembre 2026 : « saisir le mot de passe ou le code
+ * inventaire, le clavier sur des plus petits écrans cache les champs ».
+ */
+describe('le clavier ne cache plus les champs', () => {
+  const composant = lire('../src/components/ui/ClavierEvite.tsx')
+  // ⚠️ Une garde qui vérifie une ABSENCE lit le code sans ses commentaires :
+  // le fichier explique justement pourquoi on n'utilise pas `useHeaderHeight`,
+  // donc il le cite. Quatrième fois que ce piège se présente en une journée.
+  const codeSeul = composant.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+  const ECRANS = [
+    '../src/app/(compte)/mfa.tsx', '../src/app/(compte)/name.tsx',
+    '../src/app/(compte)/new-member.tsx', '../src/app/(compte)/password.tsx',
+    '../src/app/(employee)/index.tsx', '../src/app/(supervisor)/[sessionId]/invite.tsx',
+    '../src/app/(supervisor)/[sessionId]/zones.tsx', '../src/app/(supervisor)/new-session.tsx',
+    '../src/app/login.tsx',
+  ]
+
+  it('⚠️ le décalage vaut la hauteur de l’en-tête, sur iOS', () => {
+    // Sans lui, le rembourrage est court de toute la hauteur de l'en-tête :
+    // `_frame` est relative au parent, `keyboardFrame.screenY` est en
+    // coordonnées écran. Lu dans la source de React Native.
+    expect(composant).toContain('keyboardVerticalOffset')
+    expect(composant).toContain('HeaderHeightContext')
+    // ⚠️ Le CONTEXTE, pas `useHeaderHeight()` : ce hook lève une exception sur
+    // un écran sans en-tête, et deux des nôtres n'en ont pas.
+    expect(codeSeul).not.toContain('useHeaderHeight')
+    // Rien sur Android : le système redimensionne déjà la fenêtre.
+    expect(composant).toContain("Platform.OS === 'ios' ? (entete ?? 0) : 0")
+  })
+
+  it('le chemin interne d’expo-router existe encore', () => {
+    // Même précaution que `usePreventRemove` : sans ce fichier, le décalage
+    // retomberait à zéro EN SILENCE à la prochaine mise à jour d'Expo.
+    expect(existsSync(path.resolve(
+      __dirname, '../node_modules/expo-router/build/react-navigation/elements/index.js',
+    ))).toBe(true)
+  })
+
+  it('⚠️ et chaque écran à champs porte LES DEUX mécanismes', () => {
+    // Mesuré au simulateur : seul, aucun des deux ne dégage le champ.
+    for (const f of ECRANS) {
+      const code = lire(f)
+      expect(code, f).toContain('<ClavierEvite')
+      expect(code, f).toContain('automaticallyAdjustKeyboardInsets')
+      expect(code, f).toContain('keyboardShouldPersistTaps')
+    }
+  })
+
+  it('plus aucun garde-clavier nu dans l’application', () => {
+    // Une seule définition de la règle : un `KeyboardAvoidingView` écrit à la
+    // main repartirait sans décalage.
+    for (const f of [...ECRANS, '../src/components/scanner.tsx',
+                     '../src/components/BaliseSheetModal.tsx',
+                     '../src/app/company-setup.tsx', '../src/app/signup.tsx']) {
+      expect(lire(f), f).not.toContain('<KeyboardAvoidingView')
+    }
+  })
+
+  it('la connexion défile — sinon le bouton devient inatteignable', () => {
+    const login = lire('../src/app/login.tsx')
+    // ⚠️ `flexGrow`, jamais `flex` : `flex: 1` contraint le contenu à la zone
+    // visible et empêche tout défilement.
+    expect(login).toContain('container: { flexGrow: 1')
+    expect(login).not.toContain('container: { flex: 1')
+  })
+})
