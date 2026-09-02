@@ -6520,7 +6520,10 @@ n'a fait fabriquait une démarque intégrale sur ce rayon.
   précisément la démarque que l'inventaire existe pour révéler — la reprendre
   l'effacerait en silence. Une balise auditée à moitié garde donc ses écarts.
   Vérifié : sur une balise partiellement auditée, `reprises` vaut 0 et rien ne
-  bouge. Ne pas « compléter » cette fonction en la passant par SKU.
+  bouge. **Arbitré par Julien le 2 septembre 2026**, la question lui ayant été
+  posée explicitement : *« cela ne concerne que les balises avec aucun audit,
+  donc on reste comme ça »*. Ne pas « compléter » cette fonction en la passant
+  par SKU — c'est une décision, pas un raccourci.
 - **⚠️ Elle écrit de vraies lignes de comptage en passe 2**, et c'est
   obligatoire : `article_audit` est **dérivée** de `counts` par
   `recompute_session_audit`. Poser `final_qty` à la main serait défait au premier
