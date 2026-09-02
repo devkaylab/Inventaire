@@ -6858,10 +6858,12 @@ explique pourquoi il n'utilise pas telle fonction, donc il la cite. Le motif
   donc on ne fait pas défiler en tapant : mesuré, `mInputShown` passe à faux au
   premier `swipe`. Reprendre ce point avec un vrai formulaire long si quelqu'un
   s'en plaint ; ne pas y toucher au jugé.
-- **Non vérifié : un écran plus petit que ceux dont je dispose.** Le simulateur
-  n'a pas d'iPhone SE installé, et le plus petit appareil disponible est un
-  6,1 pouces. La correction est mesurée sur la mécanique (le champ passe
-  au-dessus du clavier), pas sur l'écran exact de la plainte.
+- **✅ Confirmé par Julien, appareil en main, le 2 septembre 2026** : « testé et
+  c'est fonctionnel », sur les deux plateformes et sur l'écran où il avait vu le
+  défaut. C'est la seule preuve qui valait pour ce chantier — de mon côté, le
+  plus petit appareil disponible faisait 6,1 pouces (ni iPhone SE au
+  simulateur, ni écran plus petit sous la main), donc la correction n'était
+  mesurée que sur la mécanique : le champ passe au-dessus du clavier.
 
 Tests de garde : `tests/compte.test.ts`, bloc « le clavier ne cache plus les
 champs ».
