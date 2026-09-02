@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { derniereDefinition, fichierDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const m1 = lire('../../supabase/migrations/20260822130001_demande_ajout_magasin.sql')
@@ -25,14 +26,15 @@ const pageInscription = lire('../app/inscription/page.tsx')
 const pageAdmin = lire('../app/admin/page.tsx')
 const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
 
-/** La définition qui fait foi : la plus récente. */
-const corpsDe = (fn: string) => {
-  for (const src of [m5, m4, m2, m1]) {
-    const corps = src.split(`function public.${fn}(`)[1]?.split('$$;')[0]
-    if (corps) return corps
-  }
-  return ''
-}
+/**
+ * La définition qui fait foi : la plus récente, sur TOUTES les migrations.
+ *
+ * ⚠️ Ce helper listait quatre fichiers à la main. Le 2 septembre 2026,
+ * `ca_request_store` a changé d'assiette dans une cinquième migration, et une
+ * liste écrite en dur ne l'aurait pas vue — c'est mot pour mot le défaut que
+ * `derniereDefinition` existe pour empêcher (leçon du 28 août).
+ */
+const corpsDe = (fn: string) => derniereDefinition(fn).corps
 
 describe('la demande ne crée pas le magasin', () => {
   it('ca_request_store n’insère que dans store_requests', () => {
@@ -48,12 +50,20 @@ describe('la demande ne crée pas le magasin', () => {
     expect(corps).toContain('if not public.is_admin() then')
     // Réutiliser admin_add_store plutôt que recopier la génération du code :
     // deux chemins de création divergeraient.
-    expect(corps).toContain('public.admin_add_store(v_req.company_id, v_req.store_name)')
+    expect(corps).toContain('public.admin_add_store(v_req.company_id, v_req.store_name')
     expect(corps).not.toContain('gen_store_code')
+    // ⚠️ Et le magasin part avec son assiette et son prix (2 septembre 2026) :
+    // sans eux il arrivait sans appareils et sans licence, donc compté au
+    // panier moyen dans le revenu annuel.
+    expect(corps).toContain('v_req.devices')
+    expect(corps).toContain("nullif(v_req.quote_lines -> 0 ->> 'annuelCents', '')::bigint")
   })
 
   it('une demande déjà traitée ne se rejoue pas', () => {
-    expect(corpsDe('admin_fulfil_store_request')).toContain("if v_req.status <> 'pending' then")
+    // Depuis le 22 août la création exige l'encaissement, pas seulement une
+    // demande en attente — et le `for update` du 28 août sérialise les clics.
+    expect(corpsDe('admin_fulfil_store_request')).toContain("if v_req.status <> 'paid' then")
+    expect(corpsDe('admin_fulfil_store_request')).toContain('for update')
     expect(corpsDe('admin_reject_store_request')).toContain("where id = p_id and status = 'pending'")
   })
 })
@@ -165,58 +175,89 @@ describe('écrans', () => {
 // demande ». Le premier jet ne demandait qu'un nom — or la licence se tarife
 // au volume de stock : une demande sans stock est un aller-retour de plus.
 
-describe('le formulaire porte le volume', () => {
-  it('le stock est exigé, la surface non', () => {
+describe('le formulaire porte les appareils', () => {
+  it('le nombre d’appareils est exigé, et borné', () => {
+    // ⚠️ 2 septembre 2026 : c'est lui qui tarife, plus le volume de stock.
     const corps = corpsDe('ca_request_store')
-    expect(corps).toContain('if p_units is null or p_units <= 0 then')
-    expect(corps).not.toMatch(/if p_sqm is null[\s\S]{0,60}return json_build_object\('success', false/)
+    expect(corps).toContain('if p_devices is null or p_devices <= 0 then')
+    expect(corps).toContain('p_devices > 1000')
+    expect(corps).not.toContain('if p_units is null')
   })
 
-  it('ne laisse pas cohabiter deux signatures', () => {
-    // Postgres garderait les deux fonctions, et un appel à deux arguments
-    // deviendrait ambigu.
-    expect(m2).toContain('drop function if exists public.ca_request_store(text, text)')
+  it('l’ancienne signature reste, en refus lisible, le temps du déploiement', () => {
+    // Règle du projet : le code se déploie d'abord, l'objet se retire ensuite.
+    // Ses quatre paramètres n'ont plus de défaut — c'est ce qui interdit
+    // l'ambiguïté avec la nouvelle sur un appel à deux arguments.
+    const f = fichierDe('ca_request_store')
+    expect(f).toContain('drop function if exists public.ca_request_store(text, text, integer, integer);')
+    expect(f).toContain('p_name text, p_message text, p_units integer, p_sqm integer\n) returns json')
+    expect(f).toContain('Le formulaire d\'\'ajout de magasin a changé')
   })
 
   it('les deux écrans partagent la même carte de saisie', () => {
-    // Une seule définition : les libellés, les unités et la tranche affichée
-    // ne doivent pas diverger entre l'inscription et la demande.
+    // Une seule définition : les libellés et les unités ne doivent pas
+    // diverger entre l'inscription et la demande.
     for (const page of [pageMagasins, pageInscription]) {
       expect(page).toContain("from '@/components/MagasinSaisie'")
       expect(page).toContain('<MagasinSaisie')
     }
   })
 
-  it('la demande transporte le stock et la surface', () => {
-    expect(pageMagasins).toContain('p_units')
-    expect(pageMagasins).toContain('p_sqm')
+  it('la demande transporte les appareils, du navigateur jusqu’à la RPC', () => {
+    expect(pageMagasins).toContain('p_devices')
+    expect(pageMagasins).not.toContain('p_units')
     for (const fn of ['ca_list_store_requests', 'admin_list_store_requests']) {
       expect(corpsDe(fn), fn).toContain("'units', r.units")
     }
+
+    // ⚠️ ET LA FONCTION EDGE, qui est le chemin NOMINAL — la RPC directe n'est
+    // qu'un repli. Elle avait été oubliée le 2 septembre 2026 : la page envoyait
+    // `devices`, l'edge appelait encore `p_units`/`p_sqm`, donc l'ancienne
+    // signature, devenue un refus lisible. Toute demande de magasin passant par
+    // le chemin normal répondait « rechargez la page ». Rien ne l'avait vu :
+    // ce test ne regardait que le navigateur.
+    const edge = lire('../../supabase/functions/ca-request-store/index.ts')
+    expect(edge).toContain('p_devices: devices')
+    expect(edge).not.toContain('p_units')
+    expect(edge).not.toContain('p_sqm')
   })
 
-  it('le prix ne se lit que dans la console, jamais côté client', () => {
-    // Décision de Julien, 22 août 2026. La carte de saisie montrait la tranche
-    // et son tarif à la frappe, et /inscription totalisait le tout : cela
-    // disait au prospect, pendant qu'il déclarait un stock invérifiable, de
-    // combien le baisser pour payer moins. Même motif que le recoupement
-    // stock / surface, qui ne sort pas non plus de la console.
-    expect(ficheEntreprise).toContain('trancheDe')
+  it('le prix s’affiche au formulaire, le recoupement de densité reste en console', () => {
+    // ⚠️ RENVERSEMENT ASSUMÉ de la décision du 22 août 2026, et il faut
+    // distinguer les deux moitiés de cette règle.
+    //
+    // Ce qui change : le tarif s'affiche à la frappe. L'interdiction visait un
+    // chiffre DÉCLARÉ ET INVÉRIFIABLE — le stock —, dont on ne voulait pas
+    // indiquer de combien le baisser. Le nombre d'appareils se mesure, c'est
+    // même la raison pour laquelle cette assiette a été retenue, et les trois
+    // prix sont publics sur /tarifs depuis le 30 août.
+    //
+    // Ce qui NE change PAS : le recoupement stock / surface ne sort toujours
+    // pas de la console — il reviendrait à soupçonner le prospect avant le
+    // devis. Et aucun montant n'est écrit en dur nulle part : tout passe par
+    // `lib/offres`, sinon la grille se met à exister en deux endroits.
     expect(ficheEntreprise).toContain('densite')
 
     const saisie = lire('../components/MagasinSaisie.tsx')
+    expect(saisie).toContain("from '@/lib/offres'")
+    // ⚠️ LES DEUX RYTHMES (demande de Julien, 2 septembre 2026) : un prospect
+    // qui ne lit qu'un montant annuel n'a aucun moyen de savoir que le mensuel
+    // existe, alors que le devis se règle dans les deux.
+    expect(saisie).toContain("prixCents(appareils, 'monthly')")
+    expect(saisie).toContain("prixCents(appareils, 'yearly')")
+    expect(pageInscription).toContain("total('monthly')")
+    expect(pageInscription).toContain("total('yearly')")
     for (const [nom, source] of [
       ['la carte de saisie', saisie],
       ['la demande de magasin', pageMagasins],
       ['le formulaire d’inscription', pageInscription],
     ] as const) {
-      expect(source, `${nom} ne calcule pas de tranche`).not.toContain('trancheDe')
-      expect(source, `${nom} ne totalise pas de licences`).not.toContain('totalAnnuel')
+      expect(source, `${nom} ne calcule pas de tranche de volume`).not.toContain('trancheDe')
+      expect(source, `${nom} ne totalise pas de licences au volume`).not.toContain('totalAnnuel')
       expect(source, `${nom} ne recoupe pas la densité`).not.toContain('densite')
     }
 
-    // Et aucun montant de la grille écrit en dur pour contourner les fonctions.
-    for (const montant of ['2 100', '4 200', '6 600', '10 200', '14 400']) {
+    for (const montant of ['950', '3 300', '9 450', '2 100', '6 600']) {
       expect(pageInscription, `${montant} € sur /inscription`).not.toContain(montant)
       expect(saisie, `${montant} € dans la carte de saisie`).not.toContain(montant)
     }
@@ -311,8 +352,10 @@ describe('une demande aboutie quitte l’écran, et se dit par e-mail', () => {
     // « Demandes de magasin », alors que le magasin était créé puis supprimé.
     // Une demande aboutie n'est plus une demande.
     const corps = corpsDe('ca_list_store_requests')
-    expect(corps).toContain("r.status = 'pending'")
-    expect(corps).toContain("r.status = 'rejected'")
+    // La liste garde ce qui attend un geste du client — dont, depuis le
+    // 22 août au soir, le devis à accepter et la licence à régler.
+    expect(corps).toContain("r.status in ('pending', 'quoted', 'accepted', 'paid')")
+    expect(corps).toContain("r.status in ('rejected', 'declined')")
     // L'ancienne règle montrait tout ce qui avait été traité depuis 30 jours,
     // statut compris : c'est elle qui affichait « Magasin créé ».
     expect(corps).not.toMatch(/or r\.handled_at > now\(\) - interval '30 days'/)

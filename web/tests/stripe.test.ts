@@ -108,10 +108,11 @@ describe('la session Checkout', () => {
 
 describe('payé, donc créé', () => {
   it('seul le serveur peut déclencher la création', () => {
-    // ⚠️ Cinq arguments depuis `20260828250001` : `p_event_id` s'ajoute, et
-    // l'ancienne signature à quatre est SUPPRIMÉE — deux signatures rendraient
-    // un appel à quatre arguments ambigu.
-    for (const fn of ['fulfil_paid_request(text, text, text, text, text)', 'attach_checkout_session(text, uuid, text, text)',
+    // ⚠️ Six arguments : `p_event_id` s'ajoute le 28 août (`20260828250001`),
+    // `p_subscription_id` le 30 (souscription en ligne). À chaque fois
+    // l'ancienne signature est SUPPRIMÉE — deux signatures rendraient un appel
+    // au nombre d'arguments précédent ambigu.
+    for (const fn of ['fulfil_paid_request(text, text, text, text, text, text)', 'attach_checkout_session(text, uuid, text, text)',
       'invite_company_admin_after_payment(uuid, text, text, text)', 'log_system_action(text, text, text, text, text, jsonb)']) {
       const f = fichier(fn)
       expect(f, fn).toContain(`revoke all on function public.${fn} from public, anon, authenticated`)

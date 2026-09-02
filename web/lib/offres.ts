@@ -2,11 +2,12 @@
  * Les trois offres, en un seul point.
  *
  * ⚠️ À ne pas confondre avec `lib/tarifs.ts`, qui porte l'ANCIENNE grille au
- * volume de stock : celle-ci ne tarife plus rien depuis le 30 août 2026, mais
- * ses tranches servent encore à dimensionner une installation (`MagasinSaisie`)
- * et sa fonction `densite` au recoupement stock/surface de `lib/secteurs.ts`.
- * Les deux modules coexistent le temps que le parcours d'inscription soit
- * repris ; c'est celui-ci qui dit le prix.
+ * volume de stock. **Elle ne tarife plus rien du tout depuis le 2 septembre
+ * 2026** : le parcours de devis a été repris, et c'est ce module-ci qui
+ * propose les lignes. `lib/tarifs.ts` ne survit que pour lire les magasins
+ * déclarés AVANT ce jour — le recoupement stock/surface d'`admin_pipeline` et
+ * l'écran `/admin/usage`, qui n'ont plus de source sur les demandes nouvelles.
+ * Ne rien y rebrancher.
  *
  *
  * Décidées le 30 août 2026 (hypothèse 4 de docs/entreprise/hypotheses-tarifaires.md) :
@@ -175,3 +176,72 @@ export function offrePour(appareils: number): Offre | null {
 export function euros(v: number): string {
   return `${Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} €`
 }
+
+// ── Ce qu'un magasin coûte, à partir de son nombre d'appareils ──────────────
+//
+// C'est ce que le parcours de devis a besoin de calculer depuis le 2 septembre
+// 2026 : les formulaires ne déclarent plus un volume de stock mais un nombre
+// d'appareils, et la console propose une ligne par magasin à partir de là.
+//
+// ⚠️ Ces fonctions PROPOSENT. Le montant qui part au client reste celui que
+// l'administrateur valide en console — un devis se négocie. La règle est la
+// même que depuis le 22 août : la grille propose, l'administrateur dispose.
+
+/** Les deux rythmes, écrits comme la base et Stripe les nomment. */
+export type Rythme = 'monthly' | 'yearly'
+
+/**
+ * Le prix d'un magasin, en centimes, hors taxes.
+ *
+ * Au-delà de `APPAREILS_MAX`, le palier Enterprise se prolonge par tranches de
+ * dix entamées — c'est ce qu'annonce la page publique. Rend `null` pour un
+ * nombre d'appareils inexploitable : zéro appareil n'est pas un magasin
+ * gratuit, c'est une saisie incomplète.
+ */
+export function prixCents(
+  appareils: number | null | undefined,
+  rythme: Rythme = 'yearly',
+): number | null {
+  if (appareils == null || !Number.isFinite(appareils) || appareils <= 0) return null
+  const annuel = rythme === 'yearly'
+  const socle = OFFRES[OFFRES.length - 1]
+  const o = offrePour(appareils)
+  if (o) return Math.round((annuel ? o.an : o.mois) * 100)
+  const tranches = Math.ceil((appareils - APPAREILS_MAX) / SUPPLEMENT.par)
+  const base = annuel ? socle.an : socle.mois
+  const pas = annuel ? SUPPLEMENT.an : SUPPLEMENT.mois
+  return Math.round((base + tranches * pas) * 100)
+}
+
+/**
+ * Le nom de l'offre qui couvre ce nombre d'appareils.
+ *
+ * Au-delà du plafond c'est toujours Enterprise : le palier ne change pas de
+ * nom quand il se prolonge, il coûte seulement plus cher. Vide si le nombre
+ * n'est pas exploitable — on n'invente pas une offre pour remplir une case.
+ */
+export function nomOffre(appareils: number | null | undefined): string {
+  if (appareils == null || !Number.isFinite(appareils) || appareils <= 0) return ''
+  return (offrePour(appareils) ?? OFFRES[OFFRES.length - 1]).nom
+}
+
+/**
+ * La grille en centimes, telle que ce module la voit.
+ *
+ * Sert au test de concordance avec `supabase/functions/_shared/devis.ts`, qui
+ * en porte la copie : le site et les fonctions edge ne compilent pas ensemble
+ * (npm d'un côté, esm.sh de l'autre). Même partage que `web/lib/devis.ts`.
+ */
+export const GRILLE_OFFRES_CENTIMES = OFFRES.map((o) => ({
+  cle: o.cle,
+  nom: o.nom,
+  max: o.max,
+  moisCents: o.mois * 100,
+  anCents: o.an * 100,
+}))
+
+export const SUPPLEMENT_CENTIMES = {
+  par: SUPPLEMENT.par,
+  moisCents: SUPPLEMENT.mois * 100,
+  anCents: SUPPLEMENT.an * 100,
+} as const

@@ -11,6 +11,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { derniereDefinition } from './migrations'
 import {
   SEUILS_VENTE, type VenteEnCours, alerteDensite, enAttenteCents, lienVente, lireVente, trierVentes,
 } from '../lib/pipeline'
@@ -110,10 +111,28 @@ describe('à chaque étape, qui attend quoi', () => {
     ]
     expect(enAttenteCents(ventes)).toBe(110)
   })
+
+  it('et il se lit à l’année, pas à l’échéance', () => {
+    // ⚠️ 2 septembre 2026 : un devis mensuel se règle par douzièmes. Sommer les
+    // échéances afficherait 1 200 € pour une affaire qui en vaut 14 400 — un
+    // indicateur de revenu qui divise par douze n'est plus un indicateur.
+    // Le calcul vit en base (`annuel_du_devis`), parce que le rythme seul ne
+    // suffit pas : la souscription en ligne écrit un montant déjà annuel sur
+    // une demande mensuelle.
+    const ventes: VenteEnCours[] = [
+      { ...base, status: 'quoted', quote_amount_cents: 120_000, billing_period: 'monthly', annual_cents: 1_275_000 },
+    ]
+    expect(enAttenteCents(ventes)).toBe(1_275_000)
+    // Sans le calcul de la base — une demande d'avant la bascule — on retombe
+    // sur le montant du devis, qui est annuel.
+    expect(enAttenteCents([{ ...base, status: 'quoted', quote_amount_cents: 660_000 }])).toBe(660_000)
+  })
 })
 
 describe('la base et les écrans', () => {
-  const corps = (fn: string) => migration.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+  // ⚠️ La définition qui FAIT FOI, pas un fichier nommé en dur : `admin_pipeline`
+  // a été réécrite le 2 septembre 2026 (appareils, rythme, montant annuel).
+  const corps = (fn: string) => derniereDefinition(fn).corps
 
   it('admin_pipeline rend tout ce qui n’est pas terminé, dans les deux tables', () => {
     const c = corps('admin_pipeline')
@@ -125,7 +144,10 @@ describe('la base et les écrans', () => {
   it('la fiche entreprise ne perd plus une demande devisée', () => {
     // L'ancienne règle — `pending` ou traité depuis 90 jours — laissait tomber
     // `quoted`, `accepted` et `paid`, qui n'ont pas de handled_at.
-    expect(corps('admin_list_store_requests')).toContain("r.status in ('pending', 'quoted', 'accepted', 'paid')")
+    // Sans la parenthèse fermante : la liste de la console porte aussi
+    // `declined` depuis le 22 août au soir, et l'assertion vise l'intention —
+    // « en cours » veut dire « pas terminé », jamais « pending ».
+    expect(corps('admin_list_store_requests')).toContain("r.status in ('pending', 'quoted', 'accepted', 'paid'")
     expect(ficheEntreprise).toContain('demandes.filter(enCours)')
   })
 

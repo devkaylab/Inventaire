@@ -189,7 +189,15 @@ describe('le formulaire d’inscription répond la même chose', () => {
     expect(migration).toMatch(
       /revoke all on function public\.submit_company_request_detailed[\s\S]*?from public, anon, authenticated/,
     )
-    expect(migration).not.toMatch(/grant execute on function public\.submit_company_request_detailed/)
+    // ⚠️ Un `grant` est admis, mais UNIQUEMENT vers `service_role` : la règle
+    // « les droits se reposent dans la même migration » vaut aussi ici. Ce qui
+    // reste interdit, c'est de la rendre joignable par un client — ce serait
+    // rouvrir l'oracle d'énumération que le 28 août 2026 a fermé.
+    for (const m of migration.matchAll(
+      /grant execute on function public\.submit_company_request_detailed[\s\S]*?to ([^;]+);/g,
+    )) {
+      expect(m[1].replace(/\s+/g, ' ').trim()).toBe('service_role')
+    }
   })
 
   it('la fonction edge lit le détail, et ne le rend pas', () => {

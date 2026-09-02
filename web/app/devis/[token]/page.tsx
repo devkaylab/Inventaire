@@ -32,6 +32,10 @@ import { CONTACT_EMAIL } from '@/lib/contact'
 
 type Ligne = {
   libelle?: string | null
+  /** Appareils déclarés — l'assiette depuis le 2 septembre 2026. */
+  appareils?: number | null
+  offre?: string | null
+  /** ⚠️ Volume de stock : les devis d'avant la bascule n'ont que lui. */
   unites?: number | null
   tranche?: string | null
   prixCents?: number | null
@@ -44,6 +48,7 @@ type Devis = {
   reference?: string
   amount_cents?: number | null
   lines?: Ligne[]
+  billing_period?: 'monthly' | 'yearly'
   status?: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'rejected' | 'declined'
   sent_at?: string
   expires_at?: string
@@ -186,6 +191,11 @@ function DevisContenu() {
   const decline = devis.status === 'declined'
   const perime = !accepte && devis.expired
   const lignes = devis.lines ?? []
+  const mensuel = devis.billing_period === 'monthly'
+  // Les devis d'avant le 2 septembre 2026 portent un volume de stock, pas des
+  // appareils. La colonne dit ce que la ligne contient : on ne réécrit pas un
+  // document déjà envoyé.
+  const surAppareils = lignes.some((l) => l.appareils != null)
 
   return (
     <div className="auth-wrap">
@@ -255,13 +265,17 @@ function DevisContenu() {
           <div className="devis-lignes">
             <div className="devis-ligne devis-ligne-tete">
               <span>Magasin</span>
-              <span className="n">Stock déclaré</span>
-              <span className="n">Licence annuelle HT</span>
+              <span className="n">{surAppareils ? 'Appareils' : 'Stock déclaré'}</span>
+              <span className="n">{mensuel ? 'Abonnement mensuel HT' : 'Licence annuelle HT'}</span>
             </div>
             {lignes.map((l, i) => (
               <div className="devis-ligne" key={i}>
                 <span>{(l.libelle ?? '').trim() || `Magasin ${i + 1}`}</span>
-                <span className="n muted">{l.unites == null ? '—' : `${nb(l.unites)} pièces`}</span>
+                <span className="n muted">
+                  {surAppareils
+                    ? l.appareils == null ? '—' : `${nb(l.appareils)} appareil${l.appareils > 1 ? 's' : ''}`
+                    : l.unites == null ? '—' : `${nb(l.unites)} pièces`}
+                </span>
                 <span className="n">{l.prixCents == null ? 'sur devis' : euros(l.prixCents)}</span>
               </div>
             ))}
@@ -269,7 +283,7 @@ function DevisContenu() {
         )}
 
         <div className="devis-total">
-          <span>Total annuel hors taxes</span>
+          <span>{mensuel ? 'Total mensuel hors taxes' : 'Total annuel hors taxes'}</span>
           <b>{euros(devis.amount_cents)}</b>
         </div>
 
@@ -321,10 +335,15 @@ function DevisContenu() {
           </div>
         )}
 
+        {/* ⚠️ « comptages et compteurs illimités » était vrai de la grille au
+            volume ; il ne l'est plus. C'est le nombre d'appareils qui comptent
+            en même temps qui est facturé — le dire ici évite de le découvrir
+            aux conditions générales. Et le moyen de paiement suit le rythme :
+            le SEPA convient à une facture annuelle, pas à un abonnement. */}
         <p className="devis-note">
-          Licence annuelle par magasin, comptages et compteurs illimités. L’acceptation vaut bon pour
-          accord&nbsp;; le règlement se fait en ligne, par carte ou prélèvement SEPA, et vos accès sont créés
-          dès réception. La facture vous est envoyée automatiquement.
+          {mensuel
+            ? 'Abonnement mensuel par magasin, pour le nombre d’appareils indiqué. Inventaires illimités. L’acceptation vaut bon pour accord ; le règlement se fait en ligne par carte, et vos accès sont créés dès le premier prélèvement. La facture de chaque échéance vous est envoyée automatiquement.'
+            : 'Licence annuelle par magasin, pour le nombre d’appareils indiqué. Inventaires illimités. L’acceptation vaut bon pour accord ; le règlement se fait en ligne, par carte ou prélèvement SEPA, et vos accès sont créés dès réception. La facture vous est envoyée automatiquement.'}
         </p>
       </div>
     </div>

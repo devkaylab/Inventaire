@@ -35,12 +35,23 @@ export function formulaire(obj: Record<string, unknown>, prefixe = ''): string {
 export type SessionCheckout = { id: string; url: string; customer?: string | null }
 
 /**
- * Une session Checkout pour un devis.
+ * Une session Checkout pour un devis ANNUEL.
  *
  * `mode: payment` : la licence est annuelle, facturée en une fois. Les moyens
  * de paiement proposés sont la carte et le prélèvement SEPA — le second
  * convient aux montants d'une enseigne. `invoice_creation` fait produire et
  * envoyer la facture par Stripe : c'est ce qui remplace le RIB.
+ *
+ * ⚠️ Un devis MENSUEL ne passe pas par ici : un mois ne se facture pas en une
+ * fois, il se reconduit. Voir `creerAbonnementSurMesure`.
+ *
+ * ⚠️ `taxRateId` porte la TVA, et son absence coûte de l'argent : nos montants
+ * sont hors taxes, donc sans lui Stripe encaisse 9 450 € là où 11 340 € sont
+ * dus, et la différence sort de la poche de l'éditeur. Le devis lui-même le dit
+ * (« TVA non applicable sur ce document — le montant hors taxes fait foi ») :
+ * c'est la facture qui l'ajoute. Ce paramètre a été ajouté le 2 septembre
+ * 2026 ; il manquait depuis la mise en place de Stripe, et seule la
+ * souscription en ligne l'avait.
  *
  * La clé d'idempotence est l'identifiant de la demande : un second appel
  * pour la même demande rend la même session, jamais deux.
@@ -57,6 +68,8 @@ export async function creerSessionCheckout(
     reference: string
     successUrl: string
     cancelUrl: string
+    /** Le taux de TVA à appliquer (`txr_…`). Sans lui, rien n'est facturé en sus. */
+    taxRateId?: string | null
     /** Change quand la session précédente est expirée : sinon la clé
         d'idempotence rendrait la session morte. */
     tentative?: number
@@ -74,6 +87,7 @@ export async function creerSessionCheckout(
         unit_amount: p.amountCents,
         product_data: { name: p.label, description: p.description },
       },
+      ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
     }],
     invoice_creation: {
       enabled: true,
@@ -174,6 +188,92 @@ export async function creerAbonnementCheckout(
       Authorization: `Bearer ${cle}`,
       'Content-Type': 'application/x-www-form-urlencoded',
       'Idempotency-Key': `abonnement-${p.requestId}-${p.tentative ?? 0}`,
+    },
+    body: corps,
+  })
+  const data = await resp.json()
+  if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+  return { id: data.id, url: data.url, customer: data.customer ?? null }
+}
+
+/**
+ * Une session Checkout pour un devis MENSUEL (2 septembre 2026).
+ *
+ * ⚠️ **C'est le seul endroit du produit où un prix Stripe est créé par du
+ * code, et il faut savoir pourquoi cette exception tient.** La règle du projet
+ * — « les Prices ne sont JAMAIS créés à la volée » — protège les trois offres
+ * publiques : leurs montants sont fixes, relus, et posés en secrets. Un devis
+ * est l'inverse : son montant est **négocié**, saisi et relu par un
+ * administrateur dans la console. Aucun Price posé d'avance ne peut le porter.
+ * Ce que la règle interdit vraiment, c'est un prix que personne n'a relu ; ici
+ * quelqu'un l'a relu, c'est même tout l'objet du devis.
+ *
+ * Trois différences avec un devis annuel, et chacune compte :
+ *
+ * - `mode: subscription` avec un `recurring` **mensuel** : un mois ne se
+ *   facture pas en une fois, il se reconduit. C'est aussi ce qui fait vivre le
+ *   cycle `invoice.paid` / `payment_failed` / `subscription.deleted` déjà
+ *   branché sur le webhook.
+ * - **carte seule**, comme la souscription en ligne. Le prélèvement SEPA
+ *   convient à une facture annuelle d'enseigne ; son délai de règlement ferait
+ *   attendre l'ouverture des accès à chaque échéance.
+ * - pas d'`invoice_creation` : en mode abonnement Stripe produit la facture de
+ *   chaque échéance sans qu'on le demande.
+ *
+ * La clé d'idempotence reste l'identifiant de la demande — un second clic
+ * rouvre la même session, jamais une seconde — et elle est **distincte** de
+ * celle du mode paiement : les deux ne portent pas les mêmes paramètres, et
+ * Stripe refuse une clé rejouée avec d'autres.
+ */
+export async function creerAbonnementSurMesure(
+  cle: string,
+  p: {
+    requestId: string
+    kind: 'company' | 'store'
+    amountCents: number
+    label: string
+    description: string
+    customerEmail: string
+    reference: string
+    successUrl: string
+    cancelUrl: string
+    taxRateId?: string | null
+    tentative?: number
+  },
+): Promise<SessionCheckout> {
+  const corps = formulaire({
+    mode: 'subscription',
+    customer_email: p.customerEmail,
+    payment_method_types: ['card'],
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: 'eur',
+        unit_amount: p.amountCents,
+        recurring: { interval: 'month' },
+        product_data: { name: p.label },
+      },
+      ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+    }],
+    subscription_data: {
+      description: p.description,
+      metadata: { request_id: p.requestId, kind: p.kind, reference: p.reference,
+                  billing_period: 'monthly' },
+    },
+    metadata: { request_id: p.requestId, kind: p.kind, reference: p.reference,
+                billing_period: 'monthly' },
+    client_reference_id: p.requestId,
+    success_url: p.successUrl,
+    cancel_url: p.cancelUrl,
+    locale: 'fr',
+    billing_address_collection: 'required',
+  })
+  const resp = await fetch(`${API}/checkout/sessions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key': `devis-mensuel-${p.kind}-${p.requestId}-${p.tentative ?? 0}`,
     },
     body: corps,
   })

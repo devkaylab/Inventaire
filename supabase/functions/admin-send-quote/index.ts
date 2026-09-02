@@ -16,7 +16,7 @@
 // devis est alors enregistré sans partir, et l'écran le dit.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo, envoyerEmail } from '../_shared/email.ts'
-import { type LigneDevis, euros, jour, nombre } from '../_shared/devis.ts'
+import { type LigneDevis, type Rythme, euros, jour, nombre } from '../_shared/devis.ts'
 import { devisEnPdf, enBase64 } from '../_shared/devisPdf.ts'
 
 const cors = {
@@ -42,6 +42,9 @@ Deno.serve(async (req) => {
     lines?: LigneDevis[]
     /** 'company' (inscription) ou 'store' (ajout de magasin). */
     target?: 'company' | 'store'
+    /** Le rythme du devis. Décide du PDF, du libellé du montant, et de la
+        session Stripe qu'ouvrira l'acceptation. */
+    billingPeriod?: Rythme
   }
   try {
     payload = await req.json()
@@ -53,6 +56,10 @@ Deno.serve(async (req) => {
   const amountCents = typeof payload.amountCents === 'number' ? Math.round(payload.amountCents) : null
   const lines = Array.isArray(payload.lines) ? payload.lines : []
   const target = payload.target === 'store' ? 'store' : 'company'
+  // ⚠️ Rythme inconnu = annuel, jamais un refus : c'était le comportement de
+  // tous les devis d'avant le 2 septembre 2026, et une console pas encore
+  // redéployée n'envoie rien du tout sur ce champ.
+  const rythme: Rythme = payload.billingPeriod === 'monthly' ? 'monthly' : 'yearly'
   if (!requestId) return json({ success: false, error: 'Demande absente.' }, 400)
   if (amountCents === null || amountCents < 0) return json({ success: false, error: 'Montant invalide.' }, 400)
 
@@ -70,6 +77,7 @@ Deno.serve(async (req) => {
     p_amount_cents: amountCents,
     p_note: (payload.note ?? '').trim(),
     p_lines: lines,
+    p_billing_period: rythme,
   })
   if (rErr) return json({ success: false, error: rErr.message }, 500)
   if (!result?.success) return json({ success: false, error: result?.error ?? 'Devis impossible.' }, 403)
@@ -105,6 +113,7 @@ Deno.serve(async (req) => {
       siren: q.siren ?? null,
       lignes,
       totalCents: amountCents,
+      rythme,
       emisLe,
       expireLe,
     })
@@ -122,7 +131,7 @@ Deno.serve(async (req) => {
         ? `Voici votre devis pour l’ajout du magasin « ${magasin} » à votre licence. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`
         : `Voici votre devis pour l’équipement de ${magasins > 1 ? `vos ${nombre(magasins)} magasins` : 'votre magasin'}. Il est joint à ce message, et vous pouvez l’accepter en ligne d’un clic.`,
       contact
-        ? `Il est valable jusqu’au ${jour(expireLe)}. Une question sur une ligne ou sur un volume déclaré ? Écrivez-nous à ${contact}.`
+        ? `Il est valable jusqu’au ${jour(expireLe)}. Une question sur une ligne ou sur un nombre d’appareils ? Écrivez-nous à ${contact}.`
         : `Il est valable jusqu’au ${jour(expireLe)}.`,
     ],
     details: [
@@ -131,7 +140,10 @@ Deno.serve(async (req) => {
       ...(magasin
         ? [{ intitule: 'Magasin', valeur: magasin }]
         : [{ intitule: 'Magasins', valeur: nombre(magasins) }]),
-      { intitule: 'Montant annuel HT', valeur: euros(amountCents) },
+      {
+        intitule: rythme === 'monthly' ? 'Montant mensuel HT' : 'Montant annuel HT',
+        valeur: euros(amountCents),
+      },
     ],
     bouton: { libelle: 'Voir et accepter le devis', lien },
     note: magasin

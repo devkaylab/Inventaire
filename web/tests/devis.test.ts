@@ -10,11 +10,12 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { GRILLE_CENTIMES, lignesProposees, referenceProposee, totalProposeCents } from '../lib/devis'
+import { lignesProposees, referenceProposee, totalProposeCents } from '../lib/devis'
+import { GRILLE_OFFRES_CENTIMES, SUPPLEMENT_CENTIMES, prixCents } from '../lib/offres'
 import { elementsDevis } from '../../supabase/functions/_shared/devis'
+import { derniereDefinition, fichierDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
-const migration = lire('../../supabase/migrations/20260822220001_devis_envoye_et_accepte.sql')
 const partage = lire('../../supabase/functions/_shared/devis.ts')
 const edgeEnvoi = lire('../../supabase/functions/admin-send-quote/index.ts')
 const edgeAccept = lire('../../supabase/functions/accept-quote/index.ts')
@@ -22,31 +23,59 @@ const edgePdf = lire('../../supabase/functions/quote-pdf/index.ts')
 const pageDevis = lire('../app/devis/[token]/page.tsx')
 const console_ = lire('../components/admin/CompanyRequests.tsx')
 
-const corpsDe = (fn: string) => migration.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+// ⚠️ La définition QUI FAIT FOI, pas celle d'un fichier nommé en dur : ces
+// quatre fonctions ont été réécrites le 2 septembre 2026 pour porter le rythme
+// du devis. Un test qui lirait encore la migration du 22 août validerait une
+// définition qui ne tourne plus — c'est exactement le défaut que
+// `derniereDefinition` existe pour empêcher.
+const corpsDe = (fn: string) => derniereDefinition(fn).corps
 
 describe('les lignes proposées', () => {
+  // ⚠️ L'assiette est le nombre d'appareils qui comptent en même temps, plus
+  // le volume de stock (2 septembre 2026).
   const stores = [
-    { name: 'Lyon Part-Dieu', units: 180_000, sqm: 1200 },
-    { name: 'Paris Centre', units: 42_000, sqm: 400 },
-    { name: 'Annecy', units: 8_500, sqm: 150 },
+    { name: 'Lyon Part-Dieu', devices: 40 },
+    { name: 'Paris Centre', devices: 8 },
+    { name: 'Annecy', devices: 2 },
   ]
 
-  it('place chaque magasin dans sa tranche et totalise', () => {
+  it('place chaque magasin dans son offre et totalise', () => {
     const lignes = lignesProposees(stores, 3)
-    expect(lignes.map((l) => l.tranche)).toEqual(['Grande surface', 'Magasin', 'Boutique'])
-    expect(totalProposeCents(lignes).cents).toBe(660_000 + 420_000 + 210_000)
+    expect(lignes.map((l) => l.offre)).toEqual(['Enterprise', 'Advanced', 'Essential'])
+    expect(totalProposeCents(lignes).cents).toBe(945_000 + 330_000 + 95_000)
   })
 
-  it('garde le magasin sans volume, sans le chiffrer', () => {
-    // L'escamoter ferait un devis incomplet sans le dire.
+  it('suit le rythme demandé, et porte toujours l’annuel à côté', () => {
+    // `annuelCents` voyage DANS la ligne : c'est lui qui devient
+    // `stores.annual_price_cents`, et le rythme seul ne suffit pas à le
+    // retrouver (la souscription en ligne écrit un montant déjà annuel sur une
+    // demande mensuelle).
+    const [l] = lignesProposees([{ name: 'Lyon', devices: 8 }], 1, 'monthly')
+    expect(l.prixCents).toBe(31_000)
+    expect(l.annuelCents).toBe(330_000)
+  })
+
+  it('prolonge Enterprise au-delà de cent appareils, par tranche de dix entamée', () => {
+    // 121 appareils = Enterprise + 3 tranches (101-110, 111-120, 121-130).
+    expect(prixCents(101, 'yearly')).toBe(945_000 + SUPPLEMENT_CENTIMES.anCents)
+    expect(prixCents(121, 'yearly')).toBe(945_000 + 3 * SUPPLEMENT_CENTIMES.anCents)
+    expect(lignesProposees([{ name: 'Entrepôt', devices: 121 }], 1)[0].offre).toBe('Enterprise')
+  })
+
+  it('garde le magasin sans appareils, sans le chiffrer', () => {
+    // L'escamoter ferait un devis incomplet sans le dire. C'est aussi le cas de
+    // toutes les demandes déposées avant la bascule.
     const lignes = lignesProposees([{ name: 'Nouveau magasin' }], 1)
     expect(lignes).toHaveLength(1)
     expect(lignes[0].prixCents).toBeNull()
     expect(totalProposeCents(lignes).cents).toBe(0)
   })
 
-  it('ne compte pas un magasin sur devis comme gratuit', () => {
-    const lignes = lignesProposees([{ name: 'Hyper', units: 3_000_000 }], 1)
+  it('ne chiffre pas une demande d’avant la bascule sur son volume', () => {
+    // Le stock ne tarife plus rien : la ligne reste, sans prix, et le devis se
+    // fait à la main.
+    const lignes = lignesProposees([{ name: 'Ancienne', units: 180_000, sqm: 1200 }], 1)
+    expect(lignes[0].appareils).toBeNull()
     expect(lignes[0].prixCents).toBeNull()
     expect(totalProposeCents(lignes)).toEqual({ cents: 0, surDevis: 1 })
   })
@@ -65,16 +94,31 @@ describe('les lignes proposées', () => {
 })
 
 describe('la grille du site et celle des fonctions edge', () => {
-  it('sont les mêmes, tranche par tranche', () => {
+  it('sont les mêmes, offre par offre', () => {
     // Duplication volontaire (npm d'un côté, esm.sh de l'autre) : ce test est
     // ce qui l'empêche de devenir une divergence.
-    const edge = [...partage.matchAll(/\{ max: ([\w_]+), profil: '([^']+)', prixCents: ([\w_]+) \}/g)].map((m) => ({
-      max: m[1] === 'null' ? null : Number(m[1].replace(/_/g, '')),
-      profil: m[2],
-      prixCents: m[3] === 'null' ? null : Number(m[3].replace(/_/g, '')),
+    const edge = [...partage.matchAll(
+      /\{ cle: '([\w]+)', nom: '([^']+)', max: ([\d_]+), moisCents: ([\d_]+), anCents: ([\d_]+) \}/g,
+    )].map((m) => ({
+      cle: m[1], nom: m[2],
+      max: Number(m[3].replace(/_/g, '')),
+      moisCents: Number(m[4].replace(/_/g, '')),
+      anCents: Number(m[5].replace(/_/g, '')),
     }))
-    expect(edge).toHaveLength(GRILLE_CENTIMES.length)
-    expect(edge).toEqual(GRILLE_CENTIMES.map((t) => ({ max: t.max, profil: t.profil, prixCents: t.prixCents })))
+    expect(edge).toHaveLength(GRILLE_OFFRES_CENTIMES.length)
+    expect(edge).toEqual(GRILLE_OFFRES_CENTIMES.map((o) => ({ ...o })))
+  })
+
+  it('et le supplément au-delà de cent appareils aussi', () => {
+    const m = partage.match(
+      /SUPPLEMENT_CENTIMES = \{ par: ([\d_]+), moisCents: ([\d_]+), anCents: ([\d_]+) \}/,
+    )
+    expect(m).not.toBeNull()
+    expect({
+      par: Number(m![1].replace(/_/g, '')),
+      moisCents: Number(m![2].replace(/_/g, '')),
+      anCents: Number(m![3].replace(/_/g, '')),
+    }).toEqual({ ...SUPPLEMENT_CENTIMES })
   })
 })
 
@@ -84,8 +128,8 @@ describe('la mise en page du devis', () => {
     entreprise: 'ACME Retail',
     contact: 'Marie Durand',
     siren: '123456789',
-    lignes: lignesProposees([{ name: 'Lyon', units: 180_000 }], 1),
-    totalCents: 660_000,
+    lignes: lignesProposees([{ name: 'Lyon', devices: 40 }], 1),
+    totalCents: 945_000,
     emisLe: new Date('2026-08-22T10:00:00Z'),
     expireLe: new Date('2026-09-21T10:00:00Z'),
   }
@@ -95,7 +139,7 @@ describe('la mise en page du devis', () => {
     expect(textes).toContain('DEV-2026-0007')
     expect(textes).toContain('ACME Retail')
     const plat = textes.map((t) => t.replace(/[\s\u202f\u00a0]/g, ' '))
-    expect(plat.some((t) => t.includes('6 600,00'))).toBe(true)
+    expect(plat.some((t) => t.includes('9 450,00'))).toBe(true)
     expect(plat.some((t) => t.includes('22/08/2026'))).toBe(true)
     expect(plat.some((t) => t.includes('21/09/2026'))).toBe(true)
   })
@@ -103,7 +147,7 @@ describe('la mise en page du devis', () => {
   it('tient sur une page, quel que soit le nombre de magasins', () => {
     // Un devis de trois pages ne se lit pas mieux, et la ligne de total doit
     // rester sous les yeux.
-    const beaucoup = { ...devis, lignes: lignesProposees(Array.from({ length: 40 }, (_, i) => ({ name: `M${i}`, units: 5000 })), 40) }
+    const beaucoup = { ...devis, lignes: lignesProposees(Array.from({ length: 40 }, (_, i) => ({ name: `M${i}`, devices: 5 })), 40) }
     const els = elementsDevis(beaucoup)
     const yMax = Math.max(...els.map((e) => (e.type === 'trait' ? e.y2 : e.type === 'bloc' ? e.y + e.hauteur : e.y)))
     expect(yMax).toBeLessThanOrEqual(297)
@@ -185,8 +229,10 @@ describe('envoyer, lire et accepter', () => {
 
 
 describe('un magasin ne se crée plus sans devis (22 août 2026)', () => {
-  const m = lire('../../supabase/migrations/20260822230001_devis_demande_magasin.sql')
-  const corps = (fn: string) => m.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+  // ⚠️ `derniereDefinition`, jamais un fichier nommé en dur : quatre de ces
+  // fonctions ont été réécrites depuis (le `for update` du 28 août, le rythme
+  // du 2 septembre).
+  const corps = corpsDe
 
   it('la création exige l’encaissement', () => {
     // Constat de Julien : deux magasins créés sans qu'aucun devis ne parte.
@@ -238,8 +284,8 @@ describe('le client peut décliner (22 août 2026)', () => {
   // Julien : « dans le parcours où le devis est décliné, il n'y a pas le
   // bouton ». Un client qui ne veut pas du devis n'avait rien à cliquer, et
   // on le relançait sept jours plus tard pour rien.
-  const m = lire('../../supabase/migrations/20260822280001_devis_decline.sql')
-  const corps = (fn: string) => m.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
+  const m = fichierDe('decline_quote_by_token')
+  const corps = corpsDe
   const edge = lire('../../supabase/functions/decline-quote/index.ts')
 
   it('seul un devis en attente se décline, par le jeton, sous limitation de débit', () => {
@@ -304,5 +350,101 @@ describe('une demande refusée peut être supprimée (23 août 2026)', () => {
 
   it('a son libellé au journal', () => {
     expect(lire('../components/admin/AuditLog.tsx')).toContain("demande_entreprise_supprimee: 'Demande d’inscription supprimée'")
+  })
+})
+
+describe('l’assiette est le nombre d’appareils (2 septembre 2026)', () => {
+  const migration = fichierDe('ca_request_store')
+  const magasins = lire('../app/magasins/page.tsx')
+  const inscription = lire('../app/inscription/page.tsx')
+  const saisie = lire('../components/MagasinSaisie.tsx')
+  const stripe = lire('../../supabase/functions/_shared/stripe.ts')
+
+  it('les deux formulaires demandent des appareils, plus un stock', () => {
+    // C'est le décalage que la bascule du 30 août avait laissé : le site
+    // public annonçait les trois offres pendant que les formulaires
+    // réclamaient encore un volume de stock et une surface.
+    expect(saisie).toContain('Appareils qui comptent en même temps')
+    expect(saisie).not.toContain('Stock théorique')
+    expect(saisie).not.toContain('Surface de vente')
+    expect(inscription).toContain('devices: m.appareils')
+    expect(magasins).toContain('devices: Math.round(appareils)')
+    expect(magasins).toContain('p_devices: corps.devices')
+  })
+
+  it('et le formulaire montre l’offre que ce nombre désigne', () => {
+    // Renversement assumé de la règle du 22 août : elle valait contre un
+    // chiffre déclaré et invérifiable, pas contre une assiette mesurable dont
+    // les prix sont publics.
+    expect(saisie).toContain("import { euros, nomOffre, prixCents } from '@/lib/offres'")
+    expect(saisie).toContain('magasin-offre')
+  })
+
+  it('la demande sans appareils est refusée en base, pas seulement à l’écran', () => {
+    const c = corpsDe('ca_request_store')
+    expect(c).toContain('p_devices is null or p_devices <= 0')
+    expect(c).toContain('devices, requested_by, requested_label')
+    // Bornée : au-delà, ce n'est plus un magasin, c'est une saisie fausse.
+    expect(c).toContain('p_devices > 1000')
+  })
+
+  it('l’ancienne signature répond un refus lisible au lieu de disparaître', () => {
+    // Règle du projet : le code se déploie d'abord, l'objet se retire ensuite.
+    // Le site et l'edge en ligne appellent encore avec un stock.
+    expect(migration).toContain('create function public.ca_request_store(\n  p_name text, p_message text, p_units integer, p_sqm integer\n)')
+    expect(migration).toContain('Le formulaire d\'\'ajout de magasin a changé')
+  })
+
+  it('les droits ne s’ouvrent pas à anon au passage', () => {
+    // Un `create` accorde EXECUTE à anon par les droits par défaut de
+    // Supabase : le `revoke` doit viser `public` ET `anon` (constat n°6 du
+    // 28 août, reproduit ici et relevé sur la base réelle).
+    for (const sig of [
+      'public.ca_request_store(text, text, integer)',
+      'public.admin_quote_company_request(uuid, text, bigint, text, jsonb, text)',
+      'public.admin_quote_store_request(uuid, text, bigint, text, jsonb, text)',
+    ]) {
+      expect(migration).toContain(`revoke all on function ${sig} from public, anon;`)
+    }
+  })
+
+  it('le rythme voyage du panneau jusqu’à Stripe', () => {
+    expect(console_).toContain('p_billing_period: rythme')
+    expect(console_).toContain('billingPeriod: rythme')
+    expect(edgeEnvoi).toContain('p_billing_period: rythme')
+    expect(corpsDe('admin_quote_company_request')).toContain('billing_period = p_billing_period')
+    expect(corpsDe('quote_by_token')).toContain("'billing_period'")
+    expect(corpsDe('accept_quote_by_token')).toContain("'billing_period'")
+    expect(edgeAccept).toContain("result.billing_period === 'monthly'")
+  })
+
+  it('un devis mensuel ouvre un abonnement, un devis annuel un paiement unique', () => {
+    // Un mois ne se facture pas en une fois ; une licence annuelle, si — et
+    // c'est le seul chemin vérifié de bout en bout, on n'y touche pas.
+    expect(stripe).toContain("mode: 'subscription'")
+    expect(stripe).toContain("recurring: { interval: 'month' }")
+    expect(edgeAccept).toContain('creerAbonnementSurMesure(stripeKey, commande)')
+    expect(edgeAccept).toContain('creerSessionCheckout(stripeKey, commande)')
+    // Deux clés d'idempotence distinctes : les deux sessions ne portent pas les
+    // mêmes paramètres, et Stripe refuse une clé rejouée avec d'autres.
+    expect(stripe).toContain('`checkout-${p.kind}-${p.requestId}-${p.tentative ?? 0}`')
+    expect(stripe).toContain('`devis-mensuel-${p.kind}-${p.requestId}-${p.tentative ?? 0}`')
+  })
+
+  it('la TVA est appliquée au devis, pas seulement à la souscription', () => {
+    // Elle manquait depuis la mise en place de Stripe : sans ce taux, on
+    // encaisse le HT et la TVA due sort de la poche de l'éditeur.
+    expect(edgeAccept).toContain("Deno.env.get('STRIPE_TAX_RATE')")
+    expect(edgeAccept).toContain('taxRateId,')
+    expect(stripe.match(/tax_rates: \[p\.taxRateId\]/g) ?? []).toHaveLength(3)
+  })
+
+  it('la création reporte les appareils et le prix ANNUEL', () => {
+    const c = corpsDe('fulfil_paid_request')
+    expect(c).toContain('devices, units, sqm')
+    // ⚠️ `coalesce(annuelCents, prixCents)`, jamais « ×12 si mensuel » : la
+    // souscription en ligne écrit un montant DÉJÀ annuel sur une demande
+    // mensuelle, et l'annualiser la facturerait douze fois trop cher.
+    expect(c).toContain("nullif(v_ligne ->> 'annuelCents', '')::bigint, v_prix")
   })
 })

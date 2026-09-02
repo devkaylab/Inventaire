@@ -37,6 +37,17 @@ export type VenteEnCours = {
   ape?: string | null
   /** Les magasins déclarés, avec leur stock et leur surface. */
   stores?: MagasinDeclare[] | null
+  /** Le rythme du devis, depuis le 2 septembre 2026. Absent = annuel. */
+  billing_period?: 'monthly' | 'yearly' | null
+  /**
+   * Ce que l'affaire vaut à l'année, calculé en base (`annuel_du_devis`).
+   *
+   * ⚠️ Il existe parce que `quote_amount_cents` est ce qui sera facturé **à
+   * l'échéance** : sur un devis mensuel, c'est un douzième. Ne jamais
+   * l'annualiser ici à partir du seul rythme — la souscription en ligne écrit
+   * un montant déjà annuel sur une demande mensuelle.
+   */
+  annual_cents?: number | null
 }
 
 /** Les seuils se discutent, ils ne se devinent pas. En jours. */
@@ -194,7 +205,7 @@ export function lienVente(v: VenteEnCours): string {
 export function enAttenteCents(ventes: VenteEnCours[]): number {
   return ventes
     .filter((v) => v.kind !== 'store_removal' && (v.status === 'quoted' || v.status === 'accepted'))
-    .reduce((s, v) => s + (v.quote_amount_cents ?? 0), 0)
+    .reduce((s, v) => s + (v.annual_cents ?? v.quote_amount_cents ?? 0), 0)
 }
 
 /**
@@ -213,6 +224,10 @@ export function enAttenteCents(ventes: VenteEnCours[]): number {
  * douteux suffit — c'est sur lui qu'on appellera.
  */
 export function alerteDensite(v: VenteEnCours): string | null {
+  // ⚠️ Silencieuse sur toute demande déposée après le 2 septembre 2026 : les
+  // formulaires ne réclament plus ni stock ni surface, donc le filtre ci-dessous
+  // ne retient plus rien. Ce n'est pas un défaut, c'est la contrepartie du
+  // changement d'assiette — le nombre d'appareils, lui, se mesure.
   if (v.kind === 'store_removal') return null
   const magasins = (v.stores ?? []).filter((m) => m.units != null && m.sqm != null)
   const douteux: string[] = []

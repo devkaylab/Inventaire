@@ -205,10 +205,14 @@ export default function AdminPage() {
                   ? `${euros(Math.round(v.arr_cents / v.stores))} en moyenne par magasin`
                   : `${nb(v.stores - v.priced_stores)} magasin${v.stores - v.priced_stores > 1 ? 's' : ''} estimé${v.stores - v.priced_stores > 1 ? 's' : ''} à ${euros(v.default_price_cents)}`}
             />
+            {/* ⚠️ Annualisé (2 septembre 2026) : un devis mensuel se règle par
+                douzièmes, et sommer les échéances afficherait 1 200 € pour une
+                affaire qui en vaut 14 400. Le calcul vit en base, dans
+                `annuel_du_devis` — voir `lib/pipeline.ts`. */}
             <Kpi
               nom="Revenu en attente" icone="valeur" valeur={euros(attente)}
               refTexte={ventes.length > 0
-                ? `${nb(ventes.length)} vente${ventes.length > 1 ? 's' : ''} en cours`
+                ? `${nb(ventes.length)} vente${ventes.length > 1 ? 's' : ''} en cours · à l’année`
                 : 'Aucune vente en cours'}
             />
           </section>
