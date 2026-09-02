@@ -3,9 +3,8 @@ import { StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMyScanEntries } from '@/lib/queries'
 import type { Article, BaliseMode } from '@/lib/queries'
-import { getSession, insertCount, primeOfflineCache } from '@/lib/offlineSync'
+import { getScanEntries, getSession, insertCount, primeOfflineCache } from '@/lib/offlineSync'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { useAuth } from '@/lib/auth'
@@ -35,7 +34,7 @@ export default function EmployeeScanScreen() {
   // Persisted scans for this counter/pass — rebuilds the list after navigation.
   const { data: initialScans } = useQuery({
     queryKey: ['scan-entries', sessionId, passNumber, profile?.id],
-    queryFn: () => getMyScanEntries(sessionId, passNumber, profile!.id),
+    queryFn: () => getScanEntries(sessionId, passNumber, profile!.id),
     enabled: !!session && !!profile,
     staleTime: 0,
   })

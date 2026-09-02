@@ -81,7 +81,20 @@ export async function primeOfflineCache(sessionId: string): Promise<boolean> {
       q.getZones(sessionId).catch(() => []),
       q.getSession(sessionId).catch(() => null),
     ])
-    await off.cacheArticles(sessionId, articles)
+    // ⚠️ Le référentiel du serveur ne connaît pas encore les articles créés en
+    // réserve : ils sont dans la file, pas en base. `cacheArticles` réécrit le
+    // cache **en entier** — les rajouter ici est ce qui évite qu'un code saisi à
+    // la main redevienne « inconnu » à la première barre de réseau, alors que
+    // son comptage attend toujours d'être envoyé.
+    //
+    // Une seule écriture, pas une par article : le cache se réécrit à chaque
+    // appel, et boucler dessus coûterait le carré du nombre d'articles.
+    const enAttente = await off.pendingArticles(sessionId)
+    const connus = new Set(articles.map((a) => a.sku))
+    await off.cacheArticles(sessionId, [
+      ...articles,
+      ...enAttente.filter((a) => !connus.has(a.sku)),
+    ])
     await off.cacheZones(sessionId, zones)
     // La fiche d'inventaire est ce qui permet de **rouvrir** l'écran de comptage
     // après un redémarrage sans réseau. Sans elle, les scans en attente seraient
@@ -137,14 +150,137 @@ export async function hasOfflineCache(sessionId: string): Promise<boolean> {
 
 // ─── Opérations de comptage ──────────────────────────────────────────────────
 
-/** Résout un code-barres : cache local si on se sait hors ligne, serveur sinon. */
+/**
+ * Résout un code-barres : cache local si on se sait hors ligne, serveur sinon.
+ *
+ * ⚠️ **Le cache sert de repli même EN LIGNE**, quand le serveur ne connaît pas
+ * le code. C'est la fenêtre qui sépare un article créé en réserve de sa
+ * remontée : la file l'a, la base pas encore. Sans ce repli, la première barre
+ * de réseau rouvrait « Article inconnu » sur un code qu'on venait de saisir —
+ * et une seconde saisie fabriquait un doublon dans la file. Trouvé par
+ * `tests/offlineSync.test.ts`, pas à l'écran.
+ *
+ * Le repli ne peut pas ressusciter un article retiré du référentiel : chaque
+ * `primeOfflineCache` réécrit le cache à partir du serveur, et n'y ajoute que
+ * ce qui attend encore dans la file.
+ */
 export async function resolveArticle(sessionId: string, value: string): Promise<Article | null> {
   if (offline) return off.resolveArticleOffline(sessionId, value)
   try {
-    return await q.resolveArticle(sessionId, value)
+    return (await q.resolveArticle(sessionId, value)) ?? off.resolveArticleOffline(sessionId, value)
   } catch (e) {
     if (!noteNetworkError(e)) throw e
     return off.resolveArticleOffline(sessionId, value)
+  }
+}
+
+/**
+ * La liste des scans d'une balise : serveur **plus** ce qui attend en file.
+ *
+ * ⚠️ **Deux défauts hors ligne, et le second corrompt des données.** L'écran
+ * appelait `queries.getMyScanEntries` en direct :
+ *
+ *  1. sans réseau, la liste d'une balise ouverte restait vide — or c'est elle
+ *     que les boutons « + / − » corrigent. Le compteur ne pouvait plus
+ *     reprendre une erreur de la journée ;
+ *  2. pire, l'échec **ne vidait rien** : passer de la balise A à la balise B
+ *     laissait les scans de A affichés sous B. Un « − » posé là écrivait une
+ *     correction négative dans B pour un article compté en A.
+ *
+ * La file est ajoutée dans les deux cas, pas seulement hors ligne : au retour
+ * du réseau, une partie des scans est déjà partie et l'autre attend encore.
+ * N'afficher que le serveur ferait clignoter la liste entre les deux.
+ */
+export async function getScanEntries(
+  sessionId: string,
+  passNumber: number,
+  countedBy: string,
+  zone?: string | null,
+): Promise<q.ScanEntrySeed[]> {
+  let entries: q.ScanEntrySeed[] = []
+  if (!offline) {
+    try {
+      entries = await q.getMyScanEntries(sessionId, passNumber, countedBy, zone)
+    } catch (e) {
+      // Un refus du serveur (inventaire clôturé, droits) ne doit pas non plus
+      // afficher la liste de la balise précédente : on repart de la file.
+      if (!noteNetworkError(e)) console.warn('[offlineSync] liste des scans', e)
+    }
+  }
+
+  const attente = (await off.pendingCounts(sessionId)).filter(
+    (c) =>
+      Number(c.pass_number) === passNumber &&
+      // Mode zones : la balise. Mode classique : ses propres lignes.
+      (zone != null ? (c.zone ?? null) === zone : c.counted_by === countedBy),
+  )
+  if (attente.length === 0) return entries
+
+  const agg = new Map<string, q.ScanEntrySeed>()
+  for (const e of entries) agg.set(e.article.sku, { ...e })
+  for (const c of attente) {
+    const at = c.created_at ? new Date(c.created_at).getTime() : Date.now()
+    const cur = agg.get(c.sku)
+    if (cur) {
+      cur.qty += Number(c.qty ?? 0)
+      if (at > cur.timestamp) cur.timestamp = at
+      continue
+    }
+    // Le libellé vient du cache local — c'est là que vivent aussi les articles
+    // créés en réserve, qui n'existent encore nulle part ailleurs.
+    const article =
+      (await off.resolveArticleOffline(sessionId, c.sku)) ??
+      (off.articleFromInsert({ session_id: sessionId, sku: c.sku, label: '' }) as Article)
+    agg.set(c.sku, { article, qty: Number(c.qty ?? 0), timestamp: at })
+  }
+  // Une référence entièrement corrigée (net nul ou négatif) quitte la liste,
+  // comme côté serveur.
+  return [...agg.values()].filter((e) => e.qty > 0).sort((a, b) => b.timestamp - a.timestamp)
+}
+
+/**
+ * Crée un article absent du référentiel (« Article inconnu »).
+ *
+ * ⚠️ **C'est la fonction qui manquait au hors ligne.** L'écran de scan
+ * appelait `queries.insertArticle` en direct : sans réseau, la saisie
+ * échouait avec « fetch failed », le compteur restait devant une étiquette
+ * bien réelle sans moyen d'avancer, et le seul chemin qui lui restait était
+ * de ne pas compter l'article. Signalé par Julien le 1er septembre 2026, sur
+ * les deux plateformes.
+ *
+ * L'article est ajouté au cache local **dans les deux cas** : en ligne pour
+ * que la descente en réserve qui suit le connaisse déjà, hors ligne parce que
+ * c'est alors le seul endroit où il existe. Sans cela, rescanner le code
+ * qu'on vient de saisir rouvrirait « Article inconnu » — et créerait un
+ * doublon dans la file.
+ *
+ * @param bucket  code de la balise ouverte, pour que l'article parte avec les
+ *                comptages du même endroit (voir `enqueueArticle`).
+ */
+export async function insertArticle(
+  article: TablesInsert<'articles'>,
+  bucket: string | null = null,
+): Promise<Article> {
+  // L'identifiant est tiré ICI, pas laissé au serveur : la copie mise en cache
+  // et la ligne qui arrivera en base portent alors le même `id`, et un renvoi
+  // en double retombe sur la clé primaire — que la file traite comme « déjà
+  // passé ». L'unicité (session_id, sku) protégerait de toute façon, mais deux
+  // identités pour un même article sont une confusion qu'on peut s'épargner.
+  const payload: TablesInsert<'articles'> = { ...article, id: article.id ?? off.newId() }
+  const local = off.articleFromInsert(payload)
+  const enqueue = async (): Promise<Article> => {
+    await off.enqueueArticle(payload.session_id, bucket ?? off.NO_BALISE, payload)
+    await off.addCachedArticle(payload.session_id, local)
+    return local
+  }
+  if (offline) return enqueue()
+  try {
+    const created = await q.insertArticle(payload)
+    await off.addCachedArticle(payload.session_id, created)
+    return created
+  } catch (e) {
+    if (!noteNetworkError(e)) throw e
+    return enqueue()
   }
 }
 
@@ -234,6 +370,7 @@ export async function syncNow(sessionId: string): Promise<SyncOutcome> {
 
   const result = await off.flush(sessionId, {
     insertCount: (c) => q.insertCount(c),
+    insertArticle: (a) => q.insertArticle(a),
     setBalise: (s, c, m, o, a) => q.setBalise(s, c, m, o, a),
   })
   setOffline(result.interrupted)
@@ -271,6 +408,7 @@ export async function probeNetwork(sessionId: string): Promise<boolean> {
 export const pendingBalises = off.pendingBalises
 export const pendingBaliseCount = off.pendingBaliseCount
 export const pendingCounts = off.pendingCounts
+export const pendingArticles = off.pendingArticles
 export const failedOps = off.failedOps
 export const clearFailedOps = off.clearFailedOps
 export const clearOfflineSession = off.clearSession

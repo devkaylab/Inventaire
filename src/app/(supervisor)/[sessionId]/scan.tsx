@@ -3,9 +3,12 @@ import { StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getSession, getMyScanEntries } from '@/lib/queries'
 import type { Article, BaliseMode } from '@/lib/queries'
-import { insertCount, primeOfflineCache } from '@/lib/offlineSync'
+// ⚠️ `getSession` vient de la couche hors ligne, comme sur l'écran du
+// compteur : il venait de `@/lib/queries` jusqu'au 2 septembre 2026, et
+// l'écran (`if (!session) return null`) restait **blanc** dès que le réseau
+// tombait — un superviseur qui compte lui aussi en réserve.
+import { getScanEntries, getSession, insertCount, primeOfflineCache } from '@/lib/offlineSync'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { useAuth } from '@/lib/auth'
@@ -35,7 +38,7 @@ export default function SupervisorScanScreen() {
   // Persisted scans for this counter/pass — rebuilds the list after navigation.
   const { data: initialScans } = useQuery({
     queryKey: ['scan-entries', sessionId, passNumber, profile?.id],
-    queryFn: () => getMyScanEntries(sessionId, passNumber, profile!.id),
+    queryFn: () => getScanEntries(sessionId, passNumber, profile!.id),
     enabled: !!session && !!profile,
     staleTime: 0,
   })

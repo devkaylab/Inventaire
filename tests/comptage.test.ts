@@ -274,3 +274,117 @@ describe('le champ de la douchette se vide et se relit', () => {
     expect(scanner).toContain('autoFocus={illisibleCode === null}')
   })
 })
+
+/**
+ * « Article inconnu » sans réseau.
+ *
+ * Constat de Julien, 1er septembre 2026, capture à l'appui sur les deux
+ * plateformes : saisir un article absent du référentiel en réserve répondait
+ * « fetch failed » (`UnknownHostException` sur Android, « The Internet
+ * connection appears to be offline » sur iOS). L'écran de scan appelait
+ * `queries.insertArticle` en direct — la seule écriture du comptage restée
+ * hors de la couche hors ligne.
+ */
+describe('« Article inconnu » passe par la couche hors ligne', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+  const sansCommentaires = scanner.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+  it('importe insertArticle depuis offlineSync, jamais depuis queries', () => {
+    // ⚠️ Sur le code SEUL : le commentaire du fichier raconte le défaut, donc
+    // cite les deux modules.
+    const depuisQueries = sansCommentaires.match(/import \{([^}]*)\} from '@\/lib\/queries'/)
+    expect(depuisQueries).not.toBeNull()
+    expect(depuisQueries![1]).not.toContain('insertArticle')
+    expect(sansCommentaires).toMatch(/import \{[^}]*insertArticle[^}]*\} from '@\/lib\/offlineSync'/)
+  })
+
+  it('donne à la modale la balise ouverte, pour que l’article parte avec ses comptages', () => {
+    expect(sansCommentaires).toContain('zone={activeBalise?.code ?? null}')
+    expect(sansCommentaires).toMatch(/unit_purchase_price: 0,\s*\}, zone\)/)
+  })
+
+  it('n’écrit aucun prix d’achat depuis le comptage', () => {
+    // La borne serveur (`articles_insert_member`) exige `unit_purchase_price =
+    // 0` : un compteur constate une présence, pas une valeur. Un champ prix
+    // ajouté ici serait refusé en 42501, sans rien pour l'expliquer à l'écran.
+    expect(sansCommentaires).toContain('unit_purchase_price: 0')
+  })
+})
+
+/**
+ * Le serveur laisse un compteur créer cet article — il ne le laissait pas.
+ *
+ * Avant la migration du 2 septembre 2026, `articles` n'avait qu'une policy
+ * d'écriture, réservée aux superviseurs : un compteur recevait `42501`, **même
+ * en ligne**. La fonctionnalité était donc inatteignable pour le rôle à qui
+ * elle est destinée, et le hors ligne n'a fait que déplacer l'échec.
+ */
+describe('un compteur peut créer l’article qu’il scanne', () => {
+  const migration = lire(
+    '../supabase/migrations/20260902100001_article_inconnu_par_le_compteur.sql',
+  )
+  const sql = migration.replace(/^--.*$/gm, '')
+
+  it('ouvre l’INSERT seulement — le fichier du superviseur ne se récrit pas', () => {
+    expect(sql).toContain('FOR INSERT')
+    expect(sql).not.toMatch(/FOR (ALL|UPDATE|DELETE)/)
+  })
+
+  it('exige l’appartenance à l’inventaire et un inventaire ouvert', () => {
+    expect(sql).toContain('session_members')
+    expect(sql).toContain("s.status <> 'closed'")
+  })
+
+  it('interdit d’y poser un prix d’achat', () => {
+    expect(sql).toContain('unit_purchase_price = 0')
+  })
+})
+
+/**
+ * La liste des scans d'une balise, sans réseau.
+ *
+ * Deux défauts trouvés en relisant le hors ligne le 2 septembre 2026, sur
+ * l'écran même où « Article inconnu » échouait :
+ *
+ *  1. la liste venait du serveur seul — vide en réserve, alors que ce sont ses
+ *     lignes que les boutons « + / − » corrigent ;
+ *  2. l'échec ne vidait rien : passer de la balise A à la balise B laissait les
+ *     scans de A affichés sous B, et un « − » posé là écrivait une correction
+ *     négative dans B pour un article compté en A.
+ */
+describe('la liste des scans se reconstruit hors ligne', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+  const employe = lire('../src/app/(employee)/[sessionId]/scan.tsx')
+  const superviseur = lire('../src/app/(supervisor)/[sessionId]/scan.tsx')
+  const sync = lire('../src/lib/offlineSync.ts')
+  const nu = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+  it('aucun écran n’appelle plus getMyScanEntries en direct', () => {
+    for (const f of [scanner, employe, superviseur]) expect(nu(f)).not.toContain('getMyScanEntries')
+  })
+
+  it('un échec vide la liste au lieu de garder celle de la balise précédente', () => {
+    expect(nu(scanner)).toContain('.catch(() => { if (!cancelled) setRecentScans([]) })')
+  })
+
+  it('la file d’attente complète la réponse du serveur, en ligne comme hors ligne', () => {
+    const corps = sync.slice(sync.indexOf('export async function getScanEntries'))
+    const bloc = corps.slice(0, corps.indexOf('\nexport '))
+    expect(bloc).toContain('off.pendingCounts(sessionId)')
+    // Les lignes en attente sont lues quoi qu'il arrive : elles ne sont pas
+    // dans la branche `if (!offline)`.
+    expect(bloc.indexOf('off.pendingCounts')).toBeGreaterThan(bloc.indexOf('if (!offline)'))
+    expect(bloc).toMatch(/return \[\.\.\.agg\.values\(\)\]\.filter\(\(e\) => e\.qty > 0\)/)
+  })
+
+  it('les deux écrans de scan lisent la fiche d’inventaire depuis le cache', () => {
+    // ⚠️ Le superviseur compte lui aussi : sur `@/lib/queries`, `getSession`
+    // rendait null hors ligne et l'écran (`if (!session) return null`) restait
+    // blanc.
+    for (const f of [employe, superviseur]) {
+      expect(nu(f)).toMatch(/import \{[^}]*getSession[^}]*\} from '@\/lib\/offlineSync'/)
+      const q = nu(f).match(/import \{([^}]*)\} from '@\/lib\/queries'/)
+      if (q) expect(q[1]).not.toContain('getSession')
+    }
+  })
+})
