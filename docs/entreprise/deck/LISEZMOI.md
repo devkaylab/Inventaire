@@ -62,6 +62,13 @@ depuis : cadre du viseur, liste des scans passée derrière un bouton, trace
   `/outils/prise-en-main` du site sert les mêmes images et porte le même
   aveu ; le drapeau ne se baisse jamais avant les captures.
 
+⚠️ **Deux écrans ont DÉJÀ été repris le 2 septembre 2026**, et ils vivent dans
+`../fiche-produit/` : `ecarts-audit.png` et `rapport.png`. Le premier remplace
+`audit.png`, dont la capture montrait l'interface d'avant la refonte du
+29 août (les deux boutons Compteur / Auditeur n'existaient pas) ; le second
+n'existait dans aucun jeu. À la prochaine passe, les reverser dans `captures/`
+sous leurs noms définitifs et retirer l'exception du dossier de la fiche.
+
 **2. Les captures du site** (`web/screenshots/`). Les trois du tableau de bord
 ont été **reconstituées depuis le `.pptx` précédent** : ce dossier est dans le
 `.gitignore` et le harnais e2e ne démarrait pas dans le conteneur d'alors. Les
@@ -305,6 +312,30 @@ ferme sans rien dire si `app.config` n'est pas déposé dans `EXConstants.bundle
 ⚠️ **Remettre le build Debug ensuite** — sinon le rechargement par Metro ne
 fonctionne plus, et une modification du code semble sans effet :
 `xcrun simctl install <UDID> ios/build/dd/Build/Products/Debug-iphonesimulator/Inventaire.app`.
+
+### Capturer sans pouvoir taper
+
+⚠️ **L'outil qui fait les appuis tombe en panne, et il ne se répare pas.** Le
+simulateur répond alors `No Legacy HID port found` : la connexion est morte, et
+elle survit à l'extinction de l'appareil comme au redémarrage de Simulator.app.
+Seul le redémarrage de la session la rend. `xcrun simctl io … screenshot`,
+lui, continue de marcher.
+
+Ce qui sauve la passe dans ce cas — c'est ainsi que les deux écrans du
+2 septembre ont été pris — : **détourner la route d'accueil**. L'application
+tourne en Debug, donc le code vient de Metro et se recharge tout seul.
+
+1. dans `src/app/index.tsx`, remplacer le `<Redirect href="/(supervisor)/" />`
+   par la route visée, par exemple
+   `<Redirect href="/(supervisor)/<id>/audits" />` ;
+2. `pkill -f "Inventaire.app/Inventaire"` puis `xcrun simctl launch` — le
+   `terminate` de simctl ne tue pas toujours l'application ;
+3. laisser Metro reconstruire (le premier écran affiche « Downloading… » —
+   prendre une rafale de captures et garder la dernière), puis capturer ;
+4. **remettre `index.tsx`** et le vérifier au `git status`.
+
+Il ne couvre que les écrans qu'une route atteint : un scan en cours, une
+balise ouverte ou une feuille dépliée demandent toujours un doigt.
 
 Deux pièges de la capture elle-même :
 

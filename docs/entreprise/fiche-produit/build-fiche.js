@@ -28,10 +28,15 @@
 // cette exception disparaîtra — voir « Ce qu'il reste à faire » dans
 // `../deck/LISEZMOI.md`.
 //
-// ⚠️ **Les trois écrans montrés sont ceux qui n'ont PAS changé** depuis le jeu
-// du 27 août. L'écran de comptage en est absent pour cette seule raison : sa
-// capture montre une liste de scans que l'application affiche désormais
-// derrière un bouton. L'y remettre demande la passe de captures.
+// ⚠️ **Trois des cinq écrans viennent du jeu du 27 août**, et ce sont ceux qui
+// n'ont PAS changé depuis. Les deux autres — écarts d'audit et rapport — ont
+// été repris le 2 septembre 2026 : l'écran des écarts avait été récrit le
+// 29 août (les deux boutons Compteur / Auditeur), sa vieille capture montrait
+// une interface disparue.
+//
+// L'écran de comptage reste absent pour la même raison, et lui n'a pas pu être
+// repris : sa capture montre une liste de scans que l'application affiche
+// désormais derrière un bouton. Il entrera à la prochaine passe de captures.
 
 const fs = require('fs')
 const path = require('path')
@@ -65,7 +70,7 @@ const par = (runs, o = {}) => new Paragraph({
 /** Titre de section : petites capitales indigo, filet dessous. */
 const section = (t) => new Paragraph({
   children: [new TextRun({ text: t.toUpperCase(), font: F, size: 15, bold: true, color: P.DEEP, characterSpacing: 24 })],
-  spacing: { before: 200, after: 90 },
+  spacing: { before: 160, after: 80 },
   border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: P.HAIR, space: 4 } },
 })
 
@@ -103,8 +108,9 @@ const tableau = (rows, widths) => new Table({
 const COL = mm(87)   // une colonne sur deux
 const GOUT = mm(6)   // la gouttière entre elles
 
-// Trois téléphones en bandeau : 43 mm de large, rapport 637/1345.
-const TEL = 43
+// Cinq téléphones en bandeau : 31 mm de large, rapport 637/1345. À cinq, la
+// largeur utile (180 mm) fixe la taille — on ne choisit que les légendes.
+const TEL = 31
 const TELH = Math.round((TEL * 1345 / 637) * 10) / 10
 const PX = 2.8346 // mm → points
 
@@ -117,12 +123,12 @@ const tel = (fichier, legende) => cell([
     children: [new TextRun({ text: legende, font: F, size: 14, color: P.SLATE })],
     alignment: AlignmentType.CENTER, spacing: { after: 0 },
   }),
-], mm(60), { valign: VerticalAlign.TOP })
+], mm(36), { valign: VerticalAlign.TOP })
 
 const doc = (LOGO) => new Document({
   creator: 'Devkaylab', title: 'Quantinvo — fiche produit', description: "Application d'inventaire pour le commerce de détail",
   sections: [{
-    properties: { page: { margin: { top: mm(14), bottom: mm(12), left: mm(15), right: mm(15) } } },
+    properties: { page: { margin: { top: mm(12), bottom: mm(10), left: mm(15), right: mm(15) } } },
     children: [
 
       // ── En-tête : la tuile, le mot-symbole, la nature du document ────────
@@ -194,19 +200,43 @@ const doc = (LOGO) => new Document({
       ], [COL, GOUT, COL]),
 
       // ── Le bandeau des écrans ────────────────────────────────────────────
-      new Paragraph({ children: [txt('')], spacing: { after: 200 } }),
+      new Paragraph({ children: [txt('')], spacing: { after: 120 } }),
       tableau([
         new TableRow({
           children: [
-            tel('accueil-superviseur.png', 'Les inventaires du magasin'),
-            tel('inventaire-superviseur.png', 'Le suivi d’un inventaire'),
-            tel('zones.png', 'Les emplacements et leurs balises'),
+            tel('accueil-superviseur.png', 'Les inventaires'),
+            tel('inventaire-superviseur.png', 'Le suivi'),
+            tel('zones.png', 'Zones et balises'),
+            tel('ecarts-audit.png', 'Écarts d’audit'),
+            tel('rapport.png', 'Rapport et écarts'),
           ],
         }),
-      ], [mm(60), mm(60), mm(60)]),
+      ], [mm(36), mm(36), mm(36), mm(36), mm(36)]),
+      // Les légendes touchaient le titre de la section suivante.
+      new Paragraph({ children: [txt('')], spacing: { after: 90 } }),
+
+      // ── Sécurité : ce qu'une DSI demande en premier ──────────────────────
+      section('Sécurité et confidentialité'),
+      tableau([
+        new TableRow({
+          children: [
+            cell([
+              puce('Double authentification (TOTP) sur l’application comme sur le site, activable par chaque compte.'),
+              puce('Chaque compte ne voit que son entreprise, et un compteur que ses propres comptages : le cloisonnement est appliqué en base, pas seulement à l’écran.'),
+              puce('Personne ne s’inscrit seul. Les accès sont ouverts par l’administrateur de l’entreprise.'),
+            ], COL, { padR: mm(3) }),
+            cell([], GOUT),
+            cell([
+              puce('Mot de passe de 12 caractères au minimum, et refus de ceux qui figurent dans les fuites connues.'),
+              puce('Le jeton de session vit dans le trousseau du téléphone, chiffré par le système. Une session inutilisée expire au bout de 30 jours.'),
+              puce('Données hébergées dans l’Union européenne. Aucun traceur, aucune mesure d’audience.'),
+            ], COL),
+          ],
+        }),
+      ], [COL, GOUT, COL]),
 
       // ── Deux blocs de faits, côte à côte ─────────────────────────────────
-      new Paragraph({ children: [txt('')], spacing: { after: 200 } }),
+      new Paragraph({ children: [txt('')], spacing: { after: 100 } }),
       tableau([
         new TableRow({
           children: [
@@ -214,8 +244,7 @@ const doc = (LOGO) => new Document({
               section('Compatibilité'),
               fait('iPhone', 'iOS 16.4 ou plus récent. iPad pris en charge.'),
               fait('Android', '7.0 (API 24) ou plus récent.'),
-              fait('Langue', 'français. Orientation portrait.'),
-              fait('Thème', 'clair et sombre, selon le réglage du téléphone.'),
+              fait('Langue', 'français. Portrait, thèmes clair et sombre.'),
               fait('Douchettes', 'lecteurs Bluetooth en mode clavier (HID).'),
               fait('Accès demandé', 'la caméra, pour lire les codes-barres. Aucune photo n’est enregistrée.'),
             ], COL, { pad: mm(2), padL: mm(3), padR: mm(3), shade: P.MIST }),
@@ -254,14 +283,14 @@ const doc = (LOGO) => new Document({
       ], [COL, GOUT, COL]),
       new Paragraph({
         children: [new TextRun({ text: 'L’application n’est pas encore publiée. Ces deux adresses mènent aujourd’hui à la recherche de chaque boutique, et afficheront la fiche le jour de la mise en ligne.', font: F, size: 15, color: P.SLATE, italics: true })],
-        spacing: { before: 100, after: 0 },
+        spacing: { before: 80, after: 0 },
       }),
 
       // ── Pied ─────────────────────────────────────────────────────────────
       new Paragraph({
         children: [new TextRun({ text: 'Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le 2 septembre 2026, application version 1.0.0.', font: F, size: 14, color: P.SLATE })],
-        spacing: { before: 260, after: 0 },
-        border: { top: { style: BorderStyle.SINGLE, size: 4, color: P.HAIR, space: 6 } },
+        spacing: { before: 130, after: 0 },
+        border: { top: { style: BorderStyle.SINGLE, size: 4, color: P.HAIR, space: 5 } },
       }),
     ],
   }],
