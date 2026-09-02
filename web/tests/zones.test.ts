@@ -1,8 +1,14 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  codeRange, groupByName, sortCodes, UNNAMED, validateRange,
-  type ZoneDashboardRow,
+  codeRange, ecartLigne, groupByName, sortCodes, UNNAMED, validateRange,
+  type BaliseLigne, type ZoneDashboardRow,
 } from '@/lib/zones'
+import { ACTIONS } from '@/lib/journal'
+import { derniereDefinition, fichierDe } from './migrations'
+
+const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 
 function zone(partial: Partial<ZoneDashboardRow> & { code: string }): ZoneDashboardRow {
   return {
@@ -97,5 +103,134 @@ describe('validateRange', () => {
   it('applique la même limite que le serveur', () => {
     expect(validateRange('Réserve', '1', '2000')).toBeNull()
     expect(validateRange('Réserve', '1', '2001')).toMatch(/trop grande/i)
+  })
+})
+
+// ── Le détail d'une balise (2 septembre 2026) ───────────────────────────────
+//
+// Demande de Julien : « je veux pouvoir cliquer sur le numéro de balise et voir
+// ce qui a été compté dessus ». La fenêtre existait, elle ne disait pas ce
+// qu'il y avait dedans.
+
+function ligne(p: Partial<BaliseLigne> & { sku: string }): BaliseLigne {
+  return {
+    ean: null, brand: '', label: '',
+    counted_qty: 0, audited_qty: 0, final_qty: null, audit_status: 'done',
+    ...p,
+  }
+}
+
+describe('l’écart d’une ligne de balise', () => {
+  it('ne se calcule pas tant que l’audit de la balise n’est pas clôturé', () => {
+    // ⚠️ Le cœur de la règle : une quantité auditée à zéro ne distingue pas
+    // « l'auditeur n'a rien trouvé » de « l'auditeur n'est pas encore passé ».
+    // Afficher −4 ici accuserait quelqu'un à tort.
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 4, audited_qty: 0, audit_status: 'open' }))).toBeNull()
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 4, audited_qty: 0, audit_status: 'pending' }))).toBeNull()
+  })
+
+  it('se calcule une fois l’audit clôturé, dans les deux sens', () => {
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 4, audited_qty: 1 }))).toBe(-3)
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 1, audited_qty: 3 }))).toBe(2)
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 2, audited_qty: 2 }))).toBe(0)
+    // Audit clôturé et rien trouvé : là, le zéro veut bien dire quelque chose.
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 4, audited_qty: 0 }))).toBe(-4)
+  })
+
+  it('se tait quand la ligne a été arbitrée', () => {
+    // La quantité retenue remplace la comparaison : c'est elle qui fera foi au
+    // rapport, une soustraction à côté ne dirait plus rien.
+    expect(ecartLigne(ligne({ sku: 'A', counted_qty: 4, audited_qty: 1, final_qty: 3 }))).toBeNull()
+  })
+})
+
+describe('le serveur borne le détail à une balise', () => {
+  const detail = derniereDefinition('get_balise_detail').corps
+  const vider = derniereDefinition('vider_balise').corps
+
+  it('ne descend jamais le détail de l’inventaire entier', () => {
+    // Le motif retiré en août 2026 pour la tenue en charge : `getSessionDetail`
+    // rend toutes les balises. Ici la requête est filtrée sur celle demandée.
+    expect(detail).toContain('norm_balise(coalesce(c.zone, \'\')) = v_key')
+    expect(detail).toContain('can_access_session')
+  })
+
+  it('écarte les références ramenées à zéro', () => {
+    // `counts` est en ajout pur : un article scanné puis entièrement corrigé a
+    // des lignes et zéro pièce. Même filtre que `get_session_detail`.
+    expect(detail).toContain("coalesce(cnt.qty, 0) <> 0 or coalesce(aud.qty, 0) <> 0")
+  })
+
+  it('ne calcule pas l’écart côté serveur', () => {
+    // Il rend les deux quantités et le statut de l'audit ; c'est l'écran qui
+    // décide s'il peut soustraire (voir `ecartLigne`).
+    expect(detail).toContain('audit_status')
+    expect(detail).not.toMatch(/audited_qty\s*-\s*counted_qty|counted_qty\s*-\s*audited_qty/)
+  })
+})
+
+describe('vider une balise', () => {
+  const vider = derniereDefinition('vider_balise').corps
+
+  it('reste bornée à UNE balise, nommée', () => {
+    // ⚠️ C'est ce qui la distingue de la policy retirée par VR-007 : le
+    // périmètre est fixé par le serveur, pas par un filtre que le client
+    // choisit. Ne jamais l'élargir à une liste ni à un critère libre.
+    expect(vider).toContain('p_code text')
+    expect(vider).not.toMatch(/p_codes|text\[\]/)
+  })
+
+  it('efface les comptages ET les audits, puis remet la balise à faire', () => {
+    expect(vider).toContain('delete from public.counts')
+    expect(vider).toContain('delete from public.article_audit')
+    expect(vider).toContain("count_status = 'pending'")
+    expect(vider).toContain("audit_status = 'pending'")
+    expect(vider).toContain('count_done_at = null')
+  })
+
+  it('laisse une trace — c’est l’aggravation relevée par VR-007', () => {
+    expect(vider).toContain('company_audit_log')
+    expect(vider).toContain("'balise_videe'")
+  })
+
+  it('refuse un inventaire clôturé et un non-superviseur', () => {
+    // Le rapport d'un inventaire clôturé est sorti, souvent exporté.
+    expect(vider).toContain("s.status <> 'closed'")
+    expect(vider).toContain('can_access_session')
+  })
+
+  it('n’est ouverte ni à anon ni à public', () => {
+    const fichier = fichierDe('vider_balise')
+    expect(fichier).toMatch(/revoke all on function public\.vider_balise\(uuid, text\) from public, anon/)
+    expect(fichier).toMatch(/grant execute on function public\.vider_balise\(uuid, text\) to authenticated/)
+  })
+})
+
+describe('l’écran de la balise', () => {
+  const ecran = lire('../components/dashboard/BaliseDetail.tsx')
+  const nu = ecran.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+  it('ne propose plus de rouvrir depuis le site', () => {
+    // Décision de Julien : rouvrir est un geste de terrain, qui n'a de sens que
+    // sur le téléphone de la personne qui va recompter.
+    expect(nu).not.toMatch(/setBalise\([^)]*true\)/)
+    expect(nu).toContain('Pour rouvrir, passez par l’application')
+  })
+
+  it('nomme les deux clôtures par ce qu’elles font', () => {
+    expect(nu).toContain('Marquer comptée')
+    expect(nu).toContain('Marquer auditée')
+  })
+
+  it('exige la recopie du numéro avant de vider', () => {
+    // Le bouton est à quelques centimètres de « Marquer comptée » et efface le
+    // travail de toute l'équipe sur ce rayon.
+    expect(nu).toMatch(/requireText: z\.code/)
+    expect(nu).toContain("tone: 'danger'")
+  })
+
+  it('a un libellé de journal pour l’action qu’il déclenche', () => {
+    // Sans lui, /journal afficherait le mot technique brut.
+    expect(ACTIONS.balise_videe).toBeTypeOf('function')
   })
 })

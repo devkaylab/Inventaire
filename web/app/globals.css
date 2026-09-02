@@ -1704,6 +1704,57 @@ a { color: inherit; text-decoration: none; }
 .modal-details li { margin-bottom: 4px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
 
+/* ── Détail d'une balise ────────────────────────────────────
+   La fenêtre qui s'ouvre au clic sur une balise, dans l'onglet Suivi. Elle
+   porte un tableau : 460 px n'y suffisent pas, d'où `.modal-large`. La liste
+   défile à l'intérieur — un rayon peut porter deux cents références, et la
+   fenêtre ne doit pas grandir avec lui. */
+.modal-large { max-width: 640px; }
+.modal-sub { color: var(--text-2); font-size: 14px; margin-top: 6px; }
+
+.balise-bloc { margin-top: 24px; }
+.balise-bloc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.balise-bloc-title { font-weight: 600; font-size: 14px; }
+.balise-bloc-count { color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.balise-tbl { margin-top: 12px; overflow-x: auto; max-height: 320px; overflow-y: auto; }
+.balise-tbl table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.balise-tbl thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--surface);
+  text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-3); white-space: nowrap;
+  padding: 0 10px 8px 0; border-bottom: 1px solid var(--hairline);
+}
+.balise-tbl th.num, .balise-tbl td.num {
+  text-align: right; padding-right: 0; padding-left: 14px; font-variant-numeric: tabular-nums;
+}
+.balise-tbl tbody td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.balise-tbl tbody tr:last-child td { border-bottom: none; }
+.balise-art { font-weight: 500; }
+.balise-ref { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.balise-neant { color: var(--text-3); }
+.ecart-neg { color: var(--danger-text); font-weight: 600; }
+.ecart-pos { color: var(--success-text); font-weight: 600; }
+
+.tag {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .03em; vertical-align: 1px;
+}
+.tag-inconnu { color: var(--warning-text); background: var(--warning-soft); }
+.tag-arbitre { color: var(--accent); background: var(--accent-soft); }
+
+.balise-note { margin-top: 12px; color: var(--text-3); font-size: 12.5px; }
+.balise-vide { text-align: center; padding: 22px 12px; color: var(--text-2); font-size: 14px; }
+.balise-vide strong { display: block; color: var(--text); font-weight: 600; margin-bottom: 4px; }
+
+/* Le geste destructeur est mis à distance des deux autres : il n'efface pas un
+   réglage, il efface le travail de l'équipe sur ce rayon. */
+.balise-zone-sensible {
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--hairline);
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.link-btn.danger { color: var(--danger-text); font-weight: 600; }
+
 /* ── États vides et ossatures ───────────────────────────── */
 .empty-state {
   border: 1px dashed var(--hairline); border-radius: 12px;

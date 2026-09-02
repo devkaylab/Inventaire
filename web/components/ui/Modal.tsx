@@ -4,11 +4,13 @@ import { useEffect, useRef } from 'react'
 
 /** Fenêtre modale générique (invitation, identifiants…). Échap et clic hors
  *  cadre referment ; le focus entre dans la fenêtre à l'ouverture. */
-export function Modal({ title, onClose, children, footer }: {
+export function Modal({ title, onClose, children, footer, large = false }: {
   title: string
   onClose: () => void
   children: React.ReactNode
   footer?: React.ReactNode
+  /** Élargit la fenêtre pour un tableau : 460 px ne tient pas quatre colonnes. */
+  large?: boolean
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
 
@@ -21,7 +23,7 @@ export function Modal({ title, onClose, children, footer }: {
 
   return (
     <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={boxRef} tabIndex={-1}>
+      <div className={`modal${large ? ' modal-large' : ''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={boxRef} tabIndex={-1}>
         <div className="modal-head">
           <h2 className="modal-title" id="modal-title">{title}</h2>
           <button type="button" className="modal-x" onClick={onClose} aria-label="Fermer">×</button>

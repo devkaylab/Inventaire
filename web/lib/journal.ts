@@ -38,6 +38,10 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
   magasin_demande: (c) => `demandé l’ajout du magasin « ${c} »`,
   magasin_demande_annulee: (c) => `annulé la demande du magasin « ${c} »`,
   magasin_suppression_demandee: (c) => `demandé la suppression du magasin « ${c} »`,
+  // Écrite par `vider_balise`, pas par une fonction `ca_*` : les comptages ne
+  // sont journalisés nulle part ailleurs, et c'est la seule trace qu'un rayon
+  // a été effacé.
+  balise_videe: (c) => `vidé la ${c}`,
 }
 
 /**
