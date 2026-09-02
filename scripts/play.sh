@@ -87,14 +87,19 @@ fi
 # C'est le motif du « succès silencieux » que ce projet a déjà payé plusieurs
 # fois — on regarde donc qui a signé, pas si la commande a rendu zéro.
 echo "→ Contrôle de la signature…"
-SIGNATAIRE=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs --min-sdk-version 24 "$AAB" 2>/dev/null | grep -i "Signer #1 certificate DN" || true)
+# ⚠️ On interroge LE BUNDLE, pas le trousseau. Une première version de ce
+# script retombait sur `keytool -list` quand apksigner ne savait pas lire
+# l'AAB : elle affichait alors le propriétaire du fichier de clé — ce qui est
+# vrai quoi qu'il arrive, et ne prouve rien sur ce qui vient d'être signé.
+# C'était exactement le « succès silencieux » que ce contrôle existe pour
+# empêcher, reproduit dans le contrôle lui-même. `jarsigner` lit l'AAB.
+VERIF=$("$JAVA_HOME/bin/jarsigner" -verify -verbose:summary -certs "$AAB" 2>&1)
+SIGNATAIRE=$(echo "$VERIF" | grep -m1 '^- Signed by' | sed 's/^- Signed by //')
 
 if [[ -z "$SIGNATAIRE" ]]; then
-  # apksigner ne lit pas toujours un AAB : on retombe sur keytool, qui liste
-  # le certificat contenu dans le fichier de clé employé.
-  SIGNATAIRE=$(keytool -list -v -keystore "$STORE" -storepass "$(grep '^QUANTINVO_UPLOAD_STORE_PASSWORD=' "$PROPS" | cut -d= -f2-)" 2>/dev/null | grep -m1 "Propriétaire\|Owner" || true)
+  echo "✗ Le bundle ne porte aucune signature lisible. Ne pas le déposer."
+  exit 1
 fi
-
 if echo "$SIGNATAIRE" | grep -qi "Android Debug"; then
   echo "✗ Le bundle est signé avec la clé de DEBUG. Ne pas le déposer."
   exit 1
@@ -102,7 +107,7 @@ fi
 
 echo
 echo "✓ Bundle prêt : $AAB"
-echo "  Signataire : ${SIGNATAIRE:-(non lu — vérifier à la main avant le dépôt)}"
+echo "  Signataire : $SIGNATAIRE"
 ls -lh "$AAB" | awk '{print "  Taille     : " $5}'
 echo
 echo "  À déposer dans la Play Console → Production → Créer une version."
