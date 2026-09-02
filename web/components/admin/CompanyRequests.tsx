@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { densite, trancheDe } from '@/lib/tarifs'
+import { densite } from '@/lib/tarifs'
 import { type Secteur, densiteAttendue, secteurReconnu } from '@/lib/secteurs'
 import { formaterSiren } from '@/lib/siren'
-import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
+import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
+import { nomOffre, prixCents } from '@/lib/offres'
 import { nb } from '@/lib/format'
 
 export type CompanyRequest = {
@@ -33,6 +34,10 @@ export type CompanyRequest = {
 /** Ce que le prospect a déclaré, magasin par magasin, sur /inscription. */
 export type MagasinDeclare = {
   name: string | null
+  /** Appareils comptant en même temps — l'assiette depuis le 2 septembre 2026. */
+  devices?: number | null
+  /** ⚠️ Volume de stock : ne tarife plus rien. Les demandes d'avant la bascule
+      n'ont que lui, et c'est le seul cas où le recoupement de densité s'affiche. */
   units: number | null
   sqm: number | null
 }
@@ -100,13 +105,22 @@ function libelleDensite(
 }
 
 function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ape: string | null }) {
-  const liste = (stores ?? []).filter((m) => m.units != null || m.sqm != null || (m.name ?? '') !== '')
+  const liste = (stores ?? []).filter(
+    (m) => m.devices != null || m.units != null || m.sqm != null || (m.name ?? '') !== '',
+  )
   if (liste.length === 0) return null
 
   return (
     <div className="declare">
       {liste.map((m, i) => {
-        const tranche = trancheDe(m.units)
+        const offre = nomOffre(m.devices)
+        const prix = prixCents(m.devices, 'yearly')
+        // ⚠️ Le recoupement stock / surface ne s'affiche que pour les demandes
+        // qui portent un volume, c'est-à-dire celles d'avant le 2 septembre
+        // 2026. Il n'a plus de source sur les nouvelles, et une ligne
+        // « densité non calculable » sous chacune d'elles ferait chercher un
+        // défaut là où il y a une règle.
+        const ancienne = m.units != null || m.sqm != null
         const d = densite(m.units, m.sqm)
         const repere = densiteAttendue(d, ape)
         return (
@@ -114,30 +128,35 @@ function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ap
             <div className="declare-haut">
               <span className="declare-nom">{(m.name ?? '').trim() || `Magasin ${i + 1}`}</span>
               <span className="declare-meta">
-                {m.units == null ? 'stock non déclaré' : `${m.units.toLocaleString('fr-FR')} u`}
-                {m.sqm == null ? '' : ` · ${m.sqm.toLocaleString('fr-FR')} m²`}
+                {m.devices == null
+                  ? 'appareils non déclarés'
+                  : `${nb(m.devices)} appareil${m.devices > 1 ? 's' : ''}`}
               </span>
-              {tranche && (
+              {offre && prix !== null && (
                 <span className="declare-tranche">
-                  {tranche.profil}
-                  {tranche.prixEuros === null
-                    ? ' · sur devis'
-                    : ` · ${tranche.prixEuros.toLocaleString('fr-FR')} €/an`}
+                  {offre} · {(prix / 100).toLocaleString('fr-FR')} €/an
                 </span>
               )}
             </div>
 
-            <div className="declare-bas">
-              <span className="declare-meta">{libelleDensite(d, repere)}</span>
-              {repere && !repere.plausible && (
-                <span
-                  className="declare-flag"
-                  title={`Attendu entre ${repere.secteur.min} et ${repere.secteur.max} u/m² pour « ${repere.secteur.nom} »`}
-                >
-                  Densité inhabituelle — vérifier qu’il ne manque pas un zéro
+            {ancienne && (
+              <div className="declare-bas">
+                <span className="declare-meta">
+                  {/* Demande d'avant la bascule : son volume ne tarife plus,
+                      il ne sert qu'au recoupement d'ordre de grandeur. */}
+                  {m.units == null ? 'stock non déclaré' : `${nb(m.units)} u`}
+                  {m.sqm == null ? '' : ` · ${nb(m.sqm)} m²`} — {libelleDensite(d, repere)}
                 </span>
-              )}
-            </div>
+                {repere && !repere.plausible && (
+                  <span
+                    className="declare-flag"
+                    title={`Attendu entre ${repere.secteur.min} et ${repere.secteur.max} u/m² pour « ${repere.secteur.nom} »`}
+                  >
+                    Densité inhabituelle — vérifier qu’il ne manque pas un zéro
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )
       })}
@@ -154,40 +173,77 @@ function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ap
  * fait donc qu'exposer l'action suivante, jamais un choix libre.
  */
 /**
- * Le panneau qui établit le devis : deux champs et un bouton.
+ * Le panneau qui établit le devis : un rythme, deux champs et un bouton.
  *
- * Le montant est **proposé** depuis la grille et les volumes déclarés, et
- * reste modifiable — un devis se négocie, et c'est la ligne saisie qui part
- * dans le PDF. La référence est proposée de façon stable pour une demande
- * donnée : rouvrir le panneau ne la change pas.
+ * Le montant est **proposé** depuis la grille des offres et le nombre
+ * d'appareils déclaré, et reste modifiable — un devis se négocie, et c'est la
+ * ligne saisie qui part dans le PDF. La référence est proposée de façon stable
+ * pour une demande donnée : rouvrir le panneau ne la change pas.
+ *
+ * ⚠️ **Le rythme n'est pas un détail d'affichage.** Il décide de ce qui est
+ * facturé (une année ou un mois), de ce que dit le PDF, et de la session
+ * Stripe que l'acceptation ouvre — paiement unique pour l'année, abonnement
+ * pour le mois. Changer de rythme recalcule le montant proposé : c'est
+ * volontaire, laisser un montant annuel sous un devis mensuel serait la faute
+ * la plus coûteuse de cet écran.
  */
 function PanneauDevis({
   requete, busy, onEnvoyer,
 }: {
   requete: CompanyRequest
   busy: boolean
-  onEnvoyer: (reference: string, cents: number) => void
+  onEnvoyer: (reference: string, cents: number, rythme: Rythme) => void
 }) {
-  const lignes = lignesProposees(requete.stores, requete.store_count)
+  const [rythme, setRythme] = useState<Rythme>('yearly')
+  const lignes = lignesProposees(requete.stores, requete.store_count, rythme)
   const propose = totalProposeCents(lignes)
   const [reference, setReference] = useState(
     requete.quote_reference || referenceProposee(new Date().getFullYear(), requete.id),
   )
+  // Le montant suit le rythme, sauf si l'administrateur l'a lui-même touché :
+  // `touche` retient ce choix, sinon un aller-retour entre les deux boutons
+  // effacerait une négociation déjà saisie.
+  const [touche, setTouche] = useState(false)
   const [montant, setMontant] = useState(
     ((requete.quote_amount_cents ?? propose.cents) / 100).toFixed(2).replace('.', ','),
   )
 
+  function changerRythme(r: Rythme) {
+    setRythme(r)
+    if (touche) return
+    const t = totalProposeCents(lignesProposees(requete.stores, requete.store_count, r))
+    setMontant((t.cents / 100).toFixed(2).replace('.', ','))
+  }
+
   const cents = Math.round(Number(montant.replace(/\s/g, '').replace(',', '.')) * 100)
   const valide = reference.trim() !== '' && Number.isFinite(cents) && cents >= 0
+  const mensuel = rythme === 'monthly'
 
   return (
     <div className="devis-panneau">
+      <div className="devis-rythme" role="group" aria-label="Rythme de facturation">
+        <button
+          type="button" className={mensuel ? '' : 'actif'} aria-pressed={!mensuel}
+          onClick={() => changerRythme('yearly')}
+        >
+          À l’année
+        </button>
+        <button
+          type="button" className={mensuel ? 'actif' : ''} aria-pressed={mensuel}
+          onClick={() => changerRythme('monthly')}
+        >
+          Par mois
+        </button>
+      </div>
+
       <div className="devis-panneau-lignes">
         {lignes.map((l, i) => (
           <div className="devis-panneau-ligne" key={i}>
             <span>{l.libelle}</span>
-            <span className="muted">{l.unites == null ? '—' : `${nb(l.unites)} pièces`}</span>
-            <span className="muted">{l.tranche || '—'}</span>
+            <span className="muted">
+              {l.appareils == null ? '—' : `${nb(l.appareils)} appareil${l.appareils > 1 ? 's' : ''}`}
+            </span>
+            <span className="muted">{l.offre || '—'}</span>
             <span className="n">{l.prixCents == null ? 'sur devis' : euros(l.prixCents)}</span>
           </div>
         ))}
@@ -201,8 +257,8 @@ function PanneauDevis({
 
       {propose.surDevis > 0 && (
         <div className="muted small">
-          {propose.surDevis} magasin{propose.surDevis > 1 ? 's dépassent' : ' dépasse'} le million
-          d&apos;unités : leur prix se fait au cas par cas, ils ne sont pas dans la proposition.
+          {propose.surDevis} magasin{propose.surDevis > 1 ? 's n’ont' : ' n’a'} pas déclaré
+          d&apos;appareils : leur prix se fait à la main, ils ne sont pas dans la proposition.
         </div>
       )}
 
@@ -212,8 +268,12 @@ function PanneauDevis({
           <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={40} />
         </label>
         <label>
-          Montant annuel HT
-          <input value={montant} onChange={(e) => setMontant(e.target.value)} inputMode="decimal" />
+          {mensuel ? 'Montant mensuel HT' : 'Montant annuel HT'}
+          <input
+            value={montant}
+            onChange={(e) => { setTouche(true); setMontant(e.target.value) }}
+            inputMode="decimal"
+          />
         </label>
       </div>
 
@@ -221,12 +281,14 @@ function PanneauDevis({
         <button
           className="btn btn-primary btn-sm"
           disabled={busy || !valide}
-          onClick={() => valide && onEnvoyer(reference.trim(), cents)}
+          onClick={() => valide && onEnvoyer(reference.trim(), cents, rythme)}
         >
           {busy ? 'Envoi…' : 'Envoyer le devis'}
         </button>
         <span className="muted small">
-          Le PDF est fabriqué et joint à l&apos;envoi, avec le lien d&apos;acceptation.
+          {mensuel
+            ? 'Le PDF dit « abonnement mensuel », et l’acceptation ouvre un abonnement Stripe.'
+            : 'Le PDF est fabriqué et joint à l’envoi, avec le lien d’acceptation.'}
         </span>
       </div>
     </div>
@@ -275,11 +337,11 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
    * enregistré sans partir, et l'écran le dit plutôt que de laisser croire
    * qu'il est parti.
    */
-  async function envoyerDevis(r: CompanyRequest, reference: string, cents: number) {
-    const lignes = lignesProposees(r.stores, r.store_count)
+  async function envoyerDevis(r: CompanyRequest, reference: string, cents: number, rythme: Rythme) {
+    const lignes = lignesProposees(r.stores, r.store_count, rythme)
     setBusy(r.id)
     const { data, error } = await supabase.functions.invoke('admin-send-quote', {
-      body: { requestId: r.id, reference, amountCents: cents, lines: lignes },
+      body: { requestId: r.id, reference, amountCents: cents, lines: lignes, billingPeriod: rythme },
     })
     setBusy(null)
     if (!error && data?.success) {
@@ -294,6 +356,7 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
       const ok = await run(r.id, () =>
         supabase.rpc('admin_quote_company_request', {
           p_id: r.id, p_reference: reference, p_amount_cents: cents, p_note: '', p_lines: lignes,
+          p_billing_period: rythme,
         }),
       )
       if (ok) {
@@ -326,7 +389,8 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
   async function fulfil(r: CompanyRequest) {
     // Les noms déclarés au formulaire sont proposés tels quels : dans la
     // plupart des cas il n'y a plus qu'à valider. Le tarif de chaque magasin
-    // est posé côté base depuis la tranche de son volume déclaré.
+    // est posé côté base depuis la ligne du devis — son offre, donc son nombre
+    // d'appareils.
     const proposes = (r.stores ?? [])
       .map((m) => (m.name ?? '').trim())
       .filter(Boolean)
@@ -407,7 +471,7 @@ export function CompanyRequests({ onCompanyCreated }: { onCompanyCreated: () => 
               <PanneauDevis
                 requete={r}
                 busy={busy === r.id}
-                onEnvoyer={(reference, cents) => envoyerDevis(r, reference, cents)}
+                onEnvoyer={(reference, cents, rythme) => envoyerDevis(r, reference, cents, rythme)}
               />
             )}
           </div>

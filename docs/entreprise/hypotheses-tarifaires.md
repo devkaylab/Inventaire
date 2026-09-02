@@ -785,8 +785,19 @@ restent dans le canevas si le sujet se rouvre.
 - **Page publique `/tarifs`**, hors `AppShell` — elle s'ouvre au téléphone, et
   c'est le premier prix affiché du produit. La grille cessant d'être sur devis,
   `/inscription` peut afficher l'offre correspondante.
-- **`MagasinSaisie`** : le stock déclaré ne devise plus. Garder le champ (il
-  sert au dimensionnement et au recoupement de densité), changer son texte.
+- **`MagasinSaisie`** : fait le 2 septembre 2026, et **la décision a changé en
+  chemin**. Ce point disait « garder le champ de stock, changer son texte » ;
+  Julien a tranché l'inverse — **le stock et la surface quittent les deux
+  formulaires**, remplacés par le nombre d'appareils. Un chiffre qui ne tarife
+  plus rien n'a rien à faire dans un formulaire public : il se remplit mal, il
+  se discute pour rien, et il laisse croire qu'il pèse sur le prix.
+  ⚠️ Contrepartie assumée : `alerteDensite` (le repérage d'un stock déclaré
+  invraisemblable) et l'écran `/admin/usage` n'ont plus de source sur les
+  demandes nouvelles. Ils ne servent plus qu'aux magasins déclarés avant cette
+  date. Les colonnes `units` et `sqm` restent en base.
+  Et **l'offre s'affiche à la frappe**, ce qui renverse la règle du 22 août :
+  elle valait contre un chiffre déclaré et invérifiable, pas contre une assiette
+  mesurable dont les trois prix sont publics.
 - **CGV** : les articles 5.1, 6.3, 6.4 et 6.5 portent la déclaration et la
   régularisation du volume. Ils sont remplacés par une clause sur le nombre
   d'appareils et le dépassement.

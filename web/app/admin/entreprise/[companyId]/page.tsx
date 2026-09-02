@@ -21,8 +21,9 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Renommer } from '@/components/ui/Renommer'
 import { AppShell } from '@/components/AppShell'
 import { UsageConstate } from '@/components/admin/UsageConstate'
-import { densite, trancheDe } from '@/lib/tarifs'
-import { lignesProposees, referenceProposee, totalProposeCents } from '@/lib/devis'
+import { densite } from '@/lib/tarifs'
+import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
+import { nomOffre, prixCents } from '@/lib/offres'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = {
@@ -41,7 +42,7 @@ type Invitation = {
 type Detail = { company: Company; stores: Store[]; members: Member[]; invitations: Invitation[] }
 type StoreRequest = {
   id: string; company_id: string; store_id: string | null; store_name: string; message: string
-  units: number | null; sqm: number | null
+  devices: number | null; units: number | null; sqm: number | null
   kind: 'add' | 'remove'
   status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected' | 'declined'
   requested_label: string; created_at: string
@@ -92,36 +93,68 @@ const enCours = (d: StoreRequest) =>
  * Le panneau qui établit le devis d'un magasin — même figure que celui des
  * demandes d'inscription, sur une seule ligne : un magasin, une licence.
  *
- * Le montant proposé vient de la grille et du volume déclaré ; il reste
- * modifiable, c'est la ligne saisie qui part dans le PDF.
+ * Le montant proposé vient de la grille des offres et du nombre d'appareils
+ * déclaré ; il reste modifiable, c'est la ligne saisie qui part dans le PDF.
+ *
+ * ⚠️ Le rythme décide de ce qui est facturé, de ce que dit le PDF et de la
+ * session Stripe qu'ouvre l'acceptation. Miroir exact du panneau des
+ * inscriptions (`components/admin/CompanyRequests`) : les deux doivent bouger
+ * ensemble — l'asymétrie entre fonctions sœurs est le signe habituel de
+ * l'oubli, ce projet l'a payée trois fois.
  */
 function PanneauDevisMagasin({
   demande, busy, onEnvoyer,
 }: {
   demande: StoreRequest
   busy: boolean
-  onEnvoyer: (reference: string, cents: number) => void
+  onEnvoyer: (reference: string, cents: number, rythme: Rythme) => void
 }) {
-  const lignes = lignesProposees([{ name: demande.store_name, units: demande.units, sqm: demande.sqm }], 1)
+  const [rythme, setRythme] = useState<Rythme>('yearly')
+  const lignes = lignesProposees([{ name: demande.store_name, devices: demande.devices }], 1, rythme)
   const propose = totalProposeCents(lignes)
   const [reference, setReference] = useState(
     demande.quote_reference || referenceProposee(new Date().getFullYear(), demande.id),
   )
+  const [touche, setTouche] = useState(false)
   const [montant, setMontant] = useState(
     ((demande.quote_amount_cents ?? propose.cents) / 100).toFixed(2).replace('.', ','),
   )
 
+  function changerRythme(r: Rythme) {
+    setRythme(r)
+    if (touche) return
+    const t = totalProposeCents(lignesProposees([{ name: demande.store_name, devices: demande.devices }], 1, r))
+    setMontant((t.cents / 100).toFixed(2).replace('.', ','))
+  }
+
   const cents = Math.round(Number(montant.replace(/\s/g, '').replace(',', '.')) * 100)
   const valide = reference.trim() !== '' && Number.isFinite(cents) && cents >= 0
+  const mensuel = rythme === 'monthly'
 
   return (
     <div className="devis-panneau">
+      <div className="devis-rythme" role="group" aria-label="Rythme de facturation">
+        <button
+          type="button" className={mensuel ? '' : 'actif'} aria-pressed={!mensuel}
+          onClick={() => changerRythme('yearly')}
+        >
+          À l’année
+        </button>
+        <button
+          type="button" className={mensuel ? 'actif' : ''} aria-pressed={mensuel}
+          onClick={() => changerRythme('monthly')}
+        >
+          Par mois
+        </button>
+      </div>
       <div className="devis-panneau-lignes">
         {lignes.map((l, i) => (
           <div className="devis-panneau-ligne" key={i}>
             <span>{l.libelle}</span>
-            <span className="muted">{l.unites == null ? '—' : `${nb(l.unites)} pièces`}</span>
-            <span className="muted">{l.tranche || '—'}</span>
+            <span className="muted">
+              {l.appareils == null ? '—' : `${nb(l.appareils)} appareil${l.appareils > 1 ? 's' : ''}`}
+            </span>
+            <span className="muted">{l.offre || '—'}</span>
             <span className="n">
               {l.prixCents == null
                 ? 'sur devis'
@@ -136,39 +169,61 @@ function PanneauDevisMagasin({
           <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={40} />
         </label>
         <label>
-          Montant annuel HT
-          <input value={montant} onChange={(e) => setMontant(e.target.value)} inputMode="decimal" />
+          {mensuel ? 'Montant mensuel HT' : 'Montant annuel HT'}
+          <input
+            value={montant}
+            onChange={(e) => { setTouche(true); setMontant(e.target.value) }}
+            inputMode="decimal"
+          />
         </label>
       </div>
       <div className="devis-panneau-actions">
         <button
           className="btn btn-primary btn-sm"
           disabled={busy || !valide}
-          onClick={() => valide && onEnvoyer(reference.trim(), cents)}
+          onClick={() => valide && onEnvoyer(reference.trim(), cents, rythme)}
         >
           {busy ? 'Envoi…' : 'Envoyer le devis'}
         </button>
         <span className="muted small">
-          Le PDF est fabriqué et joint à l&apos;envoi, avec le lien d&apos;acceptation.
+          {mensuel
+            ? 'Le PDF dit « abonnement mensuel », et l’acceptation ouvre un abonnement Stripe.'
+            : 'Le PDF est fabriqué et joint à l’envoi, avec le lien d’acceptation.'}
         </span>
       </div>
     </div>
   )
 }
 
-function VolumeDemande({ units, sqm }: { units: number | null; sqm: number | null }) {
-  const tranche = trancheDe(units)
+/**
+ * Ce que la demande a déclaré.
+ *
+ * ⚠️ Le stock et la surface ne s'affichent que pour les demandes d'avant le
+ * 2 septembre 2026 : elles n'ont pas d'appareils, et leur volume ne tarife plus
+ * rien — il ne sert plus qu'au recoupement d'ordre de grandeur.
+ */
+function VolumeDemande({
+  devices, units, sqm,
+}: { devices: number | null; units: number | null; sqm: number | null }) {
+  const offre = nomOffre(devices)
+  const prix = prixCents(devices, 'yearly')
   const d = densite(units, sqm)
+  if (devices !== null) {
+    return (
+      <div className="muted small">
+        {nb(devices)} appareil{devices > 1 ? 's' : ''}
+        {offre && prix !== null && (
+          <> · <b>{offre}</b> — {nb(Math.round(prix / 100))} € / an</>
+        )}
+      </div>
+    )
+  }
   return (
     <div className="muted small">
-      {units === null ? 'Stock non déclaré' : `${nb(units)} pièces`}
+      Appareils non déclarés
+      {units !== null && ` · ${nb(units)} pièces`}
       {sqm !== null && ` · ${nb(sqm)} m²`}
       {d !== null && ` · ${nb(Math.round(d))} pièces/m²`}
-      {tranche && (
-        <> · <b>{tranche.profil}</b> — {tranche.prixEuros === null
-          ? 'sur devis'
-          : `${nb(tranche.prixEuros)} € / an`}</>
-      )}
     </div>
   )
 }
@@ -234,11 +289,14 @@ export default function AdminCompanyPage() {
   }
 
   /** Envoyer le devis d'un magasin — même edge que les inscriptions. */
-  async function envoyerDevisMagasin(d: StoreRequest, reference: string, cents: number) {
-    const lignes = lignesProposees([{ name: d.store_name, units: d.units, sqm: d.sqm }], 1)
+  async function envoyerDevisMagasin(d: StoreRequest, reference: string, cents: number, rythme: Rythme) {
+    const lignes = lignesProposees([{ name: d.store_name, devices: d.devices }], 1, rythme)
     setBusy(d.id)
     const { data, error } = await supabase.functions.invoke('admin-send-quote', {
-      body: { requestId: d.id, reference, amountCents: cents, lines: lignes, target: 'store' },
+      body: {
+        requestId: d.id, reference, amountCents: cents, lines: lignes,
+        target: 'store', billingPeriod: rythme,
+      },
     })
     setBusy(null)
     if (!error && data?.success) {
@@ -252,6 +310,7 @@ export default function AdminCompanyPage() {
     if (error) {
       if (await appel('admin_quote_store_request', {
         p_id: d.id, p_reference: reference, p_amount_cents: cents, p_note: '', p_lines: lignes,
+        p_billing_period: rythme,
       })) {
         alert("Devis enregistré, mais l'envoi automatique n'a pas répondu : le client n'a rien reçu.")
         setDevisOuvert(null)
@@ -457,7 +516,7 @@ export default function AdminCompanyPage() {
                       <span className="pill pill-refus" style={{ marginLeft: 8 }}>Suppression</span>
                     )}
                   </div>
-                  {d.kind === 'add' && <VolumeDemande units={d.units} sqm={d.sqm} />}
+                  {d.kind === 'add' && <VolumeDemande devices={d.devices} units={d.units} sqm={d.sqm} />}
                   <div className="muted small">
                     Demandé le {frDate(d.created_at)}
                     {d.requested_label && ` par ${d.requested_label}`}
@@ -480,7 +539,7 @@ export default function AdminCompanyPage() {
                     <PanneauDevisMagasin
                       demande={d}
                       busy={busy === d.id}
-                      onEnvoyer={(reference, cents) => envoyerDevisMagasin(d, reference, cents)}
+                      onEnvoyer={(reference, cents, rythme) => envoyerDevisMagasin(d, reference, cents, rythme)}
                     />
                   )}
                 </div>

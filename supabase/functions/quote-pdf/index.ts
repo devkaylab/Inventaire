@@ -48,6 +48,9 @@ Deno.serve(async (req) => {
       siren: data.siren ?? null,
       lignes,
       totalCents: typeof data.amount_cents === 'number' ? data.amount_cents : 0,
+      // Le rythme vient de la base : le PDF téléchargé doit dire la même chose
+      // que celui joint à l'e-mail — c'est tout l'objet du module partagé.
+      rythme: data.billing_period === 'monthly' ? 'monthly' : 'yearly',
       emisLe: new Date(data.sent_at ?? Date.now()),
       expireLe: new Date(data.expires_at ?? Date.now()),
     })

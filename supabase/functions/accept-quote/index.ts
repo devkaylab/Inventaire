@@ -17,7 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
 import { euros } from '../_shared/devis.ts'
-import { creerSessionCheckout, lireSessionCheckout } from '../_shared/stripe.ts'
+import { creerAbonnementSurMesure, creerSessionCheckout, lireSessionCheckout } from '../_shared/stripe.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -69,6 +69,15 @@ Deno.serve(async (req) => {
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
   const kind: 'company' | 'store' = result.kind === 'store' ? 'store' : 'company'
   const requestId = result.request_id as string | undefined
+  // ⚠️ Le rythme décide du MODE Stripe : paiement unique pour une licence
+  // annuelle (inchangé depuis le 22 août, vérifié de bout en bout), abonnement
+  // pour un devis mensuel — un mois ne se facture pas en une fois.
+  const mensuel = result.billing_period === 'monthly'
+  // ⚠️ La TVA. Nos montants sont hors taxes : sans ce taux, Stripe encaisse le
+  // HT et la TVA due sort de la poche de l'éditeur. Le taux vit dans le
+  // tableau de bord Stripe, en mode EXCLUSIF (il s'ajoute au prix) ; un taux
+  // inclusif ferait l'inverse et découperait le montant.
+  const taxRateId = Deno.env.get('STRIPE_TAX_RATE') ?? null
   if (stripeKey && requestId && typeof result.amount_cents === 'number' && result.amount_cents > 0
       && result.status !== 'paid' && result.status !== 'created') {
     try {
@@ -79,10 +88,9 @@ Deno.serve(async (req) => {
       const existante = typeof result.checkout_session_id === 'string'
         ? await lireSessionCheckout(stripeKey, result.checkout_session_id)
         : null
-      const objet = kind === 'store'
-        ? `Licence annuelle — ${result.store_name}`
-        : `Licence annuelle — ${result.company_name}`
-      const session = existante ?? await creerSessionCheckout(stripeKey, {
+      const nom = kind === 'store' ? result.store_name : result.company_name
+      const objet = `${mensuel ? 'Abonnement mensuel' : 'Licence annuelle'} — ${nom}`
+      const commande = {
         requestId,
         kind,
         tentative: typeof result.checkout_session_id === 'string' ? Date.now() : 0,
@@ -91,9 +99,13 @@ Deno.serve(async (req) => {
         description: `Devis ${result.reference} · Quantinvo, l’outil d’inventaire pour le commerce`,
         customerEmail: result.contact_email,
         reference: result.reference ?? '',
+        taxRateId,
         successUrl: `${appUrl}/devis/${jeton}?paiement=ok`,
         cancelUrl: `${appUrl}/devis/${jeton}`,
-      })
+      }
+      const session = existante ?? (mensuel
+        ? await creerAbonnementSurMesure(stripeKey, commande)
+        : await creerSessionCheckout(stripeKey, commande))
       if (!existante) {
         await client.rpc('attach_checkout_session', {
           p_kind: kind, p_id: requestId, p_session_id: session.id, p_customer_id: session.customer,
@@ -130,15 +142,19 @@ Deno.serve(async (req) => {
       paragraphes: [
         'Merci : nous avons bien enregistré votre accord sur le devis ci-dessous.',
         paymentUrl
-          ? 'Il ne reste qu’à régler la licence, par carte ou par prélèvement SEPA. Vos accès sont créés dans la minute qui suit le paiement, et la facture vous est envoyée automatiquement.'
+          ? mensuel
+            ? 'Il ne reste qu’à régler la première échéance, par carte. Vos accès sont créés dans la minute qui suit le paiement, et la facture de chaque mois vous est envoyée automatiquement.'
+            : 'Il ne reste qu’à régler la licence, par carte ou par prélèvement SEPA. Vos accès sont créés dans la minute qui suit le paiement, et la facture vous est envoyée automatiquement.'
           : 'Votre facture vous parvient sous 48 heures. Vos accès sont créés dès son règlement, et nous vous écrivons à ce moment-là.',
       ],
       details: [
         { intitule: 'Référence', valeur: reference },
         { intitule: 'Entreprise', valeur: entreprise },
-        { intitule: 'Montant annuel HT', valeur: montant },
+        { intitule: mensuel ? 'Montant mensuel HT' : 'Montant annuel HT', valeur: montant },
       ],
-      ...(paymentUrl ? { bouton: { libelle: 'Régler la licence', lien: paymentUrl } } : {}),
+      ...(paymentUrl
+        ? { bouton: { libelle: mensuel ? 'Régler la première échéance' : 'Régler la licence', lien: paymentUrl } }
+        : {}),
       raison: 'Vous recevez ce message parce que vous venez d’accepter un devis Quantinvo.',
       siteUrl: appUrl,
     })
@@ -169,7 +185,7 @@ Deno.serve(async (req) => {
         titre: 'Un devis vient d’être accepté',
         apercu: `${entreprise} a accepté le devis ${reference}.`,
         paragraphes: [
-          `${entreprise} vient d’accepter le devis ${reference} pour ${objet} — ${montant} par an.`,
+          `${entreprise} vient d’accepter le devis ${reference} pour ${objet} — ${montant} ${mensuel ? 'par mois' : 'par an'}.`,
           paymentUrl
             ? 'Le paiement Stripe lui est proposé dans la foulée ; la création se fera toute seule à réception.'
             : `Il reste à facturer, encaisser, puis ${magasin ? 'créer le magasin' : 'créer l’entreprise'} depuis le tableau de bord.`,
@@ -178,7 +194,7 @@ Deno.serve(async (req) => {
           { intitule: 'Entreprise', valeur: entreprise },
           ...(magasin ? [{ intitule: 'Magasin', valeur: magasin }] : []),
           { intitule: 'Référence', valeur: reference },
-          { intitule: 'Montant annuel HT', valeur: montant },
+          { intitule: mensuel ? 'Montant mensuel HT' : 'Montant annuel HT', valeur: montant },
         ],
         bouton: { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
         raison: 'Vous recevez ce message parce que vous suivez les devis Quantinvo.',

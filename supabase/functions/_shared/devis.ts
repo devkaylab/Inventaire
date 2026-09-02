@@ -13,6 +13,12 @@
 //
 // Le module est volontairement **sans API Deno**, comme `email.ts`.
 //
+// ⚠️ **L'assiette a changé le 2 septembre 2026.** Une ligne se calcule sur le
+// nombre d'appareils qui comptent en même temps dans le magasin, plus sur son
+// volume de stock — la décision du 30 août (hypothèse 4) portée jusqu'au devis.
+// La grille ci-dessous est la **copie en centimes** de `web/lib/offres.ts` ;
+// `web/tests/devis.test.ts` échoue si les deux divergent.
+//
 // Charte « Papier » : fond blanc, encre pour le texte, indigo pour les titres et
 // le total, filet de scan cyan sous l'en-tête. Un devis s'imprime et se signe.
 // ============================================================================
@@ -32,20 +38,28 @@ export const COULEURS_DEVIS = {
 /** Un magasin déclaré au formulaire d'inscription. */
 export type MagasinDeclare = {
   name?: string | null
+  /** Appareils comptant en même temps dans ce magasin — l'assiette. */
+  devices?: number | null
+  /** Volume de stock. ⚠️ Ne tarife plus rien ; lu pour les demandes anciennes. */
   units?: number | null
   sqm?: number | null
 }
+
+/** Les deux rythmes, écrits comme la base et Stripe les nomment. */
+export type Rythme = 'monthly' | 'yearly'
 
 /** Une ligne du devis, telle qu'elle s'affiche et se facture. */
 export type LigneDevis = {
   /** Nom du magasin, ou « Magasin 2 » à défaut. */
   libelle: string
-  /** Volume déclaré, en unités. `null` si non renseigné. */
-  unites: number | null
-  /** Profil tarifaire — « Grande surface ». Vide si hors grille. */
-  tranche: string
-  /** Licence annuelle HT, en centimes. `null` = sur devis. */
+  /** Appareils déclarés. `null` si la demande est antérieure à la bascule. */
+  appareils: number | null
+  /** Nom de l'offre — « Advanced ». Vide si rien n'est déclaré. */
+  offre: string
+  /** Licence HT, en centimes, au rythme du devis. `null` = sur devis. */
   prixCents: number | null
+  /** Ce que le magasin vaut à l'année — voir la migration `20260902120001`. */
+  annuelCents: number | null
 }
 
 export type Devis = {
@@ -62,48 +76,82 @@ export type Devis = {
   lignes: LigneDevis[]
   /** Total facturé, en centimes — celui saisi en console, qui fait foi. */
   totalCents: number
+  /** Le rythme du devis. Décide des libellés du tableau et du total. */
+  rythme?: Rythme
   emisLe: Date
   expireLe: Date
 }
 
-/** Grille des tranches, en centimes. Doit rester alignée sur `web/lib/tarifs.ts`. */
-const TRANCHES: readonly { max: number | null; profil: string; prixCents: number | null }[] = [
-  { max: 10_000, profil: 'Boutique', prixCents: 210_000 },
-  { max: 50_000, profil: 'Magasin', prixCents: 420_000 },
-  { max: 200_000, profil: 'Grande surface', prixCents: 660_000 },
-  { max: 500_000, profil: 'Grand magasin', prixCents: 1_020_000 },
-  { max: 1_000_000, profil: 'Très grand magasin', prixCents: 1_440_000 },
-  { max: null, profil: 'Hypermarché', prixCents: null },
+/** Grille des offres, en centimes. Doit rester alignée sur `web/lib/offres.ts`. */
+export const OFFRES_CENTIMES: readonly {
+  cle: string; nom: string; max: number; moisCents: number; anCents: number
+}[] = [
+  { cle: 'essential', nom: 'Essential', max: 2, moisCents: 8_900, anCents: 95_000 },
+  { cle: 'advanced', nom: 'Advanced', max: 20, moisCents: 31_000, anCents: 330_000 },
+  { cle: 'enterprise', nom: 'Enterprise', max: 100, moisCents: 89_000, anCents: 945_000 },
 ]
 
-/** Tranche applicable à un volume, ou `null` si le volume n'est pas exploitable. */
-export function trancheDeUnites(unites: number | null | undefined) {
-  if (unites == null || !Number.isFinite(unites) || unites <= 0) return null
-  return TRANCHES.find((t) => t.max === null || unites <= t.max) ?? null
+/** Au-delà de cent appareils, par tranche de dix entamée. */
+export const SUPPLEMENT_CENTIMES = { par: 10, moisCents: 6_400, anCents: 69_000 } as const
+
+/** Le plafond au-delà duquel le palier Enterprise se prolonge. */
+export const APPAREILS_MAX = 100
+
+const exploitable = (n: number | null | undefined): n is number =>
+  n != null && Number.isFinite(n) && n > 0
+
+/**
+ * Le prix d'un magasin, en centimes, hors taxes.
+ *
+ * Rend `null` pour un nombre d'appareils inexploitable : zéro appareil n'est
+ * pas un magasin gratuit, c'est une saisie incomplète — et c'est le cas de
+ * toutes les demandes déposées avant la bascule du 2 septembre 2026.
+ */
+export function prixCents(appareils: number | null | undefined, rythme: Rythme = 'yearly'): number | null {
+  if (!exploitable(appareils)) return null
+  const annuel = rythme === 'yearly'
+  const socle = OFFRES_CENTIMES[OFFRES_CENTIMES.length - 1]
+  const o = OFFRES_CENTIMES.find((x) => appareils <= x.max)
+  if (o) return annuel ? o.anCents : o.moisCents
+  const tranches = Math.ceil((appareils - APPAREILS_MAX) / SUPPLEMENT_CENTIMES.par)
+  const base = annuel ? socle.anCents : socle.moisCents
+  const pas = annuel ? SUPPLEMENT_CENTIMES.anCents : SUPPLEMENT_CENTIMES.moisCents
+  return base + tranches * pas
+}
+
+/** Le nom de l'offre qui couvre ce nombre d'appareils. Vide si inexploitable. */
+export function nomOffre(appareils: number | null | undefined): string {
+  if (!exploitable(appareils)) return ''
+  return (OFFRES_CENTIMES.find((x) => appareils <= x.max)
+    ?? OFFRES_CENTIMES[OFFRES_CENTIMES.length - 1]).nom
 }
 
 /**
  * Lignes proposées pour une demande.
  *
- * Un magasin sans volume déclaré garde sa ligne, sans prix : il faut le voir
- * pour en parler, l'escamoter ferait un devis incomplet sans le dire.
+ * Un magasin sans appareils déclarés garde sa ligne, sans prix : il faut le
+ * voir pour en parler, l'escamoter ferait un devis incomplet sans le dire.
  */
-export function lignesProposees(stores: MagasinDeclare[] | null | undefined, storeCount = 0): LigneDevis[] {
+export function lignesProposees(
+  stores: MagasinDeclare[] | null | undefined,
+  storeCount = 0,
+  rythme: Rythme = 'yearly',
+): LigneDevis[] {
   const liste = (stores ?? []).filter(
-    (m) => (m.name ?? '').trim() !== '' || m.units != null || m.sqm != null,
+    (m) => (m.name ?? '').trim() !== '' || m.devices != null || m.units != null || m.sqm != null,
   )
   const source = liste.length > 0
     ? liste
     : Array.from({ length: Math.max(0, storeCount) }, () => ({} as MagasinDeclare))
 
   return source.map((m, i) => {
-    const unites = typeof m.units === 'number' && Number.isFinite(m.units) ? m.units : null
-    const t = trancheDeUnites(unites)
+    const appareils = exploitable(m.devices) ? m.devices : null
     return {
       libelle: (m.name ?? '').trim() || `Magasin ${i + 1}`,
-      unites,
-      tranche: t?.profil ?? '',
-      prixCents: t?.prixCents ?? null,
+      appareils,
+      offre: nomOffre(appareils),
+      prixCents: prixCents(appareils, rythme),
+      annuelCents: prixCents(appareils, 'yearly'),
     }
   })
 }
@@ -192,12 +240,18 @@ export function elementsDevis(devis: Devis): Element[] {
     e.push({ type: 'texte', x: marge, y, texte: devis.objet, taille: 9.5, gras: true, couleur: C.indigoProfond })
   }
 
-  // Tableau
+  // Tableau. Les deux colonnes du milieu disent l'assiette : le nombre
+  // d'appareils, et l'offre qu'il désigne. Le stock n'y figure plus — il ne
+  // tarife plus rien depuis le 2 septembre 2026.
+  const mensuel = devis.rythme === 'monthly'
   y = 88
   e.push({ type: 'texte', x: marge, y, texte: 'Magasin', taille: 8, gras: true, couleur: C.ardoise })
-  e.push({ type: 'texte', x: marge + 82, y, texte: 'Stock déclaré', taille: 8, gras: true, couleur: C.ardoise })
-  e.push({ type: 'texte', x: marge + 118, y, texte: 'Profil', taille: 8, gras: true, couleur: C.ardoise })
-  e.push({ type: 'texte', x: droite, y, texte: 'Licence annuelle HT', taille: 8, gras: true, couleur: C.ardoise, alignement: 'droite' })
+  e.push({ type: 'texte', x: marge + 82, y, texte: 'Appareils', taille: 8, gras: true, couleur: C.ardoise })
+  e.push({ type: 'texte', x: marge + 118, y, texte: 'Offre', taille: 8, gras: true, couleur: C.ardoise })
+  e.push({
+    type: 'texte', x: droite, y, taille: 8, gras: true, couleur: C.ardoise, alignement: 'droite',
+    texte: mensuel ? 'Abonnement mensuel HT' : 'Licence annuelle HT',
+  })
   y += 2.5
   e.push({ type: 'trait', x1: marge, y1: y, x2: droite, y2: y, epaisseur: 0.4, couleur: C.filet })
 
@@ -210,9 +264,9 @@ export function elementsDevis(devis: Devis): Element[] {
     e.push({ type: 'texte', x: marge, y, texte: l.libelle, taille: 10, couleur: C.encre })
     e.push({
       type: 'texte', x: marge + 82, y, taille: 9.5, couleur: C.encre2,
-      texte: l.unites === null ? '—' : `${nombre(l.unites)} pièces`,
+      texte: l.appareils === null ? '—' : `${nombre(l.appareils)} appareil${l.appareils > 1 ? 's' : ''}`,
     })
-    e.push({ type: 'texte', x: marge + 118, y, texte: l.tranche || '—', taille: 9.5, couleur: C.encre2 })
+    e.push({ type: 'texte', x: marge + 118, y, texte: l.offre || '—', taille: 9.5, couleur: C.encre2 })
     e.push({
       type: 'texte', x: droite, y, alignement: 'droite', taille: 10, gras: true, couleur: C.encre,
       texte: l.prixCents === null ? 'sur devis' : euros(l.prixCents),
@@ -231,7 +285,10 @@ export function elementsDevis(devis: Devis): Element[] {
   // Total
   y += 14
   e.push({ type: 'bloc', x: marge, y: y - 7, largeur: droite - marge, hauteur: 16, couleur: C.brume })
-  e.push({ type: 'texte', x: marge + 5, y: y + 2, texte: 'Total annuel hors taxes', taille: 10.5, gras: true, couleur: C.encre })
+  e.push({
+    type: 'texte', x: marge + 5, y: y + 2, taille: 10.5, gras: true, couleur: C.encre,
+    texte: mensuel ? 'Total mensuel hors taxes' : 'Total annuel hors taxes',
+  })
   e.push({
     type: 'texte', x: droite - 5, y: y + 3, alignement: 'droite', taille: 15, gras: true,
     couleur: C.indigoProfond, texte: euros(devis.totalCents),
@@ -239,8 +296,15 @@ export function elementsDevis(devis: Devis): Element[] {
 
   // Conditions
   y += 22
+  // ⚠️ La première ligne dit ce que l'offre borne, et ce qu'elle ne borne pas.
+  // « Comptages, compteurs et inventaires illimités » était vrai de la grille
+  // au volume ; il ne l'est plus — c'est le nombre d'appareils qui comptent en
+  // même temps qui est facturé.
   for (const ligne of [
-    'Licence annuelle par magasin. Comptages, compteurs et inventaires illimités.',
+    mensuel
+      ? 'Abonnement mensuel par magasin, pour le nombre d’appareils indiqué. Inventaires illimités.'
+      : 'Licence annuelle par magasin, pour le nombre d’appareils indiqué. Inventaires illimités.',
+    'Un appareil est un téléphone ou une tablette qui compte en même temps que les autres.',
     'TVA non applicable sur ce document — le montant hors taxes fait foi.',
     "L'acceptation de ce devis vaut bon pour accord. La facture suit, et les accès sont",
     'ouverts dès son règlement.',

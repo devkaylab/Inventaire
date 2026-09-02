@@ -37,6 +37,9 @@ type StoreRequest = {
   store_id: string | null
   store_name: string
   message: string
+  /** Appareils déclarés. Nul pour les demandes d'avant le 2 septembre 2026. */
+  devices: number | null
+  /** ⚠️ Volume de stock — ne tarife plus rien. Lu pour les demandes anciennes. */
   units: number | null
   sqm: number | null
   status: 'pending' | 'quoted' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected' | 'declined'
@@ -255,13 +258,12 @@ function DemandesMagasin() {
   const confirm = useConfirm()
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
   const [ouvert, setOuvert] = useState(false)
-  const [saisie, setSaisie] = useState<SaisieMagasin>({ nom: '', stock: '', surface: '' })
+  const [saisie, setSaisie] = useState<SaisieMagasin>({ nom: '', appareils: '' })
   const [mot, setMot] = useState('')
   const [busy, setBusy] = useState(false)
   const uid = useId()
 
-  const stock = nombreOuNull(saisie.stock)
-  const surface = nombreOuNull(saisie.surface)
+  const appareils = nombreOuNull(saisie.appareils)
 
   const charger = useCallback(async () => {
     const { data, error } = await supabase.rpc('ca_list_store_requests')
@@ -272,14 +274,14 @@ function DemandesMagasin() {
 
   function fermer() {
     setOuvert(false)
-    setSaisie({ nom: '', stock: '', surface: '' })
+    setSaisie({ nom: '', appareils: '' })
     setMot('')
   }
 
   async function envoyer(e: React.FormEvent) {
     e.preventDefault()
     const n = saisie.nom.trim()
-    if (!n || !stock) return
+    if (!n || !appareils || appareils <= 0) return
     setBusy(true)
     // Par l'edge function : même RPC, appelée avec ce jeton, plus l'accusé de
     // réception par e-mail. Repli sur la RPC directe si elle est injoignable —
@@ -287,16 +289,14 @@ function DemandesMagasin() {
     const corps = {
       name: n,
       message: mot.trim(),
-      units: Math.round(stock),
-      sqm: surface === null ? null : Math.round(surface),
+      devices: Math.round(appareils),
     }
     let { data, error } = await supabase.functions.invoke('ca-request-store', { body: corps })
     if (error) {
       ;({ data, error } = await supabase.rpc('ca_request_store', {
         p_name: corps.name,
         p_message: corps.message,
-        p_units: corps.units,
-        p_sqm: corps.sqm,
+        p_devices: corps.devices,
       }))
     }
     setBusy(false)
@@ -344,9 +344,10 @@ function DemandesMagasin() {
                   </span>
                 </div>
                 <div className="muted small">
-                  {d.units !== null && `${nb(d.units)} pièces`}
-                  {d.sqm !== null && ` · ${nb(d.sqm)} m²`}
-                  {d.units !== null && ' · '}
+                  {/* Les demandes d'avant le 2 septembre 2026 portent un volume
+                      de stock et pas d'appareils : on affiche ce qu'elles ont. */}
+                  {d.devices !== null && `${nb(d.devices)} appareil${d.devices > 1 ? 's' : ''} · `}
+                  {d.devices === null && d.units !== null && `${nb(d.units)} pièces · `}
                   demandé le {jourCourt(d.created_at)}
                   {d.requested_label && ` par ${d.requested_label}`}
                   {d.status === 'pending' && ' · Quantinvo vous recontacte'}
@@ -392,8 +393,9 @@ function DemandesMagasin() {
       ) : (
         <form onSubmit={envoyer} className="panel demande-magasin" style={{ marginTop: 12 }}>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Le prix dépend du volume de stock&nbsp;: indiquez-le pour qu&apos;on puisse vous faire
-            un devis. Quantinvo crée ensuite le magasin.
+            Le prix dépend du nombre d&apos;appareils qui comptent en même temps dans ce
+            magasin&nbsp;: indiquez-le pour qu&apos;on puisse vous faire un devis. Quantinvo crée
+            ensuite le magasin.
           </p>
 
           <MagasinSaisie
@@ -415,14 +417,17 @@ function DemandesMagasin() {
           </div>
 
           <div className="inline-form">
-            <button className="btn btn-primary" disabled={busy || !saisie.nom.trim() || !stock}>
+            <button
+              className="btn btn-primary"
+              disabled={busy || !saisie.nom.trim() || !appareils || appareils <= 0}
+            >
               Envoyer la demande
             </button>
             <button type="button" className="link-btn" onClick={fermer}>Annuler</button>
           </div>
-          {!stock && saisie.nom.trim() !== '' && (
+          {(!appareils || appareils <= 0) && saisie.nom.trim() !== '' && (
             <p className="field-hint" style={{ marginTop: 10 }}>
-              Sans le stock, nous ne pouvons pas vous faire de devis.
+              Sans le nombre d&apos;appareils, nous ne pouvons pas vous faire de devis.
             </p>
           )}
         </form>

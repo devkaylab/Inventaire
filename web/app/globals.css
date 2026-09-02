@@ -440,6 +440,17 @@ a { color: inherit; text-decoration: none; }
    des champs — en clair comme en sombre. */
 .magasin input, .magasin textarea { background: var(--surface); }
 
+/* L'offre que le nombre d'appareils désigne, sous le champ (2 septembre 2026).
+   Elle informe, elle ne promet rien : le montant qui fait foi reste celui du
+   devis. En `--text-2` et non `--text-3` — c'est un prix, il doit passer le
+   contraste AA sur le fond de la carte ; c'est la correction déjà faite le
+   22 août sur la ligne de tranche. */
+.magasin-offre {
+  margin: 9px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.magasin-offre strong { color: var(--accent-light); font-weight: 700; }
+
 .magasin-top { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
 /* Le nom du magasin n'avait aucun habillage : dans la carte étroite de
    /inscription cela passait presque, dans l'espace connecté (1120 px) il
@@ -482,9 +493,9 @@ a { color: inherit; text-decoration: none; }
   background: var(--warning-soft); color: var(--warning-text); line-height: 1.5;
 }
 
-/* Le pied du formulaire d'inscription : ce qui remplace l'estimation chiffrée,
-   retirée le 22 août 2026 pour ne pas afficher le prix en face du champ qui le
-   détermine. */
+/* Le pied du formulaire d'inscription : ce que ces chiffres servent à faire.
+   Il ne remplace plus une estimation — depuis le 2 septembre 2026 chaque
+   magasin affiche son offre sous son champ (voir `.magasin-offre`). */
 .devis-note {
   margin: 16px 0; padding: 12px 14px; border-radius: 13px; font-size: 12.5px;
   background: var(--accent-soft); border: 1px solid var(--hairline);
@@ -2095,6 +2106,23 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg); border: 1px solid var(--hairline);
   display: flex; flex-direction: column; gap: 12px;
 }
+/* Le rythme du devis, en tête du panneau : c'est lui qui décide de tout le
+   reste — le montant proposé, le libellé du champ, le PDF, et la session
+   Stripe qu'ouvre l'acceptation. Même bascule que la page publique des tarifs,
+   à l'échelle d'un panneau d'administration. */
+.devis-rythme {
+  display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 12px;
+  background: var(--bg); border: 1px solid var(--hairline); border-radius: 12px;
+}
+.devis-rythme button {
+  font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  border: none; background: transparent; color: var(--text-2);
+  padding: 8px 14px; border-radius: 9px;
+}
+.devis-rythme button:hover { color: var(--text); }
+.devis-rythme button.actif { background: var(--accent); color: var(--on-accent); }
+.devis-rythme button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .devis-panneau-lignes { display: flex; flex-direction: column; }
 .devis-panneau-ligne {
   display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px 14px;

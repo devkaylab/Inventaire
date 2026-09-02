@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
+import { euros, prixCents } from '@/lib/offres'
 import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/registre'
 
 /**
@@ -16,24 +17,20 @@ import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/regist
  * Quantinvo devise, facture, puis transforme en entreprise et magasins. Les
  * codes ne sont générés qu'après encaissement, dans la console admin.
  *
- * Deux choses se déclarent magasin par magasin, et pas globalement :
+ * ⚠️ **Ce qui se déclare a changé le 2 septembre 2026 : le nombre d'appareils
+ * qui comptent en même temps, magasin par magasin.** Le stock théorique et la
+ * surface ont quitté la page — ils ne tarifent plus rien depuis que la grille
+ * est passée aux trois offres (30 août, hypothèse 4), et un chiffre qui ne
+ * pèse plus sur le prix n'a rien à faire dans un formulaire public.
  *
- * - le **stock théorique en unités**, parce que la tranche tarifaire s'applique
- *   à chaque magasin. Trois magasins de 60 000 unités ne se tarifent pas comme
- *   un de 180 000, donc un total serait inexploitable ;
- * - la **surface de vente**, qui ne tarife rien. Elle sert à recouper une
- *   déclaration que le Service ne sait pas vérifier lui-même (article 6.4 des
- *   CGV). Le recoupement **ne s'affiche jamais ici** : sur un formulaire public
- *   il reviendrait à soupçonner le prospect avant le devis, et surtout à lui
- *   indiquer quel chiffre ajuster. Il vit dans la console d'administration.
+ * Cela se déclare magasin par magasin, jamais globalement : un entrepôt qui
+ * compte à trente et une boutique qui compte à deux ne prennent pas la même
+ * offre, donc un total serait inexploitable.
  *
- * ⚠️ **Le tarif ne s'affiche plus** (décision de Julien, 22 août 2026, qui
- * renverse celle du 21). La page montrait la tranche de chaque magasin à la
- * frappe et une estimation annuelle en pied de formulaire. C'était indiquer au
- * prospect, pendant qu'il déclarait un chiffre invérifiable, exactement de
- * combien le baisser pour changer de tranche — le même raisonnement qui tient
- * le recoupement stock / surface hors de cette page, appliqué au prix lui-même.
- * Le montant se lit sur le devis, établi par Quantinvo.
+ * ⚠️ **Et le tarif s'affiche de nouveau**, ce qui renverse la décision du
+ * 22 août. Elle valait contre un chiffre déclaré et invérifiable ; le nombre
+ * d'appareils se mesure, et les trois prix sont publics sur /tarifs. Le
+ * raisonnement complet est en tête de `components/MagasinSaisie`.
  */
 
 // La carte de saisie vit dans `components/MagasinSaisie` : la demande d'ajout
@@ -63,7 +60,7 @@ const SIREN_EXEMPLE = '123 456 789'
  * clés suivantes viennent d'un `useRef`, et les identifiants se dérivent de
  * `useId()` et de l'index — stables par construction.
  */
-const PREMIER_MAGASIN: MagasinSaisi = { cle: 0, nom: '', stock: '', surface: '' }
+const PREMIER_MAGASIN: MagasinSaisi = { cle: 0, nom: '', appareils: '' }
 
 
 /**
@@ -134,6 +131,14 @@ export default function CompanyRequestPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Somme des offres, quand chaque magasin porte un nombre d'appareils. Un
+  // seul magasin sans chiffre et il n'y a plus d'estimation à donner : un total
+  // partiel se lirait comme un total.
+  const prixMagasins = magasins.map((m) => prixCents(nombreOuNull(m.appareils), 'yearly'))
+  const estimation: number | null = prixMagasins.some((p) => p === null)
+    ? null
+    : prixMagasins.reduce<number>((t, p) => t + (p ?? 0), 0)
+
   const alerteSiren = messageSiren(siren)
   const sirenOk = siren.length > 0 && sirenValide(siren)
   const [registre, setRegistre] = useState<ResultatRegistre | null>(null)
@@ -183,7 +188,7 @@ export default function CompanyRequestPage() {
   function ajouter() {
     const cle = cleSuivante.current
     cleSuivante.current += 1
-    setMagasins((liste) => [...liste, { cle, nom: '', stock: '', surface: '' }])
+    setMagasins((liste) => [...liste, { cle, nom: '', appareils: '' }])
   }
 
   function modifier(cle: number, champ: keyof MagasinSaisi, valeur: string) {
@@ -212,8 +217,7 @@ export default function CompanyRequestPage() {
     setLoading(true)
     const stores = magasins.map((m) => ({
       name: m.nom,
-      units: m.stock === '' ? null : nombreOuNull(m.stock),
-      sqm: m.surface === '' ? null : nombreOuNull(m.surface),
+      devices: m.appareils === '' ? null : nombreOuNull(m.appareils),
     }))
     // Par l'edge function, qui prévient le prospect et Quantinvo ; repli sur
     // la RPC directe si elle est injoignable — la demande passe alors sans
@@ -378,13 +382,22 @@ export default function CompanyRequestPage() {
             <p className="field-hint">Un code d&apos;accès sera généré pour chaque magasin.</p>
           </div>
 
-          {/* Pas d'estimation chiffrée : voir l'en-tête de `MagasinSaisie`. Le
-              montant se lit sur le devis, pas en face du champ qui le
-              détermine. */}
+          {/* L'estimation, quand tous les magasins sont renseignés. Elle dit
+              qu'elle est une estimation : le montant qui engage est celui du
+              devis, et il se négocie — surtout sur un réseau. */}
           <p className="devis-note">
-            Ces informations nous servent à dimensionner votre installation. La licence est
-            par magasin, calée sur le nombre de personnes qui comptent en même temps,
-            comptages illimités.
+            {estimation === null ? (
+              <>
+                La licence est par magasin, calée sur le nombre d’appareils qui comptent en même
+                temps. Inventaires et comptages illimités.
+              </>
+            ) : (
+              <>
+                Estimation : <strong>{euros(estimation / 100)} par an HT</strong> pour{' '}
+                {magasins.length} magasin{magasins.length > 1 ? 's' : ''}. Nous revenons vers vous
+                avec un devis — sur un réseau, il se discute.
+              </>
+            )}
           </p>
 
           <div className="field">

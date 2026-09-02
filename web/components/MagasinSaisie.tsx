@@ -1,29 +1,44 @@
 'use client'
 
-// La carte « un magasin » — nom, stock théorique, surface.
+// La carte « un magasin » — son nom, et le nombre d'appareils qui y comptent.
 //
 // Elle est née sur /inscription, où le prospect déclare ses magasins. Elle sert
 // aussi à l'administrateur d'entreprise qui demande l'ajout d'un magasin : dans
-// les deux cas on demande la même chose, pour la même raison — la licence se
-// tarife au volume de stock, donc une demande sans stock est une demande que
-// Quantinvo ne peut pas deviser.
+// les deux cas on demande la même chose, pour la même raison — c'est ce qui
+// tarife la licence.
 //
-// ⚠️ **Aucun prix ni aucune tranche ne s'affiche ici** (décision de Julien,
-// 22 août 2026). La carte montrait la tranche et son tarif à la frappe : cela
-// disait au prospect, pendant qu'il saisissait, quel chiffre baisser pour payer
-// moins. Or le stock est **déclaré et invérifiable** — l'import du stock
-// théorique est facultatif et rattaché à un inventaire, pas au magasin. Afficher
-// le prix en face du champ, c'était fournir le mode d'emploi de la minoration.
-// Le montant ne se lit plus que sur le devis, établi par Quantinvo, et dans la
-// console (`CompanyRequests`, fiche d'une entreprise) où l'on devise.
-// Ne pas le réintroduire — un test monte la garde.
+// ⚠️ **L'ASSIETTE A CHANGÉ LE 2 SEPTEMBRE 2026, et avec elle deux règles.**
+//
+// 1. **Le stock théorique et la surface ont quitté ce formulaire.** La licence
+//    se calait sur le volume de stock jusqu'au 30 août ; elle se cale désormais
+//    sur le nombre d'appareils qui comptent EN MÊME TEMPS dans le magasin
+//    (hypothèse 4). Un chiffre qui ne tarife plus rien n'a rien à faire dans un
+//    formulaire public : il se remplit mal, il se discute pour rien, et il
+//    laisse croire qu'il pèse sur le prix.
+//    ⚠️ Conséquence à connaître : le recoupement stock / surface
+//    (`alerteDensite` d'`admin_pipeline`) et l'écran `/admin/usage` n'ont plus
+//    de source sur les demandes nouvelles. Ils ne servent plus qu'aux magasins
+//    déclarés avant cette date. Les colonnes `units` et `sqm` restent en base —
+//    on retire les appels d'abord, on supprime les objets plus tard.
+//
+// 2. **L'offre et son prix S'AFFICHENT à la frappe**, ce qui renverse la
+//    décision du 22 août 2026. Elle interdisait d'afficher un tarif en face du
+//    champ qui le détermine, et elle avait raison tant que ce champ était le
+//    stock : déclaré, invérifiable, il indiquait au prospect quel chiffre
+//    baisser pour payer moins. Le nombre d'appareils est d'une autre nature —
+//    il se mesure, c'est même la raison pour laquelle cette assiette a été
+//    retenue — et les trois prix sont publics sur /tarifs depuis le 30 août.
+//    Les cacher ici ne protégerait plus rien : cela ferait seulement remplir un
+//    formulaire à l'aveugle.
 //
 // Une seule définition, donc. Les deux écrans ne doivent pas se mettre à
 // diverger sur les libellés ou les unités.
 
-export type SaisieMagasin = { nom: string; stock: string; surface: string }
+import { euros, nomOffre, prixCents } from '@/lib/offres'
 
-/** Une saisie libre (« 180 000 », « 1 200,5 ») ramenée à un nombre. */
+export type SaisieMagasin = { nom: string; appareils: string }
+
+/** Une saisie libre (« 12 », « 1 200 ») ramenée à un nombre. */
 export function nombreOuNull(saisie: string): number | null {
   const n = Number.parseFloat(saisie.replace(/\s/g, '').replace(',', '.'))
   return Number.isFinite(n) ? n : null
@@ -43,6 +58,10 @@ export function MagasinSaisie({
       le bon champ quand la carte est répétée. */
   idPrefix: string
 }) {
+  const appareils = nombreOuNull(valeur.appareils)
+  const offre = nomOffre(appareils)
+  const prix = prixCents(appareils, 'yearly')
+
   return (
     <div className="magasin">
       <div className="magasin-top">
@@ -66,33 +85,29 @@ export function MagasinSaisie({
         )}
       </div>
 
-      <div className="field-duo">
-        <div className="field">
-          <label htmlFor={`${idPrefix}-stock`}>Stock théorique</label>
-          <input
-            id={`${idPrefix}-stock`}
-            type="number"
-            min={0}
-            step={1000}
-            value={valeur.stock}
-            onChange={(e) => onChange('stock', e.target.value)}
-            placeholder="180 000"
-          />
-          <p className="field-hint">En pièces, toutes marques confondues.</p>
-        </div>
-        <div className="field">
-          <label htmlFor={`${idPrefix}-surface`}>Surface de vente</label>
-          <input
-            id={`${idPrefix}-surface`}
-            type="number"
-            min={0}
-            step={10}
-            value={valeur.surface}
-            onChange={(e) => onChange('surface', e.target.value)}
-            placeholder="1 200"
-          />
-          <p className="field-hint">En m², réserve comprise.</p>
-        </div>
+      <div className="field">
+        <label htmlFor={`${idPrefix}-appareils`}>Appareils qui comptent en même temps</label>
+        <input
+          id={`${idPrefix}-appareils`}
+          type="number"
+          min={1}
+          step={1}
+          value={valeur.appareils}
+          onChange={(e) => onChange('appareils', e.target.value)}
+          placeholder="5"
+        />
+        <p className="field-hint">
+          Téléphones ou tablettes qui scannent en même temps, le jour de l&apos;inventaire. Pas le
+          nombre de comptes, ni le nombre de salariés.
+        </p>
+        {/* L'offre se lit à la frappe : les trois prix sont publics, et c'est
+            ce que le devis reprendra. Rien n'est promis pour autant — un devis
+            se négocie, et le montant qui part est celui que Quantinvo établit. */}
+        {offre && prix !== null && (
+          <p className="magasin-offre">
+            <strong>{offre}</strong> — {euros(prix / 100)} / an HT par magasin
+          </p>
+        )}
       </div>
     </div>
   )

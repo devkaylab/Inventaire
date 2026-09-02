@@ -56,7 +56,14 @@ describe('la souscription ne crée rien qu’on ne puisse payer', () => {
     // serait facturé à un vrai client. Les six Prices vivent dans le tableau
     // de bord Stripe et voyagent par secret.
     expect(edge, 'le Price vient d’un secret').toContain('STRIPE_PRICE_')
-    const abonnement = stripe.slice(stripe.indexOf('creerAbonnementCheckout'))
+    // ⚠️ On ne découpe QUE cette fonction, pas la fin du fichier : depuis le
+    // 2 septembre 2026 `creerAbonnementSurMesure` la suit, et celle-là crée
+    // bien un prix — c'est l'exception du devis négocié, dont le montant est
+    // saisi et relu par un administrateur. La règle protège les trois offres
+    // publiques, dont les montants sont fixes et posés en secrets.
+    const debut = stripe.indexOf('export async function creerAbonnementCheckout')
+    const abonnement = stripe.slice(debut, stripe.indexOf('\nexport ', debut + 1))
+    expect(abonnement).toContain('priceId')
     expect(abonnement, 'pas de price_data en mode abonnement')
       .not.toContain('price_data')
   })
