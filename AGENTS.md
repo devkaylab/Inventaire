@@ -6851,13 +6851,16 @@ explique pourquoi il n'utilise pas telle fonction, donc il la cite. Le motif
 
 - **iOS : réglé et vérifié.** Champ ET bouton dégagés, clavier ouvert, sur le
   dernier champ de « Mot de passe ».
-- **Android : très amélioré, pas parfait.** Avant, rien ne bougeait du tout.
-  Maintenant le contenu défile et **le champ visé est visible**, ce qui était la
-  plainte. Le bouton de validation, lui, demande encore de faire défiler ou de
-  refermer le clavier. ⚠️ **Et sur Android un glissement REFERME le clavier**,
-  donc on ne fait pas défiler en tapant : mesuré, `mInputShown` passe à faux au
-  premier `swipe`. Reprendre ce point avec un vrai formulaire long si quelqu'un
-  s'en plaint ; ne pas y toucher au jugé.
+- **Android : réglé pour l'usage.** Avant, rien ne bougeait du tout. Maintenant
+  le contenu défile et **le champ visé est visible**, ce qui était la plainte.
+  Le bouton de validation demande encore de faire défiler ou de refermer le
+  clavier, et ⚠️ **sur Android un glissement REFERME le clavier** — mesuré,
+  `mInputShown` passe à faux au premier `swipe`.
+  · **⚠️ ARBITRÉ PAR JULIEN le 2 septembre 2026, appareil en main : « c'est bon
+    j'ai testé, aucune gêne ».** Ne pas y revenir sans qu'il le redemande. Trois
+    hypothèses ont déjà été démenties par la mesure dans cette seule journée, et
+    ce qui reste ne coûte rien à l'usage : le poursuivre reviendrait à risquer
+    une régression sur un défaut que personne ne ressent.
 - **✅ Confirmé par Julien, appareil en main, le 2 septembre 2026** : « testé et
   c'est fonctionnel », sur les deux plateformes et sur l'écran où il avait vu le
   défaut. C'est la seule preuve qui valait pour ce chantier — de mon côté, le
