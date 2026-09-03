@@ -1830,6 +1830,40 @@ export type Database = {
       }
       join_store: { Args: { p_code: string }; Returns: Json }
       leave_session: { Args: { p_session_id: string }; Returns: Json }
+      lister_articles: {
+        Args: { p_apres_sku?: string; p_limite?: number; p_session_id: string }
+        Returns: {
+          brand: string
+          ean: string
+          ean_norm: string
+          id: string
+          label: string
+          session_id: string
+          sku: string
+          unit_purchase_price: number
+          updated_at: string
+        }[]
+      }
+      lister_ecarts: {
+        Args: { p_session_id: string }
+        Returns: {
+          brand: string
+          ean: string
+          final_qty: number
+          id: string
+          label: string
+          qty_pass1: number
+          qty_pass2: number
+          qty_pass3: number
+          resolved_by: string
+          session_id: string
+          sku: string
+          status: string
+          unit_purchase_price: number
+          updated_at: string
+          zone: string
+        }[]
+      }
       log_admin_action: {
         Args: {
           p_action: string
@@ -1863,6 +1897,21 @@ export type Database = {
       marquer_alertes: { Args: { p_cles: string[] }; Returns: number }
       marquer_messages_lus: { Args: never; Returns: Json }
       marquer_notifications_lues: { Args: never; Returns: Json }
+      membre_ou_superviseur: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
+      mes_balises_comptees: {
+        Args: { p_pass?: number; p_session_id: string }
+        Returns: {
+          brand: string
+          ean: string
+          label: string
+          qty: number
+          sku: string
+          zone: string
+        }[]
+      }
       mes_fils: { Args: never; Returns: Json }
       mes_messages: { Args: never; Returns: Json }
       mes_notifications: { Args: never; Returns: Json }
@@ -1915,6 +1964,22 @@ export type Database = {
       revert_pass: {
         Args: { p_delete_counts?: boolean; p_session_id: string }
         Returns: Json
+      }
+      scans_de_balise: {
+        Args: { p_pass: number; p_session_id: string; p_zone?: string }
+        Returns: {
+          brand: string
+          dernier_scan: string
+          ean: string
+          ean_norm: string
+          id: string
+          label: string
+          qty: number
+          session_id: string
+          sku: string
+          unit_purchase_price: number
+          updated_at: string
+        }[]
       }
       set_balise: {
         Args: {

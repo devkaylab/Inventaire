@@ -53,15 +53,36 @@ export async function getSessionMembers(sessionId: string) {
   return data
 }
 
-export async function getMyCounts(sessionId: string, passNumber: number) {
-  const { data, error } = await supabase
-    .from('counts')
-    .select('*')
-    .eq('session_id', sessionId)
-    .eq('pass_number', passNumber)
-    .order('created_at', { ascending: false })
+/** Une ligne de « ce que j'ai compté », déjà agrégée par balise et référence. */
+export type BaliseComptee = {
+  zone: string
+  sku: string
+  qty: number
+  label: string | null
+  brand: string | null
+  ean: string | null
+}
+
+/**
+ * Ce que LA PERSONNE CONNECTÉE a compté, par balise et par référence.
+ *
+ * ⚠️ Remplace un `select` sur `counts` qui ne filtrait sur personne, et le
+ * défaut n'était pas que de volume : c'est la policy `counts_select_own` qui
+ * bornait un COMPTEUR à ses lignes. Un SUPERVISEUR relève de
+ * `counts_select_supervisor` — il voyait donc TOUTE L'ÉQUIPE sous un écran
+ * intitulé « ce que ce compteur a déjà compté ». Même défaut et même correctif
+ * que `get_my_count_totals` le 22 août 2026 : le filtre sur `auth.uid()` est
+ * dans la fonction, il ne dépend plus du rôle de qui appelle.
+ *
+ * L'agrégation et les libellés viennent du serveur : l'écran rapatriait chaque
+ * ligne de comptage, puis rechargeait les articles par un `.in()` non borné.
+ */
+export async function getMyCounts(sessionId: string, passNumber: number): Promise<BaliseComptee[]> {
+  const { data, error } = await supabase.rpc('mes_balises_comptees', {
+    p_session_id: sessionId, p_pass: passNumber,
+  })
   if (error) throwSupabase('getMyCounts', error)
-  return data
+  return (data ?? []) as BaliseComptee[]
 }
 
 /**
@@ -553,30 +574,62 @@ export async function deleteSessionPermanently(sessionId: string) {
   if (!result.success) throwSupabase('deleteSessionPermanently', new Error(result.error ?? 'Échec de la suppression'))
 }
 
-export async function getTheoreticalStock(sessionId: string) {
-  const { data, error } = await supabase
-    .from('theoretical_stock')
-    .select('*')
-    .eq('session_id', sessionId)
-  if (error) throwSupabase('getTheoreticalStock', error)
-  return data
-}
-
 export async function recomputeAudit(sessionId: string) {
   const { data, error } = await supabase.rpc('recompute_session_audit', { p_session_id: sessionId })
   if (error) throwSupabase('recomputeAudit', error)
   return data as { success: boolean; failed?: number; pending?: number; total?: number }
 }
 
-export async function getAudits(sessionId: string) {
-  const { data, error } = await supabase
-    .from('article_audit')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('status', { ascending: true })
-    .order('sku', { ascending: true })
-  if (error) throwSupabase('getAudits', error)
-  return data
+/** Le libellé d'un article, tel que l'écran des écarts l'affiche. */
+export type EtiquetteArticle = { label: string; brand: string; ean: string | null; price: number }
+
+/**
+ * Les écarts d'audit d'un inventaire, LIBELLÉS COMPRIS, en un seul appel.
+ *
+ * ⚠️ Remplace deux lectures directes, et il faut les deux raisons :
+ *
+ * 1. la policy d'`article_audit` s'évalue **une fois par ligne** (0,44 ms
+ *    mesurés) : lire toute la table d'un inventaire de 30 000 références
+ *    dépassait les 8 s du délai serveur ;
+ * 2. les libellés partaient en `.in('sku', …)` non borné — la longueur d'URL
+ *    admise ne le permet pas sur un gros catalogue.
+ *
+ * Mesuré à 190 ms sur 29 389 références. Ne pas revenir à un
+ * `.from('article_audit')`.
+ */
+export async function getEcarts(sessionId: string): Promise<{
+  audits: ArticleAudit[]
+  labels: Record<string, EtiquetteArticle>
+}> {
+  const { data, error } = await supabase.rpc('lister_ecarts', { p_session_id: sessionId })
+  if (error) throwSupabase('getEcarts', error)
+
+  const rows = (data ?? []) as (ArticleAudit & {
+    label: string | null; brand: string | null
+    ean: string | null; unit_purchase_price: number | null
+  })[]
+
+  const audits: ArticleAudit[] = []
+  const labels: Record<string, EtiquetteArticle> = {}
+  for (const r of rows) {
+    audits.push({
+      id: r.id, session_id: r.session_id, sku: r.sku, zone: r.zone,
+      qty_pass1: r.qty_pass1, qty_pass2: r.qty_pass2, qty_pass3: r.qty_pass3,
+      final_qty: r.final_qty, status: r.status,
+      resolved_by: r.resolved_by, updated_at: r.updated_at,
+    })
+    // Jointure externe : un article retiré du référentiel depuis le comptage
+    // garde sa ligne d'écart, sans libellé.
+    if (r.label !== null) {
+      labels[r.sku] = {
+        label: r.label, brand: r.brand ?? '', ean: r.ean,
+        price: Number(r.unit_purchase_price ?? 0),
+      }
+    }
+  }
+  // L'ordre d'affichage est celui d'avant : statut, puis référence.
+  audits.sort((a, b) => a.status.localeCompare(b.status) || a.sku.localeCompare(b.sku))
+  return { audits, labels }
 }
 
 /**
@@ -644,96 +697,76 @@ export type ScanEntrySeed = { article: Article; qty: number; timestamp: number }
 // (and app restarts) until the inventory is closed. Aggregates net qty per SKU
 // for the given session + pass + counter, drops SKUs that net to zero, and
 // joins the article details needed to render each row.
+/**
+ * La liste des scans d'une balise (ou du compteur, en mode classique).
+ *
+ * ⚠️ L'agrégation est faite EN BASE. La version précédente rapatriait chaque
+ * ligne de `counts` pour en faire une somme au téléphone, puis rechargeait les
+ * articles par tranches de 300 pour ne pas dépasser la longueur d'URL admise —
+ * sur un gros comptage, des milliers de lignes et une dizaine d'allers-retours,
+ * chacun payant un contrôle d'accès évalué ligne à ligne.
+ *
+ * `p_zone` décide du périmètre : la BALISE quand il est fourni (tous compteurs
+ * confondus, c'est ce qui permet la correction), la personne connectée sinon.
+ */
 export async function getMyScanEntries(
   sessionId: string,
   passNumber: number,
   countedBy: string,
   zone?: string | null,
 ): Promise<ScanEntrySeed[]> {
-  // En mode zones, on reconstruit la liste de la BALISE (tous compteurs confondus)
-  // pour permettre la correction ; sinon la liste du compteur (mode classique).
-  let q = supabase
-    .from('counts')
-    .select('sku, qty, created_at')
-    .eq('session_id', sessionId)
-    .eq('pass_number', passNumber)
-  q = zone != null ? q.eq('zone', zone) : q.eq('counted_by', countedBy)
-  const { data, error } = await q
+  void countedBy // le serveur lit `auth.uid()` : le paramètre reste pour l'appelant
+  const { data, error } = await supabase.rpc('scans_de_balise', {
+    // `undefined` laisse le défaut SQL (null) : c'est le mode classique, où
+    // le serveur filtre sur la personne connectée. Une chaîne vide, elle, est
+    // une vraie balise — le `??` ne doit donc pas la confondre avec l'absence.
+    p_session_id: sessionId, p_pass: passNumber, p_zone: zone ?? undefined,
+  })
   if (error) throwSupabase('getMyScanEntries', error)
 
-  const agg = new Map<string, { qty: number; ts: number }>()
-  for (const row of data ?? []) {
-    const cur = agg.get(row.sku) ?? { qty: 0, ts: 0 }
-    cur.qty += Number(row.qty)
-    const t = new Date(row.created_at as string).getTime()
-    if (t > cur.ts) cur.ts = t
-    agg.set(row.sku, cur)
-  }
-
-  const skus = [...agg.entries()].filter(([, v]) => v.qty > 0).map(([sku]) => sku)
-  if (skus.length === 0) return []
-
-  // Fetch article details in chunks — a counter may have scanned thousands of
-  // distinct SKUs, and a single huge `.in(...)` can blow the URL length limit.
-  const bySku = new Map<string, Article>()
-  const CHUNK = 300
-  for (let i = 0; i < skus.length; i += CHUNK) {
-    const slice = skus.slice(i, i + CHUNK)
-    const { data: articles, error: aErr } = await supabase
-      .from('articles')
-      .select('*')
-      .eq('session_id', sessionId)
-      .in('sku', slice)
-    if (aErr) throwSupabase('getMyScanEntries.articles', aErr)
-    for (const a of articles ?? []) bySku.set(a.sku, a)
-  }
-
-  const entries: ScanEntrySeed[] = []
-  for (const sku of skus) {
-    const article = bySku.get(sku)
-    if (!article) continue // article no longer exists (e.g. catalog re-import)
-    entries.push({ article, qty: agg.get(sku)!.qty, timestamp: agg.get(sku)!.ts })
-  }
-  entries.sort((a, b) => b.timestamp - a.timestamp)
-  return entries
+  return ((data ?? []) as (Article & { qty: number; dernier_scan: string })[]).map((r) => ({
+    article: {
+      id: r.id, sku: r.sku, ean: r.ean, brand: r.brand, label: r.label,
+      unit_purchase_price: r.unit_purchase_price, updated_at: r.updated_at,
+      session_id: r.session_id, ean_norm: r.ean_norm,
+    },
+    qty: Number(r.qty),
+    timestamp: new Date(r.dernier_scan).getTime(),
+  }))
 }
 
 /**
  * Tout le référentiel d'un inventaire, pour la mise en cache hors ligne.
  *
  * Pagination obligatoire : PostgREST plafonne une réponse à 1000 lignes, et un
- * inventaire de magasin en compte couramment plusieurs milliers. Sans les
- * `range`, le cache se remplirait silencieusement à moitié — et le compteur
- * verrait « article inconnu » en réserve sur tout ce qui dépasse.
+ * inventaire de magasin en compte couramment plusieurs milliers. Sans elle, le
+ * cache se remplirait silencieusement à moitié — et le compteur verrait
+ * « article inconnu » en réserve sur tout ce qui dépasse.
+ *
+ * ⚠️ LA PAGINATION EST PAR CLÉ (le dernier SKU lu), PLUS PAR `range`. Avec un
+ * `OFFSET`, la page N repayait le contrôle d'accès sur les N × 1000 lignes
+ * précédentes — la policy de `articles` s'évalue une fois par ligne. Mesuré sur
+ * un inventaire de 29 389 articles : page 1 → 388 ms, page 29 → 10 832 ms,
+ * au-delà du délai serveur de 8 s. Le cache d'un superviseur ne se remplissait
+ * donc plus du tout au-delà de ~20 000 articles, sans que rien ne le dise.
+ *
+ * Par `lister_articles`, les 30 pages complètes prennent 391 ms.
+ * Ne pas y remettre d'`offset`.
  */
 export async function getSessionArticles(sessionId: string): Promise<Article[]> {
   const PAGE = 1000
   const out: Article[] = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('articles')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('sku', { ascending: true })
-      .range(from, from + PAGE - 1)
+  let apres: string | null = null
+  for (;;) {
+    const { data, error } = await supabase.rpc('lister_articles', {
+      p_session_id: sessionId, p_apres_sku: apres ?? undefined, p_limite: PAGE,
+    })
     if (error) throwSupabase('getSessionArticles', error)
-    const page = data ?? []
+    const page = (data ?? []) as Article[]
     out.push(...page)
     if (page.length < PAGE) return out
+    apres = page[page.length - 1].sku
   }
-}
-
-export async function getArticleLabels(sessionId: string, skus: string[]) {
-  if (skus.length === 0) return {}
-  const { data, error } = await supabase
-    .from('articles')
-    .select('sku, label, brand, ean, unit_purchase_price')
-    .eq('session_id', sessionId)
-    .in('sku', skus)
-  if (error) throwSupabase('getArticleLabels', error)
-  const map: Record<string, { label: string; brand: string; ean: string | null; price: number }> = {}
-  for (const a of data ?? []) map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean, price: Number(a.unit_purchase_price ?? 0) }
-  return map
 }
 
 // ── Zones & balises ────────────────────────────────────────────────────────
