@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  getArticleLabels, getAudits, recomputeAudit, resolveAudit,
+  getEcarts, recomputeAudit, resolveAudit,
   type ArticleAudit, type ArticleLabel,
 } from '@/lib/inventory'
 import type { ZoneDashboardRow } from '@/lib/zones'
@@ -40,8 +40,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
       // Un seul recalcul explicite, au chargement de l'onglet — pas un par
       // onglet visité comme auparavant.
       await recomputeAudit(sessionId)
-      const a = await getAudits(sessionId)
-      const l = await getArticleLabels(sessionId, [...new Set(a.map(x => x.sku))])
+      const { audits: a, labels: l } = await getEcarts(sessionId)
       setAudits(a); setLabels(l)
     } catch (err) {
       toast.error(friendlyError(err))
@@ -317,5 +316,7 @@ async function recomputeAuditAfterUndo(sessionId: string, a: ArticleAudit): Prom
     .eq('sku', a.sku)
     .eq('zone', a.zone)
   if (error) throw error
-  await recomputeAudit(sessionId)
+  // `force` : on vient d'écrire dans `article_audit` sans toucher aux
+  // comptages, donc le raccourci du recalcul ne verrait rien bouger.
+  await recomputeAudit(sessionId, true)
 }

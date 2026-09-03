@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { annulerArbitrage, getArticleLabels, getAudits, getSession, getZoneDashboard, recomputeAudit, resolveAudit } from '@/lib/queries'
+import { annulerArbitrage, getEcarts, getSession, getZoneDashboard, recomputeAudit, resolveAudit } from '@/lib/queries'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { CocheIcon } from '@/components/ui/Icones'
 import type { ArticleAudit } from '@/lib/queries'
@@ -76,17 +76,14 @@ export default function AuditsScreen() {
   const { data: session } = useQuery({ queryKey: ['session', sessionId], queryFn: () => getSession(sessionId) })
   const usesZones = !!session?.uses_zones
 
-  const { data: audits, isLoading, refetch, isRefetching } = useQuery({
+  // Écarts et libellés viennent ensemble : une seule requête, une seule
+  // attente à l'écran. Voir `getEcarts` pour ce que cela remplace.
+  const { data: ecarts, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['audits', sessionId],
-    queryFn: () => getAudits(sessionId),
+    queryFn: () => getEcarts(sessionId),
   })
-
-  const skus = useMemo(() => [...new Set((audits ?? []).map((a) => a.sku))], [audits])
-  const { data: labels } = useQuery({
-    queryKey: ['audit-labels', sessionId, skus.length],
-    queryFn: () => getArticleLabels(sessionId, skus),
-    enabled: skus.length > 0,
-  })
+  const audits = ecarts?.audits
+  const labels = ecarts?.labels
   const { data: zoneRows } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
     queryFn: () => getZoneDashboard(sessionId),

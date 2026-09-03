@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg'
 import { useQuery } from '@tanstack/react-query'
 
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
-import { getArticleLabels, getMyCounts, getZones } from '@/lib/queries'
+import { getMyCounts, getZones } from '@/lib/queries'
 import { useTheme } from '@/lib/theme'
 
 /**
@@ -52,16 +52,21 @@ export function CountedBalisesList({
   const zoneName = new Map<string, string>()
   for (const z of zones ?? []) if (z.name) zoneName.set(z.code, z.name)
 
+  // Les lignes arrivent DÉJÀ agrégées par balise et par référence, libellés
+  // compris : le regroupement ci-dessous ne fait plus que les ranger.
+  const labels: Record<string, { label: string | null; brand: string | null; ean: string | null }> = {}
+  for (const c of countRows ?? []) labels[c.sku] = { label: c.label, brand: c.brand, ean: c.ean }
+
   const skuTotals = new Map<string, number>()
-  for (const c of countRows ?? []) skuTotals.set(c.sku, (skuTotals.get(c.sku) ?? 0) + c.qty)
+  for (const c of countRows ?? []) skuTotals.set(c.sku, (skuTotals.get(c.sku) ?? 0) + Number(c.qty))
   const summaryRows = [...skuTotals.entries()].map(([sku, qty]) => ({ sku, qty }))
 
   const baliseMap = new Map<string, { total: number; skus: Map<string, number> }>()
   for (const c of countRows ?? []) {
     const code = (c.zone ?? '').trim() || '—'
     const g = baliseMap.get(code) ?? { total: 0, skus: new Map<string, number>() }
-    g.total += c.qty
-    g.skus.set(c.sku, (g.skus.get(c.sku) ?? 0) + c.qty)
+    g.total += Number(c.qty)
+    g.skus.set(c.sku, (g.skus.get(c.sku) ?? 0) + Number(c.qty))
     baliseMap.set(code, g)
   }
   const sections = [...baliseMap.entries()]
@@ -73,14 +78,8 @@ export function CountedBalisesList({
       data: [...g.skus.entries()].map(([sku, qty]) => ({ sku, qty })).sort((a, b) => b.qty - a.qty),
     }))
 
-  const { data: labels } = useQuery({
-    queryKey: ['my-count-labels', sessionId, summaryRows.length],
-    queryFn: () => getArticleLabels(sessionId, summaryRows.map((r) => r.sku)),
-    enabled: summaryRows.length > 0,
-  })
-
   function renderArticle(item: { sku: string; qty: number }) {
-    const info = labels?.[item.sku]
+    const info = labels[item.sku]
     const title = info?.label || item.sku
     const meta: string[] = []
     if (info?.ean && info.ean === item.sku) {

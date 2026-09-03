@@ -291,41 +291,74 @@ export async function getSessionDetail(id: string): Promise<SessionDetailRow[]> 
   return (data ?? []) as SessionDetailRow[]
 }
 
-export async function getAudits(id: string): Promise<ArticleAudit[]> {
-  const { data, error } = await supabase
-    .from('article_audit')
-    .select('id,session_id,sku,zone,qty_pass1,qty_pass2,qty_pass3,final_qty,status,resolved_by,updated_at')
-    .eq('session_id', id)
-    .order('sku', { ascending: true })
-  if (error) fail('getAudits', error)
-  return (data ?? []) as ArticleAudit[]
-}
+/**
+ * Les écarts d'audit d'un inventaire, LIBELLÉS COMPRIS, en un seul appel.
+ *
+ * ⚠️ Remplace deux lectures directes qui ne tenaient pas la taille, et il faut
+ * les deux raisons pour comprendre pourquoi cette fonction existe :
+ *
+ * 1. `article_audit` porte une policy dont le garde s'évalue **une fois par
+ *    ligne** (0,44 ms mesurés) : lire toute la table d'un inventaire de
+ *    30 000 références dépassait les 8 s du délai serveur.
+ * 2. Les libellés se chargeaient par tranches de 200 SKU — la longueur d'URL
+ *    admise ne permet pas mieux — soit **150 requêtes en série** sur un gros
+ *    catalogue.
+ *
+ * `lister_ecarts` est `SECURITY DEFINER` : le droit se contrôle une fois, la
+ * jointure se fait en base. Mesuré à 190 ms sur 29 389 références.
+ *
+ * Ne pas revenir à un `.from('article_audit')` ni à un `.in('sku', …)` découpé.
+ */
+export async function getEcarts(id: string): Promise<{
+  audits: ArticleAudit[]
+  labels: Record<string, ArticleLabel>
+}> {
+  const { data, error } = await supabase.rpc('lister_ecarts', { p_session_id: id })
+  if (error) fail('getEcarts', error)
 
-const SKU_CHUNK = 200
+  const rows = (data ?? []) as (ArticleAudit & {
+    label: string | null
+    brand: string | null
+    ean: string | null
+    unit_purchase_price: number | null
+  })[]
 
-export async function getArticleLabels(id: string, skus: string[]): Promise<Record<string, ArticleLabel>> {
-  const map: Record<string, ArticleLabel> = {}
-  if (skus.length === 0) return map
-
-  // Un `.in()` non borné finit par dépasser la longueur d'URL admise dès qu'un
-  // inventaire dépasse quelques centaines de références : on découpe.
-  for (let i = 0; i < skus.length; i += SKU_CHUNK) {
-    const chunk = skus.slice(i, i + SKU_CHUNK)
-    const { data, error } = await supabase
-      .from('articles')
-      .select('sku,label,brand,ean,unit_purchase_price')
-      .eq('session_id', id)
-      .in('sku', chunk)
-    if (error) fail('getArticleLabels', error)
-    for (const a of (data ?? []) as { sku: string; label: string; brand: string; ean: string | null; unit_purchase_price: number | null }[]) {
-      map[a.sku] = { label: a.label, brand: a.brand, ean: a.ean, price: Number(a.unit_purchase_price ?? 0) }
+  const audits: ArticleAudit[] = []
+  const labels: Record<string, ArticleLabel> = {}
+  for (const r of rows) {
+    audits.push({
+      id: r.id, session_id: r.session_id, sku: r.sku, zone: r.zone,
+      qty_pass1: r.qty_pass1, qty_pass2: r.qty_pass2, qty_pass3: r.qty_pass3,
+      final_qty: r.final_qty, status: r.status,
+      resolved_by: r.resolved_by, updated_at: r.updated_at,
+    })
+    // La jointure est externe : un article supprimé du référentiel depuis le
+    // comptage garde sa ligne d'écart, sans libellé.
+    if (r.label !== null) {
+      labels[r.sku] = {
+        label: r.label, brand: r.brand ?? '', ean: r.ean,
+        price: Number(r.unit_purchase_price ?? 0),
+      }
     }
   }
-  return map
+  return { audits, labels }
 }
 
-export async function recomputeAudit(id: string): Promise<void> {
-  const { error } = await supabase.rpc('recompute_session_audit', { p_session_id: id })
+/**
+ * Recalcule les écarts d'un inventaire.
+ *
+ * ⚠️ `force` n'est PAS une commodité : sans comptage nouveau, la fonction sait
+ * qu'elle n'a rien à refaire et rend ses totaux en quelques millisecondes — ce
+ * qui est ce qui rend un inventaire de 400 000 références utilisable. Mais
+ * l'annulation d'un arbitrage écrit DIRECTEMENT dans `article_audit` sans
+ * toucher aux comptages : le raccourci ne verrait rien bouger, et la ligne
+ * resterait « à traiter » au lieu de retrouver son vrai statut. C'est le seul
+ * appelant qui doit forcer.
+ */
+export async function recomputeAudit(id: string, force = false): Promise<void> {
+  const { error } = await supabase.rpc('recompute_session_audit', {
+    p_session_id: id, p_force: force,
+  })
   if (error) fail('recomputeAudit', error)
 }
 

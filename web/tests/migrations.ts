@@ -20,15 +20,23 @@ export const dossierMigrations = path.resolve(__dirname, '../../supabase/migrati
 
 /** La dernière migration qui définit `fn`, et le corps de cette définition. */
 export function derniereDefinition(fn: string): { fichier: string; corps: string } {
-  // `create or replace`, pas seulement `function` : un `drop function if
-  // exists` porte le même nom et vient parfois après la création.
-  const marqueur = `create or replace function public.${fn}(`
+  // ⚠️ `create` AVEC OU SANS `or replace`. Changer la liste des colonnes de
+  // retour d'une fonction impose un `drop` préalable, et le `create` qui suit
+  // n'a alors pas besoin du `or replace` — c'est ce qu'a fait
+  // `mes_balises_comptees` le 3 septembre 2026. En n'acceptant que la forme
+  // `or replace`, ce helper serait remonté à la définition PRÉCÉDENTE, celle
+  // qui ne tourne plus : exactement le défaut qu'il existe pour empêcher.
+  //
+  // Le `(` final est ce qui évite qu'un `drop function if exists` ou un nom
+  // plus long (`lister_articles_bis`) soit pris pour la définition.
+  const marqueur = new RegExp(`create (?:or replace )?function public\\.${fn}\\(`, 'g')
   const fichiers = readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql')).sort().reverse()
 
   for (const fichier of fichiers) {
     const texte = readFileSync(path.join(dossierMigrations, fichier), 'utf8')
-    if (!texte.includes(marqueur)) continue
-    const apres = texte.slice(texte.lastIndexOf(marqueur))
+    const trouves = [...texte.matchAll(marqueur)]
+    if (trouves.length === 0) continue
+    const apres = texte.slice(trouves[trouves.length - 1].index)
     // Fin du corps : le délimiteur de chaîne, quel qu'il soit dans ce fichier.
     const fin = Math.min(
       ...['$function$;', '$$;'].map((d) => {
