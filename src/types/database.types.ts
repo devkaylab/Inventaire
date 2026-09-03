@@ -1657,6 +1657,10 @@ export type Database = {
         Args: { p_message: string; p_sujet: string }
         Returns: Json
       }
+      deposer_notification_admins: {
+        Args: { p_donnees: Json; p_type: string }
+        Returns: number
+      }
       deposer_souscription: {
         Args: {
           p_amount_cents: number
@@ -1670,6 +1674,79 @@ export type Database = {
           p_store_name: string
         }
         Returns: Json
+      }
+      ecarts_arbitres_page: {
+        Args: { p_limite?: number; p_offset?: number; p_session_id: string }
+        Returns: {
+          brand: string
+          ean: string
+          final_qty: number
+          id: string
+          label: string
+          qty_pass1: number
+          qty_pass2: number
+          qty_pass3: number
+          resolved_by: string
+          session_id: string
+          sku: string
+          status: string
+          total: number
+          updated_at: string
+          zone: string
+          zone_name: string
+        }[]
+      }
+      ecarts_page: {
+        Args: {
+          p_limite?: number
+          p_offset?: number
+          p_ordre?: string
+          p_session_id: string
+          p_zone?: string
+        }
+        Returns: {
+          audite: number
+          brand: string
+          compte: number
+          ean: string
+          ecart: number
+          ecart_valeur: number
+          final_qty: number
+          genre: string
+          id: string
+          label: string
+          qty_pass1: number
+          qty_pass2: number
+          qty_pass3: number
+          resolved_by: string
+          session_id: string
+          sku: string
+          status: string
+          total: number
+          unit_purchase_price: number
+          updated_at: string
+          zone: string
+          zone_name: string
+        }[]
+      }
+      ecarts_resume: {
+        Args: { p_session_id: string }
+        Returns: {
+          arbitres: number
+          manque_audit: number
+          manque_comptage: number
+          quantite: number
+          total: number
+          unites: number
+          valeur: number
+        }[]
+      }
+      ecarts_zones: {
+        Args: { p_session_id: string }
+        Returns: {
+          lignes: number
+          nom: string
+        }[]
       }
       ensure_zone: {
         Args: { p_code: string; p_session_id: string }
@@ -1955,6 +2032,57 @@ export type Database = {
       ouvrir_message_fil: { Args: { p_fil: string }; Returns: Json }
       purge_expired_data: { Args: never; Returns: Json }
       quote_by_token: { Args: { p_token: string }; Returns: Json }
+      rapport_detail_page: {
+        Args: { p_limite?: number; p_offset?: number; p_session_id: string }
+        Returns: {
+          audited: boolean
+          audited_by: string
+          audited_qty: number
+          brand: string
+          counted_by: string
+          counted_qty: number
+          ean: string
+          label: string
+          sku: string
+          total: number
+          zone: string
+          zone_name: string
+        }[]
+      }
+      rapport_page: {
+        Args: {
+          p_limite?: number
+          p_offset?: number
+          p_recherche?: string
+          p_sens?: string
+          p_session_id: string
+          p_tri?: string
+        }
+        Returns: {
+          brand: string
+          counted_qty: number
+          ean: string
+          label: string
+          sku: string
+          status: string
+          theoretical_qty: number
+          total: number
+          unit_purchase_price: number
+          variance_units: number
+          variance_value: number
+        }[]
+      }
+      rapport_resume: {
+        Args: { p_session_id: string }
+        Returns: {
+          compte: number
+          ecart_unites: number
+          ecart_valeur: number
+          lignes: number
+          non_arbitres: number
+          theorique: number
+        }[]
+      }
       rate_limit_ok: {
         Args: {
           p_key: string

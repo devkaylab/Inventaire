@@ -10,12 +10,18 @@ import {
 } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { getSession, getSessionDetail, getSessionResults, recomputeAudit, type SessionResultRow } from '@/lib/queries'
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
+import {
+  getAllRapportRows, getRapportPage, getRapportResume, getSession, getSessionDetail,
+  recomputeAudit, type SessionResultRow,
+} from '@/lib/queries'
 import { exportResultsToExcel } from '@/lib/report'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+
+/** ⚠️ La liste se lit par pages : voir le commentaire des totaux plus bas. */
+const PAGE = 50
 
 function fmt(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, '')
@@ -34,29 +40,52 @@ export default function ResultsScreen() {
     queryFn: () => getSession(sessionId),
   })
 
-  const { data: rows, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['results', sessionId],
+  /**
+   * ⚠️ LES TOTAUX VIENNENT DE LA BASE, la liste PAR PAGES (3 septembre 2026).
+   *
+   * L'écran additionnait les 400 000 lignes qu'il venait de télécharger. Sur un
+   * téléphone c'est pire que sur un ordinateur : la réponse ne tient pas en
+   * mémoire, et le serveur ne la rend pas dans les 8 s qu'il s'accorde.
+   *
+   * Les totaux portent sur TOUT l'inventaire — des chiffres qui changeraient en
+   * faisant défiler ne voudraient rien dire.
+   */
+  const { data: resume, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['rapport-resume', sessionId],
     queryFn: async () => {
       await recomputeAudit(sessionId)
-      return getSessionResults(sessionId)
+      return getRapportResume(sessionId)
     },
   })
 
-  const totals = useMemo(() => {
-    const r = rows ?? []
-    return {
-      theoreticalUnits: r.reduce((s, x) => s + Number(x.theoretical_qty), 0),
-      countedUnits: r.reduce((s, x) => s + Number(x.counted_qty), 0),
-      varianceUnits: r.reduce((s, x) => s + Number(x.variance_units), 0),
-      varianceValue: r.reduce((s, x) => s + Number(x.variance_value), 0),
-    }
-  }, [rows])
+  const {
+    data: pages, fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['rapport-page', sessionId],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => getRapportPage(sessionId, pageParam, PAGE),
+    getNextPageParam: (derniere, toutes) => {
+      const vus = toutes.reduce((n, p) => n + p.rows.length, 0)
+      return vus >= derniere.total ? undefined : vus
+    },
+    enabled: !!resume,
+  })
+
+  const totals = useMemo(() => ({
+    theoreticalUnits: resume?.theorique ?? 0,
+    countedUnits: resume?.compte ?? 0,
+    varianceUnits: resume?.ecart_unites ?? 0,
+    varianceValue: resume?.ecart_valeur ?? 0,
+  }), [resume])
 
   const exportMutation = useMutation({
     mutationFn: async () => {
+      // ⚠️ L'export contient TOUT : c'est ce que le client reçoit. Il parcourt
+      // les pages par tranches, au lieu d'exiger l'ensemble en une réponse.
       // Le détail par zone n'est chargé qu'au moment de l'export.
+      const tout = await getAllRapportRows(sessionId)
       const detail = await getSessionDetail(sessionId)
-      return exportResultsToExcel(session?.inventory_number ?? 'inventaire', rows ?? [], detail)
+      return exportResultsToExcel(session?.inventory_number ?? 'inventaire', tout, detail)
     },
     onSuccess: (result) => {
       if (!result.shared) {
@@ -70,7 +99,8 @@ export default function ResultsScreen() {
     return <View style={styles.center}><ActivityIndicator color={theme.accent} /></View>
   }
 
-  const list = rows ?? []
+  const list = (pages?.pages ?? []).flatMap(p => p.rows)
+  const total = resume?.lignes ?? 0
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -87,21 +117,37 @@ export default function ResultsScreen() {
         </View>
 
         <Pressable
-          style={[styles.exportBtn, (exportMutation.isPending || list.length === 0) && { opacity: 0.6 }]}
+          style={[styles.exportBtn, (exportMutation.isPending || total === 0) && { opacity: 0.6 }]}
           onPress={() => exportMutation.mutate()}
-          disabled={exportMutation.isPending || list.length === 0}
+          disabled={exportMutation.isPending || total === 0}
         >
           {exportMutation.isPending
             ? <ActivityIndicator color="#fff" />
             : <Text style={styles.exportBtnText}>Exporter le rapport Excel</Text>}
         </Pressable>
 
-        {list.length === 0 && (
+        {total === 0 && (
           <Text style={styles.empty}>Aucun résultat. Importez le stock théorique et effectuez les comptages.</Text>
         )}
 
-        {list.length > 0 && <Text style={styles.sectionLabel}>Détail par article</Text>}
+        {total > 0 && (
+          <Text style={styles.sectionLabel}>
+            Détail par article · {list.length} sur {total}
+          </Text>
+        )}
         {list.map((r) => <ResultCard key={r.sku} row={r} theme={theme} styles={styles} />)}
+
+        {hasNextPage && (
+          <Pressable
+            style={[styles.plusBtn, isFetchingNextPage && { opacity: 0.6 }]}
+            onPress={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage
+              ? <ActivityIndicator color={theme.accent} />
+              : <Text style={styles.plusBtnText}>Voir {Math.min(PAGE, total - list.length)} de plus</Text>}
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -155,6 +201,15 @@ function makeStyles(t: Theme) {
     summaryValue: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, ...tabular },
     exportBtn: { backgroundColor: t.success, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center' },
     exportBtnText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
+    // « Voir N de plus » : un bouton en contour, pas un second bouton plein —
+    // l'export reste l'action de l'écran, charger la suite est un pas de côté.
+    // ⚠️ 48 de haut : la cible tactile minimale d'Android (31 août 2026).
+    plusBtn: {
+      minHeight: 48, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline,
+      backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center',
+      marginTop: Spacing.xs,
+    },
+    plusBtnText: { fontSize: 15, fontFamily: Font.semibold, color: t.accent },
     empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
     sectionLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs, marginLeft: 2 },
     card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: 4, ...t.shadowCard },

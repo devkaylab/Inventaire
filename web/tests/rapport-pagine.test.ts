@@ -155,9 +155,13 @@ describe('les écarts d’audit se lisent par pages', () => {
   })
 
   it('les droits sont reposés, anon nommément', () => {
-    const fichier = fichierDe('ecarts_page')
+    // ⚠️ Dans le fichier qui définit CHACUNE, pas dans un fichier commun :
+    // `create or replace` rend EXECUTE à PUBLIC, donc c'est la migration qui
+    // redéfinit une fonction qui doit reposer ses droits — constat n°6 du
+    // 28 août 2026, qui se reproduit à chaque redéfinition.
     for (const fn of ['ecarts_resume', 'ecarts_page', 'ecarts_zones', 'ecarts_arbitres_page']) {
-      expect(fichier).toContain(`revoke all on function public.${fn}(`)
+      expect(fichierDe(fn)).toContain(`revoke all on function public.${fn}(`)
+      expect(fichierDe(fn)).toMatch(/from public, anon/)
     }
   })
 })

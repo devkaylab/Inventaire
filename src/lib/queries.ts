@@ -609,6 +609,100 @@ export type EtiquetteArticle = { label: string; brand: string; ean: string | nul
  * Mesuré à 190 ms sur 29 389 références. Ne pas revenir à un
  * `.from('article_audit')`.
  */
+/**
+ * Les écarts d'audit, PAR PAGES (3 septembre 2026).
+ *
+ * ⚠️ `getEcarts` rendait toutes les lignes d'audit — 400 000 sur un gros
+ * inventaire, 12,9 s pour un plafond de 8 s : l'écran ne s'ouvrait plus. Et la
+ * règle qui décide ce qui EST un écart se calculait ici, donc elle ne pouvait
+ * pas paginer : elle a besoin de toutes les lignes pour trancher.
+ *
+ * ⚠️ L'ORDRE `a_traiter` N'EST PAS CELUI DU SITE, et c'est voulu : sur un
+ * téléphone, ce qui reste à trancher doit remonter en premier. Quelqu'un
+ * debout dans un rayon veut le travail qui reste, pas un classement.
+ */
+export type EcartsResume = {
+  total: number; unites: number; valeur: number
+  quantite: number; manque_audit: number; manque_comptage: number; arbitres: number
+}
+
+export async function getEcartsResume(sessionId: string): Promise<EcartsResume> {
+  const { data, error } = await supabase.rpc('ecarts_resume', { p_session_id: sessionId })
+  if (error) throwSupabase('getEcartsResume', error)
+  const r = ((data ?? []) as Record<string, number>[])[0]
+  return {
+    total: Number(r?.total ?? 0), unites: Number(r?.unites ?? 0),
+    valeur: Number(r?.valeur ?? 0), quantite: Number(r?.quantite ?? 0),
+    manque_audit: Number(r?.manque_audit ?? 0),
+    manque_comptage: Number(r?.manque_comptage ?? 0),
+    arbitres: Number(r?.arbitres ?? 0),
+  }
+}
+
+function rangerEtiquettes(
+  rows: (ArticleAudit & {
+    label: string | null; brand: string | null
+    ean: string | null; unit_purchase_price?: number | null
+  })[],
+): { audits: ArticleAudit[]; labels: Record<string, EtiquetteArticle> } {
+  const audits: ArticleAudit[] = []
+  const labels: Record<string, EtiquetteArticle> = {}
+  for (const r of rows) {
+    audits.push({
+      id: r.id, session_id: r.session_id, sku: r.sku, zone: r.zone,
+      qty_pass1: r.qty_pass1, qty_pass2: r.qty_pass2, qty_pass3: r.qty_pass3,
+      final_qty: r.final_qty, status: r.status,
+      resolved_by: r.resolved_by, updated_at: r.updated_at,
+    })
+    // Jointure externe : un article retiré du référentiel depuis le comptage
+    // garde sa ligne d'écart, sans libellé.
+    if (r.label) {
+      labels[r.sku] = {
+        label: r.label, brand: r.brand ?? '', ean: r.ean,
+        price: Number(r.unit_purchase_price ?? 0),
+      }
+    }
+  }
+  return { audits, labels }
+}
+
+export async function getEcartsPage(sessionId: string, offset: number, limite = 50): Promise<{
+  audits: ArticleAudit[]
+  labels: Record<string, EtiquetteArticle>
+  zoneNames: Record<string, string | null>
+  total: number
+}> {
+  const { data, error } = await supabase.rpc('ecarts_page', {
+    p_session_id: sessionId, p_zone: undefined,
+    p_offset: offset, p_limite: limite, p_ordre: 'a_traiter',
+  })
+  if (error) throwSupabase('getEcartsPage', error)
+  const rows = (data ?? []) as (ArticleAudit & {
+    label: string | null; brand: string | null; ean: string | null
+    unit_purchase_price: number | null; zone_name: string | null; total: number
+  })[]
+  const { audits, labels } = rangerEtiquettes(rows)
+  const zoneNames: Record<string, string | null> = {}
+  for (const r of rows) zoneNames[r.zone] = r.zone_name ?? null
+  return { audits, labels, zoneNames, total: Number(rows[0]?.total ?? 0) }
+}
+
+export async function getEcartsArbitres(sessionId: string, offset: number, limite = 50): Promise<{
+  audits: ArticleAudit[]
+  labels: Record<string, EtiquetteArticle>
+  total: number
+}> {
+  const { data, error } = await supabase.rpc('ecarts_arbitres_page', {
+    p_session_id: sessionId, p_offset: offset, p_limite: limite,
+  })
+  if (error) throwSupabase('getEcartsArbitres', error)
+  const rows = (data ?? []) as (ArticleAudit & {
+    label: string | null; brand: string | null; ean: string | null; total: number
+  })[]
+  const { audits, labels } = rangerEtiquettes(rows)
+  return { audits, labels, total: Number(rows[0]?.total ?? 0) }
+}
+
 export async function getEcarts(sessionId: string): Promise<{
   audits: ArticleAudit[]
   labels: Record<string, EtiquetteArticle>
@@ -677,10 +771,87 @@ export async function resolveAudit(sessionId: string, sku: string, finalQty: num
   return data as { success: boolean; error?: string }
 }
 
-export async function getSessionResults(sessionId: string): Promise<SessionResultRow[]> {
-  const { data, error } = await supabase.rpc('get_session_results', { p_session_id: sessionId })
-  if (error) throwSupabase('getSessionResults', error)
-  return (data ?? []) as SessionResultRow[]
+/**
+ * Le rapport se lit PAR PAGES (3 septembre 2026).
+ *
+ * ⚠️ `get_session_results` rendait toutes les lignes d'un coup — 400 000 sur
+ * un gros inventaire. Sur un téléphone c'est pire que sur un ordinateur : la
+ * réponse ne tient pas en mémoire, et le serveur ne la rend de toute façon pas
+ * dans les 8 s qu'il s'accorde.
+ *
+ * Ne pas revenir à un appel qui rend tout. Ce qui change n'est pas la vitesse
+ * d'affichage, c'est le fait que l'écran s'ouvre.
+ */
+export type RapportResume = {
+  lignes: number
+  theorique: number
+  compte: number
+  ecart_unites: number
+  ecart_valeur: number
+  non_arbitres: number
+}
+
+/** Les totaux — sur TOUT l'inventaire, jamais sur la page affichée. */
+export async function getRapportResume(sessionId: string): Promise<RapportResume> {
+  const { data, error } = await supabase.rpc('rapport_resume', { p_session_id: sessionId })
+  if (error) throwSupabase('getRapportResume', error)
+  const r = ((data ?? []) as Record<string, number>[])[0]
+  return {
+    lignes: Number(r?.lignes ?? 0),
+    theorique: Number(r?.theorique ?? 0),
+    compte: Number(r?.compte ?? 0),
+    ecart_unites: Number(r?.ecart_unites ?? 0),
+    ecart_valeur: Number(r?.ecart_valeur ?? 0),
+    non_arbitres: Number(r?.non_arbitres ?? 0),
+  }
+}
+
+export async function getRapportPage(
+  sessionId: string, offset: number, limite = 50,
+): Promise<{ rows: SessionResultRow[]; total: number }> {
+  const { data, error } = await supabase.rpc('rapport_page', {
+    p_session_id: sessionId,
+    p_recherche: undefined,
+    p_tri: 'variance_value',
+    p_sens: 'desc',
+    p_offset: offset,
+    p_limite: limite,
+  })
+  if (error) throwSupabase('getRapportPage', error)
+  const rows = (data ?? []) as (SessionResultRow & { total: number })[]
+  return { rows: rows as SessionResultRow[], total: Number(rows[0]?.total ?? 0) }
+}
+
+/**
+ * Parcourt toutes les pages — POUR L'EXPORT SEULEMENT.
+ *
+ * ⚠️ Le fichier remis au client doit être COMPLET. La pagination ne concerne
+ * que l'écran ; l'export demande l'ensemble, mais par tranches.
+ */
+async function toutesLesPages<T>(
+  page: (offset: number) => Promise<{ rows: T[]; total: number }>,
+  taille: number,
+): Promise<T[]> {
+  const tout: T[] = []
+  let offset = 0
+  let total = 0
+  for (;;) {
+    const r = await page(offset)
+    total = r.total
+    tout.push(...r.rows)
+    // Deux conditions d'arrêt : une page incomplète, et le total atteint. Sans
+    // la seconde, un serveur qui répondrait toujours une page pleine ferait
+    // tourner le téléphone sans fin.
+    if (r.rows.length < taille || tout.length >= total) break
+    offset += taille
+  }
+  return tout
+}
+
+const TAILLE_EXPORT = 5000
+
+export async function getAllRapportRows(sessionId: string): Promise<SessionResultRow[]> {
+  return toutesLesPages((offset) => getRapportPage(sessionId, offset, TAILLE_EXPORT), TAILLE_EXPORT)
 }
 
 /** Détail par (article, balise) — non sommé entre zones — pour l'onglet « Détail par zone ».
@@ -699,10 +870,16 @@ export type SessionDetailRow = {
   audited_by: string | null
 }
 
+/** Le détail par balise, page par page — l'export en a besoin en entier. */
 export async function getSessionDetail(sessionId: string): Promise<SessionDetailRow[]> {
-  const { data, error } = await supabase.rpc('get_session_detail', { p_session_id: sessionId })
-  if (error) throwSupabase('getSessionDetail', error)
-  return (data ?? []) as SessionDetailRow[]
+  return toutesLesPages(async (offset) => {
+    const { data, error } = await supabase.rpc('rapport_detail_page', {
+      p_session_id: sessionId, p_offset: offset, p_limite: TAILLE_EXPORT,
+    })
+    if (error) throwSupabase('getSessionDetail', error)
+    const rows = (data ?? []) as (SessionDetailRow & { total: number })[]
+    return { rows: rows as SessionDetailRow[], total: Number(rows[0]?.total ?? 0) }
+  }, TAILLE_EXPORT)
 }
 
 export type ScanEntrySeed = { article: Article; qty: number; timestamp: number }

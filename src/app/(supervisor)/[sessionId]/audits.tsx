@@ -11,11 +11,14 @@ import {
 } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { annulerArbitrage, getEcarts, getSession, getZoneDashboard, recomputeAudit, resolveAudit } from '@/lib/queries'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  annulerArbitrage, getEcartsArbitres, getEcartsPage, getEcartsResume,
+  getSession, getZoneDashboard, recomputeAudit, resolveAudit,
+} from '@/lib/queries'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { CocheIcon } from '@/components/ui/Icones'
-import type { ArticleAudit } from '@/lib/queries'
+import type { ArticleAudit, EtiquetteArticle } from '@/lib/queries'
 import { depuis } from '@/lib/temps'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
@@ -25,6 +28,20 @@ const STATUS_RANK: Record<string, number> = { failed: 0, pending: 1, resolved: 2
 
 /** Au-delà, la liste des arbitrages se replie derrière « Voir les N autres ». */
 const ARBITRES_VUS = 5
+
+/**
+ * ⚠️ LA LISTE SE LIT PAR PAGES (3 septembre 2026).
+ *
+ * L'écran chargeait toutes les lignes d'audit — 400 000 sur un gros inventaire,
+ * 12,9 s pour un plafond serveur de 8 s : il ne s'ouvrait plus. La règle qui
+ * décide ce qui EST un écart est passée en base, à l'identique, parce qu'elle
+ * a besoin de toutes les lignes pour trancher et ne pouvait donc pas paginer.
+ *
+ * ⚠️ Le serveur rend l'ordre `a_traiter`, qui n'est PAS celui du site : ici,
+ * ce qui reste à trancher remonte en premier. Quelqu'un debout dans un rayon
+ * veut le travail qui reste.
+ */
+const PAGE = 50
 
 /** « 3 unités » — un nombre seul ne dit pas ce qu'il compte. */
 function unites(v: number): string {
@@ -71,33 +88,69 @@ export default function AuditsScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['audits', sessionId] }),
   })
 
+  /** Tout ce qui doit se relire après un arbitrage. */
+  async function relire() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['audits', sessionId] }),
+      queryClient.invalidateQueries({ queryKey: ['audits-resume', sessionId] }),
+      queryClient.invalidateQueries({ queryKey: ['audits-arbitres', sessionId] }),
+    ])
+  }
+
   useEffect(() => { recompute.mutate() }, [sessionId])
 
   const { data: session } = useQuery({ queryKey: ['session', sessionId], queryFn: () => getSession(sessionId) })
   const usesZones = !!session?.uses_zones
 
-  // Écarts et libellés viennent ensemble : une seule requête, une seule
-  // attente à l'écran. Voir `getEcarts` pour ce que cela remplace.
-  const { data: ecarts, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['audits', sessionId],
-    queryFn: () => getEcarts(sessionId),
+  // ⚠️ Les compteurs portent sur TOUT l'inventaire, la liste sur la page :
+  // des chiffres qui changeraient en faisant défiler ne voudraient rien dire.
+  const { data: resume, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['audits-resume', sessionId],
+    queryFn: () => getEcartsResume(sessionId),
   })
-  const audits = ecarts?.audits
-  const labels = ecarts?.labels
+
+  const {
+    data: pages, fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['audits', sessionId],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => getEcartsPage(sessionId, pageParam, PAGE),
+    getNextPageParam: (derniere, toutes) => {
+      const vus = toutes.reduce((n, p) => n + p.audits.length, 0)
+      return vus >= derniere.total ? undefined : vus
+    },
+  })
+
+  const { data: arbitresPage } = useInfiniteQuery({
+    queryKey: ['audits-arbitres', sessionId],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => getEcartsArbitres(sessionId, pageParam, PAGE),
+    getNextPageParam: () => undefined,
+  })
+
+  const audits = useMemo(
+    () => (pages?.pages ?? []).flatMap((p) => p.audits),
+    [pages],
+  )
+  const labels = useMemo(() => {
+    const m: Record<string, EtiquetteArticle> = {}
+    for (const p of pages?.pages ?? []) Object.assign(m, p.labels)
+    for (const p of arbitresPage?.pages ?? []) Object.assign(m, p.labels)
+    return m
+  }, [pages, arbitresPage])
   const { data: zoneRows } = useQuery({
     queryKey: ['zone-dashboard', sessionId],
     queryFn: () => getZoneDashboard(sessionId),
     enabled: usesZones,
   })
+  // Le nom des balises : celui du tableau de bord, complété par la page —
+  // une balise sans écart n'est pas dans la page.
   const zoneNames = useMemo(() => {
     const m: Record<string, string | null> = {}
     for (const z of zoneRows ?? []) m[z.code] = z.name
+    for (const p of pages?.pages ?? []) Object.assign(m, p.zoneNames)
     return m
-  }, [zoneRows])
-  const auditedZones = useMemo(
-    () => new Set((zoneRows ?? []).filter((z) => z.audit_status === 'done').map((z) => z.code)),
-    [zoneRows],
-  )
+  }, [zoneRows, pages])
 
   const resolve = useMutation({
     mutationFn: ({ sku, zone, qty }: { sku: string; zone: string; qty: number }) => resolveAudit(sessionId, sku, qty, zone),
@@ -140,27 +193,19 @@ export default function AuditsScreen() {
     }).then((ok) => { if (ok) annuler.mutate({ sku: a.sku, zone: a.zone }) })
   }
 
-  const list = audits ?? []
   const busy = resolve.isPending
 
-  // Écart = Auditeur (P2) − Compteur (P1). On ne compare que dans une balise
-  // AUDITÉE : un article compté mais non audité ressort avec −compté. En mode
-  // classique, on compare quand l'audit existe. Corrigés exclus.
-  const discrepancies = list.filter((a) => {
-    if (a.status === 'resolved') return false
-    const counted = Number(a.qty_pass1 ?? 0)
-    const audited = Number(a.qty_pass2 ?? 0)
-    if (counted === audited) return false
-    const zoned = !!a.zone && a.zone !== ''
-    return zoned ? auditedZones.has(a.zone) : a.qty_pass2 != null
-  })
-  const ecartsCount = discrepancies.length
+  // ⚠️ La règle « écart = Auditeur − Compteur, et seulement dans une balise
+  // dont l'audit est TERMINÉ » n'est plus appliquée ici : elle a besoin de
+  // toutes les lignes pour trancher, donc elle ne pouvait pas paginer. Elle
+  // vit en base (`ecarts_page`), reprise clause par clause. Ce que la page
+  // rend EST déjà la liste des écarts.
+  const discrepancies = audits
+  const ecartsCount = resume?.total ?? 0
+  const arbitresTotal = resume?.arbitres ?? 0
   const arbitres = useMemo(
-    // Sur `audits`, pas sur `list` : `audits ?? []` rend un tableau neuf à
-    // chaque rendu, et le mémo ne mémoriserait rien.
-    () => (audits ?? []).filter((a) => a.status === 'resolved')
-      .sort((x, y) => x.zone.localeCompare(y.zone) || x.sku.localeCompare(y.sku)),
-    [audits],
+    () => (arbitresPage?.pages ?? []).flatMap((p) => p.audits),
+    [arbitresPage],
   )
   const arbitresVus = tousArbitres ? arbitres : arbitres.slice(0, ARBITRES_VUS)
 
@@ -242,12 +287,12 @@ export default function AuditsScreen() {
           <Stat
             styles={styles}
             label="Arbitrés"
-            value={arbitres.length}
-            color={arbitres.length > 0 ? theme.success : theme.textPrimary}
+            value={arbitresTotal}
+            color={arbitresTotal > 0 ? theme.success : theme.textPrimary}
           />
         </View>
 
-        {list.length === 0 && (
+        {ecartsCount === 0 && arbitresTotal === 0 && (
           <Text style={styles.empty}>Les articles apparaîtront après le comptage.</Text>
         )}
 
@@ -261,7 +306,7 @@ export default function AuditsScreen() {
           </Text>
         )}
 
-        {groups.length === 0 && list.length > 0 && (
+        {ecartsCount === 0 && arbitresTotal > 0 && (
           <View style={styles.okCard}>
             <View style={styles.okIcone}><CocheIcon color={theme.success} size={18} /></View>
             <View style={{ flex: 1 }}>
@@ -287,6 +332,22 @@ export default function AuditsScreen() {
             {g.rows.map(renderCard)}
           </View>
         ))}
+
+        {hasNextPage && (
+          <Pressable
+            style={[styles.plusBtn, isFetchingNextPage && { opacity: 0.6 }]}
+            onPress={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage
+              ? <ActivityIndicator color={theme.accent} />
+              : (
+                <Text style={styles.plusBtnText}>
+                  Voir {Math.min(PAGE, ecartsCount - discrepancies.length)} écarts de plus
+                </Text>
+              )}
+          </Pressable>
+        )}
 
         {arbitres.length > 0 && (
           <>
@@ -489,6 +550,15 @@ function makeStyles(t: Theme) {
       alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md,
     },
     choixTexte: { fontSize: 15, fontFamily: Font.bold },
+      // « Voir N écarts de plus » : un bouton en contour, pas un bouton plein —
+      // l'action de l'écran reste l'arbitrage. ⚠️ 48 de haut, la cible tactile
+      // minimale d'Android (31 août 2026).
+      plusBtn: {
+        minHeight: 48, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline,
+        backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center',
+        marginTop: Spacing.xs,
+      },
+      plusBtnText: { fontSize: 15, fontFamily: Font.semibold, color: t.accent },
       empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
 
     // Aucun écart à traiter : la bonne nouvelle se dit, au lieu d'une phrase

@@ -1856,7 +1856,10 @@ describe('les écarts arbitrés se lisent comme une liste', () => {
     // En rouge, « aucun écart » se lisait comme un problème ; en vert, un
     // « 0 arbitré » annonçait une réussite qui n'a pas eu lieu.
     expect(ecran).toContain('color={ecartsCount > 0 ? theme.danger : theme.textPrimary}')
-    expect(ecran).toContain('color={arbitres.length > 0 ? theme.success : theme.textPrimary}')
+    // Amendé le 3 septembre 2026 : le compte des arbitrages vient du serveur
+    // depuis que la liste se lit par pages (`arbitres.length` n'en serait plus
+    // que la première page). L'intention, elle, ne bouge pas.
+    expect(ecran).toContain('color={arbitresTotal > 0 ? theme.success : theme.textPrimary}')
   })
 
   it('la consigne ne s’affiche que s’il y a quelque chose à corriger', () => {
@@ -2530,5 +2533,72 @@ describe('la publication Android ne part pas avec la clé de debug', () => {
     const versions = [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].map((m) => m[1])
     expect(versions.length).toBeGreaterThan(0)
     for (const v of versions) expect(v).toBe(app.expo.ios.buildNumber)
+  })
+})
+
+/**
+ * Les deux écrans lourds de l'application se lisent par pages
+ * (3 septembre 2026).
+ *
+ * Le Rapport et les Écarts chargeaient TOUTES les lignes — 400 000 sur un gros
+ * inventaire. Sur un téléphone c'est pire que sur un ordinateur : la réponse ne
+ * tient pas en mémoire, et le serveur ne la rend pas dans les 8 s qu'il
+ * s'accorde.
+ */
+describe('le rapport et les écarts de l’application se lisent par pages', () => {
+  // ⚠️ Sans ses commentaires : ils EXPLIQUENT le défaut corrigé, donc ils
+  // citent les fonctions qu'on interdit. Une garde d'absence qui les lirait
+  // échouerait sur sa propre documentation.
+  const codeSeul = (source: string) =>
+    source
+      .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, '')
+      .split('\n')
+      .filter(l => !l.trim().startsWith('//'))
+      .join('\n')
+
+  const rapport = codeSeul(lire('app/(supervisor)/[sessionId]/results.tsx'))
+  const ecarts = codeSeul(lire('app/(supervisor)/[sessionId]/audits.tsx'))
+  const q = codeSeul(lire('lib/queries.ts'))
+
+  it('⚠️ aucun des deux ne demande plus TOUTES les lignes', () => {
+    expect(rapport).not.toContain('getSessionResults(')
+    expect(rapport).toContain('getRapportPage(')
+    expect(ecarts).not.toContain('getEcarts(sessionId)')
+    expect(ecarts).toContain('getEcartsPage(')
+  })
+
+  it('⚠️ les totaux viennent de la base, jamais d’une addition de la page', () => {
+    // Des chiffres qui changeraient en faisant défiler ne voudraient rien dire.
+    expect(rapport).not.toMatch(/r\.reduce\(/)
+    expect(rapport).toContain('resume?.ecart_valeur')
+    expect(ecarts).toContain('resume?.total')
+    expect(ecarts).toContain('resume?.arbitres')
+  })
+
+  it('⚠️ la règle des écarts ne se calcule plus sur le téléphone', () => {
+    // Elle a besoin de TOUTES les lignes pour trancher : elle ne peut pas
+    // paginer. Elle vit en base, reprise clause par clause.
+    expect(ecarts).not.toContain('auditedZones.has(')
+    expect(ecarts).not.toContain("a.status === 'resolved'")
+  })
+
+  it('⚠️ le téléphone demande l’ordre « à traiter », pas celui du site', () => {
+    // Quelqu'un debout dans un rayon veut le travail qui reste, pas un
+    // classement par balise.
+    expect(q).toContain("p_ordre: 'a_traiter'")
+  })
+
+  it('⚠️ l’export contient toujours tout', () => {
+    expect(rapport).toContain('getAllRapportRows(')
+    expect(q).toContain('async function toutesLesPages')
+    // Deux conditions d'arrêt : une page incomplète, et le total atteint.
+    expect(q).toContain('r.rows.length < taille || tout.length >= total')
+  })
+
+  it('les deux boutons « voir plus » atteignent la cible tactile', () => {
+    // 48 dp, le minimum d'Android — règle du 31 août 2026.
+    for (const ecran of [rapport, ecarts]) {
+      expect(ecran).toMatch(/plusBtn:\s*\{[\s\S]*?minHeight:\s*48/)
+    }
   })
 })
