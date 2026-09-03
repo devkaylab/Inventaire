@@ -2520,5 +2520,15 @@ describe('la publication Android ne part pas avec la clé de debug', () => {
 
     expect(valeur('CFBundleVersion')).toBe(app.expo.ios.buildNumber)
     expect(valeur('CFBundleShortVersionString')).toBe(app.expo.version)
+
+    // Et une TROISIÈME copie dort dans le projet Xcode. Elle ne décide de rien
+    // tant que le plist porte une valeur littérale — mais elle décide de tout
+    // le jour où quelqu'un y met $(CURRENT_PROJECT_VERSION), et `agvtool` ne
+    // lit qu'elle. Trouvée à 1 alors que le plist passait à 2 : on aligne.
+    const pbx = readFileSync(
+      path.join(here, '..', 'ios', 'Inventaire.xcodeproj', 'project.pbxproj'), 'utf8')
+    const versions = [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].map((m) => m[1])
+    expect(versions.length).toBeGreaterThan(0)
+    for (const v of versions) expect(v).toBe(app.expo.ios.buildNumber)
   })
 })
