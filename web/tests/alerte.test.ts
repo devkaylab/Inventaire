@@ -168,3 +168,98 @@ describe('l’écran et la boîte de réception racontent la même chose', () =>
     expect(e.etat).toContain('rien n’a été créé')
   })
 })
+
+/**
+ * La troisième question : un inventaire s'approche-t-il de ce que le produit
+ * tient ? (3 septembre 2026)
+ *
+ * Elle existe parce que Quantinvo est en LIBRE-SERVICE — le client lance ses
+ * inventaires quand il veut, sans prévenir. Rien ne s'anticipe : être averti
+ * automatiquement est la seule chose possible.
+ *
+ * Les seuils viennent des mesures du jour, sur la vraie base : à 400 000
+ * références et 900 000 comptages, la liste des écarts demande 12,9 s et le
+ * premier recalcul 27,6 s, pour un plafond de 8 s.
+ */
+describe('un inventaire trop gros se signale avant la panne', () => {
+  it('les deux repères sont ceux qui ont été mesurés', () => {
+    // Volontairement BAS : ils préviennent, ils ne constatent pas la panne.
+    expect(migrations).toContain("('references', t.refs, 150000::bigint")
+    expect(migrations).toContain("('comptages',  t.cpts, 400000::bigint")
+  })
+
+  it('⚠️ ne regarde que les inventaires EN COURS', () => {
+    // Un inventaire clôturé ne se compte plus : aucun risque, et le signaler
+    // chaque jour ferait du bruit pour rien.
+    expect(migrations).toContain("where s.status in ('open', 'counting')")
+  })
+
+  it('⚠️ ne se rappelle PAS tous les jours, contrairement aux autres', () => {
+    // Un gros inventaire le reste jusqu'à sa clôture. Le redire chaque matin
+    // est le meilleur moyen qu'on cesse de lire ces messages — alors qu'un
+    // paiement sans suite, lui, est une anomalie à retraiter.
+    expect(migrations).toContain("or (o.nature <> 'volume' and a.derniere_le < now() - interval '24 hours')")
+  })
+
+  it('⚠️ deux repères, donc deux clés : ce sont deux moments différents', () => {
+    // Les références se connaissent à l'import, souvent des jours avant le
+    // comptage ; les comptages, pendant. Le second mérite d'être signalé même
+    // si le premier l'a déjà été.
+    expect(migrations).toContain("'volume:' || v.repere || ':' || s.id::text")
+  })
+
+  it('l’e-mail dit quoi faire, pas seulement ce qui se passe', () => {
+    expect(edge).toContain('Compute')
+    expect(edge).toContain('prévenir le client')
+    expect(edge).toMatch(/inventaires? approche/)
+  })
+
+  it('⚠️ la cloche part en plus de l’e-mail, et seulement après lui', () => {
+    // Les deux disent la même chose : ils partent ensemble ou pas du tout.
+    const iEnvoi = edge.indexOf('envoyerEmail')
+    const iCloche = edge.indexOf('deposer_notification_admins')
+    expect(iCloche).toBeGreaterThan(iEnvoi)
+    // Et une cloche muette ne doit pas faire échouer un e-mail déjà parti.
+    expect(edge).toMatch(/if \(nErr\) console\.error/)
+  })
+
+  it('⚠️ la cloche n’est ouverte qu’au rôle serveur', () => {
+    // `notifications` n'a aucune policy d'écriture : c'est ce qui garantit
+    // qu'aucun client ne peut faire sonner la cloche de quelqu'un d'autre.
+    expect(migrations).toContain(
+      'revoke all on function public.deposer_notification_admins(text, jsonb) from public, anon, authenticated',
+    )
+    expect(migrations).toContain(
+      'grant execute on function public.deposer_notification_admins(text, jsonb) to service_role',
+    )
+  })
+
+  it('le site sait afficher ce type de notification', () => {
+    // Un type déposé sans libellé s'afficherait vide dans la cloche.
+    const cloche = lire('../components/Notifications.tsx')
+    expect(cloche).toContain("case 'inventaire_volumineux':")
+    expect(cloche).toContain("'inventaire_volumineux'")
+  })
+})
+
+/**
+ * ⚠️ La cloche a DEUX filtres, et il faut les deux (3 septembre 2026).
+ *
+ * Trouvé en l'essayant pour de vrai : l'e-mail est parti (`emailed: true`) et
+ * la cloche est restée muette. La contrainte de la table refusait le type, et
+ * `mes_notifications` ne le rendait pas. Aucune des deux ne se voit à la
+ * lecture du code de la fonction edge.
+ */
+describe('un nouveau type de notification passe les deux filtres', () => {
+  it('la contrainte de la table l’accepte', () => {
+    expect(migrations).toContain("'inventaire_volumineux'::text")
+  })
+
+  it('⚠️ et la liste blanche de LECTURE le rend', () => {
+    // Un type déposé sans être ajouté ici n'apparaît jamais dans la cloche,
+    // sans le moindre message d'erreur.
+    expect(migrations).toContain(
+      "n.type in ('invitation_inventaire', 'compteur_actif', 'inventaire_volumineux')",
+    )
+  })
+})

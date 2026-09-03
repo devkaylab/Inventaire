@@ -8,12 +8,20 @@
 // l'apprenons quand il écrit.
 //
 // ⚠️ ON SURVEILLE LE RÉSULTAT, PAS LA MACHINE. Pas les erreurs techniques des
-// fonctions — elles sont bruyantes, et la plupart se règlent seules. Deux
+// fonctions — elles sont bruyantes, et la plupart se règlent seules. Trois
 // questions seulement, posées toutes les heures : *y a-t-il un paiement
-// encaissé dont rien n'a été créé ?* et *le ménage quotidien a-t-il eu lieu ?*
-// La détection vit en base (`anomalies_a_signaler`), qui porte aussi les délais
-// de grâce — quinze minutes pour les nouvelles tentatives de Stripe,
-// quarante-huit heures pour la purge, qui ne passe qu'une fois par jour.
+// encaissé dont rien n'a été créé ?*, *le ménage quotidien a-t-il eu lieu ?*,
+// et — depuis le 3 septembre 2026 — *un inventaire s'approche-t-il de ce que
+// le produit tient ?* La détection vit en base (`anomalies_a_signaler`), qui
+// porte aussi les délais de grâce — quinze minutes pour les nouvelles
+// tentatives de Stripe, quarante-huit heures pour la purge, qui ne passe
+// qu'une fois par jour.
+//
+// ⚠️ La troisième question existe parce que Quantinvo est en LIBRE-SERVICE :
+// le client lance ses inventaires quand il veut, sans nous prévenir. On ne
+// peut donc rien anticiper, ni monter la machine la veille. Être prévenu
+// automatiquement est la seule chose possible — et il vaut mieux l'apprendre
+// par une alerte que par le client.
 //
 // La seconde question remplace une vérification que Julien aurait dû faire à
 // la main chaque matin. Une vérification dont un humain est responsable
@@ -49,6 +57,8 @@ type Anomalie = {
   montant_centimes: number | null
   depuis: string | null
   parcours: string
+  /** Renseigné pour la nature « volume » seulement : mène à l'inventaire. */
+  session_id?: string | null
 }
 
 const euros = (centimes: number | null) =>
@@ -98,15 +108,25 @@ Deno.serve(async (req) => {
   // quotidien — et une alerte qui décrit mal ce qu'elle a vu ne se lit plus.
   const paiements = anomalies.filter((a) => a.nature === 'paiement')
   const purges = anomalies.filter((a) => a.nature === 'purge')
+  // Quantinvo est en LIBRE-SERVICE : le client lance ses inventaires quand il
+  // veut, sans nous prévenir. Rien ne s'anticipe — d'où cette troisième
+  // question, posée au même tour de garde : *un inventaire s'approche-t-il de
+  // ce que le produit tient ?*
+  const volumes = anomalies.filter((a) => a.nature === 'volume')
   const total = paiements.reduce((s, a) => s + (a.montant_centimes ?? 0), 0)
 
-  const titre = paiements.length && purges.length
-    ? `${n} anomalies`
-    : purges.length
-      ? 'La purge des données ne tourne plus'
-      : paiements.length > 1
-        ? `${paiements.length} paiements sans suite`
-        : 'Un paiement sans suite'
+  const natures = [paiements, purges, volumes].filter((g) => g.length).length
+  const titre = natures > 1
+    ? `${n} points à regarder`
+    : volumes.length
+      ? volumes.length > 1
+        ? `${volumes.length} inventaires approchent de la limite`
+        : 'Un inventaire approche de la limite'
+      : purges.length
+        ? 'La purge des données ne tourne plus'
+        : paiements.length > 1
+          ? `${paiements.length} paiements sans suite`
+          : 'Un paiement sans suite'
 
   const paragraphes: string[] = []
   if (paiements.length) {
@@ -124,20 +144,37 @@ Deno.serve(async (req) => {
       'Les durées de conservation annoncées dans la politique de confidentialité ne sont donc plus tenues : rien n’est effacé ni anonymisé en attendant.',
     )
   }
+  if (volumes.length) {
+    paragraphes.push(
+      volumes.length > 1
+        ? `${volumes.length} inventaires en cours ont dépassé les repères de volume.`
+        : 'Un inventaire en cours a dépassé les repères de volume.',
+      'Ce n’est pas une panne : c’est le moment d’agir avant qu’il n’y en ait une. Au-delà de ces tailles, l’onglet Écarts et le premier recalcul des écarts deviennent trop lents pour le délai que le serveur accorde.',
+      'Deux gestes : monter la taille du serveur (Supabase → Settings → Compute, facturé à l’heure, moins de deux minutes de coupure), et prévenir le client que son inventaire est hors des tailles vérifiées.',
+    )
+  }
 
   const { html, text } = emailQuantinvo({
     titre,
     apercu: paiements.length
       ? `${euros(total)} encaissés, rien n’a été créé.`
-      : 'Le ménage quotidien des données ne se fait plus.',
+      : volumes.length
+        ? 'Un inventaire dépasse les tailles vérifiées.'
+        : 'Le ménage quotidien des données ne se fait plus.',
     paragraphes,
     details: anomalies.slice(0, 10).map((a) => ({
       intitule: a.objet || 'Sans nom',
       valeur: a.nature === 'purge'
         ? `${a.parcours} · dernier passage ${depuisQuand(a.depuis)}`
-        : `${euros(a.montant_centimes)} · ${a.parcours} · payé ${depuisQuand(a.depuis)}`,
+        : a.nature === 'volume'
+          ? `${a.parcours} · ouvert ${depuisQuand(a.depuis)}`
+          : `${euros(a.montant_centimes)} · ${a.parcours} · payé ${depuisQuand(a.depuis)}`,
     })),
-    bouton: { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
+    // Un seul inventaire en cause : le bouton mène droit dessus. Sinon, la
+    // console, d'où tout se voit.
+    bouton: volumes.length === 1 && n === 1 && volumes[0].session_id
+      ? { libelle: 'Ouvrir l’inventaire', lien: `${appUrl}/dashboard/${volumes[0].session_id}` }
+      : { libelle: 'Ouvrir le tableau de bord', lien: `${appUrl}/admin` },
     note: n > 10 ? `Et ${n - 10} autres, visibles sur le tableau de bord.` : undefined,
     raison:
       'Vous recevez ce message parce que vous suivez Quantinvo. Tant que la situation dure, il est rappelé une fois par jour, pas davantage.',
@@ -159,6 +196,22 @@ Deno.serve(async (req) => {
       { success: false, anomalies: n, emailed: false, error: e instanceof Error ? e.message : String(e) },
       500,
     )
+  }
+
+  // ⚠️ La cloche EN PLUS de l'e-mail, et seulement une fois l'e-mail parti :
+  // les deux disent la même chose, ils doivent donc partir ensemble ou pas du
+  // tout. Un e-mail se lit dans une boîte qu'on n'ouvre pas toujours ; la
+  // cloche attend sur le site.
+  //
+  // ⚠️ Seul le volume la déclenche. Un paiement sans suite et une purge en
+  // panne remontent déjà sur /admin, dans « Ventes en cours » et « À traiter ».
+  for (const v of volumes) {
+    const { error: nErr } = await admin.rpc('deposer_notification_admins', {
+      p_type: 'inventaire_volumineux',
+      p_donnees: { nom: v.objet ?? '', mesure: v.parcours, session_id: v.session_id ?? '' },
+    })
+    // Une cloche muette ne doit pas faire échouer un e-mail déjà parti.
+    if (nErr) console.error('notification volume', nErr.message)
   }
 
   // Le message est parti : on note, pour se taire jusqu'à demain.

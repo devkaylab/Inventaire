@@ -18,7 +18,7 @@ import { relativeTime } from '@/lib/format'
 
 type Notif = {
   id: string
-  type: 'invitation_inventaire' | 'compteur_actif' | 'message'
+  type: 'invitation_inventaire' | 'compteur_actif' | 'message' | 'inventaire_volumineux'
   donnees: Record<string, string | undefined>
   created_at: string
   lu: boolean
@@ -47,6 +47,15 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
         titre: `Message de ${d.de || 'quelqu’un'}${d.entreprise ? ` — ${d.entreprise}` : ''}`,
         texte: d.sujet ?? '',
         lien: d.fil_id ? `/messages?fil=${d.fil_id}` : '/messages',
+      }
+    // Le tour de garde, quand un inventaire dépasse les tailles vérifiées.
+    // Elle ne va qu'aux administrateurs Quantinvo, et arrive en même temps que
+    // l'e-mail — une boîte ne s'ouvre pas toujours, la cloche attend sur place.
+    case 'inventaire_volumineux':
+      return {
+        titre: 'Un inventaire approche de la limite',
+        texte: `« ${d.nom || 'Sans nom'} » — ${d.mesure ?? ''}. Au-delà, le rapport et les écarts deviennent trop lents : à regarder avant le jour du comptage.`,
+        lien: d.session_id ? `/dashboard/${d.session_id}` : '/admin',
       }
   }
 }
