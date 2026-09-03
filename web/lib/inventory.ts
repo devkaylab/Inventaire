@@ -7,6 +7,8 @@
 // inventaire doit s'y lire à l'identique.
 import { supabase } from '@/lib/supabaseClient'
 import { errorMessage } from '@/lib/errors'
+// Types seulement : `discrepancies.ts` reste un module pur, sans Supabase.
+import type { Discrepancy, DiscrepancyKind } from '@/lib/discrepancies'
 
 export type SessionStatus = 'open' | 'counting' | 'closed'
 
@@ -401,6 +403,138 @@ export async function getSessionDetail(
     const rows = (data ?? []) as (SessionDetailRow & { total: number })[]
     return { rows: rows as SessionDetailRow[], total: Number(rows[0]?.total ?? 0) }
   }, TAILLE_EXPORT, onAvance)
+}
+
+/**
+ * Les écarts d'audit, PAR PAGES (3 septembre 2026).
+ *
+ * ⚠️ `getEcarts` rendait toutes les lignes d'audit — 400 000 sur un gros
+ * inventaire, 12,9 s mesurées pour un plafond de 8 s : l'onglet ne s'ouvrait
+ * plus. Et la règle qui décide ce qui EST un écart vivait dans le navigateur
+ * (`computeDiscrepancies`), donc elle ne pouvait pas paginer.
+ *
+ * Elle est désormais appliquée en base, clause par clause. `computeDiscrepancies`
+ * reste la référence écrite en clair — et ses tests, la spécification que le
+ * SQL doit respecter.
+ */
+export type EcartsResume = {
+  total: number
+  unites: number
+  valeur: number
+  quantite: number
+  manque_audit: number
+  manque_comptage: number
+  arbitres: number
+}
+
+export async function getEcartsResume(id: string): Promise<EcartsResume> {
+  const { data, error } = await supabase.rpc('ecarts_resume', { p_session_id: id })
+  if (error) fail('getEcartsResume', error)
+  const r = (data ?? [])[0]
+  return {
+    total: Number(r?.total ?? 0),
+    unites: Number(r?.unites ?? 0),
+    valeur: Number(r?.valeur ?? 0),
+    quantite: Number(r?.quantite ?? 0),
+    manque_audit: Number(r?.manque_audit ?? 0),
+    manque_comptage: Number(r?.manque_comptage ?? 0),
+    arbitres: Number(r?.arbitres ?? 0),
+  }
+}
+
+/** Les emplacements qui portent au moins un écart — pour le filtre de l'écran. */
+export async function getEcartsZones(id: string): Promise<{ nom: string; lignes: number }[]> {
+  const { data, error } = await supabase.rpc('ecarts_zones', { p_session_id: id })
+  if (error) fail('getEcartsZones', error)
+  return ((data ?? []) as { nom: string; lignes: number }[])
+    .map(z => ({ nom: z.nom, lignes: Number(z.lignes) }))
+}
+
+type LigneEcart = ArticleAudit & {
+  label: string | null
+  brand: string | null
+  ean: string | null
+  unit_purchase_price: number | null
+  compte: number
+  audite: number
+  ecart: number
+  ecart_valeur: number
+  genre: DiscrepancyKind
+  zone_name: string | null
+  total: number
+}
+
+/**
+ * Une page d'écarts, mise à la forme que l'écran attendait déjà.
+ *
+ * On rend des `Discrepancy` — la même forme que `computeDiscrepancies` — pour
+ * que l'affichage n'ait pas à changer : seule la SOURCE change.
+ */
+export async function getEcartsPage(id: string, opts: {
+  zone?: string | null
+  offset?: number
+  limite?: number
+}): Promise<{
+  rows: Discrepancy[]
+  labels: Record<string, ArticleLabel>
+  zoneNames: Record<string, string | null>
+  total: number
+}> {
+  const { data, error } = await supabase.rpc('ecarts_page', {
+    p_session_id: id,
+    p_zone: opts.zone ?? null,
+    p_offset: opts.offset ?? 0,
+    p_limite: opts.limite ?? 50,
+  })
+  if (error) fail('getEcartsPage', error)
+  const brut = (data ?? []) as LigneEcart[]
+
+  const labels: Record<string, ArticleLabel> = {}
+  const zoneNames: Record<string, string | null> = {}
+  const rows: Discrepancy[] = brut.map((r) => {
+    labels[r.sku] = {
+      label: r.label ?? '',
+      brand: r.brand ?? '',
+      ean: r.ean ?? null,
+      price: Number(r.unit_purchase_price ?? 0),
+    }
+    zoneNames[r.zone] = r.zone_name ?? null
+    return {
+      audit: {
+        id: r.id, session_id: r.session_id ?? id, sku: r.sku, zone: r.zone,
+        qty_pass1: r.qty_pass1, qty_pass2: r.qty_pass2, qty_pass3: r.qty_pass3 ?? null,
+        final_qty: r.final_qty, status: r.status, resolved_by: r.resolved_by ?? null,
+        updated_at: r.updated_at,
+      } as ArticleAudit,
+      key: `${r.zone} ${r.sku}`,
+      counted: Number(r.compte),
+      audited: Number(r.audite),
+      ecart: Number(r.ecart),
+      // `|| 0` neutralise le zéro négatif, comme le faisait le navigateur.
+      ecartValue: Number(r.ecart_valeur) || 0,
+      kind: r.genre,
+    }
+  })
+  return { rows, labels, zoneNames, total: Number(brut[0]?.total ?? 0) }
+}
+
+/** Les lignes déjà arbitrées, page par page, les plus récentes d'abord. */
+export async function getEcartsArbitres(id: string, opts: {
+  offset?: number; limite?: number
+}): Promise<{ rows: ArticleAudit[]; labels: Record<string, ArticleLabel>; total: number }> {
+  const { data, error } = await supabase.rpc('ecarts_arbitres_page', {
+    p_session_id: id, p_offset: opts.offset ?? 0, p_limite: opts.limite ?? 50,
+  })
+  if (error) fail('getEcartsArbitres', error)
+  const brut = (data ?? []) as (ArticleAudit & {
+    label: string | null; brand: string | null; ean: string | null; total: number
+  })[]
+  const labels: Record<string, ArticleLabel> = {}
+  const rows = brut.map((r) => {
+    labels[r.sku] = { label: r.label ?? '', brand: r.brand ?? '', ean: r.ean ?? null, price: 0 }
+    return r as ArticleAudit
+  })
+  return { rows, labels, total: Number(brut[0]?.total ?? 0) }
 }
 
 /**

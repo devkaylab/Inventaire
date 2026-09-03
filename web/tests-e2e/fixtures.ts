@@ -181,6 +181,83 @@ export function rapportDetailPage(body: Record<string, unknown>) {
   return DETAIL.slice(off, off + lim).map(r => ({ ...r, total: DETAIL.length }))
 }
 
+/* Les écarts d'audit, paginés (3 septembre 2026).
+   ⚠️ Le faux serveur applique la RÈGLE, pas une liste figée : une ligne
+   arbitrée est exclue, un écart nul aussi, et une balise dont l'audit n'est
+   pas terminé ne compare pas. Sans quoi les tests valideraient un écran qui
+   affiche n'importe quoi. */
+function ecartsBruts() {
+  const prix = (sku: string) => ARTICLES.find(a => a.sku === sku)?.unit_purchase_price ?? 0
+  const art = (sku: string) => ARTICLES.find(a => a.sku === sku)
+  const auditee = new Set(ZONES.filter(z => z.audit_status === 'done').map(z => z.code))
+  return AUDITS
+    .filter(a => a.status !== 'resolved')
+    .map(a => {
+      const compte = Number(a.qty_pass1 ?? 0)
+      const audite = Number(a.qty_pass2 ?? 0)
+      return { a, compte, audite, ecart: audite - compte }
+    })
+    .filter(({ a, compte, audite, ecart }) => {
+      if (ecart === 0) return false
+      return a.zone ? auditee.has(a.zone) : a.qty_pass2 != null
+      void compte; void audite
+    })
+    .map(({ a, compte, audite, ecart }) => ({
+      ...a,
+      zone_name: ZONES.find(z => z.code === a.zone)?.name ?? null,
+      label: art(a.sku)?.label ?? '', brand: art(a.sku)?.brand ?? '',
+      ean: art(a.sku)?.ean ?? null, unit_purchase_price: prix(a.sku),
+      compte, audite, ecart, ecart_valeur: ecart * prix(a.sku),
+      genre: compte === 0 && audite !== 0 ? 'missing-count'
+        : audite === 0 && compte !== 0 ? 'missing-audit' : 'quantity',
+    }))
+    .sort((x, y) => (x.zone ?? '').localeCompare(y.zone ?? '') || x.sku.localeCompare(y.sku))
+}
+
+export function ecartsResume() {
+  const e = ecartsBruts()
+  return {
+    total: e.length,
+    unites: e.reduce((s, r) => s + r.ecart, 0),
+    valeur: e.reduce((s, r) => s + r.ecart_valeur, 0),
+    quantite: e.filter(r => r.genre === 'quantity').length,
+    manque_audit: e.filter(r => r.genre === 'missing-audit').length,
+    manque_comptage: e.filter(r => r.genre === 'missing-count').length,
+    arbitres: AUDITS.filter(a => a.status === 'resolved').length,
+  }
+}
+
+export function ecartsPage(body: Record<string, unknown>) {
+  const zone = body.p_zone == null ? null : String(body.p_zone)
+  const off = Number(body.p_offset ?? 0)
+  const lim = Number(body.p_limite ?? 50)
+  const filtre = ecartsBruts().filter(r => zone == null || (r.zone_name ?? '—') === zone)
+  return filtre.slice(off, off + lim).map(r => ({ ...r, total: filtre.length }))
+}
+
+export function ecartsZones() {
+  const m = new Map<string, number>()
+  for (const r of ecartsBruts()) {
+    const n = r.zone_name ?? '—'
+    m.set(n, (m.get(n) ?? 0) + 1)
+  }
+  return [...m.entries()].sort().map(([nom, lignes]) => ({ nom, lignes }))
+}
+
+export function ecartsArbitresPage(body: Record<string, unknown>) {
+  const off = Number(body.p_offset ?? 0)
+  const lim = Number(body.p_limite ?? 50)
+  const art = (sku: string) => ARTICLES.find(a => a.sku === sku)
+  const tout = AUDITS.filter(a => a.status === 'resolved')
+    .map(a => ({
+      ...a, zone_name: ZONES.find(z => z.code === a.zone)?.name ?? null,
+      label: art(a.sku)?.label ?? '', brand: art(a.sku)?.brand ?? '',
+      ean: art(a.sku)?.ean ?? null,
+    }))
+    .sort((x, y) => y.updated_at.localeCompare(x.updated_at) || x.id.localeCompare(y.id))
+  return tout.slice(off, off + lim).map(r => ({ ...r, total: tout.length }))
+}
+
 export const STORES = [
   { id: 'store-1', name: 'Oberlin Lyon' },
   { id: 'store-2', name: 'Magasin centre-ville' },

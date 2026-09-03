@@ -224,6 +224,11 @@ export async function mockSupabase(
         // serveur applique la même arithmétique que la vraie fonction —
         // recherche, tri, tranche, et le total de la sélection sur chaque
         // ligne — sans quoi les tests valideraient un écran qui ne pagine pas.
+        case 'ecarts_resume': return json(route, [F.ecartsResume()])
+        case 'ecarts_page': return json(route, F.ecartsPage(body as Record<string, unknown>))
+        case 'ecarts_zones': return json(route, F.ecartsZones())
+        case 'ecarts_arbitres_page':
+          return json(route, F.ecartsArbitresPage(body as Record<string, unknown>))
         case 'rapport_resume': return json(route, [F.rapportResume()])
         case 'rapport_page': return json(route, F.rapportPage(body as Record<string, unknown>))
         case 'rapport_detail_page': return json(route, F.rapportDetailPage(body as Record<string, unknown>))

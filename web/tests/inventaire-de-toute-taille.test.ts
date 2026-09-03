@@ -132,16 +132,26 @@ describe('les lectures qui balaient un inventaire passent par une RPC', () => {
 })
 
 describe('les écrans ne balaient plus les tables eux-mêmes', () => {
-  it('le site lit les écarts en un seul appel, libellés compris', () => {
+  it('le site lit les écarts par le serveur, libellés compris', () => {
+    // ⚠️ Amendé le 3 septembre 2026, PAS affaibli. Cette garde interdisait le
+    // retour au balayage direct d'`article_audit` ; elle l'interdit toujours.
+    // Ce qui a changé, c'est qu'un appel unique ne suffisait plus : à 400 000
+    // lignes il demandait 12,9 s pour un plafond de 8 s. On lit maintenant par
+    // pages — et l'exigence devient donc plus forte, pas moins.
     const lib = sansCommentaires(lire('../lib/inventory.ts'))
-    expect(lib).toContain("supabase.rpc('lister_ecarts'")
+    expect(lib).toContain("supabase.rpc('ecarts_page'")
+    expect(lib).toContain("supabase.rpc('ecarts_resume'")
     expect(lib).not.toContain(".from('article_audit')")
     // Les libellés partaient en 150 requêtes de 200 SKU sur un gros catalogue.
     expect(lib).not.toContain("SKU_CHUNK")
 
     const onglet = sansCommentaires(lire('../components/dashboard/tabs/EcartsTab.tsx'))
-    expect(onglet).toContain('getEcarts(sessionId)')
+    expect(onglet).toContain('getEcartsPage(sessionId')
+    expect(onglet).not.toContain('getEcarts(sessionId)')
     expect(onglet).not.toContain('getArticleLabels')
+    // ⚠️ Et la règle ne se calcule plus dans le navigateur : elle ne pourrait
+    // pas paginer, puisqu'elle a besoin de toutes les lignes pour trancher.
+    expect(onglet).not.toContain('computeDiscrepancies(')
   })
 
   it('l’application lit les écarts de la même façon', () => {

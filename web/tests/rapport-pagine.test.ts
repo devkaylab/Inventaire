@@ -99,3 +99,65 @@ describe('le rapport se lit par pages', () => {
     expect(fichier).toMatch(/from public, anon/)
   })
 })
+
+/**
+ * Les écarts d'audit, par pages (3 septembre 2026).
+ *
+ * ⚠️ La règle qui décide CE QUI EST UN ÉCART vivait dans le navigateur : elle
+ * avait besoin de toutes les lignes pour trancher, donc elle ne pouvait pas
+ * paginer. Elle est passée en base, clause par clause.
+ */
+describe('les écarts d’audit se lisent par pages', () => {
+  const onglet = sansCommentaires(lire('../components/dashboard/tabs/EcartsTab.tsx'))
+
+  it('⚠️ la règle est reprise CLAUSE PAR CLAUSE', () => {
+    // Les trois exclusions, dans l'ordre où `computeDiscrepancies` les pose.
+    const { corps } = derniereDefinition('ecarts_page')
+    const code = corps.replace(/^\s*--.*$/gm, '')
+    expect(code).toContain("a.status <> 'resolved'")
+    expect(code).toContain('(coalesce(a.qty_pass2, 0) - coalesce(a.qty_pass1, 0)) <> 0')
+    // ⚠️ Le point qui évite les faux positifs : dans une balise, on ne compare
+    // que si l'audit de CETTE balise est terminé.
+    expect(code).toContain("z.audit_status = 'done'")
+    expect(code).toContain('else a.qty_pass2 is not null end')
+  })
+
+  it('les trois genres d’écart sont les mêmes qu’au navigateur', () => {
+    const { corps } = derniereDefinition('ecarts_page')
+    expect(corps).toContain("then 'missing-count'")
+    expect(corps).toContain("then 'missing-audit'")
+    expect(corps).toContain("else 'quantity'")
+  })
+
+  it('⚠️ les compteurs portent sur TOUT, pas sur la page', () => {
+    // Un « écarts à traiter » qui changerait en tournant les pages ne voudrait
+    // rien dire.
+    expect(onglet).toContain('resume?.total')
+    expect(onglet).toContain('resume?.arbitres')
+    expect(onglet).not.toContain('summarize(')
+    expect(onglet).not.toContain('resolvedLines(')
+  })
+
+  it('⚠️ les deux listes ont un ordre TOTAL', () => {
+    const ecarts = derniereDefinition('ecarts_page').corps.replace(/^\s*--.*$/gm, '')
+    expect(ecarts).toMatch(/order by[\s\S]*f\.e_sku\s*\n?\s*offset/)
+    // Deux arbitrages faits dans la même seconde ont le même `updated_at` :
+    // sans l'id, la pagination en répéterait un.
+    const arb = derniereDefinition('ecarts_arbitres_page').corps.replace(/^\s*--.*$/gm, '')
+    expect(arb).toContain('order by a.updated_at desc nulls last, a.id')
+  })
+
+  it('le filtre par emplacement est servi par le serveur', () => {
+    // Il se déduisait de la liste complète ; sans cette fonction il aurait
+    // disparu avec la pagination.
+    expect(onglet).toContain('getEcartsZones(')
+    expect(onglet).not.toContain('new Set<string>()')
+  })
+
+  it('les droits sont reposés, anon nommément', () => {
+    const fichier = fichierDe('ecarts_page')
+    for (const fn of ['ecarts_resume', 'ecarts_page', 'ecarts_zones', 'ecarts_arbitres_page']) {
+      expect(fichier).toContain(`revoke all on function public.${fn}(`)
+    }
+  })
+})

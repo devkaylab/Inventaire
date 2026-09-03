@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  getEcarts, recomputeAudit, resolveAudit,
-  type ArticleAudit, type ArticleLabel,
+  getEcartsArbitres, getEcartsPage, getEcartsResume, getEcartsZones,
+  recomputeAudit, resolveAudit,
+  type ArticleAudit, type ArticleLabel, type EcartsResume,
 } from '@/lib/inventory'
 import type { ZoneDashboardRow } from '@/lib/zones'
 import {
-  auditKey, computeDiscrepancies, groupDiscrepancies, KIND_LABELS, resolvedLines, summarize,
+  auditKey, groupDiscrepancies, KIND_LABELS,
   type Discrepancy,
 } from '@/lib/discrepancies'
 import { fmtQty, fmtSigned, money, parseDecimal, relativeTime } from '@/lib/format'
@@ -17,6 +18,15 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Figure, Stat } from '@/components/ui/Stat'
+
+/**
+ * ⚠️ LA LISTE SE LIT PAR PAGES (3 septembre 2026).
+ *
+ * Avant, l'onglet chargeait toutes les lignes d'audit — 400 000 sur un gros
+ * inventaire, 12,9 s pour un plafond de 8 s : il ne s'ouvrait plus. La règle
+ * qui décide ce qui est un écart est passée en base, à l'identique.
+ */
+const PAGE = 50
 
 export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   sessionId: string
@@ -28,20 +38,41 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   const confirm = useConfirm()
 
   const [loading, setLoading] = useState(true)
-  const [audits, setAudits] = useState<ArticleAudit[]>([])
+  const [chargeantPage, setChargeantPage] = useState(false)
+  const [resume, setResume] = useState<EcartsResume | null>(null)
+  const [zoneOptions, setZoneOptions] = useState<{ nom: string; lignes: number }[]>([])
+  const [pageRows, setPageRows] = useState<Discrepancy[]>([])
+  const [pageZoneNames, setPageZoneNames] = useState<Record<string, string | null>>({})
+  const [totalFiltre, setTotalFiltre] = useState(0)
+  const [page, setPage] = useState(0)
+  const [resolved, setResolved] = useState<ArticleAudit[]>([])
   const [labels, setLabels] = useState<Record<string, ArticleLabel>>({})
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [zoneFilter, setZoneFilter] = useState<string>('all')
+  /** Bouge à chaque arbitrage : c'est ce qui fait relire la page. */
+  const [version, setVersion] = useState(0)
 
+  /**
+   * Le travail lourd : le recalcul, les totaux et la liste des emplacements.
+   * ⚠️ Il ne se refait PAS en tournant les pages — le recalcul réécrit
+   * `article_audit`, et le rejouer à chaque page coûterait des secondes.
+   */
   const load = useCallback(async () => {
     setLoading(true)
     try {
       // Un seul recalcul explicite, au chargement de l'onglet — pas un par
       // onglet visité comme auparavant.
       await recomputeAudit(sessionId)
-      const { audits: a, labels: l } = await getEcarts(sessionId)
-      setAudits(a); setLabels(l)
+      const [r, z, arb] = await Promise.all([
+        getEcartsResume(sessionId),
+        getEcartsZones(sessionId),
+        getEcartsArbitres(sessionId, { limite: 50 }),
+      ])
+      setResume(r); setZoneOptions(z)
+      setResolved(arb.rows)
+      setLabels(l => ({ ...l, ...arb.labels }))
+      setVersion(v => v + 1)
     } catch (err) {
       toast.error(friendlyError(err))
     } finally {
@@ -51,36 +82,54 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
 
   useEffect(() => { void load() }, [load])
 
+  // Changer d'emplacement ramène à la première page.
+  useEffect(() => { setPage(0) }, [zoneFilter])
+
+  /** La page affichée — recherchée, filtrée et ordonnée par le serveur. */
+  useEffect(() => {
+    let vivant = true
+    setChargeantPage(true)
+    getEcartsPage(sessionId, {
+      zone: zoneFilter === 'all' ? null : zoneFilter,
+      offset: page * PAGE,
+      limite: PAGE,
+    })
+      .then(({ rows, labels: l, zoneNames, total }) => {
+        if (!vivant) return
+        setPageRows(rows)
+        setPageZoneNames(zoneNames)
+        setLabels(prev => ({ ...prev, ...l }))
+        setTotalFiltre(total)
+      })
+      .catch((err) => { if (vivant) toast.error(friendlyError(err)) })
+      .finally(() => { if (vivant) setChargeantPage(false) })
+    return () => { vivant = false }
+  }, [sessionId, zoneFilter, page, version, toast])
+
+  // Le nom des balises : celui de la page, complété par le tableau de bord
+  // déjà en mémoire — un emplacement sans écart n'est pas dans la page.
   const zoneNames = useMemo(() => {
     const m: Record<string, string | null> = {}
     for (const z of zones) m[z.code] = z.name
-    return m
-  }, [zones])
+    return { ...m, ...pageZoneNames }
+  }, [zones, pageZoneNames])
 
-  const auditedZones = useMemo(
-    () => new Set(zones.filter(z => z.audit_status === 'done').map(z => z.code)),
-    [zones],
-  )
+  // ⚠️ On ne groupe QUE la page. Le serveur la rend déjà dans l'ordre des
+  // balises, donc les groupes restent cohérents d'une page à l'autre — une
+  // balise qui déborde repart simplement sous son titre à la page suivante.
+  const groups = useMemo(() => groupDiscrepancies(pageRows, zoneNames), [pageRows, zoneNames])
 
-  const all = useMemo(
-    () => computeDiscrepancies(audits, labels, auditedZones),
-    [audits, labels, auditedZones],
-  )
-
-  const filtered = useMemo(
-    () => (zoneFilter === 'all' ? all : all.filter(d => (zoneNames[d.audit.zone] ?? '—') === zoneFilter)),
-    [all, zoneFilter, zoneNames],
-  )
-
-  const groups = useMemo(() => groupDiscrepancies(filtered, zoneNames), [filtered, zoneNames])
-  const stats = useMemo(() => summarize(all), [all])
-  const resolved = useMemo(() => resolvedLines(audits), [audits])
-
-  const zoneOptions = useMemo(() => {
-    const set = new Set<string>()
-    for (const d of all) set.add(zoneNames[d.audit.zone] ?? '—')
-    return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
-  }, [all, zoneNames])
+  // ⚠️ Les compteurs portent sur TOUT l'inventaire, pas sur la page : un
+  // « écarts à traiter » qui changerait en tournant les pages ne voudrait
+  // rien dire.
+  const stats = useMemo(() => ({
+    total: resume?.total ?? 0,
+    byKind: {
+      quantity: resume?.quantite ?? 0,
+      'missing-audit': resume?.manque_audit ?? 0,
+      'missing-count': resume?.manque_comptage ?? 0,
+    },
+  }), [resume])
 
   async function onResolve(d: Discrepancy, qty: number) {
     setBusy(d.key)
@@ -146,7 +195,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
           value={String(stats.byKind['missing-audit'])}
           tone={stats.byKind['missing-audit'] > 0 ? 'warn' : 'neutral'}
         />
-        <Stat label="Arbitrés" value={String(resolved.length)} tone="pos" />
+        <Stat label="Arbitrés" value={String(resume?.arbitres ?? 0)} tone="pos" />
       </div>
 
       <p className="muted small" style={{ marginBottom: 12 }}>
@@ -159,21 +208,23 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         <div className="toolbar">
           <label htmlFor="zone-filter" className="dash-section-label">Emplacement</label>
           <select id="zone-filter" value={zoneFilter} onChange={e => setZoneFilter(e.target.value)}>
-            <option value="all">Tous ({all.length})</option>
-            {zoneOptions.map(z => <option key={z} value={z}>{z}</option>)}
+            <option value="all">Tous ({stats.total})</option>
+            {zoneOptions.map(z => (
+              <option key={z.nom} value={z.nom}>{z.nom} ({z.lignes})</option>
+            ))}
           </select>
         </div>
       )}
 
       {groups.length === 0 ? (
         <EmptyState
-          tone={audits.length > 0 ? 'ok' : 'neutral'}
-          title={audits.length === 0
-            ? 'Aucun article compté pour l’instant'
-            : 'Aucun écart entre le comptage et l’audit'}
-          hint={audits.length === 0
-            ? 'Les articles apparaîtront ici dès les premiers scans.'
-            : 'Soit les chiffres concordent, soit l’audit des balises concernées n’est pas encore terminé.'}
+          tone={(resume?.arbitres ?? 0) > 0 || stats.total > 0 ? 'ok' : 'neutral'}
+          title={stats.total === 0
+            ? 'Aucun écart entre le comptage et l’audit'
+            : 'Aucun écart dans cet emplacement'}
+          hint={stats.total === 0
+            ? 'Soit les chiffres concordent, soit l’audit des balises concernées n’est pas encore terminé.'
+            : 'Choisissez « Tous » pour voir les autres emplacements.'}
         />
       ) : groups.map(g => (
         <div key={g.zone || '_'} style={{ marginBottom: 20 }}>
@@ -254,9 +305,38 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         </div>
       ))}
 
+      {totalFiltre > PAGE && (
+        <div className="pagination">
+          <span className="muted small">
+            {(page * PAGE + 1).toLocaleString('fr-FR')}–
+            {Math.min(totalFiltre, (page + 1) * PAGE).toLocaleString('fr-FR')} sur{' '}
+            {totalFiltre.toLocaleString('fr-FR')} écart{totalFiltre > 1 ? 's' : ''}
+          </span>
+          <div className="pagination-boutons">
+            <button
+              type="button" className="btn btn-ghost btn-sm"
+              disabled={page === 0 || chargeantPage}
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+            >
+              Précédent
+            </button>
+            <span className="muted small">
+              Page {page + 1} / {Math.ceil(totalFiltre / PAGE).toLocaleString('fr-FR')}
+            </span>
+            <button
+              type="button" className="btn btn-ghost btn-sm"
+              disabled={(page + 1) * PAGE >= totalFiltre || chargeantPage}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
+      )}
+
       {resolved.length > 0 && (
         <details className="collapsible">
-          <summary>Écarts arbitrés ({resolved.length})</summary>
+          <summary>Écarts arbitrés ({resume?.arbitres ?? resolved.length})</summary>
           <div className="collapsible-body">
             <p className="muted small" style={{ marginBottom: 12 }}>
               Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport.
