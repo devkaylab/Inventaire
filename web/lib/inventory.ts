@@ -344,8 +344,21 @@ export async function getEcarts(id: string): Promise<{
   return { audits, labels }
 }
 
-export async function recomputeAudit(id: string): Promise<void> {
-  const { error } = await supabase.rpc('recompute_session_audit', { p_session_id: id })
+/**
+ * Recalcule les écarts d'un inventaire.
+ *
+ * ⚠️ `force` n'est PAS une commodité : sans comptage nouveau, la fonction sait
+ * qu'elle n'a rien à refaire et rend ses totaux en quelques millisecondes — ce
+ * qui est ce qui rend un inventaire de 400 000 références utilisable. Mais
+ * l'annulation d'un arbitrage écrit DIRECTEMENT dans `article_audit` sans
+ * toucher aux comptages : le raccourci ne verrait rien bouger, et la ligne
+ * resterait « à traiter » au lieu de retrouver son vrai statut. C'est le seul
+ * appelant qui doit forcer.
+ */
+export async function recomputeAudit(id: string, force = false): Promise<void> {
+  const { error } = await supabase.rpc('recompute_session_audit', {
+    p_session_id: id, p_force: force,
+  })
   if (error) fail('recomputeAudit', error)
 }
 

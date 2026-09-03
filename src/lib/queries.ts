@@ -574,8 +574,20 @@ export async function deleteSessionPermanently(sessionId: string) {
   if (!result.success) throwSupabase('deleteSessionPermanently', new Error(result.error ?? 'Échec de la suppression'))
 }
 
-export async function recomputeAudit(sessionId: string) {
-  const { data, error } = await supabase.rpc('recompute_session_audit', { p_session_id: sessionId })
+/**
+ * Recalcule les écarts d'un inventaire.
+ *
+ * ⚠️ `force` n'est PAS une commodité : sans comptage nouveau, la fonction sait
+ * qu'elle n'a rien à refaire et rend ses totaux en quelques millisecondes — ce
+ * qui rend un inventaire de 400 000 références utilisable. Mais l'annulation
+ * d'un arbitrage écrit DIRECTEMENT dans `article_audit` sans toucher aux
+ * comptages : le raccourci ne verrait rien bouger, et la ligne resterait « à
+ * traiter » au lieu de retrouver son vrai statut.
+ */
+export async function recomputeAudit(sessionId: string, force = false) {
+  const { data, error } = await supabase.rpc('recompute_session_audit', {
+    p_session_id: sessionId, p_force: force,
+  })
   if (error) throwSupabase('recomputeAudit', error)
   return data as { success: boolean; failed?: number; pending?: number; total?: number }
 }
@@ -649,7 +661,9 @@ export async function annulerArbitrage(sessionId: string, sku: string, zone = ''
     .eq('sku', sku)
     .eq('zone', zone)
   if (error) throwSupabase('annulerArbitrage', error)
-  await recomputeAudit(sessionId)
+  // `force` : on vient d'écrire dans `article_audit` sans toucher aux
+  // comptages, donc le raccourci du recalcul ne verrait rien bouger.
+  await recomputeAudit(sessionId, true)
 }
 
 export async function resolveAudit(sessionId: string, sku: string, finalQty: number, zone = '') {

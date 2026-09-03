@@ -7229,3 +7229,120 @@ indolore. À reprendre le jour où une balise porterait des milliers de
 références, pas avant.
 
 Tests de garde : `web/tests/inventaire-de-toute-taille.test.ts`.
+
+## 400 000 références — le plafond, mesuré (3 septembre 2026)
+
+*« Jusqu'à combien peux-tu monter le plafond ? Un vrai inventaire peut aller
+jusqu'à 400 000 références, on doit voir large. »*
+
+Mesuré d'abord, sur un inventaire synthétique de **382 057 références et
+764 114 comptages**, en transactions annulées, **statistiques volontairement
+périmées**. Tout passait, sauf une chose :
+
+| chemin | à 382 057 références |
+|---|---|
+| cache hors ligne complet (383 pages) | 709 ms |
+| liste des écarts | 2 058 ms |
+| rapport | ~2 500 ms |
+| **recalcul des écarts** | **16 503 ms** |
+
+### ⚠️ Il n'existe pas de version rapide du recalcul COMPLET
+
+Trois optimisations essayées, mesurées, et le plancher n'a pas bougé :
+
+- index d'expression sur l'agrégat → l'agrégat tombe à **541 ms** ;
+- `where` sur le `do update` → n'écrit plus que ce qui change ;
+- `enable_nestloop` fermé → l'anti-jointure passe en hachage.
+
+Et pourtant un recalcul « rien n'a changé » coûtait encore **6,6 s**. La raison
+est structurelle : **`insert … on conflict` doit insérer puis détecter le
+conflit sur CHACUNE des 382 057 lignes**, même quand la clause `where` l'empêche
+d'écrire au bout. Sonder 400 000 lignes prend cinq secondes, un point c'est
+tout.
+
+**La seule issue est de ne plus tout recalculer à chaque ouverture.**
+
+### L'empreinte
+
+`counts` est en **ajout pur** : hors suppression explicite, le nombre de lignes
+ne peut que croître. Le nombre de comptages est donc une empreinte **exacte** —
+inchangé ⟹ rien n'est arrivé ⟹ l'audit est déjà juste.
+
+| | avant | après |
+|---|---|---|
+| 1er recalcul (382 057 lignes à créer) | 16 503 ms | **15 003 ms** |
+| recalcul, rien n'a bougé | 16 503 ms | **423 ms** |
+| recalcul, 500 scans de plus | 16 503 ms | **7 194 ms** |
+
+- **⚠️ L'exactitude tient à une règle, pas à une heuristique : TOUTE
+  suppression de comptages efface l'empreinte.** Sans cela, une suppression
+  suivie d'un ajout redonnerait le même compte et l'audit resterait faux **en
+  silence**. `vider_balise` et `delete_audit_line` appellent donc
+  `oublier_empreinte_audit`. Un test de garde balaie **toutes** les migrations,
+  retrouve la dernière définition de chaque fonction contenant
+  `delete from public.counts`, et exige l'appel — avec deux exemptions nommées :
+  `delete_session` (la ligne part en cascade) et `revert_pass` (révoquée à
+  `authenticated` depuis le 13 août 2026, donc injoignable ; la redéfinir
+  rendrait EXECUTE à PUBLIC et rouvrirait ce trou pour un gain nul).
+- **⚠️ L'empreinte ne peut PAS vivre sur `inventory_sessions`** : un superviseur
+  a le droit d'y écrire (`sessions_supervisor_update`), il pourrait donc figer
+  une empreinte fausse depuis le navigateur et **geler ses propres chiffres
+  d'audit**. Table à part, RLS active, aucune policy, révoquée à
+  `authenticated` — le motif de `stripe_events_traites`.
+- **⚠️ `p_force` n'est pas une commodité.** L'annulation d'un arbitrage écrit
+  **directement** dans `article_audit` sans toucher aux comptages : l'empreinte
+  ne bouge pas, le raccourci s'activerait, et la ligne resterait « à traiter »
+  au lieu de retrouver son vrai statut. C'est le **seul** appelant qui force,
+  des deux côtés. L'ancienne signature à un argument est **supprimée** (piège de
+  `p_event_id` et de `ca_request_store`) ; un appel nommé à un argument continue
+  de fonctionner.
+- **`set statement_timeout to '60s'` sur la fonction** : le tout premier
+  recalcul d'un inventaire entièrement compté crée autant de lignes qu'il y a de
+  références — ~15 s à 400 000, incompressible, et une seule fois. Les 8 s par
+  défaut le tuaient.
+
+### ⚠️ Le marqueur du matin n'a pas survécu à l'après-midi
+
+Le premier correctif du jour remplaçait l'anti-jointure par un **marqueur**
+(`v_marque` posé par l'upsert, relu par le delete) — plan-proof, 87 ms sur
+29 889 lignes. Il exige de **réécrire toutes les lignes à chaque recalcul** :
+dix secondes d'écriture pour rien à 400 000. La protection est donc passée du
+côté du **plan** : `set enable_nestloop to off` rend le mauvais choix impossible
+quelles que soient les statistiques (mesuré : boucle imbriquée > 45 s, hachage
+53 ms), et l'upsert n'écrit plus que ce qui change. Le bloc de garde a été
+**récrit, pas affaibli** — il vérifie désormais que la boucle est fermée et que
+le marqueur a disparu.
+
+### Vérifications
+
+- **Sept contrôles de justesse sur les données réelles**, en transaction
+  annulée : l'audit reproduit exactement l'agrégat des comptages, les statuts
+  suivent la même règle qu'avant, une ligne orpheline est retirée, un arbitrage
+  survit, un scan arrivé après l'empreinte est bien pris, le raccourci ne
+  s'active que si rien n'a bougé, et vider une balise efface l'empreinte.
+- **Zéro résidu contrôlé** : 29 553 articles, 165 comptages, 62 audits,
+  156 lignes de stock — identiques à avant.
+- **La garde du §empreinte mord** : en retirant l'appel dans `vider_balise`,
+  elle échoue **en nommant la fonction fautive**.
+- 884 tests du site, 380 de l'application, `eslint .` à zéro erreur,
+  `next build` avec la même table de routes.
+
+⚠️ **Piège de méthode du jour** : un premier contrôle a annoncé 8 lignes
+divergentes. C'était le TEST, pas la fonction — dans un `full join`, une
+condition sur la table de droite posée dans le `ON` laisse remonter **toutes les
+lignes des autres inventaires** comme si elles divergeaient (62 audits au total
+− 54 pour cet inventaire = les 8). Filtrer la table AVANT la jointure. Ne pas
+conclure à une régression sur un `full join` mal écrit.
+
+### Ce qui reste, et à quel prix
+
+Sur un inventaire de 400 000 références en cours d'audit, **une ouverture de
+l'onglet Écarts après de nouveaux scans coûte ~7 s** — le plancher du sondage
+décrit plus haut. Le rendre instantané demanderait de ne recalculer que les
+couples (balise, référence) réellement touchés, donc une colonne d'**ordre
+d'arrivée posée par le serveur** sur `counts`. ⚠️ **`created_at` ne peut pas
+servir** : la file hors ligne envoie l'heure réelle du scan
+(`src/lib/offline.ts`), donc un téléphone qui se synchronise après coup insère
+des lignes **antidatées** — un repère fondé sur `created_at` les manquerait, et
+l'audit serait faux sans que rien ne le dise. Chantier à ouvrir seulement si un
+client atteint réellement cette taille.

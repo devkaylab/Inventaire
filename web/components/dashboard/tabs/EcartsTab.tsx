@@ -316,5 +316,7 @@ async function recomputeAuditAfterUndo(sessionId: string, a: ArticleAudit): Prom
     .eq('sku', a.sku)
     .eq('zone', a.zone)
   if (error) throw error
-  await recomputeAudit(sessionId)
+  // `force` : on vient d'écrire dans `article_audit` sans toucher aux
+  // comptages, donc le raccourci du recalcul ne verrait rien bouger.
+  await recomputeAudit(sessionId, true)
 }

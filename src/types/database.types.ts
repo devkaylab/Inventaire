@@ -205,6 +205,32 @@ export type Database = {
           },
         ]
       }
+      audit_empreintes: {
+        Row: {
+          calcule_le: string
+          comptages: number
+          session_id: string
+        }
+        Insert: {
+          calcule_le?: string
+          comptages: number
+          session_id: string
+        }
+        Update: {
+          calcule_le?: string
+          comptages?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_empreintes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "inventory_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           balise_count: number
@@ -1918,6 +1944,10 @@ export type Database = {
       my_team_by_store: { Args: never; Returns: Json }
       nom_propre: { Args: { p_nom: string }; Returns: string }
       norm_balise: { Args: { p: string }; Returns: string }
+      oublier_empreinte_audit: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
       ouvrir_fil: {
         Args: { p_message: string; p_sujet: string }
         Returns: Json
@@ -1934,7 +1964,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      recompute_session_audit: { Args: { p_session_id: string }; Returns: Json }
+      recompute_session_audit: {
+        Args: { p_force?: boolean; p_session_id: string }
+        Returns: Json
+      }
       register_balise: {
         Args: { p_code: string; p_name: string; p_session_id: string }
         Returns: Json
