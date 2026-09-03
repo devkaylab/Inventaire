@@ -224,9 +224,19 @@ export async function importCatalogFile(
 
   // Remplacement complet : un simple upsert laisserait les SKU d'un import
   // précédent qui ne sont plus dans le fichier.
-  const { error: deleteError } = await supabase.from('articles').delete().eq('session_id', sessionId)
+  // ⚠️ LE VIDAGE PASSE PAR UNE RPC, JAMAIS PAR UN DELETE POSTGREST.
+  // Un remplacement doit vider d'abord : un simple upsert laisserait les SKU
+  // d'un import précédent qui ne sont plus dans le fichier. Mais la policy
+  // `articles_supervisor` porte `is_session_participant(session_id)`, qui prend la colonne
+  // de la LIGNE — Postgres l'évalue une fois par ligne. Sur 29 382 articles le
+  // DELETE dépassait le délai serveur (3 septembre 2026), et PostgREST rendait
+  // une erreur SANS TEXTE que l'écran affichait telle quelle.
+  // `vider_import` contrôle le droit une fois puis supprime hors RLS : 57 ms.
+  const { error: deleteError } = await supabase.rpc('vider_import', {
+    p_session_id: sessionId, p_cible: 'articles',
+  })
   if (deleteError) {
-    console.error('[import] delete articles', deleteError)
+    console.error('[import] vider_import articles', deleteError)
     throw new Error(errorMessage(deleteError))
   }
 
@@ -279,9 +289,19 @@ export async function importStockFile(
 
   onProgress?.({ parsed: total, uploaded: 0, total: rows.length })
 
-  const { error: deleteError } = await supabase.from('theoretical_stock').delete().eq('session_id', sessionId)
+  // ⚠️ LE VIDAGE PASSE PAR UNE RPC, JAMAIS PAR UN DELETE POSTGREST.
+  // Un remplacement doit vider d'abord : un simple upsert laisserait les SKU
+  // d'un import précédent qui ne sont plus dans le fichier. Mais la policy
+  // `theoretical_stock_supervisor` porte `is_session_participant(session_id)`, qui prend la colonne
+  // de la LIGNE — Postgres l'évalue une fois par ligne. Sur 29 382 articles le
+  // DELETE dépassait le délai serveur (3 septembre 2026), et PostgREST rendait
+  // une erreur SANS TEXTE que l'écran affichait telle quelle.
+  // `vider_import` contrôle le droit une fois puis supprime hors RLS : 57 ms.
+  const { error: deleteError } = await supabase.rpc('vider_import', {
+    p_session_id: sessionId, p_cible: 'stock',
+  })
   if (deleteError) {
-    console.error('[import] delete theoretical_stock', deleteError)
+    console.error('[import] vider_import stock', deleteError)
     throw new Error(errorMessage(deleteError))
   }
 

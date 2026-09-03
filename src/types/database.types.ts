@@ -1649,6 +1649,14 @@ export type Database = {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
       }
+      etat_import: {
+        Args: { p_session_id: string }
+        Returns: {
+          articles: number
+          stock: number
+          theorique: number
+        }[]
+      }
       export_my_data: { Args: never; Returns: Json }
       fil_pour_email: { Args: { p_fil: string }; Returns: Json }
       find_user_by_email: {
@@ -1968,6 +1976,10 @@ export type Database = {
       vider_balise: {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
+      }
+      vider_import: {
+        Args: { p_cible: string; p_session_id: string }
+        Returns: number
       }
     }
     Enums: {

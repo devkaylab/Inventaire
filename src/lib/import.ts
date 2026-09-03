@@ -222,13 +222,21 @@ export async function importCatalogFile(
 
   onProgress?.({ parsed: total, uploaded: 0, total: articles.length })
 
-  // 3. Delete existing articles for this session then re-insert fresh
-  const { error: deleteError } = await supabase
-    .from('articles')
-    .delete()
-    .eq('session_id', sessionId)
+  // 3. Vider ce qui est déjà chargé, puis réinsérer : un upsert seul
+  //    laisserait les SKU d'un import précédent absents du fichier.
+  // ⚠️ LE VIDAGE PASSE PAR UNE RPC, JAMAIS PAR UN DELETE POSTGREST.
+  //    La policy `articles_supervisor` porte `is_session_participant(session_id)`, qui
+  //    prend la colonne de la LIGNE : Postgres l'évalue une fois par ligne. Sur
+  //    un référentiel de 29 382 articles le DELETE dépassait le délai serveur
+  //    (constaté sur le site le 3 septembre 2026, l'app portait le même
+  //    défaut). `vider_import` contrôle le droit une fois puis supprime hors
+  //    RLS. Les deux `lib/import.ts` bougent ensemble — voir le test de garde.
+  const { error: deleteError } = await supabase.rpc('vider_import', {
+    p_session_id: sessionId,
+    p_cible: 'articles',
+  })
   if (deleteError) {
-    console.error('[import] delete articles', deleteError)
+    console.error('[import] vider_import articles', deleteError)
     throw new Error(errorMessage(deleteError))
   }
 
@@ -288,14 +296,21 @@ export async function importStockFile(
 
   onProgress?.({ parsed: total, uploaded: 0, total: payload.length })
 
-  // 3. Delete existing stock for this session, then insert fresh
-  //    (upsert alone would leave stale SKUs from a previous upload)
-  const { error: deleteError } = await supabase
-    .from('theoretical_stock')
-    .delete()
-    .eq('session_id', sessionId)
+  // 3. Vider ce qui est déjà chargé, puis réinsérer : un upsert seul
+  //    laisserait les SKU d'un import précédent absents du fichier.
+  // ⚠️ LE VIDAGE PASSE PAR UNE RPC, JAMAIS PAR UN DELETE POSTGREST.
+  //    La policy `theoretical_stock_supervisor` porte `is_session_participant(session_id)`, qui
+  //    prend la colonne de la LIGNE : Postgres l'évalue une fois par ligne. Sur
+  //    un référentiel de 29 382 articles le DELETE dépassait le délai serveur
+  //    (constaté sur le site le 3 septembre 2026, l'app portait le même
+  //    défaut). `vider_import` contrôle le droit une fois puis supprime hors
+  //    RLS. Les deux `lib/import.ts` bougent ensemble — voir le test de garde.
+  const { error: deleteError } = await supabase.rpc('vider_import', {
+    p_session_id: sessionId,
+    p_cible: 'stock',
+  })
   if (deleteError) {
-    console.error('[import] delete theoretical_stock', deleteError)
+    console.error('[import] vider_import stock', deleteError)
     throw new Error(errorMessage(deleteError))
   }
 

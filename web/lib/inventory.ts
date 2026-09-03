@@ -235,21 +235,30 @@ export type ImportState = {
   theoreticalQty: number
 }
 
+/**
+ * ⚠️ UN SEUL APPEL, ET IL COMPTE EN BASE — ne jamais y remettre de `count:
+ * 'exact'` sur `articles` ou `theoretical_stock`.
+ *
+ * Ces deux comptages étaient des requêtes HEAD à PostgREST. La policy
+ * `articles_supervisor` porte `is_session_participant(session_id)`, qui prend
+ * la colonne de la LIGNE : Postgres l'évalue une fois par ligne. Sur
+ * l'inventaire « HV » (29 382 articles) le comptage demandait 11,7 s, donc
+ * dépassait le délai serveur — et comme cette fonction est jouée à CHAQUE
+ * ouverture du tableau de bord, l'onglet Set up tombait en erreur avant même
+ * qu'on importe quoi que ce soit (3 septembre 2026).
+ *
+ * `etat_import` contrôle le droit UNE fois puis compte hors RLS : 24 ms pour
+ * les trois chiffres. C'est le motif de `get_session_count_totals`, pour la
+ * même raison.
+ */
 export async function getImportState(id: string): Promise<ImportState> {
-  const [a, s, t] = await Promise.all([
-    supabase.from('articles').select('*', { count: 'exact', head: true }).eq('session_id', id),
-    supabase.from('theoretical_stock').select('*', { count: 'exact', head: true }).eq('session_id', id),
-    supabase.rpc('get_session_theoretical_total', { p_session_id: id }),
-  ])
-  if (a.error) fail('getImportState/articles', a.error)
-  if (s.error) fail('getImportState/stock', s.error)
-  // Le total n'est pas vital pour l'affichage des autres compteurs : une
-  // migration en retard ne doit pas vider l'onglet Fichiers.
-  if (t.error) console.error('[inventory] getImportState/theoretical', t.error)
+  const { data, error } = await supabase.rpc('etat_import', { p_session_id: id })
+  if (error) fail('getImportState', error)
+  const row = Array.isArray(data) ? data[0] : data
   return {
-    articles: a.count ?? 0,
-    stock: s.count ?? 0,
-    theoreticalQty: t.error ? 0 : Number(t.data ?? 0),
+    articles: Number(row?.articles ?? 0),
+    stock: Number(row?.stock ?? 0),
+    theoreticalQty: Number(row?.theorique ?? 0),
   }
 }
 
