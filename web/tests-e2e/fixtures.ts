@@ -132,6 +132,55 @@ export const DETAIL = [
   { sku: 'GHI9123', ean: '3701000000035', brand: 'Nike', label: 'Casquette', zone: '5372', zone_name: 'Surface de vente', counted_qty: 0, counted_by: null, audited: true, audited_qty: 1, audited_by: 'Compte Test Sup' },
 ]
 
+/* Le rapport paginé (3 septembre 2026).
+   ⚠️ Le faux serveur refait le vrai travail — recherche, tri, tranche, total
+   de la sélection porté par chaque ligne. Un mock qui rendrait toujours les
+   quatre lignes laisserait passer un écran qui ne pagine pas. */
+export function rapportResume() {
+  return {
+    lignes: RESULTS.length,
+    theorique: RESULTS.reduce((s, r) => s + r.theoretical_qty, 0),
+    compte: RESULTS.reduce((s, r) => s + r.counted_qty, 0),
+    ecart_unites: RESULTS.reduce((s, r) => s + r.variance_units, 0),
+    ecart_valeur: RESULTS.reduce((s, r) => s + r.variance_value, 0),
+    non_arbitres: RESULTS.filter(r => r.status === 'failed').length,
+  }
+}
+
+type Cle = keyof (typeof RESULTS)[number]
+
+export function rapportPage(body: Record<string, unknown>) {
+  const q = String(body.p_recherche ?? '').trim().toLowerCase()
+  const tri = String(body.p_tri ?? 'variance_value') as Cle
+  const sens = String(body.p_sens ?? 'desc') === 'desc' ? -1 : 1
+  const off = Number(body.p_offset ?? 0)
+  const lim = Number(body.p_limite ?? 50)
+
+  const filtre = q === ''
+    ? RESULTS
+    : RESULTS.filter(r =>
+      r.sku.toLowerCase().includes(q) || (r.ean ?? '').toLowerCase().includes(q)
+      || r.label.toLowerCase().includes(q) || r.brand.toLowerCase().includes(q))
+
+  const trie = [...filtre].sort((a, b) => {
+    const va = a[tri], vb = b[tri]
+    const c = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), 'fr')
+    // Le sku départage, comme en base : sans ordre total, une page peut
+    // répéter une ligne et en sauter une autre.
+    return (sens * c) || a.sku.localeCompare(b.sku)
+  })
+
+  return trie.slice(off, off + lim).map(r => ({ ...r, total: filtre.length }))
+}
+
+export function rapportDetailPage(body: Record<string, unknown>) {
+  const off = Number(body.p_offset ?? 0)
+  const lim = Number(body.p_limite ?? 5000)
+  return DETAIL.slice(off, off + lim).map(r => ({ ...r, total: DETAIL.length }))
+}
+
 export const STORES = [
   { id: 'store-1', name: 'Oberlin Lyon' },
   { id: 'store-2', name: 'Magasin centre-ville' },

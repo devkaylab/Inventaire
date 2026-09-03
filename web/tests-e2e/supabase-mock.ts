@@ -220,6 +220,13 @@ export async function mockSupabase(
         // navigateur ne télécharge plus les lignes de comptage. PostgREST rend
         // une fonction `returns table` sous forme de tableau.
         case 'get_session_count_totals': return json(route, [F.countTotals()])
+        // Le rapport se lit par pages depuis le 3 septembre 2026. Le faux
+        // serveur applique la même arithmétique que la vraie fonction —
+        // recherche, tri, tranche, et le total de la sélection sur chaque
+        // ligne — sans quoi les tests valideraient un écran qui ne pagine pas.
+        case 'rapport_resume': return json(route, [F.rapportResume()])
+        case 'rapport_page': return json(route, F.rapportPage(body as Record<string, unknown>))
+        case 'rapport_detail_page': return json(route, F.rapportDetailPage(body as Record<string, unknown>))
         case 'get_session_results': return json(route, F.RESULTS)
         case 'get_session_detail': return json(route, F.DETAIL)
         case 'recompute_session_audit': return json(route, { success: true, failed: 2, pending: 1, total: 4 })

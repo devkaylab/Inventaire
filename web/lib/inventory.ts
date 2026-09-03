@@ -279,16 +279,128 @@ export async function startSession(id: string): Promise<void> {
 
 // ── Résultats et audit ───────────────────────────────────────────────────────
 
-export async function getSessionResults(id: string): Promise<SessionResultRow[]> {
-  const { data, error } = await supabase.rpc('get_session_results', { p_session_id: id })
-  if (error) fail('getSessionResults', error)
-  return (data ?? []) as SessionResultRow[]
+/**
+ * Le rapport se lit PAR PAGES (3 septembre 2026).
+ *
+ * ⚠️ `get_session_results` et `get_session_detail` rendaient toutes les lignes
+ * d'un coup — 400 000 sur un gros inventaire, des dizaines de mégaoctets, et
+ * un navigateur qui calculait ensuite totaux, recherche et tri sur place.
+ * Mesuré à 6,3 s côté serveur, et l'écran ne s'ouvrait plus du tout au-delà.
+ *
+ * Ne pas revenir à un appel qui rend tout : ce qui change ici n'est pas la
+ * vitesse d'affichage, c'est le fait que l'écran s'ouvre.
+ */
+
+/** Le tri accepté par le serveur. Toute autre valeur y est ignorée. */
+export type RapportTri =
+  | 'sku' | 'label' | 'status'
+  | 'theoretical_qty' | 'counted_qty' | 'variance_units' | 'variance_value'
+
+export type RapportResume = {
+  lignes: number
+  theorique: number
+  compte: number
+  ecart_unites: number
+  ecart_valeur: number
+  non_arbitres: number
 }
 
-export async function getSessionDetail(id: string): Promise<SessionDetailRow[]> {
-  const { data, error } = await supabase.rpc('get_session_detail', { p_session_id: id })
-  if (error) fail('getSessionDetail', error)
-  return (data ?? []) as SessionDetailRow[]
+/**
+ * Les totaux affichés en tuiles.
+ *
+ * ⚠️ Ils portent sur l'inventaire ENTIER, pas sur la page ni sur la recherche.
+ * C'est ce que l'écran montrait déjà quand il chargeait tout ; un total qui
+ * suivrait la page ne voudrait rien dire.
+ */
+export async function getRapportResume(id: string): Promise<RapportResume> {
+  const { data, error } = await supabase.rpc('rapport_resume', { p_session_id: id })
+  if (error) fail('getRapportResume', error)
+  const r = (data ?? [])[0]
+  return {
+    lignes: Number(r?.lignes ?? 0),
+    theorique: Number(r?.theorique ?? 0),
+    compte: Number(r?.compte ?? 0),
+    ecart_unites: Number(r?.ecart_unites ?? 0),
+    ecart_valeur: Number(r?.ecart_valeur ?? 0),
+    non_arbitres: Number(r?.non_arbitres ?? 0),
+  }
+}
+
+/** Une page du rapport, plus le nombre de lignes que la recherche retient. */
+export async function getRapportPage(id: string, opts: {
+  recherche?: string
+  tri?: RapportTri
+  sens?: 'asc' | 'desc'
+  offset?: number
+  limite?: number
+}): Promise<{ rows: SessionResultRow[]; total: number }> {
+  const { data, error } = await supabase.rpc('rapport_page', {
+    p_session_id: id,
+    p_recherche: opts.recherche?.trim() || null,
+    p_tri: opts.tri ?? 'variance_value',
+    p_sens: opts.sens ?? 'desc',
+    p_offset: opts.offset ?? 0,
+    p_limite: opts.limite ?? 50,
+  })
+  if (error) fail('getRapportPage', error)
+  const rows = (data ?? []) as (SessionResultRow & { total: number })[]
+  return { rows: rows as SessionResultRow[], total: Number(rows[0]?.total ?? 0) }
+}
+
+/**
+ * Parcourt toutes les pages et rend l'ensemble — POUR L'EXPORT SEULEMENT.
+ *
+ * ⚠️ Le fichier remis au client doit être COMPLET : c'est le seul endroit du
+ * site où l'on veut encore tout. La différence avec avant est qu'on le
+ * demande par tranches, au lieu d'exiger 400 000 lignes en une réponse que le
+ * serveur ne peut pas rendre dans le temps qui lui est accordé.
+ *
+ * `onAvance` sert à dire où on en est : à cette taille, l'attente se compte en
+ * dizaines de secondes, et un bouton qui tourne sans rien dire inquiète.
+ */
+async function toutesLesPages<T>(
+  page: (offset: number) => Promise<{ rows: T[]; total: number }>,
+  taille: number,
+  onAvance?: (fait: number, total: number) => void,
+): Promise<T[]> {
+  const tout: T[] = []
+  let offset = 0
+  let total = 0
+  for (;;) {
+    const r = await page(offset)
+    total = r.total
+    tout.push(...r.rows)
+    onAvance?.(tout.length, total)
+    // On s'arrête sur une page incomplète : c'est la dernière. Le garde-fou
+    // sur `total` évite une boucle sans fin si le serveur changeait d'avis.
+    if (r.rows.length < taille || tout.length >= total) break
+    offset += taille
+  }
+  return tout
+}
+
+const TAILLE_EXPORT = 5000
+
+export async function getAllRapportRows(
+  id: string, onAvance?: (fait: number, total: number) => void,
+): Promise<SessionResultRow[]> {
+  return toutesLesPages(
+    (offset) => getRapportPage(id, { tri: 'sku', sens: 'asc', offset, limite: TAILLE_EXPORT }),
+    TAILLE_EXPORT, onAvance,
+  )
+}
+
+export async function getSessionDetail(
+  id: string, onAvance?: (fait: number, total: number) => void,
+): Promise<SessionDetailRow[]> {
+  return toutesLesPages(async (offset) => {
+    const { data, error } = await supabase.rpc('rapport_detail_page', {
+      p_session_id: id, p_offset: offset, p_limite: TAILLE_EXPORT,
+    })
+    if (error) fail('getSessionDetail', error)
+    const rows = (data ?? []) as (SessionDetailRow & { total: number })[]
+    return { rows: rows as SessionDetailRow[], total: Number(rows[0]?.total ?? 0) }
+  }, TAILLE_EXPORT, onAvance)
 }
 
 /**

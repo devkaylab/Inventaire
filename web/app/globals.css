@@ -801,6 +801,16 @@ a { color: inherit; text-decoration: none; }
   margin: -4px 0 14px;
 }
 
+/* Le pied d'un tableau paginé : ce qu'on voit, sur combien, et les deux pas.
+   ⚠️ Les boutons restent À DROITE et le décompte à gauche même quand la ligne
+   passe sur deux rangs : sur un écran étroit, un « Suivant » qui se promène
+   d'un bord à l'autre selon la longueur du texte se cherche à chaque page. */
+.pagination {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: 10px;
+}
+.pagination-boutons { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
 /* Choix du format de téléchargement : deux options décrites, pas deux boutons nus. */
 .format-choice { display: flex; flex-direction: column; gap: 12px; }
 .format-option {
