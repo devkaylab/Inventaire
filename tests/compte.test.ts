@@ -2507,4 +2507,18 @@ describe('la publication Android ne part pas avec la clé de debug', () => {
     expect(app.expo.ios.buildNumber).toBeTruthy()
     expect(typeof app.expo.android.versionCode).toBe('number')
   })
+
+  it('⚠️ le numéro iOS vit AUSSI dans un plist versionné, et les deux doivent coïncider', () => {
+    // `android/` est régénéré à chaque build : `versionCode` n'a qu'une source,
+    // app.json. `ios/` est VERSIONNÉ et ne se régénère pas — le numéro qui part
+    // réellement chez Apple est celui d'Info.plist. Bumper app.json seul produit
+    // donc un second « build 1 », et App Store Connect le refuse À L'ENVOI,
+    // après tout le build. Même piège que `UIUserInterfaceStyle` le 31 août.
+    const plist = readFileSync(path.join(here, '..', 'ios', 'Inventaire', 'Info.plist'), 'utf8')
+    const valeur = (cle: string) =>
+      plist.match(new RegExp(`<key>${cle}</key>\\s*<string>([^<]*)</string>`))?.[1]
+
+    expect(valeur('CFBundleVersion')).toBe(app.expo.ios.buildNumber)
+    expect(valeur('CFBundleShortVersionString')).toBe(app.expo.version)
+  })
 })

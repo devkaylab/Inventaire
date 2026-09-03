@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.quantinvo.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "La caméra sert à lire les balises de zone et les codes-barres des articles pendant l'inventaire. Aucune photo n'est enregistrée.",
         "ITSAppUsesNonExemptEncryption": false
