@@ -7006,3 +7006,82 @@ JSON. Le contrôle qui reste à Julien tient en un geste : **rouvrir « HV » et
 réimporter le fichier**.
 
 Tests de garde : `web/tests/import-gros-referentiel.test.ts`.
+
+## Un constat ne s'affiche pas comme une erreur (3 septembre 2026)
+
+Suite du chantier ci-dessus. L'import réussi de 29 389 articles affichait, juste
+sous le vert, un encadré **rouge** : « 7318 SKU en double dans le fichier —
+dernière valeur conservée ». Question de Julien : *« pourquoi j'ai cette alerte
+si on peut utiliser les doublons sans problème ? »*
+
+**Il avait raison, et le mécanisme qu'il avait en tête n'était pas en cause.**
+Un SKU répété avec un EAN **différent** est bien conservé à part (règle du
+25 août). Ce qui déclenchait le rouge, c'était l'autre cas : le SKU répété avec
+le **même** EAN — donc la même référence listée plusieurs fois, ce qui est
+l'ordinaire d'un référentiel (une ligne par emplacement). Vérifié en base sur
+« HV W&J » : 29 382 EAN sur 29 389 articles, et **zéro** ligne insérée sous son
+EAN, donc `keptByEan = 0`. Rien n'était perdu ; l'écran criait sur un import
+parfaitement réussi.
+
+## ⚠️ `errors` et `notes` : ce qui manque, et ce qui a été regroupé
+
+`ImportResult` porte désormais **deux listes**, des deux côtés du produit :
+
+- **`errors`** — ce qui n'a PAS été importé, donc ce qui appelle un geste
+  (« Ligne 412 : ni SKU ni EAN — ignorée »), plus l'échec fatal côté mobile ;
+- **`notes`** — ce que l'import a regroupé ou dédoublé. Aucune référence perdue.
+
+Les trois constats qui sortaient en rouge sont passés en notes : les doublons
+stricts, les lignes gardées sous leur EAN, et l'agrégation multi-emplacements du
+stock.
+
+- **⚠️ Le texte dit ce qui s'est passé, et le mot « doublon » seul a disparu**
+  — il laissait croire à un défaut du fichier. Désormais : « N ligne(s)
+  répètent une référence déjà vue — une seule fiche par référence, **la
+  dernière ligne fait foi** ». Cette fin n'est pas décorative : c'est la seule
+  conséquence réelle, si les lignes répétées portaient un libellé, une marque
+  ou un prix différents.
+- **⚠️ La boîte neutre ne prend JAMAIS les jetons `danger`** — un test lit le
+  bloc CSS et refuse le mot. Côté mobile, même règle : `noteBox` est sur
+  `t.surface` + `t.hairline`, jamais `t.dangerSoft`.
+- **`--bg`, pas `--surface-2`, pour le fond de `.import-notes`** : en clair
+  `--surface-2` vaut `#ffffff`, donc la boîte n'avait aucun fond sur un panneau
+  blanc et ne tenait qu'à son filet. **Trouvé à l'écran, pas dans le code** —
+  c'est exactement ce que la capture apporte de plus que les tests.
+- Les titres disent ce qu'ils contiennent : « Lignes non importées » (rouge) et
+  « À savoir » (neutre). « Lignes signalées » ne distinguait rien.
+- **⚠️ Côté mobile, `errors` porte AUSSI l'échec fatal** (`errors:
+  [errorMessage(e)]` dans le `catch`) : on ne pouvait donc pas simplement
+  recolorer la boîte existante. Le `catch` vide désormais `notes`, sans quoi les
+  constats d'un import précédent survivraient à un échec.
+
+## ⚠️ La garde « aucun emoji » ne voyait pas les commentaires JSX
+
+Cinquième variante du même piège sur ce dépôt, et elle méritait mieux qu'un
+contournement. `codeSeul` (`tests/compte.test.ts`) filtrait **ligne à ligne** les
+débuts `//`, `*` et `/*` — donc un commentaire JSX lui échappait : `{/* … */}` ne
+commence par aucun des trois, et ses lignes du milieu ne commencent par rien de
+reconnaissable. Un `⚠️` posé dans un commentaire d'écran faisait échouer un test
+qui vérifie ce que l'écran **affiche**.
+
+Elle retire maintenant les blocs `/* … */` et `{/* … */}` **d'un coup**, avant
+de filtrer les `//`. Vérifié dans les deux sens : un emoji remis dans du vrai
+JSX la fait toujours échouer.
+
+## Vérifications
+
+- 853 tests du site (dont 5 nouveaux), 380 de l'application, `tsc --noEmit` des
+  deux côtés, `eslint .` à zéro erreur, `next build` avec la même table de
+  routes.
+- **Au navigateur, clair ET sombre**, par route jetable (retirée, `git status`
+  contrôlé) : les trois boîtes ensemble, puis le cas de Julien seul — vert +
+  neutre, aucun rouge. Débordement horizontal nul, aucune erreur de console.
+- ⚠️ **Piège de méthode** : une route jetable survit dans `.next/dev/types`
+  après un `next dev`, et le `next build` suivant échoue sur un module
+  introuvable. Ce n'est pas une régression — `rm -rf .next` avant de conclure.
+- **Non vérifié à l'écran** : l'écran mobile d'import, qui demande une session
+  de superviseur sur le téléphone. Le rendu est tenu par le test qui compare
+  `noteBox` à `t.surface`.
+
+Tests de garde : `web/tests/import.test.ts`, bloc « un constat ne s'affiche pas
+comme une erreur ».

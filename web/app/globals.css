@@ -1515,6 +1515,19 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px; padding: 12px 14px; font-size: 13px; color: var(--danger-text);
 }
 .import-errors ul { margin: 6px 0 0 18px; }
+/* Ce que l'import a REGROUPÉ — un constat, pas une alerte.
+   ⚠️ Ne jamais lui donner les jetons `danger` : c'est précisément la confusion
+   corrigée le 3 septembre 2026, où « 7318 lignes répètent une référence »
+   s'affichait en rouge alors que rien n'était perdu. */
+.import-notes {
+  /* ⚠️ `--bg`, pas `--surface-2` : en clair ce dernier vaut #ffffff, donc la
+     boîte n'avait aucun fond sur un panneau blanc et ne tenait qu'à son
+     filet. `--bg` creuse légèrement dans les DEUX thèmes. */
+  margin-top: 12px; background: var(--bg); border: 1px solid var(--hairline);
+  border-radius: 10px; padding: 12px 14px; font-size: 13px; color: var(--text-2);
+}
+.import-notes strong { color: var(--text); }
+.import-notes ul { margin: 6px 0 0 18px; }
 .banner {
   border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px;
   border: 1px solid transparent;

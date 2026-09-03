@@ -1339,13 +1339,18 @@ describe('aucun emoji dans les écrans du parcours', () => {
 
   // Seules les lignes de code comptent : les commentaires en emploient pour
   // signaler un piège (« ⚠️ »), et c'est une convention du dépôt.
+  //
+  // ⚠️ Les blocs sont retirés d'un coup, PAS ligne à ligne. Le filtre d'origine
+  // testait le début de chaque ligne, donc il ratait un commentaire JSX —
+  // `{/* … */}` ne commence ni par `//` ni par `*`, et ses lignes du milieu ne
+  // commencent par rien de reconnaissable. Cinquième variante du même piège sur
+  // ce dépôt : une garde qui vérifie une ABSENCE doit lire le code sans ses
+  // commentaires, quelle que soit leur forme.
   const codeSeul = (source: string) =>
     source
+      .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, '')
       .split('\n')
-      .filter(l => {
-        const t = l.trim()
-        return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*')
-      })
+      .filter(l => !l.trim().startsWith('//'))
       .join('\n')
 
   for (const fichier of [

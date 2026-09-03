@@ -78,12 +78,14 @@ describe('mapCatalogRows', () => {
   })
 
   it('sur doublon de SKU, la dernière ligne l’emporte', () => {
-    const { articles, errors } = mapCatalogRows([
+    const { articles, errors, notes } = mapCatalogRows([
       { sku: 'A', libelle: 'ancien' }, { sku: 'A', libelle: 'nouveau' },
     ], S)
     expect(articles).toHaveLength(1)
     expect(articles[0].label).toBe('nouveau')
-    expect(errors.join(' ')).toMatch(/double/i)
+    // ⚠️ Une NOTE, pas une erreur : aucune référence n'est perdue.
+    expect(errors).toHaveLength(0)
+    expect(notes.join(' ')).toMatch(/répètent une référence déjà vue/i)
   })
 
   it('reconnaît « Code Ean » — le fichier du 25 août 2026', () => {
@@ -116,7 +118,7 @@ describe('mapCatalogRows', () => {
     // Référentiel bijouterie/horlogerie : une ligne par pièce, le SKU (modèle)
     // se répète, l'EAN identifie la pièce. Écraser perdait tous les EAN sauf
     // le dernier — et chaque pièce écrasée sortait « article inconnu » au scan.
-    const { articles, errors } = mapCatalogRows([
+    const { articles, errors, notes } = mapCatalogRows([
       { sku: 'A', ean: '7624709024384', libelle: 'Montre' },
       { sku: 'A', ean: '7624709024391', libelle: 'Montre' },
     ], S)
@@ -124,7 +126,8 @@ describe('mapCatalogRows', () => {
     const bySku = new Map(articles.map(a => [a.sku, a]))
     expect(bySku.get('A')!.ean).toBe('7624709024384')
     expect(bySku.get('7624709024391')!.ean).toBe('7624709024391')
-    expect(errors.join(' ')).toMatch(/EAN différent/i)
+    expect(errors).toHaveLength(0)
+    expect(notes.join(' ')).toMatch(/EAN différent/i)
   })
 
   it('ne perd pas l’EAN quand une ligne en double n’en porte pas', () => {
@@ -144,9 +147,68 @@ describe('mapCatalogRows', () => {
   })
 })
 
+describe('un constat ne s’affiche pas comme une erreur', () => {
+  // Constat de Julien, 3 septembre 2026, devant « 7318 SKU en double dans le
+  // fichier » affiché en rouge : « pourquoi j'ai cette alerte si on peut
+  // utiliser les doublons sans problème ? » Un référentiel liste couramment la
+  // même référence une fois par emplacement — rien n'était perdu.
+  const lire = (p: string) => readFileSync(join(__dirname, p), 'utf8')
+  const sansCommentaires = (src: string) =>
+    src
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join('\n')
+
+  it('ce qui est regroupé va dans notes, ce qui est perdu dans errors', () => {
+    // Perte réelle : la ligne n'a ni SKU ni EAN, elle n'est pas importée.
+    const perte = mapCatalogRows([{ libelle: 'sans code' }], S)
+    expect(perte.errors.join(' ')).toMatch(/ignorée/i)
+    expect(perte.notes).toHaveLength(0)
+
+    // Regroupement : la référence existe, elle est simplement répétée.
+    const constat = mapCatalogRows([{ sku: 'A' }, { sku: 'A' }], S)
+    expect(constat.errors).toHaveLength(0)
+    expect(constat.notes).toHaveLength(1)
+  })
+
+  it('l’agrégation multi-emplacements du stock est une note', () => {
+    const { errors, notes } = mapStockRows(
+      [{ sku: 'A', qte: '2' }, { sku: 'A', qte: '3' }], S,
+    )
+    expect(errors).toHaveLength(0)
+    expect(notes.join(' ')).toMatch(/agrégée/i)
+  })
+
+  it('le message ne dit plus « doublon » tout court', () => {
+    // Le mot seul laissait croire à un défaut du fichier ; le texte dit
+    // maintenant ce qui s'est passé et ce qui fait foi.
+    const { notes } = mapCatalogRows([{ sku: 'A' }, { sku: 'A' }], S)
+    expect(notes[0]).not.toMatch(/en double/i)
+    expect(notes[0]).toMatch(/la dernière ligne fait foi/i)
+  })
+
+  it('⚠️ les notes ne se rendent JAMAIS dans la boîte rouge', () => {
+    const setup = sansCommentaires(lire('../components/dashboard/tabs/SetupTab.tsx'))
+    expect(setup).toMatch(/state\.notes\.map/)
+    // La boîte des notes est neutre, celle des erreurs reste `import-errors`.
+    expect(setup).toContain('className="import-notes"')
+    expect(setup.match(/import-errors/g) ?? []).toHaveLength(2) // échec fatal + lignes non importées
+
+    const css = lire('../app/globals.css')
+    const bloc = css.slice(css.indexOf('.import-notes {'), css.indexOf('.import-notes strong'))
+    expect(bloc).not.toMatch(/danger/)
+
+    // Et l'application suit la même règle.
+    const mobile = sansCommentaires(lire('../../src/app/(supervisor)/[sessionId]/import.tsx'))
+    expect(mobile).toMatch(/state\.notes\.map/)
+    expect(mobile).toMatch(/noteBox:[^,]*backgroundColor: t\.surface/)
+  })
+})
+
 describe('mapStockRows', () => {
   it('additionne les quantités d’un même SKU sur plusieurs emplacements', () => {
-    const { rows, errors } = mapStockRows([
+    const { rows, errors, notes } = mapStockRows([
       { sku: 'A', quantite: '3' },
       { sku: 'A', quantite: '2' },
       { sku: 'B', qte: '5' },
@@ -155,7 +217,9 @@ describe('mapStockRows', () => {
     expect(rows).toHaveLength(2)
     expect(rows.find(r => r.sku === 'A')!.theoretical_qty).toBe(5)
     expect(rows.find(r => r.sku === 'B')!.theoretical_qty).toBe(5)
-    expect(errors.join(' ')).toMatch(/multi-emplacements/i)
+    // ⚠️ Une NOTE : sommer plusieurs emplacements est le comportement attendu.
+    expect(errors).toHaveLength(0)
+    expect(notes.join(' ')).toMatch(/multi-emplacements/i)
   })
 
   it('accepte les variantes de colonne quantité', () => {

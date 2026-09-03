@@ -20,6 +20,7 @@ interface StepState {
   progress: ImportProgress | null
   uploaded: number
   errors: string[]
+  notes: string[]
 }
 
 const initialState: StepState = {
@@ -28,6 +29,7 @@ const initialState: StepState = {
   progress: null,
   uploaded: 0,
   errors: [],
+  notes: [],
 }
 
 function ProgressBar({ progress, styles }: { progress: ImportProgress; styles: ReturnType<typeof makeStyles> }) {
@@ -66,7 +68,7 @@ export default function ImportScreen() {
     const file = await pickFile()
     if (!file) return
 
-    set(step)(s => ({ ...s, fileName: file.name, phase: 'parsing', errors: [], progress: null, uploaded: 0 }))
+    set(step)(s => ({ ...s, fileName: file.name, phase: 'parsing', errors: [], notes: [], progress: null, uploaded: 0 }))
 
     try {
       const onProgress = (p: ImportProgress) => {
@@ -86,6 +88,7 @@ export default function ImportScreen() {
         phase: 'done',
         uploaded: result.uploaded,
         errors: result.errors,
+        notes: result.notes,
       }))
     } catch (e: unknown) {
       console.error('[import screen]', step, e)
@@ -93,6 +96,7 @@ export default function ImportScreen() {
         ...s,
         phase: 'error',
         errors: [errorMessage(e)],
+        notes: [],
       }))
     }
   }
@@ -131,10 +135,21 @@ export default function ImportScreen() {
           </View>
         )}
 
+        {/* Ce qui n'a PAS été importé, ou l'échec fatal : le rouge est mérité. */}
         {state.errors.length > 0 && (
           <View style={styles.errorBox}>
             {state.errors.map((e, i) => (
               <Text key={i} style={styles.errorText}>{e}</Text>
+            ))}
+          </View>
+        )}
+
+        {/* Ce que l'import a regroupé. ⚠️ Boîte NEUTRE, jamais `errorBox` :
+            rien n'est perdu, et le rouge ferait douter d'un import réussi. */}
+        {state.notes.length > 0 && (
+          <View style={styles.noteBox}>
+            {state.notes.map((e, i) => (
+              <Text key={i} style={styles.noteText}>{e}</Text>
             ))}
           </View>
         )}
@@ -253,7 +268,12 @@ function makeStyles(t: Theme) {
     successText: { color: t.success, fontFamily: Font.semibold, fontSize: 13, ...tabular },
 
     errorBox: { backgroundColor: t.dangerSoft, borderRadius: Radius.sm, padding: 10, gap: 4 },
+    noteBox: {
+      backgroundColor: t.surface, borderRadius: Radius.sm, padding: 10, gap: 4,
+      borderWidth: 1, borderColor: t.hairline,
+    },
     errorText: { color: t.danger, fontSize: 12 },
+    noteText: { color: t.textMuted, fontSize: 12 },
 
     button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
     buttonDisabled: { opacity: 0.5 },

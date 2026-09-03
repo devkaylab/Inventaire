@@ -25,9 +25,20 @@ export interface ImportProgress {
   total: number
 }
 
+/**
+ * ⚠️ DEUX LISTES, ET LA DIFFÉRENCE EST CE QUI SE VOIT À L'ÉCRAN.
+ *
+ * `errors` = ce qui n'a PAS été importé, donc ce qui appelle un geste.
+ * `notes`  = ce que l'import a regroupé ou dédoublé, donc un simple constat.
+ *
+ * Elles étaient confondues jusqu'au 3 septembre 2026, et tout sortait dans la
+ * même boîte rouge — sur le site comme ici. Le module du site porte la même
+ * séparation ; les deux `lib/import.ts` bougent ensemble.
+ */
 export interface ImportResult {
   uploaded: number
   errors: string[]
+  notes: string[]
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -168,6 +179,7 @@ export async function importCatalogFile(
   onProgress?: (p: ImportProgress) => void,
 ): Promise<ImportResult> {
   const errors: string[] = []
+  const notes: string[] = []
 
   // 1. Parse
   const rawRows = isXlsx(name) ? await xlsxToRawRows(uri) : await csvToRawRows(await new File(uri).text())
@@ -214,11 +226,17 @@ export async function importCatalogFile(
     articleMap.set(sku, already?.ean && !ean ? { ...article, ean: already.ean } : article)
   }
   const articles = Array.from(articleMap.values())
+  // Les deux constats ci-dessous ne perdent AUCUN article : ce sont des
+  // regroupements, pas des lignes écartées. D'où `notes` et non `errors`.
   if (keptByEan > 0) {
-    errors.push(`${keptByEan} ligne(s) au même SKU avec un EAN différent — conservée(s) séparément sous leur EAN`)
+    notes.push(`${keptByEan} ligne(s) au même SKU sous un EAN différent — conservée(s) séparément, sous leur EAN`)
   }
   const dupes = total - skipped - articles.length
-  if (dupes > 0) errors.push(`${dupes} SKU(s) en double dans le fichier — dernière valeur conservée`)
+  if (dupes > 0) {
+    // Le message dit ce qui s'est passé : la même référence répétée est le cas
+    // ordinaire d'un référentiel (une ligne par emplacement), pas un défaut.
+    notes.push(`${dupes} ligne(s) répètent une référence déjà vue — une seule fiche par référence, la dernière ligne fait foi`)
+  }
 
   onProgress?.({ parsed: total, uploaded: 0, total: articles.length })
 
@@ -255,7 +273,7 @@ export async function importCatalogFile(
     (uploaded) => onProgress?.({ parsed: total, uploaded, total }),
   )
 
-  return { uploaded: articles.length, errors }
+  return { uploaded: articles.length, errors, notes }
 }
 
 // ─── Stock import ─────────────────────────────────────────────────────────────
@@ -266,6 +284,7 @@ export async function importStockFile(
   onProgress?: (p: ImportProgress) => void,
 ): Promise<ImportResult> {
   const errors: string[] = []
+  const notes: string[] = []
 
   // 1. Parse
   const rawRows = isXlsx(name) ? await xlsxToRawRows(uri) : await csvToRawRows(await new File(uri).text())
@@ -290,8 +309,9 @@ export async function importStockFile(
   )
   const locations = total - skipped
   const uniqueSkus = payload.length
-  if (locations > uniqueSkus) errors.push(
-    `${locations - uniqueSkus} ligne(s) multi-emplacements agrégées — quantités sommées par SKU`
+  // Sommer plusieurs emplacements est le comportement attendu, pas un défaut.
+  if (locations > uniqueSkus) notes.push(
+    `${locations - uniqueSkus} ligne(s) multi-emplacements agrégée(s) — quantités sommées par SKU`
   )
 
   onProgress?.({ parsed: total, uploaded: 0, total: payload.length })
@@ -328,5 +348,5 @@ export async function importStockFile(
     (uploaded) => onProgress?.({ parsed: total, uploaded, total: payload.length }),
   )
 
-  return { uploaded: payload.length, errors }
+  return { uploaded: payload.length, errors, notes }
 }
