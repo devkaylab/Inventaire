@@ -1,6 +1,16 @@
 /**
  * Extract a human-readable message from any thrown value.
  * Handles: Error, PostgrestError, plain objects, strings, null.
+ *
+ * ⚠️ **CE QUI N'A PAS DE TEXTE NE SE SÉRIALISE PAS EN JSON.** Le site a
+ * affiché `{"message":""}` dans un encadré rouge le 3 septembre 2026 : c'est
+ * ce que rend `JSON.stringify` d'une erreur PostgREST sans texte, et PostgREST
+ * en fabrique une (`{ message: <corps> }`) chaque fois que le serveur répond
+ * en erreur AVEC UN CORPS VIDE — un délai dépassé, une passerelle qui coupe.
+ * Le cas est donc exactement celui où la personne a le plus besoin d'une
+ * phrase, et c'est celui où elle recevait du JSON. Le module du site porte la
+ * même correction ; l'objet brut reste tracé par le `console.error` de
+ * l'appelant, il n'a rien à faire à l'écran.
  */
 export function errorMessage(e: unknown): string {
   if (!e) return 'Erreur inconnue'
@@ -17,7 +27,11 @@ export function errorMessage(e: unknown): string {
     if (typeof obj.hint === 'string' && obj.hint) parts.push(`Conseil: ${obj.hint}`)
     if (typeof obj.code === 'string' && obj.code) parts.push(`[${obj.code}]`)
     if (parts.length) return parts.join(' ')
-    try { return JSON.stringify(e) } catch { /* ignore */ }
+    // On garde le code technique quand il existe — il retrouve l'incident
+    // dans les journaux — et rien d'autre.
+    return typeof obj.code === 'string' && obj.code
+      ? `Erreur inconnue [${obj.code}]`
+      : 'Erreur inconnue'
   }
 
   if (typeof e === 'string') return e
@@ -33,6 +47,11 @@ export function friendlyInsertCountError(e: unknown): string {
   const msg = errorMessage(e)
   if (/row-level security|42501|permission denied/i.test(msg)) {
     return "Enregistrement refusé. Vous n'êtes peut-être plus inscrit à cet inventaire, ou il vient d'être clôturé. Rejoignez-le à nouveau (numéro + code) ou contactez le superviseur."
+  }
+  // Le délai serveur dépassé n'est ni un refus ni une panne de réseau :
+  // l'opération est partie et a été interrompue en route.
+  if (/57014|statement timeout|canceling statement/i.test(msg)) {
+    return 'Le serveur a mis trop de temps à répondre et a interrompu l’opération. Réessayez dans un instant.'
   }
   if (/network|fetch|timeout|Failed to fetch/i.test(msg)) {
     return 'Connexion perdue. Vérifiez votre réseau : le comptage sera enregistrable dès le retour de la connexion.'
