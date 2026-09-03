@@ -12,7 +12,19 @@ import { supabase } from '@/lib/supabaseClient'
 import { errorMessage } from '@/lib/errors'
 
 export type ImportProgress = { parsed: number; uploaded: number; total: number }
-export type ImportResult = { uploaded: number; errors: string[] }
+/**
+ * ⚠️ DEUX LISTES, ET LA DIFFÉRENCE EST CE QUI SE VOIT À L'ÉCRAN.
+ *
+ * `errors` = ce qui n'a PAS été importé, donc ce qui appelle un geste.
+ * `notes`  = ce que l'import a regroupé ou dédoublé, donc un simple constat.
+ *
+ * Elles étaient confondues jusqu'au 3 septembre 2026, et tout sortait dans la
+ * même boîte rouge. Constat de Julien devant « 7318 SKU en double dans le
+ * fichier » : « pourquoi j'ai cette alerte si on peut utiliser les doublons
+ * sans problème ? » — un référentiel liste couramment la même référence une
+ * fois par emplacement, et l'écran criait sur le cas normal.
+ */
+export type ImportResult = { uploaded: number; errors: string[]; notes: string[] }
 
 type ArticleInsert = {
   session_id: string
@@ -169,9 +181,10 @@ async function readRows(file: File): Promise<Record<string, unknown>[]> {
  *   d'écraser l'EAN précédent (contrainte UNIQUE (session_id, sku) oblige).
  */
 export function mapCatalogRows(rawRows: Record<string, unknown>[], sessionId: string): {
-  articles: ArticleInsert[]; errors: string[]; skipped: number
+  articles: ArticleInsert[]; errors: string[]; notes: string[]; skipped: number
 } {
   const errors: string[] = []
+  const notes: string[] = []
   const byS = new Map<string, ArticleInsert>()
   let skipped = 0
   let keptByEan = 0
@@ -205,12 +218,21 @@ export function mapCatalogRows(rawRows: Record<string, unknown>[], sessionId: st
   }
 
   const articles = [...byS.values()]
+  // Les deux constats ci-dessous ne perdent AUCUN article : ce sont des
+  // regroupements, pas des lignes écartées. D'où `notes` et non `errors`.
   if (keptByEan > 0) {
-    errors.push(`${keptByEan} ligne(s) au même SKU avec un EAN différent — conservée(s) séparément sous leur EAN`)
+    notes.push(`${keptByEan} ligne(s) au même SKU sous un EAN différent — conservée(s) séparément, sous leur EAN`)
   }
   const dupes = rawRows.length - skipped - articles.length
-  if (dupes > 0) errors.push(`${dupes} SKU en double dans le fichier — dernière valeur conservée`)
-  return { articles, errors, skipped }
+  if (dupes > 0) {
+    // ⚠️ Le message DIT ce qui s'est passé, sans le mot « doublon » seul, qui
+    // laissait croire à un défaut du fichier. La même référence répétée est le
+    // cas ordinaire d'un référentiel (une ligne par emplacement) ; la seule
+    // conséquence réelle est que la dernière ligne fait foi pour le libellé,
+    // la marque et le prix.
+    notes.push(`${dupes} ligne(s) répètent une référence déjà vue — une seule fiche par référence, la dernière ligne fait foi`)
+  }
+  return { articles, errors, notes, skipped }
 }
 
 export async function importCatalogFile(
@@ -218,7 +240,7 @@ export async function importCatalogFile(
 ): Promise<ImportResult> {
   const rawRows = await readRows(file)
   const total = rawRows.length
-  const { articles, errors } = mapCatalogRows(rawRows, sessionId)
+  const { articles, errors, notes } = mapCatalogRows(rawRows, sessionId)
 
   onProgress?.({ parsed: total, uploaded: 0, total: articles.length })
 
@@ -248,16 +270,17 @@ export async function importCatalogFile(
     }
   }, uploaded => onProgress?.({ parsed: total, uploaded, total: articles.length }))
 
-  return { uploaded: articles.length, errors }
+  return { uploaded: articles.length, errors, notes }
 }
 
 // ── Stock théorique ──────────────────────────────────────────────────────────
 
 /** Agrège les quantités par SKU (un article peut occuper plusieurs emplacements). */
 export function mapStockRows(rawRows: Record<string, unknown>[], sessionId: string): {
-  rows: StockInsert[]; errors: string[]; skipped: number
+  rows: StockInsert[]; errors: string[]; notes: string[]; skipped: number
 } {
   const errors: string[] = []
+  const notes: string[] = []
   const byS = new Map<string, number>()
   let skipped = 0
 
@@ -275,9 +298,10 @@ export function mapStockRows(rawRows: Record<string, unknown>[], sessionId: stri
   const rows = [...byS.entries()].map(([sku, theoretical_qty]) => ({ session_id: sessionId, sku, theoretical_qty }))
   const locations = rawRows.length - skipped
   if (locations > rows.length) {
-    errors.push(`${locations - rows.length} lignes multi-emplacements agrégées — quantités sommées par SKU`)
+    // Sommer plusieurs emplacements est le comportement attendu, pas un défaut.
+    notes.push(`${locations - rows.length} ligne(s) multi-emplacements agrégée(s) — quantités sommées par SKU`)
   }
-  return { rows, errors, skipped }
+  return { rows, errors, notes, skipped }
 }
 
 export async function importStockFile(
@@ -285,7 +309,7 @@ export async function importStockFile(
 ): Promise<ImportResult> {
   const rawRows = await readRows(file)
   const total = rawRows.length
-  const { rows, errors } = mapStockRows(rawRows, sessionId)
+  const { rows, errors, notes } = mapStockRows(rawRows, sessionId)
 
   onProgress?.({ parsed: total, uploaded: 0, total: rows.length })
 
@@ -313,5 +337,5 @@ export async function importStockFile(
     }
   }, uploaded => onProgress?.({ parsed: total, uploaded, total: rows.length }))
 
-  return { uploaded: rows.length, errors }
+  return { uploaded: rows.length, errors, notes }
 }

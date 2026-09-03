@@ -27,12 +27,13 @@ type StepState = {
   progress: ImportProgress
   uploaded: number
   errors: string[]
+  notes: string[]
   message: string | null
 }
 
 const EMPTY: StepState = {
   fileName: null, phase: 'idle', progress: { parsed: 0, uploaded: 0, total: 0 },
-  uploaded: 0, errors: [], message: null,
+  uploaded: 0, errors: [], notes: [], message: null,
 }
 
 /**
@@ -94,7 +95,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
     existing: number,
     kind: 'catalogue' | 'stock',
     setState: React.Dispatch<React.SetStateAction<StepState>>,
-    importer: (f: File, id: string, onProgress: (p: ImportProgress) => void) => Promise<{ uploaded: number; errors: string[] }>,
+    importer: (f: File, id: string, onProgress: (p: ImportProgress) => void) => Promise<{ uploaded: number; errors: string[]; notes: string[] }>,
   ) {
     // Un import remplace intégralement ce qui est déjà chargé : mieux vaut le
     // dire avant, pas après.
@@ -114,7 +115,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
         setState(s => ({ ...s, phase: p.uploaded > 0 ? 'uploading' : 'parsing', progress: p }))
       })
       setState(s => ({
-        ...s, phase: 'done', uploaded: result.uploaded, errors: result.errors,
+        ...s, phase: 'done', uploaded: result.uploaded, errors: result.errors, notes: result.notes,
         message: `${result.uploaded} ligne(s) importée(s).`,
       }))
       toast.success(`${file.name} : ${result.uploaded} ligne(s) importée(s).`)
@@ -509,10 +510,22 @@ function ImportStep({ title, description, state, disabled, onFile, required }: {
         <div className="import-errors">{state.message}</div>
       )}
 
+      {/* Ce qui n'a PAS été importé : le seul cas qui appelle un geste. */}
       {state.errors.length > 0 && (
         <div className="import-errors">
-          <strong>Lignes signalées</strong>
+          <strong>Lignes non importées</strong>
           <ul>{state.errors.map(e => <li key={e}>{e}</li>)}</ul>
+        </div>
+      )}
+
+      {/* Ce que l'import a regroupé. ⚠️ Boîte NEUTRE, jamais `import-errors` :
+          un référentiel liste couramment la même référence une fois par
+          emplacement, et rien n'est perdu — crier dessus fait douter d'un
+          import réussi. */}
+      {state.notes.length > 0 && (
+        <div className="import-notes">
+          <strong>À savoir</strong>
+          <ul>{state.notes.map(e => <li key={e}>{e}</li>)}</ul>
         </div>
       )}
     </section>
