@@ -380,15 +380,27 @@ Deno.serve(async (req) => {
     }
 
     let itemOffre = String(etat.item_offre ?? '').trim()
-    if (!itemOffre) {
-      // Première modification depuis la souscription : on retrouve l'article
-      // dans l'abonnement plutôt que de le supposer.
+    let itemSuppl = String(etat.item_appareils ?? '').trim()
+
+    // ⚠️⚠️ ON RETROUVE LES DEUX ARTICLES DANS L'ABONNEMENT, PAS SEULEMENT
+    // CELUI DE L'OFFRE. Un magasin né d'un Checkout au-delà de cent appareils
+    // porte DÉJÀ une ligne « appareils supplémentaires » chez Stripe, alors que
+    // `stores.stripe_item_appareils` est nul — le paiement enregistre
+    // l'abonnement, pas le détail de ses lignes. Ne chercher que l'article de
+    // l'offre laissait `poserArticleAppareils` en CRÉER UN SECOND : le client
+    // aurait payé ses tranches deux fois, et rien ne l'aurait signalé.
+    if (!itemOffre || (!itemSuppl && tranches > 0)) {
       const abo = await lireAbonnement(stripeKey, abonnement)
       if (!abo || abo.articles.length === 0) {
         return json({ success: false, error: 'Abonnement introuvable chez Stripe.' }, 502)
       }
       const suppl = priceAppareils ?? ''
-      itemOffre = (abo.articles.find((a) => a.price !== suppl) ?? abo.articles[0]).id
+      if (!itemOffre) {
+        itemOffre = (abo.articles.find((a) => a.price !== suppl) ?? abo.articles[0]).id
+      }
+      if (!itemSuppl && suppl) {
+        itemSuppl = abo.articles.find((a) => a.price === suppl)?.id ?? ''
+      }
     }
 
     let itemAppareils: string
@@ -400,7 +412,7 @@ Deno.serve(async (req) => {
       })
       itemAppareils = await poserArticleAppareils(stripeKey, {
         subscriptionId: abonnement,
-        itemId: String(etat.item_appareils ?? '').trim() || null,
+        itemId: itemSuppl || null,
         priceId: priceAppareils ?? '',
         quantity: tranches,
         taxRateId,

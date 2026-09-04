@@ -527,3 +527,25 @@ describe('le magasin créé demande qui le supervise', () => {
     expect(sansCommentaires(edge)).toContain('magasin=ok&demande=')
   })
 })
+
+describe('on ne facture pas les tranches deux fois', () => {
+  // ⚠️ TROUVÉ EN RELISANT POUR RÉPONDRE À JULIEN, pas par un test. Un magasin
+  // né d'un Checkout au-delà de cent appareils porte DÉJÀ une ligne « appareils
+  // supplémentaires » chez Stripe, alors que `stores.stripe_item_appareils` est
+  // nul : le paiement enregistre l'abonnement, pas le détail de ses lignes.
+  // Le chemin d'API ne cherchait que l'article de l'offre — il aurait CRÉÉ un
+  // second article de tranches, et le client aurait payé les siennes deux fois.
+  const sans = sansCommentaires(edge)
+
+  it('retrouve les DEUX articles dans l’abonnement, pas seulement l’offre', () => {
+    expect(sans).toContain('if (!itemOffre || (!itemSuppl && tranches > 0))')
+    expect(sans).toContain("itemSuppl = abo.articles.find((a) => a.price === suppl)?.id ?? ''")
+  })
+
+  it('n’envoie jamais « pas d’article » quand l’abonnement en a un', () => {
+    // Le `null` dit à `poserArticleAppareils` d'en créer un : il ne doit sortir
+    // que d'une recherche qui n'a rien trouvé.
+    expect(sans).toContain('itemId: itemSuppl || null')
+    expect(sans).not.toContain("itemId: String(etat.item_appareils ?? '').trim() || null")
+  })
+})

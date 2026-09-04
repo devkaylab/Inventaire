@@ -9052,3 +9052,28 @@ deux écrans plus loin. `web/components/QuiSupervise.tsx`, ouvert au retour de
 
 Tests de garde : `web/tests/libre-service.test.ts`, blocs « l'abonnement suit le
 magasin » et « le magasin créé demande qui le supervise ».
+
+## ⚠️ On ne facture pas les tranches deux fois (4 septembre 2026)
+
+Trouvé **en relisant pour répondre à Julien**, qui demandait confirmation que le
+chantier était clos — pas par un test, pas par un sabotage. Il n'avait jamais
+tourné, et il n'aurait fait de dégât qu'au premier changement d'offre d'un
+client abonné.
+
+Un magasin né d'un Checkout **au-delà de cent appareils** porte déjà une ligne
+« appareils supplémentaires » chez Stripe, alors que
+`stores.stripe_item_appareils` est **nul** : le paiement enregistre
+l'abonnement, pas le détail de ses lignes. Le chemin d'API ne cherchait dans
+l'abonnement que l'article de l'offre ; le supplément, lui, partait à `null` —
+c'est-à-dire « crée-le ». **Le client aurait payé ses tranches deux fois**, et
+rien ne l'aurait signalé.
+
+⚠️ **La leçon : un identifiant qu'on n'a pas enregistré ne vaut pas un
+identifiant qui n'existe pas.** `null` en base voulait dire « je ne sais pas »,
+et le code le lisait « il n'y en a pas ». Partout où un article, un abonnement
+ou un client Stripe est absent de nos colonnes, il faut aller **regarder chez
+Stripe** avant de conclure — c'est ce que faisait déjà l'article de l'offre, et
+c'est exactement pour ça qu'il ne saignait pas.
+
+Tests de garde : `web/tests/libre-service.test.ts`, bloc « on ne facture pas les
+tranches deux fois ».
