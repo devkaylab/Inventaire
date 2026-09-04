@@ -102,13 +102,22 @@ export default function CompteLayout() {
           headerRight: actionsRight,
         }}
       />
-      <Stack.Screen name="stores" options={{ title: 'Magasins', ...headerBase, headerRight: actionsRight }} />
-      {/* ⚠️ **Mon équipe et Boîte à outils s'ouvrent aussi depuis ailleurs** :
-          le bandeau de démarrage de l'accueil superviseur y mène directement.
-          Arrivés ainsi, ils sont le PREMIER écran de cette pile — la flèche
-          native ne s'affiche pas, et on reste coincé dessus (vu au simulateur
-          le 23 août 2026). `RetourVersApp` la rend, ici comme sur « Mon
-          compte », et pointe vers le bon écran dans les deux cas. */}
+      {/* ⚠️ **TOUT ÉCRAN DE CE GROUPE OUVERT DEPUIS UN AUTRE GROUPE DOIT
+          PORTER `headerLeft`.** Arrivé ainsi, il est le PREMIER écran de cette
+          pile — la flèche native ne s'affiche pas, et on reste coincé dessus
+          (vu au simulateur le 23 août 2026 sur Mon équipe et Boîte à outils).
+          `RetourVersApp` la rend, ici comme sur « Mon compte », et pointe vers
+          le bon écran dans tous les cas.
+
+          ⚠️ **Magasins avait été oublié**, et le commentaire d'alors ne
+          nommait que les deux écrans du jour : constat de Julien le
+          4 septembre 2026, depuis un compte d'administrateur d'entreprise —
+          son bandeau de démarrage et sa porte de bienvenue mènent tous deux
+          ici. C'est pourquoi la règle est désormais tenue par un test qui
+          DÉDUIT la liste du code (`tests/compte.test.ts`, « une porte s'ouvre
+          des deux côtés ») au lieu de citer des écrans à la main : la
+          prochaine porte se signalera toute seule. */}
+      <Stack.Screen name="stores" options={{ title: 'Magasins', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
       <Stack.Screen name="team" options={{ title: 'Mon équipe', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
       <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: actionsRight }} />
       <Stack.Screen name="tools" options={{ title: 'Boîte à outils', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />

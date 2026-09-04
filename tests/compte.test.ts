@@ -2839,3 +2839,59 @@ describe('l’onboarding est clos', () => {
     }
   })
 })
+
+describe('une porte s’ouvre des deux côtés', () => {
+  // ⚠️ L'AUTOMATISME DEMANDÉ PAR JULIEN, 4 SEPTEMBRE 2026 : « pas de bouton
+  // retour [...] créé-toi un automatisme pour vérifier ce genre de détail ».
+  //
+  // Le défaut : depuis un compte d'administrateur d'entreprise, « Voir mes
+  // magasins » ouvrait `(compte)/stores` — donc en traversant deux groupes de
+  // routes. L'écran devient alors le PREMIER de sa pile, la flèche native ne
+  // s'affiche pas, et on reste coincé dessus.
+  //
+  // Ce n'est pas la première fois : Mon équipe et Boîte à outils avaient le
+  // même défaut le 23 août, corrigé en les nommant à la main dans le layout.
+  // **Nommer à la main, c'est oublier le suivant** — Magasins a été oublié le
+  // jour même où le bandeau de l'administrateur a commencé à y mener.
+  //
+  // Ce test ne cite donc AUCUN écran : il déduit du code la liste de ceux qui
+  // s'ouvrent depuis l'extérieur du groupe, et exige un `headerLeft` pour
+  // chacun. La prochaine porte se signalera toute seule.
+  it('tout écran de (compte) ouvert depuis un autre groupe porte un retour', () => {
+    const layout = lire('app/(compte)/_layout.tsx')
+
+    // Qui, hors du groupe, envoie vers un écran de (compte) ?
+    const ouverts = new Set<string>()
+    for (const fichier of fichiersSource()) {
+      if (fichier.includes(`app${path.sep}(compte)${path.sep}`)) continue
+      for (const m of readFileSync(fichier, 'utf8').matchAll(/\(compte\)\/([a-z-]+)/g)) {
+        ouverts.add(m[1])
+      }
+    }
+    expect(ouverts.size, 'aucune porte trouvée : la détection est cassée').toBeGreaterThan(0)
+
+    // ⚠️ On découpe sur `<Stack.Screen` plutôt que d'écrire une expression
+    // qui court jusqu'au premier `/>` : les options tiennent parfois sur
+    // plusieurs lignes et contiennent elles-mêmes des balises auto-fermantes
+    // (`<RetourVersApp />`). Un découpage ne peut pas se tromper de fin.
+    const blocs = layout.split('<Stack.Screen').slice(1)
+
+    for (const ecran of ouverts) {
+      const declaration = blocs.find((b) => b.includes(`name="${ecran}"`))
+      expect(declaration, `(compte)/${ecran} n’est pas déclaré dans le layout`).toBeTruthy()
+      expect(
+        declaration,
+        `(compte)/${ecran} s’ouvre depuis un autre groupe et n’a pas de headerLeft : ` +
+        'on y arrive sans flèche de retour, et on reste coincé dessus.',
+      ).toContain('headerLeft')
+    }
+  })
+
+  // Le corollaire : un `headerLeft` qui s'afficherait alors que la pile a une
+  // histoire donnerait deux retours. `RetourVersApp` ne se rend que si
+  // `router.canGoBack()` est faux — c'est ce qui lui permet d'être posé sans
+  // discernement sur toutes les portes.
+  it('et ce retour s’efface quand la flèche native existe', () => {
+    expect(lire('app/(compte)/_layout.tsx')).toContain('if (!router.canGoBack()) return null')
+  })
+})

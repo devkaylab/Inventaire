@@ -8041,3 +8041,81 @@ Aucune écriture — consulter n'écrit rien, contrôlé par la règle du 25 ao�
 410 tests, `tsc --noEmit`. Les quatre gardes nouvelles ont été mises en défaut
 une à une (repère débranché, ligne des pièces retirée, `Linking` ajouté, rôle
 de bienvenue renommé) : les quatre échouent.
+
+
+# Une porte s'ouvre des deux côtés (4 septembre 2026)
+
+Constat de Julien, **depuis un compte d'administrateur d'entreprise** :
+« onboarding, voir mes magasins > page magasin, pas de bouton retour ; crée-toi
+un automatisme pour vérifier ce genre de détail ».
+
+C'est le piège déjà nommé ici le 23 août — *ce qu'un écran ouvre doit être dans
+sa pile*. Un écran du groupe `(compte)` ouvert depuis un autre groupe de routes
+devient le **premier** de sa pile : la flèche native ne s'affiche pas, et on
+reste coincé dessus. `RetourVersApp` existe pour ça depuis ce jour-là.
+
+**Sauf que Magasins avait été oublié.** Le commentaire du layout ne nommait que
+« Mon équipe et Boîte à outils », les deux écrans du jour ; personne n'a repris
+la liste quand le bandeau de l'administrateur d'entreprise s'est mis à mener
+vers Magasins (`(supervisor)/index.tsx`, étapes `magasins` et `superviseurs`)
+et quand sa porte de bienvenue a gagné « Voir mes magasins »
+(`PorteBienvenue.tsx`).
+
+## ⚠️ L'AUTOMATISME : LA GARDE DÉDUIT LA LISTE, ELLE NE LA CITE PAS
+
+C'est tout l'objet de la demande, et c'est la leçon générale. Une garde qui
+**nomme** les écrans à protéger ne protège que ceux qu'on connaissait le jour
+où on l'a écrite — elle passe à côté du suivant, en silence. Celle-ci balaie
+`src/`, retient tout `(compte)/<écran>` cité **hors du groupe**, et exige un
+`headerLeft` pour chacun dans `(compte)/_layout.tsx`. La prochaine porte se
+signalera d'elle-même, le jour où quelqu'un l'ouvrira.
+
+Deux détails d'écriture qui comptent :
+
+- elle **découpe le layout sur `<Stack.Screen`** au lieu de chercher une
+  expression qui court jusqu'au premier `/>` : les options tiennent parfois sur
+  plusieurs lignes et contiennent elles-mêmes des balises auto-fermantes
+  (`<RetourVersApp />`). Un découpage ne peut pas se tromper de fin ;
+- elle échoue si **aucune** porte n'est trouvée : une détection cassée rendrait
+  la garde silencieuse, ce qui est pire que pas de garde.
+
+⚠️ **`RetourVersApp` ne se rend que si `router.canGoBack()` est faux.** C'est ce
+qui permet de la poser sans discernement sur toutes les portes : arrivé par le
+chemin normal (Mon compte → Magasins), la flèche native existe et le bouton
+s'efface — pas de double retour. Un test fige cette condition.
+
+Vérifié au simulateur : Mon compte → Magasins ne porte qu'**un seul** « Retour ».
+Le cul-de-sac, lui, se reproduit depuis un compte d'administrateur d'entreprise
+— que je n'ai pas ; c'est Julien qui l'a vu, et la garde le tient désormais.
+
+Tests de garde : `tests/compte.test.ts`, bloc « une porte s'ouvre des deux
+côtés ».
+
+# Les six Price Stripe, contrôlés un par un (4 septembre 2026)
+
+Julien a recréé les six Price aux tarifs du 31 août et posé les six secrets.
+Contrôle de bout en bout : six sessions Checkout ouvertes par la fonction
+déployée (une par couple offre × rythme), et **le montant lu sur chaque page
+de paiement** —
+
+| | mensuel | annuel |
+|---|---|---|
+| Essential | 89,00 € | 950,00 € |
+| Advanced | 310,00 € | 3 300,00 € |
+| Enterprise | 890,00 € | 9 450,00 € |
+
+⚠️ **C'est le montant affiché qui fait foi, pas le fait que la session s'ouvre.**
+Une inversion mensuel/annuel ouvre une page tout aussi valide et facturerait
+9 450 € par mois. C'est le contrôle du 30 août, refait à l'identique.
+
+Deux constats au passage :
+
+- **le compte est toujours en mode TEST** (`cs_test_…`, « Environnement de test
+  Devkaylab ») : rien n'est encaissé pour de vrai tant que les clés `live` ne
+  sont pas posées ;
+- **aucune ligne de TVA sur les pages**, donc `STRIPE_TAX_RATE` n'est pas posé.
+  Toléré en test, **refusé en live** par la fonction elle-même (`tva_absente`,
+  503) — voir « La TVA : un taux fixe, et un garde-fou contre l'oubli ».
+
+Données d'essai supprimées, **zéro résidu contrôlé** : 0 demande, 2 entreprises,
+2 magasins — inchangés.
