@@ -7548,19 +7548,84 @@ Trois constats de Julien sur l'inventaire de démonstration.
   les deux espaces invisibles — `U+202F` (insécable étroite, celle que pose
   `fr-FR`) et `U+00A0` — avant d'assertir.
 
-## Ce que ces deux journées n'ont PAS prouvé
+## La concurrence, enfin mesurée (4 septembre 2026)
+
+C'était le trou de ce chantier : toutes les mesures étaient faites **une
+requête à la fois**, et « cent compteurs en même temps » restait de
+l'arithmétique. Julien : *« Et tu ne peux pas faire ce test ? »*
+
+**⚠️ LE BANC PASSE PAR `pg_cron`, ET C'EST LE POINT DE MÉTHODE À RETENIR.**
+`cron.use_background_workers` vaut `off` sur ce projet : chaque tâche ouvre
+**une vraie connexion**, donc N tâches programmées à la même minute donnent N
+requêtes réellement simultanées. `cron.max_running_jobs = 32` fixe le plafond
+du banc. Rien à installer.
+
+- **⚠️ NE PAS INSTALLER `dblink` POUR ÇA.** Il est disponible et il ferait le
+  travail — mais c'est une porte de connexions sortantes ouverte en
+  production, la famille de `pg_net`. Le gain ne vaut pas la surface.
+- **Chaque tâche se désinscrit elle-même** (`cron.unschedule` en second
+  ordre), **et** un nettoyage explicite balaie `charge-%` derrière. Une tâche
+  de test oubliée tourne toutes les heures, indéfiniment.
+- Table de résultats et fonctions de banc **révoquées** à `anon` et
+  `authenticated` le temps de leur existence, puis supprimées.
+- Rester **loin du plafond de connexions** : 19 étaient déjà prises sur 60,
+  donc 32 au maximum. Saturer `max_connections` sur la base de production
+  rendrait le site indisponible.
+
+### Ce que ça donne, sur `get_zone_dashboard` (l'appel le plus fréquent)
+
+**Inventaire de 400 000 références** — le pire cas :
+
+| Simultanés | Réponse | Débit |
+|---|---|---|
+| 1 | 1 649 ms | 0,6 /s |
+| 5 | 3 154 ms | 1,57 /s |
+| 10 | 5 840 ms | 1,67 /s |
+| 20 | **11 881 ms** | 1,65 /s |
+
+**Inventaire de taille réelle** (30 000 références, 400 balises) :
+
+| Simultanés | Réponse | Débit |
+|---|---|---|
+| 1 | 174 ms | 5,7 /s |
+| 20 | 651 ms | 25,2 /s |
+| 32 | 1 063 ms | 23,0 /s |
+
+**⚠️ LE DÉBIT EST PLAT, ET C'EST TOUTE LA LEÇON.** 1,65 appel/s sur le gros
+inventaire, 24/s sur un inventaire normal — quel que soit le nombre de gens.
+La machine a deux cœurs ; au-delà, chaque personne de plus ne fait
+qu'**attendre son tour**, et le temps de réponse monte en ligne droite.
+
+Conséquences, en clair :
+
+- **Sur un inventaire normal, 100 compteurs passent** : ≈ 4,2 s si tous
+  appuyaient à la même seconde, et en réalité une centaine de compteurs
+  produit ~2 appels/s, soit **8 % de la capacité**.
+- **⚠️ Sur un inventaire de 400 000 références, le 13e appel simultané dépasse
+  déjà les 8 s** et l'écran tombe en erreur. Mesuré : 11,9 s à vingt. **Le mur
+  n'est pas le nombre de compteurs, c'est la taille de l'inventaire.**
+
+### L'écriture n'est pas le problème, et c'est maintenant prouvé
+
+32 compteurs simultanés, 10 scans chacun, **RLS active** (le chemin réel d'un
+téléphone) : **320 écritures en 774 ms, soit 413 scans/seconde, zéro erreur.**
+
+Cent compteurs à six scans par minute font 10 écritures/s — **2,4 % de cette
+capacité**. Le chiffre de 3 ms par scan, mesuré en solo depuis le 3 septembre,
+tient sous contention. Ne pas chercher le problème de ce côté.
+
+## Ce qui n'est TOUJOURS pas prouvé
 
 Dit explicitement, parce qu'une absence de constat ne vaut que si on sait ce
 qui n'a pas été regardé.
 
-- **⚠️ LA CONCURRENCE RÉELLE.** Toutes les mesures sont **une requête à la
-  fois**. Cent téléphones qui ouvrent une balise dans la même minute, ce n'est
-  pas mesuré — c'est de l'arithmétique. C'est le seul point sur lequel on ne
-  peut rien garantir à un client, et il faut le dire plutôt que de le laisser
-  découvrir un matin d'inventaire.
+- **⚠️ Le banc mesure la BASE, pas la chaîne complète.** PostgREST et son pool
+  de connexions, le réseau, le canal temps réel : rien de tout cela n'est dans
+  ces chiffres. La base est le terme dominant, ce n'est pas le seul.
 - **L'import d'un fichier de 400 000 lignes** depuis le navigateur.
 - **Le trafic sortant** : chaque téléphone télécharge le catalogue entier.
-- Le jeu d'essai portait **8 compteurs distincts**, pas 100.
+- Le jeu d'essai portait **8 compteurs distincts**, pas 100 — la concurrence
+  est prouvée, la diversité des comptes ne l'est pas.
 
 ## ⚠️ Deux inventaires de démonstration vivent en production
 
