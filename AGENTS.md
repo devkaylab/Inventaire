@@ -8321,6 +8321,11 @@ laisserait au-dessus de son forfait dès le lendemain, et il faudrait le
 rappeler une semaine plus tard. `proposer()` (`web/lib/appareils.ts`) le fait ;
 le prix vient de `prixCents`, jamais d'une addition faite sur place.
 
+**⚠️ On n'écrit pas ce que l'interface fait déjà voir** (Julien, le même jour,
+sur « Le changement se fait en ligne, tout de suite » : *« pas besoin de mettre
+ce genre de phrase »*). Il y a un bouton, il est là — le dire ne fait que
+diluer les phrases qui apprennent quelque chose.
+
 **⚠️ Et le bouton dit l'ACTION, jamais le montant** (Julien, le même jour).
 « Passer à Advanced », « Passer à 120 appareils » quand le palier ne change pas
 de nom, « Créer le magasin » pour un magasin de plus. Jamais « Ajouter 20
