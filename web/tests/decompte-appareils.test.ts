@@ -94,23 +94,38 @@ describe('le verrou, en base', () => {
 })
 
 describe('les droits', () => {
-  const fichier = fichierDe('prendre_place_appareil')
+  // ⚠️ CHAQUE FONCTION EST LUE DANS SON PROPRE FICHIER. Une garde qui lisait
+  // « le fichier de `prendre_place_appareil` » pour y chercher les droits des
+  // trois autres est devenue fausse à la première migration qui redéfinit
+  // celle-là seule. `fichierDe` répond « la dernière définition », pas « la
+  // migration d'origine » — c'est tout son intérêt, encore faut-il l'appeler
+  // par fonction.
 
   it('aucune des fonctions n’est ouverte à anon', () => {
-    for (const fn of ['prendre_place_appareil(uuid, text)', 'rendre_place_appareil(uuid, text)',
-                      'appareils_du_magasin(uuid)', 'plafond_appareils(uuid)']) {
-      expect(fichier).toContain(`revoke all on function public.${fn} from public, anon`)
+    const fns: [string, string][] = [
+      ['prendre_place_appareil', 'prendre_place_appareil(uuid, text)'],
+      ['rendre_place_appareil', 'rendre_place_appareil(uuid, text)'],
+      ['appareils_du_magasin', 'appareils_du_magasin(uuid)'],
+      ['plafond_appareils', 'plafond_appareils(uuid)'],
+      ['prevenir_forfait_trop_juste', 'prevenir_forfait_trop_juste(uuid, integer, integer)'],
+    ]
+    for (const [fn, signature] of fns) {
+      expect(fichierDe(fn)).toContain(`revoke all on function public.${signature} from public, anon`)
     }
   })
 
-  it('le plafond est une fonction interne, injoignable même connecté', () => {
-    // Les trois autres sont SECURITY DEFINER : elles n'ont pas besoin de ce droit.
-    expect(fichier).toContain('revoke all on function public.plafond_appareils(uuid) from public, anon, authenticated')
-    expect(fichier).toContain('grant execute on function public.plafond_appareils(uuid) to service_role')
-    expect(fichier).not.toContain('grant execute on function public.plafond_appareils(uuid) to authenticated')
+  it('les deux fonctions internes sont injoignables même connecté', () => {
+    // Les autres sont SECURITY DEFINER : elles n'ont pas besoin de ce droit.
+    for (const s of ['plafond_appareils(uuid)', 'prevenir_forfait_trop_juste(uuid, integer, integer)']) {
+      const f = fichierDe(s.split('(')[0])
+      expect(f).toContain(`revoke all on function public.${s} from public, anon, authenticated`)
+      expect(f).toContain(`grant execute on function public.${s} to service_role`)
+      expect(f).not.toContain(`grant execute on function public.${s} to authenticated`)
+    }
   })
 
   it('les deux tables portent la RLS et n’ont aucune policy', () => {
+    const fichier = fichierDe('appareils_du_magasin')
     for (const t of ['appareils_actifs', 'appareils_par_jour']) {
       expect(fichier).toContain(`alter table public.${t} enable row level security`)
     }
@@ -250,6 +265,64 @@ describe('l’écran de la fiche magasin', () => {
     // La fiche s'affiche sans le décompte ; la section se tait.
     expect(page).toContain('setAppareils(ap.error ? null :')
     expect(page).toContain('{appareils && (')
+  })
+})
+
+describe('le forfait trop juste se dit au client', () => {
+  it('la cloche accepte le type AUX DEUX FILTRES', () => {
+    // ⚠️ Leçon du 3 septembre 2026, payée en direct : la contrainte ET la
+    // liste blanche de `mes_notifications`. Un seul des deux suffit à rendre
+    // la cloche muette sans le moindre message d'erreur.
+    const fichier = fichierDe('prevenir_forfait_trop_juste')
+    expect(fichier).toContain("'forfait_trop_juste'::text")
+    expect(derniereDefinition('mes_notifications').corps).toContain("'forfait_trop_juste'")
+  })
+
+  it('elle ne part qu’une fois par magasin et par mois', () => {
+    const { corps } = derniereDefinition('prevenir_forfait_trop_juste')
+    // Un appareil éconduit redemande sa place toutes les trente secondes.
+    expect(corps).toContain("interval '30 days'")
+    expect(corps).toContain("type = 'forfait_trop_juste'")
+  })
+
+  it('elle ne va qu’à l’administrateur d’entreprise', () => {
+    // Un superviseur ne décide pas de la licence, un compteur encore moins.
+    const { corps } = derniereDefinition('prevenir_forfait_trop_juste')
+    expect(corps).toContain('p.is_company_admin')
+  })
+
+  it('elle porte des nombres, jamais un nom d’offre', () => {
+    // L'échelle des paliers vit dans `web/lib/offres.ts` et nulle part
+    // ailleurs : la figer en base en ferait une quatrième copie.
+    const { corps } = derniereDefinition('prevenir_forfait_trop_juste')
+    expect(corps).toContain("'forfait', p_plafond::text")
+    expect(corps).toContain("'besoin', p_besoin::text")
+    expect(corps).not.toMatch(/Essential|Advanced|Enterprise/)
+  })
+
+  it('une cloche cassée ne désactive pas le verrou', () => {
+    // `usePlaceAppareil` accorde sur toute erreur (borne 3) : une exception
+    // ici ferait tomber le verrou en silence.
+    const { corps } = derniereDefinition('prendre_place_appareil')
+    const i = corps.indexOf('prevenir_forfait_trop_juste')
+    expect(i).toBeGreaterThan(0)
+    expect(corps.slice(i, i + 200)).toContain('exception when others')
+  })
+
+  it('le rang de la cloche déduit l’offre, il ne la lit pas', () => {
+    const cloche = lire('web/components/Notifications.tsx')
+    expect(cloche).toContain("case 'forfait_trop_juste'")
+    expect(cloche).toContain('proposer(')
+    expect(cloche).toContain("action: 'Découvrir'")
+  })
+
+  it('« Découvrir » est une pastille, pas un bouton dans un bouton', () => {
+    const cloche = lire('web/components/Notifications.tsx')
+    expect(cloche).toContain('className="notif-cta"')
+    // Le rang entier reste la cible ; un <button> imbriqué serait du HTML
+    // invalide et deux cibles se disputeraient le clic.
+    const i = cloche.indexOf('notif-cta')
+    expect(cloche.slice(i - 40, i)).toContain('<span')
   })
 })
 

@@ -15,17 +15,24 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { relativeTime } from '@/lib/format'
+import { proposer } from '@/lib/appareils'
 
 type Notif = {
   id: string
-  type: 'invitation_inventaire' | 'compteur_actif' | 'message' | 'inventaire_volumineux'
+  type: 'invitation_inventaire' | 'compteur_actif' | 'message' | 'inventaire_volumineux' | 'forfait_trop_juste'
   donnees: Record<string, string | undefined>
   created_at: string
   lu: boolean
 }
 
-/** La phrase de chaque type — et où mène l'appui, s'il mène quelque part. */
-function presenter(n: Notif): { titre: string; texte: string; lien: string | null } {
+/**
+ * La phrase de chaque type — et où mène l'appui, s'il mène quelque part.
+ *
+ * `action` est le libellé d'une pastille d'appel : le rang ENTIER reste le
+ * bouton, la pastille n'en est pas un second (un bouton dans un bouton n'est
+ * pas du HTML valide, et deux cibles pour un seul geste se disputent le clic).
+ */
+function presenter(n: Notif): { titre: string; texte: string; lien: string | null; action?: string } {
   const d = n.donnees
   switch (n.type) {
     case 'invitation_inventaire':
@@ -57,6 +64,26 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
         texte: `« ${d.nom || 'Sans nom'} » — ${d.mesure ?? ''}. Au-delà, le rapport et les écarts deviennent trop lents : à regarder avant le jour du comptage.`,
         lien: d.session_id ? `/dashboard/${d.session_id}` : '/admin',
       }
+    // Des appareils n'ont pas pu compter. Elle ne va qu'à l'administrateur
+    // d'entreprise — un superviseur ne décide pas de la licence — et ne part
+    // qu'une fois par magasin et par mois.
+    //
+    // ⚠️ L'OFFRE SE DÉDUIT ICI, elle n'est pas figée en base. `donnees` porte
+    // les nombres ; `proposer()` connaît l'échelle des paliers, et c'est le
+    // seul endroit qui la connaisse. La figer côté serveur en ferait une
+    // quatrième copie de la grille.
+    case 'forfait_trop_juste': {
+      const forfait = Number(d.forfait ?? 0)
+      const offre = proposer(forfait, Number(d.besoin ?? 0))
+      return {
+        titre: 'Votre forfait semble trop juste',
+        texte: offre
+          ? `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place. Votre forfait en couvre ${forfait} à la fois — n’hésitez pas à passer à ${offre.nom}, qui en couvre ${offre.couvre}.`
+          : `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place.`,
+        lien: d.store_id ? `/magasins/${d.store_id}` : '/magasins',
+        action: 'Découvrir',
+      }
+    }
   }
 }
 
@@ -139,7 +166,10 @@ export function Notifications() {
                 <>
                   <div className="notif-titre">{p.titre}</div>
                   <div className="notif-texte">{p.texte}</div>
-                  <div className="notif-date">{relativeTime(n.created_at)}</div>
+                  <div className="notif-pied">
+                    <span className="notif-date">{relativeTime(n.created_at)}</span>
+                    {p.action && <span className="notif-cta">{p.action}</span>}
+                  </div>
                 </>
               )
               return p.lien ? (

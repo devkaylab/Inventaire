@@ -8373,6 +8373,66 @@ attendrait sinon une minute et demie pour rien.
   du magasin — sans lui, deux téléphones obtiennent la même dernière place. Le
   motif exact de VR-001, sur un autre objet.
 
+## Le forfait trop juste se dit au client, et Quantinvo n'envoie rien
+
+Julien, sur la maquette : *« on n'envoie plus de devis. Envoie une notification
+du type "votre forfait semble être trop juste pour votre utilisation, n'hésitez
+pas à passer à <nom du forfait>" avec un bouton découvrir. »* Le premier jet
+faisait du dépassement une affaire de vendeur — « un magasin au-dessus de son
+forfait est un devis à envoyer ». C'était le réflexe de l'ancien monde : depuis
+que l'offre est publique, **le client n'a besoin de personne**, il lui faut
+seulement savoir et savoir quoi prendre. La console ne sert plus qu'à voir
+venir.
+
+Migration `20260904220001`, type de notification `forfait_trop_juste`.
+
+- **⚠️ Une fois par magasin et par MOIS.** Un appareil éconduit redemande sa
+  place toutes les trente secondes ; sans ce repos, une matinée d'inventaire
+  serré produirait des dizaines de notifications et la cloche deviendrait une
+  chose qu'on ferme sans lire. Même règle que la mémoire d'`alertes_envoyees`.
+  L'appel vit dans le `if not v_refuse`, donc au **premier** refus d'un
+  appareil donné, jamais à chacune de ses tentatives.
+- **⚠️ Seul l'administrateur d'entreprise la reçoit.** Un superviseur ne décide
+  pas de la licence, un compteur encore moins — le leur dire ne ferait que
+  déplacer une contrariété. Même périmètre que la section « Appareils ».
+- **⚠️ `donnees` porte des NOMBRES, jamais un nom d'offre.** Le nom se déduit à
+  l'affichage par `proposer()` (`web/lib/appareils.ts`), seul endroit qui
+  connaisse l'échelle des paliers ; le figer en base en ferait une quatrième
+  copie de la grille. Ce sont les nombres qui décrivent la situation, le nom
+  n'en est que la lecture.
+  · Limite assumée : `besoin` est figé au **premier** refus de l'épisode. Si la
+    demande grossit ensuite, la notification propose un palier calculé sur ce
+    premier constat — la fiche du magasin, elle, calcule en direct et fait foi.
+- **⚠️ LES DEUX FILTRES DE LA CLOCHE, ET IL FAUT LES DEUX** :
+  `notifications_type_check` **et** la liste blanche de `mes_notifications`. Un
+  seul des deux suffit à rendre la cloche muette sans le moindre message
+  d'erreur — leçon du 3 septembre, payée en direct. Un test le vérifie aux deux
+  endroits.
+- **⚠️ L'appel est ENVELOPPÉ dans un bloc d'exception.** Une notification qui
+  échoue ne doit pas faire échouer la demande de place : `usePlaceAppareil`
+  accorde sur toute erreur (borne 3), donc une cloche cassée désactiverait le
+  verrou **en silence**. C'est le seul endroit du produit où avaler une
+  exception est le moindre mal, et le mode de panne connu est fermé par le test
+  ci-dessus, pas par de la chance.
+- **« Découvrir » est une PASTILLE, pas un bouton.** Le rang de la cloche est
+  déjà le bouton : un `<button>` imbriqué n'est pas du HTML valide, et deux
+  cibles pour un seul geste se disputent le clic. Un test le fige.
+
+## ⚠️ Un `fichierDe(fn)` ne parle QUE de `fn`
+
+Trouvé en écrivant ces gardes, et c'est une variante neuve d'un piège connu.
+`web/tests/decompte-appareils.test.ts` lisait « le fichier de
+`prendre_place_appareil` » pour y vérifier les droits des **trois autres**
+fonctions et la DDL des deux tables. Le jour où une migration a redéfini cette
+seule fonction, `fichierDe` a rendu le nouveau fichier — qui ne contient rien
+de tout cela — et trois assertions sont tombées.
+
+Elles avaient raison de tomber : elles ne validaient plus rien depuis la
+première seconde de la nouvelle migration. **`derniereDefinition` et
+`fichierDe` répondent « la dernière définition de CETTE fonction »** — c'est
+tout leur intérêt, encore faut-il les appeler une fois par fonction plutôt que
+de se servir du fichier de la voisine.
+
 ## L'écran de refus ne cite aucun prix
 
 Il s'ouvre devant un compteur, souvent un saisonnier, debout dans un rayon : une

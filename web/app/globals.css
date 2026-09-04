@@ -2430,7 +2430,13 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .notif-corps { min-width: 0; flex: 1; }
 .notif-titre { font-size: 13.5px; font-weight: 600; }
 .notif-texte { font-size: 12.5px; color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
-.notif-date { font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+.notif-pied { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.notif-date { font-size: 11.5px; color: var(--text-3); }
+/* Une pastille, pas un bouton : le rang entier est déjà le bouton, et un
+   bouton dans un bouton n'est pas du HTML valide. Elle dit qu'il y a un geste
+   à faire, elle ne prétend pas être une seconde cible. */
+.notif-cta { font-size: 11.5px; font-weight: 600; color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 .notif-point { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; margin-top: 6px; }
 
 /* ── Recherche et message, sur l'en-tête du tableau de bord ── */
