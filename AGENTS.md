@@ -8315,10 +8315,13 @@ laisserait au-dessus de son forfait dès le lendemain, et il faudrait le
 rappeler une semaine plus tard. `proposer()` (`web/lib/appareils.ts`) le fait ;
 le prix vient de `prixCents`, jamais d'une addition faite sur place.
 
-**⚠️ Et le bouton dit toujours « Passer à… »** (Julien, le même jour) — « Passer
-à Advanced », « Passer à 120 appareils » quand le palier ne change pas de nom.
-Jamais « Ajouter 20 appareils » : un bouton qui change de verbe selon le palier
-laisse croire qu'il fait autre chose. Un test vérifie le préfixe sur cinq cas.
+**⚠️ Et le bouton dit l'ACTION, jamais le montant** (Julien, le même jour).
+« Passer à Advanced », « Passer à 120 appareils » quand le palier ne change pas
+de nom, « Créer le magasin » pour un magasin de plus. Jamais « Ajouter 20
+appareils » — un bouton qui change de verbe selon le palier laisse croire qu'il
+fait autre chose — et jamais « Payer 124 € et créer le magasin » : le prix et le
+prorata sont écrits juste au-dessus, les répéter alourdit et fait douter de ce
+que le bouton déclenche. Un test vérifie le préfixe « Passer à » sur cinq cas.
 
 ## L'identifiant, sur le téléphone
 
