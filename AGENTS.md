@@ -8414,6 +8414,22 @@ Migration `20260904220001`, type de notification `forfait_trop_juste`.
   verrou **en silence**. C'est le seul endroit du produit où avaler une
   exception est le moindre mal, et le mode de panne connu est fermé par le test
   ci-dessus, pas par de la chance.
+- **⚠️ UNE BANNIÈRE DOUBLE LA CLOCHE, en haut à droite** (Julien, le même
+  jour). La cloche attend qu'on l'ouvre — or un forfait trop juste est
+  précisément ce qu'on ne va pas chercher : on ne sait pas encore qu'il y a
+  quelque chose à savoir.
+  · **Elle vit dans `Notifications.tsx`, pas dans `AppShell`**, pour une seule
+    raison : la liste y est déjà chargée. Un second `mes_notifications` à
+    chaque page serait du bruit pur. Sa position est `fixed`, l'endroit du DOM
+    où elle est rendue n'a donc aucune importance.
+  · **Ce n'est pas un toast** : elle ne s'efface pas toute seule, parce qu'elle
+    porte une décision et non un accusé de réception.
+  · **Une fois par session ET PAR AVIS** — la clé de `sessionStorage` porte
+    l'identifiant. Sans lui, le premier refus de l'année ferait taire tous les
+    suivants.
+  · **⚠️ Tout accès à `sessionStorage` est protégé** : il lève en navigation
+    privée, et la bannière ferait tomber la cloche entière. Sans mémoire, elle
+    s'affiche — montrer deux fois vaut mieux que jamais.
 - **« Découvrir » est une PASTILLE, pas un bouton.** Le rang de la cloche est
   déjà le bouton : un `<button>` imbriqué n'est pas du HTML valide, et deux
   cibles pour un seul geste se disputent le clic. Un test le fige.

@@ -87,6 +87,65 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
   }
 }
 
+/**
+ * La bannière d'avis, en haut à droite.
+ *
+ * Demandée par Julien le 4 septembre 2026 : « en plus d'une notif dans la
+ * cloche, mets une bannière de notif en haut à droite ». La cloche attend
+ * qu'on l'ouvre — or un forfait trop juste est précisément ce qu'on ne va pas
+ * chercher : on ne sait pas encore qu'il y a quelque chose à savoir.
+ *
+ * ⚠️ ELLE SE SERT DE LA MÊME LECTURE QUE LA CLOCHE. Elle vit dans ce composant
+ * et non dans `AppShell` pour cette seule raison : la liste est déjà chargée,
+ * un second appel à `mes_notifications` à chaque page serait du bruit pur. Sa
+ * position est `fixed`, l'endroit du DOM où elle est rendue n'a donc aucune
+ * importance.
+ *
+ * ⚠️ UNE FOIS PAR SESSION ET PAR AVIS. La clé porte l'identifiant : un avis
+ * refermé ne revient pas d'une page à l'autre, mais un avis NOUVEAU s'affiche.
+ * Sans l'identifiant, le premier refus de l'année ferait taire tous les
+ * suivants.
+ *
+ * ⚠️ `sessionStorage` LÈVE dans certains contextes (navigation privée, cookies
+ * bloqués). Tout accès est protégé, et sans lui la bannière s'affiche — c'est
+ * la dégradation la moins mauvaise : montrer deux fois vaut mieux que jamais.
+ */
+function AvisForfait({ notif, onOuvrir }: { notif: Notif; onOuvrir: (lien: string) => void }) {
+  const [ferme, setFerme] = useState(false)
+  const cle = `avis-forfait-${notif.id}`
+
+  useEffect(() => {
+    try { if (sessionStorage.getItem(cle)) setFerme(true) } catch { /* on montre */ }
+  }, [cle])
+
+  function refermer() {
+    setFerme(true)
+    try { sessionStorage.setItem(cle, '1') } catch { /* sans mémoire, tant pis */ }
+  }
+
+  if (ferme) return null
+  const p = presenter(notif)
+
+  return (
+    <div className="avis-forfait" role="status" aria-live="polite">
+      <div className="avis-forfait-corps">
+        <div className="avis-forfait-titre">{p.titre}</div>
+        <div className="avis-forfait-texte">{p.texte}</div>
+        {p.lien && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => { refermer(); onOuvrir(p.lien as string) }}
+          >
+            {p.action ?? 'Voir'}
+          </button>
+        )}
+      </div>
+      <button type="button" className="toast-close" onClick={refermer} aria-label="Fermer">×</button>
+    </div>
+  )
+}
+
 export function Notifications() {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
@@ -136,8 +195,14 @@ export function Notifications() {
     router.push(lien)
   }
 
+  // Le premier avis de forfait non lu, s'il y en a un. `find` et non `filter` :
+  // deux bannières l'une sur l'autre ne se lisent pas, et il n'y en a de toute
+  // façon qu'une par magasin et par mois.
+  const avis = liste.find((n) => n.type === 'forfait_trop_juste' && !n.lu)
+
   return (
     <div className="rail-notif" ref={boiteRef}>
+      {avis && <AvisForfait notif={avis} onOuvrir={(l) => router.push(l)} />}
       <button
         type="button"
         className="rail-onglet"

@@ -316,6 +316,36 @@ describe('le forfait trop juste se dit au client', () => {
     expect(cloche).toContain("action: 'Découvrir'")
   })
 
+  it('une bannière double la cloche, en haut à droite', () => {
+    // La cloche attend qu'on l'ouvre — or un forfait trop juste est
+    // précisément ce qu'on ne va pas chercher : on ne sait pas encore qu'il y
+    // a quelque chose à savoir. (Julien, 4 septembre 2026.)
+    const cloche = lire('web/components/Notifications.tsx')
+    const css = lire('web/app/globals.css')
+    expect(cloche).toContain('function AvisForfait')
+    expect(cloche).toContain("n.type === 'forfait_trop_juste' && !n.lu")
+    expect(css).toContain('.avis-forfait {')
+    expect(css).toMatch(/\.avis-forfait \{[^}]*top: 16px; right: 16px/)
+  })
+
+  it('la bannière ne se sert d’aucun appel supplémentaire', () => {
+    // Elle vit dans le composant de la cloche pour cette seule raison : la
+    // liste est déjà chargée. Un second `mes_notifications` par page serait du
+    // bruit pur.
+    const cloche = lire('web/components/Notifications.tsx')
+    expect(cloche.match(/rpc\('mes_notifications'\)/g)?.length ?? 0).toBe(1)
+  })
+
+  it('elle ne revient pas d’une page à l’autre, mais un avis neuf s’affiche', () => {
+    const cloche = lire('web/components/Notifications.tsx')
+    // La clé porte l'identifiant : sans lui, le premier refus de l'année
+    // ferait taire tous les suivants.
+    expect(cloche).toContain('`avis-forfait-${notif.id}`')
+    // ⚠️ `sessionStorage` lève en navigation privée : sans garde, la bannière
+    // ferait tomber la cloche entière.
+    expect(cloche).toMatch(/try \{ if \(sessionStorage/)
+  })
+
   it('« Découvrir » est une pastille, pas un bouton dans un bouton', () => {
     const cloche = lire('web/components/Notifications.tsx')
     expect(cloche).toContain('className="notif-cta"')
