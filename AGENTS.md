@@ -8442,9 +8442,20 @@ Migration `20260904220001`, type de notification `forfait_trop_juste`.
   · **⚠️ Tout accès à `sessionStorage` est protégé** : il lève en navigation
     privée, et la bannière ferait tomber la cloche entière. Sans mémoire, elle
     s'affiche — montrer deux fois vaut mieux que jamais.
-- **« Découvrir » est une PASTILLE, pas un bouton.** Le rang de la cloche est
-  déjà le bouton : un `<button>` imbriqué n'est pas du HTML valide, et deux
-  cibles pour un seul geste se disputent le clic. Un test le fige.
+- **⚠️ L'APPEL À L'ACTION NOMME L'OFFRE : « Découvrir Advanced ».** « Découvrir »
+  seul ne dit pas quoi, et une invitation sans objet ne fait pas agir (Julien,
+  4 septembre 2026). Le nom vient de `proposer()`, jamais d'une chaîne écrite
+  sur place.
+- **Il porte le DESSIN PLEIN des autres boutons du produit** (`btn btn-primary
+  btn-sm`), à l'identique dans la cloche et dans la bannière. Une pastille en
+  contour se lisait comme une étiquette et n'incitait à rien — premier jet,
+  corrigé le jour même.
+- **⚠️ Mais dans la cloche c'est un `span`, pas un `button`**, et ce n'est pas
+  négociable : le rang entier est déjà un bouton, un `<button>` imbriqué n'est
+  pas du HTML valide (les navigateurs s'en sortent au hasard) et deux cibles
+  pour un seul geste se disputent le clic. Le `span` hérite du clic du rang,
+  qui mène au même endroit. Dans la bannière, qui n'est pas un bouton, c'est un
+  vrai `<button>`. Deux tests figent les deux moitiés de cette règle.
 
 ## ⚠️ Un `fichierDe(fn)` ne parle QUE de `fn`
 

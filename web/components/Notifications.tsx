@@ -28,9 +28,16 @@ type Notif = {
 /**
  * La phrase de chaque type — et où mène l'appui, s'il mène quelque part.
  *
- * `action` est le libellé d'une pastille d'appel : le rang ENTIER reste le
- * bouton, la pastille n'en est pas un second (un bouton dans un bouton n'est
- * pas du HTML valide, et deux cibles pour un seul geste se disputent le clic).
+ * `action` est le libellé d'un appel à l'action. Il porte **le dessin plein des
+ * autres boutons du produit** (`btn btn-primary btn-sm`) : une pastille en
+ * contour se lisait comme une étiquette et n'incitait à rien (constat de
+ * Julien, 4 septembre 2026).
+ *
+ * ⚠️ MAIS C'EST UN `span`, PAS UN `button`, et ce n'est pas négociable : le
+ * rang ENTIER est déjà un bouton, et un bouton dans un bouton n'est pas du
+ * HTML valide — les navigateurs s'en sortent au hasard, et deux cibles pour un
+ * seul geste se disputent le clic. Le `span` hérite du clic du rang, qui mène
+ * exactement au même endroit.
  */
 function presenter(n: Notif): { titre: string; texte: string; lien: string | null; action?: string } {
   const d = n.donnees
@@ -81,7 +88,10 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
           ? `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place. Votre forfait en couvre ${forfait} à la fois — n’hésitez pas à passer à ${offre.nom}, qui en couvre ${offre.couvre}.`
           : `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place.`,
         lien: d.store_id ? `/magasins/${d.store_id}` : '/magasins',
-        action: 'Découvrir',
+        // ⚠️ LE LIBELLÉ NOMME L'OFFRE. « Découvrir » seul ne dit pas quoi, et
+        // une invitation sans objet ne fait pas agir (Julien, 4 septembre
+        // 2026). Le nom vient de `proposer()`, jamais d'une chaîne écrite ici.
+        action: offre ? `Découvrir ${offre.nom}` : 'Découvrir les offres',
       }
     }
   }
@@ -233,7 +243,7 @@ export function Notifications() {
                   <div className="notif-texte">{p.texte}</div>
                   <div className="notif-pied">
                     <span className="notif-date">{relativeTime(n.created_at)}</span>
-                    {p.action && <span className="notif-cta">{p.action}</span>}
+                    {p.action && <span className="btn btn-primary btn-sm notif-cta">{p.action}</span>}
                   </div>
                 </>
               )

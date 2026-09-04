@@ -313,7 +313,9 @@ describe('le forfait trop juste se dit au client', () => {
     const cloche = lire('web/components/Notifications.tsx')
     expect(cloche).toContain("case 'forfait_trop_juste'")
     expect(cloche).toContain('proposer(')
-    expect(cloche).toContain("action: 'Découvrir'")
+    // ⚠️ Le libellé NOMME l'offre : « Découvrir » seul ne dit pas quoi, et une
+    // invitation sans objet ne fait pas agir.
+    expect(cloche).toContain('`Découvrir ${offre.nom}`')
   })
 
   it('une bannière double la cloche, en haut à droite', () => {
@@ -346,12 +348,18 @@ describe('le forfait trop juste se dit au client', () => {
     expect(cloche).toMatch(/try \{ if \(sessionStorage/)
   })
 
-  it('« Découvrir » est une pastille, pas un bouton dans un bouton', () => {
+  it('l’appel à l’action porte le dessin des autres boutons', () => {
+    // Une pastille en contour se lisait comme une étiquette et n'incitait à
+    // rien (constat de Julien, 4 septembre 2026).
     const cloche = lire('web/components/Notifications.tsx')
-    expect(cloche).toContain('className="notif-cta"')
-    // Le rang entier reste la cible ; un <button> imbriqué serait du HTML
-    // invalide et deux cibles se disputeraient le clic.
-    const i = cloche.indexOf('notif-cta')
+    expect(cloche).toContain('className="btn btn-primary btn-sm notif-cta"')
+  })
+
+  it('… mais reste un span, jamais un bouton dans un bouton', () => {
+    // Le rang entier est déjà un bouton : un <button> imbriqué serait du HTML
+    // invalide, et deux cibles pour un seul geste se disputeraient le clic.
+    const cloche = lire('web/components/Notifications.tsx')
+    const i = cloche.indexOf('btn btn-primary btn-sm notif-cta')
     expect(cloche.slice(i - 40, i)).toContain('<span')
   })
 })

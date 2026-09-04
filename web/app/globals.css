@@ -2432,11 +2432,11 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .notif-texte { font-size: 12.5px; color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
 .notif-pied { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .notif-date { font-size: 11.5px; color: var(--text-3); }
-/* Une pastille, pas un bouton : le rang entier est déjà le bouton, et un
-   bouton dans un bouton n'est pas du HTML valide. Elle dit qu'il y a un geste
-   à faire, elle ne prétend pas être une seconde cible. */
-.notif-cta { font-size: 11.5px; font-weight: 600; color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+/* ⚠️ Le DESSIN d'un bouton plein, mais un `span` : le rang entier est déjà le
+   bouton, et un bouton dans un bouton n'est pas du HTML valide. Il hérite du
+   clic du rang, qui mène au même endroit. Une pastille en contour se lisait
+   comme une étiquette et n'incitait à rien. */
+.notif-cta { display: inline-block; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; }
 .notif-point { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; margin-top: 6px; }
 
 /* La bannière d'avis — en haut à droite, à l'opposé du rail. Elle n'est pas un
