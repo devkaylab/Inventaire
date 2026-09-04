@@ -7614,6 +7614,62 @@ Cent compteurs à six scans par minute font 10 écritures/s — **2,4 % de cette
 capacité**. Le chiffre de 3 ms par scan, mesuré en solo depuis le 3 septembre,
 tient sous contention. Ne pas chercher le problème de ce côté.
 
+## Le catalogue hors ligne ne part plus en entier (4 septembre 2026)
+
+Julien, après la mesure de charge : *« ne télécharger que ce dont chaque
+compteur a besoin »*. C'était le seul point que la mesure désignait comme un
+vrai risque, et le seul hors de notre contrôle : le wifi du magasin.
+
+**Mesuré avant d'agir** : chaque téléphone téléchargeait **304 octets par
+référence**, à chaque ouverture de l'écran de comptage — 8,9 Mo pour 30 000
+références, **116 Mo pour 400 000**. Cent compteurs, 11,6 Go.
+
+Deux leviers, une seule fonction nouvelle (`20260904160001`) :
+**304 → 110 octets, soit −64 %**, et **zéro octet quand rien n'a changé**.
+
+- **⚠️ Le serveur n'envoie plus que ce que le scanner LIT** — `sku`, `ean`,
+  `label`, `brand`, `prix`. Vérifié champ par champ dans `src/` avant de
+  retirer quoi que ce soit : l'identifiant interne, celui de l'inventaire et
+  la date de modification ne sont jamais lus d'un article téléchargé, et le
+  code-barres partait **en double** (brut et normalisé).
+  · **Le NOM des colonnes compte** : `unit_purchase_price` pèse 21 octets
+    **par ligne** dans le JSON, `prix` en pèse 6. Sur 400 000 lignes, 6 Mo.
+  · `ean_norm` se recalcule sur le téléphone. **⚠️ Les deux copies clientes
+    doivent reproduire la colonne générée mot pour mot** (`NULLIF(ltrim(ean,
+    '0'), '')`) — sinon un code scanné ne retrouve plus son article. Un test
+    les compare.
+  · **⚠️ Un article téléchargé n'a pas d'identité locale** (`id: ''`). Seuls
+    ceux créés en réserve en ont besoin, pour partir dans la file.
+- **⚠️ Le repère se prend AVANT la pagination.** Ce qui change pendant qu'on
+  tourne les pages porte une date postérieure : ce sera pour le passage
+  suivant, et rien n'est perdu. L'ordre inverse ouvrirait un trou.
+- **⚠️ `p_depuis` compare en STRICTEMENT SUPÉRIEUR.** Un import écrit toutes
+  ses lignes dans une seule transaction, donc avec le même `updated_at` : un
+  `>=` les redemanderait **toutes** à chaque passage et le levier ne servirait
+  plus à rien.
+- **⚠️ ET LE DÉCOMPTE RATTRAPE LES SUPPRESSIONS.** C'est la moitié qu'on
+  oublie : une date de modification ne dit **rien** d'une ligne effacée — et
+  remplacer un fichier d'import en efface. Le téléphone compare ce qu'il croit
+  connaître au total du serveur ; au moindre écart il retélécharge tout. Sans
+  ça, le cache garderait des fantômes et un code scanné se résoudrait sur un
+  article que le référentiel ne contient plus. C'est aussi ce qui ferme le
+  trou théorique du `>` (deux transactions à la microseconde près).
+- **⚠️ Les articles saisis en réserve sont écartés du décompte** : ils sont
+  dans le cache et pas encore en base. Les compter ferait diverger le total à
+  chaque saisie manuelle, donc retélécharger pour rien.
+- **⚠️ `lister_articles` N'EST PAS TOUCHÉE**, et l'ancienne enveloppe
+  `getSessionArticles` non plus : les téléphones déjà sur le terrain les
+  appellent. Règle du projet — le code se déploie d'abord, l'objet se retire
+  ensuite. À supprimer quand le build de septembre sera partout.
+
+**Ce qui a été écarté, et pourquoi** : découper le catalogue par rayon. Un
+compteur peut être envoyé sur n'importe quelle balise — s'il n'a que son rayon
+en poche, le premier article scanné ailleurs devient « inconnu ». C'est la
+fonction même du cache qui tombe.
+
+Tests de garde : `tests/offlineSync.test.ts` (le delta, la suppression, la
+saisie en réserve, sur le VRAI module) et `tests/compte.test.ts`.
+
 ## Ce qui n'est TOUJOURS pas prouvé
 
 Dit explicitement, parce qu'une absence de constat ne vaut que si on sait ce

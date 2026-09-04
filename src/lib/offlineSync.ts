@@ -74,10 +74,78 @@ function noteNetworkError(e: unknown): boolean {
  * seul le hors ligne sera dégradé — et `hasOfflineCache` permet à l'écran de le
  * dire honnêtement.
  */
+/**
+ * Le catalogue à jour, en ne demandant que ce qui a changé
+ * (4 septembre 2026, demande de Julien).
+ *
+ * Chaque téléphone téléchargeait le référentiel ENTIER à chaque ouverture de
+ * l'écran de comptage. Mesuré : 116 Mo pour 400 000 références, par appareil.
+ * Cent compteurs, c'est 11,6 Go sur le wifi d'un magasin un matin
+ * d'inventaire — le point que la mesure de charge a désigné comme le vrai
+ * risque, et le seul qui soit hors de notre contrôle.
+ *
+ * Le déroulé, et chaque étape a sa raison :
+ *
+ * 1. **On prend le repère du serveur AVANT de télécharger.** Ce qui change
+ *    pendant qu'on tourne les pages porte une date postérieure : ce sera pour
+ *    le passage suivant, et rien n'est perdu.
+ * 2. **Rien n'a bougé → on ne demande rien.** C'est le cas courant : le même
+ *    téléphone, le même inventaire, le lendemain.
+ * 3. **Sinon on ne demande que le delta**, et on le fusionne par SKU.
+ * 4. **⚠️ ON RÉCONCILIE LE NOMBRE.** Une date de modification ne dit rien
+ *    d'une ligne EFFACÉE — et remplacer un fichier d'import en efface. Si le
+ *    compte local ne tombe pas sur celui du serveur, on retélécharge tout.
+ *    Sans cette étape, un catalogue local garderait des fantômes : un code
+ *    scanné se résoudrait sur un article que le référentiel ne contient plus.
+ *
+ * ⚠️ LES ARTICLES CRÉÉS EN RÉSERVE SONT ÉCARTÉS DU DÉCOMPTE. Ils sont dans le
+ * cache mais pas encore en base : les compter ferait diverger le total à
+ * chaque saisie manuelle, et déclencherait un téléchargement complet pour
+ * rien. Ils sont ré-empilés juste après, par l'appelant.
+ */
+async function catalogueAJour(sessionId: string): Promise<q.Article[]> {
+  const repere = await q.catalogueRepere(sessionId)
+  const connu = await off.getCatalogueRepere(sessionId)
+  const cache = await off.getCachedArticles(sessionId)
+
+  const complet = async () => {
+    const tout = await q.getCatalogue(sessionId, null)
+    await off.cacheCatalogueRepere(sessionId, { depuis: repere.repere, total: repere.total })
+    return tout
+  }
+
+  // Rien en cache, ou un cache écrit par une version qui ne posait pas de
+  // repère : on repart de zéro, une fois.
+  if (!connu || cache.length === 0) return complet()
+
+  // Ce que le SERVEUR nous a déjà donné — sans les articles saisis en réserve
+  // qui n'y sont pas encore.
+  const enAttente = new Set((await off.pendingArticles(sessionId)).map((a) => a.sku))
+  const duServeur = cache.filter((a) => !enAttente.has(a.sku))
+
+  // Rien n'a changé côté serveur : le cas courant, et il ne coûte rien.
+  if (connu.depuis && repere.repere && repere.repere <= connu.depuis) {
+    if (duServeur.length === repere.total) return duServeur
+    return complet()
+  }
+
+  const delta = await q.getCatalogue(sessionId, connu.depuis)
+  const parSku = new Map(duServeur.map((a) => [a.sku, a]))
+  for (const a of delta) parSku.set(a.sku, a)
+  const fusion = [...parSku.values()]
+
+  // ⚠️ La garde des suppressions. Elle est volontairement stricte : au moindre
+  // écart on refait tout, parce qu'un catalogue faux ne se voit pas.
+  if (fusion.length !== repere.total) return complet()
+
+  await off.cacheCatalogueRepere(sessionId, { depuis: repere.repere, total: repere.total })
+  return fusion
+}
+
 export async function primeOfflineCache(sessionId: string): Promise<boolean> {
   try {
     const [articles, zones, session] = await Promise.all([
-      q.getSessionArticles(sessionId),
+      catalogueAJour(sessionId),
       q.getZones(sessionId).catch(() => []),
       q.getSession(sessionId).catch(() => null),
     ])

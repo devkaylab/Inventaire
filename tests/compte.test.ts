@@ -2706,3 +2706,77 @@ describe('l’écran de progression s’ouvre hors ligne', () => {
     expect(offline).toContain('export const cacheCountTotals')
   })
 })
+
+/**
+ * Le catalogue hors ligne, allégé et incrémental (4 septembre 2026).
+ *
+ * Julien, après la mesure de charge : « ne télécharger que ce dont chaque
+ * compteur a besoin ». Mesuré sur la base réelle : 304 octets par référence,
+ * soit 116 Mo pour 400 000 références — par appareil, à chaque ouverture de
+ * l'écran de comptage.
+ */
+describe('le catalogue hors ligne ne pèse plus le même poids', () => {
+  const requetes = lire('lib/queries.ts')
+  const bascule = lire('lib/offlineSync.ts')
+  const migrations = readdirSync(path.join(here, '..', 'supabase', 'migrations'))
+    .filter((f) => f.includes('catalogue_hors_ligne'))
+    .map((f) => readFileSync(path.join(here, '..', 'supabase', 'migrations', f), 'utf8'))
+    .join('\n')
+
+  it('⚠️ le serveur n’envoie que ce que le scanner lit', () => {
+    // Vérifié champ par champ dans src/ : ni l'identifiant interne, ni celui
+    // de l'inventaire, ni la date de modification ne sont lus d'un article
+    // téléchargé. Et le code-barres partait EN DOUBLE (brut + normalisé).
+    expect(migrations).toContain('returns table(sku text, ean text, label text, brand text, prix numeric)')
+    for (const colonne of ['a.id', 'a.session_id', 'a.updated_at', 'a.ean_norm']) {
+      expect(migrations.split('catalogue_hors_ligne')[2] ?? '', colonne).not.toContain(`${colonne},`)
+    }
+  })
+
+  it('⚠️ `ean_norm` se recalcule sur le téléphone, à l’identique du serveur', () => {
+    // La colonne est générée en base (`NULLIF(ltrim(ean,'0'),'')`). Les deux
+    // copies clientes doivent la reproduire mot pour mot, sinon un code
+    // scanné ne retrouve plus son article.
+    const attendu = "const stripped = (ean ?? '').replace(/^0+/, '')"
+    expect(requetes).toContain(attendu)
+    expect(lire('lib/offline.ts')).toContain(attendu)
+  })
+
+  it('⚠️ le repère se prend AVANT de télécharger', () => {
+    // Ce qui change pendant qu'on tourne les pages porte une date
+    // postérieure : ce sera pour le passage suivant, et rien n'est perdu.
+    const corps = bascule.slice(bascule.indexOf('async function catalogueAJour'))
+    expect(corps.indexOf('catalogueRepere(sessionId)')).toBeLessThan(corps.indexOf('q.getCatalogue('))
+  })
+
+  it('⚠️ LE DÉCOMPTE RATTRAPE LES SUPPRESSIONS', () => {
+    // Une date de modification ne dit rien d'une ligne effacée — et remplacer
+    // un fichier d'import en efface. Sans ce contrôle, le cache garderait des
+    // fantômes : un code scanné se résoudrait sur un article disparu.
+    expect(migrations).toContain('count(*)::bigint')
+    expect(bascule).toContain('fusion.length !== repere.total')
+    expect(bascule).toContain('duServeur.length === repere.total')
+  })
+
+  it('⚠️ l’ancien chemin reste, pour les téléphones déjà sur le terrain', () => {
+    // Règle du projet : le code se déploie d'abord, l'objet se retire ensuite.
+    // `lister_articles` est encore appelée par le build de production.
+    expect(requetes).toContain('export async function getSessionArticles')
+    expect(migrations).not.toContain('drop function public.lister_articles')
+    // Mais la bascule, elle, ne l'appelle plus.
+    expect(bascule).not.toContain('q.getSessionArticles(')
+  })
+
+  it('les deux fonctions reposent leurs droits, anon nommément', () => {
+    for (const fn of ['catalogue_repere', 'catalogue_hors_ligne']) {
+      expect(migrations, fn).toContain(`revoke all on function public.${fn}(`)
+    }
+    expect(migrations).toMatch(/from public, anon/)
+    expect(migrations).toContain('to authenticated, service_role')
+  })
+
+  it('la garde du serveur est celle de l’ancienne fonction, à l’identique', () => {
+    // Un compteur doit pouvoir la lire : c'est lui qui compte.
+    expect(migrations.match(/membre_ou_superviseur\(p_session_id\)/g)?.length).toBe(2)
+  })
+})

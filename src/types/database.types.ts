@@ -1606,6 +1606,28 @@ export type Database = {
       can_access_session: { Args: { p_session_id: string }; Returns: boolean }
       can_join_session_topic: { Args: { p_topic: string }; Returns: boolean }
       cancel_my_invitation: { Args: { p_id: string }; Returns: Json }
+      catalogue_hors_ligne: {
+        Args: {
+          p_apres_sku?: string
+          p_depuis?: string
+          p_limite?: number
+          p_session_id: string
+        }
+        Returns: {
+          brand: string
+          ean: string
+          label: string
+          prix: number
+          sku: string
+        }[]
+      }
+      catalogue_repere: {
+        Args: { p_session_id: string }
+        Returns: {
+          repere: string
+          total: number
+        }[]
+      }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
       client_ip: { Args: never; Returns: string }
       cloturer_audit_balise: {

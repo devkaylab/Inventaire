@@ -360,6 +360,7 @@ const profileKey = `${V}:profile`
 const sessionKey = (sessionId: string) => `${V}:session:${sessionId}`
 const sessionListKey = `${V}:sessions`
 const totauxKey = (sessionId: string) => `${V}:totaux:${sessionId}`
+const catalogueKey = (sessionId: string) => `${V}:cat:${sessionId}`
 
 async function putJson(key: string, value: unknown): Promise<void> {
   await AsyncStorage.setItem(key, JSON.stringify(value))
@@ -402,6 +403,28 @@ export const getCachedSessionList = <T,>() => getJson<T[]>(sessionListKey)
  */
 export const cacheCountTotals = (sessionId: string, t: unknown) => putJson(totauxKey(sessionId), t)
 export const getCachedCountTotals = <T,>(sessionId: string) => getJson<T>(totauxKey(sessionId))
+
+/**
+ * Où en était le catalogue à la dernière mise en cache réussie
+ * (4 septembre 2026).
+ *
+ * `depuis` est le repère du serveur, `total` le nombre d'articles qu'il
+ * portait alors. Les deux servent au passage suivant : le premier pour ne
+ * demander que les modifications, le second pour **détecter une
+ * suppression** — une date de modification ne dit rien d'une ligne effacée.
+ *
+ * ⚠️ Son absence vaut « je ne sais rien » et déclenche un téléchargement
+ * complet. C'est ce qui rend la bascule sans risque : un cache écrit par
+ * l'ancienne version n'a pas de repère, donc il se refait entièrement une
+ * fois, puis devient incrémental.
+ */
+export type CatalogueRepere = { depuis: string | null; total: number }
+export const cacheCatalogueRepere = (sessionId: string, r: CatalogueRepere) =>
+  putJson(catalogueKey(sessionId), r)
+export const getCatalogueRepere = (sessionId: string) =>
+  getJson<CatalogueRepere>(catalogueKey(sessionId))
+export const oublierCatalogueRepere = (sessionId: string) =>
+  AsyncStorage.removeItem(catalogueKey(sessionId))
 
 /**
  * Oublie les caches locaux à la déconnexion.
@@ -859,6 +882,7 @@ export async function clearSession(sessionId: string): Promise<void> {
       k === zonesKey(sessionId) ||
       k === sessionKey(sessionId) ||
       k === totauxKey(sessionId) ||
+      k === catalogueKey(sessionId) ||
       k.startsWith(balisePrefix(sessionId)) ||
       k.startsWith(failedPrefix(sessionId)) ||
       k.startsWith(`${V1_OP_PREFIX}${sessionId}:`),

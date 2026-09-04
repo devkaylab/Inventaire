@@ -34,7 +34,15 @@ const serveur = {
   articles: [] as Record<string, unknown>[],
   counts: [] as Record<string, unknown>[],
   totaux: { counted: 0, audited: 0 },
-  reset() { this.panne = false; this.articles = []; this.counts = []; this.totaux = { counted: 0, audited: 0 } },
+  /** Le référentiel du serveur : une ligne par SKU, avec sa date. */
+  catalogue: [] as { sku: string; date: string }[],
+  /** Combien de lignes le dernier téléchargement a demandées, et combien d'appels. */
+  demandes: [] as (string | null)[],
+  reset() {
+    this.panne = false; this.articles = []; this.counts = []
+    this.totaux = { counted: 0, audited: 0 }
+    this.catalogue = []; this.demandes = []
+  },
 }
 const coupure = () => { throw { name: 'TypeError', message: 'Network request failed' } }
 
@@ -55,6 +63,21 @@ vi.mock('@/lib/queries', () => ({
   },
   getMyScanEntries: async () => { if (serveur.panne) coupure(); return [] },
   getSessionArticles: async () => { if (serveur.panne) coupure(); return serveur.articles },
+  catalogueRepere: async () => {
+    if (serveur.panne) coupure()
+    const dates = serveur.catalogue.map((a) => a.date).sort()
+    return { repere: dates.length ? dates[dates.length - 1] : null, total: serveur.catalogue.length }
+  },
+  getCatalogue: async (_s: string, depuis?: string | null) => {
+    if (serveur.panne) coupure()
+    serveur.demandes.push(depuis ?? null)
+    return serveur.catalogue
+      .filter((a) => !depuis || a.date > depuis)
+      .map((a) => ({
+        id: '', session_id: 'S', sku: a.sku, ean: null, ean_norm: null,
+        label: a.sku, brand: '', unit_purchase_price: 0, updated_at: '',
+      }))
+  },
   getZones: async () => { if (serveur.panne) coupure(); return [] },
   getSession: async () => { if (serveur.panne) coupure(); return { id: 'S', uses_zones: true } },
   getSessions: async () => { if (serveur.panne) coupure(); return [] },
@@ -62,6 +85,7 @@ vi.mock('@/lib/queries', () => ({
   setBalise: async () => { if (serveur.panne) coupure(); return { success: true } },
 }))
 
+import { getCachedArticles } from '@/lib/offline'
 import {
   getMyCountTotals,
   getScanEntries,
@@ -208,5 +232,83 @@ describe('les totaux du compteur survivent à la coupure', () => {
     expect(isOffline()).toBe(true)
     serveur.totaux = { counted: 999, audited: 999 } // le serveur bouge, on ne le demande pas
     expect(await getMyCountTotals(S)).toEqual({ counted: 5, audited: 0 })
+  })
+})
+
+/**
+ * Le catalogue ne repart pas en entier (4 septembre 2026).
+ *
+ * Chaque téléphone téléchargeait le référentiel complet à chaque ouverture de
+ * l'écran de comptage — 116 Mo pour 400 000 références, par appareil. Ces
+ * gardes tiennent les deux moitiés du correctif : ne demander que le delta,
+ * et **rattraper les suppressions**, qu'aucune date de modification ne dit.
+ */
+describe('le catalogue hors ligne ne se retélécharge pas pour rien', () => {
+  const cat = (n: number, date: string) =>
+    Array.from({ length: n }, (_, i) => ({ sku: `A${i}`, date }))
+  const skusEnCache = async () =>
+    (await getCachedArticles(S)).map((a) => a.sku).sort()
+
+  it('le premier passage prend tout, le second ne demande rien', async () => {
+    serveur.catalogue = cat(3, '2026-09-04T10:00:00Z')
+    store.clear(); serveur.demandes = []
+    expect(await primeOfflineCache(S)).toBe(true)
+    expect(serveur.demandes).toEqual([null]) // téléchargement complet
+    expect(await skusEnCache()).toEqual(['A0', 'A1', 'A2'])
+
+    serveur.demandes = []
+    expect(await primeOfflineCache(S)).toBe(true)
+    expect(serveur.demandes).toEqual([]) // rien n'a bougé : aucun appel
+    expect(await skusEnCache()).toEqual(['A0', 'A1', 'A2'])
+  })
+
+  it('un ajout ne fait descendre que lui, et il rejoint le cache', async () => {
+    serveur.catalogue = cat(3, '2026-09-04T10:00:00Z')
+    store.clear(); serveur.demandes = []
+    await primeOfflineCache(S)
+
+    serveur.catalogue.push({ sku: 'A9', date: '2026-09-04T11:00:00Z' })
+    serveur.demandes = []
+    await primeOfflineCache(S)
+    // Le delta part DU repère précédent, pas du début.
+    expect(serveur.demandes).toEqual(['2026-09-04T10:00:00Z'])
+    expect(await skusEnCache()).toEqual(['A0', 'A1', 'A2', 'A9'])
+  })
+
+  it('⚠️ UNE SUPPRESSION FAIT TOUT RETÉLÉCHARGER', async () => {
+    // C'est le point qu'une date de modification ne peut pas dire — et
+    // remplacer un fichier d'import efface des lignes. Sans cette garde, un
+    // code scanné se résoudrait sur un article que le référentiel ne
+    // contient plus.
+    serveur.catalogue = cat(3, '2026-09-04T10:00:00Z')
+    store.clear(); serveur.demandes = []
+    await primeOfflineCache(S)
+
+    serveur.catalogue = [{ sku: 'A0', date: '2026-09-04T10:00:00Z' }]
+    serveur.demandes = []
+    await primeOfflineCache(S)
+    // Le repère n'a pas bougé, mais le compte ne tombe plus : on refait tout.
+    expect(serveur.demandes).toEqual([null])
+    expect(await skusEnCache()).toEqual(['A0'])
+  })
+
+  it('⚠️ un article saisi en réserve ne fausse pas le décompte', async () => {
+    // Il est dans le cache et pas encore en base : le compter ferait diverger
+    // le total à chaque saisie manuelle, donc retélécharger pour rien.
+    serveur.catalogue = cat(2, '2026-09-04T10:00:00Z')
+    store.clear(); serveur.demandes = []
+    await primeOfflineCache(S)
+
+    serveur.panne = true
+    await resolveArticle(S, CODE) // constate la coupure
+    await insertArticle(
+      { session_id: S, sku: CODE, ean: CODE, brand: '', label: 'INCONNU', unit_purchase_price: 0 },
+      '1000',
+    )
+    serveur.panne = false
+    serveur.demandes = []
+    await primeOfflineCache(S)
+    expect(serveur.demandes).toEqual([]) // aucun téléchargement : le compte tombe juste
+    expect(await skusEnCache()).toEqual(['A0', 'A1', CODE].sort())
   })
 })

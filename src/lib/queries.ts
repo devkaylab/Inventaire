@@ -944,6 +944,89 @@ export async function getMyScanEntries(
  * Par `lister_articles`, les 30 pages complètes prennent 391 ms.
  * Ne pas y remettre d'`offset`.
  */
+/**
+ * Le repère du catalogue : où il en est, sans le télécharger
+ * (4 septembre 2026).
+ *
+ * ⚠️ IL SE PREND AVANT LA PAGINATION, jamais après. Un article modifié
+ * pendant que le téléphone tourne ses pages porte forcément une date
+ * postérieure au repère : il sera rapatrié au passage suivant. L'ordre
+ * inverse ouvrirait un trou.
+ *
+ * ⚠️ `total` EST CE QUI RATTRAPE LES SUPPRESSIONS. Une date de modification
+ * ne dit rien d'une ligne effacée — et remplacer un fichier d'import en
+ * efface. On compare ce qu'on croit connaître au total du serveur : dès que
+ * les deux divergent, on retélécharge tout.
+ */
+export async function catalogueRepere(
+  sessionId: string,
+): Promise<{ repere: string | null; total: number }> {
+  const { data, error } = await supabase.rpc('catalogue_repere', { p_session_id: sessionId })
+  if (error) throwSupabase('catalogueRepere', error)
+  const row = (Array.isArray(data) ? data[0] : data) as { repere?: string | null; total?: number } | null
+  return { repere: row?.repere ?? null, total: Number(row?.total ?? 0) }
+}
+
+/**
+ * Le catalogue épuré, et seulement ce qui a changé depuis `depuis`.
+ *
+ * ⚠️ LE SERVEUR N'ENVOIE PLUS QUE CE QUE LE SCANNER LIT : sku, code-barres,
+ * libellé, marque, prix. Mesuré : **304 → 110 octets par référence**, soit
+ * 116 Mo → 42 Mo pour 400 000 références, PAR APPAREIL. Le reste se
+ * reconstitue ici — `ean_norm` par le même calcul que la colonne générée, et
+ * l'identifiant n'existe tout simplement pas pour un article téléchargé :
+ * seuls ceux créés en réserve en ont besoin.
+ */
+export async function getCatalogue(sessionId: string, depuis?: string | null): Promise<Article[]> {
+  const PAGE = 1000
+  const out: Article[] = []
+  let apres: string | null = null
+  for (;;) {
+    const { data, error } = await supabase.rpc('catalogue_hors_ligne', {
+      p_session_id: sessionId,
+      p_apres_sku: apres ?? undefined,
+      p_limite: PAGE,
+      p_depuis: depuis ?? undefined,
+    })
+    if (error) throwSupabase('getCatalogue', error)
+    const page = (data ?? []) as {
+      sku: string; ean: string | null; label: string | null; brand: string | null; prix: number | null
+    }[]
+    for (const l of page) {
+      out.push({
+        // ⚠️ Un article téléchargé n'a pas d'identité locale : rien ne la lit.
+        // Seule la création hors ligne en pose une (`off.newId()`).
+        id: '',
+        session_id: sessionId,
+        sku: l.sku,
+        ean: l.ean,
+        ean_norm: normaliserEan(l.ean),
+        label: l.label ?? '',
+        brand: l.brand ?? '',
+        unit_purchase_price: Number(l.prix ?? 0),
+        updated_at: '',
+      })
+    }
+    if (page.length < PAGE) return out
+    apres = page[page.length - 1].sku
+  }
+}
+
+/**
+ * `ean_norm` tel que le serveur le calcule : `NULLIF(ltrim(ean, '0'), '')`.
+ * Doublon volontaire de `offline.eanNorm` — `queries.ts` ne dépend pas de la
+ * couche hors ligne, et l'inverse créerait un cycle. Un test les compare.
+ */
+export function normaliserEan(ean: string | null | undefined): string | null {
+  const stripped = (ean ?? '').replace(/^0+/, '')
+  return stripped === '' ? null : stripped
+}
+
+/**
+ * ⚠️ ANCIEN CHEMIN, gardé pour les téléphones déjà sur le terrain.
+ * Ne plus l'appeler : `getCatalogue` rend la même chose en trois fois moins
+ * d'octets. À retirer quand le build de septembre sera partout.
+ */
 export async function getSessionArticles(sessionId: string): Promise<Article[]> {
   const PAGE = 1000
   const out: Article[] = []
