@@ -8965,3 +8965,90 @@ dernier endroit où l'on veut qu'un client apprenne quelque chose.
 Tests de garde : `web/tests/libre-service.test.ts`, bloc « le prix dit comment
 il se compose » — dont celui qui vérifie que le prix décomposé fait bien le
 total.
+
+# ⚠️ L'abonnement suit le magasin (4 septembre 2026)
+
+**Trouvé en vérifiant le premier paiement réel du libre-service.** Le magasin
+était créé, au bon prix, avec sa facture — et
+`companies.stripe_subscription_id` restait **nul**. La branche d'ajout de
+`fulfil_paid_request` créait le magasin sans jamais enregistrer l'abonnement
+que le paiement venait d'ouvrir.
+
+Ce n'est pas cosmétique, et la seconde conséquence coûte de l'argent :
+
+- **`sync_subscription_status` cherche l'abonnement sur `companies`** — impayé,
+  résiliation et reprise passaient inaperçus pour ce magasin ;
+- **`deposer_changement_offre` décide du chemin sur cet abonnement.** Nul, il
+  aurait ouvert un **second abonnement** au premier changement d'offre, et le
+  client aurait payé les deux offres — le trou même que ce garde-fou existe
+  pour fermer.
+
+⚠️ **ET IL SE NOTE PAR MAGASIN, PAS PAR ENTREPRISE.** Une entreprise peut en
+porter plusieurs — un par magasin ajouté en libre-service. L'écrire seulement
+sur l'entreprise ferait modifier **l'article du mauvais magasin** au premier
+changement d'offre. L'entreprise garde le premier, celui de sa licence, et on
+ne l'écrase jamais.
+
+C'est la limite notée le 2 septembre — « un magasin ajouté en mensuel crée un
+second abonnement que rien ne suit » — qui n'était plus une limite mais un
+défaut, depuis que ce chemin est celui de tout le monde. Migration
+`20260904270001`.
+
+⚠️ **Le magasin d'essai payé ce jour-là n'a pas d'abonnement enregistré** : son
+identifiant n'a jamais été écrit, et il ne se retrouve pas après coup. Sans
+conséquence, il est supprimé — mais c'est le genre de trace qu'on ne rattrape
+pas.
+
+## ⚠️ `supabase db query --file` applique une migration sans la retaper
+
+Découvert en voulant réappliquer `fulfil_paid_request` (180 lignes) : la console
+MCP exige que le SQL passe **dans l'appel**, donc qu'il soit réémis en entier.
+`supabase db query --file <fichier> --linked` l'exécute **depuis le disque**.
+
+- Il faut `supabase link --project-ref …` une fois ; `--project-ref` seul est
+  refusé (« use it with --linked »).
+- ⚠️ **Vérifier que `link` n'a pas créé de `supabase/config.toml`** : le dépôt
+  n'en a pas, et c'est ce qui fait que le CLI déploie avec `verify_jwt` **activé
+  par défaut**. Contrôlé le 4 septembre — il n'écrit que `supabase/.temp/`, qui
+  est ignoré par git. Si un `config.toml` apparaît un jour, les cinq fonctions
+  publiques doivent y être déclarées avant tout déploiement.
+- Le passage par ce chemin **n'inscrit rien dans l'historique de migrations**.
+  Sans conséquence ici : `db push` est interdit sur ce projet (le dossier
+  diverge de la base), et la parité se contrôle par MD5 sur les corps.
+
+# Le magasin créé demande qui le supervise (4 septembre 2026)
+
+Julien, au retour de son paiement : *« une fois le paiement accepté, ouvrir un
+pop-up pour ajouter des superviseurs sur le magasin, ça évite de chercher la
+page équipe du magasin. »*
+
+**Un magasin sans superviseur ne sert à rien** — personne ne peut y lancer
+d'inventaire. Le geste suivant est donc toujours le même, et il était à chercher
+deux écrans plus loin. `web/components/QuiSupervise.tsx`, ouvert au retour de
+`?magasin=ok&demande=<id>`.
+
+- **⚠️ AUCUN SECOND CHEMIN D'AFFECTATION** : la fenêtre appelle
+  `ca_set_supervisor_stores`, celle de la page Équipe, avec ses gardes.
+- **⚠️ ELLE REMPLACE LA LISTE DES MAGASINS D'UNE PERSONNE.** On lui envoie donc
+  les siens **plus celui-ci** — lui envoyer ce seul magasin retirerait la
+  personne de tous les autres. Le piège est dans le nom de la fonction, pas
+  dans son comportement.
+- **Les administrateurs d'entreprise ne sont pas proposés** : ils ont tous les
+  magasins par construction depuis le 22 août, et `ca_set_supervisor_stores`
+  refuse nommément un profil `is_company_admin`.
+- **⚠️ ON ATTEND LE WEBHOOK, ET C'EST TOUTE LA DIFFICULTÉ.** Stripe renvoie le
+  client sur la page dans la seconde ; le magasin naît quand le webhook passe.
+  Sans cette attente — dix essais, deux secondes d'écart — on lirait une demande
+  encore en `paid` et on conclurait qu'il n'y a rien à montrer. Au-delà de vingt
+  secondes c'est une anomalie, qui remonte déjà dans « Ventes en cours ».
+- **L'adresse se nettoie tout de suite** (`replaceState`) : un rafraîchissement
+  ne doit pas rouvrir la fenêtre.
+- `magasin_cree_par` **rend le statut même quand le magasin n'existe pas
+  encore** : c'est ce qui permet à l'écran de distinguer « ça arrive » de « il
+  n'y a rien à voir ».
+- L'adresse d'un superviseur **se tronque, elle ne casse pas la ligne** : une
+  adresse longue reléguait « 1 magasin » sur un second rang et déséquilibrait
+  toute la liste.
+
+Tests de garde : `web/tests/libre-service.test.ts`, blocs « l'abonnement suit le
+magasin » et « le magasin créé demande qui le supervise ».

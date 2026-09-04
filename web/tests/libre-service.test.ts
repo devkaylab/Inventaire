@@ -455,3 +455,75 @@ describe('le prix dit comment il se compose', () => {
     }
   })
 })
+
+describe('l’abonnement suit le magasin', () => {
+  // ⚠️ Trouvé en vérifiant le PREMIER PAIEMENT RÉEL : le magasin était créé au
+  // bon prix, et `companies.stripe_subscription_id` restait nul. Deux
+  // conséquences, et la seconde coûte de l'argent — le cycle de vie de la
+  // licence devenait invisible, et le changement d'offre suivant ouvrait un
+  // SECOND abonnement.
+  const { corps } = derniereDefinition('fulfil_paid_request')
+  const sans = sansCommentaires(corps)
+
+  it('note l’abonnement sur le magasin qu’il crée', () => {
+    expect(espaces(sans)).toContain('units, sqm, stripe_subscription_id')
+  })
+
+  it('n’écrase jamais celui de l’entreprise', () => {
+    // Ce serait perdre la trace de ce que le client paie déjà.
+    expect(espaces(sans)).toContain('stripe_subscription_id = coalesce(stripe_subscription_id, v_sub)')
+  })
+
+  it('le changement d’offre lit celui du MAGASIN d’abord', () => {
+    // Une entreprise peut porter plusieurs abonnements : router sur celui de
+    // l'entreprise ferait modifier l'article du mauvais magasin.
+    for (const fn of ['etat_abonnement_magasin', 'deposer_changement_offre']) {
+      const c = espaces(sansCommentaires(derniereDefinition(fn).corps))
+      expect(c, fn).toContain('coalesce(s.stripe_subscription_id, c.stripe_subscription_id)')
+    }
+  })
+
+  it('le cycle de vie retrouve un magasin, pas seulement une entreprise', () => {
+    const c = espaces(sansCommentaires(derniereDefinition('sync_subscription_status').corps))
+    expect(c).toContain('where s.stripe_subscription_id = v_sub')
+  })
+})
+
+describe('le magasin créé demande qui le supervise', () => {
+  // Julien : « ouvrir un pop-up pour ajouter des superviseurs sur le magasin,
+  // ça évite de chercher la page équipe ». Un magasin sans superviseur ne peut
+  // pas lancer d'inventaire : le geste suivant est toujours le même.
+  const fenetre = sansCommentaires(lire('web/components/QuiSupervise.tsx'))
+  const page = sansCommentaires(lire('web/app/magasins/page.tsx'))
+
+  it('n’écrit aucun second chemin d’affectation', () => {
+    expect(fenetre).toContain("rpc('ca_set_supervisor_stores'")
+    expect(fenetre).not.toContain('.from(')
+  })
+
+  it('envoie les magasins de la personne PLUS celui-ci', () => {
+    // ⚠️ La fonction REMPLACE la liste : lui envoyer ce seul magasin retirerait
+    // la personne de tous les autres.
+    expect(fenetre).toContain('[...new Set([...(m.store_ids ?? []), storeId])]')
+  })
+
+  it('ne propose pas les administrateurs, qui ont déjà tous les magasins', () => {
+    expect(fenetre).toContain("m.role === 'supervisor' && !m.is_company_admin")
+  })
+
+  it('attend le webhook avant de conclure qu’il n’y a rien', () => {
+    // Stripe renvoie le client dans la seconde ; le magasin naît quand le
+    // webhook passe.
+    expect(page).toContain("rpc('magasin_cree_par'")
+    expect(page).toContain("r.statut === 'created'")
+    expect(page).toContain('setTimeout(voir')
+  })
+
+  it('nettoie l’adresse pour qu’un rafraîchissement ne rouvre rien', () => {
+    expect(page).toContain("window.history.replaceState({}, '', '/magasins')")
+  })
+
+  it('l’adresse de retour porte la demande', () => {
+    expect(sansCommentaires(edge)).toContain('magasin=ok&demande=')
+  })
+})

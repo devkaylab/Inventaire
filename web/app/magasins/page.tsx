@@ -35,6 +35,7 @@ import { Volet } from '@/components/ui/Volet'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
 import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
+import { QuiSupervise } from '@/components/QuiSupervise'
 import { compositionOffre, proposer } from '@/lib/appareils'
 import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } from '@/lib/entreprise'
 import { getMyStores, type Store } from '@/lib/inventory'
@@ -101,6 +102,7 @@ export default function MagasinsPage() {
   const [pret, setPret] = useState(false)
 
   const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
+  const [neMagasin, setNeMagasin] = useState<{ id: string; nom: string } | null>(null)
 
   const charger = useCallback(async (admin: boolean) => {
     // L'administrateur lit son entreprise entière ; un superviseur, ses seuls
@@ -119,6 +121,46 @@ export default function MagasinsPage() {
   useEffect(() => {
     if (guard.status !== 'ready') return
     charger(!!guard.profile.is_company_admin)
+  }, [guard, charger])
+
+  /**
+   * Au retour du paiement : on demande qui va superviser le magasin.
+   *
+   * ⚠️ ON ATTEND LE WEBHOOK, ET C'EST TOUTE LA DIFFICULTÉ. Stripe renvoie le
+   * client sur cette page dans la seconde ; le magasin, lui, naît quand le
+   * webhook passe. Sans cette attente, la fenêtre ne s'ouvrirait jamais — on
+   * lirait une demande encore en `paid` et on conclurait qu'il n'y a rien.
+   *
+   * Elle s'arrête au bout de vingt secondes : au-delà c'est une anomalie, elle
+   * remonte dans « Ventes en cours » et l'écran dit déjà « le magasin est créé
+   * dans la minute ».
+   */
+  useEffect(() => {
+    if (guard.status !== 'ready' || !guard.profile.is_company_admin) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('magasin') !== 'ok') return
+    const demande = params.get('demande')
+    // ⚠️ L'adresse se nettoie TOUT DE SUITE : un rafraîchissement ne doit pas
+    // rouvrir la fenêtre, et le paiement ne se rejoue pas.
+    window.history.replaceState({}, '', '/magasins')
+    if (!demande) return
+
+    let vivant = true
+    let essais = 0
+    const voir = async () => {
+      if (!vivant) return
+      const { data } = await supabase.rpc('magasin_cree_par', { p_id: demande })
+      const r = data as { store_id: string | null; magasin: string; statut: string } | null
+      if (r?.store_id && r.statut === 'created') {
+        setNeMagasin({ id: r.store_id, nom: r.magasin })
+        charger(true)
+        return
+      }
+      essais += 1
+      if (essais < 10) setTimeout(voir, 2000)
+    }
+    voir()
+    return () => { vivant = false }
   }, [guard, charger])
 
   async function copier(code: string) {
@@ -229,6 +271,13 @@ export default function MagasinsPage() {
             <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>Imprimer des balises</Link>
           </p>
         </>
+      )}
+      {neMagasin && (
+        <QuiSupervise
+          storeId={neMagasin.id}
+          magasin={neMagasin.nom}
+          onClose={() => setNeMagasin(null)}
+        />
       )}
     </AppShell>
   )

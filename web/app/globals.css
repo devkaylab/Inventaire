@@ -3120,3 +3120,10 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    Alignées EN BAS : le bloc de gauche porte le choix de l'échéance au-dessus
    de son bouton, et « Annuler » doit se lire sur la même ligne que lui. */
 .req-actions { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+
+/* « Qui supervise ce magasin ? » — une adresse longue se tronque au lieu de
+   pousser le décompte sur un second rang. */
+.qs-qui { min-width: 0; }
+.qs-ligne { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.qs-mail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qs-compte { flex: none; }

@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
         customerEmail: email,
         successUrl: reprise.kind === 'offre'
           ? `${site}/magasins/${String(reprise.store_id)}?offre=ok`
-          : `${site}/magasins?magasin=ok`,
+          : `${site}/magasins?magasin=ok&demande=${requestId}`,
         cancelUrl: reprise.kind === 'offre'
           ? `${site}/magasins/${String(reprise.store_id)}`
           : `${site}/magasins`,
@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
         priceId: priceOffre,
         label: `Quantinvo — ${nom}`,
         customerEmail: email,
-        successUrl: `${site}/magasins?magasin=ok`,
+        successUrl: `${site}/magasins?magasin=ok&demande=${depot.id}`,
         cancelUrl: `${site}/magasins`,
         plan,
         billingPeriod: rythme,
