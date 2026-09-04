@@ -8266,6 +8266,29 @@ qui estime ce qu'il aurait fallu.
 - Un appareil refusé **ne tient aucune place** : les deux comptages du plafond
   excluent `refuse`.
 
+## ⚠️ LE VOCABULAIRE DE L'ÉCRAN — deux mots interdits
+
+Constat de Julien le 4 septembre 2026, sur le premier jet : *« tu n'utilises
+pas des mots adaptés au contexte, "sans assiette" n'est pas clair […] pareil
+pour "votre pic de", un pic signifie que ça va redescendre après, donc pas
+d'intérêt de passer à la tranche supérieure ».*
+
+- **« Assiette » ne s'écrit jamais à l'écran.** C'est notre mot de
+  facturation, il vient du droit fiscal ; le client lit **« forfait »**. Le
+  terme reste dans le code et dans ces notes, jamais dans une phrase qu'il voit.
+- **« Pic » non plus, et l'argument dépasse le vocabulaire.** Un pic redescend :
+  affiché à un client, il l'invite à conclure qu'il n'a rien à changer. Ce qui
+  appelle une décision, c'est qu'un appareil ait été **refusé**. La fiche du
+  magasin n'affiche donc pas le pic — il reste dans ce que rend la base, pour
+  notre propre usage.
+- **⚠️ Et c'est « JUSQU'À », jamais « AU MOINS ».** `besoin` majore : le vrai
+  besoin est **au plus** ce chiffre. Le premier jet écrivait « il en aurait
+  fallu au moins 7 », c'est-à-dire l'inverse de la vérité. Un test fige la
+  formule et interdit l'autre.
+
+Les trois tuiles mènent chacune à un geste : *En train de compter*,
+*Refusés · 30 derniers jours*, *Votre forfait*.
+
 ## ⚠️ LE PLAFOND EST LE HAUT DU PALIER, PAS LE NOMBRE DEVISÉ
 
 La grille vend des paliers : Advanced, c'est « 3 à 20 appareils » pour 310 €. Un

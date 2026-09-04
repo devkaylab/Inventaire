@@ -18,17 +18,28 @@
  * nombre d'appareils **éconduits** — et `besoin` (`pic + refus` du jour le plus
  * chargé), qui estime ce qu'il aurait fallu.
  *
- * ⚠️ `besoin` MAJORE. Deux appareils refusés à deux heures d'écart s'y
- * additionnent alors qu'ils n'étaient pas simultanés. Le vocabulaire de
- * l'écran doit donc rester prudent — « il en aurait fallu au moins N » —, et
- * un test interdit d'écrire que le chiffre est exact.
+ * ⚠️ `besoin` MAJORE — ET LE VOCABULAIRE DOIT DIRE « JUSQU'À », JAMAIS
+ * « AU MOINS ». Deux appareils refusés à deux heures d'écart s'y additionnent
+ * alors qu'ils n'étaient pas simultanés : le vrai besoin est donc **au plus**
+ * ce chiffre. La première version de l'écran écrivait « au moins », c'est-à-dire
+ * l'inverse de la vérité. Un test fige la formule.
+ *
+ * ⚠️ ET ON N'ÉCRIT PAS « PIC » À UN CLIENT. Constat de Julien le 4 septembre
+ * 2026 : « un pic signifie que ça va redescendre après, donc pas d'intérêt de
+ * passer à la tranche supérieure ». Il a raison, et ce n'est pas qu'un mot : ce
+ * qui justifie une montée d'offre n'est pas un maximum atteint une fois, c'est
+ * que des appareils aient été **refusés**. Le pic reste dans les faits rendus
+ * par la base — il ne s'affiche pas sur la fiche du client.
+ *
+ * ⚠️ « ASSIETTE » NON PLUS. C'est notre mot, pas le sien. À l'écran on écrit
+ * « forfait ».
  */
 
 import { APPAREILS_MAX, OFFRES, SUPPLEMENT, offrePour, prixCents, type Offre } from '@/lib/offres'
 
 /** Ce que rend `appareils_du_magasin`. */
 export type AppareilsMagasin = {
-  /** Le haut du palier payé. Nul quand aucune assiette n'est connue. */
+  /** Le haut du palier payé. Nul quand aucun forfait n'est connu. */
   plafond: number | null
   maintenant: number
   pic: number
@@ -40,7 +51,7 @@ export type AppareilsMagasin = {
   jours: number
 }
 
-export type EtatAppareils = 'sans_assiette' | 'dans_le_forfait' | 'depasse'
+export type EtatAppareils = 'sans_forfait' | 'dans_le_forfait' | 'depasse'
 
 /** L'offre à proposer, prête à écrire à l'écran. */
 export type Proposition = {
@@ -59,7 +70,7 @@ export type Proposition = {
 
 export type VerdictAppareils = {
   etat: EtatAppareils
-  /** Le palier payé aujourd'hui, nommé. Nul sans assiette. */
+  /** Le palier payé aujourd'hui, nommé. Nul sans forfait connu. */
   offreActuelle: string | null
   proposition: Proposition | null
 }
@@ -121,7 +132,7 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
 /** Ce que la fiche du magasin doit dire. */
 export function lireAppareils(a: AppareilsMagasin | null): VerdictAppareils {
   if (!a || a.plafond == null) {
-    return { etat: 'sans_assiette', offreActuelle: null, proposition: null }
+    return { etat: 'sans_forfait', offreActuelle: null, proposition: null }
   }
   const proposition = proposer(a.plafond, a.besoin)
   return {

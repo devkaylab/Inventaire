@@ -187,7 +187,7 @@ describe('le jugement — quelle offre proposer', () => {
 
   it('ne propose rien sans assiette connue', () => {
     expect(proposer(null, 40)).toBeNull()
-    expect(lireAppareils(faits({ plafond: null, besoin: 40 })).etat).toBe('sans_assiette')
+    expect(lireAppareils(faits({ plafond: null, besoin: 40 })).etat).toBe('sans_forfait')
   })
 
   it('nomme le palier payé', () => {
@@ -214,9 +214,28 @@ describe('l’écran de la fiche magasin', () => {
     expect(page).toContain('lireAppareils(')
   })
 
-  it('n’affirme pas que le besoin est exact', () => {
-    // `besoin` majore : deux refus à deux heures d'écart s'y additionnent.
-    expect(page).toContain('au moins')
+  it('dit « jusqu’à », jamais « au moins »', () => {
+    // ⚠️ `besoin` MAJORE : deux appareils refusés à deux heures d'écart s'y
+    // additionnent alors qu'ils n'étaient pas simultanés. Le vrai besoin est
+    // donc AU PLUS ce chiffre. La première version écrivait « au moins »,
+    // c'est-à-dire l'inverse de la vérité.
+    expect(page).toContain('il en aurait fallu jusqu’à')
+    expect(sansCommentaires(page)).not.toContain('au moins')
+  })
+
+  it('n’écrit ni « pic » ni « assiette » au client', () => {
+    // Julien, 4 septembre 2026 : « un pic signifie que ça va redescendre
+    // après, donc pas d'intérêt de passer à la tranche supérieure ». Ce qui
+    // appelle une décision, c'est le refus. Et « assiette » est notre mot de
+    // facturation, pas celui du client — à l'écran on écrit « forfait ».
+    const vu = sansCommentaires(page)
+    expect(vu).not.toMatch(/\bpic\b/i)
+    expect(vu).not.toMatch(/assiette/i)
+  })
+
+  it('la tuile du milieu compte les appareils refusés', () => {
+    expect(page).toContain('Refusés')
+    expect(page).toContain('nb(appareils.refus)')
   })
 
   it('un chiffre absent n’emporte pas la page', () => {

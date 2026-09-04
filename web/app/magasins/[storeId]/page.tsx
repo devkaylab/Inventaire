@@ -233,23 +233,31 @@ export default function FicheMagasinPage() {
             <Link href="/tarifs" className="btn btn-ghost btn-sm">Voir les offres</Link>
           </div>
 
+          {/* ⚠️ PAS DE TUILE « PIC ». Constat de Julien le 4 septembre 2026 :
+              « un pic signifie que ça va redescendre après, donc pas d'intérêt
+              de passer à la tranche supérieure ». Ce qui appelle une décision,
+              ce n'est pas un maximum atteint une fois, c'est qu'un appareil
+              ait été refusé. Les trois tuiles mènent donc chacune à un geste. */}
           <div className="dash-stats dash-stats-5">
             <Stat
-              label="En ce moment"
+              label="En train de compter"
               value={nb(appareils.maintenant)}
-              sub="en train de compter"
+              sub="appareils, en ce moment"
             />
             <Stat
-              label={`Pic sur ${appareils.jours} jours`}
-              value={nb(appareils.pic)}
-              sub={appareils.pic_le
-                ? `le ${new Date(appareils.pic_le).toLocaleDateString('fr-FR')}`
-                : 'aucun comptage'}
+              label={`Refusés · ${appareils.jours} derniers jours`}
+              value={nb(appareils.refus)}
+              tone={appareils.refus > 0 ? 'warn' : 'neutral'}
+              sub={appareils.refus_le
+                ? `dernier le ${new Date(appareils.refus_le).toLocaleDateString('fr-FR')}`
+                : 'aucun appareil refusé'}
             />
             <Stat
-              label="Forfait"
+              label="Votre forfait"
               value={appareils.plafond == null ? '—' : nb(appareils.plafond)}
-              sub={verdict.offreActuelle ?? 'non renseigné'}
+              sub={verdict.offreActuelle
+                ? `appareils à la fois · ${verdict.offreActuelle}`
+                : 'aucun forfait défini'}
             />
           </div>
 
@@ -265,14 +273,15 @@ export default function FicheMagasinPage() {
                   compter faute de place
                 </strong>
                 <div className="muted small">
-                  {/* « au moins » : `besoin` majore, deux refus à deux heures
-                      d’écart s’y additionnent. On ne l’affirme pas. */}
-                  Il vous en aurait fallu au moins {nb(appareils.besoin)} le
-                  {' '}{appareils.besoin_le
-                    ? new Date(appareils.besoin_le).toLocaleDateString('fr-FR')
-                    : 'jour le plus chargé'}.
-                  {' '}<strong>{verdict.proposition.nom}</strong> couvre jusqu’à
-                  {' '}{nb(verdict.proposition.couvre)} appareils, pour
+                  {/* ⚠️ « JUSQU’À », JAMAIS « AU MOINS ». `besoin` majore — deux
+                      appareils refusés à deux heures d’écart s’y additionnent
+                      alors qu’ils n’étaient pas simultanés —, donc le vrai
+                      besoin est AU PLUS ce chiffre. La première version écrivait
+                      l’inverse. */}
+                  Votre forfait couvre {nb(appareils.plafond ?? 0)} appareils à la fois&nbsp;;
+                  il en aurait fallu jusqu’à {nb(appareils.besoin)} pour que personne n’attende.
+                  {' '}<strong>{verdict.proposition.nom}</strong> en couvre
+                  {' '}{nb(verdict.proposition.couvre)}, pour
                   {' '}<span className="prix">{euros(verdict.proposition.mois)} par mois</span> ou
                   {' '}<span className="prix">{euros(verdict.proposition.an)} par an</span>.
                 </div>
@@ -283,17 +292,18 @@ export default function FicheMagasinPage() {
             </div>
           )}
 
-          {verdict.etat === 'sans_assiette' && (
+          {verdict.etat === 'sans_forfait' && (
             <p className="muted small">
-              Ce magasin n’a pas d’assiette en appareils — il a été créé avant que la licence ne
-              se compte ainsi. La mesure s’affiche, rien n’est refusé.
+              Ce magasin n’a pas encore de forfait en appareils&nbsp;: il a été ouvert avant que la
+              licence ne se compte de cette façon. Les appareils sont comptés, aucun n’est refusé.
             </p>
           )}
 
           {verdict.etat === 'dans_le_forfait' && (
             <p className="muted small">
-              Un appareil compte quand quelqu’un a l’écran de comptage ou d’audit ouvert. Il sort
-              du décompte quatre-vingt-dix secondes après son dernier signe de vie.
+              Un appareil compte tant que quelqu’un a l’écran de comptage ou d’audit ouvert, et
+              cesse de compter dès qu’il le referme. Le nombre de personnes dans l’équipe n’entre
+              pas en ligne de compte.
             </p>
           )}
         </section>
