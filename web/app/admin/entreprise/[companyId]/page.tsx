@@ -632,7 +632,12 @@ export default function AdminCompanyPage() {
                         </button>
                       </div>
                     </div>
-                    <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
+                    <div className="store-block-liens">
+                      {/* Le rapport consolidé du magasin : la console y accède
+                          comme l'administrateur de l'entreprise. */}
+                      <Link className="link-btn" href={`/magasins/${s.id}/rapport`}>Rapport</Link>
+                      <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
+                    </div>
                   </div>
                   <TarifMagasin store={s} onSaved={charger} />
                   <div className="store-sup">

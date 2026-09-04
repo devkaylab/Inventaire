@@ -10,6 +10,7 @@
 import type * as XLSXNS from 'xlsx'
 import type { SessionDetailRow, SessionResultRow } from '@/lib/inventory'
 import { AUDIT_STATUS_LABELS } from '@/lib/inventory'
+import type { LigneDetailMagasin, LigneRapportMagasin } from '@/lib/rapportMagasin'
 
 export type ExportFormat = 'xlsx' | 'csv'
 
@@ -74,28 +75,33 @@ function triggerDownload(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/**
+ * Force certaines colonnes en TEXTE pour que les codes ne partent jamais en
+ * notation scientifique et gardent leurs zéros de tête.
+ *
+ * Sortie de `downloadXlsx` le 4 septembre 2026 : le rapport d'un magasin a les
+ * mêmes colonnes de codes, et deux copies de cette boucle divergeraient le
+ * jour où l'une gagnerait une colonne.
+ */
+function forcerEnTexte(XLSX: typeof XLSXNS, ws: XLSXNS.WorkSheet, cols: number[]): void {
+  const range = XLSX.utils.decode_range(ws['!ref']!)
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    for (const C of cols) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]
+      if (cell && cell.v != null && cell.v !== '') {
+        cell.t = 's'
+        cell.v = String(cell.v)
+        cell.z = '@'
+        delete cell.w
+      }
+    }
+  }
+}
+
 export async function downloadXlsx(
   inventoryNumber: string, rows: SessionResultRow[], detailRows: SessionDetailRow[] = [],
 ): Promise<string> {
   const XLSX = await import('xlsx')
-
-  // Force certaines colonnes en TEXTE pour que les codes ne partent jamais en
-  // notation scientifique et gardent leurs zéros de tête.
-  const forceTextColumns = (ws: XLSXNS.WorkSheet, cols: number[]) => {
-    const range = XLSX.utils.decode_range(ws['!ref']!)
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      for (const C of cols) {
-        const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]
-        if (cell && cell.v != null && cell.v !== '') {
-          cell.t = 's'
-          cell.v = String(cell.v)
-          cell.z = '@'
-          delete cell.w
-        }
-      }
-    }
-  }
-
   const wb = XLSX.utils.book_new()
 
   const ws = XLSX.utils.json_to_sheet(buildVarianceRows(rows))
@@ -103,7 +109,7 @@ export async function downloadXlsx(
     { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 30 }, { wch: 16 },
     { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
   ]
-  forceTextColumns(ws, [0, 1])
+  forcerEnTexte(XLSX, ws, [0, 1])
   XLSX.utils.book_append_sheet(wb, ws, 'Écarts')
 
   const wsDetail = XLSX.utils.json_to_sheet(buildDetailRows(detailRows))
@@ -112,7 +118,7 @@ export async function downloadXlsx(
     { wch: 18 }, { wch: 12 }, { wch: 20 }, { wch: 9 }, { wch: 12 }, { wch: 20 },
   ]
   // SKU, EAN et Zone sont des codes numériques : eux aussi en texte.
-  forceTextColumns(wsDetail, [0, 1, 4])
+  forcerEnTexte(XLSX, wsDetail, [0, 1, 4])
   XLSX.utils.book_append_sheet(wb, wsDetail, 'Détail par zone')
 
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
@@ -204,6 +210,126 @@ export function downloadCsv(
     const detail = `${base}_detail_par_zone.csv`
     // Laisser le premier téléchargement démarrer avant de lancer le second.
     setTimeout(() => downloadCsvBlob(toCsv(buildDetailRows(detailRows)), detail), 600)
+    names.push(detail)
+  }
+  return names
+}
+
+// ── Le rapport consolidé d'un magasin ────────────────────────────────────────
+//
+// Mêmes colonnes que le rapport d'un inventaire, à trois différences près, et
+// chacune vient d'une décision :
+//
+// ⚠️ PAS DE COLONNE « PRIX ACHAT UNITAIRE ». Le prix est porté PAR
+// INVENTAIRE : le même SKU peut valoir 41 € en septembre et 38 € en août. Une
+// seule colonne obligerait à en inventer un ; la valeur, elle, reste juste
+// parce qu'elle est calculée inventaire par inventaire puis additionnée.
+//
+// ⚠️ PAS DE COLONNE « STATUT » non plus : le statut d'audit appartient à un
+// inventaire, pas à un magasin. Une référence arbitrée ici et en écart là
+// n'aurait aucun statut à afficher.
+//
+// ⚠️ ET DEUX FEUILLES, dont la seconde dit d'OÙ vient chaque ligne. C'est la
+// contrepartie de l'addition : sans elle, un écart de 12 pièces sur une
+// référence vue dans trois inventaires ne se rattache à aucun rayon.
+
+export function storeReportFilename(
+  storeName: string, format: ExportFormat, date = new Date(),
+): string {
+  const base = storeName
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase() || 'magasin'
+  return `rapport_magasin_${base}_${date.toISOString().slice(0, 10)}.${format}`
+}
+
+export function buildStoreVarianceRows(
+  rows: LigneRapportMagasin[],
+): Record<string, string | number>[] {
+  const data = rows.map(r => ({
+    SKU: r.sku === r.ean ? '' : r.sku,
+    EAN: r.ean ?? '',
+    Marque: r.brand,
+    Désignation: r.label,
+    'Qté théorique': Number(r.theoretical_qty),
+    'Qté comptée': Number(r.counted_qty),
+    'Écart (unités)': Number(r.variance_units),
+    'Écart (valeur achat)': Number(r.variance_value),
+    Inventaires: Number(r.inventaires),
+  }))
+
+  data.push({
+    SKU: 'TOTAL',
+    EAN: '', Marque: '', Désignation: '',
+    'Qté théorique': rows.reduce((s, r) => s + Number(r.theoretical_qty), 0),
+    'Qté comptée': rows.reduce((s, r) => s + Number(r.counted_qty), 0),
+    'Écart (unités)': rows.reduce((s, r) => s + Number(r.variance_units), 0),
+    'Écart (valeur achat)': rows.reduce((s, r) => s + Number(r.variance_value), 0),
+    Inventaires: 0,
+  })
+  return data
+}
+
+export function buildStoreDetailRows(
+  rows: LigneDetailMagasin[],
+): Record<string, string | number>[] {
+  return rows.map(r => ({
+    Inventaire: r.inventaire,
+    'N° inventaire': r.numero,
+    SKU: r.sku === r.ean ? '' : r.sku,
+    EAN: r.ean ?? '',
+    Marque: r.brand,
+    Désignation: r.label,
+    'Qté théorique': Number(r.theoretical_qty),
+    'Qté comptée': Number(r.counted_qty),
+    'Écart (unités)': Number(r.variance_units),
+    'Écart (valeur achat)': Number(r.variance_value),
+  }))
+}
+
+export async function downloadStoreXlsx(
+  storeName: string, rows: LigneRapportMagasin[], detailRows: LigneDetailMagasin[],
+): Promise<string> {
+  const XLSX = await import('xlsx')
+  const wb = XLSX.utils.book_new()
+
+  const ws = XLSX.utils.json_to_sheet(buildStoreVarianceRows(rows))
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 30 },
+    { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 12 },
+  ]
+  forcerEnTexte(XLSX, ws, [0, 1])
+  XLSX.utils.book_append_sheet(wb, ws, 'Consolidé')
+
+  const wsDetail = XLSX.utils.json_to_sheet(buildStoreDetailRows(detailRows))
+  wsDetail['!cols'] = [
+    { wch: 28 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
+    { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 },
+  ]
+  forcerEnTexte(XLSX, wsDetail, [1, 2, 3])
+  XLSX.utils.book_append_sheet(wb, wsDetail, 'Par inventaire')
+
+  const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+  const filename = storeReportFilename(storeName, 'xlsx')
+  triggerDownload(
+    new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    filename,
+  )
+  return filename
+}
+
+export function downloadStoreCsv(
+  storeName: string, rows: LigneRapportMagasin[], detailRows: LigneDetailMagasin[],
+): string[] {
+  const base = storeReportFilename(storeName, 'csv').replace(/\.csv$/, '')
+  const names: string[] = []
+
+  const consolide = `${base}_consolide.csv`
+  downloadCsvBlob(toCsv(buildStoreVarianceRows(rows)), consolide)
+  names.push(consolide)
+
+  if (detailRows.length > 0) {
+    const detail = `${base}_par_inventaire.csv`
+    setTimeout(() => downloadCsvBlob(toCsv(buildStoreDetailRows(detailRows)), detail), 600)
     names.push(detail)
   }
   return names

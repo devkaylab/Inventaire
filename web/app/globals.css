@@ -3002,3 +3002,67 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .pem-etapes { grid-template-columns: repeat(3, 1fr); gap: 12px; }
   body { background: #fff; }
 }
+
+/* ── Le rapport consolidé d'un magasin (4 septembre 2026) ─────────────────
+   Le périmètre : deux dates qui PROPOSENT une sélection, et la liste
+   d'inventaires qui la décide. La liste est repliée par défaut — même règle
+   que les volets de l'onglet Set up : rien ne s'ouvre tout seul, et l'en-tête
+   dit ce qu'il y a dedans (« 6 inventaires retenus sur 7 »). */
+.perimetre {
+  border: 1px solid var(--hairline); border-radius: 12px;
+  background: var(--surface); margin-bottom: 20px;
+}
+.perimetre-haut {
+  display: flex; align-items: flex-end; gap: 16px;
+  padding: 14px 18px; flex-wrap: wrap;
+}
+.perimetre-champ { display: flex; flex-direction: column; gap: 6px; }
+.perimetre-champ label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.perimetre-champ input {
+  font: inherit; font-size: 14px; color: var(--text);
+  /* ⚠️ `--bg`, pas `--surface-2` : en clair ce dernier vaut #fff, donc le
+     champ n'aurait aucun fond sur un panneau blanc et ne tiendrait qu'à son
+     filet. Même défaut que `.magasin-top input` le 22 août 2026. */
+  background: var(--bg); border: 1px solid var(--hairline);
+  border-radius: 9px; padding: 8px 10px; min-height: 38px;
+}
+.perimetre-champ input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+/* Sur une seule ligne tant que la place le permet ; le décompte pousse le
+   bouton à droite plutôt que de s'aligner sur les deux dates. */
+.perimetre-retenus {
+  display: flex; align-items: center; gap: 12px;
+  margin-left: auto; font-size: 13.5px; color: var(--text-2);
+}
+.perimetre-retenus b { color: var(--text); font-weight: 700; }
+
+.liste-inv { border-top: 1px solid var(--hairline); padding: 6px 8px 10px; }
+.inv-rang {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 10px; border-radius: 9px; cursor: pointer;
+}
+.inv-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.inv-rang input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.inv-nom { display: flex; flex-direction: column; gap: 2px; font-size: 14px; font-weight: 600; }
+.inv-date { font-size: 12px; font-weight: 400; color: var(--text-3); }
+/* Un inventaire en cours se voit — le cacher ferait croire à un magasin qui
+   ne compte plus — mais il ne se coche pas : le serveur ne l'additionne pas. */
+.inv-rang-inerte { cursor: default; opacity: .62; }
+.inv-rang-inerte:hover { background: none; }
+.inv-note { padding: 10px 10px 2px; border-top: 1px dashed var(--hairline); margin-top: 6px; }
+
+/* Le bandeau des doublons porte son propre filtre : « ne voir que celles-ci ». */
+.bandeau-doublons {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.bandeau-doublons > span { flex: 1; min-width: 240px; }
+
+@media (max-width: 860px) {
+  .perimetre-retenus { margin-left: 0; width: 100%; }
+}
+
+/* Deux liens dans l'en-tête d'un bloc magasin (console) : le rapport, puis la
+   suppression — le geste destructeur reste le plus à droite. */
+.store-block-liens { display: flex; align-items: center; gap: 14px; }

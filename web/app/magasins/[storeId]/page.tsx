@@ -189,6 +189,14 @@ export default function FicheMagasinPage() {
             {' · créé le '}{new Date(fiche.store.created_at).toLocaleDateString('fr-FR')}
           </p>
         </div>
+        {/* Le rapport consolidé du magasin : tous ses inventaires clôturés
+            additionnés. Réservé à l'administrateur d'entreprise et à
+            Quantinvo — cette page l'est déjà. */}
+        <div className="app-head-actions">
+          <Link href={`/magasins/${storeId}/rapport`} className="btn btn-ghost">
+            Rapport du magasin
+          </Link>
+        </div>
       </div>
 
       <section className="admin-section">
