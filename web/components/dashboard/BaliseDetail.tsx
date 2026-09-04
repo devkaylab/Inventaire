@@ -6,6 +6,7 @@ import {
   type BaliseLigne, type ZoneDashboardRow,
 } from '@/lib/zones'
 import { friendlyError } from '@/lib/errors'
+import { plural } from '@/lib/format'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
@@ -60,7 +61,7 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
         title: `Marquer la balise ${z.code} auditée ?`,
         message: 'Personne n’a audité cette balise. Les quantités du comptage seront reprises telles quelles.',
         details: [
-          `${z.count_lines} référence${z.count_lines > 1 ? 's' : ''} reprise${z.count_lines > 1 ? 's' : ''}, ${Math.round(z.count_units)} pièce${z.count_units > 1 ? 's' : ''}`,
+          `${plural(z.count_lines, 'référence')} reprise${z.count_lines > 1 ? 's' : ''}, ${plural(Math.round(z.count_units), 'pièce')}`,
           'La balise sortira donc sans écart : le comptage fait foi.',
           'Pour auditer réellement, ouvrez la balise en audit depuis l’application.',
         ],

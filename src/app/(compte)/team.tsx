@@ -22,6 +22,7 @@ import { useTheme } from '@/lib/theme'
 import { CroixIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { nb } from '@/lib/nombres'
 
 /**
  * Mon équipe — les compteurs du superviseur, rangés par magasin.
@@ -224,7 +225,7 @@ function CounterRow({
           {!counter.is_active
             ? counter.email ?? 'Invitation envoyée'
             : counter.sessions_counted > 0
-              ? `${counter.sessions_counted} inventaire${counter.sessions_counted > 1 ? 's' : ''} compté${counter.sessions_counted > 1 ? 's' : ''}`
+              ? `${nb(counter.sessions_counted)} inventaire${counter.sessions_counted > 1 ? 's' : ''} compté${counter.sessions_counted > 1 ? 's' : ''}`
               : 'Compteur'}
         </Text>
         {/* ⚠️ **`is_active` veut dire « s'est déjà connecté »**, rien d'autre :

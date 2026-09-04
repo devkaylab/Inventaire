@@ -11,7 +11,7 @@ import {
 } from '@/lib/zones'
 import { BaliseSheetPanel } from '@/components/BaliseSheetPanel'
 import { Volet } from '@/components/ui/Volet'
-import { fmtQty, plural } from '@/lib/format'
+import { fmtQty, nb, plural } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { useToast } from '@/components/ui/Toast'
@@ -178,7 +178,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
       <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <Stat
           label="Référentiel articles"
-          value={String(importState.articles)}
+          value={nb(importState.articles)}
           tone={importState.articles > 0 ? 'pos' : 'warn'}
           sub={importState.articles > 0 ? 'références chargées' : 'aucun fichier chargé'}
         />

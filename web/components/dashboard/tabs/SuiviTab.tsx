@@ -10,7 +10,7 @@ import { BaliseDetail } from '@/components/dashboard/BaliseDetail'
 import { ZoneProgressList } from '@/components/dashboard/ZoneProgressList'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { Stat } from '@/components/ui/Stat'
-import { fmtQty, plural } from '@/lib/format'
+import { fmtQty, nb, plural } from '@/lib/format'
 
 export function SuiviTab({
   session, zones, presence, recent, unknownVersions, totals, readOnly, onZonesChanged,
@@ -76,12 +76,12 @@ export function SuiviTab({
       <div className="dash-stats dash-stats-5">
         <Stat
           label="Appareils connectés"
-          value={String(live.devices)}
+          value={nb(live.devices)}
           tone={live.devices > 0 ? 'pos' : 'neutral'}
           sub={live.devices > 0 ? 'sur cet inventaire' : 'aucun appareil connecté'}
         />
-        <Stat label="En comptage" value={String(live.counting)} />
-        <Stat label="En audit" value={String(live.auditing)} />
+        <Stat label="En comptage" value={nb(live.counting)} />
+        <Stat label="En audit" value={nb(live.auditing)} />
         <Stat
           label="Pièces comptées"
           value={fmtQty(totals.counted)}

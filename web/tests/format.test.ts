@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtQty, fmtSigned, money, moneyCourt, parseDecimal, relativeTime, sinceDuration } from '@/lib/format'
+import { fmtQty, fmtSigned, money, moneyCourt, nb, parseDecimal, plural, relativeTime, sinceDuration } from '@/lib/format'
 
 describe('parseDecimal', () => {
   it('accepte la virgule décimale française', () => {
@@ -133,5 +133,42 @@ describe('moneyCourt', () => {
   it('un zéro négatif reste un zéro', () => {
     expect(moneyCourt(-0)).toBe('0,00 €')
     expect(moneyCourt(Number.NaN)).toBe('0,00 €')
+  })
+})
+
+/**
+ * Le séparateur de milliers (3 septembre 2026, demande de Julien :
+ * « 1000 > 1 000, plus facile à lire »).
+ *
+ * ⚠️ Ce n'est pas un ornement : la colonne des quantités d'un inventaire
+ * porte des nombres à cinq ou six chiffres, et « 128400 » ressemble à
+ * « 12840 » au coup d'œil — à l'endroit précis où l'on cherche un écart.
+ */
+describe('le séparateur de milliers', () => {
+  const lisible = (s: string) => s.replace(/[\u202f\u00a0]/g, ' ')
+
+  it('groupe les quantités', () => {
+    expect(lisible(fmtQty(1000))).toBe('1 000')
+    expect(lisible(fmtQty(128400))).toBe('128 400')
+    expect(lisible(fmtQty(1500.5))).toBe('1 500,5')
+  })
+
+  it('groupe les écarts signés, sans perdre le signe', () => {
+    expect(lisible(fmtSigned(12840))).toBe('+12 840')
+    expect(lisible(fmtSigned(-12840))).toBe('-12 840')
+  })
+
+  it('groupe les décomptes énoncés', () => {
+    expect(lisible(plural(1200, 'balise'))).toBe('1 200 balises')
+    expect(lisible(nb(400000))).toBe('400 000')
+  })
+
+  it('⚠️ ne change rien sous mille, ni aux décimales', () => {
+    // La règle ne doit pas devenir une refonte du formatage : ce qui se
+    // lisait bien se lit pareil.
+    expect(fmtQty(4)).toBe('4')
+    expect(fmtQty(1.5)).toBe('1,5')
+    expect(fmtQty(999)).toBe('999')
+    expect(fmtQty(-0)).toBe('0')
   })
 })

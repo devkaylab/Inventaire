@@ -23,6 +23,7 @@ import { depuis } from '@/lib/temps'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { euros as euro, nb, qte as fmt, qteSignee } from '@/lib/nombres'
 
 const STATUS_RANK: Record<string, number> = { failed: 0, pending: 1, resolved: 2, validated: 3 }
 
@@ -48,10 +49,6 @@ function unites(v: number): string {
   return `${fmt(v)} unité${v >= 2 ? 's' : ''}`
 }
 
-function fmt(v: number | null): string {
-  if (v === null || v === undefined) return '—'
-  return Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, '')
-}
 
 // Clé d'un input / d'une ligne : un article peut apparaître dans plusieurs balises.
 function keyOf(a: ArticleAudit): string {
@@ -407,10 +404,6 @@ export default function AuditsScreen() {
   )
 }
 
-function euro(v: number): string {
-  return `${v.toFixed(2).replace('.', ',')} €`
-}
-
 function Fig({ label, value, color, styles }: { label: string; value: string; color?: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.fig}>
@@ -447,7 +440,7 @@ function AuditCard({
         </View>
       </View>
       <View style={styles.figRow}>
-        <Fig styles={styles} label="Écart" value={`${fmt(ecart)} u`} color={ecart < 0 ? theme.danger : theme.success} />
+        <Fig styles={styles} label="Écart" value={`${qteSignee(ecart)} u`} color={ecart < 0 ? theme.danger : theme.success} />
         <Fig styles={styles} label="Écart valeur" value={euro(ecartValue)} color={ecartValue < 0 ? theme.danger : undefined} />
       </View>
       {/* Trancher, c'est presque toujours choisir l'un des deux comptes : un
@@ -495,7 +488,7 @@ function AuditCard({
 function Stat({ label, value, color, styles }: { label: string; value: number; color: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={[styles.statValue, { color }]}>{nb(value)}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   )

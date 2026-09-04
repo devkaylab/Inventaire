@@ -195,9 +195,13 @@ describe('un long tableau se lit sans se tromper', () => {
     // tuiles retombent à zéro, et « 0 écart » se lit comme une victoire.
     expect(rapport).toContain("value={resume ? fmtQty(totals.theoUnits) : '—'}")
     expect(rapport).toContain("value={resume ? fmtSigned(totals.varUnits) : '—'}")
-    expect(ecarts).toContain("value={resume ? String(stats.total) : '—'}")
+    // `nb` et non `String` depuis le 3 septembre 2026 : les décomptes portent
+    // leur séparateur de milliers. La garde suit l'écriture, elle ne s'affaiblit
+    // pas — c'est toujours le « — » qu'elle protège.
+    expect(ecarts).toContain("value={resume ? nb(stats.total) : '—'}")
     // Et l'ancienne écriture, qui fabriquait le zéro, a bien disparu.
     expect(ecarts).not.toContain('value={String(stats.total)}')
+    expect(ecarts).not.toContain('value={nb(stats.total)}')
     expect(ecarts).not.toContain("String(resume?.arbitres ?? 0)")
   })
 

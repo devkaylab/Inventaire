@@ -2602,3 +2602,56 @@ describe('le rapport et les écarts de l’application se lisent par pages', () 
     }
   })
 })
+
+/**
+ * Le séparateur de milliers, côté application (3 septembre 2026).
+ *
+ * Demande de Julien : « toujours avoir un séparateur de milliers, exemple
+ * 1000 > 1 000, plus facile à lire ». Sur un inventaire, la colonne des
+ * quantités porte des nombres à cinq ou six chiffres : sans groupement,
+ * « 128400 » ressemble à « 12840 » au coup d'œil, à l'endroit précis où l'on
+ * cherche un écart.
+ */
+describe('les nombres portent leur séparateur de milliers', () => {
+  const nombres = lire('lib/nombres.ts')
+  const results = lire('app/(supervisor)/[sessionId]/results.tsx')
+  const audits = lire('app/(supervisor)/[sessionId]/audits.tsx')
+
+  it('⚠️ une seule définition, plus une copie par écran', () => {
+    // `fmt` vivait en double, recopié dans les deux écrans — le genre de
+    // doublon qui diverge au premier ajustement.
+    expect(nombres).toContain('export function qte(')
+    expect(nombres).toContain('export function euros(')
+    for (const ecran of [results, audits]) {
+      expect(ecran).toContain("from '@/lib/nombres'")
+      expect(ecran).not.toContain('function fmt(v: number')
+      expect(ecran).not.toContain("v.toFixed(3).replace(")
+    }
+  })
+
+  it('les trois fonctions groupent bien', () => {
+    // Le groupement vient de `toLocaleString('fr-FR')`, la seule chose qui
+    // sache où poser les espaces dans « 1 234 567 ».
+    for (const fn of ['qte', 'euros', 'nb']) {
+      const corps = nombres.slice(nombres.indexOf(`export function ${fn}(`))
+      expect(corps.slice(0, 400), fn).toContain("toLocaleString('fr-FR'")
+    }
+  })
+
+  it('⚠️ la locale est TOUJOURS nommée', () => {
+    // `toLocaleString()` nu suit la langue du téléphone : « 1,000 » sur un
+    // appareil anglais, au milieu d'une interface en français.
+    for (const f of fichiersSource()) {
+      const code = readFileSync(f, 'utf8')
+      expect(code, f).not.toMatch(/toLocaleString\(\s*\)/)
+    }
+  })
+
+  it('⚠️ mais rien ne se groupe à l’import ni à l’export', () => {
+    // Une espace insécable dans un fichier n'est plus un nombre pour un
+    // tableur, et une valeur envoyée en base ne se formate jamais.
+    const importLib = lire('lib/import.ts')
+    expect(importLib).not.toContain("from '@/lib/nombres'")
+    expect(lire('lib/report.ts')).not.toContain("from '@/lib/nombres'")
+  })
+})

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { groupByName, type ZoneDashboardRow, type ZoneGroup } from '@/lib/zones'
+import { nb } from '@/lib/format'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 function pct(part: number, total: number): number {
@@ -50,7 +51,7 @@ export function ZoneProgressList({ zones, onOpenZone }: {
               <div className="zone-progress-bar">
                 <div className="dash-bar-legend">
                   <span>Comptées</span>
-                  <strong className="num">{g.counted}/{g.total} · {countPct} %</strong>
+                  <strong className="num">{nb(g.counted)}/{nb(g.total)} · {countPct} %</strong>
                 </div>
                 <div className="dash-bar">
                   <div className="dash-bar-fill dash-bar-count" style={{ width: `${countPct}%` }} />
@@ -59,7 +60,7 @@ export function ZoneProgressList({ zones, onOpenZone }: {
               <div className="zone-progress-bar">
                 <div className="dash-bar-legend">
                   <span>Auditées</span>
-                  <strong className="num">{g.audited}/{g.total} · {auditPct} %</strong>
+                  <strong className="num">{nb(g.audited)}/{nb(g.total)} · {auditPct} %</strong>
                 </div>
                 <div className="dash-bar">
                   <div className="dash-bar-fill dash-bar-audit" style={{ width: `${auditPct}%` }} />

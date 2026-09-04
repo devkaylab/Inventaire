@@ -19,16 +19,11 @@ import { exportResultsToExcel } from '@/lib/report'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { euros, qte as fmt, qteSignee } from '@/lib/nombres'
 
 /** ⚠️ La liste se lit par pages : voir le commentaire des totaux plus bas. */
 const PAGE = 50
 
-function fmt(v: number): string {
-  return Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, '')
-}
-function money(v: number): string {
-  return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 export default function ResultsScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>()
@@ -112,8 +107,8 @@ export default function ResultsScreen() {
           <Text style={styles.summaryTitle}>Synthèse</Text>
           <Row styles={styles} label="Stock théorique" value={fmt(totals.theoreticalUnits)} />
           <Row styles={styles} label="Stock compté" value={fmt(totals.countedUnits)} />
-          <Row styles={styles} label="Écart total (unités)" value={(totals.varianceUnits > 0 ? '+' : '') + fmt(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
-          <Row styles={styles} label="Écart total (valeur achat)" value={`${money(totals.varianceValue)} €`} color={totals.varianceValue < 0 ? theme.danger : theme.success} />
+          <Row styles={styles} label="Écart total (unités)" value={qteSignee(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
+          <Row styles={styles} label="Écart total (valeur achat)" value={euros(totals.varianceValue)} color={totals.varianceValue < 0 ? theme.danger : theme.success} />
         </View>
 
         <Pressable
@@ -164,8 +159,8 @@ function ResultCard({ row, theme, styles }: { row: SessionResultRow; theme: Them
       <View style={styles.qtyRow}>
         <Cell styles={styles} label="Théorique" value={fmt(Number(row.theoretical_qty))} />
         <Cell styles={styles} label="Compté" value={fmt(Number(row.counted_qty))} />
-        <Cell styles={styles} label="Écart" value={(variance > 0 ? '+' : '') + fmt(variance)} color={vColor} />
-        <Cell styles={styles} label="Valeur" value={`${money(Number(row.variance_value))} €`} color={vColor} />
+        <Cell styles={styles} label="Écart" value={qteSignee(variance)} color={vColor} />
+        <Cell styles={styles} label="Valeur" value={euros(Number(row.variance_value))} color={vColor} />
       </View>
     </View>
   )

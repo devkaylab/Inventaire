@@ -7,6 +7,7 @@ import { getZoneDashboard } from '@/lib/queries'
 import type { ZoneDashboardRow } from '@/lib/queries'
 import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
+import { nb } from '@/lib/nombres'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
 type MissingGroup = { name: string; codes: string[] }
@@ -62,7 +63,7 @@ export default function MissingBalisesScreen() {
         ) : (
           <>
             <Text style={styles.intro}>
-              {totalMissing} balise{totalMissing > 1 ? 's' : ''} n'{totalMissing > 1 ? 'ont' : 'a'} pas encore été comptée{totalMissing > 1 ? 's' : ''}.
+              {nb(totalMissing)} balise{totalMissing > 1 ? 's' : ''} n'{totalMissing > 1 ? 'ont' : 'a'} pas encore été comptée{totalMissing > 1 ? 's' : ''}.
               Rendez-vous aux emplacements ci-dessous.
             </Text>
             {groups.map((g) => (

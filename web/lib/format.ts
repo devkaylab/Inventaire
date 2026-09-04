@@ -16,11 +16,27 @@ export function parseDecimal(raw: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-/** Quantité : entier tel quel, décimal sans zéros inutiles (1.500 → 1,5). */
+/**
+ * Quantité : séparateur de milliers, décimales sans zéros inutiles
+ * (1500 → « 1 500 », 1.500 → « 1,5 »).
+ *
+ * ⚠️ LE SÉPARATEUR DE MILLIERS N'EST PAS UN ORNEMENT (3 septembre 2026,
+ * demande de Julien : « 1000 > 1 000, plus facile à lire »). Sur un
+ * inventaire, la colonne des quantités porte des nombres à cinq ou six
+ * chiffres : sans groupement, « 128400 » et « 12840 » se ressemblent au coup
+ * d'œil, et c'est précisément là qu'on cherche un écart.
+ *
+ * ⚠️ ELLE NE SERT QU'À L'AFFICHAGE. Un export, une valeur de champ ou une
+ * comparaison prennent le nombre brut — `toLocaleString` insère une espace
+ * insécable étroite (U+202F) qu'aucun tableur ne relit comme un chiffre.
+ * `parseDecimal` sait la retirer (`\s` la couvre) pour ce que l'on tape.
+ *
+ * `v || 0` écrase le zéro négatif : `(-0).toLocaleString('fr-FR')` rend « -0 »,
+ * ce qui se lit comme un manque alors qu'il ne s'est rien passé.
+ */
 export function fmtQty(v: number): string {
   if (!Number.isFinite(v)) return '0'
-  const s = Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, '')
-  return s.replace('.', ',')
+  return (v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
 }
 
 /** Écart signé : on garde le + pour que le sens saute aux yeux. */
@@ -111,7 +127,7 @@ export function sinceDuration(ms: number): string {
 
 /** « 1 balise » / « 3 balises » sans répéter le ternaire partout. */
 export function plural(n: number, singular: string, plural?: string): string {
-  return `${n} ${n > 1 ? (plural ?? `${singular}s`) : singular}`
+  return `${nb(n)} ${n > 1 ? (plural ?? `${singular}s`) : singular}`
 }
 
 /**

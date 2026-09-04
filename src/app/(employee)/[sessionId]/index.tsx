@@ -24,6 +24,7 @@ import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
 import { Astuce, Fort } from '@/components/Astuce'
 import { demander, signaler } from '@/lib/dialogue'
+import { nb } from '@/lib/nombres'
 
 export default function EmployeeProgressScreen() {
   // Les notifications se demandent ici : ouvrir un inventaire est le geste
@@ -129,7 +130,7 @@ export default function EmployeeProgressScreen() {
                 <Text style={styles.inventoryNumber}>{session.inventory_number}</Text>
                 <Text style={styles.storeName}>{session.store_name}</Text>
                 <Text style={styles.summaryLine}>
-                  {countedPieces} pièce{countedPieces > 1 ? 's' : ''} comptée{countedPieces > 1 ? 's' : ''} · {auditedPieces} auditée{auditedPieces > 1 ? 's' : ''}
+                  {nb(countedPieces)} pièce{countedPieces > 1 ? 's' : ''} comptée{countedPieces > 1 ? 's' : ''} · {nb(auditedPieces)} auditée{auditedPieces > 1 ? 's' : ''}
                 </Text>
               </View>
             )}

@@ -11,7 +11,7 @@ import {
   auditKey, groupDiscrepancies, KIND_LABELS,
   type Discrepancy,
 } from '@/lib/discrepancies'
-import { fmtQty, fmtSigned, money, parseDecimal, relativeTime } from '@/lib/format'
+import { fmtQty, fmtSigned, money, nb, parseDecimal, relativeTime } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -214,16 +214,16 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
       <div className="dash-stats">
         <Stat
           label="Écarts à traiter"
-          value={resume ? String(stats.total) : '—'}
+          value={resume ? nb(stats.total) : '—'}
           tone={!resume ? 'neutral' : stats.total > 0 ? 'neg' : 'pos'}
         />
-        <Stat label="Quantités différentes" value={resume ? String(stats.byKind.quantity) : '—'} />
+        <Stat label="Quantités différentes" value={resume ? nb(stats.byKind.quantity) : '—'} />
         <Stat
           label="Non retrouvés à l’audit"
-          value={resume ? String(stats.byKind['missing-audit']) : '—'}
+          value={resume ? nb(stats.byKind['missing-audit']) : '—'}
           tone={resume && stats.byKind['missing-audit'] > 0 ? 'warn' : 'neutral'}
         />
-        <Stat label="Arbitrés" value={resume ? String(resume.arbitres) : '—'} tone={resume ? 'pos' : 'neutral'} />
+        <Stat label="Arbitrés" value={resume ? nb(resume.arbitres) : '—'} tone={resume ? 'pos' : 'neutral'} />
       </div>
 
       {!resume && (
@@ -244,9 +244,9 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         <div className="toolbar">
           <label htmlFor="zone-filter" className="dash-section-label">Emplacement</label>
           <select id="zone-filter" value={zoneFilter} onChange={e => setZoneFilter(e.target.value)}>
-            <option value="all">Tous ({stats.total})</option>
+            <option value="all">Tous ({nb(stats.total)})</option>
             {zoneOptions.map(z => (
-              <option key={z.nom} value={z.nom}>{z.nom} ({z.lignes})</option>
+              <option key={z.nom} value={z.nom}>{z.nom} ({nb(z.lignes)})</option>
             ))}
           </select>
         </div>
@@ -362,7 +362,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
 
       {resolved.length > 0 && (
         <details className="collapsible">
-          <summary>Écarts arbitrés ({resume?.arbitres ?? resolved.length})</summary>
+          <summary>Écarts arbitrés ({nb(resume?.arbitres ?? resolved.length)})</summary>
           <div className="collapsible-body">
             <p className="muted small" style={{ marginBottom: 12 }}>
               Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport.

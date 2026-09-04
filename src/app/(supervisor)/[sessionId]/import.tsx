@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, router, useLocalSearchParams } from 'expo-router'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
+import { nb } from '@/lib/nombres'
 import { useTheme } from '@/lib/theme'
 import { Astuce, Fort } from '@/components/Astuce'
 import { useRepere } from '@/lib/reperes'
@@ -40,7 +41,7 @@ function ProgressBar({ progress, styles }: { progress: ImportProgress; styles: R
         <View style={[styles.progressFill, { width: `${pct}%` }]} />
       </View>
       <Text style={styles.progressText}>
-        {pct}% — {progress.uploaded.toLocaleString()} / {progress.total.toLocaleString()} lignes
+        {pct}% — {nb(progress.uploaded)} / {nb(progress.total)} lignes
       </Text>
     </View>
   )
@@ -130,7 +131,7 @@ export default function ImportScreen() {
           <View style={styles.successBanner}>
             <CocheIcon color={theme.success} size={15} />
             <Text style={styles.successText}>
-              {state.uploaded.toLocaleString()} lignes importées
+              {nb(state.uploaded)} lignes importées
             </Text>
           </View>
         )}

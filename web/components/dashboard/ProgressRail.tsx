@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { fmtQty, plural } from '@/lib/format'
+import { fmtQty, nb, plural } from '@/lib/format'
 import type { ZoneDashboardRow } from '@/lib/zones'
 import type { Totals } from '@/hooks/useSessionData'
 
@@ -166,7 +166,7 @@ export function ProgressRail({
       <div className="dash-bar-row">
         <div className="dash-bar-legend">
           <span>Comptage</span>
-          <strong className="num">{stats.counted}/{stats.total}</strong>
+          <strong className="num">{nb(stats.counted)}/{nb(stats.total)}</strong>
         </div>
         <div className="dash-bar">
           <div
@@ -182,7 +182,7 @@ export function ProgressRail({
       <div className="dash-bar-row">
         <div className="dash-bar-legend">
           <span>Audit</span>
-          <strong className="num">{stats.audited}/{stats.total}</strong>
+          <strong className="num">{nb(stats.audited)}/{nb(stats.total)}</strong>
         </div>
         <div className="dash-bar">
           <div

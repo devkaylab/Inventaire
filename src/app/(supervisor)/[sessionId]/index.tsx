@@ -28,6 +28,7 @@ import { useNotificationsSurInventaire } from '@/lib/push'
 import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 import { useRepere } from '@/lib/reperes'
 import { demander, signaler } from '@/lib/dialogue'
+import { nb } from '@/lib/nombres'
 
 const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
 
@@ -238,7 +239,7 @@ export default function SessionDetailScreen() {
     // manques. C'est le seul chiffre qui puisse faire changer d'avis, donc il
     // passe avant le reste.
     const reste = usesZones && zoneMissing.length > 0
-      ? `${zoneMissing.length} balise${zoneMissing.length > 1 ? 's' : ''} sur ${zoneTotal} n${zoneMissing.length > 1 ? "'ont" : "'a"} pas été comptée${zoneMissing.length > 1 ? 's' : ''}. Elle${zoneMissing.length > 1 ? 's' : ''} compteront pour zéro dans le rapport.\n\n`
+      ? `${nb(zoneMissing.length)} balise${zoneMissing.length > 1 ? 's' : ''} sur ${nb(zoneTotal)} n${zoneMissing.length > 1 ? "'ont" : "'a"} pas été comptée${zoneMissing.length > 1 ? 's' : ''}. Elle${zoneMissing.length > 1 ? 's' : ''} compteront pour zéro dans le rapport.\n\n`
       : ''
     void demander({
       titre: 'Clôturer l’inventaire ?',
@@ -368,7 +369,7 @@ export default function SessionDetailScreen() {
               </View>
             ) : (
               <Text style={styles.zoneEmpty}>
-                {zoneTotal} balise{zoneTotal > 1 ? 's' : ''} prête{zoneTotal > 1 ? 's' : ''} à être comptée{zoneTotal > 1 ? 's' : ''}.
+                {nb(zoneTotal)} balise{zoneTotal > 1 ? 's' : ''} prête{zoneTotal > 1 ? 's' : ''} à être comptée{zoneTotal > 1 ? 's' : ''}.
               </Text>
             )}
 
@@ -378,11 +379,11 @@ export default function SessionDetailScreen() {
           <View style={styles.progressBlock}>
             <SectionLabel>Progression</SectionLabel>
             <View style={styles.progressBigRow}>
-              <Text style={styles.progressBig}>{countedPieces}</Text>
+              <Text style={styles.progressBig}>{nb(countedPieces)}</Text>
               {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
             </View>
             <Text style={styles.progressSub}>pièce{countedPieces > 1 ? 's' : ''} scannée{countedPieces > 1 ? 's' : ''}</Text>
-            <Text style={styles.progressSub}>{auditedPieces} pièce{auditedPieces > 1 ? 's' : ''} auditée{auditedPieces > 1 ? 's' : ''}</Text>
+            <Text style={styles.progressSub}>{nb(auditedPieces)} pièce{auditedPieces > 1 ? 's' : ''} auditée{auditedPieces > 1 ? 's' : ''}</Text>
           </View>
         )}
 

@@ -24,6 +24,7 @@ import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { nb } from '@/lib/nombres'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 type ZoneGroup = { name: string; total: number; counted: number; audited: number; codes: string[] }
@@ -161,11 +162,11 @@ export default function ZonesScreen() {
           {totals.total > 0 && (
             <View style={styles.summary}>
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.passColors[1] }]}>{totals.counted}/{totals.total}</Text>
+                <Text style={[styles.statValue, { color: theme.passColors[1] }]}>{nb(totals.counted)}/{nb(totals.total)}</Text>
                 <Text style={styles.statLabel}>Comptées · {countPct}%</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.passColors[2] }]}>{totals.audited}/{totals.total}</Text>
+                <Text style={[styles.statValue, { color: theme.passColors[2] }]}>{nb(totals.audited)}/{nb(totals.total)}</Text>
                 <Text style={styles.statLabel}>Auditées · {auditPct}%</Text>
               </View>
             </View>
