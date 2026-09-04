@@ -51,6 +51,22 @@ export type AppareilsMagasin = {
   jours: number
 }
 
+/**
+ * Un magasin vu par la console Quantinvo — `appareils_des_magasins` en rend un
+ * par magasin de l'entreprise, en un seul appel.
+ *
+ * ⚠️ Il n'y a PAS de `pic` : depuis que le verrou ferme la porte, il ne peut
+ * plus dépasser le plafond, donc il ne dit plus rien.
+ */
+export type AppareilsDuMagasin = {
+  store_id: string
+  nom: string
+  plafond: number | null
+  maintenant: number
+  refus: number
+  besoin: number
+}
+
 export type EtatAppareils = 'sans_forfait' | 'dans_le_forfait' | 'depasse'
 
 /** L'offre à proposer, prête à écrire à l'écran. */
@@ -75,6 +91,13 @@ export type VerdictAppareils = {
   /** Le palier payé aujourd'hui, nommé. Nul sans forfait connu. */
   offreActuelle: string | null
   proposition: Proposition | null
+}
+
+/** Le libellé de l'état, tel que la console l'affiche en pastille. */
+export const ETIQUETTE: Record<EtatAppareils, string> = {
+  sans_forfait: 'Forfait non défini',
+  dans_le_forfait: 'Dans le forfait',
+  depasse: 'Forfait trop juste',
 }
 
 /** Le nom du palier qui correspond à ce plafond. */
@@ -134,8 +157,15 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
   }
 }
 
-/** Ce que la fiche du magasin doit dire. */
-export function lireAppareils(a: AppareilsMagasin | null): VerdictAppareils {
+/**
+ * Ce qu'il faut dire d'un magasin.
+ *
+ * ⚠️ Elle ne demande que le plafond et le besoin, pas la forme complète : la
+ * fiche du magasin et la console lisent le même jugement à partir de deux
+ * sources qui ne rendent pas les mêmes colonnes. Deux fonctions de jugement
+ * divergeraient au premier ajustement.
+ */
+export function lireAppareils(a: Pick<AppareilsMagasin, 'plafond' | 'besoin'> | null): VerdictAppareils {
   if (!a || a.plafond == null) {
     return { etat: 'sans_forfait', offreActuelle: null, proposition: null }
   }

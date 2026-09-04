@@ -24,6 +24,7 @@ import { UsageConstate } from '@/components/admin/UsageConstate'
 import { densite } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
 import { TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
+import { ETIQUETTE, lireAppareils, type AppareilsDuMagasin } from '@/lib/appareils'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = {
@@ -228,6 +229,31 @@ function VolumeDemande({
   )
 }
 
+/**
+ * Ce que les appareils d'un magasin disent, vu de la console.
+ *
+ * ⚠️ EN LECTURE SEULE. On n'envoie plus de devis : le client est prévenu
+ * automatiquement (notification et bannière) et change d'offre lui-même. Cette
+ * ligne sert à voir venir, pas à agir — c'est pourquoi elle ne porte aucun
+ * bouton.
+ */
+function AppareilsMagasin({ a }: { a: AppareilsDuMagasin | undefined }) {
+  if (!a) return null
+  const v = lireAppareils(a)
+  const ton = v.etat === 'depasse' ? 'pill-attente' : v.etat === 'dans_le_forfait' ? 'pill-vous' : 'pill-role'
+  return (
+    <div className="store-appareils">
+      <span className={`pill ${ton}`}>{ETIQUETTE[v.etat]}</span>
+      <span className="muted small">
+        {nb(a.maintenant)} appareil{a.maintenant > 1 ? 's' : ''} en train de compter
+        {a.plafond !== null && ` · forfait ${nb(a.plafond)}`}
+        {a.refus > 0 && ` · ${nb(a.refus)} refusé${a.refus > 1 ? 's' : ''} en 30 j`}
+        {v.proposition && <> → <b>{v.proposition.nom}</b></>}
+      </span>
+    </div>
+  )
+}
+
 export default function AdminCompanyPage() {
   const router = useRouter()
   const params = useParams<{ companyId: string }>()
@@ -239,6 +265,9 @@ export default function AdminCompanyPage() {
   const [storeName, setStoreName] = useState('')
   const [copie, setCopie] = useState<string | null>(null)
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
+  // Les appareils de tous les magasins, en un seul appel. Une boucle par
+  // magasin serait le motif retiré partout ailleurs pour la tenue en charge.
+  const [appareils, setAppareils] = useState<AppareilsDuMagasin[]>([])
   // Un seul panneau de devis ouvert à la fois : deux montants côte à côte, ce
   // sont deux montants qu'on confond.
   const [devisOuvert, setDevisOuvert] = useState<string | null>(null)
@@ -248,13 +277,16 @@ export default function AdminCompanyPage() {
 
   const charger = useCallback(async () => {
     if (!companyId) return
-    const [fiche, dem] = await Promise.all([
+    const [fiche, dem, app] = await Promise.all([
       supabase.rpc('admin_company_detail', { p_company_id: companyId }),
       supabase.rpc('admin_list_store_requests'),
+      // Ne conditionne rien : la fiche s'affiche sans, et la ligne se tait.
+      supabase.rpc('appareils_des_magasins', { p_company_id: companyId }),
     ])
     if (fiche.error) { setErreur(fiche.error.message); return }
     setDetail(fiche.data as Detail)
     setDemandes(((dem.data ?? []) as StoreRequest[]).filter((d) => d.company_id === companyId))
+    setAppareils(app.error ? [] : ((app.data ?? []) as AppareilsDuMagasin[]))
   }, [companyId])
 
   useEffect(() => {
@@ -640,6 +672,7 @@ export default function AdminCompanyPage() {
                     </div>
                   </div>
                   <TarifMagasin store={s} onSaved={charger} />
+                  <AppareilsMagasin a={appareils.find((x) => x.store_id === s.id)} />
                   <div className="store-sup">
                     {s.supervisor_ids.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
                     {s.supervisor_ids.map((uid) => (

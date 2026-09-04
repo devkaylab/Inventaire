@@ -8477,6 +8477,25 @@ Migration `20260904220001`, type de notification `forfait_trop_juste`.
   qui mène au même endroit. Dans la bannière, qui n'est pas un bouton, c'est un
   vrai `<button>`. Deux tests figent les deux moitiés de cette règle.
 
+## La console voit venir, elle n'agit plus
+
+`appareils_des_magasins(company_id)` rend l'état de **tous** les magasins d'une
+entreprise en un seul appel — une boucle par magasin serait le motif retiré
+partout ailleurs pour la tenue en charge. Une ligne par magasin sur la fiche
+entreprise : pastille (`Forfait trop juste` / `Dans le forfait` / `Forfait non
+défini`), appareils en train de compter, forfait, refus sur trente jours, et
+l'offre qui couvrirait le besoin.
+
+- **⚠️ EN LECTURE SEULE, sans un seul bouton.** On n'envoie plus de devis : le
+  client est prévenu tout seul et change d'offre lui-même. Un test refuse
+  `<button>`, `<Link>` et le mot « devis » dans ce bloc.
+- **⚠️ Elle ne rend pas `pic`**, et c'est délibéré : depuis que le verrou ferme
+  la porte, il ne peut plus dépasser le plafond. Le rendre inviterait à s'en
+  servir. Un test l'interdit.
+- Le jugement est celui de la fiche du magasin — `lireAppareils` ne demande
+  plus que le plafond et le besoin, pour que les deux écrans lisent la même
+  règle à partir de deux sources qui ne rendent pas les mêmes colonnes.
+
 ## ⚠️ Un `fichierDe(fn)` ne parle QUE de `fn`
 
 Trouvé en écrivant ces gardes, et c'est une variante neuve d'un piège connu.

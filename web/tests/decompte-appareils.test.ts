@@ -229,6 +229,40 @@ describe('le jugement — quelle offre proposer', () => {
   })
 })
 
+describe('la console Quantinvo', () => {
+  it('lit tous les magasins d’une entreprise en un seul appel', () => {
+    // Une boucle d'appels par magasin serait le motif retiré partout ailleurs
+    // pour la tenue en charge.
+    const { corps } = derniereDefinition('appareils_des_magasins')
+    expect(corps).toContain('jsonb_agg')
+    expect(corps).toContain('where s.company_id = p_company_id')
+    const console_ = lire('web/app/admin/entreprise/[companyId]/page.tsx')
+    expect(console_).toContain("supabase.rpc('appareils_des_magasins'")
+  })
+
+  it('la garde est celle de l’entreprise', () => {
+    const { corps } = derniereDefinition('appareils_des_magasins')
+    expect(corps).toContain('public.is_admin() or public.is_company_admin(p_company_id)')
+    expect(fichierDe('appareils_des_magasins'))
+      .toContain('revoke all on function public.appareils_des_magasins(uuid) from public, anon')
+  })
+
+  it('elle ne rend pas le pic — il ne dit plus rien', () => {
+    // Depuis que le verrou ferme la porte, le pic ne peut plus dépasser le
+    // plafond. Le rendre inviterait à s'en servir.
+    const { corps } = derniereDefinition('appareils_des_magasins')
+    expect(corps).not.toContain("'pic'")
+  })
+
+  it('la ligne est en lecture seule — on n’envoie plus de devis', () => {
+    const console_ = lire('web/app/admin/entreprise/[companyId]/page.tsx')
+    const i = console_.indexOf('function AppareilsMagasin')
+    expect(i).toBeGreaterThan(0)
+    const bloc = sansCommentaires(console_.slice(i, i + 1400))
+    expect(bloc).not.toMatch(/<button|<Link|devis/i)
+  })
+})
+
 describe('l’écran de la fiche magasin', () => {
   const page = lire('web/app/magasins/[storeId]/page.tsx')
 

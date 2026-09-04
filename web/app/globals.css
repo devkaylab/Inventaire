@@ -2439,6 +2439,9 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .notif-cta { display: inline-block; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; }
 .notif-point { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; margin-top: 6px; }
 
+/* La ligne des appareils, dans le bloc d'un magasin de la console. */
+.store-appareils { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
 /* La bannière d'avis — en haut à droite, à l'opposé du rail. Elle n'est pas un
    toast : elle ne s'efface pas toute seule, parce qu'elle porte une décision et
    non un accusé de réception. */
