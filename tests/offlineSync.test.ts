@@ -33,7 +33,8 @@ const serveur = {
   panne: false,
   articles: [] as Record<string, unknown>[],
   counts: [] as Record<string, unknown>[],
-  reset() { this.panne = false; this.articles = []; this.counts = [] },
+  totaux: { counted: 0, audited: 0 },
+  reset() { this.panne = false; this.articles = []; this.counts = []; this.totaux = { counted: 0, audited: 0 } },
 }
 const coupure = () => { throw { name: 'TypeError', message: 'Network request failed' } }
 
@@ -57,10 +58,12 @@ vi.mock('@/lib/queries', () => ({
   getZones: async () => { if (serveur.panne) coupure(); return [] },
   getSession: async () => { if (serveur.panne) coupure(); return { id: 'S', uses_zones: true } },
   getSessions: async () => { if (serveur.panne) coupure(); return [] },
+  getMyCountTotals: async () => { if (serveur.panne) coupure(); return serveur.totaux },
   setBalise: async () => { if (serveur.panne) coupure(); return { success: true } },
 }))
 
 import {
+  getMyCountTotals,
   getScanEntries,
   insertArticle,
   insertCount,
@@ -165,5 +168,45 @@ describe('la liste d’une balise pendant une coupure', () => {
     await resolveArticle(S, CODE)
     await insertCount({ session_id: S, sku: 'A', pass_number: 2, qty: 1, counted_by: 'u1', zone: '1000' })
     expect(await getScanEntries(S, 1, 'u1', '1000')).toEqual([])
+  })
+})
+
+/**
+ * L'écran de progression du compteur, hors ligne (4 septembre 2026).
+ *
+ * Constat de Julien : « lorsque nous sommes hors ligne la page progression
+ * sur téléphone reste blanche ». Le total du serveur était la SEULE requête
+ * de cet écran à ne pas passer par la bascule : sans réseau elle échouait,
+ * React Query la rejouait, et tout l'écran restait derrière son chargement —
+ * y compris le bouton « Compter des articles », la seule chose dont on ait
+ * besoin en réserve.
+ */
+describe('les totaux du compteur survivent à la coupure', () => {
+  it('rend la dernière valeur connue quand le réseau tombe', async () => {
+    serveur.totaux = { counted: 142, audited: 30 }
+    expect(await getMyCountTotals(S)).toEqual({ counted: 142, audited: 30 })
+
+    serveur.panne = true
+    expect(await getMyCountTotals(S)).toEqual({ counted: 142, audited: 30 })
+  })
+
+  it('⚠️ rend NULL quand rien n’est connu, jamais zéro', async () => {
+    // « 0 pièce comptée » à quelqu'un qui vient d'en compter cent est le
+    // genre de chiffre qu'on croit. L'écran écrit « — ».
+    serveur.panne = true
+    await resolveArticle(S, CODE) // constate la coupure
+    expect(await getMyCountTotals('session-jamais-vue')).toBeNull()
+  })
+
+  it('une fois hors ligne, elle n’interroge plus le serveur', async () => {
+    // C'est ce qui rend l'écran instantané en réserve : sans cette garde,
+    // chaque ouverture réattend le délai réseau.
+    serveur.totaux = { counted: 5, audited: 0 }
+    await getMyCountTotals(S)
+    serveur.panne = true
+    await resolveArticle(S, CODE)
+    expect(isOffline()).toBe(true)
+    serveur.totaux = { counted: 999, audited: 999 } // le serveur bouge, on ne le demande pas
+    expect(await getMyCountTotals(S)).toEqual({ counted: 5, audited: 0 })
   })
 })

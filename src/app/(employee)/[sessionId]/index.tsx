@@ -11,8 +11,8 @@ import Svg, { Path } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMyCountTotals, leaveSession } from '@/lib/queries'
-import { getSession } from '@/lib/offlineSync'
+import { leaveSession } from '@/lib/queries'
+import { getMyCountTotals, getSession, isOffline } from '@/lib/offlineSync'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
@@ -62,7 +62,7 @@ export default function EmployeeProgressScreen() {
   // l'utilisateur : elle s'en remettait à la sécurité en base, qui rend ses
   // propres lignes à un compteur mais **toute l'équipe** à un superviseur —
   // présentées ici comme son travail à lui.
-  const { data: mesTotaux, isLoading: countsLoading } = useQuery({
+  const { data: mesTotaux } = useQuery({
     queryKey: ['my-count-totals', sessionId],
     queryFn: () => getMyCountTotals(sessionId),
     enabled: !!session,
@@ -72,6 +72,7 @@ export default function EmployeeProgressScreen() {
   // l'écran qu'on consulte avant de partir, et « ai-je tout remonté ? » est la
   // question qu'on s'y pose.
   const queue = useOfflineQueue(sessionId)
+  const horsLigne = isOffline()
   /**
    * « Aucune balise en attente » ne s'affiche qu'après une attente.
    *
@@ -114,9 +115,20 @@ export default function EmployeeProgressScreen() {
     }).then((ok) => { if (ok) leaveMutation.mutate() })
   }
 
-  const countedPieces = mesTotaux?.counted ?? 0
-  const auditedPieces = mesTotaux?.audited ?? 0
-  const isLoading = sessionLoading || countsLoading
+  const totaux = mesTotaux ?? null
+  const countedPieces = totaux?.counted ?? 0
+  const auditedPieces = totaux?.audited ?? 0
+
+  /**
+   * ⚠️ SEULE LA FICHE DE L'INVENTAIRE RETIENT L'ÉCRAN, ET ELLE VIENT DU CACHE.
+   *
+   * Les totaux du serveur attendaient ici aussi : hors ligne leur requête
+   * échoue, React Query la rejoue, et l'écran entier restait derrière — avec
+   * le bouton « Compter des articles », qui est justement ce qu'on vient
+   * chercher en réserve. Constat de Julien, 4 septembre 2026. Un chiffre
+   * d'affichage ne bloque pas un geste.
+   */
+  const isLoading = sessionLoading
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -129,9 +141,19 @@ export default function EmployeeProgressScreen() {
               <View style={styles.header}>
                 <Text style={styles.inventoryNumber}>{session.inventory_number}</Text>
                 <Text style={styles.storeName}>{session.store_name}</Text>
+                {/* ⚠️ Sans totaux connus, « — » et jamais « 0 » : annoncer
+                    zéro pièce à quelqu'un qui vient d'en compter cent est le
+                    genre de chiffre qu'on croit. */}
                 <Text style={styles.summaryLine}>
-                  {nb(countedPieces)} pièce{countedPieces > 1 ? 's' : ''} comptée{countedPieces > 1 ? 's' : ''} · {nb(auditedPieces)} auditée{auditedPieces > 1 ? 's' : ''}
+                  {totaux
+                    ? `${nb(countedPieces)} pièce${countedPieces > 1 ? 's' : ''} comptée${countedPieces > 1 ? 's' : ''} · ${nb(auditedPieces)} auditée${auditedPieces > 1 ? 's' : ''}`
+                    : '— pièce comptée · — auditée'}
                 </Text>
+                {totaux && horsLigne && (
+                  <Text style={styles.summaryDate}>
+                    Au dernier passage du réseau. Ce qui attend sur ce téléphone n&apos;y est pas encore.
+                  </Text>
+                )}
               </View>
             )}
 
@@ -239,6 +261,7 @@ function makeStyles(t: Theme) {
     inventoryNumber: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, ...tabular },
     storeName: { fontSize: 14, color: t.textSecondary, fontFamily: Font.medium },
     summaryLine: { fontSize: 13, color: t.textMuted, fontFamily: Font.medium, marginTop: Spacing.xs, ...tabular },
+    summaryDate: { fontSize: 12, color: t.textMuted, fontFamily: Font.medium, marginTop: 2 },
     pendingRow: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
       backgroundColor: t.warningSoft, borderColor: t.warning, borderWidth: 1,

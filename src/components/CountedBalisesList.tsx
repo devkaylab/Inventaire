@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { getMyCounts, getZones } from '@/lib/queries'
+import { isOffline } from '@/lib/offlineSync'
 import { useTheme } from '@/lib/theme'
 
 /**
@@ -27,7 +28,7 @@ export function CountedBalisesList({
   const styles = makeStyles(theme)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const { data: countRows, isLoading, refetch, isRefetching } = useQuery({
+  const { data: countRows, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['my-counts', sessionId, 1],
     queryFn: () => getMyCounts(sessionId, 1),
   })
@@ -107,9 +108,29 @@ export function CountedBalisesList({
     return <View style={styles.center}><ActivityIndicator color={theme.accent} /></View>
   }
 
+  /**
+   * ⚠️ « RIEN REMONTÉ » ET « JE N'AI PAS PU DEMANDER » NE SE DISENT PAS PAREIL.
+   *
+   * Hors ligne, la requête échoue et la liste ressortait vide : cet écran
+   * annonçait « Aucune pièce remontée » à quelqu'un qui venait de compter
+   * toute la matinée. C'est le plus inquiétant des mensonges possibles ici —
+   * c'est précisément l'écran qu'on ouvre pour se rassurer avant de partir.
+   * Même règle que les tuiles du site : un chiffre qu'on n'a pas pu obtenir
+   * n'est pas un zéro.
+   */
   const empty = (
     <View style={styles.center}>
-      <Text style={styles.emptyText}>Aucune pièce remontée pour l&apos;instant</Text>
+      <Text style={styles.emptyText}>
+        {isError || isOffline()
+          ? 'Impossible de joindre le serveur pour l’instant.'
+          : 'Aucune pièce remontée pour l’instant'}
+      </Text>
+      {(isError || isOffline()) && (
+        <Text style={styles.emptyHint}>
+          Cette liste vient du serveur. Ce que ce téléphone retient encore se lit sur
+          « En attente », et part tout seul au retour du réseau.
+        </Text>
+      )}
     </View>
   )
 
@@ -183,4 +204,5 @@ const makeStyles = (t: Theme) =>
     qty: { fontSize: 20, color: t.accent, fontFamily: Font.extrabold, ...tabular },
     qtyUnit: { fontSize: 11, color: t.textMuted, fontFamily: Font.medium },
     emptyText: { color: t.textMuted, fontSize: 15, fontFamily: Font.regular },
+    emptyHint: { fontSize: 12.5, color: t.textMuted, fontFamily: Font.medium, textAlign: 'center', marginTop: 6, paddingHorizontal: Spacing.lg, lineHeight: 18 },
   })

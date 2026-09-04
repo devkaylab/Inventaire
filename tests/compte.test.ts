@@ -2655,3 +2655,54 @@ describe('les nombres portent leur séparateur de milliers', () => {
     expect(lire('lib/report.ts')).not.toContain("from '@/lib/nombres'")
   })
 })
+
+/**
+ * Hors ligne, l'écran de progression s'ouvre quand même (4 septembre 2026).
+ *
+ * Constat de Julien : « lorsque nous sommes hors ligne la page progression sur
+ * téléphone reste blanche […] y a-t-il une possibilité de faire en sorte que
+ * l'on puisse ouvrir la page scan depuis la page progression même en hors
+ * ligne ? ». Oui — et le défaut n'était pas la progression, c'était le geste
+ * qu'elle bloquait.
+ */
+describe('l’écran de progression s’ouvre hors ligne', () => {
+  const progression = lire('app/(employee)/[sessionId]/index.tsx')
+  const liste = lire('components/CountedBalisesList.tsx')
+
+  it('⚠️ SEULE LA FICHE DE L’INVENTAIRE RETIENT L’ÉCRAN', () => {
+    // Les totaux du serveur attendaient là aussi : hors ligne leur requête
+    // échoue, React Query la rejoue, et le bouton « Compter des articles »
+    // restait derrière. Un chiffre d'affichage ne bloque pas un geste.
+    expect(progression).toContain('const isLoading = sessionLoading')
+    expect(progression).not.toContain('sessionLoading || countsLoading')
+  })
+
+  it('⚠️ les totaux passent par la bascule hors ligne', () => {
+    // C'était la seule requête de l'écran à venir directement de `queries`.
+    expect(progression).toMatch(/getMyCountTotals[^\n]*from '@\/lib\/offlineSync'/)
+    expect(progression).not.toMatch(/getMyCountTotals[^\n]*from '@\/lib\/queries'/)
+  })
+
+  it('⚠️ un total inconnu s’écrit « — », jamais « 0 »', () => {
+    // Annoncer zéro pièce à quelqu'un qui vient d'en compter cent est le
+    // genre de chiffre qu'on croit — même règle que les tuiles du site.
+    expect(progression).toContain("'— pièce comptée · — auditée'")
+    expect(progression).toContain('{totaux')
+  })
+
+  it('⚠️ « Balises comptées » ne dit pas « rien » quand elle n’a pas pu demander', () => {
+    // C'est l'écran qu'on ouvre pour se rassurer avant de quitter le magasin :
+    // « Aucune pièce remontée » y serait le pire des mensonges.
+    expect(liste).toContain('isError || isOffline()')
+    expect(liste).toContain('Impossible de joindre le serveur')
+    expect(liste).toContain("from '@/lib/offlineSync'")
+  })
+
+  it('le cache des totaux part avec l’inventaire et à la déconnexion', () => {
+    const offline = lire('lib/offline.ts')
+    // `clearSession` le nomme ; le ménage de déconnexion balaie tout `V:`
+    // sauf la file, donc il le couvre sans qu'on l'y nomme.
+    expect(offline).toContain('k === totauxKey(sessionId)')
+    expect(offline).toContain('export const cacheCountTotals')
+  })
+})

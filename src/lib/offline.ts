@@ -359,6 +359,7 @@ export async function zoneNameFor(sessionId: string, code: string): Promise<stri
 const profileKey = `${V}:profile`
 const sessionKey = (sessionId: string) => `${V}:session:${sessionId}`
 const sessionListKey = `${V}:sessions`
+const totauxKey = (sessionId: string) => `${V}:totaux:${sessionId}`
 
 async function putJson(key: string, value: unknown): Promise<void> {
   await AsyncStorage.setItem(key, JSON.stringify(value))
@@ -385,6 +386,22 @@ export const getCachedSession = <T,>(sessionId: string) => getJson<T>(sessionKey
 /** Liste des inventaires du compteur, pour retrouver le sien au redémarrage. */
 export const cacheSessionList = (list: unknown) => putJson(sessionListKey, list)
 export const getCachedSessionList = <T,>() => getJson<T[]>(sessionListKey)
+
+/**
+ * Ce que le serveur a enregistré pour cette personne (pièces comptées,
+ * auditées) — la dernière valeur connue.
+ *
+ * ⚠️ ELLE DATE, ET C'EST ASSUMÉ. Le total du serveur ne peut pas être à jour
+ * hors ligne : les scans en attente n'y sont pas encore. L'écran le dit
+ * (« au dernier passage du réseau ») plutôt que d'afficher un chiffre neuf
+ * qui serait faux, et il montre à côté la file locale, qui est exacte.
+ *
+ * ⚠️ ET SURTOUT : l'absence de cache rend `null`, jamais zéro. « 0 pièce
+ * comptée » à quelqu'un qui vient d'en compter cent, c'est le même mensonge
+ * que les tuiles à zéro du site — un chiffre inconnu s'écrit « — ».
+ */
+export const cacheCountTotals = (sessionId: string, t: unknown) => putJson(totauxKey(sessionId), t)
+export const getCachedCountTotals = <T,>(sessionId: string) => getJson<T>(totauxKey(sessionId))
 
 /**
  * Oublie les caches locaux à la déconnexion.
@@ -841,6 +858,7 @@ export async function clearSession(sessionId: string): Promise<void> {
       k === articlesKey(sessionId) ||
       k === zonesKey(sessionId) ||
       k === sessionKey(sessionId) ||
+      k === totauxKey(sessionId) ||
       k.startsWith(balisePrefix(sessionId)) ||
       k.startsWith(failedPrefix(sessionId)) ||
       k.startsWith(`${V1_OP_PREFIX}${sessionId}:`),

@@ -131,6 +131,37 @@ export async function getSession(sessionId: string): Promise<q.Session | null> {
   }
 }
 
+/**
+ * Ce que le serveur a enregistré pour cette personne — dernière valeur connue
+ * hors ligne (4 septembre 2026).
+ *
+ * ⚠️ C'EST CE QUI LAISSAIT L'ÉCRAN DE PROGRESSION BLANC EN RÉSERVE. Constat de
+ * Julien. Cette requête était la seule de l'écran à ne pas passer par ici :
+ * sans réseau elle échouait, React Query la rejouait deux fois, et **tout
+ * l'écran restait derrière son chargement** — y compris le bouton « Compter
+ * des articles », qui est la seule chose dont un compteur ait besoin à ce
+ * moment-là. Sur un wifi de magasin qui répond sans router, chaque tentative
+ * attend le délai réseau : l'écran pouvait rester vide une minute.
+ *
+ * ⚠️ Elle rend `null` quand rien n'est en cache, jamais un zéro. « 0 pièce
+ * comptée » à quelqu'un qui vient d'en compter cent serait faux, et c'est
+ * précisément le genre de chiffre qu'on croit.
+ */
+export async function getMyCountTotals(
+  sessionId: string,
+): Promise<{ counted: number; audited: number } | null> {
+  const cached = () => off.getCachedCountTotals<{ counted: number; audited: number }>(sessionId)
+  if (offline) return cached()
+  try {
+    const t = await q.getMyCountTotals(sessionId)
+    await off.cacheCountTotals(sessionId, t)
+    return t
+  } catch (e) {
+    if (!noteNetworkError(e)) throw e
+    return cached()
+  }
+}
+
 /** Inventaires du compteur : serveur si possible, dernière liste connue sinon. */
 export async function getSessions(): Promise<q.Session[]> {
   if (offline) return (await off.getCachedSessionList<q.Session>()) ?? []
