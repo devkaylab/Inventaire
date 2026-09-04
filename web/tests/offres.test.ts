@@ -194,3 +194,22 @@ describe('l’assiette est l’appareil, jamais le compte', () => {
     expect(essential.points.join(' | ')).toContain('comptes illimités')
   })
 })
+
+describe('les libellés de la grille', () => {
+  it('annoncent « Jusqu’à N », jamais une borne basse', () => {
+    // Julien, 4 septembre 2026 : une borne basse n'aide personne à choisir —
+    // elle donne l'impression qu'on peut être « trop petit » pour une offre —
+    // et elle est redondante, le palier en dessous dit déjà où il s'arrête.
+    for (const o of OFFRES) {
+      expect(o.plage).toBe(`Jusqu’à ${o.max} appareils`)
+    }
+  })
+
+  it('la grille invite à commencer, elle ne fait pas choisir', () => {
+    // « Choisir Essential » décrit un tri ; « Commencer avec Essential » dit ce
+    // qui va se passer.
+    const grille = lire('../components/TarifsGrille.tsx')
+    expect(grille).toContain('Commencer avec {o.nom}')
+    expect(grille).not.toContain('Choisir {o.nom}')
+  })
+})

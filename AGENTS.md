@@ -8284,6 +8284,26 @@ qui estime ce qu'il aurait fallu.
 - Un appareil refusé **ne tient aucune place** : les deux comptages du plafond
   excluent `refuse`.
 
+## La page de tarifs annonce « Jusqu'à N » et invite à commencer (4 septembre 2026)
+
+Deux détails demandés par Julien sur `/tarifs`, et les deux valent comme règle.
+
+- **« Jusqu'à 2 / 20 / 100 appareils », jamais « 3 à 20 ».** Une borne basse
+  n'aide personne à choisir — elle donne l'impression qu'on peut être « trop
+  petit » pour une offre — et elle est de toute façon redondante : le palier en
+  dessous dit déjà où il s'arrête. Le libellé vit dans `OFFRES[].plage`, donc il
+  suit aussi sur `/souscrire` et dans le balisage schema.org ; un test vérifie
+  qu'il porte bien le `max`.
+- **« Commencer avec Essential », plus « Choisir Essential ».** « Choisir »
+  décrit un tri, « Commencer avec » dit ce qui va se passer. Un test refuse le
+  retour de l'ancien libellé.
+
+⚠️ Vérifié au navigateur : la page **déborde de 40 px**, et ce n'est PAS un
+défaut — c'est le cube décoratif `.deco-droite`, coupé par l'`overflow-x: clip`
+de la racine (règle du 30 août : `clip`, jamais `hidden`, sinon l'en-tête
+collant décroche). `scrollX` reste à zéro, la page ne défile pas latéralement.
+Ne pas « corriger » ce chiffre en le voyant passer dans une mesure.
+
 ## ⚠️ LE VOCABULAIRE DE L'ÉCRAN — deux mots interdits
 
 Constat de Julien le 4 septembre 2026, sur le premier jet : *« tu n'utilises

@@ -96,7 +96,7 @@ export function TarifsGrille() {
                 href={`/souscrire?offre=${o.cle}${annuel ? '&rythme=annuel' : ''}`}
                 className={phare ? 'btn btn-primary' : 'btn btn-ghost'}
               >
-                Choisir {o.nom}
+                Commencer avec {o.nom}
               </Link>
             </div>
           )

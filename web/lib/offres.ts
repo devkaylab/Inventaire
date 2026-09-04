@@ -52,6 +52,13 @@ export type Offre = {
   /** Nombre d'appareils comptant en même temps, dans UN magasin. */
   min: number
   max: number
+  /**
+   * ⚠️ « Jusqu'à N appareils », jamais « M à N » (Julien, 4 septembre 2026).
+   * Une borne basse n'aide personne à choisir — elle donne l'impression qu'on
+   * peut être « trop petit » pour une offre — et elle est de toute façon
+   * redondante : le palier en dessous dit déjà où il s'arrête. Un test
+   * vérifie que le libellé porte le `max`.
+   */
   plage: string
   /** Hors taxes, par magasin. */
   mois: number
@@ -66,7 +73,7 @@ export const OFFRES: Offre[] = [
     nom: 'Essential',
     min: 1,
     max: 2,
-    plage: '2 appareils',
+    plage: 'Jusqu’à 2 appareils',
     mois: 89,
     an: 950,
     pour: 'Vous comptez seul ou à deux, dans un magasin.',
@@ -87,7 +94,7 @@ export const OFFRES: Offre[] = [
     nom: 'Advanced',
     min: 3,
     max: 20,
-    plage: '3 à 20 appareils',
+    plage: 'Jusqu’à 20 appareils',
     mois: 310,
     an: 3300,
     pour: 'Vous montez une équipe le jour de l’inventaire.',
@@ -104,7 +111,7 @@ export const OFFRES: Offre[] = [
     nom: 'Enterprise',
     min: 21,
     max: 100,
-    plage: '21 à 100 appareils',
+    plage: 'Jusqu’à 100 appareils',
     mois: 890,
     an: 9450,
     pour: 'La grande surface, qui mobilise une équipe entière.',
