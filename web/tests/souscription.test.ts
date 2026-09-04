@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { OFFRES, euros } from '../lib/offres'
+import { OFFRES, TVA_APPLICABLE, euros, ttc } from '../lib/offres'
 
 const racine = join(__dirname, '../..')
 const lire = (p: string) => readFileSync(join(racine, p), 'utf8')
@@ -137,13 +137,17 @@ describe('le paiement se fait chez Stripe, jamais ici', () => {
 })
 
 describe('la TVA', () => {
-  it('est exigée en mode live, tolérée en test', () => {
+  it('est exigée en mode live, tolérée en test — quand elle s’applique', () => {
     // Le seul endroit où l'oubli coûte de l'argent : sans taux, Stripe
     // encaisserait 310 € là où 372 € sont dus, et l'écart sortirait de la
     // poche de l'éditeur à chaque échéance. La clé dit dans quel mode on est.
     expect(edgeNu).toContain("stripeKey.startsWith('sk_live_')")
     expect(edgeNu).toContain("code: 'tva_absente'")
     expect(edgeNu).toContain('STRIPE_TAX_RATE')
+    // ⚠️ Mais ce refus a été écrit en supposant que la TVA s'applique
+    // TOUJOURS. En franchise en base, il bloquerait la vente pour exiger un
+    // taux qui n'a pas lieu d'exister : il est donc conditionné.
+    expect(edgeNu).toContain('TVA_APPLICABLE && !taxRateId')
   })
 
   it('voyage jusqu’à la ligne de facturation', () => {
@@ -151,10 +155,18 @@ describe('la TVA', () => {
     expect(abonnement).toContain('tax_rates')
   })
 
+  // ⚠️ AMENDÉ LE 4 SEPTEMBRE 2026, PAS AFFAIBLI. L'éditeur est passé en
+  // franchise en base de TVA : il n'y a plus de TTC à annoncer, puisqu'il n'y a
+  // plus de taxe à ajouter. Ce que le test défend n'a pas changé — le bouton
+  // porte le montant RÉELLEMENT PRÉLEVÉ — et c'est justement pour ça qu'il ne
+  // peut plus exiger le mot « TTC » : l'écrire annoncerait une taxe qui ne
+  // sera pas prise.
   it('affiche le montant réellement prélevé au moment de payer', () => {
-    // Annoncer le HT jusqu'au bout ferait découvrir l'écart sur le relevé.
     expect(page).toContain('ttc(')
-    expect(page).toContain('TTC et créer mon espace')
+    expect(page).toContain('et créer mon espace')
+    // Le mot « TTC » n'apparaît que si la TVA s'applique — dans les deux cas
+    // le bouton dit le montant du relevé bancaire.
+    expect(page).toContain("TVA_APPLICABLE ? ' TTC' : ''")
   })
 
   it('garde le taux d’affichage et celui de Stripe alignés', () => {
@@ -220,5 +232,88 @@ describe('la page de souscription', () => {
 
   it('affiche des montants et non des centimes', () => {
     expect(euros(OFFRES[1].mois)).toBe('310 €')
+  })
+})
+
+describe('la franchise en base de TVA', () => {
+  // Julien, 4 septembre 2026 : « je suis en exonération de TVA ». Un seul
+  // interrupteur commande trois choses — le taux envoyé à Stripe, ce que les
+  // pages affichent, et la mention portée par les devis. Ces gardes tiennent
+  // les trois ensemble : le jour où le seuil de la franchise est dépassé, il
+  // suffit de basculer la constante, et rien d'autre ne doit avoir bougé
+  // entre-temps.
+  const offres = lire('web/lib/offres.ts')
+  const devisPartage = lire('supabase/functions/_shared/devis.ts')
+
+  it('le même interrupteur des deux côtés', () => {
+    // ⚠️ Doublon volontaire, comme la grille : le site et les fonctions edge
+    // ne compilent pas ensemble. Ce test est ce qui les tient d'accord — deux
+    // valeurs différentes, et le site annoncerait un prix que Stripe ne
+    // prélèverait pas.
+    const valeur = offres.match(/export const TVA_APPLICABLE = (true|false)/)?.[1]
+    expect(valeur, 'TVA_APPLICABLE absente de web/lib/offres.ts').toBeTruthy()
+    expect(edgeNu, 'la fonction edge doit porter la même valeur')
+      .toContain(`const TVA_APPLICABLE = ${valeur}`)
+  })
+
+  it('sans TVA, le prix affiché est le prix payé', () => {
+    // `ttc()` reste la fonction que les écrans appellent : c'est elle qui sait,
+    // pas eux. Un écran qui ferait le calcul lui-même échapperait à
+    // l'interrupteur.
+    expect(ttc(310)).toBe(TVA_APPLICABLE ? 372 : 310)
+    expect(page).toContain('ttc(')
+  })
+
+  // ⚠️ LA GARDE BALAIE, ELLE NE CITE PAS. Trois fichiers avaient été corrigés
+  // à la main le 4 septembre 2026 ; le balayage en a trouvé six autres, dont
+  // la grille de la page publique, la page de devis que le client lit et le
+  // balisage schema.org. Nommer les écrans à protéger, c'est protéger ceux
+  // qu'on connaissait ce jour-là — la leçon du bouton retour, le même jour.
+  it('et aucun écran n’écrit « HT », « TTC » ou « hors taxes » sans condition', () => {
+    const dossiers = [join(racine, 'web/app'), join(racine, 'web/components')]
+    const fichiers: string[] = []
+    const balayer = (d: string) => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const chemin = join(d, e.name)
+        if (e.isDirectory()) balayer(chemin)
+        else if (/\.tsx?$/.test(e.name)) fichiers.push(chemin)
+      }
+    }
+    dossiers.forEach(balayer)
+    expect(fichiers.length, 'balayage vide : la détection est cassée').toBeGreaterThan(20)
+
+    const motifs = [/\bHT\b/, /\bTTC\b/, /hors taxes?\b/i]
+    for (const fichier of fichiers) {
+      // Les commentaires DÉCRIVENT la règle, donc ils la citent : on lit le
+      // code seul. Même piège que partout ailleurs sur ce projet.
+      const lignes = sansCommentaires(readFileSync(fichier, 'utf8')).split('\n')
+      for (const motif of motifs) {
+        const fautives = lignes.filter((l, i) =>
+          motif.test(l) &&
+          // La condition vit souvent une ligne au-dessus, sur la première
+          // branche d'un ternaire.
+          !lignes.slice(Math.max(0, i - 2), i + 3).some((v) => v.includes('TVA_APPLICABLE')))
+        expect(
+          fautives,
+          `${fichier.slice(racine.length + 1)} écrit ${motif} sans regarder TVA_APPLICABLE`,
+        ).toEqual([])
+      }
+    }
+  })
+
+  // ⚠️ LA MENTION EST RÉGLEMENTAIRE, PAS DESCRIPTIVE. L'article 293 B du CGI
+  // impose ces mots-là sur un devis comme sur une facture. L'ancienne phrase
+  // — « TVA non applicable sur ce document, le montant hors taxes fait foi » —
+  // annonçait même l'inverse : que la facture, elle, l'ajouterait.
+  it('le devis porte la mention réglementaire, et la même des deux côtés', () => {
+    const attendue = offres.match(/export const MENTION_TVA = '([^']+)'/)?.[1]
+    expect(attendue, 'MENTION_TVA absente de web/lib/offres.ts').toBeTruthy()
+    expect(attendue).toContain('293 B')
+    expect(devisPartage, 'le module de devis doit porter la même mention')
+      .toContain(`export const MENTION_TVA = '${attendue}'`)
+    // Et elle est réellement posée sur le document, pas seulement déclarée.
+    expect(sansCommentaires(devisPartage)).toContain('MENTION_TVA,')
+    expect(sansCommentaires(devisPartage))
+      .not.toContain('le montant hors taxes fait foi')
   })
 })

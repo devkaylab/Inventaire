@@ -23,6 +23,13 @@
 // le total, filet de scan cyan sous l'en-tête. Un devis s'imprime et se signe.
 // ============================================================================
 
+/**
+ * ⚠️ Jumelle de `MENTION_TVA` dans `web/lib/offres.ts`. Doublon volontaire :
+ * le site et les fonctions edge ne compilent pas ensemble. Un test compare
+ * les deux.
+ */
+export const MENTION_TVA = 'TVA non applicable, article 293 B du CGI'
+
 export const COULEURS_DEVIS = {
   encre: '#0b0f19',
   encre2: '#2a3140',
@@ -305,7 +312,15 @@ export function elementsDevis(devis: Devis): Element[] {
       ? 'Abonnement mensuel par magasin, pour le nombre d’appareils indiqué. Inventaires illimités.'
       : 'Licence annuelle par magasin, pour le nombre d’appareils indiqué. Inventaires illimités.',
     'Un appareil est un téléphone ou une tablette qui compte en même temps que les autres.',
-    'TVA non applicable sur ce document — le montant hors taxes fait foi.',
+    // ⚠️ LA MENTION EST RÉGLEMENTAIRE, PAS DESCRIPTIVE (4 septembre 2026).
+    // L'éditeur est en franchise en base : l'article 293 B du CGI impose ces
+    // mots-là sur un devis comme sur une facture. La phrase d'avant — « TVA
+    // non applicable sur ce document, le montant hors taxes fait foi » —
+    // annonçait l'inverse de la réalité : que la facture, elle, l'ajouterait.
+    // Le jour où la franchise est dépassée, cette ligne redevient
+    // « Prix hors taxes, TVA au taux en vigueur » — voir `TVA_APPLICABLE`
+    // dans `web/lib/offres.ts`, qui commande tout le reste.
+    MENTION_TVA,
     "L'acceptation de ce devis vaut bon pour accord. La facture suit, et les accès sont",
     'ouverts dès son règlement.',
   ]) {

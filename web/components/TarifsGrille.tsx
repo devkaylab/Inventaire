@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, economie, euros } from '@/lib/offres'
+import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, TVA_APPLICABLE, economie, euros } from '@/lib/offres'
 
 /**
  * Les trois offres, avec la bascule mensuel / annuel.
@@ -59,7 +59,7 @@ export function TarifsGrille() {
               <div className="tarifs-prix">
                 <div className="montant">
                   <strong>{euros(annuel ? o.an : o.mois)}</strong>
-                  <span>{annuel ? 'HT / an' : 'HT / mois'}</span>
+                  <span>{annuel ? `${TVA_APPLICABLE ? 'HT ' : ''}/ an` : `${TVA_APPLICABLE ? 'HT ' : ''}/ mois`}</span>
                 </div>
                 <span className="tarifs-alt">
                   {annuel

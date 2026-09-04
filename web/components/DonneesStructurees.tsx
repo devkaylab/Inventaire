@@ -1,4 +1,4 @@
-import { OFFRES } from '@/lib/offres'
+import { OFFRES, TVA_APPLICABLE } from '@/lib/offres'
 import { SITE_URL, url } from '@/lib/site'
 
 /**
@@ -90,9 +90,10 @@ export function LogicielJsonLd() {
         price: o.an,
         priceCurrency: 'EUR',
         url: url('/tarifs'),
-        // Le prix affiché est hors taxes, et la page le dit : le balisage doit
-        // le dire aussi, sinon il annonce un prix qui n'est pas celui payé.
-        valueAddedTaxIncluded: false,
+        // Le balisage doit dire la même chose que la page, sinon il annonce
+        // un prix qui n'est pas celui payé. En franchise en base, le prix
+        // affiché EST le prix dû : rien ne s'y ajoute.
+        valueAddedTaxIncluded: !TVA_APPLICABLE,
         priceSpecification: {
           '@type': 'UnitPriceSpecification',
           price: o.an,

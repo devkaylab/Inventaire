@@ -34,7 +34,7 @@
 // Une seule définition, donc. Les deux écrans ne doivent pas se mettre à
 // diverger sur les libellés ou les unités.
 
-import { euros, nomOffre, prixCents } from '@/lib/offres'
+import { TVA_APPLICABLE, euros, nomOffre, prixCents } from '@/lib/offres'
 
 export type SaisieMagasin = { nom: string; appareils: string }
 
@@ -115,7 +115,7 @@ export function MagasinSaisie({
           <p className="magasin-offre">
             <strong>{offre}</strong> — <span className="prix">{euros(mois / 100)} / mois</span>
             {' ou '}
-            <span className="prix">{euros(an / 100)} / an</span> HT par magasin
+            <span className="prix">{euros(an / 100)} / an</span>{TVA_APPLICABLE ? ' HT' : ''} par magasin
           </p>
         )}
       </div>

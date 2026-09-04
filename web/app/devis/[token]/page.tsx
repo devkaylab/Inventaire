@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { CONTACT_EMAIL } from '@/lib/contact'
+import { MENTION_TVA, TVA_APPLICABLE } from '@/lib/offres'
 
 /**
  * Le devis, vu par le prospect — et accepté sans compte.
@@ -266,7 +267,9 @@ function DevisContenu() {
             <div className="devis-ligne devis-ligne-tete">
               <span>Magasin</span>
               <span className="n">{surAppareils ? 'Appareils' : 'Stock déclaré'}</span>
-              <span className="n">{mensuel ? 'Abonnement mensuel HT' : 'Licence annuelle HT'}</span>
+              <span className="n">
+                {mensuel ? 'Abonnement mensuel' : 'Licence annuelle'}{TVA_APPLICABLE ? ' HT' : ''}
+              </span>
             </div>
             {lignes.map((l, i) => (
               <div className="devis-ligne" key={i}>
@@ -283,9 +286,18 @@ function DevisContenu() {
         )}
 
         <div className="devis-total">
-          <span>{mensuel ? 'Total mensuel hors taxes' : 'Total annuel hors taxes'}</span>
+          {/* ⚠️ En franchise en base, il n'y a pas de « hors taxes » : le
+              total est le montant dû. La mention réglementaire est portée par
+              le PDF, qui est le document qui engage. */}
+          <span>
+            {mensuel ? 'Total mensuel' : 'Total annuel'}{TVA_APPLICABLE ? ' hors taxes' : ''}
+          </span>
           <b>{euros(devis.amount_cents)}</b>
         </div>
+
+        {/* La mention que porte le PDF, portée aussi par l'écran : c'est ici
+            qu'on accepte, et le total affiché est le montant dû. */}
+        {!TVA_APPLICABLE && <p className="devis-mention">{MENTION_TVA}.</p>}
 
         {erreur && <div className="error">{erreur}</div>}
 

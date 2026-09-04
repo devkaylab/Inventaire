@@ -106,7 +106,10 @@ describe('les données structurées disent ce que la page dit', () => {
   it('les prix viennent de la grille, jamais recopiés', () => {
     // Les decks ont porté une grille remplacée pendant une semaine. Un
     // balisage périmé serait pire : il est lu par des machines.
-    expect(structurees).toContain("import { OFFRES } from '@/lib/offres'")
+    // ⚠️ On vérifie CE QUI EST IMPORTÉ, pas la ligne mot pour mot : elle a
+    // gagné `TVA_APPLICABLE` le 4 septembre 2026, et une assertion sur la
+    // chaîne exacte casse à chaque ajout sans rien protéger de plus.
+    expect(structurees).toMatch(/import \{[^}]*\bOFFRES\b[^}]*\} from '@\/lib\/offres'/)
     expect(structurees).toContain('offers: OFFRES.map')
     expect(structurees).not.toMatch(/price: \d{3,}/)
   })
@@ -115,8 +118,13 @@ describe('les données structurées disent ce que la page dit', () => {
     expect(structurees).toContain("replace(/</g, '\\\\u003c')")
   })
 
-  it('le prix est annoncé hors taxes, comme sur la page', () => {
-    expect(structurees).toContain('valueAddedTaxIncluded: false')
+  // ⚠️ AMENDÉ LE 4 SEPTEMBRE 2026, PAS AFFAIBLI. Ce que le test défend n'a pas
+  // changé — **le balisage dit la même chose que la page**, sinon il annonce
+  // aux machines un prix qui n'est pas celui payé. Ce qui a changé, c'est ce
+  // que la page dit : en franchise en base, le prix affiché EST le prix dû,
+  // donc la taxe est « incluse » au sens du balisage.
+  it('le prix est annoncé comme sur la page', () => {
+    expect(structurees).toContain('valueAddedTaxIncluded: !TVA_APPLICABLE')
   })
 
   it('l’éditeur et le site sont déclarés une fois, à la racine', () => {

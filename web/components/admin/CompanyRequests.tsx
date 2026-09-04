@@ -6,7 +6,7 @@ import { densite } from '@/lib/tarifs'
 import { type Secteur, densiteAttendue, secteurReconnu } from '@/lib/secteurs'
 import { formaterSiren } from '@/lib/siren'
 import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
-import { nomOffre, prixCents } from '@/lib/offres'
+import { TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
 import { nb } from '@/lib/format'
 
 export type CompanyRequest = {
@@ -268,7 +268,7 @@ function PanneauDevis({
           <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={40} />
         </label>
         <label>
-          {mensuel ? 'Montant mensuel HT' : 'Montant annuel HT'}
+          {mensuel ? 'Montant mensuel' : 'Montant annuel'}{TVA_APPLICABLE ? ' HT' : ''}
           <input
             value={montant}
             onChange={(e) => { setTouche(true); setMontant(e.target.value) }}

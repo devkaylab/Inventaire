@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
-import { euros, prixCents } from '@/lib/offres'
+import { TVA_APPLICABLE, euros, prixCents } from '@/lib/offres'
 import { type ResultatRegistre, chercherParSiren, lieuCourt } from '@/lib/registre'
 
 /**
@@ -397,7 +397,7 @@ export default function CompanyRequestPage() {
               <>
                 Estimation pour {magasins.length} magasin{magasins.length > 1 ? 's' : ''} :{' '}
                 <strong className="prix">{euros(parMois / 100)} par mois</strong> ou{' '}
-                <strong className="prix">{euros(parAn / 100)} par an</strong>, hors taxes. Nous revenons vers vous
+                <strong className="prix">{euros(parAn / 100)} par an</strong>{TVA_APPLICABLE ? ', hors taxes' : ''}. Nous revenons vers vous
                 avec un devis — sur un réseau, il se discute.
               </>
             )}

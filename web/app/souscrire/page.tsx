@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { supabase } from '@/lib/supabaseClient'
-import { OFFRES, economie, euros, ttc, type CleOffre } from '@/lib/offres'
+import { MENTION_TVA, OFFRES, TVA_APPLICABLE, economie, euros, ttc, type CleOffre } from '@/lib/offres'
 import { CONTACT_EMAIL } from '@/lib/contact'
 
 /**
@@ -119,12 +119,22 @@ function Formulaire() {
 
         <div className="souscrire-total">
           <strong>{euros(annuel ? offre.an : offre.mois)}</strong>
-          <span>{annuel ? 'HT par an, pour un magasin' : 'HT par mois, pour un magasin'}</span>
-          {/* ⚠️ Le TTC s'affiche ici et nulle part ailleurs : c'est le montant
-              qui sera réellement prélevé. Annoncer le HT jusqu'au bout ferait
-              découvrir l'écart sur le relevé bancaire. */}
+          <span>
+            {TVA_APPLICABLE
+              ? (annuel ? 'HT par an, pour un magasin' : 'HT par mois, pour un magasin')
+              : (annuel ? 'par an, pour un magasin' : 'par mois, pour un magasin')}
+          </span>
+          {/* ⚠️ CE QUI S'AFFICHE ICI EST LE MONTANT RÉELLEMENT PRÉLEVÉ, et
+              c'est le seul endroit du site où on le dit. Annoncer un hors
+              taxes jusqu'au bout ferait découvrir l'écart sur le relevé
+              bancaire.
+              En franchise de TVA il n'y a pas d'écart à annoncer : le prix
+              affiché est le prix payé, et c'est la mention réglementaire qui
+              prend la place du « soit … TTC ». */}
           <span className="souscrire-ttc">
-            soit {euros(ttc(annuel ? offre.an : offre.mois))} TTC, TVA 20 % incluse
+            {TVA_APPLICABLE
+              ? `soit ${euros(ttc(annuel ? offre.an : offre.mois))} TTC, TVA 20 % incluse`
+              : MENTION_TVA}
           </span>
           <em>
             {annuel
@@ -167,7 +177,9 @@ function Formulaire() {
       )}
 
       <button type="submit" className="btn btn-primary btn-block" disabled={envoi}>
-        {envoi ? 'Ouverture du paiement…' : `Payer ${euros(ttc(annuel ? offre.an : offre.mois))} TTC et créer mon espace`}
+        {envoi
+          ? 'Ouverture du paiement…'
+          : `Payer ${euros(ttc(annuel ? offre.an : offre.mois))}${TVA_APPLICABLE ? ' TTC' : ''} et créer mon espace`}
       </button>
       <p className="souscrire-note">
         Paiement par carte, sur la page sécurisée de Stripe. Nous ne voyons jamais votre

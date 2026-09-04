@@ -144,6 +144,19 @@ describe('la mise en page du devis', () => {
     expect(plat.some((t) => t.includes('21/09/2026'))).toBe(true)
   })
 
+  // ⚠️ LA MENTION EST RÉGLEMENTAIRE, ET C'EST LE DOCUMENT QUI ENGAGE.
+  // L'éditeur est en franchise en base (4 septembre 2026) : l'article 293 B du
+  // CGI impose ces mots-là sur un devis comme sur une facture. On vérifie
+  // qu'ils sont RÉELLEMENT DESSINÉS, pas seulement déclarés dans le module —
+  // c'est tout l'intérêt d'une mise en page testable.
+  it('porte la mention de TVA imposée par la loi', () => {
+    const textes = elementsDevis(devis).filter((e) => e.type === 'texte').map((e) => (e as { texte: string }).texte)
+    expect(textes.some((t) => t.includes('293 B'))).toBe(true)
+    // L'ancienne phrase annonçait l'inverse : que la facture, elle, ajouterait
+    // la TVA.
+    expect(textes.some((t) => t.includes('le montant hors taxes fait foi'))).toBe(false)
+  })
+
   it('tient sur une page, quel que soit le nombre de magasins', () => {
     // Un devis de trois pages ne se lit pas mieux, et la ligne de total doit
     // rester sous les yeux.
@@ -376,7 +389,12 @@ describe('l’assiette est le nombre d’appareils (2 septembre 2026)', () => {
     // Renversement assumé de la règle du 22 août : elle valait contre un
     // chiffre déclaré et invérifiable, pas contre une assiette mesurable dont
     // les prix sont publics.
-    expect(saisie).toContain("import { euros, nomOffre, prixCents } from '@/lib/offres'")
+    // ⚠️ On vérifie CE QUI EST IMPORTÉ, pas la ligne d'import mot pour mot :
+    // elle a changé le 4 septembre 2026 en gagnant `TVA_APPLICABLE`, et une
+    // assertion sur la chaîne exacte casse à chaque ajout sans rien protéger
+    // de plus.
+    expect(saisie).toMatch(/import \{[^}]*\bprixCents\b[^}]*\} from '@\/lib\/offres'/)
+    expect(saisie).toMatch(/import \{[^}]*\bnomOffre\b[^}]*\} from '@\/lib\/offres'/)
     expect(saisie).toContain('magasin-offre')
   })
 

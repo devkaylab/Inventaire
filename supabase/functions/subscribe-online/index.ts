@@ -51,6 +51,19 @@ const cors = {
  * l'autre), comme `web/lib/devis.ts` et `_shared/devis.ts`. Un test compare
  * les deux — s'ils divergent, la suite échoue.
  */
+/**
+ * ⚠️ JUMEAU DE `TVA_APPLICABLE` DANS `web/lib/offres.ts` — l'éditeur est en
+ * franchise en base de TVA (4 septembre 2026). Doublon volontaire, pour la
+ * même raison que la grille : le site et les fonctions edge ne compilent pas
+ * ensemble. Un test compare les deux.
+ *
+ * Tant qu'il vaut `false` : aucun taux n'est envoyé à Stripe, et le refus de
+ * vendre en live sans `STRIPE_TAX_RATE` ne se déclenche pas — ce garde-fou a
+ * été écrit en supposant que la TVA s'applique toujours, ce qui n'est vrai que
+ * hors franchise.
+ */
+const TVA_APPLICABLE = false
+
 const GRILLE = {
   essential: { monthly: 8900, yearly: 95000, nom: 'Essential' },
   advanced: { monthly: 31000, yearly: 330000, nom: 'Advanced' },
@@ -109,8 +122,12 @@ Deno.serve(async (req) => {
   // En mode TEST on tolère son absence : on valide le parcours avant d'avoir
   // tout configuré. En mode LIVE on REFUSE — c'est le seul endroit où l'oubli
   // coûte de l'argent, et la clé dit dans quel mode on est.
-  const taxRateId = Deno.env.get('STRIPE_TAX_RATE') ?? null
-  if (!taxRateId && stripeKey.startsWith('sk_live_')) {
+  //
+  // ⚠️ EN FRANCHISE, IL N'Y A RIEN À AJOUTER — et rien à refuser. Le taux est
+  // ignoré même s'il traîne dans les secrets : un taux posé par erreur
+  // facturerait une taxe que l'éditeur ne collecte pas.
+  const taxRateId = TVA_APPLICABLE ? (Deno.env.get('STRIPE_TAX_RATE') ?? null) : null
+  if (TVA_APPLICABLE && !taxRateId && stripeKey.startsWith('sk_live_')) {
     return json({
       success: false,
       code: 'tva_absente',

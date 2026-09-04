@@ -4,6 +4,7 @@ import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { CubeFilaire } from '@/components/Parallaxe'
 import { TarifsGrille } from '@/components/TarifsGrille'
 import { CONTACT_EMAIL } from '@/lib/contact'
+import { MENTION_TVA, TVA_APPLICABLE } from '@/lib/offres'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/tarifs' },
@@ -151,7 +152,9 @@ export default function TarifsPage() {
         </section>
 
         <p className="tarifs-pied">
-          <span>Prix hors taxes, par magasin.</span>
+          <span>
+            {TVA_APPLICABLE ? 'Prix hors taxes, par magasin.' : `Prix par magasin. ${MENTION_TVA}.`}
+          </span>
           <span>Mensuel sans engagement ; annuel dû jusqu’à son terme.</span>
           <span>Aucun matériel à acheter.</span>
         </p>

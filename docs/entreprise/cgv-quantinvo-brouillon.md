@@ -17,7 +17,8 @@ société immatriculée.
 
 Le service Quantinvo est édité par **Devkaylab**, [SASU au capital de … €],
 immatriculée au RCS de [ville] sous le numéro [SIREN], dont le siège est situé
-[adresse], numéro de TVA intracommunautaire [FR…], représentée par son
+[adresse], non assujettie à la TVA (franchise en base, article 293 B du CGI),
+représentée par son
 président, [Julien Thiong-kay] (ci-après « l'Éditeur »).
 
 Contact : [adresse e-mail de contact], [téléphone].
@@ -97,7 +98,11 @@ prévient l'Éditeur sans délai en cas de divulgation.
 
 6.1 Le prix est une **licence par Magasin**, déterminée par le nombre
 d'Appareils comptant simultanément dans ce Magasin, selon la grille de
-l'annexe 2. Il est exprimé hors taxes ; la TVA s'ajoute au taux en vigueur.
+l'annexe 2. **TVA non applicable, article 293 B du CGI** — l'Éditeur relève de
+la franchise en base ; le prix affiché est le prix dû. Le jour où l'Éditeur
+devient redevable, le prix s'entend hors taxes et la TVA s'ajoute au taux en
+vigueur, ce qui est notifié au Client selon l'article [modification des
+conditions].
 **Ni le volume de stock, ni le nombre de références, ni le nombre
 d'Utilisateurs, ni le nombre d'Inventaires réalisés dans l'année n'entrent dans
 la détermination du prix.**
@@ -341,7 +346,8 @@ sort des données à la fin, audit).
 
 ## Annexe 2 — Grille tarifaire en vigueur
 
-Prix hors taxes, **par Magasin**. Le palier est déterminé par le nombre
+Prix **par Magasin** — TVA non applicable, article 293 B du CGI. Le palier est
+déterminé par le nombre
 d'Appareils comptant **simultanément** dans le Magasin (article 6.3).
 
 | Offre | Appareils comptant simultanément | Par mois | Par an |

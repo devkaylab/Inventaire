@@ -3066,3 +3066,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* Deux liens dans l'en-tête d'un bloc magasin (console) : le rapport, puis la
    suppression — le geste destructeur reste le plus à droite. */
 .store-block-liens { display: flex; align-items: center; gap: 14px; }
+
+/* La mention de TVA sous le total d'un devis : elle doit se lire, sans peser
+   plus que le montant qu'elle accompagne. */
+.devis-mention { font-size: 12.5px; color: var(--text-3); margin: 10px 0 18px; }

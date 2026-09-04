@@ -149,8 +149,46 @@ export const APPAREILS_MAX = 100
  */
 export const TVA = 0.2
 
-/** Le montant toutes taxes comprises, pour l'afficher au moment de payer. */
+/**
+ * ⚠️ L'ÉDITEUR EST EN FRANCHISE EN BASE DE TVA (Julien, 4 septembre 2026).
+ *
+ * **Un seul interrupteur commande trois choses**, et c'est tout l'objet de
+ * cette constante : le taux appliqué par Stripe, ce que les pages affichent, et
+ * la mention portée par les devis et les factures. Le jour où le seuil de la
+ * franchise est dépassé, on le passe à `true` et rien d'autre ne bouge.
+ *
+ * Ce que ça change, tant qu'il vaut `false` :
+ *
+ * - **il n'y a ni HT ni TTC** : le prix affiché EST le prix payé. Écrire
+ *   « 310 € HT » puis « 372 € TTC » annoncerait une taxe qui ne sera pas
+ *   prélevée ;
+ * - **`STRIPE_TAX_RATE` n'a pas à exister**, et le refus de vendre en live sans
+ *   lui ne doit pas se déclencher — il a été écrit en supposant que la TVA
+ *   s'applique toujours ;
+ * - **les devis et factures portent la mention réglementaire** ci-dessous. Elle
+ *   est obligatoire, et elle n'est pas la même chose que « TVA non applicable
+ *   sur ce document ».
+ *
+ * ⚠️ Il a un jumeau dans `supabase/functions/subscribe-online/index.ts` — le
+ * site et les fonctions edge ne compilent pas ensemble, comme la grille. Un
+ * test compare les deux.
+ */
+export const TVA_APPLICABLE = false
+
+/**
+ * La mention que la loi impose sur un devis et une facture en franchise
+ * (article 293 B du CGI). ⚠️ À faire confirmer par le comptable si le régime
+ * change : ce n'est pas au code d'en décider la formulation.
+ */
+export const MENTION_TVA = 'TVA non applicable, article 293 B du CGI'
+
+/**
+ * Le montant toutes taxes comprises, pour l'afficher au moment de payer.
+ * En franchise, il n'y a rien à ajouter : le montant est déjà celui qu'on
+ * prélève.
+ */
 export function ttc(ht: number): number {
+  if (!TVA_APPLICABLE) return ht
   return Math.round(ht * (1 + TVA) * 100) / 100
 }
 
