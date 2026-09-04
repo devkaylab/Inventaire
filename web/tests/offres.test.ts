@@ -172,3 +172,25 @@ describe('le site ne contredit plus la grille', () => {
     }
   })
 })
+
+describe('l’assiette est l’appareil, jamais le compte', () => {
+  // ⚠️ Relevé par Julien le 4 septembre 2026 : Essential annonçait « un
+  // magasin, deux comptes ». C'est un contresens sur le modèle même — on
+  // facture les appareils qui comptent EN MÊME TEMPS, pas les personnes. Une
+  // équipe de dix saisonniers peut tourner sur deux téléphones, et c'est
+  // l'argument de vente, pas une tolérance.
+  it('aucun argumentaire d’offre ne compte des personnes', () => {
+    for (const o of OFFRES) {
+      for (const point of o.points) {
+        expect(point, `${o.nom} : « ${point} »`).not.toMatch(/\bcomptes?\b(?! illimités)/i)
+        expect(point, `${o.nom} : « ${point} »`).not.toMatch(/utilisateurs?/i)
+      }
+    }
+  })
+
+  it('et Essential dit ce que couvre son palier', () => {
+    const essential = OFFRES.find((o) => o.cle === 'essential')!
+    expect(essential.points.join(' | ')).toContain('deux appareils à la fois')
+    expect(essential.points.join(' | ')).toContain('comptes illimités')
+  })
+})

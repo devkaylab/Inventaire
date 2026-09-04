@@ -71,7 +71,11 @@ export const OFFRES: Offre[] = [
     an: 950,
     pour: 'Vous comptez seul ou à deux, dans un magasin.',
     points: [
-      'Un magasin, deux comptes',
+      // ⚠️ « Comptes » était un contresens (relevé par Julien le 4 septembre
+      // 2026) : l'assiette est le nombre d'appareils qui comptent EN MÊME
+      // TEMPS, jamais le nombre de personnes. Une équipe de dix saisonniers
+      // peut tourner sur deux téléphones — c'est même l'argument.
+      'Un magasin, deux appareils à la fois — comptes illimités',
       'Comptage et audit en seconde passe',
       'Rapport d’écarts et export Excel',
       'Import CSV et Excel sans reformater',
