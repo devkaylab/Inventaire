@@ -11,6 +11,10 @@ import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { AlerteIcon, AstuceIcon, CocheIcon, FichierIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
+import { SITE_URL } from '@/constants/links'
+
+/** L'adresse telle qu'on la retape sur un clavier — sans le protocole. */
+const SITE_ADRESSE = SITE_URL.replace(/^https?:\/\//, '')
 
 type Step = 'catalog' | 'stock'
 type Phase = 'idle' | 'parsing' | 'uploading' | 'done' | 'error'
@@ -188,6 +192,21 @@ export default function ImportScreen() {
           CSV ou Excel (.xlsx) acceptés. Les fichiers volumineux peuvent prendre quelques secondes.
         </Text>
 
+        {/* ⚠️ Le geste principal est ICI : le téléphone sait choisir un fichier
+            et l'importer. Mais un référentiel sort d'un ERP, donc il est
+            souvent sur un poste — et cette ligne évite d'en faire un
+            transfert vers le téléphone pour rien (maquette du 23 août 2026).
+
+            ⚠️ ELLE N'EST PAS CLIQUABLE, ET C'EST VOULU. L'espace connecté du
+            site se ferme sous 720 px : ouvert depuis ce téléphone, le lien
+            tomberait sur « Cet espace se pilote depuis un ordinateur ».
+            L'adresse est écrite pour être retapée sur le poste, pas touchée
+            ici. */}
+        <Text style={styles.info}>
+          Vos fichiers sont sur l&apos;ordinateur ? Les mêmes imports se font sur{' '}
+          <Text style={styles.infoAdresse}>{SITE_ADRESSE}</Text>, depuis un poste.
+        </Text>
+
         <View style={styles.warningBanner}>
           <AlerteIcon color={theme.warning} size={16} />
           <Text style={styles.warningText}>
@@ -242,6 +261,7 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     astuceEncart: { marginBottom: Spacing.md },
     container: { padding: Spacing.lg, gap: Spacing.lg },
+    infoAdresse: { color: t.textPrimary, fontFamily: Font.semibold },
     info: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
     warningBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, backgroundColor: t.warningSoft, borderRadius: Radius.md, padding: Spacing.md, borderLeftWidth: 3, borderLeftColor: t.warning },
     warningText: { flex: 1, fontSize: 13, color: t.warning, fontFamily: Font.semibold, lineHeight: 19 },

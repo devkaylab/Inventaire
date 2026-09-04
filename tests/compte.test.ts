@@ -2780,3 +2780,62 @@ describe('le catalogue hors ligne ne pèse plus le même poids', () => {
     expect(migrations.match(/membre_ou_superviseur\(p_session_id\)/g)?.length).toBe(2)
   })
 })
+
+describe('l’onboarding est clos', () => {
+  // Audit du 4 septembre 2026, à la demande de Julien (« je veux que l'on
+  // clôture ce sujet aujourd'hui »). La maquette du 23 août
+  // (artifact e54ce742) décrit vingt écrans ; tous sont construits, sauf deux
+  // écartés avec leurs raisons. Ces gardes tiennent la clôture — elles
+  // échouent si une pièce du parcours disparaît.
+
+  // ⚠️ LA GARDE QUI COMPTE. Un repère déclaré et branché nulle part est une
+  // aide qui n'existe pas — c'est arrivé : `balayage` a vécu huit jours dans
+  // `lib/reperes.ts` sans qu'aucun écran ne l'affiche.
+  it('chaque repère déclaré est réellement branché sur un écran', () => {
+    const declaration = lire('lib/reperes.ts')
+    const bloc = declaration.slice(
+      declaration.indexOf('export type Repere'),
+      declaration.indexOf('const cle ='),
+    )
+    const reperes = [...bloc.matchAll(/'([a-z-]+)'/g)].map((m) => m[1])
+    expect(reperes.length).toBeGreaterThanOrEqual(13)
+
+    const tout = fichiersSource()
+      .filter((f) => !f.endsWith(path.join('lib', 'reperes.ts')))
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n')
+    for (const r of reperes) {
+      expect(tout, `le repère « ${r} » n’est branché nulle part`).toContain(`useRepere('${r}'`)
+    }
+  })
+
+  // ⚠️ L'avancement se compte en BALISES, mais les pièces l'accompagnent sans
+  // le remplacer : « 60 % » ne dit pas si les rayons faits portaient dix
+  // articles ou trois mille.
+  it('la progression du superviseur porte les balises ET les pièces', () => {
+    const ecran = lire('app/(supervisor)/[sessionId]/index.tsx')
+    expect(ecran).toContain('% des balises comptées')
+    expect(ecran).toContain('{nb(countedPieces)} pièce')
+    expect(ecran).toContain('auditée')
+  })
+
+  // ⚠️ L'adresse du site est écrite pour être RETAPÉE SUR UN POSTE, pas
+  // touchée ici : l'espace connecté se ferme sous 720 px, donc un lien
+  // ouvert depuis ce téléphone tomberait sur « Cet espace se pilote depuis un
+  // ordinateur ».
+  it('l’import nomme le site sans en faire un lien', () => {
+    const ecran = lire('app/(supervisor)/[sessionId]/import.tsx')
+    expect(ecran).toContain('SITE_ADRESSE')
+    expect(ecran).not.toContain('openURL')
+    expect(ecran).not.toContain('Linking')
+  })
+
+  // Les trois profils ont leur bienvenue : le rôle change le contenu, jamais
+  // la structure.
+  it('la bienvenue connaît les trois profils', () => {
+    const bienvenue = lire('components/Bienvenue.tsx')
+    for (const role of ['employee', 'supervisor', 'company_admin']) {
+      expect(bienvenue, role).toContain(`'${role}'`)
+    }
+  })
+})

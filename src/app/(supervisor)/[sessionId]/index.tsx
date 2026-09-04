@@ -352,6 +352,16 @@ export default function SessionDetailScreen() {
             </View>
             <Text style={styles.progressSub}>{countPct}% des balises comptées</Text>
             <Text style={styles.progressSub}>{auditPct}% des balises auditées</Text>
+            {/* ⚠️ L'avancement se compte en BALISES — c'est ce qui dit où en
+                est le magasin. Mais le nombre de pièces L'ACCOMPAGNE sans le
+                remplacer (maquette d'onboarding du 23 août 2026) : « 60 % »
+                ne dit pas si les rayons faits portaient dix articles ou trois
+                mille, et c'est la première question qu'on se pose en le
+                lisant. Les deux nombres sont déjà chargés pour l'autre mode. */}
+            <Text style={styles.progressSub}>
+              {nb(countedPieces)} pièce{countedPieces > 1 ? 's' : ''} comptée{countedPieces > 1 ? 's' : ''}
+              {' · '}{nb(auditedPieces)} auditée{auditedPieces > 1 ? 's' : ''}
+            </Text>
 
             {zoneTotal === 0 ? (
               <Text style={styles.zoneEmpty}>Aucune balise affectée. Ouvrez « Zones & balises » depuis le panneau infos.</Text>
