@@ -28,10 +28,13 @@
 --      réserver ni se voir refuser : le contrôle est en ligne, et seulement en
 --      ligne. C'est une limite assumée, pas un oubli — on ne bloque pas une
 --      réserve parce que le wifi est tombé.
---   3. **Sans plafond connu, aucun refus.** Les magasins créés avant le
---      2 septembre 2026 n'ont pas d'assiette en appareils (`devices` est nul) ;
---      les deux magasins d'aujourd'hui sont dans ce cas. Un plafond inventé
---      fermerait la porte à tort.
+--   3. **Sans plafond connu, aucun refus.** Un magasin dont `devices` est nul
+--      et dont l'entreprise n'a pas de `plan` n'a pas d'assiette : on mesure, on
+--      ne juge pas. Un plafond inventé fermerait la porte à tort.
+--      ⚠️ Au 4 septembre 2026, **les deux entreprises en base sont des
+--      entreprises d'essai** — il n'y a encore aucun client réel. Ce n'est donc
+--      pas un historique à ménager, c'est le cas normal d'un magasin créé
+--      autrement que par un devis ou une souscription.
 --
 -- ⚠️ CONSÉQUENCE À CONNAÎTRE : LE PIC NE PEUT PLUS DÉPASSER LE PLAFOND. Tant
 -- que le verrou mord, « sept appareils ont compté sur un forfait de deux » ne

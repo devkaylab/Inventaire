@@ -8240,10 +8240,16 @@ pas un inventaire. Ne pas les défaire sans que Julien rouvre le sujet.
    plus large : **on n'échoue jamais du côté fermé** — réseau coupé, serveur
    muet, code inconnu, tout accorde. Le seul refus qui ferme la porte est un
    `forfait_plein` explicitement prononcé par le serveur.
-3. **Sans plafond connu, aucun refus.** Les magasins créés avant le 2 septembre
-   n'ont pas d'assiette (`stores.devices` nul) — **les deux magasins
-   d'aujourd'hui sont dans ce cas**, donc rien ne mord encore. Un plafond
-   inventé fermerait la porte à tort.
+3. **Sans plafond connu, aucun refus.** Un magasin dont `stores.devices` est nul
+   et dont l'entreprise n'a pas de `plan` n'a pas d'assiette : on mesure, on ne
+   juge pas. Un plafond inventé fermerait la porte à tort.
+   · **⚠️ Au 4 septembre 2026 il n'y a AUCUN CLIENT RÉEL** (Julien : « à l'heure
+     actuelle nous n'avons que des comptes et entreprises tests »). Les deux
+     entreprises en base sont des entreprises d'essai, sans forfait en
+     appareils — donc le verrou ne mord nulle part aujourd'hui. Ce n'est pas un
+     historique à ménager : c'est simplement qu'aucune licence n'a encore été
+     vendue. **Ne pas écrire au client qu'un magasin « a été ouvert avant que la
+     licence ne se compte ainsi »** : c'est une histoire qu'on ne connaît pas.
 
 ## ⚠️ LE SIGNAL COMMERCIAL N'EST PAS LE PIC, C'EST LE REFUS
 
