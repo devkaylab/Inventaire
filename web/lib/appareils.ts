@@ -158,6 +158,26 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
 }
 
 /**
+ * Comment le prix se compose, quand il ne tient pas dans un seul palier.
+ *
+ * ⚠️ ELLE EXISTE PARCE QUE LA PAGE STRIPE, ELLE, DÉCOMPOSE. Julien a saisi
+ * 137 appareils et découvert sur la page de paiement deux lignes —
+ * « Enterprise » et « Appareils supplémentaires, Qté 4 » — sans que rien ne
+ * l'y ait préparé : « pourquoi j'ai un Qté 4 ? ». Notre écran annonçait le
+ * total (140 appareils, 12 210 €) et taisait l'addition qui y mène.
+ *
+ * ⚠️ ET ELLE DIT L'ARRONDI. Une tranche ENTAMÉE se paie entière : 137 demandés,
+ * 140 couverts. C'est la règle de la grille depuis le 30 août, et elle ne se
+ * devine pas — la découvrir sur une facture, c'est la découvrir trop tard.
+ *
+ * Rend `null` tant qu'on est dans un palier : il n'y a alors rien à décomposer.
+ */
+export function compositionOffre(p: Proposition): string | null {
+  if (p.tranches <= 0) return null
+  return `${APPAREILS_MAX} appareils + ${p.tranches} tranche${p.tranches > 1 ? 's' : ''} de ${SUPPLEMENT.par}`
+}
+
+/**
  * Ce qu'il faut dire d'un magasin.
  *
  * ⚠️ Elle ne demande que le plafond et le besoin, pas la forme complète : la

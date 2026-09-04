@@ -35,7 +35,7 @@ import { Volet } from '@/components/ui/Volet'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
 import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
-import { proposer } from '@/lib/appareils'
+import { compositionOffre, proposer } from '@/lib/appareils'
 import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } from '@/lib/entreprise'
 import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
@@ -294,6 +294,7 @@ function DemandesMagasin() {
     () => (appareils && appareils > 0 ? proposer(0, Math.round(appareils)) : null),
     [appareils],
   )
+  const composition = offre ? compositionOffre(offre) : null
 
   const charger = useCallback(async () => {
     const { data, error } = await supabase.rpc('ca_list_store_requests')
@@ -424,6 +425,11 @@ function DemandesMagasin() {
             <div style={{ marginTop: 14 }}>
               <div className="muted small">
                 <strong>{offre.nom}</strong> couvre {nb(offre.couvre)} appareils à la fois.
+                {/* ⚠️ La page Stripe décompose en deux lignes : si notre écran
+                    ne le dit pas, le « Qté 4 » s'y découvre sans prévenir. Et
+                    une tranche entamée se paie entière — 137 demandés, 140
+                    couverts. */}
+                {composition && <> — {composition}.</>}
               </div>
               {/* ⚠️ LE BOUTON DIT L'ACTION, JAMAIS LE MONTANT — « à garder
                   uniquement : "Créer le magasin" » (Julien, 4 septembre 2026).

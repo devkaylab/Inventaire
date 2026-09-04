@@ -25,7 +25,7 @@ import { LigneInventaire } from '@/components/magasin/CorpsMagasin'
 import { nb, relativeTime } from '@/lib/format'
 import { Stat } from '@/components/ui/Stat'
 import { euros } from '@/lib/offres'
-import { lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
+import { compositionOffre, lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
 import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import type { SessionBloc } from '@/lib/entreprise'
 
@@ -335,7 +335,12 @@ export default function FicheMagasinPage() {
                   Votre forfait couvre {nb(appareils.plafond ?? 0)} appareils à la fois&nbsp;;
                   il en aurait fallu jusqu’à {nb(appareils.besoin)} pour que personne n’attende.
                   {' '}<strong>{verdict.proposition.nom}</strong> en couvre
-                  {' '}{nb(verdict.proposition.couvre)}, pour
+                  {' '}{nb(verdict.proposition.couvre)}
+                  {/* Le détail de l'addition quand elle dépasse un palier :
+                      la page Stripe la décompose, notre écran doit l'annoncer. */}
+                  {compositionOffre(verdict.proposition)
+                    ? ` (${compositionOffre(verdict.proposition)})`
+                    : ''}, pour
                   {' '}<span className="prix">{euros(verdict.proposition.mois)} par mois</span> ou
                   {' '}<span className="prix">{euros(verdict.proposition.an)} par an</span>.
                 </div>

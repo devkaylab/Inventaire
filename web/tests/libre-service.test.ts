@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
 import { OFFRES, SUPPLEMENT } from '@/lib/offres'
-import { PALIERS_APPAREILS } from '@/lib/appareils'
+import { PALIERS_APPAREILS, compositionOffre, proposer } from '@/lib/appareils'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -422,5 +422,36 @@ describe('le rythme se change avant de payer', () => {
 
   it('le journal nomme le geste', () => {
     expect(lire('web/lib/journal.ts')).toContain('rythme_change:')
+  })
+})
+
+describe('le prix dit comment il se compose', () => {
+  // ⚠️ Julien, sur la page Stripe : « pourquoi j'ai un Qté 4 ? ». Il avait
+  // saisi 137 appareils ; Stripe décompose en « Enterprise » + « Appareils
+  // supplémentaires, Qté 4 », et notre écran n'annonçait que le total. Le
+  // montant était juste — c'est l'écran qui n'avait pas prévenu.
+  it('décompose au-delà du dernier palier, et pas avant', () => {
+    expect(compositionOffre(proposer(2, 7)!)).toBeNull()
+    const gros = proposer(100, 137)!
+    expect(gros.couvre).toBe(140)
+    expect(gros.tranches).toBe(4)
+    // ⚠️ Une tranche ENTAMÉE se paie entière : 137 demandés, 140 couverts.
+    expect(compositionOffre(gros)).toBe('100 appareils + 4 tranches de 10')
+    expect(compositionOffre(proposer(100, 105)!)).toBe('100 appareils + 1 tranche de 10')
+  })
+
+  it('le prix décomposé fait bien le total', () => {
+    const gros = proposer(100, 137)!
+    expect(gros.an).toBe(9450 + 4 * SUPPLEMENT.an)
+    expect(gros.mois).toBe(890 + 4 * SUPPLEMENT.mois)
+  })
+
+  it('les deux écrans l’affichent', () => {
+    for (const [nom, src] of [
+      ['/magasins', sansCommentaires(lire('web/app/magasins/page.tsx'))],
+      ['fiche magasin', sansCommentaires(lire('web/app/magasins/[storeId]/page.tsx'))],
+    ] as const) {
+      expect(src, nom).toContain('compositionOffre')
+    }
   })
 })

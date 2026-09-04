@@ -8936,3 +8936,32 @@ débordement horizontal nul.
 
 Tests de garde : `web/tests/libre-service.test.ts`, bloc « le rythme se change
 avant de payer ».
+
+## ⚠️ Le prix dit comment il se compose (4 septembre 2026)
+
+Julien, sur la page de paiement Stripe : *« pourquoi j'ai 12 210 € alors que je
+paie que pour ajouter 10 appareils ? J'ai un Qté 4, pourquoi ? »*
+
+**Le montant était juste.** Il avait saisi 137 appareils : Enterprise en couvre
+100, plus 4 tranches de dix — 140 couverts, 9 450 € + 4 × 690 €. Stripe
+décompose en deux lignes ; **notre écran, lui, n'annonçait que le total** et
+taisait l'addition qui y mène. Le « Qté 4 » se découvrait sur la page de
+paiement, c'est-à-dire trop tard.
+
+⚠️ **ET LA TRANCHE ENTAMÉE SE PAIE ENTIÈRE** : 137 demandés, 140 couverts,
+4 tranches et non 3. C'est la règle de la grille depuis le 30 août, et elle ne
+se devine pas. Un client qui la découvre sur une facture la découvre trop tard.
+
+`compositionOffre()` (`web/lib/appareils.ts`) rend « 100 appareils + 4 tranches
+de 10 » — et **`null` tant qu'on est dans un palier**, où il n'y a rien à
+décomposer et où une phrase de plus ne ferait qu'alourdir. Affichée aux deux
+endroits qui annoncent une offre : le panneau d'ajout de magasin et le bandeau
+de la fiche.
+
+⚠️ **La leçon dépasse ce cas : quand un tiers décompose ce qu'on présente en
+bloc, c'est nous qui devons décomposer d'abord.** La page de paiement est le
+dernier endroit où l'on veut qu'un client apprenne quelque chose.
+
+Tests de garde : `web/tests/libre-service.test.ts`, bloc « le prix dit comment
+il se compose » — dont celui qui vérifie que le prix décomposé fait bien le
+total.
