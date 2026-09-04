@@ -8244,12 +8244,24 @@ pas un inventaire. Ne pas les défaire sans que Julien rouvre le sujet.
    et dont l'entreprise n'a pas de `plan` n'a pas d'assiette : on mesure, on ne
    juge pas. Un plafond inventé fermerait la porte à tort.
    · **⚠️ Au 4 septembre 2026 il n'y a AUCUN CLIENT RÉEL** (Julien : « à l'heure
-     actuelle nous n'avons que des comptes et entreprises tests »). Les deux
-     entreprises en base sont des entreprises d'essai, sans forfait en
-     appareils — donc le verrou ne mord nulle part aujourd'hui. Ce n'est pas un
-     historique à ménager : c'est simplement qu'aucune licence n'a encore été
-     vendue. **Ne pas écrire au client qu'un magasin « a été ouvert avant que la
-     licence ne se compte ainsi »** : c'est une histoire qu'on ne connaît pas.
+     actuelle nous n'avons que des comptes et entreprises tests »). Ce n'est
+     donc pas un historique à ménager : c'est simplement qu'aucune licence n'a
+     encore été vendue. **Ne pas écrire au client qu'un magasin « a été ouvert
+     avant que la licence ne se compte ainsi »** : c'est une histoire qu'on ne
+     connaît pas.
+   · **Un forfait de 2 appareils a été posé sur La Samaritaine** le 4 septembre
+     2026, à la demande de Julien, pour exercer le verrou pour de vrai. C'est
+     le seul magasin où il mord ; **Oberlin Lyon reste sans forfait**, et c'est
+     voulu — c'est le compte de démonstration des captures, un refus au milieu
+     d'une passe de captures serait une plaie. Ne pas lui en poser un sans
+     raison.
+   · **⚠️ ET LE VERROU SE VÉRIFIE AVEC LE BON COMPTE.** Sur Groupe Bon Marché,
+     l'administrateur d'entreprise est **« Compte Test Sup »**, pas le compte
+     personnel de Julien (qui n'y est que superviseur). La section « Appareils »
+     de la fiche magasin, la notification et la bannière ne s'adressent qu'à
+     l'administrateur : depuis un autre compte, il n'y a rien à voir — et ce
+     n'est pas une panne. Même piège que les inventaires de démonstration posés
+     sur le mauvais compte, le matin même.
 
 ## ⚠️ LE SIGNAL COMMERCIAL N'EST PAS LE PIC, C'EST LE REFUS
 
