@@ -174,10 +174,18 @@ describe('le jugement — quelle offre proposer', () => {
     expect(p?.nom).toBe('Enterprise')
     expect(p?.tranches).toBe(2)
     expect(p?.couvre).toBe(120)
-    expect(p?.action).toBe('Ajouter 20 appareils')
+    expect(p?.action).toBe('Passer à 120 appareils')
     // Le prix vient de la grille, jamais d'une addition faite sur place.
     expect(p?.mois).toBe(890 + 2 * SUPPLEMENT.mois)
     expect(p?.an).toBe(9450 + 2 * SUPPLEMENT.an)
+  })
+
+  it('le bouton dit toujours « Passer à … »', () => {
+    // Décision de Julien : un seul verbe. « Ajouter 20 appareils » décrivait
+    // un geste différent des autres boutons pour exactement la même chose.
+    for (const [plafond, besoin] of [[2, 7], [2, 40], [20, 40], [100, 112], [100, 250]]) {
+      expect(proposer(plafond, besoin)?.action).toMatch(/^Passer à /)
+    }
   })
 
   it('ne propose rien quand le forfait couvre déjà le besoin', () => {

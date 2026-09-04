@@ -8315,6 +8315,11 @@ laisserait au-dessus de son forfait dès le lendemain, et il faudrait le
 rappeler une semaine plus tard. `proposer()` (`web/lib/appareils.ts`) le fait ;
 le prix vient de `prixCents`, jamais d'une addition faite sur place.
 
+**⚠️ Et le bouton dit toujours « Passer à… »** (Julien, le même jour) — « Passer
+à Advanced », « Passer à 120 appareils » quand le palier ne change pas de nom.
+Jamais « Ajouter 20 appareils » : un bouton qui change de verbe selon le palier
+laisse croire qu'il fait autre chose. Un test vérifie le préfixe sur cinq cas.
+
 ## L'identifiant, sur le téléphone
 
 - **⚠️ Il vit dans le trousseau, et il DOIT y vivre.** `oublierCachesLocaux`

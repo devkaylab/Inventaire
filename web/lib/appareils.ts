@@ -64,7 +64,9 @@ export type Proposition = {
   /** Hors taxes, par magasin. */
   mois: number
   an: number
-  /** Le libellé du bouton. */
+  /** ⚠️ Le libellé du bouton. Il commence TOUJOURS par « Passer à » — un test
+   *  le vérifie. Un bouton qui change de verbe selon le palier laisse croire
+   *  qu'il fait autre chose. */
   action: string
 }
 
@@ -116,7 +118,6 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
   // dix entamées, exactement comme `prixCents` les facture.
   const tranches = Math.ceil((besoin - APPAREILS_MAX) / SUPPLEMENT.par)
   const couvre = APPAREILS_MAX + tranches * SUPPLEMENT.par
-  const enPlus = couvre - plafond
   return {
     nom: socle.nom,
     couvre,
@@ -125,7 +126,11 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
     // calculs du même montant divergeraient au premier ajustement.
     mois: (prixCents(besoin, 'monthly') ?? 0) / 100,
     an: (prixCents(besoin, 'yearly') ?? 0) / 100,
-    action: enPlus > 0 ? `Ajouter ${enPlus} appareils` : `Passer à ${socle.nom}`,
+    // ⚠️ « Passer à … », et rien d'autre — décision de Julien le 4 septembre
+    // 2026. Ici le palier ne change pas de nom, donc c'est le nombre
+    // d'appareils qui suit le verbe : « Ajouter 20 appareils » décrivait un
+    // geste différent des autres boutons pour la même chose.
+    action: `Passer à ${couvre} appareils`,
   }
 }
 
