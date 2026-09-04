@@ -35,6 +35,7 @@ import {
   changerPrixArticle,
   creerAbonnementCheckout,
   lireAbonnement,
+  lireSessionCheckout,
   poserArticleAppareils,
 } from '../_shared/stripe.ts'
 
@@ -90,20 +91,25 @@ Deno.serve(async (req) => {
 
   const texte = (k: string) => String(corps[k] ?? '').trim()
   const action = texte('action')
-  const rythme = texte('billingPeriod') as Rythme
-  const appareils = Number(corps.devices)
+  // ⚠️ `reprendre` ne LIT PAS ces deux-là dans la requête : il les relit sur la
+  // demande déposée. Un client qui rouvre son paiement ne redit pas ce qu'il
+  // achète — et s'il pouvait le redire, il pourrait le changer après coup.
+  let rythme = texte('billingPeriod') as Rythme
+  let appareils = Number(corps.devices)
 
-  if (action !== 'magasin' && action !== 'offre') {
+  if (action !== 'magasin' && action !== 'offre' && action !== 'reprendre') {
     return json({ success: false, error: 'Geste inconnu.' }, 400)
   }
-  if (rythme !== 'monthly' && rythme !== 'yearly') {
-    return json({ success: false, error: 'Rythme de paiement inconnu.' }, 400)
-  }
-  if (!Number.isInteger(appareils) || appareils < 1) {
-    return json({
-      success: false,
-      error: 'Indiquez le nombre d’appareils qui comptent en même temps.',
-    }, 400)
+  if (action !== 'reprendre') {
+    if (rythme !== 'monthly' && rythme !== 'yearly') {
+      return json({ success: false, error: 'Rythme de paiement inconnu.' }, 400)
+    }
+    if (!Number.isInteger(appareils) || appareils < 1) {
+      return json({
+        success: false,
+        error: 'Indiquez le nombre d’appareils qui comptent en même temps.',
+      }, 400)
+    }
   }
 
   const url = Deno.env.get('SUPABASE_URL')!
@@ -119,6 +125,54 @@ Deno.serve(async (req) => {
   const { data: utilisateur } = await appelant.auth.getUser()
   const email = utilisateur?.user?.email?.toLowerCase() ?? ''
   if (!email) return json({ success: false, error: 'Session expirée.' }, 401)
+
+  // ─── REPRENDRE UN PAIEMENT ABANDONNÉ ────────────────────────────────────
+  //
+  // Une session Checkout dure vingt-quatre heures, et fermer l'onglet est le
+  // geste le plus banal du monde : sans cette reprise, la demande reste en
+  // `accepted` et le client ne peut ni payer, ni recommencer (le doublon de
+  // nom le refuse). Constat de Julien, une heure après la mise en ligne.
+  //
+  // ⚠️ IL NE REDÉPOSE RIEN. Ce qu'on achète est relu sur la demande, jamais
+  // repris du corps de la requête — sinon on pourrait changer l'offre entre le
+  // dépôt et le paiement.
+  let reprise: Record<string, unknown> | null = null
+  if (action === 'reprendre') {
+    const requestId = texte('requestId')
+    if (!requestId) return json({ success: false, error: 'Demande absente.' }, 400)
+
+    const { data: autorise, error: eG } = await appelant.rpc('peut_reprendre_paiement', {
+      p_id: requestId,
+    })
+    if (eG) return json({ success: false, error: eG.message }, 500)
+    if (autorise !== true) {
+      return json({
+        success: false,
+        error: 'Accès réservé à l’administrateur de l’entreprise.',
+      }, 403)
+    }
+
+    const { data: dem, error: eD } = await service.rpc('demande_a_reprendre', { p_id: requestId })
+    if (eD) return json({ success: false, error: eD.message }, 500)
+    if (!dem) return json({ success: false, error: 'Demande introuvable.' }, 404)
+    if (dem.statut !== 'accepted') {
+      return json({ success: false, error: 'Cette demande n’attend plus de paiement.' }, 400)
+    }
+    // ⚠️ Un devis se règle par sa propre page, qui porte le document signé.
+    // Rouvrir une session ici court-circuiterait le jeton du devis.
+    if (dem.devise === true) {
+      return json({ success: false, error: 'Ce devis se règle depuis son lien.' }, 400)
+    }
+    if (!Number.isInteger(Number(dem.appareils)) || Number(dem.appareils) < 1) {
+      return json({ success: false, error: 'Demande incomplète.' }, 400)
+    }
+    reprise = dem as Record<string, unknown>
+    appareils = Number(dem.appareils)
+    rythme = String(dem.rythme) as Rythme
+    if (rythme !== 'monthly' && rythme !== 'yearly') {
+      return json({ success: false, error: 'Rythme de paiement inconnu.' }, 400)
+    }
+  }
 
   // ── Le tarif vient de la base, jamais d'une grille recopiée ici ──────────
   const { data: tarif, error: eTarif } = await appelant.rpc('prix_offre', {
@@ -153,6 +207,66 @@ Deno.serve(async (req) => {
   const supplement = tranches > 0 && priceAppareils
     ? { priceId: priceAppareils, quantity: tranches }
     : null
+
+  if (action === 'reprendre' && reprise) {
+    const requestId = String(reprise.id)
+    const ancienne = String(reprise.session ?? '').trim()
+
+    // ⚠️ ON RELIT AVANT DE RECRÉER. Une session encore ouverte se rouvre telle
+    // quelle : c'est le même paiement, pas un second. Motif du 22 août 2026.
+    if (ancienne) {
+      try {
+        const vue = await lireSessionCheckout(stripeKey, ancienne)
+        if (vue?.url) return json({ success: true, paymentUrl: vue.url })
+      } catch {
+        // Session illisible : on en ouvre une neuve plus bas.
+      }
+    }
+
+    // ⚠️ La clé d'idempotence doit CHANGER quand l'ancienne session est morte,
+    // sinon Stripe rejoue la session expirée et rend une URL inerte. Le rang de
+    // tentative se déduit de l'âge de la demande, par tranches de vingt-quatre
+    // heures — la durée de vie d'une session : chaque expiration tombe dans une
+    // tranche neuve, sans qu'on ait à compter les essais quelque part.
+    const age = Date.now() - new Date(String(reprise.cree_le)).getTime()
+    const tentative = Math.max(1, Math.floor(age / 86_400_000))
+
+    let session
+    try {
+      session = await creerAbonnementCheckout(stripeKey, {
+        requestId,
+        priceId: priceOffre,
+        label: `Quantinvo — ${String(reprise.magasin)}`,
+        customerEmail: email,
+        successUrl: reprise.kind === 'offre'
+          ? `${site}/magasins/${String(reprise.store_id)}?offre=ok`
+          : `${site}/magasins?magasin=ok`,
+        cancelUrl: reprise.kind === 'offre'
+          ? `${site}/magasins/${String(reprise.store_id)}`
+          : `${site}/magasins`,
+        plan,
+        billingPeriod: rythme,
+        kind: reprise.kind === 'offre' ? 'store_offer' : 'store',
+        taxRateId,
+        supplement,
+        tentative,
+      })
+    } catch (e) {
+      return json({
+        success: false,
+        error: 'Le paiement n’a pas pu s’ouvrir. Réessayez dans un instant.',
+        detail: e instanceof Error ? e.message : String(e),
+      }, 502)
+    }
+
+    await service.rpc('attach_checkout_session', {
+      p_kind: 'store',
+      p_id: requestId,
+      p_session_id: session.id,
+      p_customer_id: session.customer ?? null,
+    })
+    return json({ success: true, paymentUrl: session.url })
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // AJOUTER UN MAGASIN

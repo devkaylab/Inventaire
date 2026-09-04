@@ -297,3 +297,72 @@ describe('les écrans', () => {
     expect(journal).toContain('offre_appliquee:')
   })
 })
+
+describe('un paiement abandonné ne bloque pas', () => {
+  // ⚠️ LE DÉFAUT QUE CES GARDES FERMENT. Julien a ouvert la page de paiement,
+  // fait retour sans payer, et sa demande s'est affichée « DEVIS ACCEPTÉ » —
+  // sans bouton pour payer, sans bouton pour annuler, et sans pouvoir la
+  // refaire (le doublon de nom la refusait). Trois portes fermées d'un coup,
+  // sur un état parfaitement normal : une session Checkout dure vingt-quatre
+  // heures, et fermer l'onglet est le geste le plus banal du monde.
+  const magasins = sansCommentaires(lire('web/app/magasins/page.tsx'))
+  const fiche = sansCommentaires(lire('web/app/magasins/[storeId]/page.tsx'))
+
+  it('s’annule tant que rien n’est encaissé, mais jamais un devis accepté', () => {
+    const { corps } = derniereDefinition('ca_cancel_store_request')
+    const plat = espaces(sansCommentaires(corps))
+    expect(plat).toContain('paid_at is null')
+    // ⚠️ `quote_sent_at` est ce qui distingue les deux parcours : un accord
+    // signé sur un montant négocié n'est pas un brouillon, y renoncer est une
+    // conversation.
+    expect(plat).toContain("status = 'accepted' and quote_sent_at is null")
+  })
+
+  it('ne dit pas « devis » d’une demande que personne n’a devisée', () => {
+    expect(magasins).toContain("'Paiement à finir'")
+    expect(magasins).toContain('function libreService')
+  })
+
+  it('laisse les deux sorties sur les deux écrans', () => {
+    for (const [nom, src] of [['/magasins', magasins], ['fiche magasin', fiche]] as const) {
+      expect(src, nom).toContain('<ReprendrePaiement')
+      expect(src, nom).toContain('ca_cancel_store_request')
+    }
+  })
+
+  it('ne propose pas d’acheter ce qui est déjà en cours d’achat', () => {
+    expect(fiche).toContain('!offreEnCours && verdict.etat')
+  })
+
+  it('relit la demande au lieu de croire le corps de la requête', () => {
+    // Sinon on pourrait changer l'offre entre le dépôt et le paiement.
+    const sans = sansCommentaires(edge)
+    const debut = sans.indexOf("if (action === 'reprendre') {")
+    const fin = sans.indexOf("if (action === 'reprendre' && reprise)")
+    const preambule = sans.slice(debut, fin)
+    expect(preambule).toContain("appelant.rpc('peut_reprendre_paiement'")
+    expect(preambule).toContain("service.rpc('demande_a_reprendre'")
+    expect(preambule).toContain('appareils = Number(dem.appareils)')
+    // Un devis se règle depuis son lien, qui porte le document signé.
+    expect(preambule).toContain('dem.devise === true')
+  })
+
+  it('rouvre la session existante avant d’en créer une neuve', () => {
+    const sans = sansCommentaires(edge)
+    const branche = sans.slice(sans.indexOf("if (action === 'reprendre' && reprise)"))
+    const relecture = branche.indexOf('lireSessionCheckout')
+    const creation = branche.indexOf('creerAbonnementCheckout')
+    expect(relecture).toBeGreaterThan(0)
+    expect(creation).toBeGreaterThan(relecture)
+    // ⚠️ Et la clé d'idempotence change quand l'ancienne est morte : sinon
+    // Stripe rejoue la session expirée et rend une URL inerte.
+    expect(branche).toContain('tentative')
+  })
+
+  it('ne rend la plomberie qu’à la clé de service', () => {
+    const f = fichierDe('demande_a_reprendre')
+    expect(f).toMatch(/revoke all on function public\.demande_a_reprendre\([^)]*\)[\s\S]{0,40}?from public, anon, authenticated/)
+    const g = fichierDe('peut_reprendre_paiement')
+    expect(g).toMatch(/revoke all on function public\.peut_reprendre_paiement\([^)]*\)\s*\n?\s*from public, anon/)
+  })
+})

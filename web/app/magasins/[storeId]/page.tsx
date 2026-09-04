@@ -26,7 +26,7 @@ import { nb, relativeTime } from '@/lib/format'
 import { Stat } from '@/components/ui/Stat'
 import { euros } from '@/lib/offres'
 import { lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
-import { PayerEnLigne } from '@/components/PayerEnLigne'
+import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import type { SessionBloc } from '@/lib/entreprise'
 
 type Personne = {
@@ -46,13 +46,21 @@ type Fiche = {
   sessions: SessionBloc[]
 }
 
-/** Une demande d'ajout ou de suppression, telle que la rend `ca_list_store_requests`. */
+/**
+ * Une demande, telle que la rend `ca_list_store_requests`.
+ *
+ * ⚠️ `offre` est née du libre-service (4 septembre 2026) : elle porte le même
+ * genre de ligne — c'est ce qui lui donne le webhook et la purge sans rien
+ * réécrire — mais elle ne crée aucun magasin, elle élargit le forfait de
+ * celui-ci.
+ */
 type Demande = {
   id: string
-  kind: 'add' | 'remove'
+  kind: 'add' | 'remove' | 'offre'
   store_id: string | null
   store_name: string
-  status: 'pending' | 'created' | 'removed' | 'rejected'
+  status: 'pending' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected'
+  devices: number | null
   admin_note: string
   created_at: string
 }
@@ -66,6 +74,10 @@ export default function FicheMagasinPage() {
   const [erreur, setErreur] = useState(false)
   const [copie, setCopie] = useState(false)
   const [suppression, setSuppression] = useState<Demande | null>(null)
+  // ⚠️ Un changement d'offre resté impayé DOIT se voir ici, sinon c'est le
+  // cul-de-sac de la page Magasins recopié : le dépôt refuse un second
+  // changement (`deja_en_cours`), et rien à l'écran ne dit quoi faire.
+  const [offreEnCours, setOffreEnCours] = useState<Demande | null>(null)
   const [appareils, setAppareils] = useState<AppareilsMagasin | null>(null)
   const toast = useToast()
   const confirm = useConfirm()
@@ -87,6 +99,7 @@ export default function FicheMagasinPage() {
     setCompany(c)
     const demandes = (d.data ?? []) as Demande[]
     setSuppression(demandes.find((x) => x.kind === 'remove' && x.status === 'pending' && x.store_id === storeId) ?? null)
+    setOffreEnCours(demandes.find((x) => x.kind === 'offre' && x.status === 'accepted' && x.store_id === storeId) ?? null)
   }, [storeId])
 
   useEffect(() => {
@@ -94,6 +107,23 @@ export default function FicheMagasinPage() {
     if (!guard.profile.is_company_admin) { window.location.replace('/magasins'); return }
     charger()
   }, [guard, charger])
+
+  async function annulerOffre() {
+    if (!offreEnCours) return
+    const ok = await confirm({
+      title: 'Annuler ce changement d’offre ?',
+      message: 'Votre forfait ne change pas, et rien ne sera prélevé.',
+      confirmLabel: 'Annuler le changement',
+      cancelLabel: 'Revenir',
+    })
+    if (!ok) return
+    const { data, error } = await supabase.rpc('ca_cancel_store_request', { p_id: offreEnCours.id })
+    if (error || !data?.success) {
+      toast.error(data?.error ?? error?.message ?? 'Annulation impossible.')
+      return
+    }
+    charger()
+  }
 
   async function copier(code: string) {
     try {
@@ -266,7 +296,25 @@ export default function FicheMagasinPage() {
               verrou ferme la porte, le pic ne peut plus dépasser le plafond.
               Ce qui dit qu'une offre plus large est devenue nécessaire, c'est
               le nombre d'appareils éconduits. */}
-          {verdict.etat === 'depasse' && verdict.proposition && (
+          {offreEnCours && (
+            <div className="signal signal-alerte">
+              <div className="signal-txt">
+                <strong>Un changement d’offre attend son paiement</strong>
+                <div className="muted small">
+                  {nb(offreEnCours.devices ?? 0)} appareils à la fois. Le forfait change dès le
+                  paiement ; rien n’est prélevé tant que vous n’avez pas réglé.
+                </div>
+              </div>
+              <div className="req-actions">
+                <ReprendrePaiement requestId={offreEnCours.id} />
+                <button type="button" className="link-btn danger-link" onClick={annulerOffre}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!offreEnCours && verdict.etat === 'depasse' && verdict.proposition && (
             <div className="signal signal-alerte">
               <div className="signal-txt">
                 <strong>

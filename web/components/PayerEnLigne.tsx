@@ -139,3 +139,55 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
     </div>
   )
 }
+
+/**
+ * Reprendre un paiement abandonné.
+ *
+ * ⚠️ Une demande en `accepted` sans paiement est NORMALE : une session Checkout
+ * dure vingt-quatre heures, et fermer l'onglet est le geste le plus banal du
+ * monde. Sans ce bouton, le client ne peut ni payer, ni recommencer (le doublon
+ * de nom refuse sa seconde demande) — trois portes fermées d'un coup, constat
+ * de Julien le 4 septembre 2026.
+ *
+ * Il ne redépose rien : ce qu'on achète est relu sur la demande, côté serveur.
+ */
+export function ReprendrePaiement({ requestId }: { requestId: string }) {
+  const [busy, setBusy] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function reprendre() {
+    setBusy(true)
+    setErreur(null)
+    const { data, error } = await supabase.functions.invoke('libre-service', {
+      body: { action: 'reprendre', requestId },
+    })
+    let reponse: Record<string, unknown> | null = (data ?? null) as Record<string, unknown> | null
+    const ctx = (error as { context?: unknown } | null)?.context
+    if (ctx instanceof Response) {
+      try {
+        reponse = await ctx.json()
+      } catch {
+        /* corps illisible */
+      }
+    }
+    setBusy(false)
+    if (reponse?.success === true && typeof reponse.paymentUrl === 'string') {
+      window.location.href = reponse.paymentUrl
+      return
+    }
+    setErreur(
+      (reponse?.error as string | undefined) ??
+        error?.message ??
+        'Le paiement n’a pas pu se rouvrir. Réessayez dans un instant.',
+    )
+  }
+
+  return (
+    <>
+      <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={reprendre}>
+        {busy ? 'Un instant…' : 'Reprendre le paiement'}
+      </button>
+      {erreur && <p className="field-hint" role="alert" style={{ marginTop: 8 }}>{erreur}</p>}
+    </>
+  )
+}

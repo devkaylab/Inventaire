@@ -8833,3 +8833,60 @@ voit, et elle ne casse pas un montant en fin de ligne.
 
 Tests de garde : `web/tests/format.test.ts`, bloc « le séparateur de milliers se
 VOIT » — dont celui qui refuse U+202F dans la sortie des six formatteurs.
+
+## ⚠️ Un paiement abandonné ne bloque pas (4 septembre 2026)
+
+Constat de Julien **une heure après la mise en ligne du libre-service**,
+capture à l'appui : il ouvre la page de paiement, fait retour sans payer, et sa
+demande s'affiche « DEVIS ACCEPTÉ » — sans bouton pour payer, sans bouton pour
+annuler, et sans pouvoir la refaire, le doublon de nom la refusant. **Trois
+portes fermées d'un coup.**
+
+⚠️ **L'ÉTAT N'ÉTAIT PAS FAUX, IL N'AVAIT PAS DE SORTIE.** Une demande en
+`accepted` sans paiement est parfaitement normale : une session Checkout dure
+vingt-quatre heures, et fermer l'onglet est le geste le plus banal du monde. Ce
+parcours-là n'avait simplement pas été déroulé — j'avais construit le chemin qui
+marche. C'est mot pour mot le reproche de la mémoire « penser le concept jusqu'au
+bout » : dérouler le parcours ENTIER, y compris celui où la personne renonce.
+
+Migration `20260904250001`, action `reprendre` sur `libre-service`, composant
+`ReprendrePaiement`.
+
+- **Le libellé mentait.** « Devis accepté » est celui de l'autre parcours ; le
+  libre-service dépose en `accepted` parce qu'il n'y a rien à négocier. L'écran
+  écrit désormais **« Paiement à finir »**.
+  · ⚠️ **Le discriminant est le jeton de devis** — une demande devisée en porte
+    un, le libre-service jamais. Côté base c'est `quote_sent_at`, qui n'existe
+    que si un devis est parti.
+- **Deux sorties, sur les DEUX écrans** : « Reprendre le paiement » et
+  « Annuler ». La fiche d'un magasin porte les mêmes pour un changement d'offre
+  impayé — sinon le cul-de-sac s'y recopiait à l'identique, le dépôt refusant un
+  second changement (`deja_en_cours`) sans que rien ne dise quoi faire.
+- **⚠️ `ca_cancel_store_request` n'annule JAMAIS un devis accepté.** Celui-là
+  porte un accord signé sur un montant négocié : y renoncer est une
+  conversation, pas un bouton. Elle n'ouvre l'annulation qu'à ce qui n'a jamais
+  été devisé **et** n'a rien encaissé (`paid_at is null`).
+- **⚠️ `reprendre` NE REDÉPOSE RIEN** : ce qu'on achète est relu sur la demande,
+  jamais repris du corps de la requête — sinon on pourrait changer d'offre entre
+  le dépôt et le paiement. Il refuse aussi un devis : celui-là se règle depuis
+  son lien, qui porte le document signé.
+- **⚠️ ON RELIT LA SESSION AVANT D'EN CRÉER UNE NEUVE.** Une session encore
+  ouverte se rouvre telle quelle : c'est le même paiement, pas un second (motif
+  du 22 août). Et **la clé d'idempotence doit changer quand l'ancienne est
+  morte**, sinon Stripe rejoue la session expirée et rend une URL inerte — le
+  rang de tentative se déduit de l'âge de la demande par tranches de
+  vingt-quatre heures, la durée de vie d'une session, sans rien avoir à compter
+  quelque part.
+- **La proposition d'offre s'efface tant qu'un paiement attend** : proposer
+  d'acheter ce qu'on est en train d'acheter n'a pas de sens.
+
+Vérifié en base, en transactions annulées : un devis accepté et une demande
+déjà payée refusent l'annulation, une demande de libre-service l'accepte ; un
+superviseur ordinaire est refusé sur les deux fonctions, l'administrateur
+d'entreprise passe. Et en direct sur la fonction déployée (v4, `verify_jwt`
+toujours vrai) : `reprendre` répond **403** à un compte qui n'est pas
+administrateur — la branche est atteinte et gardée. Quatre sabotages, quatre
+échecs.
+
+Tests de garde : `web/tests/libre-service.test.ts`, bloc « un paiement abandonné
+ne bloque pas ».

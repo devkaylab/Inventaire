@@ -34,7 +34,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Volet } from '@/components/ui/Volet'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
-import { PayerEnLigne } from '@/components/PayerEnLigne'
+import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import { proposer } from '@/lib/appareils'
 import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } from '@/lib/entreprise'
 import { getMyStores, type Store } from '@/lib/inventory'
@@ -263,6 +263,18 @@ function VoletMagasin({ store }: { store: StoreBloc }) {
  * trois fois. Elle s'annule tant que personne n'y a touché ; une demande déjà
  * traitée est une trace, pas un brouillon.
  */
+/**
+ * Une demande du libre-service qui attend son paiement.
+ *
+ * ⚠️ LE DISCRIMINANT EST LE JETON DE DEVIS, et il n'y a pas plus sûr : une
+ * demande devisée en porte un, le libre-service jamais. C'est aussi ce qui
+ * décide, côté base, de ce qui s'annule et de ce qui ne s'annule pas — un
+ * accord signé sur un montant négocié n'est pas un brouillon.
+ */
+function libreService(d: StoreRequest): boolean {
+  return d.status === 'accepted' && !d.quote_token
+}
+
 function DemandesMagasin() {
   const confirm = useConfirm()
   const toast = useToast()
@@ -301,7 +313,7 @@ function DemandesMagasin() {
   async function annuler(d: StoreRequest) {
     const ok = await confirm({
       title: 'Annuler cette demande ?',
-      message: `Quantinvo ne recevra plus votre demande pour « ${d.store_name} ».`,
+      message: `« ${d.store_name} » ne sera pas créé, et rien ne sera prélevé.`,
       confirmLabel: 'Annuler la demande',
       cancelLabel: 'Revenir',
     })
@@ -328,8 +340,13 @@ function DemandesMagasin() {
                   {d.kind === 'remove' && (
                     <span className="pill pill-refus" style={{ marginLeft: 8 }}>Suppression</span>
                   )}
-                  <span className={`pill ${d.status === 'pending' ? 'pill-attente' : d.status === 'rejected' || d.status === 'declined' ? 'pill-refus' : ''}`} style={{ marginLeft: 8 }}>
-                    {STATUT[d.status]}
+                  <span className={`pill ${d.status === 'pending' || libreService(d) ? 'pill-attente' : d.status === 'rejected' || d.status === 'declined' ? 'pill-refus' : ''}`} style={{ marginLeft: 8 }}>
+                    {/* ⚠️ « Devis accepté » est le libellé de l'AUTRE parcours,
+                        et il ment ici : le libre-service dépose sa demande en
+                        `accepted` parce qu'il n'y a rien à négocier. Ce qui les
+                        distingue, c'est le jeton de devis — le libre-service
+                        n'en a pas. */}
+                    {libreService(d) ? 'Paiement à finir' : STATUT[d.status]}
                   </span>
                 </div>
                 <div className="muted small">
@@ -345,6 +362,12 @@ function DemandesMagasin() {
                   <div className="muted small">
                     Devis {d.quote_reference} — {d.quote_amount_cents == null ? '—' : euros(d.quote_amount_cents)}{' '}
                     · <a href={`/devis/${d.quote_token}`}>voir et accepter</a>
+                  </div>
+                )}
+                {libreService(d) && (
+                  <div className="muted small">
+                    Votre magasin est créé dès le paiement. Rien n’est prélevé tant que
+                    vous n’avez pas réglé.
                   </div>
                 )}
                 {d.status === 'accepted' && d.quote_token && (
@@ -363,10 +386,13 @@ function DemandesMagasin() {
                   <div className="muted small">« {d.admin_note} »</div>
                 )}
               </div>
-              {d.status === 'pending' && (
-                <button type="button" className="link-btn danger-link" onClick={() => annuler(d)}>
-                  Annuler la demande
-                </button>
+              {(d.status === 'pending' || libreService(d)) && (
+                <div className="req-actions">
+                  {libreService(d) && <ReprendrePaiement requestId={d.id} />}
+                  <button type="button" className="link-btn danger-link" onClick={() => annuler(d)}>
+                    Annuler la demande
+                  </button>
+                </div>
               )}
             </div>
           ))}
