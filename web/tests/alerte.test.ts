@@ -19,6 +19,18 @@ const migrations = readdirSync(dossierMigrations)
   .map((f) => readFileSync(path.join(dossierMigrations, f), 'utf8'))
   .join('\n')
 
+/** La dernière migration qui définit `anomalies_a_signaler`, et son corps. */
+function derniereDefinitionAnomalies(): { corps: string } {
+  const fichiers = readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql')).sort().reverse()
+  for (const f of fichiers) {
+    const t = readFileSync(path.join(dossierMigrations, f), 'utf8')
+    const i = t.lastIndexOf('create or replace function public.anomalies_a_signaler()')
+    if (i === -1) continue
+    return { corps: t.slice(i, t.indexOf('$function$;', i)) }
+  }
+  throw new Error('anomalies_a_signaler introuvable')
+}
+
 describe('la question posée toutes les heures', () => {
   it('cherche un paiement encaissé dont rien n’a été créé', () => {
     // Les deux parcours : inscription d'entreprise et ajout de magasin.
@@ -261,5 +273,79 @@ describe('un nouveau type de notification passe les deux filtres', () => {
     expect(migrations).toContain(
       "n.type in ('invitation_inventaire', 'compteur_actif', 'inventaire_volumineux')",
     )
+  })
+})
+
+describe('le forfait trop juste part aussi par e-mail', () => {
+  // Julien, 4 septembre 2026 : « pas besoin de proposer d'offre sur l'app je
+  // pense, site uniquement et côté admin qui doit recevoir la même alerte de
+  // son côté (avec mail) ». Il voyait la cloche et la bannière — encore
+  // fallait-il qu'il ouvre le site.
+  const { corps } = derniereDefinitionAnomalies()
+  const sansCom = (s: string) => s.replace(/^\s*(--|\/\/).*$/gm, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ')
+
+  it('ne redétecte rien : elle part des notifications déjà déposées', () => {
+    // ⚠️ Une seconde règle de détection aurait divergé de la première au
+    // premier ajustement — et la cloche et l'e-mail se seraient contredits.
+    expect(corps).toContain("n.type = 'forfait_trop_juste'")
+    expect(corps).toContain('from public.notifications n')
+  })
+
+  it('ne se rappelle pas, comme le volume', () => {
+    // La notification est DÉJÀ au repos trente jours : la redire chaque matin
+    // est le meilleur moyen qu'on cesse de lire ces messages.
+    expect(sansCom(corps)).toContain("o.nature not in ('volume', 'forfait')")
+  })
+
+  it('sépare les deux publics', () => {
+    // ⚠️ Les trois autres natures vont aux administrateurs Quantinvo. Un seul
+    // message qui les mêlerait dirait à un client ce qui ne le regarde pas.
+    const s = sansCom(edge)
+    expect(s).toContain("const internes = anomalies.filter((a) => a.nature !== 'forfait')")
+    expect(s).toContain("const forfaits = anomalies.filter((a) => a.nature === 'forfait')")
+    // Le message du client ne part qu'au destinataire de SA notification.
+    expect(s).toContain('to: [a],')
+  })
+
+  it('ne marque que ce qui est parti', () => {
+    const s = sansCom(edge)
+    expect(s).toContain("rpc('marquer_alertes', { p_cles: clesEnvoyees })")
+    expect(s).not.toContain('p_cles: anomalies.map')
+  })
+
+  it('un message interne en échec ne retient pas celui du client', () => {
+    // ⚠️ Avant, le `catch` sortait en 500 : le client n'aurait rien reçu parce
+    // que NOTRE message n'était pas parti.
+    const s = sansCom(edge)
+    const i = s.indexOf("console.error('alerte interne'")
+    const j = s.indexOf('for (const f of forfaits)')
+    expect(i).toBeGreaterThan(0)
+    expect(j).toBeGreaterThan(i)
+  })
+
+  it('ne recopie pas une cinquième grille pour nommer l’offre', () => {
+    expect(edge).toContain("import { nomOffre } from '../_shared/devis.ts'")
+  })
+})
+
+describe('l’application ne vend rien', () => {
+  it('ne nomme aucune offre, ni aucun prix', () => {
+    // ⚠️ « Pas besoin de proposer d'offre sur l'app » (Julien). L'écran de refus
+    // s'ouvre devant un compteur debout dans un rayon, qui n'a pas la main :
+    // une proposition commerciale n'a rien à y faire.
+    const src = path.resolve(__dirname, '../../src')
+    const fichiers: string[] = []
+    const parcourir = (d: string) => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name)
+        if (e.isDirectory()) parcourir(p)
+        else if (/\.(ts|tsx)$/.test(e.name)) fichiers.push(p)
+      }
+    }
+    parcourir(src)
+    for (const f of fichiers) {
+      const code = readFileSync(f, 'utf8').replace(/^\s*(\/\/|\*|\/\*).*$/gm, ' ')
+      expect(code, f).not.toMatch(/\bEssential\b|\bAdvanced\b|\bEnterprise\b/)
+    }
   })
 })
