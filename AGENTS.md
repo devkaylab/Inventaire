@@ -8202,3 +8202,208 @@ souvent au-dessus, sur la première branche d'un ternaire.
 
 **Non vérifié** : un encaissement réel en franchise, qui demande les clés
 `live` — elles attendent l'immatriculation de la société.
+
+# Le décompte d'appareils, et le verrou (4 septembre 2026)
+
+*« Fais le décompte d'appareils. »* La page de tarifs promet « deux appareils à
+la fois » depuis le 30 août, l'assiette de la licence est ce nombre-là depuis le
+2 septembre — et **rien ne le mesurait ni ne l'appliquait**. Une entreprise
+Essential pouvait faire compter cinquante téléphones sans que personne ne le
+sache, ni elle, ni nous. Maquette validée avant codage :
+https://claude.ai/code/artifact/f3b2baf3-564a-4da0-bf5f-d4cb879ca53d
+
+Migration `20260904210001`, module `src/lib/appareil.ts`, module de jugement
+`web/lib/appareils.ts`, section « Appareils » sur la fiche d'un magasin.
+
+## ⚠️ LA RÈGLE : RIEN DE PLUS SANS PAIEMENT
+
+Arbitrée par Julien le 4 septembre 2026, en ces termes : **« on n'accepte ni
+magasin, ni appareil supplémentaires sans paiement »**. Le plafond n'est donc
+pas indicatif — le troisième appareil d'un forfait Essential **ne peut pas
+ouvrir son écran de comptage**.
+
+**Cette note remplace le « plafond souple » posé le 27 août pour l'offre Solo.**
+Elle ne vaut que pour les appareils et les magasins : un plafond de *volume
+compté*, s'il revient un jour, reste une autre question.
+
+## ⚠️ LES TROIS BORNES DU VERROU
+
+Ce ne sont pas des adoucissements, ce sont les conditions pour qu'il ne casse
+pas un inventaire. Ne pas les défaire sans que Julien rouvre le sujet.
+
+1. **Un appareil qui compte n'est JAMAIS éjecté.** Le verrou refuse une entrée,
+   il n'interrompt pas un travail. En base, le chemin « il est déjà là » passe
+   **avant** tout comptage : un plafond abaissé entre-temps ne renvoie personne
+   de son rayon.
+2. **Hors ligne, on laisse compter.** Un téléphone sans réseau ne peut ni
+   réserver ni se voir refuser. La borne vit côté application, sous une forme
+   plus large : **on n'échoue jamais du côté fermé** — réseau coupé, serveur
+   muet, code inconnu, tout accorde. Le seul refus qui ferme la porte est un
+   `forfait_plein` explicitement prononcé par le serveur.
+3. **Sans plafond connu, aucun refus.** Les magasins créés avant le 2 septembre
+   n'ont pas d'assiette (`stores.devices` nul) — **les deux magasins
+   d'aujourd'hui sont dans ce cas**, donc rien ne mord encore. Un plafond
+   inventé fermerait la porte à tort.
+
+## ⚠️ LE SIGNAL COMMERCIAL N'EST PAS LE PIC, C'EST LE REFUS
+
+Conséquence directe du verrou, et elle renverse ce qu'on aurait écrit
+spontanément : **le pic ne peut plus dépasser le plafond, par construction**.
+« Sept appareils ont compté sur un forfait de deux » n'arrivera plus jamais.
+
+Ce qui dit qu'une offre plus large est devenue nécessaire, c'est donc le nombre
+d'appareils **éconduits**, et `besoin` (`pic + refus` du jour le plus chargé),
+qui estime ce qu'il aurait fallu.
+
+- **⚠️ Le refus se compte UNE FOIS PAR APPAREIL, jamais par tentative.** Un
+  téléphone éconduit redemande sa place toutes les trente secondes ; sans la
+  colonne `appareils_actifs.refuse`, « douze refus » voudrait dire « une
+  personne a patienté six minutes ». Ce chiffre décide d'une montée d'offre : il
+  doit compter des appareils.
+- **⚠️ `besoin` MAJORE, et l'écran ne l'affirme pas.** Deux appareils refusés à
+  deux heures d'écart s'y additionnent alors qu'ils n'étaient pas simultanés.
+  D'où « il vous en aurait fallu **au moins** N » — un test garde la formule.
+- Un appareil refusé **ne tient aucune place** : les deux comptages du plafond
+  excluent `refuse`.
+
+## ⚠️ LE PLAFOND EST LE HAUT DU PALIER, PAS LE NOMBRE DEVISÉ
+
+La grille vend des paliers : Advanced, c'est « 3 à 20 appareils » pour 310 €. Un
+client devisé sur 7 appareils paie Advanced et a donc droit à **20** — lui en
+refuser un huitième lui vendrait moins que ce que la page publique lui promet.
+`plafond_appareils` arrondit donc au haut du palier, et prolonge Enterprise par
+tranches de dix **entamées**, exactement comme `prixCents` les facture.
+
+Trois sources, dans cet ordre : `stores.devices` (l'assiette devisée), puis le
+palier de `companies.plan` — **une souscription en ligne n'écrit PAS `devices`**,
+vérifié le 4 septembre, sans ce repli un client Advanced n'aurait aucun plafond
+—, puis rien.
+
+⚠️ Les trois nombres (2, 20, 100) et la tranche de dix sont **la copie** de
+`OFFRES[].max` et `SUPPLEMENT.par` de `web/lib/offres.ts` : le site et la base
+ne compilent pas ensemble. Même duplication assumée que la grille de
+`_shared/devis.ts`, même remède — un test compare les deux.
+
+## ⚠️ L'OFFRE PROPOSÉE COUVRE LE BESOIN, ELLE NE MONTE PAS D'UN CRAN
+
+Arbitré par Julien : un magasin Essential dont le besoin monte à 40 se voit
+proposer **Enterprise**, pas Advanced. Lui proposer le rang suivant le
+laisserait au-dessus de son forfait dès le lendemain, et il faudrait le
+rappeler une semaine plus tard. `proposer()` (`web/lib/appareils.ts`) le fait ;
+le prix vient de `prixCents`, jamais d'une addition faite sur place.
+
+## L'identifiant, sur le téléphone
+
+- **⚠️ Il vit dans le trousseau, et il DOIT y vivre.** `oublierCachesLocaux`
+  balaie `AsyncStorage` à chaque `signOut` : rangé là, l'identifiant changerait
+  à chaque relève d'équipe, et un téléphone partagé entre le matin et
+  l'après-midi compterait pour **deux** appareils. Or c'est exactement
+  l'argument de vente — « comptes illimités, deux appareils à la fois ».
+- **⚠️ Il n'est relié à AUCUN compte**, et `appareils_actifs` n'a délibérément
+  pas de colonne d'utilisateur. On compte des appareils, jamais des personnes
+  (constat E3, 19 août 2026). Ce qui reste nominatif, et doit le rester, c'est
+  `counts.counted_by`.
+- **⚠️ La promesse est mise en cache, pas seulement la valeur.** Deux appels
+  concurrents tireraient sinon deux identifiants, et un seul téléphone
+  consommerait deux places.
+- Conséquence assumée : réinstaller l'application peut changer l'identifiant
+  (le Keystore d'Android est effacé à la désinstallation, le trousseau d'iOS
+  non). L'ancienne place se libère seule en quatre-vingt-dix secondes.
+
+## La cadence, et pourquoi c'est celle de la présence
+
+**30 secondes entre deux signalements, 90 secondes de fenêtre côté serveur** —
+c'est-à-dire `BEAT_MS` et `STALE_MS` de `lib/presence.ts`, à l'identique. Ce
+n'est pas une coïncidence : si le verrou retenait une place plus longtemps que
+le tableau de bord ne montre l'appareil, l'écran du superviseur dirait « un
+appareil » pendant que le verrou en compterait deux. **Un seul silence, une
+seule conclusion.**
+
+La place est en outre **rendue au démontage** (`rendre_place_appareil`), sans
+attendre l'expiration : sur un forfait plein, un collègue qui prend le relais
+attendrait sinon une minute et demie pour rien.
+
+- **⚠️ `usePlaceAppareil` ne se monte QUE sur l'écran qui compte** (`scanner.tsx`).
+  L'assiette est « les appareils qui comptent en même temps » : un téléphone
+  posé sur l'écran d'un inventaire ne compte pas, et lui faire prendre une place
+  priverait un collègue de la sienne. Un test refuse le hook ailleurs.
+- Le verrou sérialise les demandes concurrentes par un `for update` sur la ligne
+  du magasin — sans lui, deux téléphones obtiennent la même dernière place. Le
+  motif exact de VR-001, sur un autre objet.
+
+## L'écran de refus ne cite aucun prix
+
+Il s'ouvre devant un compteur, souvent un saisonnier, debout dans un rayon : une
+proposition commerciale n'a rien à y faire, et il n'a de toute façon pas la
+main. Il dit la seule chose vraie et utile — attendre suffit — et renvoie au
+responsable, qui décide sur le site. Un test refuse « € », « Essential »,
+« Advanced », « Enterprise » et « offre » dans ce bloc.
+
+Symétriquement, **la section « Appareils » du site est réservée à
+l'administrateur d'entreprise et à Quantinvo** : elle passe par
+`peut_lire_rapport_magasin`, la même porte que le rapport consolidé. Ce n'est
+pas une donnée d'inventaire, c'est l'état d'une licence.
+
+## Vérifications
+
+- **En base, en transactions annulées, sur les fonctions réellement
+  appliquées** : le troisième appareil refusé sur un forfait de deux, l'appareil
+  déjà présent qui garde sa place, la clé invalide, l'étranger à l'inventaire
+  refusé, la place rendue puis reprise par le refusé, la lecture accordée à
+  l'administrateur d'entreprise et **refusée à un compteur (42501)**, la RLS qui
+  ferme les deux tables même à `authenticated`, et **sans plafond aucun refus**.
+- **La dé-duplication des refus est prouvée** : un appareil refusé cinq fois et
+  un second refusé une fois donnent `refus = 2`, pas 6.
+- **Le dépôt et la base sont identiques** : les quatre corps de fonction, une
+  fois commentaires et blancs normalisés, ont la **même empreinte MD5**.
+- **Les gardes mordent** : cinq sabotages (borne 1 retirée, refus compté à
+  chaque tentative, plafond ouvert à `authenticated`, un prix dans l'écran de
+  refus, la place prise sur l'écran d'un inventaire) font échouer exactement les
+  cinq tests correspondants.
+- **Au navigateur**, par route jetable (retirée, `git status` contrôlé), clair
+  et sombre, à 1280 px et 900 px : les quatre états, **débordement horizontal
+  nul**.
+- 1 001 tests du site, 416 de l'application, `tsc --noEmit` des deux côtés,
+  `eslint .` à zéro erreur, `next build` avec la table de routes inchangée.
+- **Zéro résidu contrôlé** : 0 ligne dans les deux tables, 165 comptages,
+  2 magasins sans assiette — comme avant.
+
+⚠️ **NON VÉRIFIÉ, ET IL FAUT LE SAVOIR : rien ne mesure encore.** L'identifiant
+et la demande de place vivent sur le téléphone — **il faut un build**. D'ici là
+les écrans afficheront zéro appareil et le verrou ne mordra pas, ce qui est
+exact : aucun téléphone ne sait encore demander sa place. Et aucun magasin n'a
+d'assiette, donc le verrou resterait muet même avec le build.
+
+## ⚠️ CE QUI RESTE, ET QUI EST LE PLUS GROS : LE LIBRE-SERVICE
+
+Julien, le même jour : *« nous avons une offre claire aujourd'hui, plus besoin
+de passer par un devis pour quoi que ce soit. Donc il faut créer les produits
+pour les magasins supplémentaires, appareils supplémentaires. »*
+
+Le bouton « Passer à Advanced » de la fiche magasin mène aujourd'hui à
+**`/tarifs`**, faute de mieux : il n'existe aucun changement d'offre en
+libre-service, la souscription en ligne crée une entreprise et ne fait pas
+monter un client existant. Ce qu'il faudra :
+
+- **Deux Prices Stripe de plus**, aux montants du 31 août : appareils
+  supplémentaires par tranche de dix, **64 € / mois** et **690 € / an**. Ils
+  portent une **quantité**, pas un montant figé. ⚠️ Comme les six autres, ils se
+  créent dans le tableau de bord et se posent en secrets — **jamais par le
+  code**.
+- **Un abonnement par entreprise, un article par magasin**, au lieu d'un
+  abonnement par magasin. Ajouter un magasin ajoute un article, changer d'offre
+  échange le Price de son article, ajouter des appareils change une quantité —
+  et Stripe calcule le prorata à chaque fois. Une seule facture pour le client.
+  · **Effet de bord bienvenu** : la limite notée le matin même — « un magasin
+    ajouté en mensuel crée un second abonnement que rien ne suit » — **disparaît**.
+    Elle n'avait de sens que dans le modèle à un abonnement par magasin.
+  · **⚠️ Un abonnement Stripe a UN SEUL RYTHME.** Une entreprise est donc
+    mensuelle ou annuelle, pas les deux. C'est déjà ce que le produit suppose
+    (`companies.billing_period`).
+- **Le devis ne disparaît pas** : il reste la porte d'entrée d'une nouvelle
+  entreprise par `/inscription`, et le seul endroit où un montant se négocie.
+  Ce que le libre-service lui retire, ce sont les magasins supplémentaires et
+  les changements d'offre d'un client déjà là — tout ce qui se tarife à la
+  grille.
+
+Tests de garde : `web/tests/decompte-appareils.test.ts`.

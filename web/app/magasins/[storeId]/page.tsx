@@ -23,6 +23,9 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Renommer } from '@/components/ui/Renommer'
 import { LigneInventaire } from '@/components/magasin/CorpsMagasin'
 import { nb, relativeTime } from '@/lib/format'
+import { Stat } from '@/components/ui/Stat'
+import { euros } from '@/lib/offres'
+import { lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
 import type { SessionBloc } from '@/lib/entreprise'
 
 type Personne = {
@@ -62,18 +65,24 @@ export default function FicheMagasinPage() {
   const [erreur, setErreur] = useState(false)
   const [copie, setCopie] = useState(false)
   const [suppression, setSuppression] = useState<Demande | null>(null)
+  const [appareils, setAppareils] = useState<AppareilsMagasin | null>(null)
   const toast = useToast()
   const confirm = useConfirm()
 
   const charger = useCallback(async () => {
     if (!storeId) return
-    const [f, c, d] = await Promise.all([
+    const [f, c, d, ap] = await Promise.all([
       supabase.rpc('ca_store_detail', { p_store_id: storeId }),
       getMyCompany().catch(() => null),
       supabase.rpc('ca_list_store_requests'),
+      // Le décompte d'appareils. Il ne conditionne rien : la fiche s'affiche
+      // sans lui, et la section se tait — un chiffre absent ne doit pas
+      // emporter la page.
+      supabase.rpc('appareils_du_magasin', { p_store_id: storeId }),
     ])
     if (f.error || !f.data) { setErreur(true); return }
     setFiche(f.data as Fiche)
+    setAppareils(ap.error ? null : (ap.data as AppareilsMagasin))
     setCompany(c)
     const demandes = (d.data ?? []) as Demande[]
     setSuppression(demandes.find((x) => x.kind === 'remove' && x.status === 'pending' && x.store_id === storeId) ?? null)
@@ -157,6 +166,10 @@ export default function FicheMagasinPage() {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
 
+  // Ce que le décompte d'appareils veut dire — le jugement vit dans
+  // `lib/appareils.ts`, testable sans base ni navigateur.
+  const verdict = lireAppareils(appareils)
+
   const ouverts = fiche.sessions.filter((s) => s.status !== 'closed')
   const clos = fiche.sessions.filter((s) => s.status === 'closed')
 
@@ -212,6 +225,79 @@ export default function FicheMagasinPage() {
           </button>
         </div>
       </section>
+
+      {appareils && (
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <h2>Appareils</h2>
+            <Link href="/tarifs" className="btn btn-ghost btn-sm">Voir les offres</Link>
+          </div>
+
+          <div className="dash-stats dash-stats-5">
+            <Stat
+              label="En ce moment"
+              value={nb(appareils.maintenant)}
+              sub="en train de compter"
+            />
+            <Stat
+              label={`Pic sur ${appareils.jours} jours`}
+              value={nb(appareils.pic)}
+              sub={appareils.pic_le
+                ? `le ${new Date(appareils.pic_le).toLocaleDateString('fr-FR')}`
+                : 'aucun comptage'}
+            />
+            <Stat
+              label="Forfait"
+              value={appareils.plafond == null ? '—' : nb(appareils.plafond)}
+              sub={verdict.offreActuelle ?? 'non renseigné'}
+            />
+          </div>
+
+          {/* ⚠️ Le bandeau ne se déclenche PAS sur le pic — depuis que le
+              verrou ferme la porte, le pic ne peut plus dépasser le plafond.
+              Ce qui dit qu'une offre plus large est devenue nécessaire, c'est
+              le nombre d'appareils éconduits. */}
+          {verdict.etat === 'depasse' && verdict.proposition && (
+            <div className="signal signal-alerte">
+              <div className="signal-txt">
+                <strong>
+                  {nb(appareils.refus)} appareil{appareils.refus > 1 ? 's n’ont' : ' n’a'} pas pu
+                  compter faute de place
+                </strong>
+                <div className="muted small">
+                  {/* « au moins » : `besoin` majore, deux refus à deux heures
+                      d’écart s’y additionnent. On ne l’affirme pas. */}
+                  Il vous en aurait fallu au moins {nb(appareils.besoin)} le
+                  {' '}{appareils.besoin_le
+                    ? new Date(appareils.besoin_le).toLocaleDateString('fr-FR')
+                    : 'jour le plus chargé'}.
+                  {' '}<strong>{verdict.proposition.nom}</strong> couvre jusqu’à
+                  {' '}{nb(verdict.proposition.couvre)} appareils, pour
+                  {' '}<span className="prix">{euros(verdict.proposition.mois)} par mois</span> ou
+                  {' '}<span className="prix">{euros(verdict.proposition.an)} par an</span>.
+                </div>
+              </div>
+              <Link href="/tarifs" className="btn btn-primary btn-sm">
+                {verdict.proposition.action}
+              </Link>
+            </div>
+          )}
+
+          {verdict.etat === 'sans_assiette' && (
+            <p className="muted small">
+              Ce magasin n’a pas d’assiette en appareils — il a été créé avant que la licence ne
+              se compte ainsi. La mesure s’affiche, rien n’est refusé.
+            </p>
+          )}
+
+          {verdict.etat === 'dans_le_forfait' && (
+            <p className="muted small">
+              Un appareil compte quand quelqu’un a l’écran de comptage ou d’audit ouvert. Il sort
+              du décompte quatre-vingt-dix secondes après son dernier signe de vie.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="admin-section">
         <div className="admin-section-head">

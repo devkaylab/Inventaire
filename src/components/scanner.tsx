@@ -48,6 +48,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { errorMessage } from '@/lib/errors'
 import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@/lib/scanSound'
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
+import { usePlaceAppareil } from '@/lib/appareil'
 import { demander, demanderChoix, signaler } from '@/lib/dialogue'
 import { redresserSaisie, redresserNumero, clavierDecale } from '@/lib/douchette'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
@@ -630,6 +631,20 @@ export function Scanner({
   // sans un mot : un refus à cet instant est définitif sur iOS. Elle attend
   // désormais le bouton de l'écran d'amorce ci-dessous.
   const amorceNecessaire = permission?.status === 'undetermined' && permission.canAskAgain
+
+  /**
+   * La place de cet appareil dans le forfait du magasin.
+   *
+   * ⚠️ ELLE NE SE PREND QUE SUR CET ÉCRAN, et c'est ce qui la rend juste :
+   * l'assiette facturée est « les appareils qui comptent EN MÊME TEMPS ». Un
+   * téléphone posé sur l'écran d'un inventaire ne compte pas, et lui faire
+   * prendre une place priverait un collègue de la sienne.
+   *
+   * Elle attend que la caméra soit autorisée : l'écran d'amorce est une
+   * demande de permission, pas du comptage. Et elle est rendue au démontage —
+   * voir `usePlaceAppareil`.
+   */
+  const place = usePlaceAppareil(sessionId, !amorceNecessaire)
 
   // Retour des Réglages : sans cette relecture, l'écran resterait sur
   // « refusé » alors que l'autorisation vient d'être accordée.
@@ -1363,6 +1378,52 @@ export function Scanner({
           <Text style={styles.amorceBtnText}>Continuer</Text>
         </Pressable>
         <Text style={styles.amorceNote}>Votre téléphone vous demandera ensuite l&apos;autorisation.</Text>
+      </View>
+    )
+  }
+
+  /**
+   * Le forfait du magasin est plein.
+   *
+   * ⚠️ IL NE CITE AUCUN PRIX, ET C'EST DÉLIBÉRÉ. Cet écran s'ouvre devant un
+   * compteur, souvent un saisonnier, debout dans un rayon : une proposition
+   * commerciale n'a rien à y faire, et il n'a de toute façon pas la main. Il
+   * dit la seule chose vraie et utile — attendre suffit — et renvoie au
+   * responsable, qui décide sur le site.
+   *
+   * ⚠️ ON N'ARRIVE ICI QUE SUR UN REFUS EXPLICITE DU SERVEUR. Réseau coupé,
+   * serveur muet, réponse inconnue : `usePlaceAppareil` accorde. Un magasin en
+   * réserve doit pouvoir compter, et une coupure d'une seconde ne doit jamais
+   * renvoyer quelqu'un de son rayon.
+   */
+  if (place.etat === 'refusee') {
+    return (
+      <View style={styles.amorce}>
+        <View style={styles.pleinPuce}>
+          <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+            <Path d="M6.5 2.75h11a1.75 1.75 0 0 1 1.75 1.75v15a1.75 1.75 0 0 1-1.75 1.75h-11A1.75 1.75 0 0 1 4.75 19.5v-15A1.75 1.75 0 0 1 6.5 2.75Z"
+              stroke={AUDIT_COLOR} strokeWidth={1.7} />
+            <Path d="M10 18.25h4" stroke={AUDIT_COLOR} strokeWidth={1.7} strokeLinecap="round" />
+          </Svg>
+        </View>
+        <Text style={styles.amorceTitre}>
+          {place.plafond === 1
+            ? 'Un appareil compte déjà'
+            : `${place.plafond ?? ''} appareils comptent déjà`}
+        </Text>
+        <Text style={styles.amorceTexte}>
+          Le forfait de ce magasin couvre {place.plafond ?? ''} appareil{(place.plafond ?? 0) > 1 ? 's' : ''} à
+          la fois. Vous pourrez compter dès que l&apos;un d&apos;eux aura terminé.
+        </Text>
+        <Text style={styles.amorceTexte}>
+          Votre responsable peut ajouter des appareils depuis le site.
+        </Text>
+        <Pressable style={styles.amorceBtn} onPress={place.reessayer}>
+          <Text style={styles.amorceBtnText}>Réessayer</Text>
+        </Pressable>
+        <Text style={styles.amorceNote}>
+          Cet écran se débloque tout seul dès qu&apos;une place se libère.
+        </Text>
       </View>
     )
   }
@@ -2136,6 +2197,11 @@ function makeStyles(t: Theme) {
     amorceBtn: { height: 48, alignSelf: 'stretch', borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
     amorceBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
     amorceNote: { color: t.textMuted, fontSize: 12.5, fontFamily: Font.regular, textAlign: 'center' },
+    pleinPuce: {
+      width: 52, height: 52, borderRadius: Radius.md, marginBottom: Spacing.md,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline,
+    },
     permTitre: { color: t.textPrimary, fontSize: 17, textAlign: 'center', fontFamily: Font.semibold },
     permText: { color: t.textSecondary, fontSize: 15, textAlign: 'center', fontFamily: Font.regular },
     permAide: { color: t.textMuted, fontSize: 13, textAlign: 'center', fontFamily: Font.regular, lineHeight: 18 },

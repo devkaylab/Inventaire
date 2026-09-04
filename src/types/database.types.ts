@@ -1550,6 +1550,7 @@ export type Database = {
         }
         Returns: Json
       }
+      appareils_du_magasin: { Args: { p_store_id: string }; Returns: Json }
       ca_cancel_invitation: { Args: { p_id: string }; Returns: Json }
       ca_cancel_store_request: { Args: { p_id: string }; Returns: Json }
       ca_company_overview: { Args: never; Returns: Json }
@@ -2052,6 +2053,10 @@ export type Database = {
         Returns: Json
       }
       ouvrir_message_fil: { Args: { p_fil: string }; Returns: Json }
+      prendre_place_appareil: {
+        Args: { p_appareil: string; p_session_id: string }
+        Returns: Json
+      }
       purge_expired_data: { Args: never; Returns: Json }
       quote_by_token: { Args: { p_token: string }; Returns: Json }
       rapport_detail_page: {
@@ -2135,6 +2140,10 @@ export type Database = {
         Returns: Json
       }
       request_account_deletion: { Args: never; Returns: Json }
+      rendre_place_appareil: {
+        Args: { p_appareil: string; p_session_id: string }
+        Returns: Json
+      }
       resolve_audit: {
         Args: {
           p_final_qty: number
