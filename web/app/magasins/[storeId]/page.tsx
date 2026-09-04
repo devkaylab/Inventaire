@@ -276,10 +276,18 @@ export default function FicheMagasinPage() {
               value={nb(appareils.maintenant)}
               sub="appareils, en ce moment"
             />
+            {/* ⚠️ L'AMBRE SUIT LE VERDICT, PAS LE COMPTE. Les refus restent
+                trente jours : après un passage à l'offre supérieure, la tuile
+                serait restée ambre un mois durant pour un problème résolu — et
+                une alerte qui persiste après le geste qui la règle est une
+                alerte qu'on cesse de lire. Même famille que « un zéro ne porte
+                aucune couleur ».
+                ⚠️ Et le commentaire se pose AVANT la balise : entre deux
+                attributs, il n'est pas du JSX valide. Troisième fois. */}
             <Stat
               label={`Refusés · ${appareils.jours} derniers jours`}
               value={nb(appareils.refus)}
-              tone={appareils.refus > 0 ? 'warn' : 'neutral'}
+              tone={verdict.etat === 'depasse' ? 'warn' : 'neutral'}
               sub={appareils.refus_le
                 ? `dernier le ${new Date(appareils.refus_le).toLocaleDateString('fr-FR')}`
                 : 'aucun appareil refusé'}

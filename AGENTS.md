@@ -9077,3 +9077,26 @@ c'est exactement pour ça qu'il ne saignait pas.
 
 Tests de garde : `web/tests/libre-service.test.ts`, bloc « on ne facture pas les
 tranches deux fois ».
+
+## Une alerte s'éteint quand le geste qui la règle est fait (4 septembre 2026)
+
+Relevé en auditant le décompte d'appareils à la demande de Julien (« au-delà du
+build, tout est fait ? »). La tuile « Refusés · 30 derniers jours » se teintait
+d'ambre dès qu'un refus existait — **y compris après le passage à l'offre
+supérieure**. Les refus restent trente jours : le client aurait vu un mois
+durant une alerte pour un problème qu'il venait de régler en payant.
+
+L'ambre suit donc le **verdict** (`etat === 'depasse'`), pas le compte. Le
+chiffre, lui, ne bouge pas : c'est un fait, et il reste lisible.
+
+⚠️ **Une alerte qui persiste après le geste qui la règle est une alerte qu'on
+cesse de lire** — et c'est la même famille que « un zéro ne porte aucune
+couleur » (29 août) : la couleur dit ce qu'il faut faire, jamais ce qui s'est
+passé.
+
+⚠️ **Piège de rédaction, troisième fois** : un commentaire `{/* … */}` n'est pas
+du JSX valide **entre deux attributs** d'une balise, pas plus qu'en premier
+enfant d'un `cond && (…)`. Il se pose avant la balise.
+
+Tests de garde : `web/tests/decompte-appareils.test.ts`, bloc « une alerte
+s'éteint quand le geste qui la règle est fait ».

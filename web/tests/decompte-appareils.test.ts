@@ -450,3 +450,17 @@ describe('l’application', () => {
     expect(bloc).toContain('Réessayer')
   })
 })
+
+describe('une alerte s’éteint quand le geste qui la règle est fait', () => {
+  it('l’ambre des refus suit le verdict, pas le compte', () => {
+    // ⚠️ Les refus restent trente jours. Après un passage à l'offre
+    // supérieure, la tuile serait restée ambre un mois durant pour un problème
+    // résolu — et une alerte qui persiste après le geste qui la règle est une
+    // alerte qu'on cesse de lire. Même famille que « un zéro ne porte aucune
+    // couleur » (29 août 2026).
+    const fiche = readFileSync(
+      path.resolve(__dirname, '../app/magasins/[storeId]/page.tsx'), 'utf8')
+    expect(fiche).toContain("tone={verdict.etat === 'depasse' ? 'warn' : 'neutral'}")
+    expect(fiche).not.toContain("tone={appareils.refus > 0 ? 'warn' : 'neutral'}")
+  })
+})
