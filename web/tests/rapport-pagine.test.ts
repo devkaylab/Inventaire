@@ -92,11 +92,18 @@ describe('le rapport se lit par pages', () => {
   })
 
   it('les droits sont reposés, anon nommément', () => {
-    const fichier = fichierDe('rapport_page')
+    // ⚠️ Dans le fichier qui définit CHACUNE, pas dans un fichier commun.
+    // Les trois vivaient ensemble jusqu'au 4 septembre 2026 ; depuis, la
+    // réécriture de `rapport_resume` et `rapport_page` a laissé
+    // `rapport_detail_page` dans sa migration d'origine. La garde ne
+    // s'affaiblit pas — elle suit la règle réelle : la migration qui redéfinit
+    // une fonction repose SES droits, parce que `create or replace` rend
+    // EXECUTE à PUBLIC.
     for (const fn of ['rapport_resume', 'rapport_page', 'rapport_detail_page']) {
-      expect(fichier).toContain(`revoke all on function public.${fn}(`)
+      const fichier = fichierDe(fn)
+      expect(fichier, fn).toContain(`revoke all on function public.${fn}(`)
+      expect(fichier, fn).toMatch(/from public, anon/)
     }
-    expect(fichier).toMatch(/from public, anon/)
   })
 })
 

@@ -307,3 +307,79 @@ describe('l’agrégat n’a plus à trier', () => {
     expect(code).toContain("group by sku, coalesce(zone, '')")
   })
 })
+
+/**
+ * Les gros écrans ne construisent plus l'univers des articles
+ * (4 septembre 2026).
+ *
+ * Constat de Julien : avec deux inventaires de 400 000 références en base, le
+ * tableau de bord d'atterrissage ne se rafraîchit plus. Reproduit sur la base
+ * réelle — `tableau_de_bord_superviseur` mettait **8 459 ms**, pour un plafond
+ * de 8 s sur le rôle `authenticated`.
+ *
+ * ⚠️ LE MOTIF EST TOUJOURS LE MÊME : le serveur assemblait l'inventaire ENTIER
+ * pour rendre trois tuiles, cinquante lignes ou un anneau à cinq parts. Le
+ * travail doit dépendre de ce qu'on affiche, pas de la taille de l'inventaire.
+ */
+describe('les gros écrans n’assemblent plus tout l’inventaire', () => {
+  it('⚠️ l’écart du tableau de bord se DÉCOMPOSE en deux sommes', () => {
+    // Σ (compté − théorique) × prix = Σ compté×prix − Σ théorique×prix.
+    // Chaque terme est une jointure et une somme ; plus d'univers de SKU à
+    // fabriquer. Identité arithmétique, vérifiée identique au centime sur les
+    // quatre inventaires réels et deux jeux de 400 000 références.
+    const { corps } = derniereDefinition('tableau_de_bord_superviseur')
+    const code = corps.replace(/^\s*--.*$/gm, '')
+    expect(code).toContain('cross join lateral')
+    // L'union des SKU a disparu de cette fonction.
+    expect(code).not.toMatch(/univers as \(/)
+    expect(code).not.toMatch(/from public\.theoretical_stock t\s*\n?\s*join fen/)
+  })
+
+  it('⚠️ le Rapport assemble en UNE passe, par jointure externe complète', () => {
+    // Il a besoin d'une ligne par SKU : on ne peut pas décomposer la somme.
+    // Mais « théorique UNION compté » puis trois jointures gauches, c'est ce
+    // que fait un `full join` entre deux ensembles déjà uniques par SKU.
+    for (const fn of ['rapport_resume', 'rapport_page']) {
+      const code = derniereDefinition(fn).corps.replace(/^\s*--.*$/gm, '')
+      expect(code, fn).toContain('full join theo ts on ts.sku = l.s')
+      expect(code, fn).not.toContain('univers as (')
+    }
+  })
+
+  it('⚠️ le filtre d’inventaire est posé AVANT la jointure complète', () => {
+    // Dans un `full join`, une condition du `on` ne filtre pas : elle décide
+    // seulement de l'appariement, et les lignes des AUTRES inventaires
+    // ressortent du côté externe. Essayé : 800 156 lignes au lieu de 400 000.
+    for (const fn of ['rapport_resume', 'rapport_page']) {
+      const code = derniereDefinition(fn).corps.replace(/^\s*--.*$/gm, '')
+      expect(code, fn).toMatch(
+        /theo as \(\s*select t\.sku, t\.theoretical_qty\s*from public\.theoretical_stock t\s*where t\.session_id = p_session_id/,
+      )
+      // Et jamais la forme piégeuse.
+      expect(code, fn).not.toContain('full join public.theoretical_stock')
+    }
+  })
+
+  it('⚠️ l’anneau des écarts se départage à égalité', () => {
+    // Trouvé en prouvant l'équivalence : deux inventaires à 0,00 € d'écart
+    // sortaient dans un ordre différent d'une exécution à l'autre. Sur une
+    // liste qui n'en garde que cinq, la cinquième part changeait
+    // d'inventaire. Défaut antérieur à la réécriture ; même règle que la
+    // pagination — un ordre doit être TOTAL.
+    const code = derniereDefinition('tableau_de_bord_superviseur').corps.replace(/^\s*--.*$/gm, '')
+    expect(code).toContain('order by abs(ps.ecart_valeur) desc, f.id')
+    expect(code).toContain('order by abs(m.ecart_valeur) desc, m.store_id')
+    expect(code).not.toMatch(/order by abs\(ps\.ecart_valeur\) desc\)/)
+  })
+
+  it('les trois fonctions reposent leurs droits, anon nommément', () => {
+    // `create or replace` rend EXECUTE à PUBLIC — le constat n°6 du 28 août,
+    // qui se reproduit à chaque redéfinition.
+    for (const fn of ['tableau_de_bord_superviseur', 'rapport_resume', 'rapport_page']) {
+      const fichier = fichierDe(fn)
+      expect(fichier, fn).toContain(`revoke all on function public.${fn}(`)
+      expect(fichier, fn).toMatch(/from public, anon/)
+      expect(fichier, fn).toContain('to authenticated, service_role')
+    }
+  })
+})
