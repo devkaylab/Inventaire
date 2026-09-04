@@ -8444,3 +8444,21 @@ monter un client existant. Ce qu'il faudra :
   grille.
 
 Tests de garde : `web/tests/decompte-appareils.test.ts`.
+
+## ⚠️ Piège de méthode du jour — `tsc | head` rend le code de sortie de `head`
+
+J'ai poussé un JSX cassé. La commande était
+`npx tsc --noEmit 2>&1 | head -3 && npx vitest run && git commit …` : `tsc` a
+bien signalé trois erreurs, mais **le code de sortie d'un tube est celui de sa
+dernière commande** — `head`, qui réussit toujours. Le `&&` a donc laissé passer
+le commit.
+
+C'est mot pour mot le piège de `./scripts/pixel.sh | tail -5` (31 août 2026),
+sur un autre outil. **Ne jamais filtrer la sortie d'un contrôle qui garde un
+`&&`** : lancer le contrôle seul, lire son code de sortie, puis enchaîner. Et
+`next build` avant de pousser, pas seulement les tests — c'est lui qui compile
+réellement le JSX.
+
+Corrigé dans la foulée : un commentaire `{/* … */}` ne peut pas être le premier
+enfant d'un `cond && (…)` qui rend un seul élément. Il se pose **avant** la
+condition.

@@ -292,13 +292,13 @@ export default function FicheMagasinPage() {
             </div>
           )}
 
+          {/* ⚠️ ON NE RACONTE PAS AU CLIENT UNE HISTOIRE QU'ON NE CONNAÎT PAS.
+              La première version disait « il a été ouvert avant que la licence
+              ne se compte de cette façon » — vrai des magasins d'essai
+              d'aujourd'hui, invérifiable pour un magasin réel dont le forfait
+              manquerait pour une tout autre raison. On dit le fait, et ce qu'il
+              change. */}
           {verdict.etat === 'sans_forfait' && (
-            {/* ⚠️ ON NE RACONTE PAS AU CLIENT UNE HISTOIRE QU'ON NE CONNAÎT PAS.
-                La première version disait « il a été ouvert avant que la licence
-                ne se compte de cette façon » — vrai des magasins d'essai
-                d'aujourd'hui, invérifiable pour un magasin réel dont le forfait
-                manquerait pour une tout autre raison. On dit le fait, et ce
-                qu'il change. */}
             <p className="muted small">
               Ce magasin n’a pas de forfait en appareils. Les appareils sont comptés, aucun n’est
               refusé.
