@@ -159,6 +159,20 @@ export async function creerAbonnementCheckout(
     billingPeriod: string
     /** Le taux de TVA à appliquer (`txr_…`). Sans lui, rien n'est facturé en sus. */
     taxRateId?: string | null
+    /**
+     * Le genre de demande, recopié dans les métadonnées Stripe. Il ne DÉCIDE
+     * de rien — le webhook retrouve la demande par l'identifiant de session —
+     * mais une facture qui dit « company » pour un changement d'offre se lit
+     * mal le jour où on la rouvre.
+     */
+    kind?: string
+    /**
+     * Une seconde ligne, facultative : les appareils supplémentaires, par
+     * tranche de dix au-delà du plafond d'Enterprise. Sa QUANTITÉ est le
+     * nombre de tranches — c'est ce qui permet à un seul Price de porter
+     * n'importe quel dépassement, sans qu'aucun montant soit fabriqué ici.
+     */
+    supplement?: { priceId: string; quantity: number } | null
     tentative?: number
   },
 ): Promise<SessionCheckout> {
@@ -166,16 +180,30 @@ export async function creerAbonnementCheckout(
     mode: 'subscription',
     customer_email: p.customerEmail,
     payment_method_types: ['card'],
-    line_items: [{
-      quantity: 1,
-      price: p.priceId,
-      ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
-    }],
+    line_items: [
+      {
+        quantity: 1,
+        price: p.priceId,
+        ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+      },
+      ...(p.supplement && p.supplement.quantity > 0
+        ? [{
+          quantity: p.supplement.quantity,
+          price: p.supplement.priceId,
+          ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+        }]
+        : []),
+    ],
     subscription_data: {
       description: p.label,
       metadata: { request_id: p.requestId, plan: p.plan, billing_period: p.billingPeriod },
     },
-    metadata: { request_id: p.requestId, kind: 'company', plan: p.plan, billing_period: p.billingPeriod },
+    metadata: {
+      request_id: p.requestId,
+      kind: p.kind ?? 'company',
+      plan: p.plan,
+      billing_period: p.billingPeriod,
+    },
     client_reference_id: p.requestId,
     success_url: p.successUrl,
     cancel_url: p.cancelUrl,
@@ -353,4 +381,139 @@ function egalConstant(a: string, b: string): boolean {
   let diff = 0
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
   return diff === 0
+}
+
+/**
+ * L'abonnement d'une entreprise, et ses articles.
+ *
+ * ⚠️ Sert au CHANGEMENT D'OFFRE d'un client qui a déjà un abonnement. On ne lui
+ * ouvre pas un second Checkout : ce serait un second abonnement, et il paierait
+ * les deux. On modifie celui qu'il a.
+ */
+export async function lireAbonnement(
+  cle: string,
+  id: string,
+): Promise<{ id: string; statut: string; articles: { id: string; price: string }[] } | null> {
+  const resp = await fetch(`${API}/subscriptions/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${cle}` },
+  })
+  if (!resp.ok) return null
+  const data = await resp.json()
+  return {
+    id: data.id,
+    statut: data.status,
+    articles: (data.items?.data ?? []).map((a: { id: string; price?: { id: string } }) => ({
+      id: a.id,
+      price: a.price?.id ?? '',
+    })),
+  }
+}
+
+/**
+ * Échange le Price d'un article d'abonnement.
+ *
+ * ⚠️ `proration_behavior: 'always_invoice'` est le cœur du parcours : Stripe
+ * calcule le prorata du temps déjà payé sur l'ancienne offre, l'impute sur la
+ * nouvelle, et FACTURE TOUT DE SUITE la différence. Sans lui, le client
+ * changerait d'offre et ne paierait rien avant sa prochaine échéance.
+ *
+ * ⚠️ La clé d'idempotence porte l'article ET le prix visé : un second clic sur
+ * « Passer à Enterprise » rejoue exactement la même modification, jamais deux
+ * prorata. Elle ne doit PAS porter d'horodatage — Stripe refuse une clé
+ * rejouée avec d'autres paramètres, et le second clic n'aurait alors plus de
+ * réponse.
+ */
+export async function changerPrixArticle(
+  cle: string,
+  p: { itemId: string; priceId: string; taxRateId?: string | null },
+): Promise<{ id: string; price: string }> {
+  const corps = formulaire({
+    price: p.priceId,
+    quantity: 1,
+    proration_behavior: 'always_invoice',
+    ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+  })
+  const resp = await fetch(`${API}/subscription_items/${encodeURIComponent(p.itemId)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key': `offre-${p.itemId}-${p.priceId}`,
+    },
+    body: corps,
+  })
+  const data = await resp.json()
+  if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+  return { id: data.id, price: data.price?.id ?? p.priceId }
+}
+
+/**
+ * Pose, met à jour ou retire la ligne « appareils supplémentaires » d'un
+ * abonnement.
+ *
+ * ⚠️ Trois gestes derrière une seule fonction, parce que c'est UNE décision :
+ * combien de tranches de dix ce magasin doit-il porter, aujourd'hui ?
+ *   · aucune tranche et pas d'article  → rien à faire ;
+ *   · aucune tranche et un article     → on le SUPPRIME (le client est
+ *     redescendu sous cent appareils, il ne doit plus rien payer pour eux) ;
+ *   · des tranches et pas d'article    → on le crée ;
+ *   · des tranches et un article       → on change sa quantité.
+ *
+ * Rend l'identifiant de l'article, ou la chaîne vide quand il n'y en a plus —
+ * c'est ce que `appliquer_changement_offre` attend pour effacer la colonne.
+ */
+export async function poserArticleAppareils(
+  cle: string,
+  p: {
+    subscriptionId: string
+    itemId: string | null
+    priceId: string
+    quantity: number
+    taxRateId?: string | null
+  },
+): Promise<string> {
+  const n = Math.max(0, Math.trunc(p.quantity))
+
+  if (n === 0) {
+    if (!p.itemId) return ''
+    const resp = await fetch(`${API}/subscription_items/${encodeURIComponent(p.itemId)}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${cle}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Idempotency-Key': `appareils-off-${p.itemId}`,
+      },
+      body: formulaire({ proration_behavior: 'always_invoice' }),
+    })
+    if (!resp.ok) {
+      const data = await resp.json()
+      throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+    }
+    return ''
+  }
+
+  const corps = formulaire({
+    ...(p.itemId ? {} : { subscription: p.subscriptionId, price: p.priceId }),
+    ...(p.itemId ? { price: p.priceId } : {}),
+    quantity: n,
+    proration_behavior: 'always_invoice',
+    ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+  })
+  const url = p.itemId
+    ? `${API}/subscription_items/${encodeURIComponent(p.itemId)}`
+    : `${API}/subscription_items`
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      // La clé porte l'abonnement, le prix et la quantité visée : un second
+      // clic rejoue la même modification, jamais deux prorata.
+      'Idempotency-Key': `appareils-${p.itemId ?? p.subscriptionId}-${p.priceId}-${n}`,
+    },
+    body: corps,
+  })
+  const data = await resp.json()
+  if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+  return data.id as string
 }

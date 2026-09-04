@@ -8554,37 +8554,14 @@ les écrans afficheront zéro appareil et le verrou ne mordra pas, ce qui est
 exact : aucun téléphone ne sait encore demander sa place. Et aucun magasin n'a
 d'assiette, donc le verrou resterait muet même avec le build.
 
-## ⚠️ CE QUI RESTE, ET QUI EST LE PLUS GROS : LE LIBRE-SERVICE
+## Le libre-service a été construit dans la foulée
 
-Julien, le même jour : *« nous avons une offre claire aujourd'hui, plus besoin
-de passer par un devis pour quoi que ce soit. Donc il faut créer les produits
-pour les magasins supplémentaires, appareils supplémentaires. »*
-
-Le bouton « Passer à Advanced » de la fiche magasin mène aujourd'hui à
-**`/tarifs`**, faute de mieux : il n'existe aucun changement d'offre en
-libre-service, la souscription en ligne crée une entreprise et ne fait pas
-monter un client existant. Ce qu'il faudra :
-
-- **Deux Prices Stripe de plus**, aux montants du 31 août : appareils
-  supplémentaires par tranche de dix, **64 € / mois** et **690 € / an**. Ils
-  portent une **quantité**, pas un montant figé. ⚠️ Comme les six autres, ils se
-  créent dans le tableau de bord et se posent en secrets — **jamais par le
-  code**.
-- **Un abonnement par entreprise, un article par magasin**, au lieu d'un
-  abonnement par magasin. Ajouter un magasin ajoute un article, changer d'offre
-  échange le Price de son article, ajouter des appareils change une quantité —
-  et Stripe calcule le prorata à chaque fois. Une seule facture pour le client.
-  · **Effet de bord bienvenu** : la limite notée le matin même — « un magasin
-    ajouté en mensuel crée un second abonnement que rien ne suit » — **disparaît**.
-    Elle n'avait de sens que dans le modèle à un abonnement par magasin.
-  · **⚠️ Un abonnement Stripe a UN SEUL RYTHME.** Une entreprise est donc
-    mensuelle ou annuelle, pas les deux. C'est déjà ce que le produit suppose
-    (`companies.billing_period`).
-- **Le devis ne disparaît pas** : il reste la porte d'entrée d'une nouvelle
-  entreprise par `/inscription`, et le seul endroit où un montant se négocie.
-  Ce que le libre-service lui retire, ce sont les magasins supplémentaires et
-  les changements d'offre d'un client déjà là — tout ce qui se tarife à la
-  grille.
+Cette section annonçait un chantier ; il est fait le jour même. Voir « Le
+libre-service : changer d'offre, ajouter un magasin » plus bas. Ce qu'elle
+prévoyait tient toujours — un abonnement par entreprise, un article par
+magasin — à un ajustement près : **un client qui n'a pas encore d'abonnement
+passe par une session Checkout ordinaire**, et c'est le cas de tout le monde
+aujourd'hui.
 
 Tests de garde : `web/tests/decompte-appareils.test.ts`.
 
@@ -8605,3 +8582,214 @@ réellement le JSX.
 Corrigé dans la foulée : un commentaire `{/* … */}` ne peut pas être le premier
 enfant d'un `cond && (…)` qui rend un seul élément. Il se pose **avant** la
 condition.
+
+# Le libre-service : changer d'offre, ajouter un magasin (4 septembre 2026)
+
+*« Nous avons une offre claire aujourd'hui, plus besoin de passer par un devis
+pour quoi que ce soit. Donc il faut créer les produits pour les magasins
+supplémentaires, appareils supplémentaires. »*
+
+Le bouton « Passer à Advanced » de la fiche magasin menait à `/tarifs` faute de
+mieux : le client y relisait ce qu'il venait de lire, puis devait nous écrire.
+Et ajouter un magasin restait une demande, un devis, une attente. Les deux
+gestes se font maintenant en ligne, du clic au paiement.
+
+Migration `20260904240001`, fonction edge `libre-service`, composant
+`web/components/PayerEnLigne.tsx`.
+
+## ⚠️ LA RÈGLE QUI COÛTE DE L'ARGENT SI ON L'INVERSE
+
+**Un changement d'offre a deux chemins, et ils ne sont pas interchangeables.**
+
+| L'entreprise… | Chemin | Pourquoi |
+|---|---|---|
+| n'a **pas** d'abonnement Stripe | session Checkout, comme une souscription | rien à modifier |
+| en **a** un | on **modifie son article** (`proration_behavior: always_invoice`) | un second Checkout ouvrirait un **second abonnement**, et le client paierait les deux offres en même temps |
+
+`deposer_changement_offre` refuse donc le second cas (`code:
+'abonnement_en_cours'`), et c'est l'edge qui prend le chemin d'API. Rien à
+l'écran ne signalerait la double facturation : c'est le genre de défaut qu'on
+découvre sur un relevé bancaire, des semaines plus tard.
+
+**Aujourd'hui aucune entreprise n'a d'abonnement** — les deux en base sont des
+comptes d'essai, et un client venu par devis n'en a pas non plus. Tout le monde
+passe donc par Checkout, et le chemin d'API n'a encore jamais servi.
+
+## Le parcours réutilise celui du 22 août, vérifié de bout en bout
+
+Une demande naît directement en **`accepted`** (il n'y a rien à négocier), la
+session Checkout s'y attache, et `fulfil_paid_request` la mène à `created`.
+**Aucun second chemin de création** : c'est ce qui a évité, jusqu'ici, que deux
+façons de créer un magasin divergent.
+
+- **Un troisième genre de demande, `kind = 'offre'`**, dans `store_requests`
+  plutôt que dans une table à lui. La table porte déjà `devices`,
+  `billing_period`, les lignes de devis et tous les `stripe_*` — et surtout elle
+  est **déjà branchée** sur `attach_checkout_session`, sur `fulfil_paid_request`
+  et sur la purge. Une table de plus, ce serait un quatrième chemin à tenir
+  d'accord avec les autres.
+- **Un `kind = 'offre'` porte un `store_id` DÈS LE DÉPART** : le magasin existe,
+  il n'y a rien à créer. D'où la branche du webhook qui **met à jour** au lieu
+  d'insérer — un test vérifie qu'elle ne contient ni `gen_store_code` ni
+  `insert into public.stores`, faute de quoi un changement d'offre fabriquerait
+  un second magasin avec un second code d'accès.
+- **Elle n'écrase jamais un abonnement déjà enregistré**
+  (`coalesce(stripe_subscription_id, v_sub)`) : ce serait perdre la trace de ce
+  que le client paie déjà.
+
+## ⚠️ `prix_offre` : une QUATRIÈME copie de la grille, et elle est nécessaire
+
+Le réflexe est de faire porter le montant par l'appelant, comme
+`deposer_souscription` — mais **celle-là est appelée par l'edge en clé de
+service**, alors que les deux dépôts du libre-service sont appelés **avec le
+jeton du client** (règle du 22 août : une fonction edge n'ajoute aucun droit).
+Un administrateur d'entreprise pourrait donc se déposer une demande à un
+centime. **Le prix doit venir du serveur.**
+
+Les quatre copies, et ce qui les tient : `web/lib/offres.ts` (euros, le site),
+`subscribe-online` (centimes, l'edge publique), les paliers de
+`plafond_appareils`, et `prix_offre`. Un test compare la dernière à la première,
+palier par palier, supplément compris.
+
+**Corollaire** : `libre-service` ne recopie **aucune** grille. Elle appelle
+`prix_offre` et n'en retient que le nom du plan — assez pour choisir le Price,
+pas assez pour inventer un montant. Un test refuse tout montant de la grille
+dans ce fichier.
+
+## ⚠️ LA GARDE SE DEMANDE, ELLE NE SE DÉDUIT PAS
+
+Le refus `abonnement_en_cours` n'arrive qu'**après** la garde de
+`deposer_changement_offre` : le recevoir prouve donc que l'appelant était
+autorisé, et l'edge pourrait s'en contenter. Elle ne le fait pas.
+`peut_changer_offre` est appelée explicitement, avec le jeton du client, avant
+tout appel en clé de service.
+
+Une autorisation qui tient à l'ordre des `if` d'une autre fonction se perd au
+premier réagencement, **sans que rien ne le signale**. Sur le chemin de
+l'argent, la garde se demande.
+
+## Ce qui a dû être fermé à côté
+
+Trois portes que le nouveau genre de demande ouvrait sans qu'on y pense :
+
+- **`admin_fulfil_store_request` refuse tout genre autre que `add`.** Une
+  demande `offre` passe par `paid` comme une autre : sans ce refus, le bouton
+  « Créer le magasin » de la fiche entreprise **fabriquait un doublon**.
+- **`admin_pipeline` range un changement d'offre sous `store_offer`**, plus sous
+  `store` — sans quoi la console proposait le même bouton.
+- **`admin_quote_store_request` le refuse aussi**, avec son propre message : un
+  changement d'offre se règle en ligne, il ne se devise pas.
+
+## Les Price, et les deux qui manquent
+
+⚠️ **Les Price sont posés en secrets, JAMAIS créés par le code.** Les six de la
+grille existent (Julien les a recréés le 4 septembre). **Deux s'y ajoutent**,
+pour les appareils supplémentaires par tranche de dix :
+
+```
+STRIPE_PRICE_APPAREILS_MONTHLY    64 €
+STRIPE_PRICE_APPAREILS_YEARLY     690 €
+```
+
+Ils portent une **quantité** — le nombre de tranches — et c'est ce qui permet à
+un seul Price de couvrir n'importe quel dépassement sans qu'aucun montant soit
+fabriqué à la volée.
+
+⚠️ **Tant qu'ils manquent, seul le dépassement des cent appareils est bloqué**
+(503 `indisponible`, **avant toute écriture** — règle du 30 août). Essential,
+Advanced et Enterprise se souscrivent déjà.
+
+## Ce qui porte les écrans
+
+- **`PayerEnLigne` est une seule définition, parce que c'est un seul geste.**
+  Deux panneaux de paiement divergeraient au premier ajustement, et c'est le
+  chemin de l'argent : ce qui diverge là se paie en euros.
+- **⚠️ AUCUN REPLI SUR UNE RPC DIRECTE**, et c'est un **renversement assumé**.
+  Le repli avait un sens tant qu'une demande de magasin n'était qu'un signal
+  (« une demande qui passe sans accusé vaut mieux qu'une demande qui ne passe
+  pas »). Depuis qu'il y a un paiement derrière, sans la fonction edge il n'y a
+  pas de session Stripe : déposer la demande quand même laisserait quelqu'un
+  persuadé d'avoir payé. C'est la règle de `/souscrire`.
+- **⚠️ `invoke` JETTE le corps d'un refus**, or c'est là que vit le message
+  utile (« votre forfait couvre déjà 20 appareils », « pas encore ouvert »). On
+  le relit sur la `Response` portée par l'erreur.
+- **Les deux rythmes s'affichent**, en deux boutons et non un menu déroulant :
+  le choix porte deux prix, et un menu les cacherait tous les deux jusqu'au
+  clic — or c'est justement la comparaison qu'on veut rendre facile.
+- **Le bouton dit l'action, jamais le montant** — « Passer à Advanced »,
+  « Créer le magasin ». Les prix sont écrits juste au-dessus.
+- **Un changement d'offre ne s'affiche pas parmi les demandes de magasin** de
+  `/magasins` : il porte le même genre de ligne, il se lit sur la fiche du
+  magasin concerné.
+
+## ⚠️ Le webhook DIT au client ce qu'il vient de payer
+
+Trouvé en relisant le webhook après coup : il n'envoyait d'e-mail que pour
+`company` et `store`. Un changement d'offre à 310 € serait passé **sans un mot**
+— rien d'autre qu'un reçu Stripe, et rien qui dise de combien le forfait a
+bougé. Branche `store_offer` ajoutée, et l'avis interne ne dit plus « a réglé le
+magasin X » pour un magasin qui existait déjà.
+
+## Six gardes réorientées, aucune affaiblie
+
+Le nouveau parcours a fait tomber six tests, et chacun défendait le devis :
+
+- `demande-magasin.test.ts` exigeait `rpc('ca_request_store')` sur `/magasins`,
+  `p_devices` dans la page, et le **repli** sur la RPC. Les trois portent
+  désormais sur le libre-service — et le troisième garde exactement l'inverse :
+  **qu'il n'y ait PAS de repli**.
+- `devis.test.ts` comptait `tax_rates: [p.taxRateId]` **trois fois** dans
+  `_shared/stripe.ts`. Un compte se périme au premier chemin ajouté : la garde
+  vérifie maintenant, fonction par fonction, que **toute forme de paiement porte
+  le taux**.
+- `stripe.test.ts` lit `revoke all on function public.fulfil_paid_request(…)
+  from public, anon, authenticated` **sur une seule ligne** depuis le 22 août.
+  L'avoir coupée en deux dans la migration a fait tomber une garde qui protège
+  la porte du webhook. ⚠️ **Une mise en forme de migration peut casser une
+  garde** : la ligne est remise d'un seul tenant.
+
+## Vérifications
+
+- **En base, en transactions annulées**, sur les fonctions réellement
+  appliquées : les dix refus et acceptations des deux dépôts (déjà couvert,
+  rythme inconnu, 1 200 appareils, magasin d'un autre client, nominal, rejeu,
+  doublon de nom, doublon de demande, zéro appareil) ; puis le parcours complet
+  — dépôt → session → webhook — qui **met La Samaritaine à 7 appareils et
+  372 000 c/an sans créer de magasin**, tandis que la branche `add` en crée bien
+  un ; le rejeu du même événement répond `already` ; la console refuse de créer
+  un magasin sur une demande `offre`.
+- **Zéro résidu contrôlé** : 0 demande, 2 magasins, La Samaritaine revenue à
+  2 appareils sans abonnement.
+- **La matrice des droits** : `anon` sur aucune des six fonctions ;
+  `etat_abonnement_magasin`, `appliquer_changement_offre` et
+  `fulfil_paid_request` fermées aussi à `authenticated`.
+- **Dépôt et base identiques** : MD5 sur les corps normalisés (commentaires et
+  blancs retirés) des dix fonctions touchées.
+- **Sept sabotages, sept échecs** : le refus du second abonnement, la création
+  dans la branche `offre`, le Price vérifié avant l'écriture, la grille
+  recopiée dans l'edge, le repli sur une RPC directe, le taux de TVA sur le
+  changement de prix, l'écran qui contourne la fonction edge.
+- **Les deux fonctions edge sont déployées** — `libre-service` en v1 **avec**
+  vérification de jeton (celui qui appelle a un compte), `stripe-webhook` en v23
+  avec `--no-verify-jwt`. `verify_jwt` **relevé sur la base avant** de déployer,
+  recontrôlé après : rien n'a bougé. Les fichiers téléchargés depuis la
+  production sont **identiques à l'octet près** au dépôt. Et en direct, par
+  `pg_net` : `libre-service` répond **401 sans jeton** (donc la vérification est
+  bien active), `stripe-webhook` **405** sur GET et **400 « signature absente »**
+  sur un POST nu.
+- 1 055 tests du site, `tsc --noEmit`, `eslint .` à zéro erreur, `next build`
+  avec la table de routes inchangée.
+- **Au navigateur**, par route jetable (retirée, `git status` contrôlé), clair
+  et sombre, à 1 280 et 900 px : le bandeau ambre avec son panneau de paiement,
+  et la création d'un magasin à 137 appareils (Enterprise prolongé, 1 146 €/mois
+  ou 12 210 €/an — les mêmes montants que `prix_offre`). **Débordement
+  horizontal nul.**
+
+**⚠️ CE QUI N'EST PAS PROUVÉ, ET NE PEUT PAS L'ÊTRE ICI : aucun euro n'a
+circulé.** Le chemin d'API — celui d'un client qui a déjà un abonnement — n'a
+jamais tourné contre Stripe, et il n'existe aucune entreprise pour l'exercer.
+Ce qui est prouvé, c'est que la base répond juste et aux bonnes personnes, que
+les deux fonctions edge démarrent et refusent ce qu'elles doivent refuser, et
+que rien ne s'écrit quand un Price manque.
+
+Tests de garde : `web/tests/libre-service.test.ts`.

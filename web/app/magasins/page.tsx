@@ -13,8 +13,16 @@
 //   août 2026, demande de Julien : ces blocs occupaient tout le tableau de
 //   bord, ils appartiennent à cette page).
 //
-// Un magasin ne se crée pas depuis le produit — la licence se facture par
-// magasin, donc Quantinvo reste seul à créer. La demande n'est qu'un signal.
+// ⚠️ UN MAGASIN SE CRÉE DEPUIS LE PRODUIT DEPUIS LE 4 SEPTEMBRE 2026, et cette
+// note disait l'inverse jusque-là. La licence se facture toujours par magasin —
+// c'est même pour cela que la création reste derrière le paiement — mais l'offre
+// est publique et le client n'a plus besoin de nous pour l'acheter (Julien :
+// « plus besoin de passer par un devis pour quoi que ce soit »). Le paiement
+// ouvre une session Stripe, et c'est le webhook qui crée, comme pour une
+// inscription : aucun second chemin de création.
+//
+// Les demandes d'avant restent affichées tant qu'elles ne sont pas abouties —
+// un devis en cours se règle encore par son lien.
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -26,6 +34,8 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Volet } from '@/components/ui/Volet'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
+import { PayerEnLigne } from '@/components/PayerEnLigne'
+import { proposer } from '@/lib/appareils'
 import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } from '@/lib/entreprise'
 import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
@@ -33,7 +43,7 @@ import { nb } from '@/lib/format'
 
 type StoreRequest = {
   id: string
-  kind: 'add' | 'remove'
+  kind: 'add' | 'remove' | 'offre'
   store_id: string | null
   store_name: string
   message: string
@@ -150,7 +160,7 @@ export default function MagasinsPage() {
             <div className="empty-state">
               <div className="empty-state-title">Votre entreprise n’a encore aucun magasin</div>
               <p className="empty-state-hint">
-                Seul Quantinvo peut créer un magasin&nbsp;: demandez-lui d&apos;en ajouter un.
+                Ajoutez-en un ci-dessous&nbsp;: il est créé dès le paiement.
               </p>
             </div>
           ) : (
@@ -254,20 +264,31 @@ function VoletMagasin({ store }: { store: StoreBloc }) {
  * traitée est une trace, pas un brouillon.
  */
 function DemandesMagasin() {
-  const toast = useToast()
   const confirm = useConfirm()
+  const toast = useToast()
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
   const [ouvert, setOuvert] = useState(false)
   const [saisie, setSaisie] = useState<SaisieMagasin>({ nom: '', appareils: '' })
-  const [mot, setMot] = useState('')
-  const [busy, setBusy] = useState(false)
   const uid = useId()
 
   const appareils = nombreOuNull(saisie.appareils)
+  const nom = saisie.nom.trim()
+
+  // L'offre qui couvre ce nombre d'appareils, et ses deux prix. Elle vient de
+  // la MÊME fonction que la proposition de la fiche magasin : deux calculs du
+  // même palier divergeraient au premier ajustement de la grille.
+  const offre = useMemo(
+    () => (appareils && appareils > 0 ? proposer(0, Math.round(appareils)) : null),
+    [appareils],
+  )
 
   const charger = useCallback(async () => {
     const { data, error } = await supabase.rpc('ca_list_store_requests')
-    if (!error && data) setDemandes(data as StoreRequest[])
+    if (error || !data) return
+    // ⚠️ Un changement d'offre n'est pas une demande de magasin. Il porte le
+    // même genre de ligne — c'est ce qui lui donne le webhook et la purge sans
+    // rien réécrire — mais il se lit sur la fiche du magasin concerné.
+    setDemandes((data as StoreRequest[]).filter((d) => d.kind !== 'offre'))
   }, [])
 
   useEffect(() => { charger() }, [charger])
@@ -275,38 +296,6 @@ function DemandesMagasin() {
   function fermer() {
     setOuvert(false)
     setSaisie({ nom: '', appareils: '' })
-    setMot('')
-  }
-
-  async function envoyer(e: React.FormEvent) {
-    e.preventDefault()
-    const n = saisie.nom.trim()
-    if (!n || !appareils || appareils <= 0) return
-    setBusy(true)
-    // Par l'edge function : même RPC, appelée avec ce jeton, plus l'accusé de
-    // réception par e-mail. Repli sur la RPC directe si elle est injoignable —
-    // la demande passe alors sans accusé, plutôt que de ne pas passer.
-    const corps = {
-      name: n,
-      message: mot.trim(),
-      devices: Math.round(appareils),
-    }
-    let { data, error } = await supabase.functions.invoke('ca-request-store', { body: corps })
-    if (error) {
-      ;({ data, error } = await supabase.rpc('ca_request_store', {
-        p_name: corps.name,
-        p_message: corps.message,
-        p_devices: corps.devices,
-      }))
-    }
-    setBusy(false)
-    if (error || !data?.success) {
-      toast.error(data?.error ?? error?.message ?? 'Demande impossible pour le moment.')
-      return
-    }
-    toast.success('Demande envoyée. Quantinvo vous recontacte.')
-    fermer()
-    charger()
   }
 
   async function annuler(d: StoreRequest) {
@@ -387,50 +376,46 @@ function DemandesMagasin() {
       {!ouvert ? (
         <div style={{ marginTop: 12 }}>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOuvert(true)}>
-            Demander l&apos;ajout d&apos;un magasin
+            Ajouter un magasin
           </button>
         </div>
       ) : (
-        <form onSubmit={envoyer} className="panel demande-magasin" style={{ marginTop: 12 }}>
+        <div className="panel demande-magasin" style={{ marginTop: 12 }}>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Le prix dépend du nombre d&apos;appareils qui comptent en même temps dans ce
-            magasin&nbsp;: indiquez-le pour qu&apos;on puisse vous faire un devis. Quantinvo crée
-            ensuite le magasin.
+            Le prix dépend du nombre d&apos;appareils qui comptent en même temps dans ce magasin.
           </p>
 
           <MagasinSaisie
             valeur={saisie}
-            idPrefix={`${uid}-demande`}
+            idPrefix={`${uid}-ajout`}
             onChange={(champ, valeur) => setSaisie((v) => ({ ...v, [champ]: valeur }))}
           />
 
-          <div className="field" style={{ marginTop: 14 }}>
-            <label htmlFor="magasin-mot">Précision pour Quantinvo (facultatif)</label>
-            <textarea
-              id="magasin-mot"
-              value={mot}
-              onChange={(e) => setMot(e.target.value)}
-              placeholder="Date d'ouverture, contraintes particulières…"
-              maxLength={500}
-              rows={3}
-            />
-          </div>
+          {offre && nom !== '' && (
+            <div style={{ marginTop: 14 }}>
+              <div className="muted small">
+                <strong>{offre.nom}</strong> couvre {nb(offre.couvre)} appareils à la fois.
+              </div>
+              {/* ⚠️ LE BOUTON DIT L'ACTION, JAMAIS LE MONTANT — « à garder
+                  uniquement : "Créer le magasin" » (Julien, 4 septembre 2026).
+                  Les deux prix sont juste au-dessus. */}
+              <PayerEnLigne
+                offre={offre}
+                corps={{ action: 'magasin', name: nom, devices: Math.round(appareils ?? 0) }}
+                libelle="Créer le magasin"
+              />
+            </div>
+          )}
 
-          <div className="inline-form">
-            <button
-              className="btn btn-primary"
-              disabled={busy || !saisie.nom.trim() || !appareils || appareils <= 0}
-            >
-              Envoyer la demande
-            </button>
+          <div className="inline-form" style={{ marginTop: 10 }}>
             <button type="button" className="link-btn" onClick={fermer}>Annuler</button>
           </div>
-          {(!appareils || appareils <= 0) && saisie.nom.trim() !== '' && (
+          {(!appareils || appareils <= 0) && nom !== '' && (
             <p className="field-hint" style={{ marginTop: 10 }}>
-              Sans le nombre d&apos;appareils, nous ne pouvons pas vous faire de devis.
+              Indiquez le nombre d&apos;appareils pour voir le prix.
             </p>
           )}
-        </form>
+        </div>
       )}
     </>
   )

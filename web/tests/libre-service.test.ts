@@ -1,0 +1,299 @@
+/**
+ * Le libre-service : changer d'offre, ajouter un magasin — sans devis.
+ * (4 septembre 2026)
+ *
+ * ⚠️ CES GARDES PORTENT SUR LE CHEMIN DE L'ARGENT. Ce qui casse ici ne se voit
+ * pas à l'écran : un client paie, ou ne paie pas, ou paie deux fois. Chacune a
+ * été mise en défaut par sabotage avant d'être gardée.
+ */
+import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { derniereDefinition, fichierDe } from './migrations'
+import { OFFRES, SUPPLEMENT } from '@/lib/offres'
+import { PALIERS_APPAREILS } from '@/lib/appareils'
+
+const racine = path.resolve(__dirname, '../..')
+const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
+
+const edge = lire('supabase/functions/libre-service/index.ts')
+const stripeShared = lire('supabase/functions/_shared/stripe.ts')
+const payer = lire('web/components/PayerEnLigne.tsx')
+
+/**
+ * ⚠️ Toute assertion d'ABSENCE lit le code sans ses commentaires. Ces fichiers
+ * expliquent précisément ce qu'ils ne font pas — donc ils en citent les mots.
+ * Le piège s'est présenté cinq fois sur ce dépôt.
+ */
+function sansCommentaires(src: string): string {
+  return src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*(--|\/\/).*$/gm, ' ')
+}
+
+const espaces = (s: string) => s.replace(/\s+/g, ' ')
+
+describe('la grille en base est celle du site', () => {
+  const { corps } = derniereDefinition('prix_offre')
+  const plat = espaces(corps)
+
+  it.each(OFFRES.map((o) => [o.cle, o] as const))(
+    'porte %s au montant de web/lib/offres.ts',
+    (_cle, o) => {
+      // ⚠️ Quatrième copie de la grille, et la seule que les deux dépôts
+      // puissent utiliser sans qu'un client puisse se déposer une demande à un
+      // centime : ils sont appelés avec le jeton du client, pas en clé de
+      // service. Elle doit donc suivre `web/lib/offres.ts` au centime.
+      expect(plat).toContain(`v_plan := '${o.cle}'`)
+      expect(plat).toContain(`v_plafond := ${o.max};`)
+      expect(plat).toContain(`v_mois := ${o.mois * 100};`)
+      expect(plat).toContain(`v_an := ${o.an * 100};`)
+    },
+  )
+
+  it('prolonge Enterprise par tranches de dix entamées, au tarif du supplément', () => {
+    expect(plat).toContain(`/ ${SUPPLEMENT.par}.0`)
+    expect(plat).toContain(`v_t * ${SUPPLEMENT.mois * 100}`)
+    expect(plat).toContain(`v_t * ${SUPPLEMENT.an * 100}`)
+  })
+
+  it('a les mêmes paliers que le module de jugement', () => {
+    for (const palier of PALIERS_APPAREILS) expect(plat).toContain(`v_plafond := ${palier};`)
+  })
+
+  it('distingue ce qui est facturé à l’échéance de ce que le magasin vaut à l’année', () => {
+    // La règle des lignes de devis du 2 septembre 2026 : `prixCents` est
+    // l'échéance, `annuelCents` l'année. Les confondre facture douze fois trop
+    // cher, ou douze fois trop peu.
+    expect(plat).toContain("'prix_cents', case when p_billing_period = 'monthly' then v_mois else v_an end")
+    expect(plat).toContain("'annuel_cents', case when p_billing_period = 'monthly' then v_mois * 12 else v_an end")
+  })
+})
+
+describe('les droits', () => {
+  it('n’ouvre aucune des fonctions du libre-service à anon', () => {
+    // ⚠️ `create` accorde EXECUTE à PUBLIC **et** à `anon` par les droits par
+    // défaut de Supabase : un `revoke … from public` seul ne suffit pas.
+    for (const fn of [
+      'prix_offre',
+      'etat_abonnement_magasin',
+      'deposer_ajout_magasin',
+      'deposer_changement_offre',
+      'appliquer_changement_offre',
+      'peut_changer_offre',
+    ]) {
+      // ⚠️ UN `fichierDe(fn)` NE PARLE QUE DE `fn`. Se servir du fichier de la
+      // voisine, c'est valider des droits que plus personne ne pose le jour où
+      // une migration redéfinit l'une des deux (payé le 4 septembre 2026).
+      const f = fichierDe(fn)
+      expect(f, fn).toMatch(new RegExp(`revoke all on function public\\.${fn}\\([^)]*\\)\\s*\\n?\\s*from public, anon`))
+    }
+  })
+
+  it('ne laisse aucun client écrire une licence ni lire la plomberie Stripe', () => {
+    for (const fn of ['etat_abonnement_magasin', 'appliquer_changement_offre']) {
+      const f = fichierDe(fn)
+      expect(f, fn).toMatch(new RegExp(`revoke all on function public\\.${fn}\\([\\s\\S]{0,80}?from public, anon, authenticated`))
+      expect(f, fn).toContain(`to service_role;`)
+    }
+  })
+})
+
+describe('on ne facture jamais deux fois', () => {
+  const { corps } = derniereDefinition('deposer_changement_offre')
+  const plat = espaces(sansCommentaires(corps))
+
+  it('refuse le dépôt quand l’entreprise a déjà un abonnement', () => {
+    // ⚠️ LE POINT LE PLUS COÛTEUX DE CE CHANTIER. Une seconde session Checkout
+    // ouvrirait un SECOND abonnement Stripe : le client paierait les deux
+    // offres en même temps, et rien ne le signalerait. Le changement se fait
+    // sur l'abonnement existant, par l'API.
+    expect(plat).toContain("'abonnement_en_cours'")
+    expect(plat).toContain('v_store.stripe_subscription_id')
+  })
+
+  it('refuse un second changement en cours pour le même magasin', () => {
+    expect(plat).toContain("'deja_en_cours'")
+  })
+
+  it('ne vend rien quand le forfait couvre déjà le besoin', () => {
+    expect(plat).toContain("'deja_couvert'")
+    expect(plat).toContain('public.plafond_appareils(p_store_id)')
+  })
+
+  it('garde sur l’entreprise DU MAGASIN, jamais sur un paramètre de l’appelant', () => {
+    expect(plat).toContain('public.is_company_admin(v_store.company_id)')
+    expect(plat).not.toMatch(/is_company_admin\(p_company/)
+  })
+})
+
+describe('le webhook met à jour au lieu de créer', () => {
+  const { corps } = derniereDefinition('fulfil_paid_request')
+  const sans = sansCommentaires(corps)
+
+  it('porte une branche pour le changement d’offre', () => {
+    expect(sans).toContain("if v_sto.kind = 'offre' then")
+    expect(sans).toContain("'kind', 'store_offer'")
+  })
+
+  it('ne crée AUCUN magasin dans cette branche', () => {
+    // ⚠️ Sans ce contrôle, un changement d'offre fabriquerait un second magasin
+    // avec un second code d'accès, et le client paierait pour deux.
+    const debut = sans.indexOf("if v_sto.kind = 'offre' then")
+    const fin = sans.indexOf('v_store_code := public.gen_store_code();', debut)
+    expect(debut).toBeGreaterThan(0)
+    expect(fin).toBeGreaterThan(debut)
+    const branche = sans.slice(debut, fin)
+    expect(branche).not.toContain('gen_store_code')
+    expect(branche).not.toContain('insert into public.stores')
+    expect(branche).toContain('update public.stores')
+  })
+
+  it('n’écrase jamais un abonnement déjà enregistré', () => {
+    const debut = sans.indexOf("if v_sto.kind = 'offre' then")
+    const branche = sans.slice(debut, sans.indexOf('v_store_code := public.gen_store_code();', debut))
+    expect(espaces(branche)).toContain('stripe_subscription_id = coalesce(stripe_subscription_id, v_sub)')
+  })
+})
+
+describe('la console ne crée pas de magasin sur un changement d’offre', () => {
+  it('refuse tout genre autre que « add »', () => {
+    // Une demande `offre` passe par `paid` comme une autre : sans ce refus, le
+    // bouton « Créer le magasin » de la fiche entreprise fabriquerait un doublon.
+    const { corps } = derniereDefinition('admin_fulfil_store_request')
+    expect(espaces(sansCommentaires(corps))).toContain("if v_req.kind <> 'add' then")
+  })
+
+  it('range un changement d’offre sous son propre genre dans le pipeline', () => {
+    const { corps } = derniereDefinition('admin_pipeline')
+    expect(espaces(corps)).toContain("when 'offre' then 'store_offer'")
+  })
+
+  it('ne devise pas un changement d’offre', () => {
+    const { corps } = derniereDefinition('admin_quote_store_request')
+    expect(espaces(sansCommentaires(corps))).toContain("if v_req.kind <> 'add' then")
+  })
+})
+
+describe('la fonction edge', () => {
+  const sans = sansCommentaires(edge)
+
+  it('vérifie le Price AVANT toute écriture', () => {
+    // ⚠️ Règle du 30 août 2026 : une demande enregistrée sans page de paiement
+    // derrière laisse une ligne morte et un client persuadé d'avoir souscrit.
+    const price = sans.indexOf('if (!stripeKey || !priceOffre) return indisponible()')
+    const depotMagasin = sans.indexOf("'deposer_ajout_magasin'")
+    const depotOffre = sans.indexOf("'deposer_changement_offre'")
+    expect(price).toBeGreaterThan(0)
+    expect(depotMagasin).toBeGreaterThan(price)
+    expect(depotOffre).toBeGreaterThan(price)
+  })
+
+  it('ne recopie aucune grille : le tarif vient de la base', () => {
+    expect(sans).toContain("appelant.rpc('prix_offre'")
+    for (const o of OFFRES) {
+      expect(sans, o.nom).not.toContain(String(o.mois * 100))
+      expect(sans, o.nom).not.toContain(String(o.an * 100))
+    }
+  })
+
+  it('ne crée jamais de Price', () => {
+    expect(sans).not.toContain('price_data')
+    expect(sans).toContain('STRIPE_PRICE_')
+  })
+
+  it('demande la garde plutôt que de la déduire', () => {
+    // Le refus `abonnement_en_cours` prouverait l'autorisation — mais une
+    // autorisation qui tient à l'ordre des `if` d'une autre fonction se perd au
+    // premier réagencement.
+    const garde = sans.indexOf("'peut_changer_offre'")
+    const etat = sans.indexOf("'etat_abonnement_magasin'")
+    expect(garde).toBeGreaterThan(0)
+    expect(etat).toBeGreaterThan(garde)
+  })
+
+  it('appelle les RPC gardées avec le jeton de l’appelant, jamais en clé de service', () => {
+    for (const rpc of ['deposer_ajout_magasin', 'deposer_changement_offre', 'peut_changer_offre']) {
+      expect(sans, rpc).toContain(`appelant.rpc('${rpc}'`)
+      expect(sans, rpc).not.toContain(`service.rpc('${rpc}'`)
+    }
+  })
+
+  it('garde la plomberie Stripe pour la clé de service', () => {
+    expect(sans).toContain("service.rpc('etat_abonnement_magasin'")
+    expect(sans).toContain("service.rpc('appliquer_changement_offre'")
+  })
+
+  it('porte le même interrupteur de TVA que le site', () => {
+    const site = lire('web/lib/offres.ts')
+    const souscrire = lire('supabase/functions/subscribe-online/index.ts')
+    const valeur = (src: string) => /TVA_APPLICABLE\s*=\s*(true|false)/.exec(src)?.[1]
+    expect(valeur(edge)).toBe(valeur(site))
+    expect(valeur(edge)).toBe(valeur(souscrire))
+  })
+})
+
+describe('le prorata est facturé tout de suite', () => {
+  it('modifie l’article de l’abonnement plutôt que d’en ouvrir un second', () => {
+    // Sans `always_invoice`, le client change d'offre et ne paie rien avant sa
+    // prochaine échéance.
+    const bloc = stripeShared.slice(stripeShared.indexOf('export async function changerPrixArticle'))
+    expect(bloc).toContain("proration_behavior: 'always_invoice'")
+    expect(bloc).toContain('/subscription_items/')
+  })
+
+  it('retire la ligne des appareils quand le client redescend sous cent', () => {
+    const bloc = stripeShared.slice(stripeShared.indexOf('export async function poserArticleAppareils'))
+    expect(bloc).toContain("method: 'DELETE'")
+  })
+})
+
+describe('le panneau de paiement', () => {
+  const sans = sansCommentaires(payer)
+
+  it('n’a AUCUN repli sur une RPC directe', () => {
+    // Règle de `/souscrire` (30 août 2026) : sans la fonction edge il n'y a pas
+    // de session Stripe, donc rien à payer. Déposer la demande quand même
+    // laisserait quelqu'un persuadé d'avoir souscrit.
+    expect(sans).not.toContain('supabase.rpc')
+    expect(sans).toContain("supabase.functions.invoke('libre-service'")
+  })
+
+  it('affiche les deux rythmes', () => {
+    expect(sans).toContain("['monthly', 'yearly']")
+  })
+
+  it('relit le corps du refus, que `invoke` jette', () => {
+    expect(sans).toContain('ctx instanceof Response')
+  })
+})
+
+describe('les écrans', () => {
+  it('la fiche d’un magasin fait le changement sur place, plus sur /tarifs', () => {
+    const fiche = sansCommentaires(lire('web/app/magasins/[storeId]/page.tsx'))
+    expect(fiche).toContain('<PayerEnLigne')
+    // Le bouton de la proposition ne renvoie plus vers la grille publique : le
+    // client y relisait ce qu'il venait de lire, et devait nous écrire.
+    expect(fiche).not.toMatch(/href="\/tarifs" className="btn btn-primary/)
+  })
+
+  it('la page Magasins crée le magasin au lieu de le demander', () => {
+    const page = sansCommentaires(lire('web/app/magasins/page.tsx'))
+    expect(page).toContain('libelle="Créer le magasin"')
+    // ⚠️ « à garder uniquement : "Créer le magasin" » (Julien, 4 septembre
+    // 2026) : le bouton dit l'action, jamais le montant.
+    expect(page).not.toContain('Envoyer la demande')
+  })
+
+  it('un changement d’offre ne s’affiche pas parmi les demandes de magasin', () => {
+    const page = sansCommentaires(lire('web/app/magasins/page.tsx'))
+    expect(page).toContain("d.kind !== 'offre'")
+  })
+
+  it('le journal nomme les deux gestes du libre-service', () => {
+    const journal = lire('web/lib/journal.ts')
+    expect(journal).toContain('offre_changee:')
+    expect(journal).toContain('offre_appliquee:')
+  })
+})

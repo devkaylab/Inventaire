@@ -138,7 +138,12 @@ describe('écrans', () => {
   })
 
   it('passe par les RPC gardées, jamais la table en direct', () => {
-    expect(pageMagasins).toContain("rpc('ca_request_store'")
+    // ⚠️ AMENDÉ LE 4 SEPTEMBRE 2026, PAS AFFAIBLI. La création d'un magasin ne
+    // passe plus par `ca_request_store` — elle est en libre-service, donc par
+    // la fonction edge `libre-service`, qui appelle `deposer_ajout_magasin`
+    // avec le jeton de l'appelant. Ce que cette garde défend n'a pas changé :
+    // l'écran ne touche jamais `store_requests` en direct.
+    expect(pageMagasins).toContain('<PayerEnLigne')
     expect(pageMagasins).toContain("rpc('ca_list_store_requests')")
     expect(pageMagasins).toContain("rpc('ca_cancel_store_request'")
     expect(pageMagasins).not.toContain(".from('store_requests')")
@@ -204,7 +209,7 @@ describe('le formulaire porte les appareils', () => {
   })
 
   it('la demande transporte les appareils, du navigateur jusqu’à la RPC', () => {
-    expect(pageMagasins).toContain('p_devices')
+    expect(pageMagasins).toContain('devices: Math.round(appareils')
     expect(pageMagasins).not.toContain('p_units')
     for (const fn of ['ca_list_store_requests', 'admin_list_store_requests']) {
       expect(corpsDe(fn), fn).toContain("'units', r.units")
@@ -218,6 +223,11 @@ describe('le formulaire porte les appareils', () => {
     // ce test ne regardait que le navigateur.
     const edge = lire('../../supabase/functions/ca-request-store/index.ts')
     expect(edge).toContain('p_devices: devices')
+
+    // Et le chemin nominal DEPUIS le 4 septembre 2026 : le libre-service. Même
+    // leçon, même endroit où l'oubli ne se verrait pas.
+    const libreService = lire('../../supabase/functions/libre-service/index.ts')
+    expect(libreService).toContain('p_devices: appareils')
     expect(edge).not.toContain('p_units')
     expect(edge).not.toContain('p_sqm')
   })
@@ -406,8 +416,18 @@ describe('une demande aboutie quitte l’écran, et se dit par e-mail', () => {
   })
 
   it('les deux écrans retombent sur la RPC si l’edge est injoignable', () => {
-    expect(pageMagasins).toContain("functions.invoke('ca-request-store'")
-    expect(pageMagasins).toContain("supabase.rpc('ca_request_store'")
+    // ⚠️ RENVERSEMENT ASSUMÉ DU 4 SEPTEMBRE 2026, ET C'EST TOUT L'OBJET DE
+    // CETTE GARDE MAINTENANT. Le repli avait un sens tant qu'une demande de
+    // magasin n'était qu'un signal : « une demande qui passe sans accusé vaut
+    // mieux qu'une demande qui ne passe pas ». Depuis que le magasin se crée en
+    // libre-service, il y a un PAIEMENT derrière — et sans la fonction edge il
+    // n'y a pas de session Stripe. Déposer la demande quand même laisserait
+    // quelqu'un persuadé d'avoir payé. C'est la règle de `/souscrire`.
+    const panneau = lire('../components/PayerEnLigne.tsx')
+    expect(panneau).toContain("supabase.functions.invoke('libre-service'")
+    expect(panneau).not.toContain('supabase.rpc')
+
+    // La console, elle, garde ses replis : ses gestes n'encaissent rien.
     expect(ficheEntreprise).toContain("functions.invoke('admin-fulfil-store-request'")
     expect(ficheEntreprise).toContain("appel('admin_fulfil_store_request'")
     expect(ficheEntreprise).toContain("functions.invoke('admin-reject-store-request'")

@@ -230,6 +230,42 @@ Deno.serve(async (req) => {
     if (!resp.ok) notes.push(`e-mail magasin : ${resp.status}`)
   }
 
+  // ⚠️ UN CHANGEMENT D'OFFRE SE DIT AUSSI, ET IL LE FAUT (4 septembre 2026).
+  // Sans ce message, quelqu'un règle 310 € en libre-service et ne reçoit rien
+  // d'autre qu'un reçu Stripe : rien ne lui confirme que son forfait a bougé,
+  // ni de combien. Le magasin, lui, existait déjà — c'est la seule différence
+  // avec le message d'à côté.
+  if (result.kind === 'store_offer' && result.notify?.email && resendKey) {
+    const n = result.notify as {
+      email: string; first_name: string; store_name: string
+      company_name: string; devices: number; store_id: string
+    }
+    const { html, text } = emailQuantinvo({
+      titre: 'Votre forfait est élargi',
+      apercu: `${n.store_name} compte maintenant sur ${n.devices} appareils à la fois.`,
+      salutation: n.first_name ? `Bonjour ${n.first_name},` : 'Bonjour,',
+      paragraphes: [
+        `Votre paiement est bien reçu : le magasin « ${n.store_name} » peut maintenant faire compter ${n.devices} appareils en même temps.`,
+        'Le changement prend effet tout de suite — il n’y a rien à faire sur les téléphones.',
+      ],
+      details: [
+        { intitule: 'Magasin', valeur: n.store_name },
+        { intitule: 'Appareils à la fois', valeur: String(n.devices) },
+        ...(facture ? [{ intitule: 'Facture', valeur: facture.numero || 'disponible en ligne' }] : []),
+      ],
+      bouton: { libelle: 'Ouvrir la fiche du magasin', lien: `${appUrl}/magasins/${n.store_id}` },
+      ...(facture ? { lienSecondaire: { libelle: `Voir et télécharger votre facture${facture.numero ? ` ${facture.numero}` : ''}`, lien: facture.url } } : {}),
+      raison: 'Vous recevez ce message parce que vous venez d’élargir le forfait de ce magasin.',
+      siteUrl: appUrl,
+    })
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [n.email], subject: `Le forfait de ${n.store_name} est élargi`, html, text }),
+    })
+    if (!resp.ok) notes.push(`e-mail forfait : ${resp.status}`)
+  }
+
   // Avis interne, comme à l'acceptation : le revenu est encaissé.
   if (resendKey) {
     try {
@@ -238,7 +274,9 @@ Deno.serve(async (req) => {
       if (dest.length > 0) {
         const objet = result.kind === 'company'
           ? `${result.company_name} a réglé et est créée`
-          : `${result.company_name} a réglé le magasin ${result.store_name}`
+          : result.kind === 'store_offer'
+            ? `${result.company_name} a élargi le forfait de ${result.store_name}`
+            : `${result.company_name} a réglé le magasin ${result.store_name}`
         const { html, text } = emailQuantinvo({
           titre: 'Paiement reçu',
           apercu: objet,

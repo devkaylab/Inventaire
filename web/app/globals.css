@@ -3098,3 +3098,20 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* La mention de TVA sous le total d'un devis : elle doit se lire, sans peser
    plus que le montant qu'elle accompagne. */
 .devis-mention { font-size: 12.5px; color: var(--text-3); margin: 10px 0 18px; }
+
+/* ── Payer en ligne : le libre-service (4 septembre 2026) ─────────────────
+   ⚠️ Les deux rythmes sont deux BOUTONS, pas un menu déroulant : le choix
+   porte deux prix, et un menu les cacherait tous les deux jusqu'au clic —
+   or c'est exactement la comparaison qu'on veut rendre facile. */
+.payer-ligne { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.payer-rythmes { display: flex; gap: 8px; flex-wrap: wrap; }
+.payer-rythme {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  padding: 8px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font: inherit; text-align: left; line-height: 1.35;
+}
+.payer-rythme:hover { border-color: var(--accent); }
+.payer-rythme.est-choisi { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.payer-rythme-nom { font-size: 12px; color: var(--text-2); }
+.payer-rythme .prix { font-weight: 600; }

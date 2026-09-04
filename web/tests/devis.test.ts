@@ -381,8 +381,10 @@ describe('l’assiette est le nombre d’appareils (2 septembre 2026)', () => {
     expect(saisie).not.toContain('Stock théorique')
     expect(saisie).not.toContain('Surface de vente')
     expect(inscription).toContain('devices: m.appareils')
-    expect(magasins).toContain('devices: Math.round(appareils)')
-    expect(magasins).toContain('p_devices: corps.devices')
+    expect(magasins).toContain('devices: Math.round(appareils')
+    // ⚠️ Depuis le 4 septembre 2026 la page ne parle plus à la RPC : elle passe
+    // par la fonction edge du libre-service, qui porte `p_devices`.
+    expect(lire('../../supabase/functions/libre-service/index.ts')).toContain('p_devices: appareils')
   })
 
   it('et le formulaire montre l’offre que ce nombre désigne', () => {
@@ -454,7 +456,22 @@ describe('l’assiette est le nombre d’appareils (2 septembre 2026)', () => {
     // encaisse le HT et la TVA due sort de la poche de l'éditeur.
     expect(edgeAccept).toContain("Deno.env.get('STRIPE_TAX_RATE')")
     expect(edgeAccept).toContain('taxRateId,')
-    expect(stripe.match(/tax_rates: \[p\.taxRateId\]/g) ?? []).toHaveLength(3)
+    // ⚠️ TOUTE FORME DE PAIEMENT PORTE LE TAUX — un compte, pas une liste, se
+    // périmait au premier chemin ajouté (trois de plus le 4 septembre 2026 avec
+    // le libre-service). On vérifie chaque fonction qui construit une charge.
+    for (const fn of [
+      'creerSessionCheckout',
+      'creerAbonnementCheckout',
+      'creerAbonnementSurMesure',
+      'changerPrixArticle',
+      'poserArticleAppareils',
+    ]) {
+      const debut = stripe.indexOf(`export async function ${fn}`)
+      expect(debut, fn).toBeGreaterThan(0)
+      const suite = stripe.slice(debut)
+      const fin = suite.indexOf('\nexport async function ')
+      expect(fin === -1 ? suite : suite.slice(0, fin), fn).toContain('p.taxRateId')
+    }
   })
 
   it('la création reporte les appareils et le prix ANNUEL', () => {

@@ -26,6 +26,7 @@ import { nb, relativeTime } from '@/lib/format'
 import { Stat } from '@/components/ui/Stat'
 import { euros } from '@/lib/offres'
 import { lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
+import { PayerEnLigne } from '@/components/PayerEnLigne'
 import type { SessionBloc } from '@/lib/entreprise'
 
 type Personne = {
@@ -286,9 +287,17 @@ export default function FicheMagasinPage() {
                   {' '}<span className="prix">{euros(verdict.proposition.an)} par an</span>.
                 </div>
               </div>
-              <Link href="/tarifs" className="btn btn-primary btn-sm">
-                {verdict.proposition.action}
-              </Link>
+              {/* ⚠️ LE CHANGEMENT SE FAIT ICI, PLUS SUR /tarifs. Le bouton
+                  menait à la grille publique faute de mieux : le client y
+                  relisait ce qu'il venait de lire, et devait nous écrire. Depuis
+                  le 4 septembre 2026, l'offre est claire et le geste est en
+                  libre-service. */}
+              <PayerEnLigne
+                offre={verdict.proposition}
+                corps={{ action: 'offre', storeId, devices: verdict.proposition.couvre }}
+                libelle={verdict.proposition.action}
+                onApplique={charger}
+              />
             </div>
           )}
 

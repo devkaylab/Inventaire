@@ -16,7 +16,13 @@ export type MagasinDeclare = { name?: string | null; units?: number | null; sqm?
 
 export type VenteEnCours = {
   /** Inscription d'une entreprise, ajout d'un magasin, ou suppression. */
-  kind: 'company' | 'store' | 'store_removal'
+  /**
+   * ⚠️ `store_offer` est né du libre-service (4 septembre 2026) : un client
+   * élargit le forfait d'un magasin qu'il a déjà. C'est une vente — elle a un
+   * montant et elle attend un paiement — mais elle ne CRÉE rien, donc elle
+   * n'appelle jamais le geste « Créer le magasin ».
+   */
+  kind: 'company' | 'store' | 'store_removal' | 'store_offer'
   id: string
   company_id: string | null
   company_name: string
@@ -169,7 +175,12 @@ export function lireVente(v: VenteEnCours, maintenant = new Date()): LectureVent
         etat: passeLaGrace
           ? `Payé le ${jourCourt(v.paid_at!)} — rien n’a été créé, le client attend`
           : 'Payé — création en cours',
-        geste: v.kind === 'company' ? 'Créer l’entreprise' : 'Créer le magasin',
+        geste: v.kind === 'company'
+          ? 'Créer l’entreprise'
+          // Un changement d'offre s'applique tout seul au passage du webhook :
+          // s'il est encore là, c'est qu'il ne s'est pas appliqué. Il n'y a
+          // rien à créer, il y a à comprendre.
+          : v.kind === 'store_offer' ? 'Vérifier' : 'Créer le magasin',
         retard: passeLaGrace,
       }
     }
