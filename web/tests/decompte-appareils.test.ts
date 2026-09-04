@@ -448,6 +448,12 @@ describe('l’application', () => {
     const bloc = sansCommentaires(scanner.slice(i, i + 2500))
     expect(bloc).not.toMatch(/€|Essential|Advanced|Enterprise|offre/i)
     expect(bloc).toContain('Réessayer')
+    // ⚠️ ET IL NOMME L'ADMINISTRATEUR, PAS « VOTRE RESPONSABLE » (Julien,
+    // 4 septembre 2026, l'écran sous les yeux depuis un compte de superviseur) :
+    // « votre responsable » sonne faux à qui est déjà le responsable du
+    // magasin. Élargir un forfait est le geste de l'administrateur.
+    expect(bloc).toContain('administrateur')
+    expect(bloc).not.toContain('Votre responsable')
   })
 })
 

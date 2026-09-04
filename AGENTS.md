@@ -9143,3 +9143,43 @@ le dépôt aujourd'hui, pas parce qu'elle est générale.
 la sortie standard : on compare 187 empreintes au dépôt sans jamais les faire
 passer par la conversation. C'est ce qui a rendu cette mesure possible en deux
 commandes.
+
+# Le décompte d'appareils, éprouvé sur un vrai téléphone (4 septembre 2026)
+
+Premier build Android portant le décompte. Tout ce qui vit sur le téléphone
+n'avait **jamais tourné** : c'est fait, appareil en main, sur La Samaritaine et
+son forfait de deux appareils.
+
+| Ce qui n'avait jamais tourné | Constaté |
+|---|---|
+| Le téléphone prend sa place | ligne dans `appareils_actifs`, `refuse = false` |
+| L'écran d'amorce n'en prend pas | aucune place tant que la caméra n'est pas accordée |
+| Le pic s'enregistre | `appareils_par_jour.pic = 1` |
+| La place est rendue en quittant | zéro place au retour, **sans attendre les 90 s** |
+| Le verrou refuse le troisième | écran « 2 appareils comptent déjà », caméra fermée |
+| Le refus se compte UNE FOIS | `refus = 1` après plusieurs réessais |
+| La notification part | `forfait_trop_juste` déposée pour l'administrateur |
+| L'écran se débloque seul | caméra rouverte ~10 s après la libération, sans un geste |
+
+⚠️ **« VOTRE RESPONSABLE » SONNAIT FAUX, ET C'EST L'ÉCRAN QUI L'A DIT.** Julien,
+lisant le refus depuis un compte de **superviseur** : il EST le responsable du
+magasin. Élargir un forfait n'est pas son geste — c'est celui de
+l'administrateur de l'entreprise, et c'est lui que l'écran nomme désormais.
+Une formulation qui vise « le rôle au-dessus » doit nommer le rôle, pas la
+relation : « votre responsable » change de sens selon qui lit.
+
+⚠️ **UNE LIMITE DE MON BANC, PAS DU PRODUIT.** Les deux appareils qui occupaient
+les places ont été insérés en base, donc sans passer par
+`prendre_place_appareil` : le pic est resté à 1, et `besoin` (pic + refus) a
+valu 2 au lieu de 3. La notification a donc proposé « les offres » au lieu
+d'Enterprise. En vrai, deux appareils qui comptent portent le pic à 2 et le
+besoin à 3. **Ne pas « corriger » `besoin` sur la foi de ce test.**
+
+⚠️ **Piège du pilotage par `adb`** : un appui à des coordonnées relevées sur une
+capture précédente atterrit ailleurs dès que la page a défilé. Le mien a ouvert
+la confirmation de suppression d'un inventaire — annulée aussitôt, rien n'a été
+détruit, et c'est la confirmation nommée qui a servi de filet. **Recapturer
+l'écran avant chaque appui**, ou lire les bornes plutôt que de les déduire.
+
+Données d'essai retirées, zéro résidu contrôlé : 0 place, 0 jour, 0
+notification, 5 inventaires, 165 comptages, 2 magasins — comme avant.

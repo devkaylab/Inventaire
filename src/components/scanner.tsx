@@ -1388,8 +1388,13 @@ export function Scanner({
    * ⚠️ IL NE CITE AUCUN PRIX, ET C'EST DÉLIBÉRÉ. Cet écran s'ouvre devant un
    * compteur, souvent un saisonnier, debout dans un rayon : une proposition
    * commerciale n'a rien à y faire, et il n'a de toute façon pas la main. Il
-   * dit la seule chose vraie et utile — attendre suffit — et renvoie au
-   * responsable, qui décide sur le site.
+   * dit la seule chose vraie et utile — attendre suffit — et nomme qui décide.
+   *
+   * ⚠️ IL DIT « L'ADMINISTRATEUR », PAS « VOTRE RESPONSABLE ». Constat de
+   * Julien le 4 septembre 2026, l'écran sous les yeux depuis un compte de
+   * SUPERVISEUR : « votre responsable » sonne faux à qui est déjà le
+   * responsable du magasin. Élargir un forfait n'est pas son geste — c'est
+   * celui de l'administrateur de l'entreprise, et c'est lui qu'il faut nommer.
    *
    * ⚠️ ON N'ARRIVE ICI QUE SUR UN REFUS EXPLICITE DU SERVEUR. Réseau coupé,
    * serveur muet, réponse inconnue : `usePlaceAppareil` accorde. Un magasin en
@@ -1416,7 +1421,8 @@ export function Scanner({
           la fois. Vous pourrez compter dès que l&apos;un d&apos;eux aura terminé.
         </Text>
         <Text style={styles.amorceTexte}>
-          Votre responsable peut ajouter des appareils depuis le site.
+          L&apos;administrateur de l&apos;entreprise peut ajouter des appareils
+          depuis le site.
         </Text>
         <Pressable style={styles.amorceBtn} onPress={place.reessayer}>
           <Text style={styles.amorceBtnText}>Réessayer</Text>
