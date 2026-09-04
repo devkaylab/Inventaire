@@ -104,9 +104,13 @@ export function MagasinSaisie({
           onChange={(e) => onChange('appareils', e.target.value)}
           placeholder="5"
         />
+        {/* ⚠️ UNE PHRASE, PAS TROIS. Elle en portait deux de plus — « le jour
+            de l'inventaire », puis « pas le nombre de comptes, ni le nombre de
+            salariés ». Julien, 4 septembre 2026 : « tu fais trop de phrases à
+            rallonge ». Une aide sous un champ se lit d'un coup d'œil ou ne se
+            lit pas ; ce qu'on ajoute pour lever un doute finit par en créer. */}
         <p className="field-hint">
-          Téléphones ou tablettes qui scannent en même temps, le jour de l&apos;inventaire. Pas le
-          nombre de comptes, ni le nombre de salariés.
+          Téléphones ou tablettes qui scannent en même temps.
         </p>
         {/* L'offre se lit à la frappe : les trois prix sont publics, et c'est
             ce que le devis reprendra. Rien n'est promis pour autant — un devis
