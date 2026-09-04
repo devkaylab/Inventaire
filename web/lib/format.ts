@@ -34,9 +34,32 @@ export function parseDecimal(raw: string): number | null {
  * `v || 0` écrase le zéro négatif : `(-0).toLocaleString('fr-FR')` rend « -0 »,
  * ce qui se lit comme un manque alors qu'il ne s'est rien passé.
  */
+/**
+ * Le séparateur de milliers, en un seul point.
+ *
+ * ⚠️ `fr-FR` pose une espace insécable ÉTROITE (U+202F), et à la taille du
+ * texte courant elle NE SE VOIT PAS sur un nombre à quatre chiffres : Julien a
+ * lu « 1146 » à côté d'un « 12 210 » qui, lui, se détachait, et a demandé
+ * qu'on harmonise (4 septembre 2026). Les deux portaient pourtant le même
+ * caractère — le défaut n'était pas un séparateur manquant, c'était un
+ * séparateur invisible.
+ *
+ * On pose donc l'espace insécable ORDINAIRE (U+00A0) : elle se voit, et elle
+ * ne casse pas un montant en fin de ligne.
+ *
+ * ⚠️ ELLE RESTE DE L'AFFICHAGE, ET RIEN D'AUTRE. Un export, une valeur de
+ * champ ou une comparaison prennent le nombre brut — aucun tableur ne relit
+ * l'une ou l'autre de ces espaces comme un chiffre. `parseDecimal` les retire
+ * toutes les deux (`\s` les couvre).
+ */
+const SEPARATEUR = '\u00a0'
+export function grouper(s: string): string {
+  return s.replace(/\u202f/g, SEPARATEUR)
+}
+
 export function fmtQty(v: number): string {
   if (!Number.isFinite(v)) return '0'
-  return (v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
+  return grouper((v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 }))
 }
 
 /** Écart signé : on garde le + pour que le sens saute aux yeux. */
@@ -51,7 +74,7 @@ export function fmtSigned(v: number): string {
  */
 export function money(v: number): string {
   if (!Number.isFinite(v)) v = 0
-  return (v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return grouper((v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
 }
 
 /**
@@ -73,10 +96,10 @@ export function moneyCourt(v: number): string {
   const abs = Math.abs(v)
   if (abs < 1000) return `${money(v)} €`
   const k = v / 1000
-  return `${k.toLocaleString('fr-FR', {
+  return `${grouper(k.toLocaleString('fr-FR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: Math.abs(k) < 100 ? 1 : 0,
-  })} k€`
+  }))} k€`
 }
 
 export function fmtDate(iso: string): string {
@@ -90,7 +113,7 @@ export function fmtDateTime(iso: string): string {
 }
 
 /** Un entier avec ses séparateurs de milliers : 18402 → « 18 402 ». */
-export const nb = (n: number) => n.toLocaleString('fr-FR')
+export const nb = (n: number) => grouper(n.toLocaleString('fr-FR'))
 
 /**
  * « il y a 40 s », « il y a 12 min »… Utilisé partout où l'on montre une
@@ -142,5 +165,5 @@ export function octets(v: number | null | undefined): string {
   let i = 0
   while (n >= 1024 && i < unites.length - 1) { n /= 1024; i += 1 }
   const arrondi = n < 10 && i > 0 ? Math.round(n * 10) / 10 : Math.round(n)
-  return `${arrondi.toLocaleString('fr-FR')} ${unites[i]}`
+  return `${grouper(arrondi.toLocaleString('fr-FR'))} ${unites[i]}`
 }

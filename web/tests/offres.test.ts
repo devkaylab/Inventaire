@@ -66,8 +66,8 @@ describe('la grille tarifaire', () => {
     // Le séparateur de milliers d'ICU diffère entre Node et le navigateur
     // selon les versions : une page rendue des deux côtés se désynchronise.
     expect(euros(690)).toBe('690 €')
-    expect(euros(2400)).toBe('2 400 €')
-    expect(euros(6900)).toBe('6 900 €')
+    expect(euros(2400)).toBe('2 400 €')
+    expect(euros(6900)).toBe('6 900 €')
   })
 })
 
@@ -86,7 +86,7 @@ describe('la page tarifs', () => {
   it('n’écrit aucun prix en dur', () => {
     // Une seule définition : lib/tarifs.ts. Un prix recopié dans le JSX
     // divergerait au premier ajustement.
-    for (const montant of ['690', '2 400', '2 400', '6 900', '6 900', '225 €', '650 €']) {
+    for (const montant of ['690', '2 400', '2 400', '6 900', '6 900', '225 €', '650 €']) {
       expect(grille, `le montant ${montant} ne doit pas être écrit en dur`).not.toContain(montant)
     }
     expect(grille).toContain("from '@/lib/offres'")

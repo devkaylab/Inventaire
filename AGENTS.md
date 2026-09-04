@@ -8793,3 +8793,43 @@ les deux fonctions edge démarrent et refusent ce qu'elles doivent refuser, et
 que rien ne s'écrit quand un Price manque.
 
 Tests de garde : `web/tests/libre-service.test.ts`.
+
+## ⚠️ Le séparateur de milliers était là, et il ne se voyait pas (4 septembre 2026)
+
+Julien, capture à l'appui : *« n'oublie pas le séparateur des milliers, tu as
+laissé 1146 alors qu'année on a 12 210, harmonise »*.
+
+**Les deux portaient pourtant le même caractère.** `fr-FR` pose une espace
+insécable **étroite** (U+202F), et `euros()` la posait à la main. Le défaut
+n'était donc pas un séparateur manquant : c'était un séparateur **invisible** à
+quatre chiffres, à la taille du texte courant. Sur « 12 210 » l'œil l'attrape,
+sur « 1 146 » non — et on lit « 1146 ».
+
+⚠️ **Ne pas conclure d'une capture qu'un formatteur est cassé** : ici il ne
+l'était pas. Ce qui a tranché, c'est la lecture des points de code dans le DOM
+(`charCodeAt`), pas l'image — et pas non plus un `node -e` retapé à la main, qui
+a d'abord *innocenté* `euros()` en substituant une espace ordinaire au caractère
+réel du fichier.
+
+Le séparateur est désormais l'espace insécable **ordinaire** (U+00A0) : elle se
+voit, et elle ne casse pas un montant en fin de ligne.
+
+- **Un seul point de vérité de chaque côté** : `grouper()` dans
+  `web/lib/format.ts`, son jumeau dans `src/lib/nombres.ts`. Tout passe par eux
+  — `fmtQty`, `money`, `moneyCourt`, `nb`, `octets`, et `euros` de
+  `lib/offres.ts`.
+- **Plus aucun `toLocaleString('fr-FR')` nu sur un nombre** dans les écrans :
+  les quinze appels directs (rapport, écarts, pagination, journal, console,
+  pipeline, mesure) passent par `nb` ou `money`. C'est ce qui rend la règle
+  tenable — sinon le prochain écran repart avec l'étroite.
+- **Rien ne change pour les exports** : c'est de l'affichage, et aucun tableur
+  ne relit l'une ou l'autre de ces espaces comme un chiffre. `parseDecimal` les
+  retire toutes les deux.
+- **⚠️ Un attendu de test ne se tape pas à la main et ne se reconstruit pas
+  depuis ICU** : il se reconstruit avec le formatteur du produit
+  (`` `${nb(4_500)} €` ``). Deux gardes citaient U+202F en dur et une troisième
+  le rebâtissait par `toLocaleString` — les trois seraient retombées au
+  prochain ajustement.
+
+Tests de garde : `web/tests/format.test.ts`, bloc « le séparateur de milliers se
+VOIT » — dont celui qui refuse U+202F dans la sortie des six formatteurs.

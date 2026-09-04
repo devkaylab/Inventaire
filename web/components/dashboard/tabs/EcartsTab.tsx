@@ -192,8 +192,8 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   const pagesEcarts = Math.max(1, Math.ceil(totalFiltre / PAGE))
   const compteAffiche = totalFiltre === 0
     ? 'Aucun écart à afficher'
-    : `${(page * PAGE + 1).toLocaleString('fr-FR')}–${Math.min(totalFiltre, (page + 1) * PAGE).toLocaleString('fr-FR')}`
-      + ` sur ${totalFiltre.toLocaleString('fr-FR')} écart${totalFiltre > 1 ? 's' : ''}`
+    : `${nb(page * PAGE + 1)}–${nb(Math.min(totalFiltre, (page + 1) * PAGE))}`
+      + ` sur ${nb(totalFiltre)} écart${totalFiltre > 1 ? 's' : ''}`
 
   if (loading) {
     return (

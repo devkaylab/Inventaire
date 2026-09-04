@@ -138,7 +138,7 @@ describe('la mise en page du devis', () => {
     const textes = elementsDevis(devis).filter((e) => e.type === 'texte').map((e) => (e as { texte: string }).texte)
     expect(textes).toContain('DEV-2026-0007')
     expect(textes).toContain('ACME Retail')
-    const plat = textes.map((t) => t.replace(/[\s\u202f\u00a0]/g, ' '))
+    const plat = textes.map((t) => t.replace(/[\s\u00a0\u00a0]/g, ' '))
     expect(plat.some((t) => t.includes('9 450,00'))).toBe(true)
     expect(plat.some((t) => t.includes('22/08/2026'))).toBe(true)
     expect(plat.some((t) => t.includes('21/09/2026'))).toBe(true)

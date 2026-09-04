@@ -221,9 +221,15 @@ export function offrePour(appareils: number): Offre | null {
  * de séparation d'ICU diffère entre Node et le navigateur selon les versions,
  * ce qui produit une erreur d'hydratation Next sur une page rendue des deux
  * côtés. Ici le résultat est le même partout.
+ *
+ * ⚠️ ET C'EST UNE ESPACE INSÉCABLE ORDINAIRE (U+00A0), PAS L'ÉTROITE DE
+ * `fr-FR` — voir `grouper()` dans `lib/format.ts`, qui porte la règle et son
+ * motif. Les deux modules doivent poser le MÊME caractère : un prix et une
+ * quantité côte à côte se lisaient autrement pareil, mais un jour l'un des
+ * deux changerait sans qu'on le voie.
  */
 export function euros(v: number): string {
-  return `${Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} €`
+  return `${Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} €`
 }
 
 // ── Ce qu'un magasin coûte, à partir de son nombre d'appareils ──────────────

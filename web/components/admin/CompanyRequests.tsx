@@ -7,7 +7,7 @@ import { type Secteur, densiteAttendue, secteurReconnu } from '@/lib/secteurs'
 import { formaterSiren } from '@/lib/siren'
 import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
 import { TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
-import { nb } from '@/lib/format'
+import { money, nb } from '@/lib/format'
 
 export type CompanyRequest = {
   id: string
@@ -54,7 +54,7 @@ const STATUS_LABEL: Record<CompanyRequest['status'], string> = {
 
 function euros(cents: number | null) {
   if (cents == null) return '—'
-  return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  return `${money(cents / 100)} €`
 }
 
 /**
@@ -134,7 +134,7 @@ function MagasinsDeclares({ stores, ape }: { stores: MagasinDeclare[] | null; ap
               </span>
               {offre && prix !== null && (
                 <span className="declare-tranche">
-                  {offre} · {(prix / 100).toLocaleString('fr-FR')} €/an
+                  {offre} · {nb(prix / 100)} €/an
                 </span>
               )}
             </div>

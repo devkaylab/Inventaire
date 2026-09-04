@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { nb } from '@/lib/format'
 
 /**
  * Les boutons de page d'un long tableau (3 septembre 2026).
@@ -36,7 +37,7 @@ export function Pagination({ page, pages, chargement, onPage, children }: {
         >
           Précédent
         </button>
-        <span className="muted small">Page {page + 1} / {pages.toLocaleString('fr-FR')}</span>
+        <span className="muted small">Page {page + 1} / {nb(pages)}</span>
         <button
           type="button" className="btn btn-ghost btn-sm"
           disabled={page + 1 >= pages || chargement}

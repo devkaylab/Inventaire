@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { money } from '@/lib/format'
 
 type Entry = {
   id: number
@@ -58,7 +59,7 @@ function detailText(e: Entry): string {
   if (typeof d.statut === 'string' && d.statut) parts.push(STATUT_FR[d.statut] ?? d.statut)
   if (typeof d.reference === 'string' && d.reference) parts.push(`réf. ${d.reference}`)
   if (typeof d.montant_cents === 'number') {
-    parts.push((d.montant_cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }))
+    parts.push(`${money(d.montant_cents / 100)} €`)
   }
   if (typeof d.magasins === 'number') parts.push(`${d.magasins} magasin${d.magasins > 1 ? 's' : ''}`)
   return parts.join(' · ')

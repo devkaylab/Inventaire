@@ -15,6 +15,20 @@
 // ⚠️ AFFICHAGE SEULEMENT. Un export, une valeur de champ de saisie ou une
 // comparaison prennent le nombre brut : `toLocaleString` insère une espace
 // insécable qu'aucun tableur ne relit comme un chiffre.
+//
+// ⚠️ ET C'EST L'ESPACE INSÉCABLE ORDINAIRE (U+00A0), PAS L'ÉTROITE DE `fr-FR`.
+// Celle que pose la locale (U+202F) NE SE VOIT PAS à la taille du texte
+// courant sur un nombre à quatre chiffres : Julien a lu « 1146 » à côté d'un
+// « 12 210 » qui, lui, se détachait (4 septembre 2026). Le séparateur était
+// pourtant le même des deux côtés — le défaut n'était pas qu'il manquait,
+// c'était qu'il était invisible. `web/lib/format.ts` porte la même règle, et
+// un test compare les deux modules.
+
+/** Le séparateur de milliers, en un seul point. */
+const SEPARATEUR = '\u00a0'
+function grouper(s: string): string {
+  return s.replace(/\u202f/g, SEPARATEUR)
+}
 
 /**
  * Quantité : groupée par milliers, décimales sans zéros inutiles
@@ -25,7 +39,7 @@
  */
 export function qte(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—'
-  return (v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
+  return grouper((v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 }))
 }
 
 /** Écart signé : le + reste, c'est lui qui donne le sens. */
@@ -36,10 +50,10 @@ export function qteSignee(v: number): string {
 /** Montant en euros, deux décimales, séparateurs français. */
 export function euros(v: number): string {
   if (!Number.isFinite(v)) v = 0
-  return `${(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+  return `${grouper((v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} €`
 }
 
 /** Un entier avec ses séparateurs de milliers : 18402 → « 18 402 ». */
 export function nb(n: number): string {
-  return (Number.isFinite(n) ? n : 0).toLocaleString('fr-FR')
+  return grouper((Number.isFinite(n) ? n : 0).toLocaleString('fr-FR'))
 }

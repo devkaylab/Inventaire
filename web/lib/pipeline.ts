@@ -10,6 +10,7 @@ export type EtapeVente = 'pending' | 'quoted' | 'accepted' | 'paid'
 
 import { densite } from '@/lib/tarifs'
 import { densiteAttendue, secteurReconnu } from '@/lib/secteurs'
+import { nb } from '@/lib/format'
 
 /** Un magasin déclaré au formulaire, tel que la RPC le remonte. */
 export type MagasinDeclare = { name?: string | null; units?: number | null; sqm?: number | null }
@@ -251,7 +252,7 @@ export function alerteDensite(v: VenteEnCours): string | null {
     if (!r.plausible) {
       const nom = (m.name ?? '').trim() || 'un magasin'
       const sens = d! < r.secteur.min ? 'très faible' : 'très élevé'
-      douteux.push(`${nom} : ${Math.round(d!).toLocaleString('fr-FR')} pièces/m², ${sens} pour ${r.secteur.nom.toLowerCase()}`)
+      douteux.push(`${nom} : ${nb(Math.round(d!))} pièces/m², ${sens} pour ${r.secteur.nom.toLowerCase()}`)
     }
   }
   if (douteux.length === 0) return null

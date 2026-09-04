@@ -7,7 +7,7 @@ import {
   type RapportResume, type RapportTri, type SessionResultRow,
 } from '@/lib/inventory'
 import { downloadCsv, downloadXlsx } from '@/lib/report'
-import { fmtQty, fmtSigned, money } from '@/lib/format'
+import { fmtQty, fmtSigned, money, nb } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -152,7 +152,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
       // ⚠️ Le fichier remis au client contient TOUT. C'est le seul endroit du
       // site où l'on redemande l'ensemble — par tranches, jamais d'un bloc.
       const suivi = (quoi: string) => (fait: number, total: number) =>
-        setAvance(`${quoi} ${fait.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}`)
+        setAvance(`${quoi} ${nb(fait)} / ${nb(total)}`)
 
       const tout = await getAllRapportRows(sessionId, suivi('Écarts'))
       const detail = await getSessionDetail(sessionId, suivi('Détail par zone'))
@@ -300,8 +300,8 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
           <div ref={hautDuTableau} />
           <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
             <span className="muted small">
-              {premier.toLocaleString('fr-FR')}–{dernier.toLocaleString('fr-FR')} sur{' '}
-              {totalFiltre.toLocaleString('fr-FR')}
+              {nb(premier)}–{nb(dernier)} sur{' '}
+              {nb(totalFiltre)}
               {chargeantPage && ' · chargement…'}
             </span>
           </Pagination>
@@ -346,9 +346,9 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
 
           <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
             <span className="muted small">
-              {premier.toLocaleString('fr-FR')}–{dernier.toLocaleString('fr-FR')} sur{' '}
-              {totalFiltre.toLocaleString('fr-FR')}
-              {recherche && ` (${(resume?.lignes ?? 0).toLocaleString('fr-FR')} au total)`}
+              {nb(premier)}–{nb(dernier)} sur{' '}
+              {nb(totalFiltre)}
+              {recherche && ` (${nb(resume?.lignes ?? 0)} au total)`}
               . Quantité retenue : arbitrage, sinon auditeur, sinon compteur.
             </span>
           </Pagination>

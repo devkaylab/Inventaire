@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { fmtQty, fmtSigned, money, moneyCourt, nb, parseDecimal, plural, relativeTime, sinceDuration } from '@/lib/format'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fmtQty, fmtSigned, money, moneyCourt, nb, octets, parseDecimal, plural, relativeTime, sinceDuration } from '@/lib/format'
+import { euros } from '@/lib/offres'
 
 describe('parseDecimal', () => {
   it('accepte la virgule décimale française', () => {
@@ -170,5 +173,47 @@ describe('le séparateur de milliers', () => {
     expect(fmtQty(1.5)).toBe('1,5')
     expect(fmtQty(999)).toBe('999')
     expect(fmtQty(-0)).toBe('0')
+  })
+})
+
+describe('le séparateur de milliers se VOIT', () => {
+  // ⚠️ Julien, 4 septembre 2026, capture à l'appui : « tu as laissé 1146 alors
+  // qu'année on a 12 210, harmonise ». Les deux portaient pourtant le même
+  // caractère — l'espace insécable ÉTROITE que pose `fr-FR` (U+202F). Le
+  // défaut n'était pas un séparateur manquant, c'était un séparateur
+  // INVISIBLE à quatre chiffres, à la taille du texte courant.
+  const ETROITE = ' '
+  const LARGE = ' '
+
+  it('groupe dès quatre chiffres', () => {
+    expect(nb(1146)).toBe(`1${LARGE}146`)
+    expect(nb(12210)).toBe(`12${LARGE}210`)
+    expect(euros(1146)).toBe(`1${LARGE}146 €`)
+    expect(euros(12210)).toBe(`12${LARGE}210 €`)
+  })
+
+  it('n’emploie jamais l’espace étroite, qui ne se voit pas', () => {
+    for (const rendu of [
+      nb(12210), fmtQty(12210.5), money(12210), moneyCourt(1221000),
+      euros(12210), octets(12210 * 1024 * 1024),
+    ]) {
+      expect(rendu, rendu).not.toContain(ETROITE)
+    }
+  })
+
+  it('le site et l’application posent le MÊME caractère', () => {
+    // Les deux modules sont dupliqués volontairement — l'app et le site ne
+    // compilent pas ensemble — et doivent bouger ensemble.
+    const mobile = readFileSync(
+      path.resolve(__dirname, '../../src/lib/nombres.ts'), 'utf8')
+    expect(mobile).toContain("const SEPARATEUR = '\\u00a0'")
+    expect(readFileSync(path.resolve(__dirname, '../lib/format.ts'), 'utf8'))
+      .toContain("const SEPARATEUR = '\\u00a0'")
+  })
+
+  it('reste de l’affichage : un nombre relu perd ses espaces', () => {
+    // Aucun tableur ne relit l'une ou l'autre de ces espaces comme un chiffre.
+    expect(parseDecimal(nb(12210))).toBe(12210)
+    expect(parseDecimal(`12${ETROITE}210`)).toBe(12210)
   })
 })

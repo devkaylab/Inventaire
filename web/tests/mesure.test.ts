@@ -5,6 +5,7 @@ import {
   lireUsage, compteursLisibles, aRevoir, ecartTotalEuros,
   phraseConstat, LIBELLES, type MagasinUsage,
 } from '@/lib/mesure'
+import { nb } from '@/lib/format'
 
 const magasin = (p: Partial<MagasinUsage>): MagasinUsage => ({
   id: 'm', name: 'Magasin', units: null, sqm: null, annual_price_cents: null,
@@ -100,10 +101,13 @@ describe('le constat', () => {
     const p = phraseConstat(parc) ?? ''
     expect(p).toContain('Nord Roubaix')
     expect(p).toContain('Maison Blanc Paris 8')
-    // Le séparateur de milliers français est une espace insécable étroite : on
-    // reconstruit l'attendu au lieu de le taper, sinon le test échoue sur un
-    // caractère invisible.
-    expect(p).toContain(`${(4_500).toLocaleString('fr-FR')} €`)
+    // ⚠️ L'attendu se reconstruit avec le formatteur du produit, jamais avec
+    // `toLocaleString` : le séparateur de milliers est une espace insécable —
+    // donc un caractère invisible — et il a changé le 4 septembre 2026 (de
+    // l'étroite de `fr-FR` à l'ordinaire, qui se voit). Le taper à la main, ou
+    // le reconstruire depuis ICU, c'est refaire tomber ce test au prochain
+    // ajustement.
+    expect(p).toContain(`${nb(4_500)} €`)
   })
 
   it('se tait quand il n’y a rien à dire', () => {

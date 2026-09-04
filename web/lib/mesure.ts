@@ -24,6 +24,7 @@
  */
 
 import { TRANCHES, trancheDe, type Tranche } from '@/lib/tarifs'
+import { nb } from '@/lib/format'
 
 export type MagasinUsage = {
   id: string
@@ -156,7 +157,7 @@ export function phraseConstat(stores: MagasinUsage[]): string | null {
   const sujet = reste > 0 ? `${noms.join(', ')} et ${reste} autre${reste > 1 ? 's' : ''}` : joindre(noms)
   const total = ecartTotalEuros(stores)
   const verbe = liste.length > 1 ? 'ont compté' : 'a compté'
-  const fin = total > 0 ? ` — ${total.toLocaleString('fr-FR')} € par an au renouvellement.` : '.'
+  const fin = total > 0 ? ` — ${nb(total)} € par an au renouvellement.` : '.'
   return `${sujet} ${verbe} au-delà de la tranche facturée${fin}`
 }
 
