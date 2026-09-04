@@ -5830,6 +5830,26 @@ n'est nécessaire pour ça — les secrets se lisent à l'exécution — mais
 `subscribe-online` doit tout de même être redéployée pour que sa grille
 (affichage et `annual_price_cents`) suive.
 
+⚠️ **REDÉPLOYÉE LE 4 SEPTEMBRE 2026** (version 4, `--no-verify-jwt`, contrôlé
+inchangé), le jour où Julien a créé les nouveaux Price. La version en ligne
+datait du 30 août et portait encore **l'ancienne grille** : avec les nouveaux
+Price posés en secrets, Stripe aurait prélevé 310 € pendant que
+`deposer_souscription` inscrivait 225 € dans les lignes de devis et dans
+`stores.annual_price_cents`. Le client aurait payé le bon montant et nos
+chiffres auraient dit le mauvais — un écart qui ne se voit qu'à la
+réconciliation. **Toute revalorisation de la grille se termine par ce
+redéploiement.** Vérifié après coup : `supabase functions download` puis
+`diff` — les deux fichiers sont identiques au dépôt, et la fonction répond
+« Offre inconnue » sur un plan invalide (donc son code est atteint sans JWT).
+
+⚠️ **Un Price archivé ne peut plus ouvrir de paiement.** Stripe ne permet pas
+de supprimer un Price, seulement de l'archiver — et un Price archivé continue
+d'honorer les abonnements en cours mais **refuse toute nouvelle session
+Checkout**. Les six secrets doivent donc porter les identifiants des NOUVEAUX
+Price ; sinon l'offre répond 502 et personne ne peut souscrire. L'échec est
+visible et sans dégât (la demande reste en `accepted` et remonte dans « Ventes
+en cours »), mais il est total.
+
 **⚠️ Les abonnements déjà souscrits gardent leur ancien Price.** Stripe ne
 rétro-facture pas : c'est le comportement voulu, mais il faut le savoir avant
 de croire qu'un client paie le tarif affiché.
