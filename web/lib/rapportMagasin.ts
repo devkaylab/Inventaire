@@ -149,6 +149,8 @@ export async function getRapportMagasinPage(
 export type LigneDetailMagasin = {
   inventaire: string
   numero: string
+  /** Date de clôture, déjà formatée en Europe/Paris par le serveur. */
+  cloture_le: string
   sku: string
   ean: string | null
   brand: string

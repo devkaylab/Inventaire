@@ -215,7 +215,8 @@ describe('le fichier remis au client', () => {
   ]
 
   const detail: LigneDetailMagasin[] = [
-    { inventaire: 'Niveau 1', numero: 'INV-1', sku: 'A1', ean: '3760112458903',
+    { inventaire: 'Niveau 1', numero: 'INV-1', cloture_le: '03/09/2026',
+      sku: 'A1', ean: '3760112458903',
       brand: 'Sandro', label: 'Manteau laine',
       theoretical_qty: 20, counted_qty: 15, variance_units: -5, variance_value: -765 },
   ]
@@ -252,10 +253,22 @@ describe('le fichier remis au client', () => {
 
   // La contrepartie de l'addition : sans cette feuille, un écart sur une
   // référence vue dans trois inventaires ne se rattache à aucun rayon.
-  it('la seconde feuille dit de quel inventaire vient chaque ligne', () => {
+  it('la seconde feuille dit de quel inventaire vient chaque ligne, et de quand', () => {
     const colonnes = Object.keys(buildStoreDetailRows(detail)[0])
     expect(colonnes[0]).toBe('Inventaire')
     expect(colonnes[1]).toBe('N° inventaire')
+    // ⚠️ Quand une référence revient dans trois lignes, c'est la date qui dit
+    // laquelle est la plus récente (Julien, 4 septembre 2026).
+    expect(colonnes[2]).toBe('Clôturé le')
+    expect(buildStoreDetailRows(detail)[0]['Clôturé le']).toBe('03/09/2026')
+  })
+
+  // ⚠️ La date vient du SERVEUR, déjà formatée en Europe/Paris. Un horodatage
+  // brut arriverait en UTC dans le tableur et daterait du 12 août un
+  // inventaire clôturé le 13 à une heure du matin.
+  it('et cette date est celle de la clôture, en heure de Paris', () => {
+    const def = sansCommentaires(derniereDefinition('rapport_magasin_detail').corps)
+    expect(def).toContain("to_char(s.closed_at at time zone 'Europe/Paris', 'DD/MM/YYYY')")
   })
 
   it('le nom du fichier porte le magasin et la date', () => {

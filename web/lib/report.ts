@@ -275,6 +275,10 @@ export function buildStoreDetailRows(
   return rows.map(r => ({
     Inventaire: r.inventaire,
     'N° inventaire': r.numero,
+    // ⚠️ La date de CLÔTURE (Julien, 4 septembre 2026). Quand une référence
+    // revient dans trois lignes, c'est elle qui dit laquelle est la plus
+    // récente — le numéro ne le dit qu'à qui connaît la nomenclature.
+    'Clôturé le': r.cloture_le,
     SKU: r.sku === r.ean ? '' : r.sku,
     EAN: r.ean ?? '',
     Marque: r.brand,
@@ -302,10 +306,12 @@ export async function downloadStoreXlsx(
 
   const wsDetail = XLSX.utils.json_to_sheet(buildStoreDetailRows(detailRows))
   wsDetail['!cols'] = [
-    { wch: 28 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
-    { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 },
+    { wch: 28 }, { wch: 20 }, { wch: 12 }, { wch: 16 }, { wch: 16 },
+    { wch: 16 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 },
   ]
-  forcerEnTexte(XLSX, wsDetail, [1, 2, 3])
+  // Le numéro d'inventaire, le SKU et l'EAN sont des codes : en texte, sans
+  // quoi ils partent en notation scientifique et perdent leurs zéros de tête.
+  forcerEnTexte(XLSX, wsDetail, [1, 3, 4])
   XLSX.utils.book_append_sheet(wb, wsDetail, 'Par inventaire')
 
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer

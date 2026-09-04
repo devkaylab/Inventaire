@@ -7880,6 +7880,16 @@ d'origine). La seconde est la contrepartie de l'addition : sans elle, un écart
 de 12 pièces sur une référence vue dans trois inventaires ne se rattache à aucun
 rayon. Le fichier contient **tout** le périmètre, demandé par tranches de 5 000.
 
+**⚠️ La feuille « Par inventaire » porte la DATE DE CLÔTURE** (Julien, le jour
+même : « par inventaire dans le rapport il faut ajouter la date »). Quand une
+référence revient dans trois lignes, c'est elle qui dit laquelle est la plus
+récente — le numéro (`INV-AAAAMMJJ-XXXX`) ne le dit qu'à qui connaît la
+nomenclature. Elle est **formatée en base, en Europe/Paris** : un horodatage
+brut arriverait en UTC dans le tableur et daterait du 12 août un inventaire
+clôturé le 13 à une heure du matin. Migration `20260904190001`, en `drop` puis
+`create` — on ne change pas une liste de colonnes de retour par un
+`create or replace`.
+
 `forceTextColumns` est sortie de `downloadXlsx` (`forcerEnTexte`) : les deux
 exports ont les mêmes colonnes de codes, et deux copies de cette boucle
 divergeraient au premier ajout de colonne.
