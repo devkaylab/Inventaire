@@ -366,3 +366,61 @@ describe('un paiement abandonné ne bloque pas', () => {
     expect(g).toMatch(/revoke all on function public\.peut_reprendre_paiement\([^)]*\)\s*\n?\s*from public, anon/)
   })
 })
+
+describe('le rythme se change avant de payer', () => {
+  // Julien : « je suis obligé d'annuler ma demande et de recommencer » — pour
+  // un geste qui n'achète rien d'autre : même magasin, mêmes appareils, même
+  // offre, seule l'échéance change.
+  const { corps } = derniereDefinition('changer_rythme_demande')
+  const plat = espaces(sansCommentaires(corps))
+
+  it('recalcule le montant en base, jamais depuis l’appelant', () => {
+    // ⚠️ C'est ce qui préserve la règle du dépôt : le client choisit une
+    // échéance, pas un prix. `p_billing_period` est le SEUL paramètre en plus
+    // de l'identifiant.
+    expect(plat).toContain('public.prix_offre(v_req.devices, p_billing_period)')
+    expect(corps).not.toMatch(/p_amount|p_prix|p_montant/)
+  })
+
+  it('oublie la session Stripe, qui portait l’ancien prix', () => {
+    // La rouvrir ferait payer le mensuel à qui vient de choisir l'annuel.
+    expect(plat).toContain('stripe_checkout_session_id = null')
+  })
+
+  it('ne touche ni à un devis, ni à ce qui est encaissé', () => {
+    expect(plat).toContain('v_req.paid_at is not null')
+    expect(plat).toContain('v_req.quote_sent_at is not null')
+  })
+
+  it('garde sur l’entreprise DE LA DEMANDE', () => {
+    expect(plat).toContain('public.is_company_admin(v_req.company_id)')
+  })
+
+  it('la clé d’idempotence Stripe porte le prix', () => {
+    // ⚠️ Sans lui, passer du mensuel à l'annuel rejouerait la clé de la session
+    // précédente : Stripe rendrait l'ANCIENNE session, et le client paierait le
+    // mensuel qu'il vient de quitter.
+    expect(stripeShared).toContain('`abonnement-${p.requestId}-${p.priceId}-${p.tentative ?? 0}`')
+  })
+
+  it('l’edge ne laisse passer que le rythme', () => {
+    const sans = sansCommentaires(edge)
+    const debut = sans.indexOf("if (action === 'reprendre') {")
+    const fin = sans.indexOf("if (action === 'reprendre' && reprise)")
+    const preambule = sans.slice(debut, fin)
+    expect(preambule).toContain("appelant.rpc('changer_rythme_demande'")
+    // Les appareils restent ceux de la demande, quoi que dise la requête.
+    expect(preambule).toContain('appareils = Number(dem.appareils)')
+    expect(preambule).not.toContain('Number(corps.devices)')
+  })
+
+  it('le panneau propose les deux échéances et n’envoie que celle-là', () => {
+    const sans = sansCommentaires(payer)
+    expect(sans).toContain("body: { action: 'reprendre', requestId, billingPeriod: rythme }")
+    expect(sans).toContain('<ChoixRythme')
+  })
+
+  it('le journal nomme le geste', () => {
+    expect(lire('web/lib/journal.ts')).toContain('rythme_change:')
+  })
+})

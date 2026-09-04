@@ -3116,5 +3116,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .payer-rythme-nom { font-size: 12px; color: var(--text-2); }
 .payer-rythme .prix { font-weight: 600; }
 
-/* Les deux sorties d'une demande en attente de paiement : payer, ou annuler. */
-.req-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Les deux sorties d'une demande en attente de paiement : payer, ou annuler.
+   Alignées EN BAS : le bloc de gauche porte le choix de l'échéance au-dessus
+   de son bouton, et « Annuler » doit se lire sur la même ligne que lui. */
+.req-actions { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }

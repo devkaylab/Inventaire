@@ -22,6 +22,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { euros } from '@/lib/offres'
+import { proposer } from '@/lib/appareils'
 
 export type OffreAPayer = {
   /** Le nom du palier — il vient d'`OFFRES`, jamais réinventé ici. */
@@ -51,6 +52,41 @@ type Props = {
   disabled?: boolean
   /** Rejoué quand le changement a pris effet sans passer par une page de paiement. */
   onApplique?: () => void
+}
+
+/**
+ * Le choix de l'échéance, avec ses deux prix.
+ *
+ * ⚠️ LES DEUX RYTHMES S'AFFICHENT, EN DEUX BOUTONS ET NON UN MENU DÉROULANT.
+ * Un client qui ne lit qu'un montant annuel n'a aucun moyen de savoir que le
+ * mensuel existe ; et un menu cacherait les deux prix jusqu'au clic, alors que
+ * c'est justement la comparaison qu'on veut rendre facile. Même paire que la
+ * page publique des tarifs.
+ */
+function ChoixRythme({
+  offre, valeur, onChange,
+}: {
+  offre: OffreAPayer
+  valeur: 'monthly' | 'yearly'
+  onChange: (r: 'monthly' | 'yearly') => void
+}) {
+  return (
+    <div className="payer-rythmes" role="radiogroup" aria-label="Rythme de paiement">
+      {(['monthly', 'yearly'] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          role="radio"
+          aria-checked={valeur === r}
+          className={`payer-rythme${valeur === r ? ' est-choisi' : ''}`}
+          onClick={() => onChange(r)}
+        >
+          <span className="payer-rythme-nom">{r === 'monthly' ? 'Au mois' : 'À l’année'}</span>
+          <span className="prix">{euros(r === 'monthly' ? offre.mois : offre.an)}</span>
+        </button>
+      ))}
+    </div>
+  )
 }
 
 export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Props) {
@@ -108,24 +144,7 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
 
   return (
     <div className="payer-ligne">
-      {/* ⚠️ LES DEUX RYTHMES S'AFFICHENT. Un client qui ne lit qu'un montant
-          annuel n'a aucun moyen de savoir que le mensuel existe. Même paire que
-          la page publique des tarifs. */}
-      <div className="payer-rythmes" role="radiogroup" aria-label="Rythme de paiement">
-        {(['monthly', 'yearly'] as const).map((r) => (
-          <button
-            key={r}
-            type="button"
-            role="radio"
-            aria-checked={rythme === r}
-            className={`payer-rythme${rythme === r ? ' est-choisi' : ''}`}
-            onClick={() => setRythme(r)}
-          >
-            <span className="payer-rythme-nom">{r === 'monthly' ? 'Au mois' : 'À l’année'}</span>
-            <span className="prix">{euros(r === 'monthly' ? offre.mois : offre.an)}</span>
-          </button>
-        ))}
-      </div>
+      <ChoixRythme offre={offre} valeur={rythme} onChange={setRythme} />
 
       <button type="button" className="btn btn-primary btn-sm" disabled={busy || disabled} onClick={payer}>
         {busy ? 'Un instant…' : libelle}
@@ -151,15 +170,31 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
  *
  * Il ne redépose rien : ce qu'on achète est relu sur la demande, côté serveur.
  */
-export function ReprendrePaiement({ requestId }: { requestId: string }) {
+export function ReprendrePaiement({
+  requestId, devices, billingPeriod,
+}: {
+  requestId: string
+  /** Les appareils déjà déposés — ils donnent l'offre, donc les deux prix. */
+  devices?: number | null
+  billingPeriod?: string | null
+}) {
   const [busy, setBusy] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [rythme, setRythme] = useState<'monthly' | 'yearly'>(
+    billingPeriod === 'yearly' ? 'yearly' : 'monthly',
+  )
+  // ⚠️ Le même calcul que partout ailleurs — deux lectures du même palier
+  // divergeraient au premier ajustement de la grille.
+  const offre = devices && devices > 0 ? proposer(0, Math.round(devices)) : null
 
   async function reprendre() {
     setBusy(true)
     setErreur(null)
     const { data, error } = await supabase.functions.invoke('libre-service', {
-      body: { action: 'reprendre', requestId },
+      // ⚠️ Le rythme voyage, et LUI SEUL : le serveur recalcule le montant
+      // depuis les appareils déjà déposés. Le client choisit une échéance, pas
+      // un prix.
+      body: { action: 'reprendre', requestId, billingPeriod: rythme },
     })
     let reponse: Record<string, unknown> | null = (data ?? null) as Record<string, unknown> | null
     const ctx = (error as { context?: unknown } | null)?.context
@@ -183,11 +218,14 @@ export function ReprendrePaiement({ requestId }: { requestId: string }) {
   }
 
   return (
-    <>
+    <div className="payer-ligne">
+      {/* Changer d'échéance ici évite d'annuler la demande et de tout refaire
+          (Julien, 4 septembre 2026) : ce qu'on achète ne change pas. */}
+      {offre && <ChoixRythme offre={offre} valeur={rythme} onChange={setRythme} />}
       <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={reprendre}>
         {busy ? 'Un instant…' : 'Reprendre le paiement'}
       </button>
       {erreur && <p className="field-hint" role="alert" style={{ marginTop: 8 }}>{erreur}</p>}
-    </>
+    </div>
   )
 }

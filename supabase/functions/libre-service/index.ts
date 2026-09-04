@@ -169,6 +169,26 @@ Deno.serve(async (req) => {
     reprise = dem as Record<string, unknown>
     appareils = Number(dem.appareils)
     rythme = String(dem.rythme) as Rythme
+
+    // ⚠️ LE RYTHME, LUI, PEUT CHANGER — et ça ne contredit pas la règle
+    // ci-dessus. Elle visait UNE chose : qu'un client ne puisse pas fixer son
+    // prix. Ici il choisit une échéance, et le montant est recalculé en base à
+    // partir des appareils DÉJÀ déposés. Julien : « je suis obligé d'annuler ma
+    // demande et de recommencer » — pour un geste qui n'achète rien d'autre.
+    const voulu = texte('billingPeriod')
+    if ((voulu === 'monthly' || voulu === 'yearly') && voulu !== rythme) {
+      const { data: chg, error: eC } = await appelant.rpc('changer_rythme_demande', {
+        p_id: requestId,
+        p_billing_period: voulu,
+      })
+      if (eC) return json({ success: false, error: eC.message }, 500)
+      if (!chg?.success) return json({ success: false, error: chg?.error ?? 'Refus.' }, 400)
+      rythme = voulu
+      // La session enregistrée portait l'ancien prix : la base vient de
+      // l'oublier, et on ne doit surtout pas la rouvrir.
+      reprise = { ...reprise, rythme: voulu, session: null }
+    }
+
     if (rythme !== 'monthly' && rythme !== 'yearly') {
       return json({ success: false, error: 'Rythme de paiement inconnu.' }, 400)
     }

@@ -8890,3 +8890,49 @@ administrateur — la branche est atteinte et gardée. Quatre sabotages, quatre
 
 Tests de garde : `web/tests/libre-service.test.ts`, bloc « un paiement abandonné
 ne bloque pas ».
+
+## Le rythme se change avant de payer (4 septembre 2026)
+
+Julien, sur sa demande en attente : *« j'aimerais pouvoir changer le mode de
+paiement mensuel ou annuel […] je suis obligé d'annuler ma demande et de
+recommencer. »*
+
+Il a raison, et c'est **le même geste** : même magasin, mêmes appareils, même
+offre — seule l'échéance change. Annuler puis refaire, c'est perdre la trace et
+rejouer les contrôles de doublon pour rien. Les deux échéances, avec leurs deux
+prix, sont désormais sur la demande elle-même.
+
+⚠️ **CE QUE ÇA NE CONTREDIT PAS.** La règle posée la veille avec `reprendre` —
+*ce qu'on achète est relu sur la demande, jamais repris du corps de la requête*
+— visait UNE chose : qu'un client ne puisse pas fixer son prix. Elle tient
+intégralement, parce que `changer_rythme_demande` **recalcule le montant par
+`prix_offre`**, en base, à partir des appareils déjà déposés. Le client choisit
+une échéance, pas un montant — et les appareils, eux, restent hors de sa portée
+(un test refuse `Number(corps.devices)` dans cette branche).
+
+- **⚠️ LA SESSION STRIPE SE JETTE, ET C'EST LE POINT QUI COÛTE DE L'ARGENT.**
+  Elle porte l'ancien prix : la rouvrir ferait payer le mensuel à qui vient de
+  choisir l'annuel. `stripe_checkout_session_id` passe à `null` dans la même
+  écriture que le rythme — c'est le seul endroit du produit où une session
+  s'oublie, et c'est parce qu'elle ne décrit plus la demande.
+- **⚠️ ET LA CLÉ D'IDEMPOTENCE PORTE MAINTENANT LE PRIX**
+  (`abonnement-<demande>-<price>-<tentative>`). Jeter la session ne suffisait
+  pas : avec l'ancienne clé, Stripe aurait **rejoué la session du rythme
+  précédent** et rendu son URL — le client aurait payé ce qu'il venait de
+  quitter. Deux rythmes, deux Price, donc deux clés. Les quatre fonctions qui
+  embarquent `_shared/stripe.ts` ont été redéployées pour ça.
+- **Rien ne bouge sur un devis**, ni sur ce qui est encaissé : un devis porte un
+  montant négocié et un document signé, dont l'échéance fait partie.
+- **Rejouer le même rythme répond `already`**, pas une erreur — un second clic
+  ne doit rien casser.
+- `ChoixRythme` est une seule définition, partagée par l'achat et la reprise :
+  deux sélecteurs de la même chose divergeraient au premier ajustement.
+
+Vérifié en base, en transaction annulée, sur la demande réelle : 1 146 € en
+mensuel → 12 210 € en annuel, `annuelCents` recalculé, **session effacée** ;
+rejeu du même rythme `already` ; rythme inconnu et devis refusés. Trois
+sabotages, trois échecs. Au navigateur, clair et sombre, à 1 280 et 900 px,
+débordement horizontal nul.
+
+Tests de garde : `web/tests/libre-service.test.ts`, bloc « le rythme se change
+avant de payer ».

@@ -215,7 +215,12 @@ export async function creerAbonnementCheckout(
     headers: {
       Authorization: `Bearer ${cle}`,
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Idempotency-Key': `abonnement-${p.requestId}-${p.tentative ?? 0}`,
+      // ⚠️ LA CLÉ PORTE LE PRIX, ET C'EST OBLIGATOIRE DEPUIS QUE LE RYTHME SE
+      // CHANGE (4 septembre 2026). Sans lui, passer du mensuel à l'annuel
+      // rejouerait la clé de la session précédente : Stripe rendrait
+      // l'ANCIENNE session, et le client paierait le mensuel qu'il vient de
+      // quitter. Deux rythmes, deux Price, donc deux clés.
+      'Idempotency-Key': `abonnement-${p.requestId}-${p.priceId}-${p.tentative ?? 0}`,
     },
     body: corps,
   })

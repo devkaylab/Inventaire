@@ -61,6 +61,7 @@ type Demande = {
   store_name: string
   status: 'pending' | 'accepted' | 'paid' | 'created' | 'removed' | 'rejected'
   devices: number | null
+  billing_period: string | null
   admin_note: string
   created_at: string
 }
@@ -306,7 +307,11 @@ export default function FicheMagasinPage() {
                 </div>
               </div>
               <div className="req-actions">
-                <ReprendrePaiement requestId={offreEnCours.id} />
+                <ReprendrePaiement
+                  requestId={offreEnCours.id}
+                  devices={offreEnCours.devices}
+                  billingPeriod={offreEnCours.billing_period}
+                />
                 <button type="button" className="link-btn danger-link" onClick={annulerOffre}>
                   Annuler
                 </button>

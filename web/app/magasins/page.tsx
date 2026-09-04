@@ -44,6 +44,7 @@ import { nb } from '@/lib/format'
 type StoreRequest = {
   id: string
   kind: 'add' | 'remove' | 'offre'
+  billing_period: string | null
   store_id: string | null
   store_name: string
   message: string
@@ -388,7 +389,9 @@ function DemandesMagasin() {
               </div>
               {(d.status === 'pending' || libreService(d)) && (
                 <div className="req-actions">
-                  {libreService(d) && <ReprendrePaiement requestId={d.id} />}
+                  {libreService(d) && (
+                    <ReprendrePaiement requestId={d.id} devices={d.devices} billingPeriod={d.billing_period} />
+                  )}
                   <button type="button" className="link-btn danger-link" onClick={() => annuler(d)}>
                     Annuler la demande
                   </button>
