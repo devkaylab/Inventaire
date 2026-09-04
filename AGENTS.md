@@ -7670,6 +7670,116 @@ fonction même du cache qui tombe.
 Tests de garde : `tests/offlineSync.test.ts` (le delta, la suppression, la
 saisie en réserve, sur le VRAI module) et `tests/compte.test.ts`.
 
+## Dix inventaires de cette taille (4 septembre 2026)
+
+Question de Julien : *« si demain on en a dix de cette ampleur, tout plante
+non ? »* Réponse mesurée : **non, ce n'est pas la vitesse qui casse — c'est la
+place.** Trois constats, dans l'ordre où ils comptent.
+
+### 1. Les écrans NE ralentissent PAS, et c'est contre-intuitif
+
+Chaque écran travaille sur **un seul inventaire**, et les quatre grosses
+tables ont toutes un index qui commence par `session_id`. Aujourd'hui le
+moteur balaie parfois la table entière — uniquement parce qu'un inventaire de
+démonstration en représentait **la moitié**. À dix inventaires, il n'en
+représente plus qu'un dixième et le planificateur bascule sur l'index.
+
+Vérifié en le forçant (`set enable_seqscan = off`) :
+
+| Écran, sur 400 000 réf. | Balayage | Par index |
+|---|---|---|
+| Rapport — les totaux | 2 767 ms | **2 593 ms** |
+| Rapport — une page | 2 966 ms | **2 707 ms** |
+| Tableau des balises | 1 649 ms | **1 442 ms** |
+
+**Aussi rapide, voire un peu plus.** Le travail dépend de l'inventaire qu'on
+regarde, pas de ce qu'il y a à côté — la règle du chantier tient ici aussi.
+**Ne pas répondre « il faut monter le serveur » à cette question-là.**
+
+### 2. ⚠️ LE MUR EST LA PLACE, ET RIEN N'EFFACE JAMAIS UN INVENTAIRE
+
+Un inventaire de 400 000 références pèse **~680 Mo** (comptages, articles,
+stock théorique, audit, et leurs index). Dix font **~6,8 Go**, pour un disque
+de l'ordre de 8 Go. Et quand un disque Postgres se remplit, ce n'est pas un
+ralentissement : **la base refuse d'écrire**, l'inventaire s'arrête.
+
+**⚠️ `purge_expired_data` ne touche AUCUNE table d'inventaire** — vérifié, elle
+ne nettoie que les demandes, invitations, journaux, notifications et
+événements Stripe. Les 635 000 lignes de scan d'un inventaire clôturé il y a
+deux ans sont toujours là, entières.
+
+Ce n'est pas un défaut : c'est **une décision jamais prise**. Combien de temps
+garde-t-on le détail brut d'un inventaire clôturé ? Le rapport et les écarts
+font foi et doivent rester ; les scans qui les ont produits, un an après, sont
+une autre question — et elle a un versant RGPD, ces lignes portant qui a
+compté quoi.
+
+### 3. ⚠️ SUPPRIMER NE REND PAS LA PLACE — le constat qui change le plan
+
+Les deux inventaires de démonstration supprimés, la base **ne bougeait pas
+d'un octet** : 1 382 Mo avant, 1 382 Mo après. Postgres marque les pages
+réutilisables, il ne les rend pas.
+
+| Étape | Base |
+|---|---|
+| Avant suppression | 1 382 Mo |
+| Après le `DELETE` | **1 382 Mo** |
+| Après `VACUUM ANALYZE` | 976 Mo |
+| Après `VACUUM FULL` | **25 Mo** |
+
+Le plus parlant : après le ménage ordinaire, `counts` occupait encore
+**470 Mo pour 165 lignes** — ce sont les index qu'un `VACUUM` simple ne
+compacte pas.
+
+- **⚠️ `VACUUM ANALYZE` n'est PAS optionnel après une grosse suppression.** Le
+  planificateur croyait encore à 1,27 million de lignes dans `counts` : il
+  aurait choisi des plans faits pour un volume disparu.
+- **⚠️ `VACUUM FULL` prend un verrou exclusif** : la table est inutilisable
+  pendant la réécriture, et il lui faut autant d'espace libre que la table
+  qu'il refait. Sur des tables devenues minuscules c'est instantané ; sur un
+  vrai gros inventaire en production, **c'est une opération à programmer, pas à
+  lancer un matin d'inventaire**.
+- **La conséquence pour la facturation** : le coût de stockage suit le
+  **point haut**, pas l'usage courant. Un client qui fait un énorme inventaire
+  une fois relève le plancher pour de bon, à moins d'un `VACUUM FULL`
+  programmé.
+
+### ⚠️ Ce que ça ouvre côté commercial — DIRECTION, PAS DÉCISION
+
+Julien, à la lecture de ce qui précède : *« on va certainement prendre ces
+deux cas pour mettre des critères de subscription. Faire payer les plus gros
+consommateurs, un peu comme avec l'IA et le token, crédit. »*
+
+**« Certainement » : c'est une direction.** Rien n'est arrêté, rien n'est à
+construire. Ce qui suit sert le jour où le sujet est relancé — et surtout,
+quatre pièges déjà payés par le projet.
+
+- **⚠️ LA BASE DE FACTURATION NE CHANGE PAS.** Le 30 août 2026 a tranché : on
+  facture **les appareils qui comptent**, et le volume de stock a été
+  explicitement écarté comme assiette. Ce qui se discute ici est un
+  **plafond**, un dépassement — pas un retour au volume comme base. Confondre
+  les deux, c'est défaire une décision documentée.
+- **⚠️ LE PLAFOND DOIT ÊTRE SOUPLE.** Règle déjà posée pour l'offre Solo : un
+  dépassement ne bloque **jamais** un comptage en cours ni la lecture d'un
+  rapport. Au pire, il refuse la **création d'un nouvel inventaire**, et il
+  prévient. On ne coupe pas un magasin un soir de comptage.
+- **⚠️ LA MESURE NE DOIT PAS SE DÉCOUPER.** Constat de Julien du 27 août : un
+  client contournerait un plafond par fichier en scindant son stock en cinq
+  petits inventaires. D'où la mesure retenue à l'époque — **les pièces
+  comptées, agrégées sur 30 jours glissants**. La même prudence vaut pour
+  toute nouvelle mesure.
+- **⚠️ LA PLACE EST LA SEULE MESURE QUI COÛTE VRAIMENT, ET ELLE NE REDESCEND
+  PAS TOUTE SEULE.** C'est l'apport du jour : ~680 Mo par inventaire de
+  400 000 références, jamais purgés, et un disque qui ne se rétracte qu'à la
+  main. Si un critère de stockage entre dans la grille, il doit venir **avec**
+  une politique d'archivage — sinon on facture une place qu'on ne sait pas
+  reprendre.
+
+Les deux faits chiffrés à reprendre le jour venu : **680 Mo par inventaire de
+400 000 références**, et **le plafond de 8 s atteint à 13 personnes
+simultanées sur un inventaire de cette taille** (contre une centaine sur un
+inventaire normal). Ce sont eux qui décrivent « un gros consommateur ».
+
 ## Ce qui n'est TOUJOURS pas prouvé
 
 Dit explicitement, parce qu'une absence de constat ne vaut que si on sait ce
@@ -7683,13 +7793,16 @@ qui n'a pas été regardé.
 - Le jeu d'essai portait **8 compteurs distincts**, pas 100 — la concurrence
   est prouvée, la diversité des comptes ne l'est pas.
 
-## ⚠️ Deux inventaires de démonstration vivent en production
+## Les inventaires de démonstration (supprimés le 4 septembre 2026)
 
-« DEMO 400 000 references » (Oberlin Lyon) et « DEMO 400 000 references — La
-Samaritaine ». Ensemble ils portent la base à **1,3 Go**. Ils sont là pour
-regarder les écrans à l'échelle réelle — **à supprimer sur un mot de Julien**,
-et il faut le lui redemander.
+« DEMO 400 000 references » et son jumeau sur La Samaritaine ont servi à tout
+ce qui précède, puis ont été supprimés à la demande de Julien. Deux choses à
+retenir d'eux.
 
-⚠️ **Le premier a été créé sur le compte de démonstration**, donc invisible
-depuis le compte de Julien : un jeu d'essai se pose sur le compte de qui va le
-regarder.
+⚠️ **Un jeu d'essai se pose sur le compte de qui va le regarder.** Le premier
+avait été créé sur le compte de démonstration : invisible depuis le compte de
+Julien, qui a cherché son inventaire dans une liste qui ne pouvait pas le
+contenir.
+
+⚠️ **ET SUPPRIMER NE REND PAS LA PLACE** — voir la section suivante, c'est le
+constat le plus utile de la journée.
