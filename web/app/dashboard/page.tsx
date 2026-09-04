@@ -25,7 +25,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { getMyCompany } from '@/lib/account'
 import { supabase } from '@/lib/supabaseClient'
-import { money, nb, relativeTime, fmtDate } from '@/lib/format'
+import { money, moneyCourt, nb, relativeTime, fmtDate } from '@/lib/format'
 import { STATUS_LABELS } from '@/lib/inventory'
 import { friendlyError } from '@/lib/errors'
 import { SkeletonRows } from '@/components/ui/Skeleton'
@@ -146,13 +146,19 @@ export default function DashboardPage() {
               absolu
               refTexte={`${nb(tb.clotures_mois_prec)} le mois dernier`}
             />
+            {/* ⚠️ Les montants sont abrégés en k€ à partir de 1 000 (demande de
+                Julien, 3 septembre 2026) — jamais les pièces, qui se comptent.
+                Le montant exact revient au survol : un chiffre arrondi qu'on ne
+                peut pas déplier serait un chiffre faux. */}
             <Kpi
               nom="Valeur comptée ce mois-ci"
               icone="valeur"
-              valeur={`${money(tb.valeur_mois)} €`}
+              valeur={moneyCourt(tb.valeur_mois)}
+              valeurExacte={`${money(tb.valeur_mois)} €`}
               precedent={tb.valeur_mois_prec}
               actuel={tb.valeur_mois}
-              refTexte={`${money(tb.valeur_mois_prec)} € le mois dernier`}
+              refTexte={`${moneyCourt(tb.valeur_mois_prec)} le mois dernier`}
+              refExact={`${money(tb.valeur_mois_prec)} € le mois dernier`}
             />
           </section>
 
@@ -165,6 +171,7 @@ export default function DashboardPage() {
               onSemaine={setSemaine}
               enChargement={chargement}
               format={{ pieces: (v) => `${nb(v)} pièces`, valeur: (v) => `${money(v)} €` }}
+              axe={(v, m) => (m !== 'valeur' ? nb(v) : v === 0 ? '0 €' : moneyCourt(v))}
             />
             <Anneau
               titre="Écart"
@@ -179,7 +186,8 @@ export default function DashboardPage() {
                 brut: mesureEcarts === 'valeur' ? e.ecart_valeur : e.ecart_qte,
                 lien: `/dashboard/${e.session_id}`,
               }))}
-              format={(v) => (mesureEcarts === 'valeur' ? `${money(v)} €` : nb(v))}
+              format={(v) => (mesureEcarts === 'valeur' ? moneyCourt(v) : nb(v))}
+              formatExact={(v) => (mesureEcarts === 'valeur' ? `${money(v)} €` : nb(v))}
               sous="sur 30 jours"
               note="Parts en écart absolu"
               vide={<>Aucun écart sur 30 jours. Seuls les inventaires avec un stock théorique importé entrent dans ce calcul.</>}
@@ -212,7 +220,7 @@ export default function DashboardPage() {
                         <div className="tb-rang-sous">{d.magasin} · {fmtDate(d.cree_le)}</div>
                       </div>
                       <div className="tb-rang-fin">
-                        <div className="tb-rang-valeur num">{money(d.valeur)} €</div>
+                        <div className="tb-rang-valeur num" title={`${money(d.valeur)} €`}>{moneyCourt(d.valeur)}</div>
                         <span className={`dash-badge dash-badge-${d.statut}`}>
                           <span className="dash-dot" />{STATUS_LABELS[d.statut as keyof typeof STATUS_LABELS] ?? d.statut}
                         </span>

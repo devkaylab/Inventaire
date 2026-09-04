@@ -12,6 +12,7 @@ import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
+import { Pagination, useRetourEnHaut } from '@/components/ui/Pagination'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Stat } from '@/components/ui/Stat'
 
@@ -68,6 +69,8 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
   const [avance, setAvance] = useState<string | null>(null)
   const [askFormat, setAskFormat] = useState(false)
   const lastRunRef = useRef(0)
+  /** Le haut du tableau : on y revient à chaque changement de page. */
+  const hautDuTableau = useRetourEnHaut(page)
 
   // La frappe n'interroge pas le serveur à chaque caractère.
   useEffect(() => {
@@ -173,16 +176,52 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
     }
   }
 
-  if (loading) return <SkeletonRows rows={5} />
+  // ⚠️ L'ATTENTE SE DIT, ET LES TUILES NE MENTENT JAMAIS PAR ZÉRO.
+  // Constat de Julien le 3 septembre 2026 : le recalcul prend plusieurs
+  // secondes sur un gros inventaire, rien ne l'indiquait, et un « 0 écart »
+  // s'affichait pendant ce temps — on peut crier victoire sur un chiffre qui
+  // n'a pas encore été calculé. Une ossature muette ne suffit pas : elle
+  // ressemble à une page vide.
+  if (loading) {
+    return (
+      <div>
+        <p className="chargement-note" role="status">
+          Calcul du rapport en cours… Sur un inventaire de plusieurs dizaines de milliers de
+          références, comptez quelques secondes.
+        </p>
+        <SkeletonRows rows={5} />
+      </div>
+    )
+  }
 
   return (
     <div>
+      {/* ⚠️ Sans résumé, on écrit « — », jamais « 0 » : un zéro se lit comme un
+          résultat, et celui-là serait faux. */}
       <div className="dash-stats">
-        <Stat label="Stock théorique" value={fmtQty(totals.theoUnits)} />
-        <Stat label="Stock compté" value={fmtQty(totals.countedUnits)} />
-        <Stat label="Écart total (unités)" value={fmtSigned(totals.varUnits)} tone={totals.varUnits < 0 ? 'neg' : 'pos'} />
-        <Stat label="Écart total (valeur achat)" value={`${money(totals.varValue)} €`} tone={totals.varValue < 0 ? 'neg' : 'pos'} />
+        <Stat label="Stock théorique" value={resume ? fmtQty(totals.theoUnits) : '—'} />
+        <Stat label="Stock compté" value={resume ? fmtQty(totals.countedUnits) : '—'} />
+        <Stat
+          label="Écart total (unités)"
+          value={resume ? fmtSigned(totals.varUnits) : '—'}
+          tone={!resume ? 'neutral' : totals.varUnits < 0 ? 'neg' : 'pos'}
+        />
+        <Stat
+          label="Écart total (valeur achat)"
+          value={resume ? `${money(totals.varValue)} €` : '—'}
+          tone={!resume ? 'neutral' : totals.varValue < 0 ? 'neg' : 'pos'}
+        />
       </div>
+
+      {!resume && (
+        <div className="banner banner-warn">
+          Les totaux n’ont pas pu être calculés — le serveur a mis trop de temps à répondre.
+          Rien n’est perdu, les comptages sont intacts :{' '}
+          <button type="button" className="link-btn" disabled={refreshing} onClick={() => void load({ silent: true })}>
+            réessayer
+          </button>.
+        </div>
+      )}
 
       {totals.unresolved > 0 && (
         <div className="banner banner-warn">
@@ -255,7 +294,19 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
         <EmptyState title="Aucun article ne correspond" hint={`Rien ne correspond à « ${recherche} ».`} />
       ) : (
         <>
-          <div className="dash-table-wrap">
+          {/* Les boutons sont AUSSI en tête : sur un écran de 14 pouces,
+              cinquante lignes passent sous le pli et ceux du bas ne se
+              voient pas. */}
+          <div ref={hautDuTableau} />
+          <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
+            <span className="muted small">
+              {premier.toLocaleString('fr-FR')}–{dernier.toLocaleString('fr-FR')} sur{' '}
+              {totalFiltre.toLocaleString('fr-FR')}
+              {chargeantPage && ' · chargement…'}
+            </span>
+          </Pagination>
+
+          <div className="dash-table-wrap" style={{ opacity: chargeantPage ? 0.55 : 1 }}>
             <table className="dash-table">
               <thead>
                 <tr>
@@ -293,33 +344,14 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
             </table>
           </div>
 
-          <div className="pagination">
+          <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
             <span className="muted small">
               {premier.toLocaleString('fr-FR')}–{dernier.toLocaleString('fr-FR')} sur{' '}
               {totalFiltre.toLocaleString('fr-FR')}
               {recherche && ` (${(resume?.lignes ?? 0).toLocaleString('fr-FR')} au total)`}
               . Quantité retenue : arbitrage, sinon auditeur, sinon compteur.
             </span>
-            {pages > 1 && (
-              <div className="pagination-boutons">
-                <button
-                  type="button" className="btn btn-ghost btn-sm"
-                  disabled={page === 0 || chargeantPage}
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
-                >
-                  Précédent
-                </button>
-                <span className="muted small">Page {page + 1} / {pages.toLocaleString('fr-FR')}</span>
-                <button
-                  type="button" className="btn btn-ghost btn-sm"
-                  disabled={page + 1 >= pages || chargeantPage}
-                  onClick={() => setPage(p => p + 1)}
-                >
-                  Suivant
-                </button>
-              </div>
-            )}
-          </div>
+          </Pagination>
         </>
       )}
     </div>

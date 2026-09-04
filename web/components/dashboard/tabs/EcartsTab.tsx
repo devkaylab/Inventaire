@@ -16,6 +16,7 @@ import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination, useRetourEnHaut } from '@/components/ui/Pagination'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Figure, Stat } from '@/components/ui/Stat'
 
@@ -52,6 +53,8 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   const [zoneFilter, setZoneFilter] = useState<string>('all')
   /** Bouge à chaque arbitrage : c'est ce qui fait relire la page. */
   const [version, setVersion] = useState(0)
+  /** Le haut de la liste : on y revient à chaque changement de page. */
+  const hautDeListe = useRetourEnHaut(page)
 
   /**
    * Le travail lourd : le recalcul, les totaux et la liste des emplacements.
@@ -183,20 +186,53 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
     }
   }
 
-  if (loading) return <SkeletonRows rows={4} />
+  // ⚠️ L'ATTENTE SE DIT. Le recalcul des écarts prend plusieurs secondes sur
+  // un gros inventaire ; une ossature muette ressemble à une page vide, et le
+  // « 0 » des tuiles se lisait comme un résultat (constat de Julien).
+  const pagesEcarts = Math.max(1, Math.ceil(totalFiltre / PAGE))
+  const compteAffiche = totalFiltre === 0
+    ? 'Aucun écart à afficher'
+    : `${(page * PAGE + 1).toLocaleString('fr-FR')}–${Math.min(totalFiltre, (page + 1) * PAGE).toLocaleString('fr-FR')}`
+      + ` sur ${totalFiltre.toLocaleString('fr-FR')} écart${totalFiltre > 1 ? 's' : ''}`
+
+  if (loading) {
+    return (
+      <div>
+        <p className="chargement-note" role="status">
+          Recherche des écarts en cours… Sur un inventaire de plusieurs dizaines de milliers de
+          références, comptez quelques secondes.
+        </p>
+        <SkeletonRows rows={4} />
+      </div>
+    )
+  }
 
   return (
     <div>
+      {/* ⚠️ Sans résumé, « — » et jamais « 0 » : un zéro d'écart se lit comme
+          une victoire, et celui-là n'aurait rien mesuré. */}
       <div className="dash-stats">
-        <Stat label="Écarts à traiter" value={String(stats.total)} tone={stats.total > 0 ? 'neg' : 'pos'} />
-        <Stat label="Quantités différentes" value={String(stats.byKind.quantity)} />
+        <Stat
+          label="Écarts à traiter"
+          value={resume ? String(stats.total) : '—'}
+          tone={!resume ? 'neutral' : stats.total > 0 ? 'neg' : 'pos'}
+        />
+        <Stat label="Quantités différentes" value={resume ? String(stats.byKind.quantity) : '—'} />
         <Stat
           label="Non retrouvés à l’audit"
-          value={String(stats.byKind['missing-audit'])}
-          tone={stats.byKind['missing-audit'] > 0 ? 'warn' : 'neutral'}
+          value={resume ? String(stats.byKind['missing-audit']) : '—'}
+          tone={resume && stats.byKind['missing-audit'] > 0 ? 'warn' : 'neutral'}
         />
-        <Stat label="Arbitrés" value={String(resume?.arbitres ?? 0)} tone="pos" />
+        <Stat label="Arbitrés" value={resume ? String(resume.arbitres) : '—'} tone={resume ? 'pos' : 'neutral'} />
       </div>
+
+      {!resume && (
+        <div className="banner banner-warn">
+          Les écarts n’ont pas pu être calculés — le serveur a mis trop de temps à répondre.
+          Rien n’est perdu, les comptages sont intacts :{' '}
+          <button type="button" className="link-btn" onClick={() => void load()}>réessayer</button>.
+        </div>
+      )}
 
       <p className="muted small" style={{ marginBottom: 12 }}>
         L’écart se lit <strong>du point de vue de l’auditeur</strong> : écart = quantité de l’auditeur
@@ -216,7 +252,20 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         </div>
       )}
 
-      {groups.length === 0 ? (
+      {/* ⚠️ Les boutons sont AUSSI en tête : sur un écran de 14 pouces, la
+          liste des écarts dépasse la fenêtre et ceux du bas restent hors de
+          vue (constat de Julien, 3 septembre 2026). */}
+      <div ref={hautDeListe} />
+      {totalFiltre > 0 && (
+        <Pagination page={page} pages={pagesEcarts} chargement={chargeantPage} onPage={setPage}>
+          <span className="muted small">
+            {compteAffiche}
+            {chargeantPage && ' · chargement…'}
+          </span>
+        </Pagination>
+      )}
+
+      {groups.length === 0 && !chargeantPage ? (
         <EmptyState
           tone={(resume?.arbitres ?? 0) > 0 || stats.total > 0 ? 'ok' : 'neutral'}
           title={stats.total === 0
@@ -305,33 +354,10 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         </div>
       ))}
 
-      {totalFiltre > PAGE && (
-        <div className="pagination">
-          <span className="muted small">
-            {(page * PAGE + 1).toLocaleString('fr-FR')}–
-            {Math.min(totalFiltre, (page + 1) * PAGE).toLocaleString('fr-FR')} sur{' '}
-            {totalFiltre.toLocaleString('fr-FR')} écart{totalFiltre > 1 ? 's' : ''}
-          </span>
-          <div className="pagination-boutons">
-            <button
-              type="button" className="btn btn-ghost btn-sm"
-              disabled={page === 0 || chargeantPage}
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-            >
-              Précédent
-            </button>
-            <span className="muted small">
-              Page {page + 1} / {Math.ceil(totalFiltre / PAGE).toLocaleString('fr-FR')}
-            </span>
-            <button
-              type="button" className="btn btn-ghost btn-sm"
-              disabled={(page + 1) * PAGE >= totalFiltre || chargeantPage}
-              onClick={() => setPage(p => p + 1)}
-            >
-              Suivant
-            </button>
-          </div>
-        </div>
+      {totalFiltre > 0 && (
+        <Pagination page={page} pages={pagesEcarts} chargement={chargeantPage} onPage={setPage}>
+          <span className="muted small">{compteAffiche}</span>
+        </Pagination>
       )}
 
       {resolved.length > 0 && (

@@ -38,6 +38,31 @@ export function money(v: number): string {
   return (v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/**
+ * Montant raccourci pour un tableau de bord : « 12,8 k€ » plutôt que
+ * « 12 750,00 € » (3 septembre 2026, demande de Julien).
+ *
+ * ⚠️ ELLE NE S'EMPLOIE QUE LÀ OÙ LE CHIFFRE EXACT RESTE ATTEIGNABLE — un
+ * `title` au survol, ou une bulle. Un montant arrondi qu'on ne peut pas
+ * déplier est un montant faux : sur un rapport, sur une facture ou dans un
+ * export, c'est `money` et rien d'autre.
+ *
+ * Sous 1 000 € on garde les centimes : c'est là qu'ils se lisent encore.
+ * Au-dessus de 100 k€ on retire la décimale — « 450 k€ » se lit mieux que
+ * « 450,3 k€ », et la précision perdue est de l'ordre du bruit.
+ */
+export function moneyCourt(v: number): string {
+  if (!Number.isFinite(v)) v = 0
+  v = v || 0
+  const abs = Math.abs(v)
+  if (abs < 1000) return `${money(v)} €`
+  const k = v / 1000
+  return `${k.toLocaleString('fr-FR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: Math.abs(k) < 100 ? 1 : 0,
+  })} k€`
+}
+
 export function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR')
 }

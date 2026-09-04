@@ -1797,6 +1797,20 @@ a { color: inherit; text-decoration: none; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 .skeleton-rows { display: flex; flex-direction: column; gap: 10px; }
 
+/* ⚠️ L'ossature ne dit pas qu'elle charge : elle ressemble à une page vide.
+   Cette ligne le dit en toutes lettres, au-dessus d'elle. */
+.chargement-note {
+  font-size: 13px; color: var(--text-2); margin: 0 0 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.chargement-note::before {
+  content: ''; flex: none; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--hairline); border-top-color: var(--accent);
+  animation: tourne .8s linear infinite;
+}
+@keyframes tourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .chargement-note::before { animation: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton, .live-pulse, .balise-dot, .refresh-btn[data-busy="true"] svg, .mobile-nav { animation: none; }
   .dash-bar-fill, .progress-fill { transition: none; }

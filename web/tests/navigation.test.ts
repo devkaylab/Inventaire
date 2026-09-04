@@ -703,3 +703,44 @@ describe('le tableau de bord d’atterrissage du superviseur', () => {
     expect(migration).toContain('revoke execute on function public.tableau_de_bord_superviseur(date) from public, anon;')
   })
 })
+
+/**
+ * Les montants du tableau de bord tiennent dans leur tuile (3 septembre 2026).
+ *
+ * Demande de Julien : « affiche les valeurs en k€ quand supérieur ou égal à
+ * 1000, avec détail réel dans une bulle quand la souris passe au-dessus, pas
+ * pour le nombre de pièces ».
+ */
+describe('les montants du tableau de bord s’abrègent', () => {
+  const page = lire('../app/dashboard/page.tsx')
+  const pieces = lire('../components/dashboard/TableauDeBord.tsx')
+
+  it('les euros s’abrègent aux quatre endroits où ils s’affichent', () => {
+    // Tuile de valeur, axe du diagramme, anneau, derniers inventaires.
+    expect(page).toContain('valeur={moneyCourt(tb.valeur_mois)}')
+    // Le zéro de l'axe s'écrit « 0 € », pas « 0,00 € » : une graduation de
+    // base n'a pas besoin de centimes.
+    expect(page).toContain("axe={(v, m) => (m !== 'valeur' ? nb(v) : v === 0 ? '0 €' : moneyCourt(v))}")
+    expect(page).toContain("format={(v) => (mesureEcarts === 'valeur' ? moneyCourt(v) : nb(v))}")
+    expect(page).toContain('{moneyCourt(d.valeur)}')
+  })
+
+  it('⚠️ LE CHIFFRE EXACT RESTE ATTEIGNABLE AU SURVOL', () => {
+    // Une valeur arrondie qu'on ne peut pas déplier est une valeur fausse.
+    expect(page).toContain('valeurExacte={`${money(tb.valeur_mois)} €`}')
+    expect(page).toContain('refExact=')
+    expect(page).toContain('formatExact=')
+    expect(page).toContain('title={`${money(d.valeur)} €`}')
+    // Et les composants partagés portent bien ces titres jusqu'au DOM.
+    expect(pieces).toContain('title={valeurExacte}')
+    expect(pieces).toContain('title={formatExact?.(a.brut)}')
+    expect(pieces).toContain('<title>{formatExact(total)}</title>')
+  })
+
+  it('⚠️ les PIÈCES ne s’abrègent pas', () => {
+    // Elles se comptent : « 12,8 k » n'est pas un nombre de pièces, c'est une
+    // approximation d'inventaire — exactement ce qu'on ne fait pas ici.
+    expect(page).toContain('valeur={nb(tb.pieces_mois)}')
+    expect(page).not.toContain('moneyCourt(tb.pieces')
+  })
+})

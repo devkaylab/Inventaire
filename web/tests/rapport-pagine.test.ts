@@ -165,3 +165,69 @@ describe('les écarts d’audit se lisent par pages', () => {
     }
   })
 })
+
+/**
+ * Lire un long tableau sans se tromper (3 septembre 2026).
+ *
+ * Julien, sur l'inventaire de démonstration à 400 000 références : « rien
+ * n'indique que ça charge, c'est juste écrit 0 écart, si le client n'attend
+ * pas, il pourrait crier victoire alors qu'en réalité ça load ». Plus deux
+ * constats de mise en page — la page ne revient pas en haut quand on tourne,
+ * et les boutons du bas sont hors de vue sur un écran de 14 pouces.
+ */
+describe('un long tableau se lit sans se tromper', () => {
+  const rapport = sansCommentaires(onglet)
+  const ecarts = sansCommentaires(lire('../components/dashboard/tabs/EcartsTab.tsx'))
+  const css = lire('../app/globals.css')
+
+  it('⚠️ l’attente se DIT, elle ne se devine pas', () => {
+    // Une ossature grise seule ressemble à une page vide : on croit que c'est
+    // fini. Les deux onglets annoncent le calcul en toutes lettres.
+    for (const code of [rapport, ecarts]) {
+      expect(code).toContain('className="chargement-note"')
+      expect(code).toContain('role="status"')
+    }
+    expect(css).toContain('.chargement-note')
+  })
+
+  it('⚠️ SANS RÉSUMÉ, LES TUILES ÉCRIVENT « — », JAMAIS « 0 »', () => {
+    // C'est le défaut exact : le recalcul dépasse le délai du serveur, les
+    // tuiles retombent à zéro, et « 0 écart » se lit comme une victoire.
+    expect(rapport).toContain("value={resume ? fmtQty(totals.theoUnits) : '—'}")
+    expect(rapport).toContain("value={resume ? fmtSigned(totals.varUnits) : '—'}")
+    expect(ecarts).toContain("value={resume ? String(stats.total) : '—'}")
+    // Et l'ancienne écriture, qui fabriquait le zéro, a bien disparu.
+    expect(ecarts).not.toContain('value={String(stats.total)}')
+    expect(ecarts).not.toContain("String(resume?.arbitres ?? 0)")
+  })
+
+  it('un échec de calcul se dit, avec de quoi réessayer', () => {
+    for (const code of [rapport, ecarts]) {
+      expect(code).toContain('{!resume && (')
+      expect(code).toContain('réessayer')
+    }
+  })
+
+  it('⚠️ les boutons de page sont EN HAUT autant qu’en bas', () => {
+    // Sur un écran de 14 pouces, cinquante lignes passent sous le pli : les
+    // boutons du bas ne se voient pas sans descendre tout le tableau.
+    for (const code of [rapport, ecarts]) {
+      expect(code.match(/<Pagination\b/g)?.length).toBe(2)
+    }
+  })
+
+  it('⚠️ changer de page ramène le HAUT du tableau sous les yeux', () => {
+    for (const code of [rapport, ecarts]) {
+      expect(code).toContain('useRetourEnHaut(page)')
+    }
+    const pagination = lire('../components/ui/Pagination.tsx')
+    // Jamais au premier rendu : on ferait sauter la page de quelqu'un qui
+    // vient seulement d'arriver sur l'onglet.
+    expect(pagination).toContain('if (premier.current)')
+    expect(pagination).toContain("scrollIntoView({ block: 'start' })")
+  })
+
+  it('la liste des écarts n’annonce pas « aucun » pendant qu’elle charge', () => {
+    expect(ecarts).toContain('groups.length === 0 && !chargeantPage')
+  })
+})

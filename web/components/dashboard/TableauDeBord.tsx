@@ -120,9 +120,16 @@ const KPI_ICONES = {
  * Un précédent à zéro n'affiche pas d'évolution : un pourcentage de zéro est
  * un chiffre inventé.
  */
-export function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu, icone }: {
+export function Kpi({ nom, valeur, valeurExacte, actuel, precedent, refTexte, refExact, absolu, icone }: {
   nom: string; valeur: string; icone: keyof typeof KPI_ICONES
   actuel?: number; precedent?: number; refTexte?: string; absolu?: boolean
+  /**
+   * ⚠️ Le chiffre en toutes lettres, montré au survol quand `valeur` est
+   * abrégée (« 12,8 k€ »). Une valeur arrondie qu'on ne peut pas déplier est
+   * une valeur fausse : abréger sans renseigner ceci est interdit.
+   */
+  valeurExacte?: string
+  refExact?: string
 }) {
   let chip: { texte: string; sens: 'plus' | 'moins' } | null = null
   if (actuel !== undefined && precedent !== undefined && precedent > 0 && actuel !== precedent) {
@@ -138,7 +145,7 @@ export function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu, icone }:
         <span className="tb-kpi-nom">{nom}</span>
       </div>
       <div className="tb-kpi-bas">
-        <span className="tb-kpi-valeur num">{valeur}</span>
+        <span className="tb-kpi-valeur num" title={valeurExacte}>{valeur}</span>
         {chip && (
           <span className={`tb-chip tb-chip-${chip.sens}`}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -147,7 +154,7 @@ export function Kpi({ nom, valeur, actuel, precedent, refTexte, absolu, icone }:
             {chip.texte}
           </span>
         )}
-        {refTexte && <span className="tb-kpi-ref num">{refTexte}</span>}
+        {refTexte && <span className="tb-kpi-ref num" title={refExact}>{refTexte}</span>}
       </div>
     </div>
   )
@@ -161,7 +168,7 @@ export const SEMAINES = [
 ]
 
 /** Le diagramme des comptages de la semaine, bascule Quantité / Valeur. */
-export function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enChargement, format }: {
+export function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enChargement, format, axe }: {
   jours: JourTb[]
   mesure: 'pieces' | 'valeur'
   onMesure: (m: 'pieces' | 'valeur') => void
@@ -169,6 +176,12 @@ export function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enC
   onSemaine: (s: number) => void
   enChargement: boolean
   format: { pieces: (v: number) => string; valeur: (v: number) => string }
+  /**
+   * Les graduations. Par défaut le nombre entier ; une valeur en euros y tient
+   * mal (« 4 000 000 » sous une gouttière de 44 px), d'où l'abrégé — la bulle
+   * au survol de la barre garde le montant exact.
+   */
+  axe?: (v: number, mesure: 'pieces' | 'valeur') => string
 }) {
   const valeurs = jours.map(j => (mesure === 'pieces' ? j.pieces : j.valeur))
   const max = Math.max(...valeurs, 1)
@@ -197,7 +210,9 @@ export function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enC
         <div className="tb-grille">
           {[0, 0.25, 0.5, 0.75, 1].map(f => (
             <div className="tb-grille-ligne" style={{ bottom: `${f * 100}%` }} key={f}>
-              <span className="num">{nb(Math.round(plafond * f))}</span>
+              <span className="num">
+                {axe ? axe(Math.round(plafond * f), mesure) : nb(Math.round(plafond * f))}
+              </span>
             </div>
           ))}
           <div className="tb-barres">
@@ -236,11 +251,13 @@ export type PartAnneau = { nom: string; brut: number; lien?: string }
  * « Autres ». Les parts se dessinent en valeur absolue — le signe se lit au
  * centre et sur chaque ligne, pas dans la taille des parts.
  */
-export function Anneau({ titre, entetes, parts, format, sous, note, vide }: {
+export function Anneau({ titre, entetes, parts, format, formatExact, sous, note, vide }: {
   titre: string
   entetes?: React.ReactNode
   parts: PartAnneau[]
   format: (v: number) => string
+  /** ⚠️ Obligatoire dès que `format` abrège : le survol doit rendre l'exact. */
+  formatExact?: (v: number) => string
   sous: string
   note?: string
   vide?: React.ReactNode
@@ -299,6 +316,7 @@ export function Anneau({ titre, entetes, parts, format, sous, note, vide }: {
                 ))}
               </g>
               <text x="90" y="92" textAnchor="middle" className="tb-anneau-gros" style={{ fontSize: tailleCentre }}>
+                {formatExact && <title>{formatExact(total)}</title>}
                 {texteCentre}
               </text>
               <text x="90" y="110" textAnchor="middle" className="tb-anneau-sous">{sous}</text>
@@ -313,7 +331,7 @@ export function Anneau({ titre, entetes, parts, format, sous, note, vide }: {
                 ) : (
                   <span className="tb-legende-nom">{a.nom}</span>
                 )}
-                <span className="tb-legende-val num">{format(a.brut)}</span>
+                <span className="tb-legende-val num" title={formatExact?.(a.brut)}>{format(a.brut)}</span>
               </div>
             ))}
             {note && <div className="tb-legende-note">{note}</div>}
