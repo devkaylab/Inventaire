@@ -10385,6 +10385,14 @@ maquette, ni les tests n'avaient pu voir.
    plus la place au-dessus** : sinon on déplacerait le débordement au lieu de
    le fermer.
 
+**Et un troisième, hors périmètre mais trouvé là** : le journal affichait
+`compteur_retire_du_magasin` **en mot technique** depuis deux semaines. Elle est
+écrite par `remove_counter_from_store`, **pas par une fonction `ca_*`** — et la
+garde des libellés ne balayait que les `ca_*`. Elle lit désormais **toutes** les
+migrations et retient chaque action réellement inscrite au journal d'entreprise :
+la prochaine se signalera d'elle-même. Encore une garde qui nommait au lieu de
+déduire.
+
 **La leçon générale : un banc d'essai a des données trop régulières.** Des
 rangées de même hauteur, une liste courte, une page qui ne touche pas le bas de
 l'écran — c'est exactement ce qui cache ces deux défauts-là. **Quand une page
@@ -10424,15 +10432,17 @@ demande une session, le vrai Chrome de Julien est le seul contrôle qui vaille**
   états*), ouvert au clic, Échap referme **et rend le focus**, un clic ailleurs
   referme, le panneau tient dans l'écran, et « Supprimer le compte » est le
   dernier, derrière son filet.
-- **Quatorze sabotages, quatorze échecs** — après resserrement du premier, qui
-  ne mordait pas.
-- 1 243 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
+- **Quinze sabotages, quinze échecs** — après resserrement du premier, qui ne
+  mordait pas.
+- 1 244 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
   avertissements, tous de la famille `react-hooks/*` déjà documentée, aucun sur
   les fichiers touchés), `next build` avec la table de routes **inchangée**.
 
 **VU EN PRODUCTION, sur le compte de Julien** (`/equipe`, 1710 px) : la bande
 de résumé, le tableau à colonnes sur cinq personnes réelles, les filets, et le
-menu d'une rangée ouvert pour de vrai. C'est ce contrôle qui a sorti les deux
-défauts ci-dessus.
+menu d'une rangée ouvert pour de vrai. C'est ce contrôle qui a sorti les trois
+défauts ci-dessus, puis confirmé leur correctif — filets alignés au pixel
+(écart 0 sur les cinq rangées) et menu de la dernière rangée qui bascule vers le
+haut, entièrement dans l'écran, ses deux extrémités cliquables.
 
 Tests de garde : `web/tests/pages-connectees.test.ts`.

@@ -31,6 +31,12 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
   magasin_renomme: (c) => `renommé un magasin en « ${c} »`,
   entreprise_renommee: (c) => `renommé l’entreprise en « ${c} »`,
   acces_retires: (c) => `retiré tous les accès de ${c}`,
+  // ⚠️ Écrite par `remove_counter_from_store`, pas par une fonction `ca_*` — et
+  // c'est pour ça qu'elle a manqué : la garde ne balayait que les `ca_*`. Vue
+  // en clair sur le journal réel le 5 septembre 2026 (« Test Sup sans inv —
+  // compteur_retire_du_magasin — Julien Compteur »). Le retrait vise UN
+  // magasin, jamais tous : le libellé doit le dire.
+  compteur_retire_du_magasin: (c) => `retiré ${c} d’un magasin`,
   promu_superviseur: (c) => `promu ${c} superviseur`,
   retrograde_compteur: (c) => `passé ${c} en compteur`,
   invitation_annulee: (c) => `annulé l’invitation de ${c}`,

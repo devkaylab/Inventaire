@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { ACTIONS } from '../lib/journal'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const migration = lire('../../supabase/migrations/20260818000003_journal_actions_admin.sql')
@@ -109,5 +110,35 @@ describe('journal des actions admin (écran)', () => {
 
   it('annonce la durée de conservation', () => {
     expect(pageAdmin + composant).toContain('conservée un an')
+  })
+})
+
+/**
+ * ⚠️ TOUTE ACTION JOURNALISÉE A SON LIBELLÉ — et la garde DÉDUIT la liste.
+ *
+ * `compteur_retire_du_magasin` s'est affichée en clair sur le journal réel
+ * pendant deux semaines (« Test Sup sans inv — compteur_retire_du_magasin —
+ * Julien Compteur »), vue le 5 septembre 2026 en regardant la page en
+ * production. Elle est écrite par `remove_counter_from_store`, pas par une
+ * fonction `ca_*` : la garde qui existait ne balayait que les `ca_*`, donc elle
+ * passait entre les mailles.
+ *
+ * Celle-ci lit TOUTES les migrations et retient chaque action réellement
+ * inscrite au journal d'entreprise. La prochaine se signalera d'elle-même.
+ */
+describe('le journal d’entreprise se lit en français', () => {
+  it('⚠️ chaque action écrite en base a son libellé', () => {
+    const dossier = path.resolve(__dirname, '../../supabase/migrations')
+    const actions = new Set<string>()
+    for (const f of readdirSync(dossier).filter((n) => n.endsWith('.sql'))) {
+      const sql = readFileSync(path.join(dossier, f), 'utf8')
+      for (const m of sql.matchAll(/log_company_action\(\s*[a-z_.]+\s*,\s*'([a-z_]+)'/g)) {
+        actions.add(m[1])
+      }
+    }
+    expect(actions.size, 'le balayage doit trouver des actions').toBeGreaterThan(8)
+    const sansLibelle = [...actions].filter((a) => !ACTIONS[a])
+    expect(sansLibelle, `ces actions s’afficheraient en mot technique : ${sansLibelle.join(', ')}`)
+      .toEqual([])
   })
 })
