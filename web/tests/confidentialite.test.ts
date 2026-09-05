@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { derniereDefinition } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 
@@ -131,5 +132,75 @@ describe('l’adresse publiée est celle du domaine', () => {
 
   it('la politique donne bien une adresse de contact', () => {
     expect(lire('../../docs/privacy.html')).toContain('contact@quantinvo.com')
+  })
+})
+
+/**
+ * Ce que la purge fait, la politique le dit (5 septembre 2026)
+ *
+ * ⚠️ TROUVÉ EN RELISANT LA POLITIQUE, PAS PAR UN TEST — et c'est bien le
+ * problème. Le parcours d'inscription a introduit deux traitements de données
+ * personnelles : le brouillon (`inscriptions`) et le CODE de vérification
+ * (`codes_email`), qui n'avait alors AUCUNE purge et gardait indéfiniment
+ * l'adresse de qui avait seulement demandé un code.
+ *
+ * La section 7 énumère les durées et affirme qu'elles s'appliquent
+ * automatiquement. Une politique qui en oublie une est aussi fausse qu'une
+ * politique qui cache un manque. Cette garde ferme l'écart dans le sens qui
+ * compte : **toute table purgée doit être déclarée**.
+ */
+describe('ce que la purge efface, la politique l’annonce', () => {
+  const { corps } = derniereDefinition('purge_expired_data')
+  // Le document mêle les deux apostrophes ; on compare le texte, pas sa
+  // ponctuation.
+  const apos = (t: string) => t.replace(/\u2019/g, "'")
+  const politique = apos(readFileSync(path.join(__dirname, '../../docs/privacy.html'), 'utf8'))
+
+  /** Les tables que la purge nettoie réellement, lues dans son corps. */
+  const purgees = [...corps.matchAll(/delete from public\.(\w+)/g)].map((m) => m[1])
+
+  /**
+   * Ce que chaque table nettoyée doit avoir dit à la personne. Une table
+   * ajoutée à la purge sans entrée ici fait échouer la suite : c'est le
+   * rappel qu'il faut aller relire la section 7.
+   */
+  const declaree: Record<string, string> = {
+    team_invitations: 'Invitations',
+    session_invitations: 'Invitations',
+    supervisor_requests: 'Demandes',
+    company_requests: 'Demandes d’inscription d’une entreprise',
+    account_deletion_requests: 'Demandes de suppression de compte',
+    admin_audit_log: 'Journaux d’administration',
+    company_audit_log: 'Journaux d’administration',
+    store_requests: 'Demandes d’ajout ou de suppression de magasin',
+    stripe_events_traites: '',   // technique : aucune donnée personnelle
+    notifications: '',
+    message_fils: '',
+    appareils_actifs: '',        // aucun compte n'y est rattaché (constat E3)
+    appareils_par_jour: '',
+    submission_attempts: '',
+    inscriptions: 'Inscription commencée et non terminée',
+    codes_email: 'Code de vérification d’adresse',
+  }
+
+  it('déclare chaque table que la purge nettoie', () => {
+    for (const t of new Set(purgees)) {
+      expect(declaree, `\`${t}\` est purgée mais n’est pas classée ici — relisez la section 7`)
+        .toHaveProperty(t)
+      const attendu = declaree[t]
+      if (!attendu) continue
+      expect(politique, `la politique doit annoncer ce qui arrive à \`${t}\``)
+        .toContain(apos(attendu))
+    }
+  })
+
+  it('et les deux durées du parcours d’inscription y sont', () => {
+    expect(corps).toContain("inscriptions_ttl     constant interval := interval '30 days'")
+    expect(corps).toContain("codes_email_ttl      constant interval := interval '24 hours'")
+    expect(politique).toContain('gardées 30 jours')
+    expect(politique).toContain('supprimée au bout de 24 heures')
+    // ⚠️ Le code n'est jamais conservé en clair, et la politique le dit — c'est
+    // une promesse que `demander_code_email` tient par bcrypt.
+    expect(politique).toContain('jamais conservé en clair')
   })
 })
