@@ -255,10 +255,16 @@ describe('le tableau de bord ne porte plus les magasins', () => {
   })
 
   it('la page s’inspire de la liste des entreprises de la console', () => {
-    // Recherche par fragments et compte dans le titre, comme /admin/entreprises.
+    // Recherche par fragments, et le compte affiché — comme /admin/entreprises.
     expect(pageMagasins).toContain('normaliser')
     expect(pageMagasins).toContain('mots.every((mot) => nom.includes(mot))')
-    expect(pageMagasins).toContain('Magasins{estAdmin && magasins.length > 0')
+    // ⚠️ Le compte a QUITTÉ LE TITRE le 5 septembre 2026 pour la bande de
+    // résumé : un nombre entre parenthèses dans un titre n'aide personne à
+    // décider, alors qu'en bande il se compare aux autres. Ce que cette garde
+    // défend — le compte est affiché — n'a pas changé de place, seulement de
+    // support.
+    expect(pageMagasins).toContain('className="resume-bande"')
+    expect(pageMagasins).toMatch(/<strong className="num">\{nb\(magasins\.length\)\}<\/strong>/)
   })
 
   it('un superviseur ordinaire garde sa liste de codes', () => {

@@ -11,13 +11,14 @@
 // ressemblent. Chaque écriture passe par une RPC SECURITY DEFINER gardée
 // côté base ; la garde client n'est que du confort.
 
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { AddCounter } from '@/components/dashboard/AddCounter'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
 import { getMyCompany, type Company } from '@/lib/account'
 
 type Store = { id: string; name: string }
@@ -284,39 +285,69 @@ export default function EquipePage() {
   const effacerFiltres = () => { setFiltre(''); setMagasinFiltre(''); setProfilFiltre('') }
   const invitations = (estAdmin ? ca?.invitations : sup?.invitations) ?? []
 
-  /** Une ligne de membre — la même pour tout le monde, seules les actions changent. */
+  /**
+   * Une personne, en colonnes.
+   *
+   * ⚠️ CE N'EST PAS UN CHANGEMENT DE DÉCOR. En rangées, chaque membre laissait
+   * **918 px de vide** entre son nom et les boutons qui le concernent (mesuré
+   * sur l'écran de Julien le 5 septembre 2026), et ses faits étaient noyés dans
+   * une phrase grise. Or une équipe se COMPARE — qui est superviseur, qui n'a
+   * jamais créé son mot de passe, qui couvre quel magasin : en colonnes on
+   * balaie du regard, en phrases il faut lire chaque rangée pour en extraire la
+   * même chose.
+   *
+   * Les cinq cellules sont des frères directs de la grille `.membres` : un
+   * conteneur par rangée casserait l'alignement des colonnes.
+   */
   const rangMembre = (m: Member) => {
     const superviseur = m.role === 'supervisor'
     // Sa propre ligne et celle d'un autre administrateur n'ont aucune action :
     // ces comptes-là restent chez Quantinvo.
     const intouchable = m.is_company_admin || m.id === guard.profile.id
+    const actions: ActionRangee[] = intouchable ? [] : [
+      {
+        libelle: superviseur ? 'Passer compteur' : 'Passer superviseur',
+        onClick: () => changerRole(m, superviseur ? 'employee' : 'supervisor'),
+      },
+      ...(superviseur ? [{
+        libelle: 'Retirer les accès',
+        onClick: async () => {
+          const ok = await confirm({
+            title: 'Retirer tous les accès ?',
+            message: `${m.full_name || 'Cette personne'} garde son compte, mais n’aura plus accès à aucun magasin.`,
+            confirmLabel: 'Retirer les accès',
+          })
+          if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
+        },
+      }] : []),
+      // ⚠️ La suppression garde sa recopie du nom : le menu déplace un bouton,
+      // il n'allège aucun garde-fou.
+      { libelle: 'Supprimer le compte', onClick: () => supprimerCompte(m), destructif: true },
+    ]
     return (
-      <div className="req-row req-row-block" key={m.id}>
+      <Fragment key={m.id}>
         <div>
-          <div className="req-name">
+          <div className="membres-nom">
             {m.full_name || 'Sans nom'}
-            {m.is_company_admin && <span className="pill">Admin</span>}
-            {!m.is_company_admin && (
-              <span className="pill pill-role">{superviseur ? 'Superviseur' : 'Compteur'}</span>
-            )}
             {m.id === guard.profile.id && <span className="pill pill-vous">Vous</span>}
-            {!m.is_active && <BadgeEnAttente />}
           </div>
-          <div className="muted small">
-            {m.email}
-            {m.is_company_admin
-              ? ` · tous les magasins de l’entreprise${m.store_ids.length > 0 ? ` (${m.store_ids.length})` : ''}`
-              : superviseur
-                ? ` · ${m.store_ids.length} magasin${m.store_ids.length > 1 ? 's' : ''}`
-                : m.sessions_counted > 0
-                  ? ` · a compté ${m.sessions_counted} inventaire${m.sessions_counted > 1 ? 's' : ''}${m.last_count_at ? ` · dernier le ${jourCourt(m.last_count_at)}` : ''}`
-                  : ' · pas encore de comptage'}
-          </div>
+          <div className="membres-mail">{m.email}</div>
+        </div>
+
+        <div>
+          {m.is_company_admin
+            ? <span className="pill">Admin</span>
+            : <span className="pill pill-role">{superviseur ? 'Superviseur' : 'Compteur'}</span>}
+        </div>
+
+        <div className="membres-cell">
           {/* Un administrateur a tous les magasins par construction : ses
               affectations ne se modifient pas, une croix qui ne marche pas
               est pire que pas de croix. */}
-          {!m.is_company_admin && (
-            <div className="store-sup" style={{ marginTop: 6 }}>
+          {m.is_company_admin ? (
+            <>Tous les magasins{m.store_ids.length > 0 ? ` (${m.store_ids.length})` : ''}</>
+          ) : (
+            <div className="store-sup">
               {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
               {m.store_ids.map((sid) => (
                 <span className="chip" key={sid}>
@@ -347,45 +378,38 @@ export default function EquipePage() {
             </div>
           )}
         </div>
-        <div className="req-actions">
-          {intouchable ? (
-            <span className="muted small">Géré par Quantinvo</span>
-          ) : (
-            <>
-              <button className="link-btn" onClick={() => changerRole(m, superviseur ? 'employee' : 'supervisor')}>
-                {superviseur ? 'Passer compteur' : 'Passer superviseur'}
-              </button>
-              <span className="action-sep" />
-              {superviseur && (
-                <>
-                  <button
-                    className="link-btn"
-                    onClick={async () => {
-                      const ok = await confirm({
-                        title: 'Retirer tous les accès ?',
-                        message: `${m.full_name || 'Cette personne'} garde son compte, mais n’aura plus accès à aucun magasin.`,
-                        confirmLabel: 'Retirer les accès',
-                      })
-                      if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
-                    }}
-                  >Retirer les accès</button>
-                  <span className="action-sep" />
-                </>
-              )}
-              <button className="link-btn danger-link" onClick={() => supprimerCompte(m)}>
-                Supprimer
-              </button>
-            </>
-          )}
+
+        {/* ⚠️ `is_active` veut dire « s'est déjà connecté », rien d'autre — le
+            contresens corrigé le 23 août 2026. C'est le seul fait de cette
+            colonne qui appelle un geste, donc le seul qui porte l'ambre. */}
+        <div className={`membres-cell${!m.is_active ? ' attente' : ''}`}>
+          {!m.is_active
+            ? 'Mot de passe à créer'
+            : m.sessions_counted > 0
+              ? `${m.sessions_counted} inventaire${m.sessions_counted > 1 ? 's' : ''}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
+              : 'Pas encore de comptage'}
         </div>
-      </div>
+
+        <div className="membres-fin">
+          {intouchable
+            ? <span className="muted small">Géré par Quantinvo</span>
+            : <MenuActions libelle={`Actions pour ${m.full_name || 'cette personne'}`} actions={actions} />}
+        </div>
+      </Fragment>
     )
   }
 
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
-        <h1 className="page-title">Mon équipe</h1>
+        <div>
+          <h1 className="page-title">Mon équipe</h1>
+          <p className="page-sub">
+            {estAdmin
+              ? 'Qui travaille dans votre entreprise, et sur quels magasins.'
+              : 'Les personnes qui comptent dans vos magasins.'}
+          </p>
+        </div>
         {/* Une seule porte pour l'administrateur : le rôle se choisit dans le
             panneau. Un superviseur ordinaire n'ajoute que des compteurs. */}
         {estAdmin ? (
@@ -420,6 +444,31 @@ export default function EquipePage() {
         />
       )}
 
+      {/* ⚠️ La bande compte ce que `ca_company_overview` a déjà rendu — aucun
+          appel de plus. L'ambre n'y désigne que les mots de passe jamais créés :
+          c'est le seul fait de cette page qui appelle un geste, et `is_active`
+          veut dire « s'est déjà connecté », rien d'autre (23 août 2026). */}
+      {estAdmin && membres.length > 0 && (
+        <div className="resume-bande">
+          <div>
+            <strong className="num">{membres.length}</strong>
+            <span>Personne{membres.length > 1 ? 's' : ''}</span>
+          </div>
+          <div>
+            <strong className="num">{membres.filter((m) => m.role === 'supervisor').length}</strong>
+            <span>Superviseurs</span>
+          </div>
+          <div>
+            <strong className="num">{membres.filter((m) => m.role === 'employee').length}</strong>
+            <span>Compteurs</span>
+          </div>
+          <div className={membres.some((m) => !m.is_active) ? 'attention' : undefined}>
+            <strong className="num">{membres.filter((m) => !m.is_active).length}</strong>
+            <span>Mot de passe à créer</span>
+          </div>
+        </div>
+      )}
+
       {estAdmin ? (
         <>
           {/* ── Invitations en attente, en tête ──
@@ -427,9 +476,15 @@ export default function EquipePage() {
               devant, comme « Ventes en cours » sur la console. Quand il n'y en a
               aucune, la section disparaît et la page s'ouvre sur les filtres. */}
           {invitations.length > 0 && (
-            <>
-              <div className="dash-sub dash-sub-compte">
-                Invitations en attente <span className="dash-sub-n">{invitations.length}</span>
+            <section className="admin-section">
+              <div className="admin-section-head">
+                <div>
+                  <h2>Invitations en attente</h2>
+                  <p className="section-note">
+                    Ces personnes ont reçu un lien et n’ont pas encore créé leur compte.
+                  </p>
+                </div>
+                <span className="dash-sub-n">{invitations.length}</span>
               </div>
               <div className="req-list">
                 {invitations.map((i) => (
@@ -470,22 +525,26 @@ export default function EquipePage() {
                   </div>
                 ))}
               </div>
-            </>
+            </section>
           )}
 
-          {/* ── Membres : une seule liste, le rôle en pastille ── */}
-          <div className="dash-sub dash-sub-compte">
-            Membres
-            <span className="dash-sub-n">
-              {filtreActif ? `${membresFiltres.length} sur ${membres.length}` : membres.length}
-            </span>
-            {filtreActif && (
-              <button className="link-btn" onClick={effacerFiltres}>Effacer les filtres</button>
-            )}
-          </div>
+          {/* ── Membres : une seule liste, le rôle en colonne ── */}
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Membres</h2>
+                <p className="section-note">
+                  Le rôle décide de ce que la personne peut faire&nbsp;; les magasins,
+                  de ce qu’elle voit.
+                </p>
+              </div>
+              <span className="dash-sub-n">
+                {filtreActif ? `${membresFiltres.length} sur ${membres.length}` : membres.length}
+              </span>
+            </div>
 
           <div className="toolbar">
-            <div className="toolbar-grow">
+            <div className="champ-borne">
               <input
                 type="search" value={filtre} onChange={(e) => setFiltre(e.target.value)}
                 placeholder="Rechercher une personne…"
@@ -511,6 +570,9 @@ export default function EquipePage() {
               <option value="supervisor">Superviseurs</option>
               <option value="employee">Compteurs</option>
             </select>
+            {filtreActif && (
+              <button className="link-btn" onClick={effacerFiltres}>Effacer les filtres</button>
+            )}
           </div>
 
           {membres.length === 0 ? (
@@ -518,18 +580,38 @@ export default function EquipePage() {
           ) : membresFiltres.length === 0 ? (
             <p className="muted small">Personne ne correspond à cette recherche.</p>
           ) : (
-            <div className="req-list">{membresFiltres.map(rangMembre)}</div>
+            <div className="membres">
+              <div className="membres-th">Personne</div>
+              <div className="membres-th">Rôle</div>
+              <div className="membres-th">Magasins</div>
+              <div className="membres-th">Activité</div>
+              <div className="membres-th" />
+              {membresFiltres.map(rangMembre)}
+            </div>
           )}
+          </section>
         </>
       ) : (sup?.stores ?? []).length === 0 ? (
-        <>
-          <div className="dash-sub">Compteurs</div>
+        <section className="admin-section">
+          <h2>Compteurs</h2>
           <p className="muted">Vous n&apos;êtes affecté à aucun magasin.</p>
-        </>
+        </section>
       ) : (
+        // Le superviseur ordinaire garde son rangement MAGASIN PAR MAGASIN
+        // (23 août 2026) : c'est ainsi qu'il travaille, un saisonnier part d'un
+        // magasin et pas de tous. Une section par magasin, au lieu d'un
+        // sous-titre en capitales plus petit que le texte qu'il coiffait.
         (sup?.stores ?? []).map((s) => (
-          <div key={s.id}>
-            <div className="dash-sub">Compteurs · {s.name}</div>
+          <section className="admin-section" key={s.id}>
+            <div className="admin-section-head">
+              <div>
+                <h2>{s.name}</h2>
+                <p className="section-note">
+                  Les compteurs de ce magasin. Les retirer d’ici ne touche pas aux autres.
+                </p>
+              </div>
+              <span className="dash-sub-n">{s.counters.length}</span>
+            </div>
             {s.counters.length === 0 ? (
               <p className="muted small">Aucun compteur sur ce magasin.</p>
             ) : (
@@ -568,7 +650,7 @@ export default function EquipePage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
         ))
       )}
 
@@ -576,8 +658,16 @@ export default function EquipePage() {
           Pour le superviseur ordinaire seulement : celles de l'administrateur
           sont passées en tête de page, là où elles attendent un geste. ── */}
       {!estAdmin && (sup?.invitations ?? []).length > 0 && (
-        <>
-          <div className="dash-sub">Invitations en cours</div>
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <div>
+              <h2>Invitations en cours</h2>
+              <p className="section-note">
+                Ces personnes ont reçu un lien et n’ont pas encore créé leur compte.
+              </p>
+            </div>
+            <span className="dash-sub-n">{(sup?.invitations ?? []).length}</span>
+          </div>
           <div className="req-list">
             {(sup?.invitations ?? []).map((i) => (
               <div className="req-row" key={i.id}>
@@ -608,7 +698,7 @@ export default function EquipePage() {
               </div>
             ))}
           </div>
-        </>
+        </section>
       )}
     </AppShell>
   )

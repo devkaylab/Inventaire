@@ -902,6 +902,123 @@ a { color: inherit; text-decoration: none; }
 .zone-sensible > .signal { flex: 1 1 100%; }
 .zone-sensible p { color: var(--text-2); font-size: 13px; margin: 3px 0 0; max-width: 62ch; }
 
+/* ── UN CHAMP DE RECHERCHE A UNE LARGEUR DE LECTURE (5 septembre 2026) ─────
+   Mesuré sur les pages connectées à 1568 px : « Rechercher une personne… »
+   faisait 1 072 px, « Rechercher un inventaire… » 1 428. On ne tape pas un nom
+   sur un mètre quarante — et un champ qui traverse l'écran fait croire qu'il
+   cherche dans toute la page, pas dans la section qui le porte.
+
+   ⚠️ Ce n'est PAS un `max-width` sur `.app-main` (retiré le 30 août, et c'est
+   une décision) : c'est le contrôle qui se borne, la page reste pleine. */
+.toolbar .champ-borne { flex: 0 1 340px; min-width: 200px; }
+
+/* ── UNE RANGÉE NE S'ÉTIRE PAS PLUS QU'UNE TUILE ───────────────────────────
+   Le pire chiffre de la mesure du 5 septembre : sur /equipe, **918 px de vide**
+   entre le nom d'une personne et les boutons qui la concernent, sur CHAQUE
+   rangée de la page.
+
+   ⚠️ ET LE REMÈDE N'EST PAS COSMÉTIQUE. Une équipe se COMPARE — qui est
+   superviseur, qui n'a pas encore créé son mot de passe, qui couvre quel
+   magasin. En colonnes on balaie du regard ; en phrases il faut lire chaque
+   rangée pour en extraire la même chose. C'est la lecture qui change, la
+   largeur n'en est que la conséquence.
+
+   Les colonnes se dimensionnent sur leur contenu (`auto` pour le rôle et les
+   actions) : c'est ce qui empêche la grille de rouvrir un trou au milieu. */
+.membres {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.7fr) auto minmax(200px, 1.4fr) minmax(150px, 1fr) auto;
+  align-items: center;
+  border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden;
+}
+.membres > * { padding: 12px 14px; border-bottom: 1px solid var(--hairline); min-width: 0; }
+/* Le dernier rang n'a pas de filet : le cadre de la grille le porte déjà. */
+.membres > *:nth-last-child(-n + 5) { border-bottom: 0; }
+/* ⚠️ `--bg`, JAMAIS `--surface-2` : en thème clair les deux valent #ffffff, et
+   la rangée d'en-tête serait blanche sur la surface blanche de la section —
+   invisible. Troisième fois que ce piège se présente (les champs de saisie le
+   22 août et le 4 septembre) : le point commun n'est pas l'élément, c'est ce
+   qu'il y a DERRIÈRE lui. `--bg` est un cran en retrait de `--surface` dans les
+   deux thèmes, c'est le seul jeton qui tienne les deux. */
+.membres-th {
+  font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-2); background: var(--bg);
+  padding-top: 9px; padding-bottom: 9px;
+}
+.membres-nom { font-size: 14.5px; font-weight: 650; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.membres-mail { color: var(--text-2); font-size: 12.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+.membres-cell { font-size: 13px; color: var(--text-2); }
+/* L'ambre ne dit qu'une chose ici : cette personne n'est jamais entrée.
+   ⚠️ `--warning-text`, pas `--warning` : le second est la couleur de la
+   pastille (3,2:1 sur la surface en clair, sous le seuil AA), le premier est
+   celle qui se LIT. Même correctif que `.offre-refus` le 5 septembre — et à
+   l'endroit précis où l'on cherche qui n'est jamais entré. */
+.membres-cell.attente { color: var(--warning-text); font-weight: 600; }
+.membres-fin { display: flex; justify-content: flex-end; }
+/* Une rangée à survoler se distingue : on suit la ligne du regard jusqu'aux
+   actions, qui sont à l'autre bout. */
+.membres > *:hover { background: var(--bg); }
+/* Sous 1040 px la grille redevient une pile : cinq colonnes y donneraient des
+   cellules de 60 px. Chaque rangée reprend alors le dessin d'une carte. */
+@media (max-width: 1040px) {
+  .membres { display: flex; flex-direction: column; border: 0; border-radius: 0; gap: 10px; }
+  .membres > * {
+    border: 1px solid var(--hairline); border-radius: 12px; padding: 14px 16px;
+    background: var(--surface);
+  }
+  .membres-th { display: none; }
+  .membres-fin { justify-content: flex-start; }
+}
+
+/* ⚠️ ET LA MÊME RÈGLE VAUT POUR LES RANGÉES QU'ON N'A PAS MISES EN COLONNES.
+   Trouvé EN REGARDANT l'écran, pas dans le code, une fois le tableau des
+   membres en place : les invitations en attente et les demandes de magasin
+   gardaient **868 px de vide** entre leur texte et leurs boutons. Le tableau
+   avait déplacé le défaut, il ne l'avait pas fermé.
+
+   Le contenu se borne à une largeur de lecture et les actions viennent JUSTE
+   APRÈS, au lieu d'être poussées au bord par un `space-between`. Bornée à la
+   section : une `.req-row` de la console Quantinvo vit dans 860 px, elle n'a
+   jamais eu ce problème. */
+.admin-section .req-row { justify-content: flex-start; gap: 24px; }
+.admin-section .req-row > *:first-child { flex: 1 1 auto; min-width: 0; max-width: 760px; }
+.admin-section .req-row > .req-actions { flex: 0 0 auto; }
+
+/* ── LE MENU D'ACTIONS D'UNE RANGÉE ───────────────────────────────────────
+   « Passer compteur » et « Supprimer le compte » étaient deux liens voisins,
+   l'un anodin et l'autre irréversible. Même famille que « Supprimer mon
+   compte » collé à « Se déconnecter » le 28 août : ce qui protège, c'est la
+   DISTANCE — ici un geste de plus pour ouvrir, et un filet avant le rouge.
+   La recopie du nom, elle, ne bouge pas. */
+.menu-actions { position: relative; }
+.menu-actions-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 9px;
+  background: transparent; border: 1px solid transparent; color: var(--text-2);
+  cursor: pointer; font-size: 17px; line-height: 1;
+}
+.menu-actions-btn:hover { background: var(--bg); border-color: var(--hairline); color: var(--text); }
+.menu-actions-btn[aria-expanded="true"] { background: var(--bg); border-color: var(--hairline); }
+.menu-actions-panneau {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+  min-width: 210px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 12px; box-shadow: var(--shadow-elev);
+  display: flex; flex-direction: column; gap: 2px;
+  animation: toast-in .14s ease-out;
+}
+.menu-actions-item {
+  display: block; width: 100%; text-align: left;
+  padding: 9px 11px; border-radius: 8px; border: 0; background: transparent;
+  color: var(--text); font-size: 13.5px; font-family: inherit; cursor: pointer;
+}
+.menu-actions-item:hover { background: var(--bg); }
+/* Le geste destructeur se va chercher : un filet le sépare du reste. */
+.menu-actions-item.destructif {
+  color: var(--danger-text); border-top: 1px solid var(--hairline);
+  border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 11px;
+}
+
 .inline-form { display: flex; gap: 10px; }
 .inline-form input {
   padding: 10px 14px; font-size: 14px; border-radius: 10px;
@@ -1191,7 +1308,12 @@ a { color: inherit; text-decoration: none; }
   color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px;
 }
 .dash-sub-compte .link-btn { text-transform: none; letter-spacing: 0; font-weight: 550; }
-.dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+/* ⚠️ La grille des inventaires se REMPLIT, elle ne s'étire pas. À trois
+   colonnes fixes, une carte faisait 465 px sur l'écran de Julien pour porter un
+   titre, un numéro et une pastille (mesuré le 5 septembre 2026). `auto-fill`
+   en donne quatre à cette largeur et retombe seule à trois, deux, puis une —
+   les deux media queries en dessous restent le filet des petits écrans. */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .dash-card {
   display: block; background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;

@@ -277,10 +277,14 @@ describe('supprimer un compte de son entreprise', () => {
   it('ne propose jamais de supprimer un administrateur, ni soi-même', () => {
     // Depuis la refonte du 23 août la liste est unique : c'est `intouchable`
     // qui porte la garde, et une ligne intouchable n'affiche aucune action.
+    // ⚠️ La garde porte sur CE QUI EST OFFERT, pas sur la façon de l'écrire :
+    // depuis le 5 septembre les actions passent par un menu, et une liste
+    // d'actions vide ne rend aucun bouton (`MenuActions` sort sur `length === 0`).
     expect(pageEquipe).toContain('const intouchable = m.is_company_admin || m.id === guard.profile.id')
-    const bloc = pageEquipe.split('{intouchable ? (')[1]?.split(') : (')[0] ?? ''
-    expect(bloc).toContain('Géré par Quantinvo')
-    expect(bloc).not.toContain('supprimerCompte')
+    expect(pageEquipe).toContain('const actions: ActionRangee[] = intouchable ? [] : [')
+    expect(pageEquipe).toContain('Géré par Quantinvo')
+    const menu = readFileSync(path.join(__dirname, '../components/ui/MenuActions.tsx'), 'utf8')
+    expect(menu, 'un menu sans action ne rend rien').toContain('if (actions.length === 0) return null')
   })
 
   it('liste tous les compteurs de l’entreprise, pas seulement les siens', () => {
@@ -339,8 +343,10 @@ describe('l’administrateur d’entreprise a tous les magasins', () => {
     // Une croix qui ne marche pas est pire que pas de croix : le rail des
     // magasins n'est rendu que pour les non-administrateurs, et sa ligne dit
     // en toutes lettres qu'il les a tous.
-    expect(pageEquipe).toContain('tous les magasins de l’entreprise')
-    expect(pageEquipe).toContain('{!m.is_company_admin && (\n            <div className="store-sup"')
+    // Sa cellule « Magasins » dit qu'il les a tous, et ne porte ni chip ni
+    // sélecteur : c'est la branche `m.is_company_admin` qui les rend.
+    expect(pageEquipe).toContain('Tous les magasins')
+    expect(pageEquipe).toMatch(/m\.is_company_admin \? \(\s*<>Tous les magasins/)
   })
 
   it('aucun écran ne lui parle plus d’affectation', () => {
@@ -405,7 +411,7 @@ describe('changer le rôle d’un membre (23 août 2026)', () => {
     // Une seule ligne pour les deux rôles depuis la refonte : le geste bascule
     // avec le rôle plutôt que d'exister en deux exemplaires.
     expect(pageEquipe).toContain("changerRole(m, superviseur ? 'employee' : 'supervisor')")
-    expect(pageEquipe).toContain("{superviseur ? 'Passer compteur' : 'Passer superviseur'}")
+    expect(pageEquipe).toContain("libelle: superviseur ? 'Passer compteur' : 'Passer superviseur',")
     expect(pageEquipe).toContain("appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })")
   })
 
@@ -484,7 +490,12 @@ describe('refonte de « Mon équipe » (23 août 2026)', () => {
 
   it('le superviseur ordinaire garde son rangement magasin par magasin', () => {
     // C'est ainsi qu'il travaille : un saisonnier part d'un magasin, pas de tous.
-    expect(pageEquipe).toContain('<div className="dash-sub">Compteurs · {s.name}</div>')
+    // ⚠️ La garde vise le DÉCOUPAGE, plus une tournure : depuis le 5 septembre
+    // chaque magasin est une section (au lieu d'un sous-titre de 12 px en
+    // capitales), mais il y en a toujours une par magasin, et le retrait vise
+    // toujours ce magasin-là.
+    expect(pageEquipe).toMatch(/\(sup\?\.stores \?\? \[\]\)\.map\(\(s\) => \(\s*<section className="admin-section" key=\{s\.id\}>/)
+    expect(pageEquipe).toContain('<h2>{s.name}</h2>')
     expect(pageEquipe).toContain("appliquer('remove_counter_from_store'")
   })
 })

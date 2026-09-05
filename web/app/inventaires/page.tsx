@@ -165,6 +165,12 @@ export default function InventairesPage() {
   }
   const activeCount = useMemo(() => sessions.filter(s => s.status !== 'closed').length, [sessions])
   const storeCount = useMemo(() => new Set(sessions.map(s => s.store_name)).size, [sessions])
+  // ⚠️ La bande de résumé ne demande RIEN de plus au serveur : elle compte ce
+  // que la liste a déjà chargé. Un chiffre qui coûterait une requête n'y va pas.
+  const closedThisMonth = useMemo(() => {
+    const debut = new Date(); debut.setDate(1); debut.setHours(0, 0, 0, 0)
+    return sessions.filter(s => s.status === 'closed' && s.closed_at && new Date(s.closed_at) >= debut).length
+  }, [sessions])
 
   if (guard.status === 'loading') {
     return <div className="dash"><SkeletonRows rows={3} /></div>
@@ -173,7 +179,10 @@ export default function InventairesPage() {
   return (
     <AppShell profile={guard.profile} companyName={companyName}>
       <div className="app-head">
-        <h1 className="page-title">Inventaires</h1>
+        <div>
+          <h1 className="page-title">Inventaires</h1>
+          <p className="page-sub">Ce que vos magasins comptent, et ce qu’ils ont compté.</p>
+        </div>
         <div className="app-head-actions">
           {selectionnables.length > 0 && (
             <label className="select-all">
@@ -211,27 +220,34 @@ export default function InventairesPage() {
         </div>
       )}
 
-      <div className="dash-kpis">
-        <div className="dash-kpi">
-          <div className="dash-kpi-value num">{storeCount}</div>
-          <div className="dash-kpi-label">Magasin{storeCount > 1 ? 's' : ''}</div>
+      {/* ⚠️ LA BANDE RÉPOND AVANT QU'ON CHERCHE, et elle remplace trois tuiles
+          qui faisaient 465 px chacune sur l'écran de Julien pour porter un
+          nombre à un chiffre (mesuré le 5 septembre 2026). L'ambre n'y désigne
+          que ce qui est en cours — la seule chose de cette page qui bouge
+          encore. Le total garde le libellé arrêté par Julien le 25 août :
+          c'est le compte de tout ce que la liste montre, clôturés compris. */}
+      <div className="resume-bande">
+        <div>
+          <strong className="num">{storeCount}</strong>
+          <span>Magasin{storeCount > 1 ? 's' : ''}</span>
         </div>
-        <div className="dash-kpi">
-          <div className="dash-kpi-value num">{activeCount}</div>
-          <div className="dash-kpi-label">Inventaire{activeCount > 1 ? 's' : ''} en cours</div>
+        <div className={activeCount > 0 ? 'attention' : undefined}>
+          <strong className="num">{activeCount}</strong>
+          <span>Inventaire{activeCount > 1 ? 's' : ''} en cours</span>
         </div>
-        <div className="dash-kpi">
-          <div className="dash-kpi-value num">{sessions.length}</div>
-          {/* Libellé arrêté par Julien le 25 août 2026, à l'ordre des mots
-              près (« Nombre d'inventaire total ») : c'est le compte de tout ce
-              que la liste montre, clôturés compris. */}
-          <div className="dash-kpi-label">Nombre total d&apos;inventaires</div>
+        <div>
+          <strong className="num">{closedThisMonth}</strong>
+          <span>Clôturé{closedThisMonth > 1 ? 's' : ''} ce mois-ci</span>
+        </div>
+        <div>
+          <strong className="num">{sessions.length}</strong>
+          <span>Nombre total d&apos;inventaires</span>
         </div>
       </div>
 
       {sessions.length > 6 && (
-        <div className="toolbar" style={{ marginTop: 20 }}>
-          <div className="toolbar-grow">
+        <div className="toolbar">
+          <div className="champ-borne">
             <input
               type="search" value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Rechercher un inventaire, un magasin, un numéro…"
@@ -260,51 +276,52 @@ export default function InventairesPage() {
           const active = list.filter(s => s.status !== 'closed')
           const past = list.filter(s => s.status === 'closed')
           return (
-            <section className="dash-store" key={store}>
-              <h2 className="dash-store-name">{store}</h2>
-
-              {active.length > 0 && (
-                <div className="dash-grid">
-                  {active.map(s => (
-                    <SessionCard
-                      key={s.id} s={s} live
-                      deletable={peutSupprimer(s)}
-                      selected={selection.includes(s.id)}
-                      onToggle={() => basculer(s.id)}
-                      onDelete={() => supprimer([s])}
-                    />
-                  ))}
+            <section className="admin-section" key={store}>
+              {/* Un magasin est une SECTION, pas une marge : c'est le fond qui
+                  le sépare du suivant, plus l'écart entre deux titres. Et sa
+                  phrase dit ce qu'il y a dedans — ce qui remplace le
+                  « CLÔTURÉS » en capitales de 12 px, plus petit que le texte
+                  qu'il coiffait. La pastille de chaque carte le dit déjà. */}
+              <div className="admin-section-head">
+                <div>
+                  <h2>{store}</h2>
+                  <p className="section-note">
+                    {active.length > 0
+                      ? `${active.length} inventaire${active.length > 1 ? 's' : ''} en cours`
+                      : 'Aucun inventaire en cours'}
+                    {past.length > 0 && ` · ${past.length} clôturé${past.length > 1 ? 's' : ''}`}
+                  </p>
                 </div>
-              )}
-              {past.length > 0 && (
-                <>
-                  <div className="dash-sub">Clôturés</div>
-                  <div className="dash-grid">
-                    {past.map(s => (
-                      <SessionCard
-                        key={s.id} s={s}
-                        deletable={peutSupprimer(s)}
-                        selected={selection.includes(s.id)}
-                        onToggle={() => basculer(s.id)}
-                        onDelete={() => supprimer([s])}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
+              </div>
+              <div className="dash-grid">
+                {/* Les inventaires en cours passent devant : c'est sur eux
+                    qu'on revient. */}
+                {[...active, ...past].map(s => (
+                  <SessionCard
+                    key={s.id} s={s} live={s.status !== 'closed'}
+                    deletable={peutSupprimer(s)}
+                    selected={selection.includes(s.id)}
+                    onToggle={() => basculer(s.id)}
+                    onDelete={() => supprimer([s])}
+                  />
+                ))}
+              </div>
             </section>
           )
         })
       )}
 
       {!loading && invites.length > 0 && (
-        <section className="dash-store">
-          <h2 className="dash-store-name">Inventaires invités</h2>
-          <p className="muted small" style={{ margin: '-4px 0 12px' }}>
-            Vous participez à ces inventaires sans les avoir créés. Vous pouvez y compter et
-            consulter le rapport ; leur clôture définitive et leur réouverture appartiennent à
-            leur créateur.
-          </p>
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <div>
+              <h2>Inventaires invités</h2>
+              <p className="section-note">
+                Vous y comptez sans les avoir créés. Vous pouvez consulter le rapport ;
+                leur clôture définitive et leur réouverture appartiennent à leur créateur.
+              </p>
+            </div>
+          </div>
           <div className="dash-grid">
             {invites.map(s => (
               <SessionCard

@@ -68,8 +68,11 @@ export default function JournalPage() {
           <h1 className="page-title">Journal</h1>
           <p className="page-sub">Qui a fait quoi dans votre entreprise</p>
         </div>
-        <div className="toolbar" style={{ marginTop: 0 }}>
-          <div className="toolbar-grow">
+        {/* Un champ de recherche a une largeur de lecture : il faisait toute la
+            largeur de la page, ce qui laissait croire qu'il cherchait ailleurs
+            que dans la liste juste en dessous. */}
+        <div className="toolbar" style={{ marginTop: 0, marginBottom: 0 }}>
+          <div className="champ-borne">
             <input
               type="search"
               value={query}
@@ -91,7 +94,20 @@ export default function JournalPage() {
       ) : filtrees.length === 0 ? (
         <EmptyState title="Aucun résultat" hint={`Rien ne correspond à « ${query} ».`} />
       ) : (
-        <div className="panel" style={{ marginTop: 0 }}>
+        <section className="admin-section">
+          {/* La phrase remonte SOUS le titre au lieu d'être reléguée en pied :
+              « les 200 dernières » décrit ce qu'on s'apprête à lire, ce n'est
+              pas une note de bas de page. */}
+          <div className="admin-section-head">
+            <div>
+              <h2>Actions</h2>
+              <p className="section-note">
+                Les 200 dernières, conservées un an. Invitations, retraits d’accès,
+                suppressions de comptes et demandes de magasin.
+              </p>
+            </div>
+            <span className="dash-sub-n">{filtrees.length}</span>
+          </div>
           <div className="journal">
             {filtrees.map((l) => (
               <div className="journal-l" key={l.id}>
@@ -100,10 +116,7 @@ export default function JournalPage() {
               </div>
             ))}
           </div>
-          <p className="muted small" style={{ marginTop: 14 }}>
-            Les 200 dernières actions. Elles sont conservées un an.
-          </p>
-        </div>
+        </section>
       )}
     </AppShell>
   )

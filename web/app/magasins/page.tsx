@@ -189,13 +189,46 @@ export default function MagasinsPage() {
     return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
   }
 
+  // ⚠️ La bande ne demande RIEN de plus au serveur : elle compte ce que
+  // `ca_company_overview` a déjà rendu. Un chiffre qui coûterait une requête
+  // n'y va pas — et on n'y met que ce qui est exact : les compteurs d'un
+  // magasin peuvent se recouper d'un magasin à l'autre, les superviseurs se
+  // dédoublonnent par leur identifiant.
+  const enCours = magasins.reduce((n, m) => n + m.sessions.filter((x) => x.status !== 'closed').length, 0)
+  const superviseurs = new Set(magasins.flatMap((m) => m.supervisors.map((p) => p.id))).size
+
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
-        <h1 className="page-title">
-          Magasins{estAdmin && magasins.length > 0 ? ` (${magasins.length})` : ''}
-        </h1>
+        <div>
+          {/* Le compte quitte le titre pour la bande — même geste que
+              « Superviseurs · 3 » sur la fiche d'un magasin : un nombre entre
+              parenthèses dans un titre n'aide personne à décider. */}
+          <h1 className="page-title">Magasins</h1>
+          <p className="page-sub">
+            {estAdmin
+              ? 'Le patrimoine de votre entreprise. Un magasin, une licence.'
+              : 'Les magasins auxquels vous avez accès, et leur code d’entrée.'}
+          </p>
+        </div>
       </div>
+
+      {estAdmin && pret && magasins.length > 0 && (
+        <div className="resume-bande">
+          <div>
+            <strong className="num">{nb(magasins.length)}</strong>
+            <span>Magasin{magasins.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className={enCours > 0 ? 'attention' : undefined}>
+            <strong className="num">{nb(enCours)}</strong>
+            <span>Inventaire{enCours > 1 ? 's' : ''} en cours</span>
+          </div>
+          <div>
+            <strong className="num">{nb(superviseurs)}</strong>
+            <span>Superviseur{superviseurs > 1 ? 's' : ''}</span>
+          </div>
+        </div>
+      )}
 
       {!pret ? (
         <p className="muted">Chargement…</p>
@@ -210,33 +243,43 @@ export default function MagasinsPage() {
             </div>
           ) : (
             <>
-              {magasins.length > 4 && (
-                <div className="toolbar">
-                  <div className="toolbar-grow">
-                    <input
-                      type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-                      placeholder="Rechercher un magasin par son nom…"
-                      aria-label="Rechercher un magasin"
-                    />
+              <section className="admin-section">
+                <div className="admin-section-head">
+                  <div>
+                    <h2>Vos magasins</h2>
+                    <p className="section-note">
+                      Ouvrez-en un pour son code d’entrée, son équipe, ses inventaires
+                      et son offre d’appareils.
+                    </p>
                   </div>
-                  {recherche.trim() !== '' && (
-                    <>
-                      <span className="muted small" aria-live="polite">
-                        {visibles.length} sur {magasins.length}
-                      </span>
-                      <button type="button" className="link-btn" onClick={() => setRecherche('')}>Effacer</button>
-                    </>
-                  )}
                 </div>
-              )}
 
-              {visibles.length === 0 ? (
-                <p className="muted">Aucun magasin ne correspond à « {recherche} ».</p>
-              ) : (
-                <div style={{ marginTop: 4 }}>
-                  {visibles.map((m) => <VoletMagasin key={m.id} store={m} />)}
-                </div>
-              )}
+                {magasins.length > 4 && (
+                  <div className="toolbar">
+                    <div className="champ-borne">
+                      <input
+                        type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
+                        placeholder="Rechercher un magasin par son nom…"
+                        aria-label="Rechercher un magasin"
+                      />
+                    </div>
+                    {recherche.trim() !== '' && (
+                      <>
+                        <span className="muted small" aria-live="polite">
+                          {visibles.length} sur {magasins.length}
+                        </span>
+                        <button type="button" className="link-btn" onClick={() => setRecherche('')}>Effacer</button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {visibles.length === 0 ? (
+                  <p className="muted">Aucun magasin ne correspond à « {recherche} ».</p>
+                ) : (
+                  visibles.map((m) => <VoletMagasin key={m.id} store={m} />)
+                )}
+              </section>
             </>
           )}
           <DemandesMagasin />
@@ -249,9 +292,15 @@ export default function MagasinsPage() {
           </p>
         </div>
       ) : (
-        <>
-          <div className="banner banner-info">
-            Le code d&apos;un magasin ouvre l&apos;accès à ses inventaires&nbsp;: transmettez-le à une personne, jamais à un groupe.
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <div>
+              <h2>Vos codes d’entrée</h2>
+              <p className="section-note">
+                Le code d’un magasin ouvre l’accès à ses inventaires&nbsp;: transmettez-le
+                à une personne, jamais à un groupe.
+              </p>
+            </div>
           </div>
           <div className="acc-inv-list">
             {stores.map((s) => (
@@ -269,10 +318,10 @@ export default function MagasinsPage() {
             ))}
           </div>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Seul Quantinvo peut créer un magasin.
+            Un magasin s’ajoute depuis le compte de l’administrateur de votre entreprise.
             <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>Imprimer des balises</Link>
           </p>
-        </>
+        </section>
       )}
       {neMagasin && (
         <QuiSupervise
@@ -386,10 +435,24 @@ function DemandesMagasin() {
 
   return (
     <>
-      <div className="dash-sub">Demandes de magasin</div>
-
+      {/* ── Ce qui attend un geste ──
+          La section ne s'affiche que s'il y a quelque chose dedans : un titre
+          « Demandes de magasin » au-dessus du vide annonce un travail qui
+          n'existe pas. Elle passe DEVANT l'ajout, comme « Ventes en cours »
+          passe devant « À traiter » sur la console. */}
       {demandes.length > 0 && (
-        <div className="req-list">
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <div>
+              <h2>Demandes en cours</h2>
+              <p className="section-note">
+                Ce sur quoi vous pouvez encore agir. Une fois le magasin créé, la ligne
+                quitte l’écran — c’est le magasin apparu au-dessus qui le confirme.
+              </p>
+            </div>
+            <span className="dash-sub-n">{demandes.length}</span>
+          </div>
+          <div className="req-list">
           {demandes.map((d) => (
             <div className="req-row" key={d.id}>
               <div>
@@ -456,20 +519,28 @@ function DemandesMagasin() {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        </section>
       )}
 
-      {!ouvert ? (
-        <div style={{ marginTop: 12 }}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOuvert(true)}>
-            Ajouter un magasin
-          </button>
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <div>
+            <h2>Ajouter un magasin</h2>
+            <p className="section-note">
+              Il est créé dès le paiement, avec son code d’entrée. Le prix dépend du
+              nombre d’appareils qui comptent en même temps dans ce magasin.
+            </p>
+          </div>
+          {!ouvert && (
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setOuvert(true)}>
+              Ajouter un magasin
+            </button>
+          )}
         </div>
-      ) : (
-        <div className="panel demande-magasin" style={{ marginTop: 12 }}>
-          <p className="muted small" style={{ marginTop: 0 }}>
-            Le prix dépend du nombre d&apos;appareils qui comptent en même temps dans ce magasin.
-          </p>
+
+      {ouvert && (
+        <div className="demande-magasin">
 
           <MagasinSaisie
             valeur={saisie}
@@ -518,6 +589,7 @@ function DemandesMagasin() {
           )}
         </div>
       )}
+      </section>
     </>
   )
 }

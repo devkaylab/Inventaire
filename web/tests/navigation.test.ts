@@ -483,7 +483,10 @@ describe('les écrans déplacés', () => {
   it('l’équipe range les compteurs par magasin', () => {
     const equipe = lire('../app/equipe/page.tsx')
     expect(equipe).toContain("rpc('my_team_by_store')")
-    expect(equipe).toContain('Compteurs · ')
+    // ⚠️ Le rangement n'a pas bougé, sa FORME oui : depuis le 5 septembre chaque
+    // magasin est une section (au lieu d'un « Compteurs · <magasin> » en
+    // capitales de 12 px). La garde vise le découpage, pas la tournure.
+    expect(equipe).toMatch(/\(sup\?\.stores \?\? \[\]\)\.map\(\(s\) => \(\s*<section className="admin-section" key=\{s\.id\}>/)
   })
 })
 
@@ -538,7 +541,9 @@ describe('un superviseur gère vraiment son équipe', () => {
   const migration = lire('../../supabase/migrations/20260821200001_superviseur_gere_son_equipe.sql')
 
   it('le bouton Retirer n’est réservé à personne', () => {
-    const bloc = equipe.split('Compteurs · ')[1]?.split('Invitations en cours')[0] ?? ''
+    // Le bloc du superviseur ordinaire : de sa boucle par magasin jusqu'aux
+    // invitations en cours.
+    const bloc = equipe.split('(sup?.stores ?? []).map((s) => (')[1]?.split('Invitations en cours')[0] ?? ''
     expect(bloc).toContain('>Retirer du magasin</button>')
     // Amendé le 22 août 2026 : la ligne porte désormais une seconde action,
     // « Supprimer le compte », qui elle est réservée à l'administrateur
