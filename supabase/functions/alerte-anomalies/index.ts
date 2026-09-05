@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     const offre = f.besoin ? nomOffre(f.besoin) : ''
     const magasin = f.objet || 'votre magasin'
     const { html: h, text: t } = emailQuantinvo({
-      titre: 'Votre forfait d’appareils est trop juste',
+      titre: 'Votre offre d’appareils est trop juste',
       apercu: `${magasin} — des appareils n’ont pas pu compter.`,
       salutation: f.prenom ? `Bonjour ${f.prenom},` : 'Bonjour,',
       paragraphes: [
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
         'Personne n’a rien perdu — l’écran se débloque dès qu’une place se libère — mais l’équipe attend.',
         offre
           ? `${offre} couvrirait ce besoin. Le changement se fait en ligne, depuis la fiche du magasin.`
-          : 'Le forfait s’élargit en ligne, depuis la fiche du magasin.',
+          : 'L’offre s’élargit en ligne, depuis la fiche du magasin.',
       ],
       details: [
         { intitule: 'Magasin', valeur: magasin },
@@ -256,14 +256,19 @@ Deno.serve(async (req) => {
       ],
       bouton: {
         libelle: 'Ouvrir la fiche du magasin',
-        lien: f.session_id ? `${appUrl}/magasins/${f.session_id}` : `${appUrl}/magasins`,
+        // ⚠️ L'ANCRE, ET PAS SEULEMENT LA PAGE. Le message dit « depuis la
+        // fiche du magasin » : le lien doit poser le lecteur sur la section
+        // « Appareils », pas en haut d'une fiche où il faut ensuite chercher.
+        lien: f.session_id
+          ? `${appUrl}/magasins/${f.session_id}#appareils`
+          : `${appUrl}/magasins`,
       },
       raison:
         'Vous recevez ce message parce que vous administrez cette entreprise sur Quantinvo.',
       siteUrl: appUrl,
     })
     try {
-      await envoyerEmail({ to: [a], subject: `Le forfait de ${magasin} est trop juste`, html: h, text: t })
+      await envoyerEmail({ to: [a], subject: `L’offre de ${magasin} est trop juste`, html: h, text: t })
       clesEnvoyees.push(f.cle)
     } catch (e) {
       console.error('alerte forfait', e instanceof Error ? e.message : String(e))

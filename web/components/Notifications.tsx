@@ -79,15 +79,20 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
     // les nombres ; `proposer()` connaît l'échelle des paliers, et c'est le
     // seul endroit qui la connaisse. La figer côté serveur en ferait une
     // quatrième copie de la grille.
+    // ⚠️ La CLÉ du type ne bouge pas — c'est une valeur de la base, portée par
+    // la contrainte de `notifications` et par la liste blanche de
+    // `mes_notifications`. Seul le texte passe de « forfait » à « offre ».
     case 'forfait_trop_juste': {
-      const forfait = Number(d.forfait ?? 0)
-      const offre = proposer(forfait, Number(d.besoin ?? 0))
+      const couvert = Number(d.forfait ?? 0)
+      const offre = proposer(couvert, Number(d.besoin ?? 0))
       return {
-        titre: 'Votre forfait semble trop juste',
+        titre: 'Votre offre semble trop juste',
         texte: offre
-          ? `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place. Votre forfait en couvre ${forfait} à la fois — n’hésitez pas à passer à ${offre.nom}, qui en couvre ${offre.couvre}.`
+          ? `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place. Votre offre en couvre ${couvert} à la fois — n’hésitez pas à passer à ${offre.nom}, qui en couvre ${offre.couvre}.`
           : `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place.`,
-        lien: d.store_id ? `/magasins/${d.store_id}` : '/magasins',
+        // ⚠️ L'ANCRE MÈNE À LA SECTION, pas en haut de la fiche : le geste
+        // qu'on propose est à mi-page, et sans elle il faut le chercher.
+        lien: d.store_id ? `/magasins/${d.store_id}#appareils` : '/magasins',
         // ⚠️ LE LIBELLÉ NOMME L'OFFRE. « Découvrir » seul ne dit pas quoi, et
         // une invitation sans objet ne fait pas agir (Julien, 4 septembre
         // 2026). Le nom vient de `proposer()`, jamais d'une chaîne écrite ici.

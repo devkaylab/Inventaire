@@ -41,8 +41,8 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
   // Le libre-service (4 septembre 2026) : `offre_changee` est le geste du
   // client, `offre_appliquee` ce que Stripe a confirmé. Les deux existent parce
   // qu'entre les deux il y a un paiement, et qu'il peut ne jamais aboutir.
-  offre_changee: (c) => `demandé un forfait plus large pour « ${c} »`,
-  offre_appliquee: (c) => `élargi le forfait de « ${c} »`,
+  offre_changee: (c) => `demandé une offre plus large pour « ${c} »`,
+  offre_appliquee: (c) => `élargi l’offre de « ${c} »`,
   rythme_change: (c) => `changé le rythme de paiement de « ${c} »`,
   // Écrite par `vider_balise`, pas par une fonction `ca_*` : les comptages ne
   // sont journalisés nulle part ailleurs, et c'est la seule trace qu'un rayon

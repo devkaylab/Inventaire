@@ -26,7 +26,7 @@ import { nb, relativeTime } from '@/lib/format'
 import { Stat } from '@/components/ui/Stat'
 import { euros } from '@/lib/offres'
 import { compositionOffre, lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
-import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
+import { ChangerOffre, PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import type { SessionBloc } from '@/lib/entreprise'
 
 type Personne = {
@@ -113,7 +113,7 @@ export default function FicheMagasinPage() {
     if (!offreEnCours) return
     const ok = await confirm({
       title: 'Annuler ce changement d’offre ?',
-      message: 'Votre forfait ne change pas, et rien ne sera prélevé.',
+      message: 'Votre offre ne change pas, et rien ne sera prélevé.',
       confirmLabel: 'Annuler le changement',
       cancelLabel: 'Revenir',
     })
@@ -259,23 +259,23 @@ export default function FicheMagasinPage() {
       </section>
 
       {appareils && (
-        <section className="admin-section">
+        // ⚠️ L'ANCRE EST CE QUE VISE L'E-MAIL. « Le changement se fait en ligne,
+        // depuis la fiche du magasin » : le lien doit tomber sur la section, pas
+        // en haut d'une page où il faut ensuite chercher.
+        <section className="admin-section" id="appareils">
           <div className="admin-section-head">
             <h2>Appareils</h2>
             <Link href="/tarifs" className="btn btn-ghost btn-sm">Voir les offres</Link>
           </div>
 
-          {/* ⚠️ PAS DE TUILE « PIC ». Constat de Julien le 4 septembre 2026 :
-              « un pic signifie que ça va redescendre après, donc pas d'intérêt
-              de passer à la tranche supérieure ». Ce qui appelle une décision,
-              ce n'est pas un maximum atteint une fois, c'est qu'un appareil
-              ait été refusé. Les trois tuiles mènent donc chacune à un geste. */}
+          {/* ⚠️ NI « PIC », NI « EN TRAIN DE COMPTER ». Le pic est parti le
+              4 septembre 2026 — « un pic signifie que ça va redescendre après,
+              donc pas d'intérêt de passer à la tranche supérieure » — et le
+              décompte instantané le 5 : il vaut zéro dès que personne ne
+              scanne, donc la plupart du temps quand on ouvre la page, et ce
+              qu'il mesurait vraiment (le magasin tient-il dans son offre) est
+              déjà dans les deux qui restent. Chacune mène à un geste. */}
           <div className="dash-stats dash-stats-5">
-            <Stat
-              label="En train de compter"
-              value={nb(appareils.maintenant)}
-              sub="appareils, en ce moment"
-            />
             {/* ⚠️ L'AMBRE SUIT LE VERDICT, PAS LE COMPTE. Les refus restent
                 trente jours : après un passage à l'offre supérieure, la tuile
                 serait restée ambre un mois durant pour un problème résolu — et
@@ -293,11 +293,11 @@ export default function FicheMagasinPage() {
                 : 'aucun appareil refusé'}
             />
             <Stat
-              label="Votre forfait"
+              label="Votre offre"
               value={appareils.plafond == null ? '—' : nb(appareils.plafond)}
               sub={verdict.offreActuelle
                 ? `appareils à la fois · ${verdict.offreActuelle}`
-                : 'aucun forfait défini'}
+                : 'aucune offre définie'}
             />
           </div>
 
@@ -310,7 +310,7 @@ export default function FicheMagasinPage() {
               <div className="signal-txt">
                 <strong>Un changement d’offre attend son paiement</strong>
                 <div className="muted small">
-                  {nb(offreEnCours.devices ?? 0)} appareils à la fois. Le forfait change dès le
+                  {nb(offreEnCours.devices ?? 0)} appareils à la fois. L’offre change dès le
                   paiement ; rien n’est prélevé tant que vous n’avez pas réglé.
                 </div>
               </div>
@@ -340,7 +340,7 @@ export default function FicheMagasinPage() {
                       alors qu’ils n’étaient pas simultanés —, donc le vrai
                       besoin est AU PLUS ce chiffre. La première version écrivait
                       l’inverse. */}
-                  Votre forfait couvre {nb(appareils.plafond ?? 0)} appareils à la fois&nbsp;;
+                  Votre offre couvre {nb(appareils.plafond ?? 0)} appareils à la fois&nbsp;;
                   il en aurait fallu jusqu’à {nb(appareils.besoin)} pour que personne n’attende.
                   {' '}<strong>{verdict.proposition.nom}</strong> en couvre
                   {' '}{nb(verdict.proposition.couvre)}
@@ -375,7 +375,7 @@ export default function FicheMagasinPage() {
               change. */}
           {verdict.etat === 'sans_forfait' && (
             <p className="muted small">
-              Ce magasin n’a pas de forfait en appareils. Les appareils sont comptés, aucun n’est
+              Ce magasin n’a pas d’offre en appareils. Les appareils sont comptés, aucun n’est
               refusé.
             </p>
           )}
@@ -386,6 +386,29 @@ export default function FicheMagasinPage() {
               cesse de compter dès qu’il le referme. Le nombre de personnes dans l’équipe n’entre
               pas en ligne de compte.
             </p>
+          )}
+
+          {/* ⚠️ LE CHANGEMENT D'OFFRE EST LÀ DANS LES TROIS ÉTATS — c'est le
+              constat de Julien du 5 septembre 2026 : le panneau de paiement
+              n'existait que sous `etat === 'depasse'`, donc il fallait s'être
+              heurté au verrou pour avoir le droit d'acheter. On n'avait
+              construit que le chemin de la réaction, jamais celui de
+              l'anticipation, qui est pourtant le cas normal.
+
+              ⚠️ La seule exception est un changement DÉJÀ déposé : proposer
+              d'acheter ce qu'on est en train d'acheter n'a pas de sens, et le
+              serveur le refuserait (`deja_en_cours`). Le bandeau au-dessus
+              porte alors les deux sorties — reprendre, ou annuler. */}
+          {!offreEnCours && (
+            <ChangerOffre
+              storeId={storeId as string}
+              plafond={appareils.plafond}
+              invite={verdict.etat === 'depasse'
+                ? 'Il vous en faut davantage\u00a0?'
+                : 'Besoin de plus d’appareils pour un prochain inventaire\u00a0?'}
+              libelle={verdict.etat === 'depasse' ? 'Choisir une autre offre' : 'Changer d’offre'}
+              onApplique={charger}
+            />
           )}
         </section>
       )}

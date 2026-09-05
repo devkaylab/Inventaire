@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
       company_name: string; devices: number; store_id: string
     }
     const { html, text } = emailQuantinvo({
-      titre: 'Votre forfait est élargi',
+      titre: 'Votre offre est élargie',
       apercu: `${n.store_name} compte maintenant sur ${n.devices} appareils à la fois.`,
       salutation: n.first_name ? `Bonjour ${n.first_name},` : 'Bonjour,',
       paragraphes: [
@@ -255,13 +255,13 @@ Deno.serve(async (req) => {
       ],
       bouton: { libelle: 'Ouvrir la fiche du magasin', lien: `${appUrl}/magasins/${n.store_id}` },
       ...(facture ? { lienSecondaire: { libelle: `Voir et télécharger votre facture${facture.numero ? ` ${facture.numero}` : ''}`, lien: facture.url } } : {}),
-      raison: 'Vous recevez ce message parce que vous venez d’élargir le forfait de ce magasin.',
+      raison: 'Vous recevez ce message parce que vous venez d’élargir l’offre de ce magasin.',
       siteUrl: appUrl,
     })
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [n.email], subject: `Le forfait de ${n.store_name} est élargi`, html, text }),
+      body: JSON.stringify({ from: fromAddr, reply_to: adresseDeContact() ?? undefined, to: [n.email], subject: `L’offre de ${n.store_name} est élargie`, html, text }),
     })
     if (!resp.ok) notes.push(`e-mail forfait : ${resp.status}`)
   }
@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
         const objet = result.kind === 'company'
           ? `${result.company_name} a réglé et est créée`
           : result.kind === 'store_offer'
-            ? `${result.company_name} a élargi le forfait de ${result.store_name}`
+            ? `${result.company_name} a élargi l’offre de ${result.store_name}`
             : `${result.company_name} a réglé le magasin ${result.store_name}`
         const { html, text } = emailQuantinvo({
           titre: 'Paiement reçu',

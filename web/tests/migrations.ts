@@ -29,7 +29,14 @@ export function derniereDefinition(fn: string): { fichier: string; corps: string
   //
   // Le `(` final est ce qui évite qu'un `drop function if exists` ou un nom
   // plus long (`lister_articles_bis`) soit pris pour la définition.
-  const marqueur = new RegExp(`create (?:or replace )?function public\\.${fn}\\(`, 'g')
+  //
+  // ⚠️ ET SANS ÉGARD À LA CASSE (5 septembre 2026). `pg_get_functiondef` rend
+  // « CREATE OR REPLACE FUNCTION » en majuscules : une migration écrite en
+  // repartant de la base — le moyen le plus sûr de ne réécrire QUE la phrase
+  // qu'on veut changer — serait passée inaperçue, et ce helper aurait rendu la
+  // définition PRÉCÉDENTE. Le défaut qu'il existe pour empêcher, une fois de
+  // plus, par une autre porte.
+  const marqueur = new RegExp(`create (?:or replace )?function public\\.${fn}\\(`, 'gi')
   const fichiers = readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql')).sort().reverse()
 
   for (const fichier of fichiers) {

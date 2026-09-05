@@ -93,11 +93,20 @@ export type VerdictAppareils = {
   proposition: Proposition | null
 }
 
-/** Le libellé de l'état, tel que la console l'affiche en pastille. */
+/**
+ * Le libellé de l'état, tel que la console l'affiche en pastille.
+ *
+ * ⚠️ ON ÉCRIT « OFFRE », JAMAIS « FORFAIT » NI « ASSIETTE » (Julien,
+ * 5 septembre 2026). « Assiette » est notre mot de facturation ; « forfait »
+ * était le compromis d'un jour, et il faisait deux noms pour la chose que la
+ * page Tarifs appelle une offre. Les CLÉS, elles, ne bougent pas : ce sont des
+ * identifiants, pas du texte — et `forfait_trop_juste` est en plus une valeur
+ * de la base, contrainte et liste blanche comprises.
+ */
 export const ETIQUETTE: Record<EtatAppareils, string> = {
-  sans_forfait: 'Forfait non défini',
-  dans_le_forfait: 'Dans le forfait',
-  depasse: 'Forfait trop juste',
+  sans_forfait: 'Offre non définie',
+  dans_le_forfait: 'Dans l’offre',
+  depasse: 'Offre trop juste',
 }
 
 /** Le nom du palier qui correspond à ce plafond. */

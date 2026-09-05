@@ -440,13 +440,24 @@ describe('l’application', () => {
     }
   })
 
-  it('l’écran de refus ne cite aucun prix', () => {
+  it('l’écran de refus ne vend rien', () => {
     // Il s'ouvre devant un compteur, debout dans un rayon. La proposition
     // commerciale est sur le site, pour qui paie.
+    //
+    // ⚠️ AMENDÉE LE 5 SEPTEMBRE 2026, ET RECENTRÉE SUR SON INTENTION. Elle
+    // refusait le mot « offre » — qui était alors, forcément, le début d'une
+    // vente. Depuis que « offre » a remplacé « forfait » PARTOUT (décision de
+    // Julien sur la maquette), c'est aussi le nom de ce que le magasin a déjà
+    // payé : « L'offre de ce magasin couvre 2 appareils » est un constat, pas
+    // une proposition. Ce qu'on interdit ici, ce sont donc les prix, les noms
+    // de palier et les verbes d'achat — pas un mot devenu du vocabulaire
+    // courant. Ne pas l'affaiblir davantage : chacun de ces motifs a été
+    // vérifié en défaut.
     const i = scanner.indexOf("place.etat === 'refusee'")
     expect(i).toBeGreaterThan(0)
     const bloc = sansCommentaires(scanner.slice(i, i + 2500))
-    expect(bloc).not.toMatch(/€|Essential|Advanced|Enterprise|offre/i)
+    expect(bloc).not.toMatch(/€|Essential|Advanced|Enterprise/i)
+    expect(bloc).not.toMatch(/passer à|souscri|découvrir|changer d’offre|tarif/i)
     expect(bloc).toContain('Réessayer')
     // ⚠️ ET IL NOMME L'ADMINISTRATEUR, PAS « VOTRE RESPONSABLE » (Julien,
     // 4 septembre 2026, l'écran sous les yeux depuis un compte de superviseur) :
@@ -468,5 +479,155 @@ describe('une alerte s’éteint quand le geste qui la règle est fait', () => {
       path.resolve(__dirname, '../app/magasins/[storeId]/page.tsx'), 'utf8')
     expect(fiche).toContain("tone={verdict.etat === 'depasse' ? 'warn' : 'neutral'}")
     expect(fiche).not.toContain("tone={appareils.refus > 0 ? 'warn' : 'neutral'}")
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHANGER D'OFFRE SANS AVOIR ÉTÉ REFUSÉ (5 septembre 2026)
+// ---------------------------------------------------------------------------
+// Constat de Julien : « sur le site je ne vois nulle part où je peux upgrade
+// mon abonnement ». Le panneau de paiement n'existait que sous
+// `verdict.etat === 'depasse'` : il fallait s'être heurté au verrou pour avoir
+// le droit d'acheter. On n'avait construit que le chemin de la RÉACTION, et
+// jamais celui de l'ANTICIPATION — qui est pourtant le cas normal.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('changer d’offre ne demande pas d’avoir été refusé', () => {
+  const fiche = lire('web/app/magasins/[storeId]/page.tsx')
+  const panneau = lire('web/components/PayerEnLigne.tsx')
+
+  it('le panneau est rendu hors de la branche « dépassé »', () => {
+    // La seule condition est qu'aucun changement n'attende déjà son paiement.
+    expect(fiche).toContain('{!offreEnCours && (\n            <ChangerOffre')
+    // ⚠️ Et il n'est PAS enfermé dans la condition du bandeau d'alerte : c'est
+    // exactement le défaut qu'on corrige. Le bandeau, lui, la garde.
+    const i = fiche.indexOf('<ChangerOffre')
+    const j = fiche.indexOf("verdict.etat === 'depasse' && verdict.proposition")
+    expect(j).toBeGreaterThan(0)
+    expect(i).toBeGreaterThan(j)
+  })
+
+  it('il ne se propose pas par-dessus un paiement en attente', () => {
+    // Proposer d'acheter ce qu'on est en train d'acheter n'a pas de sens — et
+    // le serveur le refuserait (`deja_en_cours`). Le bandeau au-dessus porte
+    // alors les deux sorties : reprendre, ou annuler.
+    expect(sansCommentaires(fiche)).toContain('{!offreEnCours && (')
+  })
+
+  it('il ne recopie aucun montant : la grille reste dans lib/offres', () => {
+    const i = panneau.indexOf('export function ChangerOffre')
+    expect(i).toBeGreaterThan(0)
+    const bloc = sansCommentaires(panneau.slice(i))
+    // Le prix vient de `proposer()`, jamais d'une addition faite sur place.
+    expect(bloc).toContain('proposer(0, devices)')
+    for (const o of OFFRES) {
+      expect(bloc).not.toContain(String(o.mois))
+      expect(bloc).not.toContain(String(o.an))
+    }
+  })
+
+  it('il passe par la fonction edge, sans repli sur une RPC directe', () => {
+    // ⚠️ Règle de `/souscrire` : sans la fonction edge il n'y a pas de session
+    // Stripe, donc rien à payer. Déposer la demande quand même laisserait
+    // quelqu'un persuadé d'avoir souscrit.
+    const i = panneau.indexOf('export function ChangerOffre')
+    const bloc = sansCommentaires(panneau.slice(i))
+    expect(bloc).not.toContain("rpc('deposer_changement_offre')")
+    // Il compose le panneau de paiement existant plutôt que d'en écrire un
+    // second : deux chemins de paiement divergeraient au premier ajustement.
+    expect(bloc).toContain('<PayerEnLigne')
+  })
+
+  it('la saisie qui ne changerait rien se dit AVANT le clic', () => {
+    const i = panneau.indexOf('export function ChangerOffre')
+    const bloc = sansCommentaires(panneau.slice(i))
+    expect(bloc).toContain('devices <= plafond')
+  })
+})
+
+describe('le lien qu’on envoie tombe sur la section', () => {
+  it('la section porte l’ancre', () => {
+    expect(lire('web/app/magasins/[storeId]/page.tsx'))
+      .toContain('<section className="admin-section" id="appareils">')
+  })
+
+  it('l’e-mail et la cloche la visent', () => {
+    // « Le changement se fait en ligne, depuis la fiche du magasin » : le lien
+    // doit poser le lecteur sur la section, pas en haut d'une fiche où il faut
+    // ensuite chercher.
+    expect(lire('supabase/functions/alerte-anomalies/index.ts'))
+      .toContain('/magasins/${f.session_id}#appareils')
+    expect(lire('web/components/Notifications.tsx'))
+      .toContain('/magasins/${d.store_id}#appareils')
+  })
+})
+
+describe('on écrit « offre », jamais « forfait »', () => {
+  // Décision de Julien le 5 septembre 2026, sur la maquette : « change le mot
+  // forfait par autre chose ». « Assiette » était déjà interdit — c'est notre
+  // mot de facturation ; « forfait » faisait un second nom pour ce que la page
+  // Tarifs appelle une offre, et deux mots pour la même chose dans la même
+  // carte font douter qu'il s'agisse de la même chose.
+  //
+  // ⚠️ LES CLÉS NE BOUGENT PAS : `forfait_trop_juste` est une valeur de la
+  // base (contrainte de `notifications` ET liste blanche de
+  // `mes_notifications`), `forfait_plein` un code de refus du serveur, et
+  // `dans_le_forfait` un identifiant d'état. Ce sont des identifiants, pas du
+  // texte.
+  const cles = /forfait_trop_juste|forfait_plein|sans_forfait|dans_le_forfait|avis-forfait|AvisForfait|d\.forfait|'forfait'|nature !== 'forfait'|e-mail forfait|alerte forfait|forfaits/
+  const ecrans = [
+    'web/app/magasins/[storeId]/page.tsx',
+    'web/components/PayerEnLigne.tsx',
+    'web/components/Notifications.tsx',
+    'web/lib/appareils.ts',
+    'web/lib/journal.ts',
+    'web/app/admin/entreprise/[companyId]/page.tsx',
+    'supabase/functions/alerte-anomalies/index.ts',
+    'supabase/functions/stripe-webhook/index.ts',
+    'supabase/functions/libre-service/index.ts',
+    'src/components/scanner.tsx',
+  ]
+
+  for (const f of ecrans) {
+    it(`${f} n’affiche plus le mot`, () => {
+      for (const ligne of sansCommentaires(lire(f)).split('\n')) {
+        if (!/orfait/i.test(ligne)) continue
+        expect(ligne, `${f} : ${ligne.trim()}`).toMatch(cles)
+      }
+    })
+  }
+})
+
+describe('la tuile instantanée a disparu', () => {
+  it('la fiche ne compte plus les appareils « en ce moment »', () => {
+    // Elle vaut zéro dès que personne ne scanne — donc la plupart du temps
+    // quand on ouvre la page — et ce qu'elle mesurait vraiment (le magasin
+    // tient-il dans son offre) est dans les deux tuiles qui restent.
+    const fiche = sansCommentaires(lire('web/app/magasins/[storeId]/page.tsx'))
+    expect(fiche).not.toContain('En train de compter')
+    expect(fiche).not.toContain('appareils.maintenant')
+  })
+})
+
+describe('les deux phrases qui vivent en base disent « offre »', () => {
+  // ⚠️ Elles auraient survécu au renommage sans que rien ne le signale : ce
+  // sont des textes que le client lit, mais ils ne sont dans aucun écran.
+  it('le refus sous le bouton', () => {
+    const { corps } = derniereDefinition('deposer_changement_offre')
+    expect(corps).toContain("'Votre offre couvre déjà '")
+    expect(sansCommentaires(corps)).not.toContain('Votre forfait couvre')
+  })
+
+  it('la ligne qui part dans l’e-mail d’alerte', () => {
+    const { corps } = derniereDefinition('anomalies_a_signaler')
+    expect(corps).toContain("l''offre en couvre")
+    expect(sansCommentaires(corps)).not.toContain('le forfait en couvre')
+  })
+
+  it('et le helper retrouve bien une migration écrite en majuscules', () => {
+    // ⚠️ `pg_get_functiondef` rend « CREATE OR REPLACE FUNCTION ». Repartir de
+    // la base est le moyen le plus sûr de ne réécrire QUE la phrase visée —
+    // encore faut-il que la garde voie la migration qui en sort.
+    const source = readFileSync(path.resolve(__dirname, 'migrations.ts'), 'utf8')
+    expect(source).toContain("'gi')")
   })
 })

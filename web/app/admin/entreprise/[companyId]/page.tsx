@@ -246,7 +246,7 @@ function AppareilsMagasin({ a }: { a: AppareilsDuMagasin | undefined }) {
       <span className={`pill ${ton}`}>{ETIQUETTE[v.etat]}</span>
       <span className="muted small">
         {nb(a.maintenant)} appareil{a.maintenant > 1 ? 's' : ''} en train de compter
-        {a.plafond !== null && ` · forfait ${nb(a.plafond)}`}
+        {a.plafond !== null && ` · offre ${nb(a.plafond)}`}
         {a.refus > 0 && ` · ${nb(a.refus)} refusé${a.refus > 1 ? 's' : ''} en 30 j`}
         {v.proposition && <> → <b>{v.proposition.nom}</b></>}
       </span>

@@ -375,7 +375,7 @@ Deno.serve(async (req) => {
       return json({
         success: false,
         code: 'deja_couvert',
-        error: `Votre forfait couvre déjà ${etat.plafond} appareils.`,
+        error: `Votre offre couvre déjà ${etat.plafond} appareils.`,
       }, 400)
     }
 

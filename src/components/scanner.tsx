@@ -1417,7 +1417,7 @@ export function Scanner({
             : `${place.plafond ?? ''} appareils comptent déjà`}
         </Text>
         <Text style={styles.amorceTexte}>
-          Le forfait de ce magasin couvre {place.plafond ?? ''} appareil{(place.plafond ?? 0) > 1 ? 's' : ''} à
+          L&apos;offre de ce magasin couvre {place.plafond ?? ''} appareil{(place.plafond ?? 0) > 1 ? 's' : ''} à
           la fois. Vous pourrez compter dès que l&apos;un d&apos;eux aura terminé.
         </Text>
         <Text style={styles.amorceTexte}>

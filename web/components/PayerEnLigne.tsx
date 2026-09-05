@@ -19,10 +19,12 @@
  * quand même laisserait quelqu'un persuadé d'avoir souscrit.
  */
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { euros } from '@/lib/offres'
-import { proposer } from '@/lib/appareils'
+import { compositionOffre, proposer } from '@/lib/appareils'
+import { nombreOuNull } from '@/components/MagasinSaisie'
+import { nb } from '@/lib/format'
 
 export type OffreAPayer = {
   /** Le nom du palier — il vient d'`OFFRES`, jamais réinventé ici. */
@@ -226,6 +228,124 @@ export function ReprendrePaiement({
         {busy ? 'Un instant…' : 'Reprendre le paiement'}
       </button>
       {erreur && <p className="field-hint" role="alert" style={{ marginTop: 8 }}>{erreur}</p>}
+    </div>
+  )
+}
+
+/**
+ * Choisir une autre offre — À TOUT MOMENT, pas seulement après un refus.
+ *
+ * ⚠️ CE PANNEAU FERME LE SEUL CUL-DE-SAC QUI RESTAIT AU LIBRE-SERVICE.
+ * Constat de Julien, 5 septembre 2026 : *« sur le site je ne vois nulle part
+ * où je peux upgrade mon abonnement »*. Il avait raison, et ce n'était pas un
+ * défaut d'affichage : le panneau de paiement n'apparaissait que sous la
+ * condition `verdict.etat === 'depasse'`, c'est-à-dire **une fois qu'un
+ * appareil avait été éconduit**.
+ *
+ * Autrement dit, on n'avait construit que le chemin de la RÉACTION — être
+ * bloqué, puis payer — et jamais celui de l'ANTICIPATION, qui est pourtant le
+ * cas normal : « mon inventaire de la semaine prochaine demande douze
+ * appareils, je passe à Advanced aujourd'hui ». Un client qui doit d'abord se
+ * heurter au verrou pour avoir le droit d'acheter, c'est le produit qui décide
+ * quand il a le droit de dépenser.
+ *
+ * ⚠️ IL N'AJOUTE AUCUN CHEMIN D'ACHAT. Il compose ce qui existe déjà :
+ * `proposer()` pour lire la grille — jamais un montant écrit ici —, et
+ * `PayerEnLigne` pour le paiement. Deux panneaux de paiement divergeraient au
+ * premier ajustement, et c'est le chemin de l'argent.
+ *
+ * ⚠️ ET « OFFRE », JAMAIS « FORFAIT » (Julien, 5 septembre 2026, sur la
+ * maquette). C'est le mot de la page Tarifs, celui des trois paliers, et celui
+ * que le code emploie déjà pour ce geste (`kind = 'offre'`). Deux mots pour la
+ * même chose dans la même carte font douter qu'il s'agisse de la même chose.
+ */
+export function ChangerOffre({
+  storeId, plafond, invite, libelle, onApplique,
+}: {
+  storeId: string
+  /** Ce que l'offre payée couvre aujourd'hui. Nul quand aucune n'est connue. */
+  plafond: number | null
+  /** La phrase qui précède le bouton — elle diffère selon qu'on est à l'aise
+      dans son offre ou qu'on vient de s'y heurter. */
+  invite: string
+  libelle: string
+  onApplique?: () => void
+}) {
+  const [ouvert, setOuvert] = useState(false)
+  const [saisie, setSaisie] = useState('')
+  const uid = useId()
+
+  const brut = nombreOuNull(saisie)
+  const devices = brut != null && brut > 0 ? Math.round(brut) : null
+  // ⚠️ Le serveur refuse déjà ce cas (`deja_couvert`), et l'écran le dit AVANT :
+  // découvrir après avoir cliqué qu'il n'y avait rien à acheter est le genre de
+  // refus qui fait douter du bouton. La borne haute, elle, reste au serveur —
+  // c'est une règle de grille, on n'en fait pas une copie de plus.
+  const dejaCouvert = devices != null && plafond != null && devices <= plafond
+  const offre = devices != null && !dejaCouvert ? proposer(0, devices) : null
+  const composition = offre ? compositionOffre(offre) : null
+
+  if (!ouvert) {
+    return (
+      <div className="offre-pied">
+        <span className="muted small">{invite}</span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOuvert(true)}>
+          {libelle}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="offre-pied-ouvert">
+      <div className="field offre-champ">
+        <label htmlFor={`${uid}-appareils`}>Appareils qui comptent en même temps</label>
+        <input
+          id={`${uid}-appareils`}
+          type="number"
+          min={1}
+          step={1}
+          value={saisie}
+          onChange={(e) => setSaisie(e.target.value)}
+          placeholder={String((plafond ?? 2) + 1)}
+        />
+        <p className="field-hint">
+          {plafond == null
+            ? 'Ce magasin n’a pas encore d’offre en appareils.'
+            : `Votre offre en couvre ${nb(plafond)} aujourd’hui.`}
+        </p>
+      </div>
+
+      {dejaCouvert && (
+        <p className="field-hint" role="status">
+          Votre offre couvre déjà {nb(plafond ?? 0)} appareils&nbsp;: il n’y a rien à changer.
+        </p>
+      )}
+
+      {offre && (
+        <>
+          <p className="muted small offre-resume">
+            <strong>{offre.nom}</strong> couvre {nb(offre.couvre)} appareils à la fois
+            {/* La page Stripe décompose en deux lignes dès qu'on sort d'un
+                palier : si notre écran ne le dit pas, le « Qté 4 » s'y
+                découvre sans prévenir. Et une tranche entamée se paie
+                entière — 137 demandés, 140 couverts. */}
+            {composition ? ` — ${composition}` : ''}.
+          </p>
+          <PayerEnLigne
+            offre={offre}
+            corps={{ action: 'offre', storeId, devices }}
+            libelle={offre.action}
+            onApplique={onApplique}
+          />
+        </>
+      )}
+
+      <div className="inline-form" style={{ marginTop: 10 }}>
+        <button type="button" className="link-btn" onClick={() => { setOuvert(false); setSaisie('') }}>
+          Annuler
+        </button>
+      </div>
     </div>
   )
 }

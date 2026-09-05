@@ -3127,3 +3127,33 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .qs-ligne { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
 .qs-mail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qs-compte { flex: none; }
+
+/* ── Changer d'offre, depuis la fiche d'un magasin ───────────────────────────
+   Le pied de la section « Appareils ». Il est là dans les trois états : le
+   changement d'offre n'attend pas qu'un appareil ait été refusé (constat de
+   Julien, 5 septembre 2026).
+
+   ⚠️ Le filet du haut est ce qui le sépare de ce qui précède — un bandeau
+   d'alerte ambre, ou un paragraphe d'explication. Sans lui, le bouton se lit
+   comme la suite de la phrase au-dessus. */
+.offre-pied {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  border-top: 1px solid var(--hairline); padding-top: 14px; margin-top: 16px;
+}
+.offre-pied-ouvert {
+  border-top: 1px solid var(--hairline); padding-top: 16px; margin-top: 16px;
+}
+/* Un nombre d'appareils tient en trois chiffres : un champ pleine largeur
+   laisserait croire qu'on attend une phrase. */
+.offre-champ { max-width: 280px; }
+/* ⚠️ ET IL LUI FAUT UN FOND. `.field input` prend `--bg`, ce qui va dans un
+   `.panel` (posé sur `--surface`) mais pas ici : `.admin-section` est
+   transparente, donc le champ se retrouvait EXACTEMENT de la couleur de la
+   page et ne tenait qu'à son filet — invisible tant qu'il n'a pas le focus.
+   Troisième fois que ce défaut se présente : `.magasin-top input` le 22 août
+   2026, les deux champs de date du rapport magasin le 4 septembre. Le point
+   commun n'est pas le champ, c'est ce qu'il y a DERRIÈRE lui : mesurer les
+   deux couleurs, jamais l'une seule. */
+.offre-champ input { background: var(--surface); }
+.offre-resume { margin: 14px 0 0; }
