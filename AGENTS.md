@@ -9604,3 +9604,90 @@ terrain ; le jour où une capture présentable existe, elle remplace ce bloc san
 toucher au reste.
 
 Tests de garde : `web/tests/vitrine-accueil.test.ts`.
+
+## La version mobile de la vitrine (5 septembre 2026)
+
+Constat de Julien, capture d'iPhone à l'appui, une heure après la mise en ligne
+de la refonte : *« peux revoir la version mobile stp »*. Deux défauts, et le
+second était un trou, pas un détail.
+
+### ⚠️ 1. Le bouton de la barre sortait du bandeau
+
+`.site-header .inner` a une hauteur **figée** de 64 px : « Inscrire mon
+entreprise » passait à trois lignes, débordait du bandeau et dépassait le bord
+droit de l'écran. Les deux moitiés du correctif vont ensemble — `white-space:
+nowrap` sur le bouton, **parce que** la rangée ne peut pas grandir.
+
+**⚠️ ET MA MESURE NE L'AVAIT PAS VU.** Le contrôle de la veille à 390 px
+filtrait `main *` : il n'a jamais regardé l'en-tête. **Une mesure de débordement
+porte sur `body`, jamais sur une seule branche.**
+
+### ⚠️ 2. Sur un téléphone, les quatre liens du site DISPARAISSAIENT
+
+Sous 780 px, `.nav-links` passait en `display: none` — et rien ne les
+remplaçait. Un visiteur de téléphone ne pouvait atteindre ni les tarifs ni les
+pages produit autrement qu'en devinant l'adresse. Julien a envoyé la version
+mobile de Qonto : mot-symbole, **un** bouton, et tout le reste derrière un
+burger. `components/MenuMobile.tsx`.
+
+Ce que la comparaison a donné, et qu'il ne faut pas défaire :
+
+- **le panneau prend TOUT L'ÉCRAN sous la barre**, il ne pend pas dessous. Un
+  menu court laisse voir la page derrière et se lit comme une infobulle ;
+- **les liens sont grands, avec un chevron** — on parcourt en haut, on agit en
+  bas ;
+- **les deux actions sont en pied, dans leurs rangs** : le bouton plein sur
+  toute la largeur, puis « Se connecter » en lien souligné. La barre garde deux
+  rangs sur un écran large ; sur 390 px il n'y a pas la place, et c'est le rang
+  **secondaire** qui entre au menu — jamais le bouton principal ;
+- **le bouton de la barre s'efface tant que le menu est ouvert** : il est déjà
+  dans le panneau, et le même geste offert deux fois à trente centimètres
+  d'écart fait douter qu'il s'agisse du même ;
+- **⚠️ et le burger reprend alors la marge des actions effacées.** C'est
+  `.header-actions` qui porte le `margin-left: auto` : sans reprise, la croix
+  venait se coller au mot-symbole. **Ce défaut ne se voit QUE menu ouvert** —
+  aucune capture de la page au repos ne le montre (constat de Julien).
+
+### ⚠️ Ce qui cède quand la place manque, c'est MESURÉ
+
+À 390 px : mot-symbole (143) + « Inscrire mon entreprise » (187) + burger (44)
++ écarts = **408 px pour 395 disponibles**. Avec la forme courte du libellé,
+326 : il reste de la marge. Pour une marque jeune, le mot-symbole vaut mieux que
+deux mots de plus sur un bouton — et **« Inscription » reste explicite**, c'est
+le nom de la page où il mène. Sous 360 px seulement, le logo suffit.
+
+⚠️ **Le libellé long et le court sont TOUS DEUX dans le balisage**, et c'est
+`display: none` qui tranche : un lecteur d'écran n'en annonce qu'un. Ne pas
+remplacer par un pseudo-élément, dont le texte n'est pas fiable pour
+l'accessibilité.
+
+### ⚠️ `backdrop-filter` fait un bloc conteneur
+
+Le panneau est sorti à **32 px de haut** au premier essai. `.site-header` porte
+un `backdrop-filter` : il devient donc un bloc conteneur pour ses descendants en
+`position: fixed`, qui se calent sur la barre et non sur l'écran. Le panneau est
+en **absolu sur la barre elle-même** — qui est pleine largeur, contrairement à
+`.inner`. À connaître avant de poser quoi que ce soit de fixe dans un en-tête
+flouté.
+
+### Une seule liste de liens
+
+`lib/navigation.ts` porte `LIENS_PUBLICS`, lue par la barre **et** par le menu.
+Deux listes recopiées divergeraient au premier lien ajouté — et c'est le menu
+mobile, celui qu'on regarde le moins, qui garderait l'ancienne. Une garde refuse
+un lien de navigation écrit en dur dans l'un ou l'autre.
+
+⚠️ **Une garde a dû être récrite pour ça** : `offres.test.ts` comptait DEUX
+`href="/tarifs"` dans SiteChrome. Depuis que l'en-tête lit la liste partagée, ce
+compte ne mesurait plus l'accessibilité de la page — seulement sa façon d'être
+écrite. Elle vérifie désormais les deux chemins, chacun à sa source.
+
+### Vérifications
+
+Mesuré à **320, 360, 375, 390, 430, 480, 500, 768 et 1280 px**, clair et sombre :
+la barre garde 64 px de haut partout, aucun débordement (`scrollWidth` égal à
+`clientWidth` sur la barre comme sur le document), la croix tombe au pixel où
+était le burger (bord droit 374, centre 32). Le menu ouvert, parcouru pour de
+vrai : Échap referme, un clic ailleurs referme, un lien navigue **et** referme,
+et la classe de verrouillage quitte `<html>`. Neuf sabotages, neuf échecs.
+1 146 tests, `tsc`, `eslint .` à zéro erreur, `next build` inchangé.

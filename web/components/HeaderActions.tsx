@@ -41,7 +41,18 @@ export function HeaderActions() {
   return (
     <div className="header-actions">
       <Link href="/login" className="header-lien">Se connecter</Link>
-      <Link href="/inscription" className="btn btn-primary btn-sm">Inscrire mon entreprise</Link>
+      {/*
+        ⚠️ DEUX LIBELLÉS, UN SEUL AFFICHÉ — voir `.libelle-court` dans
+        globals.css. Sur un téléphone, « Inscrire mon entreprise » passait à
+        trois lignes et sortait de la barre (constat de Julien, 5 septembre
+        2026). « Inscription » reste EXPLICITE : c'est le nom de la page où le
+        bouton mène, et la barre doit rester un repère de navigation, jamais un
+        argument — c'est ce qui la distingue du bouton du héros.
+      */}
+      <Link href="/inscription" className="btn btn-primary btn-sm">
+        <span className="libelle-long">Inscrire mon entreprise</span>
+        <span className="libelle-court">Inscription</span>
+      </Link>
     </div>
   )
 }

@@ -183,15 +183,153 @@ a { color: inherit; text-decoration: none; }
    est le seul objet plein de la barre. */
 .header-lien { color: var(--text-2); font-size: 14px; font-weight: 550; white-space: nowrap; }
 .header-lien:hover { color: var(--text); }
+/* ⚠️ LE BOUTON DE LA BARRE NE SE CASSE JAMAIS SUR DEUX LIGNES.
+   `.site-header .inner` a une hauteur FIGÉE de 64 px : un libellé qui passe à
+   la ligne ne pousse pas la barre, il en SORT. Constat de Julien le 5 septembre
+   2026, capture d'iPhone à l'appui — « Inscrire mon entreprise » s'affichait sur
+   trois lignes, débordait du bandeau et dépassait le bord droit de l'écran. */
+.header-actions .btn { white-space: nowrap; }
+
 @media (max-width: 780px) {
   /* La navigation disparaît déjà sous 780 px ; les actions, elles, restent —
      c'est là que le visiteur d'un téléphone a le plus besoin d'une porte. */
   .header-actions { margin-left: auto; }
 }
+
+/* ⚠️ SOUS 620 PX, LE MOT-SYMBOLE CÈDE LA PLACE AUX ACTIONS.
+   Il reste le logo, qui identifie autant et ramène à l'accueil de la même
+   façon. Mesuré : à 390 px, la rangée complète — logo, « Quantinvo »,
+   « Se connecter », le bouton — demande environ 500 px. Quelque chose doit
+   céder, et c'est la répétition : le mot-symbole dit ce que la marque dit
+   déjà. Ce qu'on ne sacrifie PAS, ce sont les deux rangs d'action : un
+   visiteur qui découvre le site et un client qui revient ont chacun leur
+   porte, et c'est exactement ce que la barre a gagné le 5 septembre. */
+/* ⚠️ SOUS 780 PX, LE RANG SECONDAIRE ENTRE DANS LE MENU.
+   La barre garde deux rangs d'action sur un écran large — un lien discret puis
+   un bouton plein. Sur 390 px il n'y a pas la place pour les deux : c'est le
+   rang secondaire qui cède, JAMAIS le bouton principal, qui est la raison
+   d'être des pages publiques. « Se connecter » se retrouve dans le menu, avec
+   les quatre liens du site. Motif de Qonto, mesuré sur sa version mobile. */
+@media (max-width: 780px) {
+  .site-header .inner { gap: 12px; }
+  .header-actions .header-lien { display: none; }
+  .header-actions { gap: 10px; }
+  .header-actions .btn { padding: 8px 14px; font-size: 14px; }
+}
+/* ⚠️ LE MOT-SYMBOLE RESTE, C'EST LE LIBELLÉ QUI CÈDE — et c'est mesuré, pas
+   supposé. À 390 px, mot-symbole (143) + « Inscrire mon entreprise » (187) +
+   burger (44) + écarts demandent 408 px pour 395 disponibles. Avec la forme
+   courte, 326 : il reste de la marge. Pour une marque jeune, le mot vaut mieux
+   que deux mots de plus sur un bouton — et « Inscription » nomme la page où il
+   mène. Sous 360 px seulement, le logo suffit. */
+@media (max-width: 360px) {
+  .site-header .brand span { display: none; }
+}
+
+/* Mesuré à 360 px, la largeur d'Android la plus courante : la rangée demandait
+   encore 376 px. Les 24 px de marge du conteneur sont généreux à cette échelle
+   — on les resserre pour la seule barre, et le libellé du bouton passe à sa
+   forme courte (voir HeaderActions). */
+@media (max-width: 480px) {
+  .site-header .inner { padding-left: 16px; padding-right: 16px; }
+}
+/* ⚠️ Le libellé long et le court sont TOUS DEUX dans le balisage, et c'est
+   `display: none` qui tranche — donc un lecteur d'écran n'en annonce qu'un.
+   Ne pas remplacer par un pseudo-élément : le texte d'un `::after` n'est pas
+   fiable pour l'accessibilité. */
+.libelle-court { display: none; }
+@media (max-width: 480px) {
+  .libelle-long { display: none; }
+  .libelle-court { display: inline; }
+}
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
 .nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a { color: var(--text-2); font-size: 14px; font-weight: 500; }
 .nav-links a:hover { color: var(--text); }
+
+/* ── Le burger de la barre publique ──────────────────────────────────────── */
+.burger {
+  display: none; margin-left: 2px;
+  width: 44px; height: 44px;      /* cible tactile, jamais moins */
+  align-items: center; justify-content: center;
+  background: none; border: 0; cursor: pointer; color: var(--text);
+  border-radius: 10px;
+}
+.burger:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.burger-traits { display: block; width: 22px; }
+.burger-traits i {
+  display: block; height: 2px; border-radius: 2px; background: currentColor;
+  transition: transform .18s ease, opacity .18s ease;
+}
+.burger-traits i + i { margin-top: 5px; }
+.burger-traits.ouvert i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.burger-traits.ouvert i:nth-child(2) { opacity: 0; }
+.burger-traits.ouvert i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ⚠️ LE PANNEAU PREND TOUT L'ÉCRAN sous la barre — il ne pend pas dessous.
+   Un menu court laisse voir la page derrière et se lit comme une infobulle ;
+   plein, il devient un écran à part entière, et les liens peuvent grossir.
+   Forme de Qonto, mesurée sur sa version mobile le 5 septembre 2026. */
+/* ⚠️ ABSOLU, PAS FIXE — et ce n'est pas un choix, c'est une contrainte.
+   `.site-header` porte un `backdrop-filter` : il devient donc un BLOC
+   CONTENEUR pour ses descendants en `position: fixed`, qui se calent alors sur
+   la barre (64 px de haut) et non sur l'écran. Mesuré le 5 septembre 2026 : le
+   panneau sortait à 32 px de haut. Il se positionne donc en absolu sur la barre
+   elle-même — qui est pleine largeur, contrairement à `.inner`. */
+.menu-mobile {
+  position: absolute; top: 100%; left: 0; right: 0;
+  height: calc(100vh - 64px); height: calc(100dvh - 64px);
+  z-index: 19; background: var(--bg);
+  display: flex; flex-direction: column;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 8px 24px calc(24px + env(safe-area-inset-bottom));
+}
+.menu-mobile-liens { display: flex; flex-direction: column; }
+.menu-mobile-liens a {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 18px 0; font-size: 21px; font-weight: 700; letter-spacing: -0.4px;
+  color: var(--text); border-bottom: 1px solid var(--hairline);
+}
+/* Le chevron : deux bordures et une rotation, comme les autres du produit —
+   à cette taille un caractère « › » ne se lit plus. */
+/* Le dernier lien ne porte pas de filet : un trait sous le dernier élément
+   d'une liste ne sépare plus rien, il pend. */
+.menu-mobile-liens a:last-child { border-bottom: 0; }
+.menu-chevron {
+  flex: none; width: 9px; height: 9px; border-right: 2px solid var(--text-3);
+  border-top: 2px solid var(--text-3); transform: rotate(45deg);
+}
+
+/* ⚠️ ON PARCOURT EN HAUT, ON AGIT EN BAS. Les deux actions gardent leurs rangs :
+   le bouton plein sur toute la largeur, puis le lien souligné. Poussées en pied
+   par `margin-top: auto` — sur un grand téléphone elles tombent sous le pouce,
+   sur un petit elles suivent la liste sans jamais la chevaucher. */
+.menu-mobile-actions {
+  margin-top: auto; padding-top: 28px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.menu-mobile-actions .btn { font-size: 16px; padding: 14px 20px; }
+.menu-mobile a.menu-mobile-connexion {
+  color: var(--text); font-size: 15.5px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 5px;
+  border-bottom: 0; padding: 0;
+}
+
+@media (max-width: 780px) {
+  .site-header { position: sticky; }
+  .burger { display: flex; }
+  /* ⚠️ Le bouton de la barre s'efface tant que le menu est ouvert : il est déjà
+     dans le panneau, et le même geste offert deux fois à trente centimètres
+     d'écart fait douter qu'il s'agisse du même. */
+  .menu-ouvert .header-actions { display: none; }
+  /* ⚠️ ET LE BURGER REPREND LA MARGE QUI LE POUSSAIT À DROITE. C'est
+     `.header-actions` qui porte le `margin-left: auto` ; une fois le bouton
+     effacé, la croix venait se coller au mot-symbole. Constat de Julien le
+     5 septembre 2026 — le défaut ne se voit QUE menu ouvert. */
+  .menu-ouvert .burger { margin-left: auto; }
+  /* Et la page derrière ne défile plus sous le panneau. */
+  .menu-ouvert, .menu-ouvert body { overflow: hidden; }
+}
 
 /* ── Boutons ────────────────────────────────────────────── */
 .btn {
@@ -3366,6 +3504,24 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   letter-spacing: -0.8px; color: var(--accent); font-variant-numeric: tabular-nums;
 }
 .preuve span { color: var(--text-2); font-size: 13.5px; }
+
+/* ⚠️ REPLIÉE SUR DEUX COLONNES, LA BANDE A BESOIN DE FILETS HORIZONTAUX.
+   Les cellules ne portaient qu'un `border-right` : sur un téléphone, les deux
+   rangées se touchaient sans rien pour les séparer, et la dernière colonne
+   flottait. Vu à 390 px le 5 septembre 2026. */
+@media (max-width: 700px) {
+  .preuve { grid-template-columns: 1fr 1fr; }
+  .preuve > div { border-bottom: 1px solid var(--hairline); padding: 18px 20px; }
+  .preuve > div:nth-child(2n) { border-right: 0; }
+  .preuve > div:nth-last-child(-n+2) { border-bottom: 0; }
+}
+
+/* Deux boutons empilés de largeurs différentes se lisent comme deux objets sans
+   rapport. Sur un téléphone, ils prennent la même largeur — le motif attendu. */
+@media (max-width: 520px) {
+  .hero .cta, .final .cta { flex-direction: column; align-items: center; }
+  .hero .cta .btn, .final .cta .btn { width: 100%; max-width: 320px; text-align: center; }
+}
 
 /* ── Les trois gestes ────────────────────────────────────────────────────── */
 .etapes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }

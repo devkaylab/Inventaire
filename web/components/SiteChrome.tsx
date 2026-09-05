@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { HeaderActions } from '@/components/HeaderActions'
+import { MenuMobile } from '@/components/MenuMobile'
+import { LIENS_PUBLICS } from '@/lib/navigation'
 import { RevealObserver } from '@/components/RevealObserver'
 import { Parallaxe } from '@/components/Parallaxe'
 import { PRIVACY_URL } from '@/lib/links'
@@ -32,12 +34,16 @@ export function SiteHeader() {
             tout le monde connaît, et le répéter coûtait une place à un lien
             qui, lui, apprend quelque chose. */}
         <nav className="nav-links">
-          <Link href="/pourquoi-nous-choisir">Pourquoi nous choisir ?</Link>
-          <Link href="/inventaire">L&apos;inventaire</Link>
-          <Link href="/#fonctionnalites">Fonctionnalités</Link>
-          <Link href="/tarifs">Tarifs</Link>
+          {LIENS_PUBLICS.map((l) => (
+            <Link href={l.href} key={l.href}>{l.libelle}</Link>
+          ))}
         </nav>
         <HeaderActions />
+        {/* ⚠️ Sous 780 px, `.nav-links` passe en display:none : sans ce burger,
+            les quatre liens du site n'ont plus AUCUNE porte sur un téléphone.
+            C'est le motif de Qonto, mesuré sur sa version mobile le
+            5 septembre 2026 — mot-symbole, un bouton, le reste au menu. */}
+        <MenuMobile />
       </div>
     </header>
     </>

@@ -844,4 +844,117 @@ describe('la barre publique : parcourir à gauche, agir à droite', () => {
   it('« Accueil » ne double plus le logo', () => {
     expect(chrome).not.toContain('<Link href="/">Accueil</Link>')
   })
+
+  it('⚠️ son bouton ne peut pas passer à la ligne', () => {
+    // La rangée a une hauteur FIGÉE : un libellé qui se casse ne pousse pas la
+    // barre, il en SORT. Constat de Julien le 5 septembre 2026, capture
+    // d'iPhone à l'appui — « Inscrire mon entreprise » s'affichait sur trois
+    // lignes, débordait du bandeau et dépassait le bord droit de l'écran.
+    //
+    // Les deux moitiés vont ensemble : c'est la hauteur figée qui rend le
+    // `nowrap` obligatoire. Retirer l'une sans l'autre rouvre le défaut.
+    const rangee = css.slice(css.indexOf('.site-header .inner {'))
+    expect(rangee.slice(0, rangee.indexOf('}'))).toContain('height: 64px')
+    const bouton = css.indexOf('.header-actions .btn {')
+    expect(bouton, '.header-actions .btn n’a plus de règle propre').toBeGreaterThan(0)
+    expect(css.slice(bouton, css.indexOf('}', bouton))).toContain('white-space: nowrap')
+  })
+
+  it('⚠️ et son libellé a une forme courte pour les petits écrans', () => {
+    // Mesuré : à 360 px, la rangée complète demandait 376 px. Quelque chose
+    // doit céder — le mot-symbole d'abord (le logo dit la même chose), puis le
+    // libellé. « Inscription » reste EXPLICITE : c'est le nom de la page où le
+    // bouton mène, et la barre doit rester un repère de navigation.
+    //
+    // ⚠️ Les deux libellés sont dans le balisage et c'est `display: none` qui
+    // tranche : un lecteur d'écran n'en annonce donc qu'un. Un pseudo-élément
+    // ne donnerait pas cette garantie.
+    //
+    // ⚠️ ET ON LIT LE CODE SANS SES COMMENTAIRES. Le commentaire de
+    // HeaderActions CITE `.libelle-court` pour expliquer la règle : sans ce
+    // nettoyage, la garde passe alors même que le span a disparu du balisage.
+    // Sabotage joué le 5 septembre 2026 — elle ne mordait pas.
+    const balisage = actions.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(balisage).toContain('className="libelle-long"')
+    expect(balisage).toContain('className="libelle-court"')
+    expect(css).toContain('.libelle-court { display: none; }')
+    const petit = css.slice(css.indexOf('@media (max-width: 480px)', css.indexOf('.libelle-court')))
+    expect(petit.slice(0, 200)).toContain('.libelle-long { display: none; }')
+  })
+
+  it('⚠️ sur un téléphone, les liens du site ne disparaissent pas — ils passent au menu', () => {
+    // C'était un TROU, pas un détail de mise en page : sous 780 px,
+    // `.nav-links` passait en `display: none` et les quatre liens du site
+    // n'avaient plus aucune porte. Un visiteur de téléphone ne pouvait
+    // atteindre ni les tarifs ni les pages produit autrement qu'en devinant
+    // l'adresse. Relevé le 5 septembre 2026 en comparant à la version mobile
+    // de Qonto — mot-symbole, un bouton, et tout le reste au menu.
+    const menu = readFileSync(path.resolve(__dirname, '../components/MenuMobile.tsx'), 'utf8')
+    expect(chrome).toContain('<MenuMobile />')
+
+    // Les deux moitiés vont ensemble : la navigation ne se cache que si le
+    // burger apparaît au MÊME seuil. On remonte de la règle qui masque la
+    // navigation jusqu'à la media query qui la porte — la lire d'un seul coup
+    // échouerait, le bloc contient d'autres règles.
+    const masque = css.indexOf('.nav-links { display: none; }')
+    expect(masque, '.nav-links n’est plus masquée').toBeGreaterThan(0)
+    const avant = css.slice(0, masque)
+    const seuil = [...avant.matchAll(/@media \(max-width: (\d+)px\)/g)].pop()?.[1]
+    expect(seuil, 'aucune media query ne porte ce masquage').toBeTruthy()
+    const apparait = css.indexOf('.burger { display: flex; }')
+    expect(apparait, 'le burger n’apparaît nulle part').toBeGreaterThan(0)
+    const seuilBurger = [...css.slice(0, apparait).matchAll(/@media \(max-width: (\d+)px\)/g)].pop()?.[1]
+    expect(seuilBurger, `le burger apparaît à ${seuilBurger}px, la navigation se cache à ${seuil}px`)
+      .toBe(seuil)
+
+    // Et « Se connecter » reste joignable : il quitte la barre, il entre au menu.
+    expect(menu).toContain('/login')
+  })
+
+  it('les liens du site ont UNE seule définition', () => {
+    // Deux listes recopiées divergeraient au premier lien ajouté — et c'est le
+    // menu mobile, celui qu'on regarde le moins, qui garderait l'ancienne.
+    const menu = readFileSync(path.resolve(__dirname, '../components/MenuMobile.tsx'), 'utf8')
+    // ⚠️ La BARRE seulement : le pied de page a sa propre sélection, plus
+    // courte, et c'est délibéré — on n'y remet pas toute la navigation.
+    const barre = chrome.slice(chrome.indexOf('export function SiteHeader'), chrome.indexOf('export function SiteFooter'))
+    for (const [nom, src] of [['la barre', barre], ['le menu mobile', menu]] as const) {
+      expect(src, `${nom} n’utilise pas la liste partagée`).toContain('LIENS_PUBLICS')
+      // Le logo et les deux ACTIONS ne sont pas de la navigation : elles ont
+      // leurs rangs propres, et c'est précisément ce que la barre distingue.
+      const horsNavigation = ['/', '/login', '/inscription']
+      const enDur = [...src.matchAll(/<Link href="(\/[a-z#/-]*)"/g)]
+        .map((m) => m[1])
+        .filter((h) => !horsNavigation.includes(h))
+      expect(enDur, `${nom} écrit des liens de navigation en dur`).toEqual([])
+    }
+  })
+
+  it('⚠️ la croix ne bouge pas quand le menu s’ouvre', () => {
+    // Le bouton de la barre s'efface une fois le menu ouvert — il est déjà
+    // dans le panneau. Mais c'est `.header-actions` qui porte le
+    // `margin-left: auto` : sans reprise, le burger perdait la marge et la
+    // croix venait se coller au mot-symbole. Constat de Julien le 5 septembre
+    // 2026 — le défaut ne se voit QUE menu ouvert, jamais sur une capture de
+    // la page au repos.
+    const i = css.indexOf('.header-actions {')
+    expect(css.slice(i, css.indexOf('}', i)), 'ce sont bien les actions qui poussent à droite')
+      .toContain('margin-left: auto')
+    if (css.includes('.menu-ouvert .header-actions { display: none; }')) {
+      const j = css.indexOf('.menu-ouvert .burger')
+      expect(j, 'le burger ne reprend pas la marge des actions effacées').toBeGreaterThan(0)
+      expect(css.slice(j, css.indexOf('}', j))).toContain('margin-left: auto')
+    }
+  })
+
+  it('le burger atteint la cible tactile et dit son état', () => {
+    const menu = readFileSync(path.resolve(__dirname, '../components/MenuMobile.tsx'), 'utf8')
+    const i = css.indexOf('.burger {')
+    expect(css.slice(i, css.indexOf('}', i))).toContain('width: 44px; height: 44px')
+    expect(menu).toContain('aria-expanded={ouvert}')
+    expect(menu).toContain('aria-controls="menu-mobile"')
+    // Naviguer referme : sinon le panneau reste ouvert par-dessus la page
+    // d'arrivée et on croit que le lien n'a pas marché.
+    expect(menu).toContain('usePathname')
+  })
 })

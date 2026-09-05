@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, economie, parAppareil, offrePour, euros } from '../lib/offres'
+import { LIENS_PUBLICS } from '../lib/navigation'
 
 const lire = (p: string) => readFileSync(join(__dirname, p), 'utf8')
 
@@ -113,8 +114,16 @@ describe('la page tarifs', () => {
   })
 
   it('figure dans la navigation publique', () => {
+    // ⚠️ Cette garde comptait DEUX `href="/tarifs"` dans SiteChrome — l'en-tête
+    // et le pied. Depuis que la barre et le menu mobile lisent la même liste
+    // (5 septembre 2026), l'en-tête ne l'écrit plus en dur : compter les
+    // occurrences ne mesurait plus l'accessibilité de la page, seulement sa
+    // façon d'être écrite. On vérifie les deux chemins, chacun à sa source.
     const chrome = lire('../components/SiteChrome.tsx')
-    expect(chrome.match(/href="\/tarifs"/g) ?? [], 'en-tête et pied').toHaveLength(2)
+    const pied = chrome.slice(chrome.indexOf('export function SiteFooter'))
+    expect(pied, 'le pied de page ne mène plus aux tarifs').toContain('href="/tarifs"')
+    expect(LIENS_PUBLICS.map((l) => l.href), 'la barre ne mène plus aux tarifs')
+      .toContain('/tarifs')
   })
 })
 
