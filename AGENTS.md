@@ -9670,6 +9670,29 @@ en **absolu sur la barre elle-même** — qui est pleine largeur, contrairement 
 `.inner`. À connaître avant de poser quoi que ce soit de fixe dans un en-tête
 flouté.
 
+### ⚠️ UN STYLE D'AUTEUR BAT L'ATTRIBUT `hidden`
+
+*« Le site s'ouvre directement avec le menu ouvert sur le téléphone. »* Constat
+de Julien, une heure après la mise en ligne du burger.
+
+Ce n'était pas l'état React : `.menu-mobile` porte `display: flex`, et **une
+feuille d'AUTEUR passe avant celle du navigateur, quelle que soit la
+spécificité**. Le `display: none` que le navigateur pose sur un élément `hidden`
+était simplement écrasé — le panneau était donc affiché en permanence, plein
+écran, dès l'arrivée sur le site.
+
+⚠️ **Et j'ai introduit ce défaut le jour même**, en passant le panneau en plein
+écran : la version d'avant n'avait aucun `display`, donc `hidden` suffisait.
+**Après cette réécriture je n'ai regardé que l'état OUVERT** — j'ai vérifié
+Échap, le clic ailleurs, la navigation, jamais l'état au repos. *Un composant
+qui bascule se regarde dans ses deux états, et celui qu'on oublie est celui
+qu'on vient de quitter.*
+
+Le remède tient en une ligne (`.menu-mobile[hidden] { display: none; }`), la
+garde est plus large : elle balaie les composants, retient les éléments
+réellement pilotés par `hidden`, et exige le pendant pour ceux dont le CSS
+impose un `display`. Le prochain se signalera tout seul.
+
 ### Une seule liste de liens
 
 `lib/navigation.ts` porte `LIENS_PUBLICS`, lue par la barre **et** par le menu.

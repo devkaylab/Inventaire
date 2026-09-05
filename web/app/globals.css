@@ -276,6 +276,16 @@ a { color: inherit; text-decoration: none; }
    la barre (64 px de haut) et non sur l'écran. Mesuré le 5 septembre 2026 : le
    panneau sortait à 32 px de haut. Il se positionne donc en absolu sur la barre
    elle-même — qui est pleine largeur, contrairement à `.inner`. */
+/* ⚠️ UN STYLE D'AUTEUR BAT L'ATTRIBUT `hidden`, TOUJOURS.
+   `display: flex` ci-dessous écrase le `display: none` que le navigateur pose
+   sur un élément `hidden` — les feuilles d'auteur passent avant celle du
+   navigateur, quelle que soit la spécificité. Résultat : le site s'ouvrait
+   MENU DÉPLOYÉ sur un téléphone. Constat de Julien le 5 septembre 2026, et
+   défaut introduit le jour même en passant le panneau en plein écran : je
+   n'avais regardé que l'état ouvert après cette réécriture.
+   Toute règle qui pose un `display` sur un élément piloté par `hidden` doit
+   porter son pendant — un test le vérifie. */
+.menu-mobile[hidden] { display: none; }
 .menu-mobile {
   position: absolute; top: 100%; left: 0; right: 0;
   height: calc(100vh - 64px); height: calc(100dvh - 64px);

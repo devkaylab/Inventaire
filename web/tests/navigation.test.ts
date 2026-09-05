@@ -4,7 +4,7 @@
 // servait de carrefour : dix blocs empilés, les inventaires en double, le
 // tableau de bord derrière un bouton au milieu de la page, et aucun retour
 // au site public. Ces tests figent le remède.
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -815,6 +815,54 @@ describe('une section est une surface, pas une marge', () => {
     // Elle n'est plus une `admin-section` sur la fiche magasin.
     const fiche = readFileSync(path.resolve(__dirname, '../app/magasins/[storeId]/page.tsx'), 'utf8')
     expect(fiche).toContain('<section className="zone-sensible">')
+  })
+})
+
+describe('⚠️ un style d’auteur bat l’attribut « hidden »', () => {
+  // Le site s'ouvrait MENU DÉPLOYÉ sur un téléphone (constat de Julien,
+  // 5 septembre 2026). La cause n'était pas l'état React : `.menu-mobile`
+  // portait `display: flex`, et une feuille d'AUTEUR passe avant celle du
+  // navigateur — quelle que soit la spécificité. Le `display: none` que le
+  // navigateur pose sur un élément `hidden` était donc simplement écrasé.
+  //
+  // ⚠️ LA GARDE DÉDUIT LA LISTE : elle balaie les composants, retient les
+  // éléments réellement pilotés par `hidden`, et n'exige le pendant que pour
+  // ceux dont le CSS impose un `display`. Le prochain se signalera tout seul.
+  const css = readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8')
+
+  const fichiers: string[] = []
+  const balayer = (dossier: string) => {
+    for (const e of readdirSync(dossier, { withFileTypes: true })) {
+      const p = path.join(dossier, e.name)
+      if (e.isDirectory()) balayer(p)
+      else if (e.name.endsWith('.tsx')) fichiers.push(p)
+    }
+  }
+  balayer(path.resolve(__dirname, '../components'))
+  balayer(path.resolve(__dirname, '../app'))
+
+  it('tout élément masqué par « hidden » et stylé en display porte son pendant', () => {
+    const pilotes = new Set<string>()
+    for (const f of fichiers) {
+      const src = readFileSync(f, 'utf8')
+      for (const m of src.matchAll(/hidden=\{/g)) {
+        // On remonte à l'ouverture de la balise pour y lire la classe.
+        const balise = src.slice(src.lastIndexOf('<', m.index), m.index)
+        const classe = /className="([\w -]+)"/.exec(balise)?.[1]
+        if (classe) classe.split(' ').filter(Boolean).forEach((c) => pilotes.add(c))
+      }
+    }
+    expect(pilotes.size, 'plus aucun élément piloté par hidden : la garde ne garde rien')
+      .toBeGreaterThan(0)
+
+    for (const classe of pilotes) {
+      const i = css.indexOf(`.${classe} {`)
+      if (i < 0) continue
+      const regle = css.slice(i, css.indexOf('}', i))
+      if (!/(^|[;\s])display:/.test(regle)) continue
+      expect(css, `.${classe} impose un display : sans .${classe}[hidden], l’attribut ne masque rien`)
+        .toContain(`.${classe}[hidden] { display: none; }`)
+    }
   })
 })
 
