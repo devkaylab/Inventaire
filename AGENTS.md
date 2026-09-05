@@ -10108,3 +10108,44 @@ Toutes trois du même genre, et le genre est instructif :
   2 magasins.
 
 Tests de garde : `web/tests/inscription.test.ts`.
+
+## Le menu mobile arrive, il n'apparaît pas (5 septembre 2026)
+
+*« Je veux cette animation d'arrivage quand on ouvre le menu burger en version
+mobile »* — enregistrement d'écran de la version mobile de Qonto à l'appui.
+
+**⚠️ MESURÉ, PAS DEVINÉ.** Le film a été découpé à 1/30 s (AVFoundation, faute
+de ffmpeg sur la machine — un petit binaire Swift dans le bac à sable, plus une
+planche-contact pour ne lire qu'une image au lieu de cinquante). La largeur
+couverte par le panneau, image par image : **33 % · 60 % · 85 % · 95 % · 99 %**.
+Six images, soit **200 ms**, et une forte décélération.
+
+- **Le panneau glisse depuis la DROITE**, d'un bloc — le contenu ne se décale
+  pas séparément.
+- **La courbe est la plus proche des standards, pas une courbe ajustée sur
+  cinq points.** `cubic-bezier(0.33, 1, 0.68, 1)` suit la mesure à 4,6 points
+  en moyenne, aussi bien que la courbe d'iOS et mieux que Material ou le
+  mot-clé `ease-out`. L'écart restant (dix points sur la première image) tient
+  dans l'erreur de mesure : une image vaut 33 ms, et 33 ms de décalage
+  déplacent la courbe d'une quinzaine de points à cet endroit. **Prétendre
+  mieux serait de la fausse précision.**
+- **⚠️ C'est une `animation`, pas une `transition`.** Le panneau se ferme par
+  `[hidden]`, donc par `display: none` : une transition n'aurait rien à animer
+  au retour, et la faire vivre demanderait de toucher au mécanisme du `hidden`
+  — celui-là même qui avait fait ouvrir le site AVEC le menu déployé le matin
+  du 5 septembre. Une animation se rejoue à chaque affichage sans qu'on y
+  touche.
+- **La fermeture reste instantanée.** Chez Qonto elle est en **fondu** (mesuré
+  aussi, à 2,7 s du film) ; c'est un second geste, à faire seulement si Julien
+  le redemande.
+- `prefers-reduced-motion` la supprime.
+
+⚠️ **Piège du volet navigateur, une variante de plus** : `getAnimations()` rend
+une liste **vide** juste après l'ouverture — l'onglet est masqué, aucune frame
+n'est produite, donc l'animation ne démarre jamais. Ce qui se vérifie quand
+même : `getComputedStyle` rend bien `animation-duration` et
+`animation-timing-function`, et un premier appel — passé pendant que
+l'animation tournait encore — a montré les deux images clés
+(`translateX(100%)` → `none`). La courbe, elle, se vérifie par le calcul.
+
+Tests de garde : `web/tests/navigation.test.ts`, bloc « le menu mobile arrive ».

@@ -294,6 +294,38 @@ a { color: inherit; text-decoration: none; }
   overflow-y: auto; overscroll-behavior: contain;
   padding: 8px 24px calc(24px + env(safe-area-inset-bottom));
 }
+
+/* ─── Le menu ARRIVE, il n'apparaît pas ──────────────────────────────────────
+   Demande de Julien, 5 septembre 2026, enregistrement de la version mobile de
+   Qonto à l'appui : « je veux cette animation d'arrivage ».
+
+   ⚠️ MESURÉ, PAS DEVINÉ. Les images du film extraites à 1/30 s donnent, pour
+   la largeur couverte : 33 % · 60 % · 85 % · 95 % · 99 % — six images, soit
+   200 ms, et une forte décélération.
+
+   ⚠️ ET LA COURBE EST LA PLUS PROCHE DES STANDARDS, pas une courbe ajustée
+   sur cinq points. `cubic-bezier(0.33, 1, 0.68, 1)` (ease-out cubique) suit
+   la mesure à 4,6 points en moyenne — aussi bien que la courbe d'iOS, mieux
+   que celles de Material et du mot-clé `ease-out`. L'écart restant (dix
+   points sur la première image) tient dans l'erreur de mesure : une image de
+   film vaut 33 ms, et 33 ms de décalage déplacent la courbe d'une quinzaine
+   de points à cet endroit. Prétendre mieux serait de la fausse précision.
+
+   ⚠️ ET C'EST UNE `animation`, PAS UNE `transition`. Le panneau se ferme par
+   `[hidden]`, donc par `display: none` : une transition n'aurait rien à
+   animer au retour, et la faire vivre demanderait de toucher au mécanisme du
+   `hidden` — celui-là même qui a fait ouvrir le site AVEC le menu déployé ce
+   matin. Une animation se rejoue à chaque affichage sans qu'on y touche.
+
+   La fermeture reste donc instantanée. Chez Qonto elle est en fondu ; c'est
+   un second geste, à faire seulement si Julien le redemande. */
+@media (prefers-reduced-motion: no-preference) {
+  .menu-mobile { animation: menu-arrive 220ms cubic-bezier(0.33, 1, 0.68, 1); }
+}
+@keyframes menu-arrive {
+  from { transform: translateX(100%); }
+}
+
 .menu-mobile-liens { display: flex; flex-direction: column; }
 .menu-mobile-liens a {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;

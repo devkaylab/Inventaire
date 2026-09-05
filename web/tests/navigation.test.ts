@@ -1006,3 +1006,33 @@ describe('la barre publique : parcourir à gauche, agir à droite', () => {
     expect(menu).toContain('usePathname')
   })
 })
+
+describe('le menu mobile arrive, il n’apparaît pas', () => {
+  // Demande de Julien, 5 septembre 2026, enregistrement de la version mobile de
+  // Qonto à l'appui : « je veux cette animation d'arrivage ».
+  const css = readFileSync(path.join(__dirname, '../app/globals.css'), 'utf8')
+
+  it('glisse depuis la droite', () => {
+    expect(css).toContain('@keyframes menu-arrive')
+    expect(css).toContain('from { transform: translateX(100%); }')
+    expect(css).toContain('animation: menu-arrive')
+  })
+
+  it('⚠️ par une ANIMATION, jamais une transition', () => {
+    // Le panneau se ferme par `[hidden]`, donc par `display: none` : une
+    // transition n'aurait rien à animer au retour, et la faire vivre
+    // demanderait de toucher au mécanisme du `hidden` — celui-là même qui a
+    // fait ouvrir le site AVEC le menu déployé le matin du 5 septembre.
+    const bloc = css.slice(css.indexOf('@keyframes menu-arrive') - 700,
+                           css.indexOf('@keyframes menu-arrive'))
+    expect(bloc).not.toMatch(/\.menu-mobile\s*\{[^}]*transition/)
+    expect(css).toContain('.menu-mobile[hidden] { display: none; }')
+  })
+
+  it('et se tait quand le système demande moins de mouvement', () => {
+    const i = css.indexOf('animation: menu-arrive')
+    const avant = css.slice(0, i)
+    expect(avant.lastIndexOf('@media (prefers-reduced-motion: no-preference)'))
+      .toBeGreaterThan(avant.lastIndexOf('@keyframes'))
+  })
+})
