@@ -58,13 +58,27 @@ export default function AdminConsolePage() {
         <h1 className="page-title">Console</h1>
       </div>
 
-      <section className="admin-section" style={{ marginTop: 0 }}>
-        <h2>Demandes d&apos;inscription — entreprises</h2>
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <div>
+            <h2>Demandes d&apos;inscription</h2>
+            <p className="section-note">
+              Les entreprises qui attendent un devis, un encaissement ou leur création.
+            </p>
+          </div>
+        </div>
         <CompanyRequests onCompanyCreated={charger} />
       </section>
 
       <section className="admin-section">
-        <h2>Demandes de suppression de compte</h2>
+        <div className="admin-section-head">
+          <div>
+            <h2>Suppressions de compte</h2>
+            <p className="section-note">
+              Déposées par les personnes elles-mêmes. La suppression est immédiate et définitive.
+            </p>
+          </div>
+        </div>
         {requests.length === 0 ? (
           <p className="muted">Aucune demande en attente.</p>
         ) : (
@@ -85,7 +99,14 @@ export default function AdminConsolePage() {
       </section>
 
       <section className="admin-section">
-        <h2>Journal des actions</h2>
+        <div className="admin-section-head">
+          <div>
+            <h2>Journal des actions</h2>
+            <p className="section-note">
+              Tout ce que Quantinvo a fait sur les entreprises et les comptes. Conservé un an.
+            </p>
+          </div>
+        </div>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 14 }}>
           Chaque action d&apos;administration est enregistrée automatiquement et conservée un an.
         </p>

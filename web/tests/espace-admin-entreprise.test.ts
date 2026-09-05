@@ -280,10 +280,20 @@ describe('la fiche d’un magasin', () => {
     expect(corps).toContain('Ouvrir le magasin')
   })
 
-  it('porte le code, les membres et les inventaires', () => {
+  it('porte le code, l’équipe et les inventaires', () => {
+    // ⚠️ AMENDÉE LE 5 SEPTEMBRE 2026 — ce qu'elle défend n'a pas changé : la
+    // fiche montre bien les trois choses. Elle citait « Membres ( » et
+    // « Inventaires ( », c'est-à-dire des libellés AVEC leur compte entre
+    // parenthèses ; la refonte a déplacé le compte sur les sous-sections
+    // (« Superviseurs · 3 »), où il sert à quelque chose, et « Membres » est
+    // devenu « Équipe » — le mot de la page qui les gère. Une garde qui tient
+    // à une tournure casse au premier ajustement de texte sans rien avoir
+    // protégé ; celle-ci vise les SECTIONS et leur source.
     expect(fiche).toContain('Code d&apos;accès')
-    expect(fiche).toContain('Membres (')
-    expect(fiche).toContain('Inventaires (')
+    expect(fiche).toContain('<h2>Équipe</h2>')
+    expect(fiche).toContain('<h2>Inventaires</h2>')
+    expect(fiche).toContain('fiche.supervisors.map')
+    expect(fiche).toContain('fiche.counters.map')
     expect(fiche).toContain("rpc('ca_store_detail'")
   })
 

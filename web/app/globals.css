@@ -167,9 +167,26 @@ a { color: inherit; text-decoration: none; }
   background: var(--header-bg);
   border-bottom: 1px solid var(--hairline);
 }
+/* ⚠️ PARCOURIR À GAUCHE, AGIR À DROITE (5 septembre 2026). La barre répartissait
+   six liens d'un bord à l'autre en `space-between`, le bouton de connexion au
+   même rang que « Accueil ». Le motif universel — celui de Qonto, mesuré le
+   même jour — colle la navigation au logo et pousse les actions à droite, où
+   deux rangs se distinguent : un lien discret, puis un bouton plein.
+   `margin-left: auto` sur les actions fait la séparation ; sans lui, le
+   `space-between` étalerait de nouveau les liens. */
 .site-header .inner {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 32px;
   height: 64px;
+}
+.header-actions { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+/* Le lien de rang secondaire : il se lit, il n'appelle pas. Le bouton d'à côté
+   est le seul objet plein de la barre. */
+.header-lien { color: var(--text-2); font-size: 14px; font-weight: 550; white-space: nowrap; }
+.header-lien:hover { color: var(--text); }
+@media (max-width: 780px) {
+  /* La navigation disparaît déjà sous 780 px ; les actions, elles, restent —
+     c'est là que le visiteur d'un téléphone a le plus besoin d'une porte. */
+  .header-actions { margin-left: auto; }
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
 .nav-links { display: flex; align-items: center; gap: 28px; }
@@ -588,10 +605,122 @@ a { color: inherit; text-decoration: none; }
 /* ── Console d'administration ───────────────────────────── */
 .admin { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
 .admin .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-.admin-section { margin-top: 44px; }
-.admin-section > h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 16px; }
-.admin-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
-.admin-section-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+/* ── UNE SECTION EST UNE SURFACE, PAS UNE MARGE (5 septembre 2026) ─────────
+   Constat de Julien : « les sections se ressemblent toutes, je ne sais pas où
+   regarder, on dirait une page brouillon ». Il avait raison, et la cause tenait
+   en une ligne : `.admin-section` n'était QUE `margin-top: 44px`. Cinq blocs
+   flottaient sur le même fond, sans cadre ni respiration, avec des titres à
+   20 px au-dessus d'un texte à 15 — un rapport de 1,3, donc rien à quoi l'œil
+   puisse s'accrocher.
+
+   Mesuré chez Qonto le même jour, à sa demande : chaque section y est une BANDE
+   qui change de fond, avec 80 px de padding haut et bas, et un titre à 56 px
+   sur un texte à 16 — rapport 3,5. Ce qui découpe une page, c'est la surface et
+   l'écart d'échelle, jamais le vide entre deux titres.
+
+   ⚠️ LE THÈME NE BOUGE PAS. Mêmes jetons, mêmes boutons, mêmes composants :
+   c'est la mise en page et la hiérarchie qui changent. */
+.admin-section {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+/* ⚠️ La première section ne colle pas à l'en-tête de page : elle en est
+   séparée par le même écart que la bande de résumé lui laisse. */
+.admin-section:first-of-type { margin-top: 0; }
+.admin-section > h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 16px; }
+.admin-section-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.admin-section-head h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+/* La phrase sous le titre — elle dit ce qu'on trouve là et ce qu'on peut y
+   faire. Un titre nu oblige à lire le contenu pour savoir si c'est le bon
+   endroit ; c'est le second manque que la comparaison a rendu évident. */
+.section-note { color: var(--text-2); font-size: 13.5px; margin: 3px 0 0; max-width: 62ch; }
+.admin-section-head > div:first-child { min-width: 0; }
+
+/* ── La bande de résumé ────────────────────────────────────────────────────
+   Ce qu'on vient vérifier, avant d'avoir à le chercher. Une seule rangée, en
+   haut de page, et l'ambre y désigne la SEULE chose qui appelle une décision —
+   même règle que la tuile des refus : la couleur dit ce qu'il faut faire,
+   jamais ce qui s'est passé. */
+.resume-bande {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 12px; overflow: hidden; margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+}
+.resume-bande > div { padding: 14px 18px; border-right: 1px solid var(--hairline); }
+.resume-bande > div:last-child { border-right: 0; }
+.resume-bande b {
+  display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3); font-weight: 650; margin-bottom: 3px;
+}
+.resume-bande strong { font-size: 23px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums; }
+.resume-bande span { display: block; color: var(--text-2); font-size: 12.5px; margin-top: 1px; }
+.resume-bande .attention strong { color: var(--warning); }
+/* Sous 700 px la rangée devient une grille à deux colonnes : les filets
+   verticaux n'ont plus de sens dès qu'il y a deux rangs. */
+@media (max-width: 700px) {
+  .resume-bande > div { border-right: 0; border-bottom: 1px solid var(--hairline); }
+  .resume-bande > div:last-child { border-bottom: 0; }
+}
+
+/* ── Ce qui détruit sort des cartes ────────────────────────────────────────
+   « Fermer ce magasin » n'est pas une section comme les autres : elle descend
+   en bas, sans surface, derrière un filet. Même raisonnement que « Supprimer
+   mon compte » éloigné de « Se déconnecter » le 28 août 2026 — c'est la
+   DISTANCE qui protège, la confirmation ne vient qu'après. */
+.zone-sensible {
+  border-top: 1px solid var(--hairline); margin-top: 34px; padding-top: 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+/* ── LA PAGE SE MET EN DEUX COLONNES (5 septembre 2026) ────────────────────
+   ⚠️ TROUVÉ EN REGARDANT LA VRAIE PAGE, PAS LA MAQUETTE. Sur l'écran de
+   Julien (1568 px), `.app-main` n'ayant plus de largeur maximale depuis le
+   30 août, une rangée d'inventaire s'étalait sur 1 440 px : le nom à gauche, le
+   bouton « Ouvrir » à l'autre bout, et 1,4 mètre virtuel de vide entre les
+   deux. Deux tuiles de 700 px pour afficher « 0 » et « 2 ». C'est la première
+   cause du « on dirait un brouillon » — avant même que les sections se
+   ressemblent, RIEN N'AVAIT DE MESURE.
+
+   ⚠️ ON NE REMET PAS DE `max-width` SUR `.app-main` : deux constats de Julien
+   l'ont fait retirer le 30 août (la colonne à 1120, puis le plafond à 1400), et
+   c'est une décision, pas un oubli. La largeur se remplit au lieu de s'étirer —
+   ce que fait tout back-office : une colonne de travail, une colonne de
+   références.
+
+   Le seuil est 1180 px : en dessous, la colonne latérale passerait sous
+   320 px et ses cartes deviendraient illisibles. */
+.fiche-colonnes { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 1180px) {
+  .fiche-colonnes { grid-template-columns: minmax(0, 1fr) 340px; }
+  /* Les sections de la colonne latérale ne portent pas de marge du bas :
+     l'écart vient du `gap` de la grille. */
+  .fiche-cote { position: sticky; top: 24px; }
+}
+.fiche-cote > .admin-section:last-child { margin-bottom: 0; }
+/* Dans une colonne de 340 px, le titre et le bouton de la zone sensible ne
+   tiennent pas côte à côte : elle s'empile, et son écart vient du gap. */
+.fiche-cote .zone-sensible { flex-direction: column; align-items: stretch; margin-top: 22px; }
+.fiche-cote .zone-sensible .btn { width: 100%; }
+/* ⚠️ UNE TUILE NE S'ÉTIRE PAS À LA LARGEUR DISPONIBLE. `dash-stats-5` répartit
+   ses colonnes en `1fr` : à deux tuiles sur une carte large, chacune faisait
+   570 px pour afficher un chiffre. C'est le même défaut de mesure que les
+   rangées d'inventaire — elles se bornent et se collent à gauche. */
+.fiche-colonnes .dash-stats { grid-template-columns: repeat(auto-fit, minmax(180px, 260px)); justify-content: start; }
+
+.zone-sensible h3 { font-size: 14.5px; font-weight: 650; margin: 0; color: var(--danger-text); }
+/* Une demande déjà envoyée prend toute la largeur : c'est un état, pas une
+   rangée de deux éléments. Sans cette ligne, le bandeau se retrouvait comprimé
+   à côté du vide laissé par le bouton disparu. */
+.zone-sensible > .signal { flex: 1 1 100%; }
+.zone-sensible p { color: var(--text-2); font-size: 13px; margin: 3px 0 0; max-width: 62ch; }
 
 .inline-form { display: flex; gap: 10px; }
 .inline-form input {
@@ -2043,7 +2172,11 @@ a { color: inherit; text-decoration: none; }
   margin: 0 0 0 var(--rail-l);
   padding: 32px 32px 96px;
 }
-.app-main .page-title { font-size: 30px; font-weight: 800; letter-spacing: -0.6px; }
+/* ⚠️ 34, ET C'EST L'ÉCART QUI COMPTE, PAS LA TAILLE. À 30 px au-dessus de
+   titres de section à 20, les trois niveaux d'une page tenaient dans une plage
+   de 15 points : on devait les LIRE pour savoir où on était. 34 / 19 / 11,5 se
+   distinguent sans être lus. */
+.app-main .page-title { font-size: 34px; font-weight: 800; letter-spacing: -0.9px; line-height: 1.12; }
 /* Ce qui situe la page sous son titre — le magasin et le numéro d'un
    inventaire. Une classe plutôt qu'un style en ligne : le jour où un autre
    écran en a besoin, il n'a rien à recopier. */

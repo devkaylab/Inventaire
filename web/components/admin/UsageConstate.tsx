@@ -50,7 +50,14 @@ export function UsageConstate({ companyId }: { companyId: string }) {
   if (err) {
     return (
       <section className="admin-section">
-        <h2>Usage constaté</h2>
+        <div className="admin-section-head">
+        <div>
+          <h2>Usage constaté</h2>
+          <p className="section-note">
+            Ce que l&apos;entreprise a réellement compté, magasin par magasin.
+          </p>
+        </div>
+      </div>
         {/* Un échec de chargement n'est pas une absence d'usage : le dire, plutôt
             que d'afficher un parc vide à quelqu'un qui en a un. */}
         <p className="muted">Lecture impossible pour l&apos;instant — {err}</p>
@@ -60,7 +67,14 @@ export function UsageConstate({ companyId }: { companyId: string }) {
   if (!data) {
     return (
       <section className="admin-section">
-        <h2>Usage constaté</h2>
+        <div className="admin-section-head">
+        <div>
+          <h2>Usage constaté</h2>
+          <p className="section-note">
+            Ce que l&apos;entreprise a réellement compté, magasin par magasin.
+          </p>
+        </div>
+      </div>
         <p className="muted">Lecture en cours…</p>
       </section>
     )
@@ -72,7 +86,14 @@ export function UsageConstate({ companyId }: { companyId: string }) {
 
   return (
     <section className="admin-section">
-      <h2>Usage constaté</h2>
+      <div className="admin-section-head">
+        <div>
+          <h2>Usage constaté</h2>
+          <p className="section-note">
+            Ce que l&apos;entreprise a réellement compté, magasin par magasin.
+          </p>
+        </div>
+      </div>
       <p className="muted small" style={{ marginTop: -4 }}>
         Douze derniers mois · lecture interne, invisible du client
       </p>

@@ -228,10 +228,13 @@ export default function FicheMagasinPage() {
               return null
             }}
           />
+          {/* ⚠️ LE SOUS-TITRE DIT L'IDENTITÉ, PLUS LES CHIFFRES. Il portait
+              « 3 inventaires · 1 compteur · créé le … » — les mêmes nombres que
+              la bande de résumé juste dessous, en plus petit et sans étiquette.
+              Ici on situe le magasin ; les chiffres, eux, ont leur rangée. */}
           <p className="page-sub">
-            {fiche.sessions.length} inventaire{fiche.sessions.length > 1 ? 's' : ''}
-            {' · '}{fiche.counters.length} compteur{fiche.counters.length > 1 ? 's' : ''}
-            {' · créé le '}{new Date(fiche.store.created_at).toLocaleDateString('fr-FR')}
+            {company?.name ? `${company.name} · ` : ''}
+            créé le {new Date(fiche.store.created_at).toLocaleDateString('fr-FR')}
           </p>
         </div>
         {/* Le rapport consolidé du magasin : tous ses inventaires clôturés
@@ -244,19 +247,52 @@ export default function FicheMagasinPage() {
         </div>
       </div>
 
-      <section className="admin-section">
-        <h2>Code d&apos;accès</h2>
-        <div className="banner banner-info">
-          Ce code ouvre l&apos;accès aux inventaires du magasin&nbsp;: transmettez-le à une personne,
-          jamais à un groupe.
+      {/* ⚠️ CE QU'ON VIENT VÉRIFIER, AVANT D'AVOIR À LE CHERCHER. Une page qui
+          ne répond qu'après quatre sections oblige à parcourir pour savoir si
+          tout va bien. Aucun appel de plus : ces quatre chiffres sont déjà
+          chargés. Et l'ambre n'y désigne QUE ce qui appelle une décision. */}
+      <div className="resume-bande">
+        <div>
+          <b>Inventaires</b>
+          <strong>{nb(ouverts.length)}</strong>
+          <span>en cours, sur {nb(fiche.sessions.length)}</span>
         </div>
-        <div className="acc-inv-row">
-          <div className="cred-value">{fiche.store.join_code}</div>
-          <button type="button" className="link-btn" onClick={() => copier(fiche.store.join_code)}>
-            {copie ? 'Copié' : 'Copier le code'}
-          </button>
+        <div>
+          <b>Équipe</b>
+          <strong>{nb(fiche.supervisors.length + fiche.counters.length)}</strong>
+          <span>
+            {nb(fiche.supervisors.length)} superviseur{fiche.supervisors.length > 1 ? 's' : ''}
+          </span>
         </div>
-      </section>
+        {appareils && (
+          <div>
+            <b>Offre</b>
+            <strong>{appareils.plafond == null ? '—' : nb(appareils.plafond)}</strong>
+            <span>
+              {verdict.offreActuelle ? `appareils · ${verdict.offreActuelle}` : 'aucune offre définie'}
+            </span>
+          </div>
+        )}
+        {appareils && (
+          <div className={verdict.etat === 'depasse' ? 'attention' : undefined}>
+            <b>Refusés · {appareils.jours} j</b>
+            <strong>{nb(appareils.refus)}</strong>
+            <span>
+              {appareils.refus_le
+                ? `dernier ${relativeTime(appareils.refus_le)}`
+                : 'aucun appareil refusé'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ⚠️ DEUX COLONNES AU-DELÀ DE 1180 px. Le travail à gauche — ce qu'on
+          vient consulter et décider —, les références à droite : le code
+          d'accès, qu'on lit une fois, et la fermeture, qu'on ne veut pas sur le
+          chemin. Sans cela une rangée d'inventaire s'étale sur 1 440 px et son
+          bouton se retrouve à l'autre bout de l'écran. */}
+      <div className="fiche-colonnes">
+      <div>
 
       {appareils && (
         // ⚠️ L'ANCRE EST CE QUE VISE L'E-MAIL. « Le changement se fait en ligne,
@@ -264,7 +300,12 @@ export default function FicheMagasinPage() {
         // en haut d'une page où il faut ensuite chercher.
         <section className="admin-section" id="appareils">
           <div className="admin-section-head">
-            <h2>Appareils</h2>
+            <div>
+              <h2>Appareils</h2>
+              <p className="section-note">
+                Ce que votre offre couvre, et ce que le magasin a réellement demandé.
+              </p>
+            </div>
             <Link href="/tarifs" className="btn btn-ghost btn-sm">Voir les offres</Link>
           </div>
 
@@ -415,11 +456,18 @@ export default function FicheMagasinPage() {
 
       <section className="admin-section">
         <div className="admin-section-head">
-          <h2>Membres ({fiche.supervisors.length + fiche.counters.length})</h2>
+          <div>
+            <h2>Équipe</h2>
+            <p className="section-note">
+              Qui peut compter dans ce magasin. Les accès se gèrent depuis Mon équipe.
+            </p>
+          </div>
           <Link href="/equipe" className="btn btn-ghost btn-sm">Gérer l&apos;équipe</Link>
         </div>
 
-        <div className="dash-sub">Superviseurs</div>
+        {/* Le compte vit sur la sous-section, plus dans le titre : c'est là
+            qu'il sert à quelque chose. */}
+        <div className="dash-sub">Superviseurs · {nb(fiche.supervisors.length)}</div>
         {fiche.supervisors.length === 0 ? (
           <p className="muted small">Aucun superviseur sur ce magasin.</p>
         ) : (
@@ -439,7 +487,7 @@ export default function FicheMagasinPage() {
           </div>
         )}
 
-        <div className="dash-sub">Compteurs</div>
+        <div className="dash-sub">Compteurs · {nb(fiche.counters.length)}</div>
         {fiche.counters.length === 0 ? (
           <p className="muted small">Aucun compteur sur ce magasin.</p>
         ) : (
@@ -465,7 +513,17 @@ export default function FicheMagasinPage() {
       </section>
 
       <section className="admin-section">
-        <h2>Inventaires ({fiche.sessions.length})</h2>
+        <div className="admin-section-head">
+          <div>
+            <h2>Inventaires</h2>
+            <p className="section-note">
+              Ceux qui tournent, et ceux qui sont clôturés. Le rapport du magasin les additionne.
+            </p>
+          </div>
+          <Link href={`/magasins/${storeId}/rapport`} className="btn btn-ghost btn-sm">
+            Rapport du magasin
+          </Link>
+        </div>
         {fiche.sessions.length === 0 ? (
           <p className="muted">Aucun inventaire n&apos;a encore été lancé sur ce magasin.</p>
         ) : (
@@ -490,8 +548,39 @@ export default function FicheMagasinPage() {
         )}
       </section>
 
+      </div>
+
+      <aside className="fiche-cote">
+
+      {/* ⚠️ LE CODE D'ACCÈS DESCEND. Il ouvrait la page — or on le lit UNE FOIS
+          par magasin, à la constitution de l'équipe, jamais à chaque visite.
+          Ce qu'on vient voir, c'est l'activité et l'équipe ; le code est une
+          référence, il se range avec les références. */}
       <section className="admin-section">
-        <h2>Fermer ce magasin</h2>
+        <div className="admin-section-head">
+          <div>
+            <h2>Code d&apos;accès</h2>
+            <p className="section-note">
+              Il ouvre l&apos;entrée dans le magasin&nbsp;: transmettez-le à une personne, jamais
+              à un groupe.
+            </p>
+          </div>
+        </div>
+        <div className="acc-inv-row">
+          <div className="cred-value">{fiche.store.join_code}</div>
+          <button type="button" className="link-btn" onClick={() => copier(fiche.store.join_code)}>
+            {copie ? 'Copié' : 'Copier le code'}
+          </button>
+        </div>
+      </section>
+
+      {/* ⚠️ CE QUI DÉTRUIT SORT DES CARTES. Cinq sections identiques dont la
+          dernière efface le magasin et ses comptages : rien ne distinguait le
+          geste grave des quatre autres. Il descend, perd sa surface, et se
+          tient derrière un filet — c'est la DISTANCE qui protège, la
+          confirmation ne vient qu'après. Même raisonnement que « Supprimer mon
+          compte » éloigné de « Se déconnecter » le 28 août 2026. */}
+      <section className="zone-sensible">
         {suppression ? (
           <div className="signal signal-alerte">
             <div className="signal-txt">
@@ -507,11 +596,13 @@ export default function FicheMagasinPage() {
           </div>
         ) : (
           <>
-            <p className="muted">
-              Vous ne pouvez pas supprimer un magasin vous-même&nbsp;: Quantinvo s&apos;en charge,
-              comme pour la création. La suppression effacera ses inventaires et tous leurs
-              comptages.
-            </p>
+            <div>
+              <h3>Fermer ce magasin</h3>
+              <p>
+                Ses inventaires et tous leurs comptages seront effacés. Vous ne le supprimez pas
+                vous-même&nbsp;: Quantinvo s&apos;en charge, comme pour la création.
+              </p>
+            </div>
             <button
               type="button"
               className="btn btn-danger"
@@ -522,6 +613,9 @@ export default function FicheMagasinPage() {
           </>
         )}
       </section>
+
+      </aside>
+      </div>
     </AppShell>
   )
 }

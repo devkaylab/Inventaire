@@ -744,3 +744,95 @@ describe('les montants du tableau de bord s’abrègent', () => {
     expect(page).not.toContain('moneyCourt(tb.pieces')
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UNE SECTION EST UNE SURFACE, PAS UNE MARGE (5 septembre 2026)
+// ---------------------------------------------------------------------------
+// Constat de Julien : « les sections se ressemblent toutes, je ne sais pas où
+// regarder, on dirait une page brouillon ». La cause tenait en une ligne —
+// `.admin-section` n'était que `margin-top: 44px`. Mesuré chez Qonto le même
+// jour : chaque section y est une bande qui change de fond, avec 80 px de
+// respiration, et un titre à 56 px sur un texte à 16 (rapport 3,5) quand le
+// nôtre faisait 20 sur 15 (rapport 1,3).
+// ═══════════════════════════════════════════════════════════════════════════
+describe('une section est une surface, pas une marge', () => {
+  const css = readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8')
+  const bloc = (sel: string) => {
+    const i = css.indexOf(sel + ' {')
+    expect(i, `règle absente : ${sel}`).toBeGreaterThan(0)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('elle porte un fond, un cadre et sa respiration', () => {
+    const s = bloc('.admin-section')
+    expect(s).toContain('background: var(--surface)')
+    expect(s).toContain('border: 1px solid var(--hairline)')
+    expect(s).toMatch(/padding: \d+px \d+px/)
+    // ⚠️ Et surtout : plus de `margin-top` nu. C'était TOUT ce que la règle
+    // faisait, et c'est ce qui rendait cinq blocs indistinguables.
+    expect(s).not.toMatch(/margin-top: 44px/)
+  })
+
+  it('chaque titre de section peut porter sa phrase', () => {
+    expect(css).toContain('.section-note')
+    // Elle est bornée : une explication qui court sur 1 400 px ne se lit pas.
+    expect(bloc('.section-note')).toContain('max-width: 62ch')
+  })
+
+  it('l’échelle s’écarte assez pour se lire sans être lue', () => {
+    const titre = bloc('.app-main .page-title')
+    const m = titre.match(/font-size: (\d+)px/)
+    expect(m).toBeTruthy()
+    // 34 sur des titres de section à 19 : un rapport de 1,8 là où il valait 1,5.
+    expect(Number(m![1])).toBeGreaterThanOrEqual(34)
+    expect(bloc('.admin-section > h2')).toContain('font-size: 19px')
+  })
+
+  it('la page se met en deux colonnes plutôt que de s’étirer', () => {
+    // ⚠️ ON NE REMET PAS DE max-width SUR .app-main : deux constats de Julien
+    // l'ont fait retirer le 30 août, c'est une décision. La largeur se REMPLIT.
+    expect(css).toContain('.fiche-colonnes')
+    expect(css).toContain('grid-template-columns: minmax(0, 1fr) 340px')
+    // `max-width: none` est la TRACE de cette décision, pas une omission :
+    // c'est ce que le 30 août a explicitement posé. Ce qu'on refuse, c'est
+    // qu'une largeur contraignante y revienne.
+    expect(bloc('.app-main')).toContain('max-width: none')
+  })
+
+  it('ce qui détruit sort des cartes', () => {
+    const z = bloc('.zone-sensible')
+    expect(z).toContain('border-top')
+    expect(z).not.toContain('background: var(--surface)')
+    // Elle n'est plus une `admin-section` sur la fiche magasin.
+    const fiche = readFileSync(path.resolve(__dirname, '../app/magasins/[storeId]/page.tsx'), 'utf8')
+    expect(fiche).toContain('<section className="zone-sensible">')
+  })
+})
+
+describe('la barre publique : parcourir à gauche, agir à droite', () => {
+  const chrome = readFileSync(path.resolve(__dirname, '../components/SiteChrome.tsx'), 'utf8')
+  const actions = readFileSync(path.resolve(__dirname, '../components/HeaderActions.tsx'), 'utf8')
+  const css = readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8')
+
+  it('les actions sont poussées à droite, la navigation reste au logo', () => {
+    expect(chrome).toContain('<HeaderActions />')
+    const i = css.indexOf('.header-actions {')
+    expect(i).toBeGreaterThan(0)
+    expect(css.slice(i, css.indexOf('}', i))).toContain('margin-left: auto')
+  })
+
+  it('elle porte DEUX rangs d’action, pas un seul', () => {
+    // ⚠️ C'est le manque que la comparaison a rendu évident : la barre ne
+    // portait que « Se connecter ». L'action commerciale principale — la
+    // raison d'être des pages publiques — n'y était pas.
+    expect(actions).toContain('Se connecter')
+    expect(actions).toContain('Inscrire mon entreprise')
+    expect(actions).toContain('btn btn-primary')
+    // Et les deux ne coexistent pas une fois connecté.
+    expect(actions).toContain('Mon espace')
+  })
+
+  it('« Accueil » ne double plus le logo', () => {
+    expect(chrome).not.toContain('<Link href="/">Accueil</Link>')
+  })
+})

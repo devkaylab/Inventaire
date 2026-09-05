@@ -524,7 +524,14 @@ export default function AdminCompanyPage() {
       </div>
 
       <section className="admin-section">
-        <h2>Administrateur d&apos;entreprise</h2>
+        <div className="admin-section-head">
+          <div>
+            <h2>Administrateur d&apos;entreprise</h2>
+            <p className="section-note">
+              Il gère ses superviseurs et ses magasins. Seul Quantinvo le nomme ou le révoque.
+            </p>
+          </div>
+        </div>
         <CompanyAdminBlock
           companyId={detail.company.id}
           admins={admins}
@@ -537,7 +544,15 @@ export default function AdminCompanyPage() {
           formulaire d'à côté. */}
       {demandes.filter(enCours).length > 0 && (
         <section className="admin-section">
-          <h2>Demandes de magasin</h2>
+          <div className="admin-section-head">
+            <div>
+              <h2>Demandes de magasin</h2>
+              <p className="section-note">
+                Une demande précède la création. Le devis part d&apos;ici, la création vient après
+                le paiement.
+              </p>
+            </div>
+          </div>
           <div className="req-list">
             {demandes.filter(enCours).map((d) => (
               <div className="req-row" key={d.id}>
@@ -626,7 +641,12 @@ export default function AdminCompanyPage() {
 
       <section className="admin-section">
         <div className="admin-section-head">
-          <h2>Magasins ({detail.stores.length})</h2>
+          <div>
+            <h2>Magasins ({detail.stores.length})</h2>
+            <p className="section-note">
+              La licence se facture par magasin. En créer un ici ne passe par aucun devis.
+            </p>
+          </div>
           <form className="inline-form" onSubmit={ajouterMagasin}>
             <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Nouveau magasin" />
             <button className="btn btn-ghost">Ajouter</button>
@@ -710,7 +730,15 @@ export default function AdminCompanyPage() {
       <UsageConstate companyId={companyId} />
 
       <section className="admin-section">
-        <h2>Personnes ({detail.members.length})</h2>
+        <div className="admin-section-head">
+          <div>
+            <h2>Personnes ({detail.members.length})</h2>
+            <p className="section-note">
+              Tous les comptes rattachés à l&apos;entreprise. Une suppression est immédiate et
+              détache les comptages sans les effacer.
+            </p>
+          </div>
+        </div>
         {detail.members.length === 0 ? (
           <p className="muted">Aucun compte rattaché à cette entreprise.</p>
         ) : (
@@ -744,7 +772,14 @@ export default function AdminCompanyPage() {
 
       {detail.invitations.length > 0 && (
         <section className="admin-section">
-          <h2>Invitations en cours ({detail.invitations.length})</h2>
+          <div className="admin-section-head">
+            <div>
+              <h2>Invitations en cours ({detail.invitations.length})</h2>
+              <p className="section-note">
+                Envoyées, pas encore ouvertes&nbsp;: la personne n&apos;a pas choisi son mot de passe.
+              </p>
+            </div>
+          </div>
           <div className="req-list">
             {detail.invitations.map((i) => (
               <div className="req-row" key={i.id}>
