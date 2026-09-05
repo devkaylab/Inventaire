@@ -3290,3 +3290,185 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    deux couleurs, jamais l'une seule. */
 .offre-champ input { background: var(--surface); }
 .offre-resume { margin: 14px 0 0; }
+
+/* ── L'accueil : des bandes qui alternent ────────────────────────────────────
+   ⚠️ C'EST LE CHANGEMENT QUI PORTE TOUT LE RESTE. Jusqu'au 5 septembre 2026,
+   les huit sections de la vitrine vivaient sur UNE SEULE couleur : rien ne
+   disait où une idée finissait et où la suivante commençait. Constat de
+   Julien : « les sections se ressemblent toutes, on aurait dit une page
+   brouillon faite par un débutant ».
+
+   Mesuré sur qonto.com/fr le même jour : leurs bandes alternent blanc, gris et
+   noir, avec 80 à 104 px de respiration verticale. Quatre fonds ici — page,
+   surface, encre, accent — et l'accent ne sert QU'UNE FOIS, à la fin. Un accent
+   qui revient trois fois ne conclut plus rien.
+
+   ⚠️ L'ENCRE EST SOMBRE DANS LES DEUX THÈMES, comme le bandeau des e-mails et
+   l'en-tête de l'app. Ce n'est pas un oubli de mode clair : c'est la charte.
+
+   ⚠️ MAIS ELLE N'A PAS LA MÊME VALEUR DANS LES DEUX. Premier jet : --encre
+   valait #0b0f19 partout — c'est-à-dire, en thème SOMBRE, exactement --bg. La
+   bande disparaissait purement et simplement, et la seule section qui doit
+   trancher devenait la seule qu'on ne voyait pas. Trouvé à l'écran, jamais par
+   un test : les deux valeurs étaient justes prises isolément, c'est leur
+   rapport qui était faux. Même famille que les champs de saisie posés sur un
+   fond de leur propre couleur — mesurer ce qu'il y a DERRIÈRE, pas seulement
+   l'élément.
+
+   L'encre descend donc d'un cran sous le fond de page en sombre (#060910,
+   la valeur de `headerBg` de l'app), et reste le bleu-nuit de la charte en
+   clair. Les deux sont sombres : c'est ça, l'invariant. */
+:root {
+  --encre: #060910;
+  --encre-2: #121826;
+  --encre-hairline: #232a39;
+  --sur-encre: #eef1f7;
+  --sur-encre-2: #9aa4bb;
+}
+
+:root[data-theme="light"] {
+  --encre: #0b0f19;
+  --encre-2: #151a27;
+}
+
+.bande-surface { background: var(--surface); }
+.bande-encre { background: var(--encre); }
+.bande-encre h2, .bande-encre h3 { color: var(--sur-encre); }
+.bande-encre .section-head p, .bande-encre .card p { color: var(--sur-encre-2); }
+.bande-encre .card { background: var(--encre-2); border-color: var(--encre-hairline); box-shadow: none; }
+/* Le fond de page reprend la main sur les cartes d'une bande claire : sinon
+   une carte blanche sur une bande blanche n'a plus que son filet. */
+.bande-surface .card, .bande-surface .offre-carte { background: var(--bg); }
+.bande-accent { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+
+/* Le surtitre annonce la bande : on sait où on est avant de lire le titre. */
+.section-head .eyebrow { margin-bottom: 14px; }
+.bande-encre .eyebrow { color: var(--cyan); background: color-mix(in srgb, var(--cyan) 14%, transparent); border-color: color-mix(in srgb, var(--cyan) 30%, transparent); }
+
+/* ── Le héros : trois prestations, pas une phrase ─────────────────────────── */
+.hero p.lead-trois {
+  font-size: clamp(18px, 2.4vw, 21px); font-weight: 600; color: var(--text);
+  letter-spacing: -0.3px; max-width: 34ch;
+}
+
+/* ── La preuve, avant le premier argument ────────────────────────────────────
+   Quatre faits mesurés, en pleine largeur, entre deux filets : c'est ce que
+   Qonto pose juste sous son héros, et ce que la vitrine n'avait nulle part. */
+.preuve {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  background: var(--surface);
+  border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);
+}
+.preuve > div { padding: 22px 24px; border-right: 1px solid var(--hairline); }
+.preuve > div:last-child { border-right: 0; }
+.preuve strong {
+  display: block; font-size: clamp(22px, 3vw, 28px); font-weight: 800;
+  letter-spacing: -0.8px; color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.preuve span { color: var(--text-2); font-size: 13.5px; }
+
+/* ── Les trois gestes ────────────────────────────────────────────────────── */
+.etapes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+.etape { position: relative; padding-left: 54px; }
+.etape-no {
+  position: absolute; left: 0; top: 0; width: 38px; height: 38px; border-radius: 10px;
+  background: var(--accent-soft); color: var(--accent-light);
+  display: grid; place-items: center; font-weight: 800; font-size: 16px;
+}
+.etape h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 5px 0 4px; }
+.etape p { color: var(--text-2); font-size: 15px; }
+
+/* ── Le produit se voit : un téléphone, un écran large ───────────────────────
+   ⚠️ La colonne du téléphone est BORNÉE (236 px). Sur l'écran de Julien
+   (1568 px), une grille à deux parts égales étirait la capture à plus du
+   double de sa résolution — floue, et démesurée à côté du tableau de bord. */
+.duo {
+  display: grid; grid-template-columns: minmax(180px, 236px) minmax(0, 1fr);
+  gap: 40px; align-items: center; max-width: 960px; margin: 0 auto;
+}
+.duo figure { margin: 0; }
+.duo figcaption { color: var(--text-2); font-size: 14px; margin-top: 14px; text-align: center; }
+.duo-tel img {
+  width: 100%; height: auto; display: block; border-radius: 18px;
+  border: 1px solid var(--hairline); box-shadow: 0 12px 34px rgba(6, 9, 16, 0.28);
+}
+@media (max-width: 860px) { .duo { grid-template-columns: 1fr; gap: 34px; max-width: 420px; } }
+
+.ecran-navigateur {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+  padding: 14px; box-shadow: 0 12px 34px rgba(6, 9, 16, 0.28);
+}
+.ecran-barre { display: flex; gap: 6px; margin-bottom: 12px; }
+.ecran-barre i { width: 9px; height: 9px; border-radius: 50%; background: var(--hairline); }
+
+.tb { display: flex; flex-direction: column; gap: 14px; }
+.tb-kick {
+  display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--text-3); margin-bottom: 3px;
+}
+.tb-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tb-tete strong { font-size: clamp(16px, 1.8vw, 19px); font-weight: 800; letter-spacing: -0.4px; }
+.tb-vif {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px;
+  font-weight: 650; color: var(--success-text); background: var(--success-soft);
+  border-radius: 999px; padding: 4px 10px;
+}
+.tb-vif::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.tb-tuiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tb-t { background: var(--bg); border: 1px solid var(--hairline); border-radius: 9px; padding: 9px 10px; }
+.tb-t b { display: block; font-size: 19px; font-weight: 750; letter-spacing: -0.4px; font-variant-numeric: tabular-nums; }
+.tb-t span { display: block; color: var(--text-3); font-size: 10.5px; line-height: 1.35; margin-top: 2px; }
+.tb-zones { display: flex; flex-direction: column; gap: 10px; }
+.tb-zl { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
+.tb-zl em { font-style: normal; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.tb-jauge { height: 6px; border-radius: 999px; background: var(--hairline); overflow: hidden; }
+.tb-jauge i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.tb-scans { border-top: 1px solid var(--hairline); padding-top: 12px; }
+.tb-s {
+  display: flex; align-items: center; gap: 9px; font-size: 12.5px;
+  padding: 6px 0; border-bottom: 1px solid var(--hairline); color: var(--text-2);
+}
+.tb-s:last-child { border-bottom: 0; }
+.tb-s em {
+  flex: none; font-style: normal; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--accent-light); background: var(--accent-soft);
+  border-radius: 5px; padding: 2px 6px;
+}
+.tb-s-audit em { color: var(--warning-text); background: var(--warning-soft); }
+.tb-s i { margin-left: auto; font-style: normal; color: var(--text-3); font-size: 11.5px; flex: none; }
+@media (max-width: 620px) { .tb-tuiles { grid-template-columns: repeat(3, 1fr); } }
+
+/* ── Les trois offres, en aperçu ─────────────────────────────────────────────
+   Le détail vit sur /tarifs, avec sa bascule mensuel/annuel et ses listes de
+   points. Ici on ne montre que ce qui fait choisir : le nom, le prix, la
+   plage d'appareils. Les montants viennent de lib/offres.ts. */
+.offres-apercu { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.offre-carte {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+  padding: 24px; display: flex; flex-direction: column; align-items: flex-start;
+}
+.offre-carte.phare { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.offre-nom { font-size: 17px; font-weight: 700; }
+.offre-pastille {
+  display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 9px;
+  border-radius: 20px; background: var(--accent); color: var(--on-accent);
+  margin-left: 8px; vertical-align: 2px;
+}
+.offre-prix { font-size: 34px; font-weight: 800; letter-spacing: -1px; margin-top: 6px; }
+.offre-prix small { font-size: 14px; font-weight: 500; color: var(--text-2); letter-spacing: 0; }
+.offre-plage { color: var(--text-2); font-size: 14px; margin: 6px 0 18px; }
+/* Un bouton dans une colonne flex s'étire sur toute la largeur — déjà vu sur
+   « Ouvrir le magasin » et sur « Commencer l'inventaire ». */
+.offre-carte .btn { flex: none; margin-top: auto; }
+.offres-lien { text-align: center; margin-top: 22px; font-size: 15px; }
+
+/* ── Le rappel final, sur l'accent ───────────────────────────────────────── */
+.final { text-align: center; }
+.final h2 { font-size: clamp(28px, 4vw, 38px); font-weight: 800; letter-spacing: -0.8px; color: #fff; }
+.final p { color: rgba(255, 255, 255, 0.85); font-size: 17px; margin: 12px auto 0; max-width: 46ch; }
+.final .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
+.final-note { color: rgba(255, 255, 255, 0.72); font-size: 13.5px; margin-top: 18px; }
+.btn-clair { background: #fff; border-color: #fff; color: var(--accent); }
+.btn-clair:hover:not(:disabled) { background: rgba(255, 255, 255, 0.9); border-color: rgba(255, 255, 255, 0.9); }
+.btn-encre { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.45); color: #fff; }
+.btn-encre:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); border-color: #fff; }

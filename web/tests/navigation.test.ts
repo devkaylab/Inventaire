@@ -621,10 +621,19 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
     expect(lire('../app/inventaire/page.tsx')).not.toContain('hero-plein')
   })
 
-  it('l’indice de défilement mène à la première section', () => {
+  it('l’indice de défilement mène à une ancre qui existe vraiment', () => {
     // Un héros plein écran sans indice laisse croire que la page s'arrête là.
-    expect(accueil).toContain('className="scroll-cue" href="#rythmes"')
-    expect(accueil).toContain('id="rythmes"')
+    //
+    // ⚠️ LA GARDE DÉDUIT LA CIBLE, ELLE NE LA NOMME PAS. Elle citait
+    // « #rythmes » en dur : le 5 septembre 2026, la refonte de la vitrine a
+    // glissé cette section en cinquième position et l'indice a dû viser la
+    // première — la garde est tombée alors que rien n'était cassé. Nommer une
+    // ancre, c'est protéger l'ancre d'hier ; ce qu'il faut protéger, c'est
+    // qu'un indice de défilement ATTERRISSE quelque part.
+    const cible = /className="scroll-cue" href="#([\w-]+)"/.exec(accueil)?.[1]
+    expect(cible, 'l’indice de défilement a disparu du héros').toBeTruthy()
+    expect(accueil, `l’indice vise #${cible}, qu’aucune section ne porte`)
+      .toContain(`id="${cible}"`)
   })
 
   it('la parallaxe est montée par l’en-tête commun, comme les apparitions', () => {

@@ -5,27 +5,71 @@ import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { CubeFilaire } from '@/components/Parallaxe'
+import { ApercuTableauDeBord } from '@/components/ApercuTableauDeBord'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
+import { OFFRES, OFFRE_PHARE, euros } from '@/lib/offres'
 
+/**
+ * ⚠️ UNE PHRASE PAR IDÉE — c'est la règle qui gouverne tout ce fichier.
+ *
+ * La vitrine annonce, elle n'explique pas : le détail vit sur les pages
+ * dédiées (/pourquoi-nous-choisir, /tarifs, /inventaire). Les descriptions
+ * faisaient jusqu'à quatre lignes ; elles en font une. Constat de Julien le
+ * 5 septembre 2026 : « les sections se ressemblent toutes, on aurait dit une
+ * page brouillon » — un mur de texte uniforme ne se lit pas, il se saute.
+ */
 const FEATURES = [
-  { icon: <IconScan />, title: 'Scan rapide', desc: 'Le téléphone devient la douchette : caméra, bouton virtuel et scan automatique. Fluide, sans friction.' },
-  { icon: <IconZones />, title: 'Zones & balises', desc: 'Le comptage s’organise par emplacement : on scanne une balise pour ouvrir une zone, on compte, on clôture.' },
-  { icon: <IconStore />, title: 'Multi-magasins', desc: 'Plusieurs magasins par entreprise, un inventaire lancé pour chacun en quelques secondes.' },
-  { icon: <IconAudit />, title: 'Audit & écarts', desc: 'Double comptage, audit et arbitrage : le stock validé est un chiffre auquel on peut se fier.' },
-  { icon: <IconReport />, title: 'Rapports', desc: 'Export Excel des résultats, des écarts en valeur et du détail par zone. Prêt pour l’analyse et la correction du stock.' },
-  { icon: <IconTeam />, title: 'Équipes', desc: 'Un superviseur, plusieurs compteurs. Chacun rejoint la session avec un numéro et un code de sécurité, sans formation.' },
+  { icon: <IconScan />, title: 'Scan rapide', desc: 'Le téléphone devient la douchette.' },
+  { icon: <IconZones />, title: 'Zones & balises', desc: 'On scanne une étiquette, on compte, on clôture.' },
+  { icon: <IconStore />, title: 'Multi-magasins', desc: 'Un inventaire par magasin, lancé en quelques secondes.' },
+  { icon: <IconAudit />, title: 'Audit & écarts', desc: 'Double comptage, puis arbitrage. Le chiffre est fiable.' },
+  { icon: <IconReport />, title: 'Rapports', desc: 'Export Excel des écarts, en quantité et en valeur.' },
+  { icon: <IconTeam />, title: 'Équipes', desc: 'Un superviseur, autant de compteurs qu’il faut.' },
 ]
 
 const RYTHMES = [
-  { title: 'Tournant', desc: 'Une zone après l’autre, au fil des semaines : le stock reste juste sans jamais fermer le magasin.' },
-  { title: 'Ciblé', desc: 'Un rayon sensible, la réserve, une famille d’articles : vous comptez là où ça bouge.' },
-  { title: 'Complet', desc: 'Le grand comptage de fin d’exercice, préparé et mené comme les autres — juste plus grand.' },
+  { title: 'Tournant', desc: 'Une zone après l’autre, au fil des semaines.' },
+  { title: 'Ciblé', desc: 'Un rayon sensible, la réserve, une famille d’articles.' },
+  { title: 'Complet', desc: 'Le grand comptage de fin d’exercice, mené comme les autres.' },
 ]
 
 const CONFIANCE = [
-  { title: 'Données en Europe', desc: 'Toutes les données résident dans l’Union européenne, chez des prestataires déclarés dans notre politique de confidentialité.' },
-  { title: 'Conforme RGPD', desc: 'Les droits sont outillés dans le produit : chaque personne peut télécharger ses données ou demander la suppression de son compte.' },
-  { title: 'Zéro traceur', desc: 'Aucun cookie publicitaire, aucune mesure d’audience. Le suivi d’un inventaire est agrégé : on pilote le travail, pas les personnes.' },
+  { title: 'Données en Europe', desc: 'Hébergées dans l’Union européenne, chez des prestataires déclarés.' },
+  { title: 'Conforme RGPD', desc: 'Chacun télécharge ses données ou supprime son compte, depuis le produit.' },
+  { title: 'Zéro traceur', desc: 'Aucun cookie publicitaire. Le suivi décrit le travail, pas les personnes.' },
+]
+
+/**
+ * ⚠️ QUATRE FAITS MESURÉS, ET AUCUN CLIENT INVENTÉ.
+ *
+ * Qonto ouvre sur « +600 000 clients » ; nous n'en avons pas encore un seul, et
+ * une fausse référence se paie cher. Ce qu'on peut prouver, ce sont des mesures
+ * du produit — d'où ces quatre-là.
+ *
+ * ⚠️ ET ON N'ANNONCE JAMAIS LE PLAFOND. 400 000 références est la limite
+ * MESURÉE le 3 septembre 2026 : l'écrire ici, c'est vendre le point de rupture.
+ * 100 000 est confortable et reste sous le seuil de 150 000 à partir duquel le
+ * produit nous alerte lui-même. « Jusqu'à 100 compteurs » est vrai sur un
+ * inventaire ordinaire — sur un inventaire de 400 000 références, le treizième
+ * appel simultané dépasse déjà le délai serveur : c'est « jusqu'à » qui dit le
+ * plafond sans promettre les deux ensemble.
+ */
+const PREUVES = [
+  { chiffre: '100 000', quoi: 'références par inventaire' },
+  { chiffre: 'Jusqu’à 100', quoi: 'compteurs en même temps' },
+  { chiffre: '1 outil', quoi: 'pour tous vos inventaires' },
+  { chiffre: 'Toute l’année', quoi: 'comptez sans fermer le magasin' },
+]
+
+/**
+ * ⚠️ À L'IMPÉRATIF, ET SANS NÉGATION. « Préparez », « Comptez », « Arbitrez » —
+ * jamais « Vous préparez » ni « L'équipe compte ». Une vitrine dit ce qu'on
+ * gagne, jamais ce qu'on évite.
+ */
+const ETAPES = [
+  { title: 'Préparez', desc: 'Un fichier de stock, des étiquettes imprimées.' },
+  { title: 'Comptez', desc: 'Chacun scanne avec son téléphone, chacun dans son rayon.' },
+  { title: 'Arbitrez', desc: 'Comptage et audit se comparent. Vous tranchez sur le bon compte, puis vous exportez.' },
 ]
 
 export default function Home() {
@@ -49,38 +93,103 @@ export default function Home() {
           <div className="plx scan-trait" data-plx="0.62" aria-hidden="true" />
           <div className="container" data-hero-exit>
             <div className="logo-glow" data-reveal="0" style={{ display: 'inline-block' }}>
-              <Logo size={84} />
+              <Logo size={72} gradientId="logoHero" />
             </div>
             <div data-reveal="1"><span className="eyebrow">Outil d&apos;inventaire</span></div>
             <h1 data-reveal="2">La simplicité<br /><span className="grad">en main.</span></h1>
-            <p className="lead" data-reveal="3">
-              Un stock fiable toute l&apos;année, compté par vos propres équipes : elles scannent,
-              vous suivez l&apos;avancement en direct, et l&apos;écart se voit avant de coûter.
+            {/*
+              Trois prestations plutôt qu'une phrase : elles se lisent en un coup
+              d'œil et méritent le poids d'un sous-titre, pas celui d'un
+              paragraphe.
+            */}
+            <p className="lead lead-trois" data-reveal="3">
+              Inventaire tournant. Comptage en équipe. Écarts en direct.
             </p>
+            {/*
+              ⚠️ LE BOUTON DIT LE BÉNÉFICE, PAS LA DÉMARCHE. Personne ne se lève
+              le matin pour « inscrire une entreprise ». La barre du haut, elle,
+              garde le libellé explicite : c'est un repère de navigation, pas un
+              argument.
+            */}
             <div className="cta" data-reveal="4">
-              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
-              <AuthLink className="btn btn-ghost" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
+              <InscriptionLink className="btn btn-primary">Fiabiliser mon stock</InscriptionLink>
+              <Link href="/tarifs" className="btn btn-ghost">Voir nos offres</Link>
             </div>
           </div>
-          <a className="scroll-cue" href="#rythmes">
-            <span>Découvrir</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
+          <a className="scroll-cue" href="#en-pratique">
+            <svg width="22" height="34" viewBox="0 0 22 34" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="20" height="32" rx="10" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="11" cy="10" r="2.5" fill="currentColor" />
             </svg>
           </a>
         </section>
 
-        <section className="section" id="rythmes">
+        {/* La preuve, tout de suite : quatre faits, avant le premier argument. */}
+        <div className="preuve">
+          {PREUVES.map((p) => (
+            <div key={p.chiffre}>
+              <strong>{p.chiffre}</strong>
+              <span>{p.quoi}</span>
+            </div>
+          ))}
+        </div>
+
+        <section className="section" id="en-pratique">
           <div className="plx deco-cube deco-droite deco-accent" data-plx="0.28" aria-hidden="true">
-            <CubeFilaire size={120} />
+            <CubeFilaire size={230} />
           </div>
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <h2>Comptez quand vous voulez</h2>
-              <p>
-                Plus besoin d&apos;attendre la fermeture annuelle : vous choisissez la date,
-                le périmètre et la fréquence de chaque inventaire.
-              </p>
+              <span className="eyebrow">En pratique</span>
+              <h2>Trois gestes, et c&apos;est parti</h2>
+            </div>
+            <div className="etapes">
+              {ETAPES.map((e, i) => (
+                <div className="etape" data-reveal={i + 1} key={e.title}>
+                  <span className="etape-no">{i + 1}</span>
+                  <h3>{e.title}</h3>
+                  <p>{e.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Le produit se voit — la moitié terrain, la moitié bureau. */}
+        <section className="section bande-surface">
+          <div className="container">
+            <div className="section-head" data-reveal="0">
+              <h2>Du rayon au tableau de bord</h2>
+            </div>
+            <div className="duo">
+              <figure className="duo-tel" data-reveal="1">
+                {/*
+                  <img> et non next/image : ce PNG est servi en demi-résolution
+                  et jamais redimensionné côté serveur — même raison que le
+                  guide de prise en main.
+                */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/prise-en-main/comptage.png" alt="L’écran de comptage de l’application, dans un rayon" />
+                <figcaption>Du scan dans le rayon</figcaption>
+              </figure>
+              <figure className="duo-ecran" data-reveal="2">
+                <ApercuTableauDeBord />
+                <figcaption>Au suivi de l&apos;avancement de l&apos;inventaire zone par zone</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+
+        {/*
+          Le différenciateur, sur l'encre. Le bandeau sombre est le même dans les
+          deux thèmes — celui de la charte, celui des e-mails, celui de l'app.
+        */}
+        <section className="section bande-encre" id="rythmes">
+          <div className="container">
+            <div className="section-head" data-reveal="0">
+              <span className="eyebrow">Ce qui nous distingue</span>
+              <h2>Comptez sans fermer le magasin</h2>
+              <p>Une zone par semaine plutôt qu&apos;un grand week-end par an. Le stock reste juste toute l&apos;année.</p>
             </div>
             <div className="grid">
               {RYTHMES.map((r, i) => (
@@ -95,12 +204,13 @@ export default function Home() {
 
         <section className="section" id="fonctionnalites">
           <div className="plx deco-cube deco-gauche deco-cyan" data-plx="0.4" aria-hidden="true">
-            <CubeFilaire size={90} />
+            <CubeFilaire size={190} />
           </div>
           <div className="container">
             <div className="section-head" data-reveal="0">
+              <span className="eyebrow">Ce que ça fait</span>
               <h2>Tout pour un inventaire maîtrisé</h2>
-              <p>Du premier scan au rapport final, sans rien installer côté bureau.</p>
+              <p>Du premier scan au rapport final.</p>
             </div>
             <div className="grid">
               {FEATURES.map((f, i) => (
@@ -114,11 +224,65 @@ export default function Home() {
           </div>
         </section>
 
+        {/*
+          ⚠️ LE PRIX EST SUR L'ACCUEIL. Il est public depuis le 30 août 2026 : le
+          cacher derrière un lien fait douter. Les montants viennent tous de
+          `lib/offres.ts` — jamais un chiffre écrit sur place, sinon la grille se
+          met à exister en deux endroits.
+        */}
+        <section className="section bande-surface" id="offres">
+          <div className="container">
+            <div className="section-head" data-reveal="0">
+              <span className="eyebrow">Tarifs</span>
+              <h2>Une licence par magasin</h2>
+              <p>
+                Le prix suit le nombre d&apos;appareils qui comptent en même temps.
+                Comptes et inventaires illimités.
+              </p>
+            </div>
+            <div className="offres-apercu">
+              {OFFRES.map((o, i) => (
+                <div
+                  className={o.cle === OFFRE_PHARE ? 'offre-carte phare' : 'offre-carte'}
+                  data-reveal={i + 1}
+                  key={o.cle}
+                >
+                  <div className="offre-nom">
+                    {o.nom}
+                    {o.cle === OFFRE_PHARE && <span className="offre-pastille">Le plus courant</span>}
+                  </div>
+                  <div className="offre-prix">
+                    {euros(o.mois)}<small> / mois</small>
+                  </div>
+                  <p className="offre-plage">{o.plage}</p>
+                  {/*
+                    ⚠️ LE LIEN PORTE L'OFFRE. Sans `?offre=`, les trois boutons
+                    mènent au même écran et /souscrire retombe sur son offre par
+                    défaut : « Commencer avec Enterprise » ouvrirait Essential.
+                    C'est ce que fait déjà TarifsGrille — les deux chemins
+                    doivent envoyer la même chose.
+                  */}
+                  <Link
+                    href={`/souscrire?offre=${o.cle}`}
+                    className={o.cle === OFFRE_PHARE ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+                  >
+                    Commencer avec {o.nom}
+                  </Link>
+                </div>
+              ))}
+            </div>
+            <p className="offres-lien" data-reveal="4">
+              <Link href="/tarifs">Le détail des trois offres</Link>
+            </p>
+          </div>
+        </section>
+
         <section className="section">
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <h2>Pensé pour l&apos;entreprise</h2>
-              <p>Votre stock est votre principal actif : l&apos;outil qui le compte doit être irréprochable.</p>
+              <span className="eyebrow">Pensé pour l&apos;entreprise</span>
+              <h2>Votre stock est votre principal actif</h2>
+              <p>L&apos;outil qui le compte doit être irréprochable.</p>
             </div>
             <div className="grid">
               {CONFIANCE.map((c, i) => (
@@ -131,19 +295,18 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section">
-          <div className="container">
-            <div className="cta-band" data-reveal="0">
-              <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
-              <h2>Équipez votre magasin</h2>
-              <p>
-                Une licence par magasin, calée sur le nombre de personnes qui comptent en même
-                temps — inventaires illimités. À partir de 89 € par mois :{' '}
-                <Link href="/tarifs">voir les tarifs</Link>. Votre entreprise utilise déjà
-                Quantinvo ? Son administrateur vous ouvre l&apos;accès depuis son espace.
-              </p>
-              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
+        {/* L'accent ne sert qu'une fois, à la fin. */}
+        <section className="section bande-accent final">
+          <div className="container" data-reveal="0">
+            <h2>Comptez votre premier rayon cette semaine</h2>
+            <p>Inscription en ligne, accès ouvert tout de suite.</p>
+            <div className="cta">
+              <InscriptionLink className="btn btn-clair">Fiabiliser mon stock</InscriptionLink>
+              <AuthLink className="btn btn-encre" loggedOutLabel="Se connecter" loggedInLabel="Accéder à mon espace" />
             </div>
+            <p className="final-note">
+              Votre entreprise l&apos;utilise déjà&nbsp;? Son administrateur vous ouvre l&apos;accès.
+            </p>
           </div>
         </section>
       </main>
