@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { venteOuverte } from '@/lib/legal'
 import { getMySpacePath } from '@/lib/auth'
 
 /**
@@ -38,6 +39,8 @@ export function HeaderActions() {
     )
   }
 
+  const ouverte = venteOuverte()
+
   return (
     <div className="header-actions">
       <Link href="/login" className="header-lien">Se connecter</Link>
@@ -49,9 +52,17 @@ export function HeaderActions() {
         bouton mène, et la barre doit rester un repère de navigation, jamais un
         argument — c'est ce qui la distingue du bouton du héros.
       */}
+      {/*
+        ⚠️ TANT QUE LA VENTE EST FERMÉE, LE BOUTON NE PROMET PAS UNE
+        INSCRIPTION. Julien, 5 septembre 2026 : « on ferme en attendant
+        l'immatriculation ». Un bouton qui annonce « Inscrire mon entreprise »
+        et mène à « ce n'est pas encore ouvert » est pire que pas de bouton :
+        il fait cliquer pour rien. Il mène toujours à `/inscription`, qui
+        explique et donne l'adresse — une seule porte, un seul message.
+      */}
       <Link href="/inscription" className="btn btn-primary btn-sm">
-        <span className="libelle-long">Inscrire mon entreprise</span>
-        <span className="libelle-court">Inscription</span>
+        <span className="libelle-long">{ouverte ? 'Inscrire mon entreprise' : 'Nous écrire'}</span>
+        <span className="libelle-court">{ouverte ? 'Inscription' : 'Écrire'}</span>
       </Link>
     </div>
   )

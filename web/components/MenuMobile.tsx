@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LIENS_PUBLICS } from '@/lib/navigation'
+import { venteOuverte } from '@/lib/legal'
 
 /**
  * Le menu de la barre publique sur un téléphone.
@@ -89,7 +90,9 @@ export function MenuMobile() {
           ))}
         </nav>
         <div className="menu-mobile-actions">
-          <Link href="/inscription" className="btn btn-primary btn-block">Inscrire mon entreprise</Link>
+          <Link href="/inscription" className="btn btn-primary btn-block">
+            {venteOuverte() ? 'Inscrire mon entreprise' : 'Nous écrire'}
+          </Link>
           <Link href="/login" className="menu-mobile-connexion">Se connecter</Link>
         </div>
       </div>

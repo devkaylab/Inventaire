@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { InscriptionLink } from '@/components/InscriptionLink'
 import { Logo } from '@/components/Logo'
 
 export const metadata: Metadata = {
@@ -56,12 +57,11 @@ export default function SuperviseurPage() {
         <div className="panel">
           <h3>Votre entreprise n’est pas encore cliente</h3>
           <p>
-            L’inscription se fait au nom de l’entreprise&nbsp;: nous revenons vers vous avec
-            un devis, puis vos codes entreprise et magasins.
+            L’inscription se fait au nom de l’entreprise&nbsp;: vous répondez à quelques
+            questions, vous voyez votre offre, et vos codes entreprise et magasins s’ouvrent
+            au règlement.
           </p>
-          <Link href="/inscription" className="btn btn-ghost" style={{ marginTop: 14, display: 'inline-flex' }}>
-            Inscrire mon entreprise
-          </Link>
+          <InscriptionLink className="btn btn-ghost">Inscrire mon entreprise</InscriptionLink>
         </div>
 
         <div className="center-link">

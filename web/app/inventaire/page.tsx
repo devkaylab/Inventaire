@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { CubeFilaire } from '@/components/Parallaxe'
 
@@ -196,7 +197,7 @@ export default function InventairePage() {
                 autant de fois par an que vous le décidez.
               </p>
               <Link href="/pourquoi-nous-choisir" className="btn btn-ghost" style={{ marginRight: 12 }}>Pourquoi nous choisir ?</Link>
-              <Link href="/inscription" className="btn btn-primary">Inscrire mon entreprise</Link>
+              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
             </div>
           </div>
         </section>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { CubeFilaire } from '@/components/Parallaxe'
 import { TarifsGrille } from '@/components/TarifsGrille'
@@ -145,7 +146,7 @@ export default function TarifsPage() {
               {CONTACT_EMAIL ? (
                 <a className="btn btn-primary" href={`mailto:${CONTACT_EMAIL}`}>Nous écrire</a>
               ) : (
-                <Link className="btn btn-primary" href="/inscription">Déposer une demande</Link>
+                <InscriptionLink className="btn btn-primary">Nous écrire</InscriptionLink>
               )}
             </div>
           </div>

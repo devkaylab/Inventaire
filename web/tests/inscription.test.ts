@@ -10,10 +10,11 @@
  * Maquette : https://claude.ai/code/artifact/27d8f3e6-5e7a-4de7-a1eb-6da9d39cce3a
  */
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
 import { offrePour } from '@/lib/offres'
+import { venteOuverte } from '@/lib/legal'
 import { APPAREILS_TRANCHES } from '@/lib/inscription'
 
 /** Toute assertion d'ABSENCE lit le SQL sans ses commentaires : ils citent
@@ -378,5 +379,104 @@ describe('l’écran du parcours', () => {
       expect(offrePour(t.plafond), `la tranche ${t.libelle} doit tomber dans une seule offre`)
         .not.toBeNull()
     }
+  })
+})
+
+describe('la vente est fermée jusqu’à l’immatriculation', () => {
+  // Tranché par Julien le 5 septembre 2026 : « on ferme en attendant
+  // l'immatriculation ». Le site était en ligne, « Inscrire mon entreprise »
+  // dans la barre, et un visiteur pouvait dérouler tout le parcours pour
+  // atterrir sur une page de paiement en mode TEST.
+  //
+  // ⚠️ CES GARDES PORTENT SUR LE MÉCANISME, JAMAIS SUR LA VALEUR. Le jour où
+  // Julien remplit `legal.ts`, la boutique s'ouvre et la suite doit rester
+  // verte : un test qui figerait « c'est fermé » deviendrait un obstacle.
+  const lireSrc = (p: string) => readFileSync(path.join(__dirname, p), 'utf8')
+  const edgeIns = lireSrc('../../supabase/functions/inscription/index.ts')
+  const edgeSou = lireSrc('../../supabase/functions/subscribe-online/index.ts')
+  const drapeau = (src: string) => /const VENTE_OUVERTE = (true|false)/.exec(src)?.[1] === 'true'
+
+  it('⚠️ le serveur porte le même verdict que le site', () => {
+    // Une porte fermée à l'écran seulement s'ouvre avec une adresse.
+    expect(drapeau(edgeIns), 'la fonction edge d’inscription a divergé du site')
+      .toBe(venteOuverte())
+    expect(drapeau(edgeSou), 'la fonction edge de souscription a divergé du site')
+      .toBe(venteOuverte())
+  })
+
+  it('⚠️ et il refuse AVANT toute écriture', () => {
+    // Ouvrir un compte de prospect qui ne pourra pas payer ne laisserait que
+    // des comptes orphelins ; déposer une demande, une ligne morte.
+    const garde = edgeIns.indexOf('if (!VENTE_OUVERTE) return boutiqueFermee()')
+    expect(garde).toBeGreaterThan(0)
+    for (const ecriture of ["rpc('demander_code_email'", 'auth.admin.createUser',
+                            "rpc('finaliser_inscription'"]) {
+      expect(edgeIns.indexOf(ecriture), `${ecriture} doit venir après la garde`)
+        .toBeGreaterThan(garde)
+    }
+    const g2 = edgeSou.indexOf('if (!VENTE_OUVERTE) return boutiqueFermee()')
+    expect(edgeSou.indexOf("rpc('deposer_souscription'")).toBeGreaterThan(g2)
+  })
+
+  it('⚠️ un seul interrupteur, et c’est l’immatriculation', () => {
+    // Pas de second drapeau : ce serait un endroit de plus où se tromper, et
+    // surtout un endroit qu'on oublierait de rouvrir le jour venu. La LCEN
+    // interdit de vendre sans identification complète de l'éditeur : les deux
+    // ouvrent ensemble par nature.
+    const legal = lireSrc('../lib/legal.ts')
+    expect(legal).toContain('export function venteOuverte(): boolean {\n  return mentionsCompletes()\n}')
+  })
+
+  it('les trois écrans lisent ce verdict', () => {
+    for (const [nom, p] of [
+      ['la page d’inscription', '../app/inscription/page.tsx'],
+      ['la page de souscription', '../app/souscrire/page.tsx'],
+      ['la barre publique', '../components/HeaderActions.tsx'],
+      ['la grille de tarifs', '../components/TarifsGrille.tsx'],
+    ] as const) {
+      expect(lireSrc(p), `${nom} doit lire venteOuverte()`).toContain('venteOuverte()')
+    }
+  })
+
+  it('⚠️ mais les PRIX restent visibles', () => {
+    // Ils sont publics et vrais depuis le 30 août : les cacher ne protégerait
+    // rien et priverait un prospect de ce qu'il est venu chercher. C'est le
+    // bouton qui change, pas la grille.
+    const grille = lireSrc('../components/TarifsGrille.tsx')
+    expect(grille).toContain('euros(')
+    expect(grille).not.toMatch(/venteOuverte\(\)\s*&&[\s\S]{0,80}OFFRES\.map/)
+  })
+
+  it('et le bouton ne promet pas une inscription qui ne peut pas aboutir', () => {
+    const barre = lireSrc('../components/HeaderActions.tsx')
+    expect(barre).toContain("ouverte ? 'Inscrire mon entreprise' : 'Nous écrire'")
+  })
+
+  it('⚠️ AUCUN écran ne promet l’inscription sans lire le verdict', () => {
+    // ⚠️ LA GARDE DÉDUIT LA LISTE, ELLE NE LA CITE PAS. Une garde qui nomme les
+    // écrans à protéger ne protège que ceux qu'on connaissait le jour où on
+    // l'a écrite — et il y en avait SEPT, pas un. Doctrine du 4 septembre 2026.
+    const racine = path.join(__dirname, '..')
+    const fichiers: string[] = []
+    const balayer = (d: string) => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name)
+        if (e.isDirectory()) { if (e.name !== 'node_modules' && e.name !== '.next') balayer(p) }
+        else if (e.name.endsWith('.tsx')) fichiers.push(p)
+      }
+    }
+    for (const d of ['app', 'components']) balayer(path.join(racine, d))
+
+    const fautifs = fichiers.filter((f) => {
+      const src = readFileSync(f, 'utf8').replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      if (!src.includes('Inscrire mon entreprise')) return false
+      // Le libellé est acceptable s'il passe par `InscriptionLink` (qui sait),
+      // ou si l'écran lit lui-même `venteOuverte()`.
+      return !src.includes('InscriptionLink') && !src.includes('venteOuverte()')
+    }).map((f) => path.relative(racine, f))
+
+    expect(fautifs, `ces écrans promettent l’inscription sans savoir si elle est ouverte : ${fautifs.join(', ')}`)
+      .toEqual([])
+    expect(fichiers.length, 'le balayage doit trouver des écrans').toBeGreaterThan(20)
   })
 })

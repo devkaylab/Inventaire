@@ -37,6 +37,8 @@ import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
 const SIREN_EXEMPLE = '123 456 789'
 import { chercherParSiren } from '@/lib/registre'
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome'
+import { venteOuverte } from '@/lib/legal'
+import { CONTACT_EMAIL, ecrivezNous } from '@/lib/contact'
 import { euros, nomOffre, prixCents } from '@/lib/offres'
 import { nb } from '@/lib/format'
 import {
@@ -200,6 +202,37 @@ export default function InscriptionPage() {
     setErreur(null)
     await enregistrer(prochaine)
     setEtape(prochaine)
+  }
+
+  // ⚠️ LA PORTE EST FERMÉE TANT QUE LA SOCIÉTÉ N'EST PAS IMMATRICULÉE (Julien,
+  // 5 septembre 2026). Elle se rouvre toute seule le jour où `web/lib/legal.ts`
+  // est rempli — voir `venteOuverte()`. Et elle est fermée AU SERVEUR aussi :
+  // un écran qui refuse s'ouvre avec une adresse.
+  if (!venteOuverte()) {
+    return (
+      <>
+        <SiteHeader />
+        <main className="wrap ins-page">
+          <section className="ins-carte ins-fin">
+            <h1>L’inscription en ligne ouvre bientôt</h1>
+            {/* ⚠️ LA PROMESSE ET L'ADRESSE VOYAGENT ENSEMBLE. `ecrivezNous`
+                se tait quand `NEXT_PUBLIC_CONTACT_EMAIL` n'est pas posée — et
+                sans cette condition, la page inviterait à écrire sans dire où.
+                C'est la règle du 22 août 2026. */}
+            <p className="muted">
+              Quantinvo fonctionne, et ses tarifs sont publics — mais la souscription en
+              ligne n’est pas encore ouverte.
+              {ecrivezNous()
+                ? <> Écrivez-nous&nbsp;: nous ouvrons vos accès à la main, avec la même offre.</>
+                : <> Elle ouvre très bientôt.</>}
+            </p>
+            {ecrivezNous() && <p className="ins-adresse">{CONTACT_EMAIL}</p>}
+            <Link href="/tarifs" className="btn btn-ghost btn-block">Voir les offres</Link>
+          </section>
+        </main>
+        <SiteFooter />
+      </>
+    )
   }
 
   if (!prete) {

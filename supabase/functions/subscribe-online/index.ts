@@ -80,6 +80,31 @@ function clePrice(plan: Plan, rythme: Rythme): string {
   return `STRIPE_PRICE_${plan.toUpperCase()}_${rythme === 'monthly' ? 'MONTHLY' : 'YEARLY'}`
 }
 
+/**
+ * ⚠️ JUMEAU DE `venteOuverte()` DANS `web/lib/legal.ts` — la vente en ligne est
+ * fermée tant que la société n'est pas immatriculée (Julien, 5 septembre 2026 :
+ * « on ferme en attendant l'immatriculation »).
+ *
+ * Doublon volontaire, pour la raison habituelle : le site et les fonctions edge
+ * ne compilent pas ensemble. Un test compare les deux — une porte fermée à
+ * l'écran seulement s'ouvre avec une adresse.
+ *
+ * Côté site c'est `mentionsCompletes()` qui décide, parce que la LCEN interdit
+ * de vendre sans identification complète de l'éditeur : les deux ouvrent
+ * ensemble par nature. Ici il n'y a pas de `legal.ts` à lire, donc la valeur
+ * est écrite — **et elle se rouvre dans le même commit que les mentions**.
+ */
+const VENTE_OUVERTE = false
+
+/** Ce qu'on répond tant que la boutique est fermée. */
+const boutiqueFermee = () =>
+  json({
+    success: false,
+    code: 'vente_fermee',
+    error:
+      'La souscription en ligne n’est pas encore ouverte. Écrivez-nous et nous ouvrons vos accès.',
+  }, 503)
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ success: false, error: 'Méthode non autorisée' }, 405)
@@ -103,6 +128,8 @@ Deno.serve(async (req) => {
   // ⚠️ Le Price est vérifié AVANT d'écrire quoi que ce soit : une demande
   // enregistrée sans page de paiement derrière laisserait une ligne morte, et
   // un client persuadé d'avoir souscrit.
+  if (!VENTE_OUVERTE) return boutiqueFermee()
+
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
   const priceId = Deno.env.get(clePrice(plan, rythme))
   if (!stripeKey || !priceId) {

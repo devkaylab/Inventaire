@@ -44,6 +44,31 @@ const clePriceAppareils = (rythme: string) =>
  */
 const TVA_APPLICABLE = false
 
+/**
+ * ⚠️ JUMEAU DE `venteOuverte()` DANS `web/lib/legal.ts` — la vente en ligne est
+ * fermée tant que la société n'est pas immatriculée (Julien, 5 septembre 2026 :
+ * « on ferme en attendant l'immatriculation »).
+ *
+ * Doublon volontaire, pour la raison habituelle : le site et les fonctions edge
+ * ne compilent pas ensemble. Un test compare les deux — une porte fermée à
+ * l'écran seulement s'ouvre avec une adresse.
+ *
+ * Côté site c'est `mentionsCompletes()` qui décide, parce que la LCEN interdit
+ * de vendre sans identification complète de l'éditeur : les deux ouvrent
+ * ensemble par nature. Ici il n'y a pas de `legal.ts` à lire, donc la valeur
+ * est écrite — **et elle se rouvre dans le même commit que les mentions**.
+ */
+const VENTE_OUVERTE = false
+
+/** Ce qu'on répond tant que la boutique est fermée. */
+const boutiqueFermee = () =>
+  json({
+    success: false,
+    code: 'vente_fermee',
+    error:
+      'La souscription en ligne n’est pas encore ouverte. Écrivez-nous et nous ouvrons vos accès.',
+  }, 503)
+
 function serveur() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -73,6 +98,10 @@ Deno.serve(async (req) => {
   }
   const texte = (c: string) => String(corps[c] ?? '').trim()
   const action = texte('action') || 'code'
+
+  // ⚠️ AVANT TOUTE ACTION, y compris l'envoi du code : ouvrir un compte de
+  // prospect qui ne pourra pas payer ne laisserait que des comptes orphelins.
+  if (!VENTE_OUVERTE) return boutiqueFermee()
 
   // ─── 1. Le code ──────────────────────────────────────────────────────────
   if (action === 'code') {

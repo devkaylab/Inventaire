@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { InscriptionLink } from '@/components/InscriptionLink'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { getMySpacePath, homePathForRole } from '@/lib/auth'
@@ -221,7 +222,7 @@ export default function LoginPage() {
         <div className="center-link">
         </div>
         <div className="center-link" style={{ marginTop: 8 }}>
-          <Link href="/inscription">Inscrire mon entreprise</Link>
+          <InscriptionLink>Inscrire mon entreprise</InscriptionLink>
         </div>
         <div className="center-link" style={{ marginTop: 8 }}>
           <Link href="/">← Retour à l&apos;accueil</Link>

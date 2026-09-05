@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, TVA_APPLICABLE, economie, euros } from '@/lib/offres'
+import { venteOuverte } from '@/lib/legal'
 
 /**
  * Les trois offres, avec la bascule mensuel / annuel.
@@ -15,6 +16,7 @@ import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, TVA_APPLICABLE, economi
  * (elle porte ses métadonnées).
  */
 export function TarifsGrille() {
+  const ouverte = venteOuverte()
   const [annuel, setAnnuel] = useState(false)
 
   return (
@@ -91,12 +93,21 @@ export function TarifsGrille() {
               </ul>
 
               {/* Le rythme voyage avec l'offre : la page de souscription
-                  s'ouvre sur ce que le visiteur regardait. */}
+                  s'ouvre sur ce que le visiteur regardait.
+
+                  ⚠️ LES PRIX RESTENT VISIBLES QUAND LA VENTE EST FERMÉE, et
+                  c'est délibéré : ils sont publics et vrais depuis le 30 août,
+                  les cacher ne protégerait rien et priverait un prospect de ce
+                  qu'il est venu chercher. C'est le BOUTON qui change — on ne
+                  fait pas cliquer sur « Commencer » pour arriver sur « pas
+                  encore ouvert ». */}
               <Link
-                href={`/souscrire?offre=${o.cle}${annuel ? '&rythme=annuel' : ''}`}
+                href={ouverte
+                  ? `/souscrire?offre=${o.cle}${annuel ? '&rythme=annuel' : ''}`
+                  : '/inscription'}
                 className={phare ? 'btn btn-primary' : 'btn btn-ghost'}
               >
-                Commencer avec {o.nom}
+                {ouverte ? `Commencer avec ${o.nom}` : 'Nous écrire'}
               </Link>
             </div>
           )

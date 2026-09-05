@@ -7,7 +7,8 @@ import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { supabase } from '@/lib/supabaseClient'
 import { MENTION_TVA, OFFRES, TVA_APPLICABLE, economie, euros, ttc, type CleOffre } from '@/lib/offres'
-import { CONTACT_EMAIL } from '@/lib/contact'
+import { CONTACT_EMAIL, ecrivezNous } from '@/lib/contact'
+import { venteOuverte } from '@/lib/legal'
 
 /**
  * La souscription en ligne.
@@ -198,9 +199,32 @@ export default function SouscrirePage() {
       <main>
         <section className="section souscrire-section">
           <div className="container">
-            <Suspense fallback={<div className="card souscrire"><p>Chargement…</p></div>}>
-              <Formulaire />
-            </Suspense>
+            {/* ⚠️ FERMÉE TANT QUE LA SOCIÉTÉ N'EST PAS IMMATRICULÉE (Julien,
+                5 septembre 2026). `venteOuverte()` suit `mentionsCompletes()` :
+                remplir `web/lib/legal.ts` rouvre la boutique tout seul. Et la
+                fonction edge refuse aussi — une porte fermée à l'écran
+                seulement s'ouvre avec une adresse. */}
+            {venteOuverte() ? (
+              <Suspense fallback={<div className="card souscrire"><p>Chargement…</p></div>}>
+                <Formulaire />
+              </Suspense>
+            ) : (
+              <div className="card souscrire">
+                <h1>La souscription en ligne ouvre bientôt</h1>
+                {/* ⚠️ La promesse et l'adresse voyagent ensemble : sans
+                    `NEXT_PUBLIC_CONTACT_EMAIL`, la page inviterait à écrire
+                    sans dire où. Règle du 22 août 2026. */}
+                <p className="muted">
+                  Nos tarifs sont publics et le produit fonctionne — mais le règlement en
+                  ligne n’est pas encore ouvert.
+                  {ecrivezNous()
+                    ? <> Écrivez-nous&nbsp;: nous ouvrons vos accès à la main, avec la même offre.</>
+                    : <> Il ouvre très bientôt.</>}
+                </p>
+                {ecrivezNous() && <p className="ins-adresse">{CONTACT_EMAIL}</p>}
+                <Link href="/tarifs" className="btn btn-ghost btn-block">Voir les offres</Link>
+              </div>
+            )}
           </div>
         </section>
       </main>

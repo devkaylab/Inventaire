@@ -102,3 +102,32 @@ export function mentionsManquantes(sections: Mention[][] = [EDITEUR, HEBERGEUR])
 export function mentionsCompletes(sections: Mention[][] = [EDITEUR, HEBERGEUR]): boolean {
   return mentionsManquantes(sections).length === 0
 }
+
+/**
+ * La vente en ligne est-elle ouverte ?
+ *
+ * ⚠️ TRANCHÉ PAR JULIEN LE 5 SEPTEMBRE 2026 : « on ferme en attendant
+ * l'immatriculation ». Le site était en ligne, « Inscrire mon entreprise »
+ * dans la barre, et un visiteur pouvait dérouler tout le parcours pour
+ * atterrir sur une page de paiement en mode TEST.
+ *
+ * ⚠️ ET C'EST `mentionsCompletes()` QUI DÉCIDE, PAS UN SECOND INTERRUPTEUR.
+ * Ce n'est pas une astuce : la LCEN interdit de vendre en ligne sans
+ * identification complète de l'éditeur, donc les deux ouvrent ensemble par
+ * nature. Un drapeau à part serait un second endroit où se tromper — et
+ * surtout un endroit qu'on oublierait de rouvrir le jour de
+ * l'immatriculation. Ici, remplir `legal.ts` ouvre la boutique tout seul,
+ * comme `PUBLIEE` ouvre les fiches des boutiques d'applications.
+ *
+ * ⚠️ Elle ne ferme QUE l'acquisition publique — `/inscription` et
+ * `/souscrire`. Le libre-service (changer d'offre, ajouter un magasin) vit
+ * derrière une session d'administrateur d'entreprise, et il n'existe aucun
+ * client réel : le fermer ne protégerait rien.
+ *
+ * ⚠️ Son jumeau vit dans les deux fonctions edge (`inscription`,
+ * `subscribe-online`), qui ne compilent pas avec le site. Une porte fermée à
+ * l'écran seulement s'ouvre avec une adresse : un test compare les deux.
+ */
+export function venteOuverte(): boolean {
+  return mentionsCompletes()
+}

@@ -3749,3 +3749,10 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .ins-carte { padding: 22px 18px 24px; border-radius: 14px; }
   .ins-duo { grid-template-columns: 1fr; }
 }
+
+/* L'adresse à laquelle écrire, quand la vente est fermée : c'est la seule
+   chose à faire sur ces deux pages, elle se lit sans être cherchée. */
+.ins-adresse {
+  margin: 0; font-size: 17px; font-weight: 700; color: var(--text);
+  word-break: break-all;
+}

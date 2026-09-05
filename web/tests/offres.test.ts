@@ -217,8 +217,13 @@ describe('les libellés de la grille', () => {
   it('la grille invite à commencer, elle ne fait pas choisir', () => {
     // « Choisir Essential » décrit un tri ; « Commencer avec Essential » dit ce
     // qui va se passer.
+    // ⚠️ AMENDÉE LE 5 SEPTEMBRE 2026 : le libellé est devenu un ternaire — la
+    // vente est fermée jusqu'à l'immatriculation, et le bouton dit alors
+    // « Nous écrire » plutôt que de promettre une inscription qui ne peut pas
+    // aboutir. Ce qui est défendu ne bouge pas : quand la boutique est
+    // ouverte, on invite à COMMENCER, on ne fait pas trier.
     const grille = lire('../components/TarifsGrille.tsx')
-    expect(grille).toContain('Commencer avec {o.nom}')
-    expect(grille).not.toContain('Choisir {o.nom}')
+    expect(grille).toContain('`Commencer avec ${o.nom}`')
+    expect(grille).not.toContain('Choisir ')
   })
 })
