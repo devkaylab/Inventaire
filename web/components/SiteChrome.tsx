@@ -4,6 +4,7 @@ import { HeaderActions } from '@/components/HeaderActions'
 import { MenuMobile } from '@/components/MenuMobile'
 import { LIENS_PUBLICS } from '@/lib/navigation'
 import { RevealObserver } from '@/components/RevealObserver'
+import { EnTeteAuDefilement } from '@/components/EnTeteAuDefilement'
 import { Parallaxe } from '@/components/Parallaxe'
 import { PRIVACY_URL } from '@/lib/links'
 import { mentionsCompletes } from '@/lib/legal'
@@ -18,6 +19,7 @@ export function SiteHeader() {
     <>
     <RevealObserver />
     <Parallaxe />
+    <EnTeteAuDefilement />
     <header className="site-header">
       <div className="container inner">
         <Link href="/" className="brand">
@@ -46,6 +48,10 @@ export function SiteHeader() {
         <MenuMobile />
       </div>
     </header>
+    {/* ⚠️ Sous 780 px la barre est FIXE : elle ne prend plus sa place dans le
+        flux, et cet espaceur la lui rend. Sans lui, la première section de
+        chaque page passerait sous la barre. */}
+    <div className="site-header-espace" aria-hidden="true" />
     </>
   )
 }
