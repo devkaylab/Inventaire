@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, TVA_APPLICABLE, economie, euros } from '@/lib/offres'
+import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, PLAFOND_LIBRE_SERVICE, TVA_APPLICABLE, economie, euros } from '@/lib/offres'
 import { venteOuverte } from '@/lib/legal'
 
 /**
@@ -114,11 +114,17 @@ export function TarifsGrille() {
         })}
       </div>
 
+      {/* ⚠️ « parlons-en » était un reste du monde du devis, supprimé le
+          4 septembre 2026 : au-delà de cent appareils l'offre se prolonge et
+          s'achète EN LIGNE, par tranches de dix. Et la grille s'arrête à 200
+          (décision de Julien du 5 septembre) — le dire ici évite de le
+          découvrir au moment de payer. */}
       <p className="tarifs-hors-grille">
-        Plus de {APPAREILS_MAX} appareils dans un même magasin ? Comptez{' '}
+        Plus de {APPAREILS_MAX} appareils dans un même magasin ? L’offre se prolonge
+        par tranches de {SUPPLEMENT.par} appareils, à{' '}
         {euros(annuel ? SUPPLEMENT.an : SUPPLEMENT.mois)}{' '}
-        {annuel ? 'par an' : 'par mois'} et par tranche de {SUPPLEMENT.par} appareils
-        supplémentaires — <Link href="/inscription">parlons-en</Link>.
+        {annuel ? 'par an' : 'par mois'} la tranche, jusqu’à {PLAFOND_LIBRE_SERVICE} appareils.
+        Au-delà, un magasin de plus prend sa propre licence.
       </p>
     </>
   )

@@ -258,7 +258,12 @@ function DevisContenu() {
         {perime && !refuse && !decline && (
           <div className="devis-etat">
             <strong>Ce devis a expiré</strong>
-            <span>Écrivez-nous&nbsp;: nous vous en établissons un nouveau, aux tarifs en vigueur.</span>
+            {/* ⚠️ L'adresse, ou le silence — règle du 22 août 2026. Ses deux
+                voisins la respectaient, pas celui-ci. Trouvé par la garde
+                des textes, le 5 septembre. */}
+            <span>{CONTACT_EMAIL
+              ? <>Écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>&nbsp;: nous vous en établissons un nouveau, aux tarifs en vigueur.</>
+              : 'Un nouveau devis reste possible, aux tarifs en vigueur.'}</span>
           </div>
         )}
 

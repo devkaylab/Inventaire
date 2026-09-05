@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/tarifs' },
   title: 'Tarifs',
   description:
-    'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 89 €/mois, Advanced 310 €, Enterprise 890 € — sans engagement, sans déclaration de stock et sans terminal à acheter.',
+    'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 89 €/mois, Advanced 310 €, Enterprise 890 € — sans engagement au mois, sans déclaration de stock et sans terminal à acheter.',
 }
 
 /** Ce que le prix comprend, quelle que soit l'offre. */
@@ -29,11 +29,18 @@ const QUESTIONS = [
   },
   {
     q: 'Que se passe-t-il si nous dépassons le jour de l’inventaire ?',
-    r: 'Rien ce jour-là. Nous ne refusons jamais un appareil pendant un comptage — vous verriez votre équipe bloquée à 22 h, ce qui n’a aucun sens. Le dépassement se règle au renouvellement.',
+    // ⚠️ CE TEXTE PROMETTAIT L'INVERSE DE CE QUE LE PRODUIT FAIT. Il datait
+    // du « plafond souple » du 27 août ; le 4 septembre Julien a tranché
+    // l'inverse — « on n'accepte ni magasin, ni appareil supplémentaires sans
+    // paiement » — et le verrou refuse réellement l'appareil en trop. Constat
+    // de Julien le 5 septembre : « ce texte n'est plus d'actualité ».
+    // Ce qui reste vrai, et qu'il faut dire : personne n'est jamais interrompu
+    // en plein comptage. C'est la première borne du verrou, pas une formule.
+    r: 'L’appareil en trop ne peut pas commencer à compter : il attend qu’un collègue termine, et son écran se débloque tout seul dès qu’une place se libère. Personne n’est jamais interrompu en plein comptage — un appareil qui compte garde sa place jusqu’au bout. Si le cas se répète, l’administrateur élargit l’offre depuis le site : c’est immédiat, et le magasin en profite dans la minute.',
   },
   {
     q: 'Une licence couvre-t-elle plusieurs magasins ?',
-    r: 'Non. Chaque magasin prend sa licence, choisie selon la taille de son équipe : un entrepôt qui compte à trente et une boutique qui compte à deux ne prennent pas la même. Si vous en équipez plusieurs, nous établissons un devis pour l’ensemble.',
+    r: 'Non. Chaque magasin prend sa licence, choisie selon la taille de son équipe : un entrepôt qui compte à trente et une boutique qui compte à deux ne prennent pas la même. Vous les ajoutez un par un depuis votre espace, et chacun est créé dès son paiement — sans devis ni attente.',
   },
   {
     q: 'Faut-il déclarer notre stock ?',
@@ -67,7 +74,11 @@ export default function TarifsPage() {
               Découvrez l’offre <span className="grad">Quantinvo.</span>
             </h1>
             <p className="lead" data-reveal="2">
-              Sans engagement et résiliable à tout moment.
+            {/* ⚠️ « résiliable à tout moment » était FAUX pour l'annuel :
+                l'article 7 des CGV dit que les douze mois restent dus, payés
+                d'avance. Une promesse qu'un contrat contredit se retourne au
+                premier client qui la lit. */}
+              Sans engagement au mois. Moins cher à l’année. Sans matériel à acheter.
             </p>
           </div>
         </section>
@@ -90,9 +101,13 @@ export default function TarifsPage() {
                   deux ne prennent pas la même.
                 </p>
               </div>
-              <Link href="/inscription" className="btn btn-ghost">
+              {/* ⚠️ Par `InscriptionLink`, comme partout ailleurs : un bouton
+                  qui promet l'inscription alors que la vente est fermée fait
+                  cliquer pour rien. Il a échappé à la garde du 5 septembre —
+                  elle cherchait « Inscrire mon entreprise », pas ce libellé. */}
+              <InscriptionLink className="btn btn-ghost">
                 Équiper plusieurs magasins
-              </Link>
+              </InscriptionLink>
             </div>
           </div>
         </section>

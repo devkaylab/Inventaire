@@ -51,8 +51,12 @@ function Formulaire() {
           votre magasin.
         </p>
         <p className="muted">
-          Rien ne vous est demandé d’ici là. Si l’e-mail n’arrive pas sous une heure,
-          {CONTACT_EMAIL ? <> écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</> : <> contactez-nous.</>}
+          {/* ⚠️ Sans adresse, on ne dit rien : « contactez-nous » sans dire OÙ
+              est précisément ce que la règle du 22 août 2026 interdit — un
+              texte qui invite à écrire donne l'adresse, ou se tait. */}
+          Rien ne vous est demandé d’ici là.
+          {CONTACT_EMAIL && <> Si l’e-mail n’arrive pas sous une heure, écrivez-nous à{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</>}
         </p>
         <Link href="/" className="btn btn-ghost">Revenir à l’accueil</Link>
       </div>
