@@ -9501,3 +9501,106 @@ maquette seule ne voit pas le défaut de mesure.
 Tests de garde : `web/tests/navigation.test.ts`, blocs « une section est une
 surface, pas une marge » et « la barre publique : parcourir à gauche, agir à
 droite ».
+
+# La vitrine, refondue (5 septembre 2026)
+
+*« Attaque surtout la page d'accueil du site. C'est notre vitrine, il manque du
+contenu je trouve. Donc toujours avec Qonto, compare leur hiérarchie dans le
+contenu et fais de même. »* Maquette validée point par point avant codage :
+https://claude.ai/code/artifact/a75510df-1bd2-4f14-94ea-3efec20c06f9
+
+## Ce que la comparaison a MESURÉ
+
+Notre accueil faisait 3 229 px de haut, celui de Qonto 10 140. Le nombre de
+pixels n'est pas le sujet : ce sont **les types de contenu qu'on n'avait pas**,
+et le fait qu'**aucune de nos huit sections n'avait de fond**.
+
+| Ce que Qonto pose | Chez nous, avant |
+|---|---|
+| Une preuve tout de suite | rien |
+| Le produit se voit | aucune image |
+| Comment ça se passe | rien |
+| Les offres sur l'accueil | une phrase |
+| Des bandes qui alternent | tout transparent |
+| Une phrase par idée | jusqu'à quatre |
+
+## Les règles, qui valent pour toute page vitrine
+
+1. **Une bande, un fond.** Quatre alternances — page, surface, encre, accent.
+   **⚠️ L'accent ne sert QU'UNE FOIS, à la fin** : un accent qui revient trois
+   fois ne conclut plus rien. Un test le compte.
+2. **Un surtitre annonce chaque bande** : on sait où on est avant de lire le
+   titre.
+3. **Une phrase par idée.** Le détail vit sur les pages dédiées.
+4. **La preuve est chiffrée, vraie, et n'annonce JAMAIS le plafond.**
+   400 000 références est la limite mesurée, et le produit s'alerte lui-même dès
+   150 000 : l'écrire sur la vitrine, c'est vendre le point de rupture. On
+   annonce 100 000. **⚠️ Et pas de client inventé** — on n'en a aucun.
+   **« Jusqu'à » fait le travail** : cent compteurs est vrai sur un inventaire
+   ordinaire ; sur 400 000 références le treizième appel simultané dépasse déjà
+   le délai. Le mot dit le plafond sans promettre les deux ensemble.
+5. **À l'impératif, sans négation.** « Préparez », « Comptez », « Arbitrez ».
+6. **Un bouton dit le bénéfice, pas la démarche** — « Fiabiliser mon stock »
+   plutôt qu'« Inscrire mon entreprise ». **La barre garde le libellé
+   explicite** : c'est un repère de navigation, pas un argument. Qonto fait
+   exactement ce partage, et un test fige les deux moitiés.
+7. **Le prix est sur l'accueil**, public depuis le 30 août : le cacher derrière
+   un lien fait douter. **Les montants viennent tous de `lib/offres.ts`.**
+
+## ⚠️ DEUX DÉFAUTS TROUVÉS EN REGARDANT, PAS EN TESTANT
+
+- **En thème sombre, la bande encre avait la couleur de la page.** `--encre`
+  valait `#0b0f19` dans les deux thèmes — c'est-à-dire, en sombre, exactement
+  `--bg`. La seule section qui doit trancher était la seule qu'on ne voyait
+  pas. **Les deux valeurs étaient justes prises isolément ; c'est leur RAPPORT
+  qui était faux** — même famille que les champs de saisie posés sur un fond de
+  leur propre couleur (22 août, 4 septembre). L'encre descend d'un cran en
+  sombre (`#060910`, le `headerBg` de l'app) et garde le bleu-nuit en clair. La
+  garde compare désormais encre et fond **dans les deux thèmes**.
+- **Les trois boutons d'offre menaient au même écran.** `/souscrire` retombe sur
+  son offre par défaut : « Commencer avec Enterprise » ouvrait Essential. Ils
+  portent `?offre=<cle>`, comme le fait déjà `TarifsGrille`. Trouvé en
+  parcourant les liens un par un, à la demande de Julien — pas par un test.
+
+## ⚠️ Une garde qui NOMME une ancre protège l'ancre d'hier
+
+`navigation.test.ts` exigeait `href="#rythmes"` en dur. La refonte a glissé
+cette section en cinquième position et l'indice de défilement a dû viser la
+première : la garde est tombée **alors que rien n'était cassé**. Elle déduit
+maintenant la cible de l'indice et vérifie qu'une section la porte. Même
+doctrine que la garde des portes de `(compte)` le 4 septembre.
+
+## ⚠️ Vérifier une page longue dans le volet navigateur
+
+Deux pièges, tous deux coûteux :
+
+- **le volet ne photographie que ce qui est à l'ordonnée zéro.** `scrollTo` et
+  `scrollIntoView` déplacent bien le DOM (et les styles pilotés par le
+  défilement suivent), mais la capture reste au sommet — d'où des écrans
+  uniformément vides qu'on prend pour un défaut de rendu. **Remonter la page
+  par une marge négative sur `<main>`** met la section voulue sous l'en-tête ;
+- **les apparitions `.reveal` ne se déclenchent jamais** : l'onglet est
+  « hidden », l'`IntersectionObserver` ne part pas. Injecter
+  `.reveal{opacity:1!important;transform:none!important}` avant toute lecture.
+
+## Vérifications
+
+Au navigateur, **clair et sombre**, à **1568 px** (l'écran de Julien), 900 et
+390 px : les huit bandes, **aucun débordement de contenu** — `scrollX` reste à
+zéro, les 40 px mesurés sont le cube décoratif que la racine rogne en `clip`
+(règle du 30 août, ne pas « corriger ») — et aucune erreur de console.
+
+**Chaque bouton cliqué pour de vrai**, écran d'arrivée relu : les trois offres
+présélectionnent bien la leur, les cinq liens de la barre et les cinq du pied
+répondent 200. **Onze sabotages, onze échecs.** 1 140 tests, `tsc --noEmit`,
+`eslint .` à zéro erreur, `next build` avec la table de routes inchangée.
+
+⚠️ **Ce qui reste** : la section « Du rayon au tableau de bord » montre une
+capture réelle du téléphone et un tableau de bord **redessiné**
+(`components/ApercuTableauDeBord.tsx`) — les treize captures de
+`public/prise-en-main/` sont toutes mobiles, et une capture réelle du site
+porterait les données du compte d'essai. Julien apporte une vraie photo de
+terrain ; le jour où une capture présentable existe, elle remplace ce bloc sans
+toucher au reste.
+
+Tests de garde : `web/tests/vitrine-accueil.test.ts`.
