@@ -292,6 +292,29 @@ describe('les pièges de couleur, mesurés dans les DEUX thèmes', () => {
     expect(css).toMatch(/\.membres-cell\.attente \{[^}]*var\(--warning-text\)/)
   })
 
+  it('⚠️ la grille ne ROGNE PAS le menu de ses rangées', () => {
+    // Défaut trouvé en répondant à « all good ? », après le commit. `.membres`
+    // portait `overflow: hidden` pour arrondir les coins de son en-tête — et
+    // rognait du même coup le panneau du menu « ⋯ », posé en absolu dans une
+    // cellule. Les trois actions d'un membre (changer le rôle, retirer les
+    // accès, supprimer le compte) étaient INATTEIGNABLES.
+    //
+    // ⚠️ ET UN `getBoundingClientRect` NE LE VOIT PAS : il rend la géométrie
+    // d'un élément même quand un ancêtre le rogne (92 × 210 px, alors que rien
+    // n'était cliquable). Ce qui tranche, c'est `elementFromPoint` — mesuré :
+    // le bas du panneau rendait `.app-main` avec `hidden`, et bien
+    // `.menu-actions-item.destructif` sans.
+    // ⚠️ Et `code()` avant d'assertir : le commentaire de ce bloc CITE
+    // `overflow: hidden` pour dire qu'on ne le remet pas. Septième variante du
+    // même piège sur ce dépôt — cette garde y est tombée en naissant.
+    const bloc = code(css.slice(css.indexOf('.membres {'), css.indexOf('.membres > * {')))
+    expect(bloc, 'overflow: hidden rognerait le menu de chaque rangée')
+      .not.toContain('overflow: hidden')
+    // Les coins s'arrondissent donc cellule par cellule.
+    expect(css).toMatch(/\.membres > \*:nth-child\(1\) \{ border-top-left-radius/)
+    expect(css).toMatch(/\.membres > \*:last-child \{ border-bottom-right-radius/)
+  })
+
   it('l’en-tête des colonnes n’est pas plus pâle que le texte qu’il coiffe', () => {
     expect(css).toMatch(/\.membres-th \{[^}]*color: var\(--text-2\)/)
   })

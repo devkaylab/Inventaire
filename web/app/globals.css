@@ -929,8 +929,21 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   grid-template-columns: minmax(220px, 1.7fr) auto minmax(200px, 1.4fr) minmax(150px, 1fr) auto;
   align-items: center;
-  border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--hairline); border-radius: 12px;
 }
+/* ⚠️ SURTOUT PAS `overflow: hidden` SUR CETTE GRILLE. Il servait à arrondir les
+   coins de l'en-tête ; il rognait aussi le panneau du menu « ⋯ », posé en
+   absolu dans une cellule. Mesuré : **hauteur 0**, donc un menu qui ne montre
+   RIEN — et les trois actions d'un membre (changer le rôle, retirer les accès,
+   supprimer le compte) devenaient inatteignables.
+   ⚠️ Et un `getBoundingClientRect` NE L'AURAIT PAS VU : il rend la géométrie
+   d'un élément même quand un ancêtre le rogne. Ce qui tranche, c'est
+   `elementFromPoint` — ou la hauteur réelle du panneau. Les coins s'arrondissent
+   donc cellule par cellule, ci-dessous. */
+.membres > *:nth-child(1) { border-top-left-radius: 11px; }
+.membres > *:nth-child(5) { border-top-right-radius: 11px; }
+.membres > *:nth-last-child(5) { border-bottom-left-radius: 11px; }
+.membres > *:last-child { border-bottom-right-radius: 11px; }
 .membres > * { padding: 12px 14px; border-bottom: 1px solid var(--hairline); min-width: 0; }
 /* Le dernier rang n'a pas de filet : le cadre de la grille le porte déjà. */
 .membres > *:nth-last-child(-n + 5) { border-bottom: 0; }

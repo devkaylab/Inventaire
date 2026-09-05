@@ -10343,6 +10343,29 @@ genre d'endroit : celui où l'on cherche qui n'est jamais entré.
 - **« Clôturé ce mois-ci » se mesure sur `closed_at`**, pas sur `created_at` :
   un inventaire ouvert en juin et clôturé aujourd'hui doit compter.
 
+## ⚠️ LE DÉFAUT TROUVÉ EN RÉPONDANT À « ALL GOOD ? » — après le commit
+
+`.membres` portait `overflow: hidden` pour arrondir les coins de son en-tête.
+Il rognait du même coup **le panneau du menu « ⋯ »**, posé en absolu dans une
+cellule : les trois actions d'un membre — changer le rôle, retirer les accès,
+supprimer le compte — étaient **inatteignables** sur `/equipe`. Les coins
+s'arrondissent désormais cellule par cellule.
+
+⚠️ **ET UN `getBoundingClientRect` NE LE VOIT PAS.** Il rend la géométrie d'un
+élément même quand un ancêtre le rogne : le panneau mesurait 92 × 210 px alors
+que rien n'était cliquable. **Ce qui tranche, c'est `elementFromPoint`** — le
+bas du panneau rendait `.app-main` avec `hidden`, et bien
+`.menu-actions-item.destructif` sans. C'est pour ça que le contrôle du menu
+« dans ses deux états », fait avant le commit, n'avait rien vu : il mesurait un
+rectangle.
+
+⚠️ **Et ma première preuve du défaut était FAUSSE, en sens inverse** : j'ai
+d'abord mesuré « hauteur du panneau = 0 » et conclu trop vite. **Le `body`
+entier mesurait 0 × 0** — le volet navigateur était masqué, le piège déjà payé
+le 5 septembre au matin (« 204 px de débordement » qui n'existaient pas). Poser
+une largeur explicite AVANT de mesurer, toujours ; un chiffre invraisemblable
+est d'abord un défaut de mesure.
+
 ## ⚠️ TROIS LEÇONS DE MÉTHODE
 
 1. **Le pire défaut ne se voit qu'en REGARDANT.** Les 868 px de vide des
@@ -10353,7 +10376,11 @@ genre d'endroit : celui où l'on cherche qui n'est jamais entré.
    mordu : une page qui a deux sections passe en en perdant une. La garde exige
    donc aussi que les classes de l'ancien monde (`dash-store`, `dash-kpi`,
    `dash-sub`) aient disparu.
-3. **Une garde qui tient à une tournure casse au premier ajustement de texte.**
+3. **Une garde qui vérifie une ABSENCE lit le code sans ses commentaires** —
+   septième variante sur ce dépôt, et celle-ci y est tombée **en naissant** :
+   le commentaire du bloc CITE `overflow: hidden` pour dire qu'on ne le remet
+   pas, et la garde s'est lue elle-même.
+4. **Une garde qui tient à une tournure casse au premier ajustement de texte.**
    Sept gardes existantes sont tombées — elles cherchaient
    `<div className="dash-sub">Compteurs · {s.name}</div>`,
    `Magasins{estAdmin && …}`, `{superviseur ? 'Passer compteur' : …}`. Toutes
@@ -10372,9 +10399,9 @@ genre d'endroit : celui où l'on cherche qui n'est jamais entré.
   états*), ouvert au clic, Échap referme **et rend le focus**, un clic ailleurs
   referme, le panneau tient dans l'écran, et « Supprimer le compte » est le
   dernier, derrière son filet.
-- **Onze sabotages, onze échecs** — après resserrement du premier, qui ne
+- **Douze sabotages, douze échecs** — après resserrement du premier, qui ne
   mordait pas.
-- 1 240 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
+- 1 241 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
   avertissements, tous de la famille `react-hooks/*` déjà documentée, aucun sur
   les fichiers touchés), `next build` avec la table de routes **inchangée**.
 
