@@ -8091,7 +8091,7 @@ Le cul-de-sac, lui, se reproduit depuis un compte d'administrateur d'entreprise
 Tests de garde : `tests/compte.test.ts`, bloc « une porte s'ouvre des deux
 côtés ».
 
-# Les six Price Stripe, contrôlés un par un (4 septembre 2026)
+# Les huit Price Stripe, contrôlés un par un (4 et 5 septembre 2026)
 
 Julien a recréé les six Price aux tarifs du 31 août et posé les six secrets.
 Contrôle de bout en bout : six sessions Checkout ouvertes par la fonction
@@ -8697,9 +8697,24 @@ Ils portent une **quantité** — le nombre de tranches — et c'est ce qui perm
 un seul Price de couvrir n'importe quel dépassement sans qu'aucun montant soit
 fabriqué à la volée.
 
-⚠️ **Tant qu'ils manquent, seul le dépassement des cent appareils est bloqué**
-(503 `indisponible`, **avant toute écriture** — règle du 30 août). Essential,
-Advanced et Enterprise se souscrivent déjà.
+⚠️ **POSÉS LE 4 SEPTEMBRE 2026 À 17 h 09, et vérifiés le 5** — cette section
+a dit « restent à poser » pendant une journée entière, et je l'ai répétée à
+Julien le 5 septembre au lieu d'aller regarder. `supabase secrets list` répond
+en une commande. **Une liste de « reste à faire » se barre quand c'est fait**,
+sinon elle devient la source d'une réponse fausse.
+
+Montants relevés sur les pages de paiement réelles, en test, par le parcours
+d'inscription complet (140 appareils = Enterprise + 4 tranches) :
+
+| | mensuel | annuel |
+|---|---|---|
+| Quantinvo Enterprise | 890,00 € | 9 450,00 € |
+| Appareils supplémentaires · Qté 4 | 64,00 € chacun = 256,00 € | 690,00 € chacun = 2 760,00 € |
+| **Total** | **1 146,00 €** | **12 210,00 €** |
+
+C'est exactement ce que rend `prix_offre`. ⚠️ **Et c'est le montant AFFICHÉ qui
+fait foi, pas le fait que la session s'ouvre** : une inversion mensuel/annuel
+ouvre une page tout aussi valide.
 
 ## Ce qui porte les écrans
 
@@ -10030,15 +10045,21 @@ gain nul ; un jeton qui n'authentifie pas ne servirait à rien.
 
 ## ⚠️ CE QUI RESTE À FAIRE, ET QUE JE NE PEUX PAS FAIRE
 
-- **Les deux Price `STRIPE_PRICE_APPAREILS_MONTHLY` / `_YEARLY`** (64 € et
-  690 € par tranche de dix) ne sont **toujours pas posés**. Sans eux, un magasin
-  au-delà de cent appareils répond `indisponible` — **avant toute écriture**.
-  Les six Price d'offre, eux, existent en mode TEST.
-- **Aucun euro n'a circulé par ce parcours.** Ce qui est prouvé : la base
-  répond juste, la fonction edge démarre et refuse ce qu'elle doit refuser
-  (401 sans session, 400 sur une action inconnue, 400 sur une adresse
-  malformée), et les écrans affichent les mêmes montants que `prix_offre`.
-- **L'e-mail du code n'a pas été reçu dans une vraie boîte.**
+- ~~Les deux Price `STRIPE_PRICE_APPAREILS_*` restent à poser~~ — **FAUX, et
+  c'est moi qui l'ai écrit**. Ils étaient posés depuis le 4 septembre 17 h 09.
+  Constat de Julien : « je comprends pas, on n'a pas déjà fait les price sur
+  Stripe ? ». J'avais repris la note du dépôt au lieu de lancer
+  `supabase secrets list`. **Les huit Price existent**, et les deux
+  « appareils » ont été relus sur les pages de paiement le 5 septembre.
+- **⚠️ LE PARCOURS A ÉTÉ ÉPROUVÉ CONTRE STRIPE, en test** (5 septembre 2026) :
+  compte de prospect créé par la fonction edge, session ouverte, dépôt d'un
+  magasin à 140 appareils, et les deux pages de paiement relues — mensuelle et
+  annuelle. Voir « Les huit Price Stripe » plus haut pour les montants.
+  Données d'essai supprimées, **zéro résidu contrôlé** (0 brouillon, 0 demande,
+  0 code, 8 comptes et 8 profils comme avant).
+- **Aucun euro n'a circulé** : les deux sessions ont été abandonnées, elles
+  expirent d'elles-mêmes. Et **l'e-mail du code n'a pas été reçu dans une vraie
+  boîte** — le code a été lu en base pour ne pas écrire à un domaine d'essai.
 
 ## Six gardes réorientées, aucune affaiblie
 
