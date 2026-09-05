@@ -315,6 +315,32 @@ describe('les pièges de couleur, mesurés dans les DEUX thèmes', () => {
     expect(css).toMatch(/\.membres > \*:last-child \{ border-bottom-right-radius/)
   })
 
+  it('⚠️ les filets du tableau ne font pas d’ESCALIER', () => {
+    // Vu sur la page RÉELLE en production, jamais au banc : avec
+    // `align-items: center` sur la grille, chaque cellule prenait sa hauteur
+    // naturelle et son `border-bottom` se posait à une hauteur différente de
+    // ses voisines — un escalier de filets sur toute la largeur. Les rangées
+    // d'essai avaient toutes la même hauteur, elles ne pouvaient pas le
+    // montrer.
+    const grille = code(css.slice(css.indexOf('.membres {'), css.indexOf('.membres > * {')))
+    expect(grille, 'les cellules doivent s’étirer sur la hauteur de leur rangée')
+      .not.toContain('align-items: center')
+    expect(css).toMatch(/\.membres > \* \{[^}]*justify-content: center/)
+  })
+
+  it('⚠️ le menu s’ouvre vers le HAUT quand la place manque en bas', () => {
+    // Mesuré sur la page réelle : sur la dernière rangée, le panneau dépassait
+    // le bas de la fenêtre de 86 px. Il existait, il était même atteignable
+    // après défilement — mais il fallait deviner qu'il était là.
+    const menu = code(lire('components/ui/MenuActions.tsx'))
+    expect(menu).toContain('window.innerHeight')
+    expect(menu).toMatch(/versLeHaut \? ' vers-le-haut' : ''/)
+    expect(css).toMatch(/\.menu-actions-panneau\.vers-le-haut \{[^}]*bottom: calc\(100% \+ 6px\)/)
+    // ⚠️ Et il ne bascule PAS s'il n'y a pas non plus la place au-dessus :
+    // sinon on déplacerait le débordement au lieu de le fermer.
+    expect(menu).toContain('r.top - hauteur > 0')
+  })
+
   it('l’en-tête des colonnes n’est pas plus pâle que le texte qu’il coiffe', () => {
     expect(css).toMatch(/\.membres-th \{[^}]*color: var\(--text-2\)/)
   })

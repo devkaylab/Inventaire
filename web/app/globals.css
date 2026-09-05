@@ -928,7 +928,6 @@ a { color: inherit; text-decoration: none; }
 .membres {
   display: grid;
   grid-template-columns: minmax(220px, 1.7fr) auto minmax(200px, 1.4fr) minmax(150px, 1fr) auto;
-  align-items: center;
   border: 1px solid var(--hairline); border-radius: 12px;
 }
 /* ⚠️ SURTOUT PAS `overflow: hidden` SUR CETTE GRILLE. Il servait à arrondir les
@@ -944,7 +943,17 @@ a { color: inherit; text-decoration: none; }
 .membres > *:nth-child(5) { border-top-right-radius: 11px; }
 .membres > *:nth-last-child(5) { border-bottom-left-radius: 11px; }
 .membres > *:last-child { border-bottom-right-radius: 11px; }
-.membres > * { padding: 12px 14px; border-bottom: 1px solid var(--hairline); min-width: 0; }
+/* ⚠️ LES CELLULES S'ÉTIRENT, ELLES NE SE CENTRENT PAS — et le filet en dépend.
+   Avec `align-items: center` sur la grille, chaque cellule prenait sa hauteur
+   naturelle : leurs `border-bottom` se retrouvaient à des hauteurs différentes
+   et le tableau montrait un ESCALIER de filets d'une colonne à l'autre. Vu sur
+   la page réelle en production, pas au banc — les rangées d'essai avaient
+   toutes la même hauteur. Le contenu se centre donc DANS la cellule, qui
+   remplit sa rangée. */
+.membres > * {
+  padding: 12px 14px; border-bottom: 1px solid var(--hairline); min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+}
 /* Le dernier rang n'a pas de filet : le cadre de la grille le porte déjà. */
 .membres > *:nth-last-child(-n + 5) { border-bottom: 0; }
 /* ⚠️ `--bg`, JAMAIS `--surface-2` : en thème clair les deux valent #ffffff, et
@@ -967,7 +976,7 @@ a { color: inherit; text-decoration: none; }
    celle qui se LIT. Même correctif que `.offre-refus` le 5 septembre — et à
    l'endroit précis où l'on cherche qui n'est jamais entré. */
 .membres-cell.attente { color: var(--warning-text); font-weight: 600; }
-.membres-fin { display: flex; justify-content: flex-end; }
+.membres-fin { align-items: flex-end; }
 /* Une rangée à survoler se distingue : on suit la ligne du regard jusqu'aux
    actions, qui sont à l'autre bout. */
 .membres > *:hover { background: var(--bg); }
@@ -1012,6 +1021,10 @@ a { color: inherit; text-decoration: none; }
 }
 .menu-actions-btn:hover { background: var(--bg); border-color: var(--hairline); color: var(--text); }
 .menu-actions-btn[aria-expanded="true"] { background: var(--bg); border-color: var(--hairline); }
+/* ⚠️ ET IL S'OUVRE VERS LE HAUT QUAND LA PLACE MANQUE EN BAS. Mesuré sur la
+   page réelle : sur la dernière rangée du tableau, le panneau dépassait le bas
+   de la fenêtre de 86 px — il fallait deviner qu'il était là et faire défiler.
+   Le composant mesure avant d'ouvrir et pose la classe. */
 .menu-actions-panneau {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
   min-width: 210px; padding: 6px;
@@ -1020,6 +1033,7 @@ a { color: inherit; text-decoration: none; }
   display: flex; flex-direction: column; gap: 2px;
   animation: toast-in .14s ease-out;
 }
+.menu-actions-panneau.vers-le-haut { top: auto; bottom: calc(100% + 6px); }
 .menu-actions-item {
   display: block; width: 100%; text-align: left;
   padding: 9px 11px; border-radius: 8px; border: 0; background: transparent;

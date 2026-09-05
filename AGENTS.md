@@ -10366,7 +10366,32 @@ le 5 septembre au matin (« 204 px de débordement » qui n'existaient pas). Pos
 une largeur explicite AVANT de mesurer, toujours ; un chiffre invraisemblable
 est d'abord un défaut de mesure.
 
-## ⚠️ TROIS LEÇONS DE MÉTHODE
+## ⚠️ DEUX DÉFAUTS QUE SEULE LA PAGE RÉELLE POUVAIT MONTRER
+
+Julien : *« Tu ne peux pas vérifier sur Chrome ? »* — son navigateur porte sa
+session. **C'est le premier contrôle de ce chantier sur les vraies pages, avec
+ses vraies données**, et il a sorti deux défauts que ni le banc, ni la
+maquette, ni les tests n'avaient pu voir.
+
+1. **⚠️ LES FILETS DU TABLEAU FAISAIENT UN ESCALIER.** `align-items: center`
+   sur la grille : chaque cellule prenait sa hauteur naturelle et son
+   `border-bottom` se posait à une hauteur différente de ses voisines. **Les
+   rangées d'essai avaient toutes la même hauteur — elles ne pouvaient pas le
+   montrer.** Les cellules s'étirent désormais et centrent leur contenu.
+2. **⚠️ SUR LA DERNIÈRE RANGÉE, LE MENU S'OUVRAIT HORS DE L'ÉCRAN**, dépassant
+   le bas de la fenêtre de 86 px. Il existait, il devenait même atteignable en
+   défilant — mais il fallait deviner qu'il était là. `MenuActions` mesure
+   maintenant avant d'ouvrir et bascule vers le haut, **sauf s'il n'y a pas non
+   plus la place au-dessus** : sinon on déplacerait le débordement au lieu de
+   le fermer.
+
+**La leçon générale : un banc d'essai a des données trop régulières.** Des
+rangées de même hauteur, une liste courte, une page qui ne touche pas le bas de
+l'écran — c'est exactement ce qui cache ces deux défauts-là. **Quand une page
+demande une session, le vrai Chrome de Julien est le seul contrôle qui vaille**
+(outils `claude-in-chrome`), et il ne coûte que de le demander.
+
+## ⚠️ LE DÉFAUT TROUVÉ EN RÉPONDANT À « ALL GOOD ? » — après le commit
 
 1. **Le pire défaut ne se voit qu'en REGARDANT.** Les 868 px de vide des
    rangées d'invitation ont été trouvés sur une capture, après que le tableau
@@ -10399,15 +10424,15 @@ est d'abord un défaut de mesure.
   états*), ouvert au clic, Échap referme **et rend le focus**, un clic ailleurs
   referme, le panneau tient dans l'écran, et « Supprimer le compte » est le
   dernier, derrière son filet.
-- **Douze sabotages, douze échecs** — après resserrement du premier, qui ne
-  mordait pas.
-- 1 241 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
+- **Quatorze sabotages, quatorze échecs** — après resserrement du premier, qui
+  ne mordait pas.
+- 1 243 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
   avertissements, tous de la famille `react-hooks/*` déjà documentée, aucun sur
   les fichiers touchés), `next build` avec la table de routes **inchangée**.
 
-**Non vu à l'écran** : les quatre pages complètes demandent une session
-d'administrateur d'entreprise ou de superviseur, que je n'ai pas. Ce qui est
-prouvé, c'est que le balisage réel de ces pages, rendu à la vraie largeur, tient
-dans les deux thèmes et ne laisse plus un seul trou.
+**VU EN PRODUCTION, sur le compte de Julien** (`/equipe`, 1710 px) : la bande
+de résumé, le tableau à colonnes sur cinq personnes réelles, les filets, et le
+menu d'une rangée ouvert pour de vrai. C'est ce contrôle qui a sorti les deux
+défauts ci-dessus.
 
 Tests de garde : `web/tests/pages-connectees.test.ts`.

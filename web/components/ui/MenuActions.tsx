@@ -29,8 +29,29 @@ export type ActionRangee = {
  */
 export function MenuActions({ libelle, actions }: { libelle: string; actions: ActionRangee[] }) {
   const [ouvert, setOuvert] = useState(false)
+  const [versLeHaut, setVersLeHaut] = useState(false)
   const boite = useRef<HTMLDivElement>(null)
   const bouton = useRef<HTMLButtonElement>(null)
+
+  /**
+   * ⚠️ Il s'ouvre vers le haut quand la place manque en bas.
+   *
+   * Mesuré sur la page réelle : sur la dernière rangée du tableau, le panneau
+   * dépassait le bas de la fenêtre de 86 px. Il existait, il était même
+   * cliquable après défilement — mais il fallait deviner qu'il était là.
+   *
+   * La hauteur est estimée avant l'ouverture (le panneau n'existe pas encore) :
+   * 40 px par action, plus le rembourrage. Une estimation suffit — ce qui
+   * compte est le SENS, pas le pixel.
+   */
+  const ouvrir = () => {
+    const r = bouton.current?.getBoundingClientRect()
+    if (r) {
+      const hauteur = actions.length * 40 + 16
+      setVersLeHaut(r.bottom + 6 + hauteur > window.innerHeight && r.top - hauteur > 0)
+    }
+    setOuvert(true)
+  }
 
   useEffect(() => {
     if (!ouvert) return
@@ -59,7 +80,7 @@ export function MenuActions({ libelle, actions }: { libelle: string; actions: Ac
         aria-label={libelle}
         aria-haspopup="menu"
         aria-expanded={ouvert}
-        onClick={() => setOuvert((v) => !v)}
+        onClick={() => (ouvert ? setOuvert(false) : ouvrir())}
       >
         {/* Trois points dessinés : à cette taille un caractère ne se cale pas. */}
         <span aria-hidden="true" style={{ display: 'flex', gap: 3 }}>
@@ -70,7 +91,7 @@ export function MenuActions({ libelle, actions }: { libelle: string; actions: Ac
       </button>
 
       {ouvert && (
-        <div className="menu-actions-panneau" role="menu">
+        <div className={`menu-actions-panneau${versLeHaut ? ' vers-le-haut' : ''}`} role="menu">
           {actions.map((a) => (
             <button
               key={a.libelle}
