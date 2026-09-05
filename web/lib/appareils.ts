@@ -35,7 +35,7 @@
  * « forfait ».
  */
 
-import { APPAREILS_MAX, OFFRES, SUPPLEMENT, offrePour, prixCents, type Offre } from '@/lib/offres'
+import { APPAREILS_MAX, OFFRES, PLAFOND_LIBRE_SERVICE, SUPPLEMENT, offrePour, prixCents, type Offre } from '@/lib/offres'
 
 /** Ce que rend `appareils_du_magasin`. */
 export type AppareilsMagasin = {
@@ -127,10 +127,16 @@ export function nomDuPalier(plafond: number | null): string | null {
  * le laisserait au-dessus de son forfait dès le lendemain, et il faudrait le
  * rappeler une semaine plus tard.
  *
- * Rend `null` quand le forfait couvre déjà le besoin : il n'y a rien à vendre.
+ * Rend `null` dans DEUX cas, et les écrans doivent les distinguer :
+ *
+ * - le forfait couvre déjà le besoin — il n'y a rien à vendre ;
+ * - le besoin dépasse `PLAFOND_LIBRE_SERVICE` — il n'y a rien à vendre **ici**,
+ *   c'est un abonnement de plus (Julien, 5 septembre 2026). Un écran qui
+ *   n'afficherait rien laisserait croire à une panne : il doit dire la règle.
  */
 export function proposer(plafond: number | null, besoin: number): Proposition | null {
   if (plafond == null || !Number.isFinite(besoin) || besoin <= plafond) return null
+  if (besoin > PLAFOND_LIBRE_SERVICE) return null
 
   const o: Offre | null = offrePour(besoin)
   const socle = OFFRES[OFFRES.length - 1]

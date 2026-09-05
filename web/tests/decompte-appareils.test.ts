@@ -198,9 +198,13 @@ describe('le jugement — quelle offre proposer', () => {
   it('le bouton dit toujours « Passer à … »', () => {
     // Décision de Julien : un seul verbe. « Ajouter 20 appareils » décrivait
     // un geste différent des autres boutons pour exactement la même chose.
-    for (const [plafond, besoin] of [[2, 7], [2, 40], [20, 40], [100, 112], [100, 250]]) {
+    // ⚠️ 200 est le dernier cas VENDABLE depuis le 5 septembre 2026 : au-delà,
+    // le libre-service ne prolonge plus l'offre d'un magasin (décision de
+    // Julien), et le cas 250 qui figurait ici rend désormais `null`.
+    for (const [plafond, besoin] of [[2, 7], [2, 40], [20, 40], [100, 112], [100, 200]]) {
       expect(proposer(plafond, besoin)?.action).toMatch(/^Passer à /)
     }
+    expect(proposer(100, 250), 'au-delà de la borne, il n’y a rien à vendre ici').toBeNull()
   })
 
   it('ne propose rien quand le forfait couvre déjà le besoin', () => {

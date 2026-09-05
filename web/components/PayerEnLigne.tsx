@@ -21,7 +21,8 @@
 
 import { useId, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { euros } from '@/lib/offres'
+import { PLAFOND_LIBRE_SERVICE, euros } from '@/lib/offres'
+import { ecrivezNous } from '@/lib/contact'
 import { compositionOffre, proposer } from '@/lib/appareils'
 import { nombreOuNull } from '@/components/MagasinSaisie'
 import { nb } from '@/lib/format'
@@ -277,12 +278,18 @@ export function ChangerOffre({
 
   const brut = nombreOuNull(saisie)
   const devices = brut != null && brut > 0 ? Math.round(brut) : null
-  // ⚠️ Le serveur refuse déjà ce cas (`deja_couvert`), et l'écran le dit AVANT :
-  // découvrir après avoir cliqué qu'il n'y avait rien à acheter est le genre de
-  // refus qui fait douter du bouton. La borne haute, elle, reste au serveur —
-  // c'est une règle de grille, on n'en fait pas une copie de plus.
+  // ⚠️ Le serveur refuse déjà ces deux cas (`deja_couvert`, `hors_grille`), et
+  // l'écran les dit AVANT : découvrir après avoir cliqué qu'il n'y avait rien à
+  // acheter est le genre de refus qui fait douter du bouton.
+  //
+  // ⚠️ LA BORNE HAUTE EST DITE ICI DEPUIS LE 5 SEPTEMBRE 2026, et c'est un
+  // renversement. Tant qu'elle valait 1 000 elle était théorique — personne ne
+  // tape mille appareils —, donc la laisser au seul serveur ne coûtait rien. À
+  // 200 elle se rencontre : une enseigne saisit 250 sans y penser, et verrait
+  // un prix calculé avant d'être refusée au clic.
   const dejaCouvert = devices != null && plafond != null && devices <= plafond
-  const offre = devices != null && !dejaCouvert ? proposer(0, devices) : null
+  const horsGrille = devices != null && devices > PLAFOND_LIBRE_SERVICE
+  const offre = devices != null && !dejaCouvert && !horsGrille ? proposer(0, devices) : null
   const composition = offre ? compositionOffre(offre) : null
 
   if (!ouvert) {
@@ -317,8 +324,18 @@ export function ChangerOffre({
       </div>
 
       {dejaCouvert && (
-        <p className="field-hint" role="status">
+        <p className="offre-refus" role="status">
           Votre offre couvre déjà {nb(plafond ?? 0)} appareils&nbsp;: il n’y a rien à changer.
+        </p>
+      )}
+
+      {horsGrille && (
+        <p className="offre-refus" role="status">
+          Au-delà de {nb(PLAFOND_LIBRE_SERVICE)} appareils, l&apos;offre d&apos;un magasin ne se
+          prolonge plus&nbsp;: l&apos;abonnement est par magasin, déclarez-les séparément.
+          {/* ⚠️ `ecrivezNous` se tait quand l'adresse n'est pas posée : on
+              n'invite jamais à écrire sans dire où. Règle du 22 août 2026. */}
+          {ecrivezNous() && <> Si votre cas ne rentre pas, {ecrivezNous()}.</>}
         </p>
       )}
 

@@ -3239,6 +3239,14 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    c'est lui qui apparaîtra sur le relevé bancaire. */
 .souscrire-ttc { font-size: 13.5px; color: var(--text-2); }
 
+/* Un refus qui décide d'un achat se LIT.
+   ⚠️ `.field-hint` est en `--text-3` à 12 px, soit ~3:1 sur la carte — sous le
+   seuil AA, et c'est déjà le défaut corrigé le 22 août 2026 sur la ligne de
+   tranche du formulaire de magasin : « à l'endroit précis où l'on lit le
+   prix ». Ces deux phrases-là disent qu'on ne peut pas acheter, ou qu'il n'y a
+   rien à acheter : elles montent d'un cran (≈ 6:1 dans les deux thèmes). */
+.offre-refus { font-size: 13px; color: var(--text-2); margin-top: 10px; }
+
 /* ─── Prise en main ────────────────────────────────────────────────────────
    Le guide de l'application mobile, dans la boîte à outils. Rien de neuf en
    couleurs ni en typographie : ce sont les jetons de l'espace connecté. */

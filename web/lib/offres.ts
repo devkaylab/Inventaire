@@ -138,8 +138,31 @@ export const OFFRE_PHARE: CleOffre = 'advanced'
  */
 export const SUPPLEMENT = { par: 10, mois: 64, an: 690 } as const
 
-/** Le plafond au-delà duquel le tarif se construit avec le client. */
+/** Le haut du dernier palier — au-delà, le supplément par dix prend le relais. */
 export const APPAREILS_MAX = 100
+
+/**
+ * Le plus grand nombre d'appareils que le libre-service vend sur UN magasin.
+ *
+ * ⚠️ Tranché par Julien le 5 septembre 2026 : « au bout d'un moment on n'ajoute
+ * plus d'appareils, on passe par une autre offre. Il est rare d'aller au-delà
+ * de 100 appareils en général. Possible d'ajouter des appareils jusqu'à 200
+ * appareils, au-delà → nouvel abonnement. Au pire le client nous contactera. »
+ *
+ * Au-delà, il n'y a **pas de prix plus gros et pas de devis** : l'abonnement
+ * est par magasin, et une enseigne qui compte à 250 appareils compte en réalité
+ * dans plusieurs lieux — chacun prend le sien.
+ *
+ * ⚠️ CE N'EST PAS UNE BORNE DE LECTURE. `plafond_appareils` (en base) calcule
+ * ce qu'un magasin a le droit de faire tourner, y compris un magasin devisé
+ * plus haut hors libre-service : borner la lecture couperait le verrou d'un
+ * client légitime. C'est la VENTE qui s'arrête à 200.
+ *
+ * ⚠️ Sa jumelle vit dans `prix_offre` (base), qui est la borne qui fait foi —
+ * le site et la base ne compilent pas ensemble, même duplication assumée que
+ * la grille elle-même. Un test compare les deux.
+ */
+export const PLAFOND_LIBRE_SERVICE = 200
 
 /**
  * Le taux de TVA appliqué en France.
@@ -252,12 +275,17 @@ export type Rythme = 'monthly' | 'yearly'
  * dix entamées — c'est ce qu'annonce la page publique. Rend `null` pour un
  * nombre d'appareils inexploitable : zéro appareil n'est pas un magasin
  * gratuit, c'est une saisie incomplète.
+ *
+ * ⚠️ ET `null` AU-DELÀ DE `PLAFOND_LIBRE_SERVICE` : il n'y a alors pas de prix
+ * du tout, pas un prix plus gros. C'est ici que la borne vit côté site — les
+ * écrans la lisent, ils ne la recalculent pas.
  */
 export function prixCents(
   appareils: number | null | undefined,
   rythme: Rythme = 'yearly',
 ): number | null {
   if (appareils == null || !Number.isFinite(appareils) || appareils <= 0) return null
+  if (appareils > PLAFOND_LIBRE_SERVICE) return null
   const annuel = rythme === 'yearly'
   const socle = OFFRES[OFFRES.length - 1]
   const o = offrePour(appareils)

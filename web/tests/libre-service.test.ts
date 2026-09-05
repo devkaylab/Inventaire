@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
-import { OFFRES, SUPPLEMENT } from '@/lib/offres'
+import { APPAREILS_MAX, OFFRES, PLAFOND_LIBRE_SERVICE, SUPPLEMENT, prixCents } from '@/lib/offres'
 import { PALIERS_APPAREILS, compositionOffre, proposer } from '@/lib/appareils'
 
 const racine = path.resolve(__dirname, '../..')
@@ -548,4 +548,106 @@ describe('on ne facture pas les tranches deux fois', () => {
     expect(sans).toContain('itemId: itemSuppl || null')
     expect(sans).not.toContain("itemId: String(etat.item_appareils ?? '').trim() || null")
   })
+})
+
+/**
+ * La grille du libre-service s'arrête à 200 appareils (5 septembre 2026)
+ *
+ * Julien, en tranchant la décision 3 de la maquette d'inscription : « au bout
+ * d'un moment on n'ajoute plus d'appareils, on passe par une autre offre. […]
+ * Possible d'ajouter des appareils jusqu'à 200 appareils, au-delà → nouvel
+ * abonnement. Au pire le client nous contactera. »
+ *
+ * La borne valait 1 000, un chiffre posé faute de décision.
+ */
+describe('la grille s’arrête à 200 appareils', () => {
+  const magasins = lire('web/app/magasins/page.tsx')
+
+  it('la base porte la même borne que le site', () => {
+    // ⚠️ Cinquième copie assumée de la grille — le site et la base ne compilent
+    // pas ensemble. C'est `prix_offre` qui fait foi côté serveur : les deux
+    // dépôts la vérifient aussi, mais pour rendre un message lisible.
+    const plat = espaces(derniereDefinition('prix_offre').corps)
+    expect(plat).toContain(`if p_devices > ${PLAFOND_LIBRE_SERVICE} then`)
+  })
+
+  it.each(['deposer_changement_offre', 'deposer_ajout_magasin'])(
+    '%s refuse au-delà, avec un code que l’écran peut lire',
+    (fn) => {
+      const plat = espaces(derniereDefinition(fn).corps)
+      expect(plat).toContain(`if p_devices > ${PLAFOND_LIBRE_SERVICE} then`)
+      expect(plat).toContain("'code', 'hors_grille'")
+    },
+  )
+
+  it.each(['deposer_changement_offre', 'deposer_ajout_magasin'])(
+    '%s ne renvoie plus vers un devis',
+    (fn) => {
+      // Le message d'avant proposait de « construire le tarif avec vous » —
+      // c'est-à-dire un devis, que ce parcours ne fait plus depuis le 4
+      // septembre. Au-delà de la borne, c'est un abonnement de plus.
+      const plat = espaces(sansCommentaires(derniereDefinition(fn).corps))
+      expect(plat).not.toContain('nous construisons le tarif avec vous')
+    },
+  )
+
+  it('⚠️ ne borne PAS la lecture : plafond_appareils reste entière', () => {
+    // Elle calcule ce qu'un magasin a le DROIT de faire tourner, y compris un
+    // magasin devisé plus haut hors libre-service. La borner couperait le
+    // verrou d'un client légitime : c'est la VENTE qui s'arrête à 200.
+    const plat = espaces(sansCommentaires(derniereDefinition('plafond_appareils').corps))
+    expect(plat).not.toContain(`> ${PLAFOND_LIBRE_SERVICE}`)
+  })
+
+  it('le prix existe jusqu’à la borne, et pas au-delà', () => {
+    expect(prixCents(PLAFOND_LIBRE_SERVICE, 'monthly')).not.toBeNull()
+    expect(prixCents(PLAFOND_LIBRE_SERVICE, 'yearly')).not.toBeNull()
+    expect(prixCents(PLAFOND_LIBRE_SERVICE + 1, 'monthly')).toBeNull()
+    expect(prixCents(1000, 'yearly')).toBeNull()
+  })
+
+  it('la proposition s’arrête à la borne', () => {
+    expect(proposer(2, PLAFOND_LIBRE_SERVICE)).not.toBeNull()
+    expect(proposer(2, PLAFOND_LIBRE_SERVICE + 1)).toBeNull()
+  })
+
+  it('et le dernier prix vendable est bien celui de la grille', () => {
+    // Enterprise plus dix tranches de dix : 890 + 10 × 64, et 9 450 + 10 × 690.
+    const tranches = (PLAFOND_LIBRE_SERVICE - APPAREILS_MAX) / SUPPLEMENT.par
+    const socle = OFFRES[OFFRES.length - 1]
+    expect(prixCents(PLAFOND_LIBRE_SERVICE, 'monthly'))
+      .toBe((socle.mois + tranches * SUPPLEMENT.mois) * 100)
+    expect(prixCents(PLAFOND_LIBRE_SERVICE, 'yearly'))
+      .toBe((socle.an + tranches * SUPPLEMENT.an) * 100)
+  })
+
+  it.each([['la fiche magasin', payer], ['la page magasins', magasins]])(
+    '%s écrit un refus qui se lit',
+    (_ou, src) => {
+      // ⚠️ `.field-hint` est en `--text-3` à 12 px, soit ~3:1 sur la carte —
+      // sous le seuil AA. C'est le défaut corrigé le 22 août 2026 sur la ligne
+      // de tranche, et une phrase qui dit « vous ne pouvez pas acheter » est
+      // exactement l'endroit où il coûte le plus cher.
+      const sans = sansCommentaires(src)
+      const bloc = sans.slice(sans.indexOf('{horsGrille && ('))
+      expect(bloc.slice(0, 200)).toContain('offre-refus')
+      expect(bloc.slice(0, 200)).not.toContain('field-hint')
+    },
+  )
+
+  it.each([['la fiche magasin', payer], ['la page magasins', magasins]])(
+    '%s dit le refus AVANT le clic',
+    (_ou, src) => {
+      // ⚠️ Renversement du 5 septembre 2026 : à 1 000 la borne était théorique,
+      // personne ne la tapait ; à 200 elle se rencontre. Un écran qui laisse
+      // calculer un prix puis refuse au clic fait douter du bouton.
+      // ⚠️ On vérifie que le drapeau se CALCULE sur la borne, pas qu'il existe :
+      // un `const horsGrille = false` laisse les deux mots dans le fichier et
+      // passait la première version de cette garde. Un test qui passe sans
+      // rien vérifier ne protège rien.
+      const sans = sansCommentaires(src)
+      expect(sans).toMatch(/horsGrille\s*=[^\n]*>\s*PLAFOND_LIBRE_SERVICE/)
+      expect(sans).toContain('{horsGrille && (')
+    },
+  )
 })

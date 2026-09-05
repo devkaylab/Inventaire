@@ -37,6 +37,8 @@ import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
 import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import { QuiSupervise } from '@/components/QuiSupervise'
 import { compositionOffre, proposer } from '@/lib/appareils'
+import { PLAFOND_LIBRE_SERVICE } from '@/lib/offres'
+import { ecrivezNous } from '@/lib/contact'
 import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } from '@/lib/entreprise'
 import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
@@ -344,6 +346,11 @@ function DemandesMagasin() {
     [appareils],
   )
   const composition = offre ? compositionOffre(offre) : null
+  // ⚠️ Le serveur refuse ce cas (`hors_grille`), et l'écran le dit AVANT le
+  // clic : à 1 000 la borne était théorique, personne ne la tapait ; à 200
+  // elle se rencontre — une enseigne saisit 250 sans y penser. Découvrir
+  // après avoir cliqué qu'il n'y avait rien à acheter fait douter du bouton.
+  const horsGrille = appareils != null && appareils > PLAFOND_LIBRE_SERVICE
 
   const charger = useCallback(async () => {
     const { data, error } = await supabase.rpc('ca_list_store_requests')
@@ -469,6 +476,16 @@ function DemandesMagasin() {
             idPrefix={`${uid}-ajout`}
             onChange={(champ, valeur) => setSaisie((v) => ({ ...v, [champ]: valeur }))}
           />
+
+          {horsGrille && (
+            <p className="offre-refus" role="status">
+              Au-delà de {nb(PLAFOND_LIBRE_SERVICE)} appareils, l&apos;offre d&apos;un magasin ne se
+              prolonge plus&nbsp;: l&apos;abonnement est par magasin, déclarez-les séparément.
+              {/* ⚠️ `ecrivezNous` se tait quand l'adresse n'est pas posée : on
+                  n'invite jamais à écrire sans dire où. Règle du 22 août 2026. */}
+              {ecrivezNous() && <> Si votre cas ne rentre pas, {ecrivezNous()}.</>}
+            </p>
+          )}
 
           {offre && nom !== '' && (
             <div style={{ marginTop: 14 }}>
