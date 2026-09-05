@@ -153,3 +153,113 @@ describe('la quatrième branche de handle_new_user', () => {
     expect(plat).toContain('Aucune invitation ni demande validée pour cet e-mail')
   })
 })
+
+describe('le brouillon vit à part', () => {
+  const f = fichierDe('enregistrer_inscription')
+  const enregistrer = code(derniereDefinition('enregistrer_inscription').corps)
+
+  it('⚠️ dans sa propre table, pas dans company_requests', () => {
+    // `admin_pipeline` rend « tout ce qui n'est pas terminé » de cette table :
+    // un brouillon abandonné à l'étape 4 s'y afficherait comme une vente en
+    // cours, avec un nom vide et un revenu de zéro. La console se remplirait de
+    // gens qui n'ont rien demandé.
+    expect(f).toContain('create table if not exists public.inscriptions')
+    expect(enregistrer).not.toContain('company_requests')
+  })
+
+  it('n’est joignable par personne — tout passe par les RPC', () => {
+    expect(f).toContain('alter table public.inscriptions enable row level security')
+    expect(f).toContain('revoke all on table public.inscriptions from public, anon, authenticated')
+    expect(f.replace(/^\s*--.*$/gm, ' ')).not.toContain('create policy')
+  })
+
+  it('⚠️ désigne la ligne par auth.uid(), jamais par un paramètre', () => {
+    // Sinon on écrirait le brouillon d'un autre. La garde porte sur la ligne
+    // visée, pas sur un argument de l'appelant — motif de `ca_store_detail`.
+    expect(enregistrer).toContain('v_uid uuid := auth.uid()')
+    expect(enregistrer).toContain('user_id = v_uid')
+  })
+
+  it('borne les réponses, et REFUSE plutôt que tronquer', () => {
+    expect(enregistrer).toContain("length(p_reponses::text) > 4000")
+    expect(enregistrer).not.toContain('left(p_reponses')
+    expect(f).toContain('inscriptions_reponses_taille')
+  })
+})
+
+describe('finaliser : le prix vient du serveur', () => {
+  const finaliser = code(derniereDefinition('finaliser_inscription').corps)
+
+  it('⚠️ appelle prix_offre, et ne reçoit AUCUN montant', () => {
+    // Elle est appelée avec le jeton du prospect : lui laisser porter un
+    // montant le laisserait s'inscrire à un centime. Même règle que les deux
+    // dépôts du libre-service (4 septembre 2026).
+    expect(finaliser).toContain('public.prix_offre(v_dev, p_billing_period)')
+    expect(finaliser).not.toMatch(/p_(montant|prix|amount)/)
+  })
+
+  it('la borne des 200 appareils reste chez prix_offre', () => {
+    // Elle rend `null` au-delà : on n'en fait pas une copie de plus ici.
+    expect(finaliser).toContain('if v_tarif is null then')
+    expect(finaliser).toContain("'hors_grille'")
+    expect(finaliser).not.toContain('> 200')
+  })
+
+  it('distingue l’échéance de ce que le magasin vaut à l’année', () => {
+    // La règle des lignes de devis du 2 septembre : les confondre facture douze
+    // fois trop cher, ou douze fois trop peu.
+    expect(finaliser).toContain("'prixCents', (v_tarif ->> 'prix_cents')::bigint")
+    expect(finaliser).toContain("'annuelCents', (v_tarif ->> 'annuel_cents')::bigint")
+  })
+
+  it('refuse plutôt que tronquer, sur chaque texte', () => {
+    // ⚠️ La borne s'ancre sur son CHIFFRE ENTIER : `toContain('> 80')` accepte
+    // « > 800 », et le sabotage passait. Troisième fois sur ce dépôt.
+    for (const [champ, max] of [['v_nom', 80], ['v_first', 80], ['v_last', 80],
+                                ['v_phone', 30], ['v_sname', 80]] as const) {
+      expect(finaliser, `${champ} doit refuser au-delà de ${max}`)
+        .toMatch(new RegExp(`length\\(${champ}\\) > ${max}(?!\\d)`))
+    }
+    expect(finaliser).toContain('public.siren_valide(v_siren)')
+  })
+
+  it('⚠️ note le COMPTE sur la demande, et naît en accepted', () => {
+    // `user_id` est le point de sécurité : le webhook promeut ce compte-là.
+    expect(finaliser).toContain("'accepted'")
+    expect(finaliser).toContain("v_uid, 'inscription')")
+  })
+
+  it('une seule demande par compte', () => {
+    expect(finaliser).toContain("'deja_finalise'")
+    expect(finaliser).toContain("'deja_dans_une_entreprise'")
+  })
+})
+
+describe('le paiement promeut le compte, il n’invite pas', () => {
+  const fulfil = code(derniereDefinition('fulfil_paid_request').corps)
+  const promouvoir = code(derniereDefinition('promouvoir_admin_apres_paiement').corps)
+
+  it('⚠️ promeut user_id, jamais l’adresse relue', () => {
+    // Quelqu'un qui change d'adresse entre le dépôt et l'encaissement se
+    // verrait sinon attribuer l'entreprise d'un autre : famille de VR-003.
+    expect(fulfil).toContain('public.promouvoir_admin_apres_paiement(v_company_id, v_req.user_id)')
+    expect(fulfil).not.toContain('promouvoir_admin_apres_paiement(v_company_id, v_email')
+  })
+
+  it('et n’envoie alors AUCUNE invitation', () => {
+    // `invite_company_admin_after_payment` refuse une adresse qui a déjà un
+    // compte (`account_exists`) : le prospect paierait et n'obtiendrait rien.
+    expect(fulfil).toContain("'invite', case when v_req.user_id is not null then null else")
+  })
+
+  it('⚠️ ne déplace pas un compte déjà rattaché à une entreprise', () => {
+    expect(promouvoir).toContain('where id = p_user and company_id is null')
+    expect(promouvoir).toContain("'compte_indisponible'")
+  })
+
+  it('et reste fermée à authenticated', () => {
+    const f = fichierDe('promouvoir_admin_apres_paiement')
+    expect(f).toContain('revoke all on function public.promouvoir_admin_apres_paiement(uuid, uuid) from public, anon, authenticated')
+    expect(f).not.toContain('promouvoir_admin_apres_paiement(uuid, uuid) to authenticated')
+  })
+})
