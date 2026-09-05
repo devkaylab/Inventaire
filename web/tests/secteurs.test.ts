@@ -148,8 +148,15 @@ describe('Où le repère s’affiche, et comment', () => {
 
   it('transmet le code APE avec la demande', () => {
     // Sans lui, la fourchette retombe sur la générique et ne signale rien.
+    //
+    // ⚠️ AMENDÉE LE 5 SEPTEMBRE 2026 : la page ne parle plus à la RPC, elle
+    // passe par la fonction edge du parcours d'inscription — c'est elle qui
+    // porte `p_ape`. Une garde qui s'arrête au navigateur ne garde que la
+    // moitié du chemin (leçon du 2 septembre sur `ca-request-store`).
     const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
-    expect(page).toContain('p_ape')
+    const edge = readFileSync(join(racine, 'supabase/functions/inscription/index.ts'), 'utf8')
+    expect(page).toContain('ape')
+    expect(edge).toContain('p_ape')
   })
 })
 

@@ -380,7 +380,14 @@ describe('l’assiette est le nombre d’appareils (2 septembre 2026)', () => {
     expect(saisie).toContain('Appareils qui comptent en même temps')
     expect(saisie).not.toContain('Stock théorique')
     expect(saisie).not.toContain('Surface de vente')
-    expect(inscription).toContain('devices: m.appareils')
+    // ⚠️ AMENDÉ LE 5 SEPTEMBRE 2026, PAS AFFAIBLI. `/inscription` n'est plus
+    // le formulaire de demande : c'est le parcours en huit étapes, et il pose
+    // la question magasin par magasin. Ce qu'on défend n'a pas changé — la
+    // demande transporte des APPAREILS et jamais un stock — seule la façon de
+    // l'écrire a bougé.
+    expect(inscription).toContain('devices: String(appareilsDe(m)')
+    expect(inscription).not.toContain('units')
+    expect(inscription).not.toContain('sqm')
     expect(magasins).toContain('devices: Math.round(appareils')
     // ⚠️ Depuis le 4 septembre 2026 la page ne parle plus à la RPC : elle passe
     // par la fonction edge du libre-service, qui porte `p_devices`.

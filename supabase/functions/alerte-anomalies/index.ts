@@ -54,6 +54,9 @@ function egalConstant(a: string, b: string): boolean {
   return diff === 0
 }
 
+/** Une inscription restée en chemin. Sa mémoire vit sur la ligne, pas ici. */
+type Relance = { id: string; email: string; etape: number; rang: number; jours: number }
+
 type Anomalie = {
   cle: string
   nature: string
@@ -292,7 +295,61 @@ Deno.serve(async (req) => {
   }
 
   // Les messages sont partis : on note, pour se taire jusqu'à demain.
+  // ─── Les relances d'inscription ────────────────────────────────────────
+  //
+  // ⚠️ UNE RELANCE N'EST PAS UNE ANOMALIE. Elle a sa propre mémoire
+  // (`inscriptions.relances`), son propre calendrier (J+1, J+8, J+21) et son
+  // propre destinataire — le prospect, pas nous. La mêler aux anomalies l'aurait
+  // fait hériter du rappel à 24 h, donc d'un quatrième envoi.
+  //
+  // ⚠️ ET ON MARQUE APRÈS L'ENVOI, jamais avant : un e-mail qui ne part pas
+  // laisse la relance ouverte, et l'heure suivante réessaie. L'ordre inverse la
+  // ferait taire pour de bon sur un incident réseau d'une seconde.
+  let relancees = 0
+  const { data: aRelancer } = await admin.rpc('inscriptions_a_relancer')
+  for (const r of (aRelancer ?? []) as Relance[]) {
+    const a = String(r.email ?? '').trim()
+    if (!a) continue
+    const rang = Number(r.rang ?? 1)
+    const [titre, phrase] = rang === 1
+      ? ['Votre inscription vous attend',
+         'Vous avez commencé à inscrire votre entreprise hier. Vos réponses sont gardées : vous reprendrez exactement où vous en étiez.']
+      : rang === 2
+      ? ['Reprendre votre inscription',
+         'Votre inscription est restée en chemin. Rien n’est perdu — vos réponses sont toujours là.']
+      : ['Dernier rappel : votre inscription',
+         'C’est notre dernier message à ce sujet. Vos réponses seront effacées dans quelques jours ; après quoi il faudra tout ressaisir.']
+    const { html: h, text: t } = emailQuantinvo({
+      titre,
+      apercu: 'Votre inscription Quantinvo vous attend.',
+      salutation: 'Bonjour,',
+      paragraphes: [
+        phrase,
+        'Il reste quelques questions, puis votre offre s’affiche et vos accès s’ouvrent au règlement.',
+      ],
+      bouton: { libelle: 'Reprendre mon inscription', lien: `${appUrl}/inscription` },
+      note: 'Si vous ne souhaitez plus poursuivre, ignorez ce message : vos réponses s’effaceront d’elles-mêmes.',
+      raison: 'Vous recevez ce message parce que vous avez commencé une inscription sur Quantinvo.',
+      siteUrl: appUrl,
+    })
+    try {
+      await envoyerEmail({ to: [a], subject: titre, html: h, text: t })
+      await admin.rpc('marquer_relance_inscription', { p_id: r.id })
+      relancees++
+    } catch (e) {
+      console.error('relance inscription', e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  // ⚠️ DES RELANCES SEULES SONT UN SUCCÈS. `clesEnvoyees` ne porte que les
+  // alertes ; un tour de garde qui n'avait rien à signaler mais a relancé trois
+  // prospects répondait 500, donc `pg_cron` l'aurait rejoué toutes les heures.
+  // Même famille que le défaut corrigé le 4 septembre : un échec d'un canal ne
+  // doit pas retenir l'autre.
   if (clesEnvoyees.length === 0) {
+    if (relancees > 0) {
+      return json({ success: true, anomalies: 0, relances: relancees, emailed: true, memorise: true })
+    }
     return json({ success: false, anomalies: anomalies.length, emailed: false }, 500)
   }
   const { error: mErr } = await admin.rpc('marquer_alertes', { p_cles: clesEnvoyees })
@@ -301,12 +358,14 @@ Deno.serve(async (req) => {
     // heure. Ça se dit, plutôt que de passer pour un succès complet.
     return json({
       success: true, anomalies: anomalies.length, internes: n, forfaits: forfaits.length,
+      relances: relancees,
       emailed: true, memorise: false, error: mErr.message,
     })
   }
 
   return json({
     success: true, anomalies: anomalies.length, internes: n, forfaits: forfaits.length,
+    relances: relancees,
     emailed: true, memorise: true,
   })
 })

@@ -199,13 +199,17 @@ describe('le formulaire porte les appareils', () => {
     expect(f).toContain('Le formulaire d\'\'ajout de magasin a changé')
   })
 
-  it('les deux écrans partagent la même carte de saisie', () => {
-    // Une seule définition : les libellés et les unités ne doivent pas
-    // diverger entre l'inscription et la demande.
-    for (const page of [pageMagasins, pageInscription]) {
-      expect(page).toContain("from '@/components/MagasinSaisie'")
-      expect(page).toContain('<MagasinSaisie')
-    }
+  it('les deux écrans posent la même question, dans les mêmes mots', () => {
+    // ⚠️ AMENDÉE LE 5 SEPTEMBRE 2026, PAS AFFAIBLIE. `/inscription` a cessé
+    // d'être un formulaire d'un seul tenant pour devenir un parcours en huit
+    // étapes : il demande le nom et les appareils MAGASIN PAR MAGASIN, sur son
+    // propre écran, et ne peut donc plus réutiliser la carte. Ce que la garde
+    // défendait — que les libellés ne divergent pas entre les deux écrans —
+    // porte désormais sur les mots eux-mêmes.
+    expect(pageMagasins).toContain("from '@/components/MagasinSaisie'")
+    expect(pageMagasins).toContain('<MagasinSaisie')
+    expect(pageInscription).toContain('Appareils qui comptent en même temps')
+    expect(lire('../components/MagasinSaisie.tsx')).toContain('Appareils qui comptent en même temps')
   })
 
   it('la demande transporte les appareils, du navigateur jusqu’à la RPC', () => {
@@ -255,8 +259,11 @@ describe('le formulaire porte les appareils', () => {
     // existe, alors que le devis se règle dans les deux.
     expect(saisie).toContain("prixCents(appareils, 'monthly')")
     expect(saisie).toContain("prixCents(appareils, 'yearly')")
-    expect(pageInscription).toContain("total('monthly')")
-    expect(pageInscription).toContain("total('yearly')")
+    // Le parcours totalise magasin par magasin, dans les deux rythmes.
+    expect(pageInscription).toContain("prixCents(n, 'monthly')")
+    expect(pageInscription).toContain("prixCents(n, 'yearly')")
+    expect(pageInscription).toContain('totalMois')
+    expect(pageInscription).toContain('totalAn')
     for (const [nom, source] of [
       ['la carte de saisie', saisie],
       ['la demande de magasin', pageMagasins],

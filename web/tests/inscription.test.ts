@@ -10,7 +10,11 @@
  * Maquette : https://claude.ai/code/artifact/27d8f3e6-5e7a-4de7-a1eb-6da9d39cce3a
  */
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
+import { offrePour } from '@/lib/offres'
+import { APPAREILS_TRANCHES } from '@/lib/inscription'
 
 /** Toute assertion d'ABSENCE lit le SQL sans ses commentaires : ils citent
  *  forcément les mots qu'ils décrivent. Le piège s'est présenté cinq fois. */
@@ -261,5 +265,118 @@ describe('le paiement promeut le compte, il n’invite pas', () => {
     const f = fichierDe('promouvoir_admin_apres_paiement')
     expect(f).toContain('revoke all on function public.promouvoir_admin_apres_paiement(uuid, uuid) from public, anon, authenticated')
     expect(f).not.toContain('promouvoir_admin_apres_paiement(uuid, uuid) to authenticated')
+  })
+})
+
+describe('les trois relances', () => {
+  const relancer = code(derniereDefinition('inscriptions_a_relancer').corps)
+  const purge = code(derniereDefinition('purge_expired_data').corps)
+  const declencher = code(derniereDefinition('declencher_alerte').corps)
+  const alerte = readFileSync(
+    path.join(__dirname, '../../supabase/functions/alerte-anomalies/index.ts'), 'utf8')
+
+  it('part à J+1, J+8 et J+21 — trois fois, jamais quatre', () => {
+    // Julien, 5 septembre 2026 : « une relance dès le lendemain puis une
+    // semaine plus tard. Puis une dernière fois à 20 jours de la première. On
+    // ne relance que trois fois. »
+    expect(relancer).toContain('array[1, 8, 21]')
+    expect(relancer).toContain('i.relances < array_length(v_jalons, 1)')
+  })
+
+  it('⚠️ le calendrier et la rétention vivent au même endroit', () => {
+    // J+21 contre une purge à 30 jours ne laisse que NEUF jours de marge. Si
+    // la rétention redescendait sans que le calendrier suive, la troisième
+    // relance partirait sur des réponses déjà effacées.
+    const jalons = relancer.match(/array\[(\d+), (\d+), (\d+)\]/)
+    const retention = relancer.match(/v_retention constant integer := (\d+)/)
+    expect(jalons, 'le calendrier doit être lisible').not.toBeNull()
+    expect(retention, 'la rétention doit vivre ici aussi').not.toBeNull()
+    const dernier = Number(jalons![3])
+    const garde = Number(retention![1])
+    expect(garde, 'la purge doit laisser passer la dernière relance').toBeGreaterThan(dernier)
+    // Et la purge elle-même porte la même valeur.
+    expect(purge).toContain(`inscriptions_ttl constant interval := interval '${garde} days'`)
+  })
+
+  it('ne relance ni un brouillon déposé, ni deux fois le même jour', () => {
+    expect(relancer).toContain('i.demande_id is null')
+    expect(relancer).toContain("interval '20 hours'")
+    expect(purge).toContain('where demande_id is null and created_at < now() - inscriptions_ttl')
+  })
+
+  it('⚠️ marque APRÈS l’envoi, jamais avant', () => {
+    // Un e-mail qui ne part pas laisse la relance ouverte, et l'heure suivante
+    // réessaie. L'ordre inverse la ferait taire pour de bon sur un incident
+    // réseau d'une seconde — règle des alertes du 28 août 2026.
+    const i = alerte.indexOf('await envoyerEmail({ to: [a], subject: titre')
+    const j = alerte.indexOf("rpc('marquer_relance_inscription'")
+    expect(i).toBeGreaterThan(0)
+    expect(i).toBeLessThan(j)
+  })
+
+  it('⚠️ des relances seules sont un succès', () => {
+    // `clesEnvoyees` ne porte que les alertes : un tour de garde qui n'avait
+    // rien à signaler mais a relancé trois prospects répondait 500, donc
+    // `pg_cron` l'aurait rejoué toutes les heures.
+    expect(alerte).toContain('if (relancees > 0) {')
+    expect(declencher).toContain('not exists (select 1 from public.inscriptions_a_relancer())')
+  })
+})
+
+describe('l’écran du parcours', () => {
+  const page = readFileSync(path.join(__dirname, '../app/inscription/page.tsx'), 'utf8')
+  const edge = readFileSync(
+    path.join(__dirname, '../../supabase/functions/inscription/index.ts'), 'utf8')
+  const sansJsx = (s: string) =>
+    s.replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/^\s*\/\/.*$/gm, ' ')
+
+  it('⚠️ la réponse à la demande de code est la MÊME dans tous les cas', () => {
+    // « Cette adresse a déjà un compte » rouvrirait l'oracle d'énumération
+    // fermé le 28 août 2026. C'est l'e-mail — qui n'atteint que le
+    // propriétaire de la boîte — qui dit la vérité.
+    const c = sansJsx(edge)
+    expect(c).toContain("const uniforme = json({ success: true, envoye: true })")
+    // Le détail ne sort jamais vers le navigateur.
+    expect(c).not.toMatch(/json\(\{[^}]*compte_existant/)
+  })
+
+  it('⚠️ n’a AUCUN repli sur une RPC directe', () => {
+    // Sans la fonction edge il n'y a pas de session Stripe : déposer quand
+    // même laisserait quelqu'un persuadé d'avoir payé. Règle de `/souscrire`.
+    const c = sansJsx(page)
+    expect(c).toContain("functions.invoke('inscription'")
+    expect(c).not.toContain("rpc('finaliser_inscription'")
+  })
+
+  it('ne décide d’aucun prix — il affiche', () => {
+    const c = sansJsx(page)
+    expect(c).toContain("prixCents(n, 'monthly')")
+    // Le montant ne part jamais dans la charge : le serveur le recalcule.
+    expect(c).not.toMatch(/amount|montant|prixCents:/)
+  })
+
+  it('écrit avant d’avancer, et relit au retour', () => {
+    // C'est ce qui rend l'abandon rattrapable : le brouillon existe dès la
+    // première réponse, et les trois relances ramènent ici.
+    const c = sansJsx(page)
+    expect(c).toContain("rpc('enregistrer_inscription'")
+    expect(c).toContain("rpc('mon_inscription')")
+  })
+
+  it('dit la borne des 200 appareils AVANT le clic', () => {
+    expect(sansJsx(page)).toContain('refusMagasin')
+    const lib = readFileSync(path.join(__dirname, '../lib/inscription.ts'), 'utf8')
+    expect(lib).toContain('PLAFOND_LIBRE_SERVICE')
+  })
+
+  it('⚠️ aucune tranche ne chevauche une frontière d’offre', () => {
+    // Les paliers sont 2, 20 et 100 : une tranche « 15 à 25 » rendrait l'offre
+    // indécidable, à cheval sur Advanced et Enterprise.
+    for (const t of APPAREILS_TRANCHES) {
+      if (t.plafond == null) continue
+      expect(offrePour(t.plafond), `la tranche ${t.libelle} doit tomber dans une seule offre`)
+        .not.toBeNull()
+    }
   })
 })

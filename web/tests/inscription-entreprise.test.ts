@@ -158,8 +158,15 @@ describe('une demande d’inscription prévient tout le monde (22 août 2026)', 
     expect(edge).toContain("if (!resendKey) return json({ success: true, received: true, emailed: false })")
   })
 
-  it('la page retombe sur la RPC directe si l’edge est injoignable', () => {
-    expect(page).toContain("functions.invoke('submit-company-request'")
-    expect(page).toContain("supabase.rpc('submit_company_request'")
+  it('⚠️ et la page N’A PLUS de repli sur la RPC directe', () => {
+    // RENVERSEMENT ASSUMÉ DU 5 SEPTEMBRE 2026. Le repli avait un sens tant
+    // qu'une demande n'était qu'un signal : « une demande qui passe sans accusé
+    // vaut mieux qu'une demande qui ne passe pas ». Depuis qu'il y a un
+    // paiement derrière, sans la fonction edge il n'y a pas de session Stripe :
+    // déposer quand même laisserait quelqu'un persuadé d'avoir payé. C'est la
+    // règle de `/souscrire` et du libre-service.
+    expect(page).toContain("functions.invoke('inscription'")
+    expect(page).not.toContain("rpc('submit_company_request'")
+    expect(page).not.toContain("functions.invoke('submit-company-request'")
   })
 })

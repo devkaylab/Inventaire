@@ -173,14 +173,31 @@ export async function creerAbonnementCheckout(
      * n'importe quel dépassement, sans qu'aucun montant soit fabriqué ici.
      */
     supplement?: { priceId: string; quantity: number } | null
+    /**
+     * Plusieurs lignes, quand l'abonnement en porte plus d'une sorte : une
+     * inscription à trois magasins peut valoir deux Advanced et un Enterprise.
+     *
+     * ⚠️ Quand elle est fournie, elle REMPLACE `priceId` et `supplement` — on
+     * ne mélange pas les deux façons de décrire la même facture. Chaque ligne
+     * porte le taux de TVA comme les autres : un oubli sur une seule ligne
+     * facturerait la taxe à moitié.
+     */
+    lignes?: { priceId: string; quantity: number }[] | null
     tentative?: number
   },
 ): Promise<SessionCheckout> {
+  const lignes = (p.lignes && p.lignes.length > 0)
+    ? p.lignes.filter((l) => l.quantity > 0).map((l) => ({
+      quantity: l.quantity,
+      price: l.priceId,
+      ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+    }))
+    : null
   const corps = formulaire({
     mode: 'subscription',
     customer_email: p.customerEmail,
     payment_method_types: ['card'],
-    line_items: [
+    line_items: lignes ?? [
       {
         quantity: 1,
         price: p.priceId,

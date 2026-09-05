@@ -143,12 +143,17 @@ describe('le formulaire d’inscription borne ce qu’il accepte', () => {
   it('borne les mêmes champs à l’écran', () => {
     // L'écran empêche, le serveur refuse. Sans le premier, quelqu'un qui colle
     // un long texte ne l'apprend qu'après avoir cliqué.
-    expect(inscription).toMatch(/id="company"\s+maxLength=\{80\}/)
-    expect(inscription).toMatch(/id="firstName" maxLength=\{80\}/)
-    expect(inscription).toMatch(/id="lastName" maxLength=\{80\}/)
-    expect(inscription).toMatch(/id="email"[^>]*maxLength=\{254\}/)
-    expect(inscription).toMatch(/id="phone" maxLength=\{30\}/)
-    expect(inscription).toContain('maxLength={2000}')
+    // ⚠️ AMENDÉE LE 5 SEPTEMBRE 2026. Les identifiants figés ont disparu avec
+    // le formulaire d'un seul tenant : le parcours génère les siens (`${uid}-soc`)
+    // pour que deux cartes de la même page ne se collisionnent pas. Ce qui est
+    // défendu ne bouge pas — l'écran EMPÊCHE avant que la fonction ne refuse —
+    // et se lit sur les bornes, champ par champ.
+    const borne = (n: number) => new RegExp(`maxLength=\\{${n}\\}`)
+    expect(inscription, 'raison sociale, prénom et nom à 80').toMatch(borne(80))
+    expect(inscription, 'téléphone à 30').toMatch(borne(30))
+    // Le message libre n'existe plus : le parcours ne pose que des questions
+    // fermées, et c'est ce qui a permis de retirer le champ de 2 000 signes.
+    expect(inscription).not.toContain('maxLength={2000}')
   })
 })
 

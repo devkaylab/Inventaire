@@ -9935,3 +9935,155 @@ aujourd'hui, et c'est voulu tant que les tranches suivantes ne sont pas là.
    prix s'y compte par dix, une tranche ne suffit plus.
 
 Tests de garde : `web/tests/inscription.test.ts`.
+
+# Le parcours d'inscription est construit (5 septembre 2026)
+
+*« Fais le reste. Aucun sujet ne doit rester en suspens. »* Les cinq tranches
+annoncées le matin sont là. Maquette, décisions 1 à 5 comprises :
+https://claude.ai/code/artifact/27d8f3e6-5e7a-4de7-a1eb-6da9d39cce3a
+
+Migrations `20260905140001` (le socle), `…150001` (la demande et le paiement),
+`…160001` (les relances et la purge), `…170001` (le tour de garde). Fonction
+edge `inscription`, écran `/inscription` en huit étapes, module
+`web/lib/inscription.ts`.
+
+## Le parcours, en une phrase par étape
+
+1. l'adresse → un code à six chiffres part par e-mail ;
+2. le code ; 3. le mot de passe → **le compte existe**, et il ne voit rien ;
+4. la pratique actuelle ; 5. fréquence et volume de références ;
+6. les magasins, **avec leurs appareils, magasin par magasin** ;
+7. l'entreprise (SIREN, raison sociale, contact) ;
+8. l'offre — **une par magasin, additionnées** — puis le paiement.
+
+## ⚠️ CE QUI REMPLACE LE VERROU DE L'AUTO-INSCRIPTION
+
+`handle_new_user` refusait tout e-mail sans invitation depuis le 13 août. Il
+accepte désormais un quatrième cas, et **un seul fait** : une adresse dont le
+code a été consommé il y a moins de quinze minutes. Le profil qui en sort est
+`employee` sans entreprise — **vérifié, pas déduit** : 0 magasin, 0 entreprise,
+0 inventaire, 0 comptage, 0 article, et son auto-promotion est ignorée.
+
+Le détail du code (CSPRNG qualifié, modulo rejeté, bcrypt, dix minutes, usage
+unique, cinq essais comptés avant la comparaison, quota avant la recherche par
+adresse) est dans la section « Le socle du prospect » plus haut.
+
+## ⚠️ LE BROUILLON VIT DANS SA PROPRE TABLE
+
+`inscriptions`, pas `company_requests` : `admin_pipeline` rend « tout ce qui
+n'est pas terminé » de cette table, et un brouillon abandonné à l'étape 4 s'y
+afficherait comme une vente en cours, avec un nom vide et un revenu de zéro.
+
+Il devient une `company_requests` **à la finalisation**, en `accepted` — et à
+partir de là c'est la machinerie du 22 août, inchangée : Checkout, webhook,
+`fulfil_paid_request`. **Aucun second chemin de création d'entreprise.**
+
+## ⚠️ LE PAIEMENT PROMEUT LE COMPTE, IL N'INVITE PAS
+
+`invite_company_admin_after_payment` refuse une adresse qui a déjà un compte
+(`account_exists`, garde VR-003) — c'est exactement le cas du prospect. Sans la
+promotion, il paierait et n'obtiendrait rien : le défaut vécu en vrai le 30 août
+sur la souscription en ligne.
+
+**On promeut `user_id`, noté sur la demande à sa naissance, jamais l'adresse
+relue** : quelqu'un qui change d'adresse entre le dépôt et l'encaissement se
+verrait sinon attribuer l'entreprise d'un autre. Et
+`promouvoir_admin_apres_paiement` ne déplace jamais un compte déjà rattaché.
+
+## ⚠️ LE PRIX VIENT DU SERVEUR
+
+`finaliser_inscription` est appelée **avec le jeton du prospect** : lui laisser
+porter un montant le laisserait s'inscrire à un centime. Elle appelle
+`prix_offre`, magasin par magasin, et la borne des 200 appareils reste là-bas —
+on n'en fait pas une copie. L'écran, lui, n'affiche que ce que `prixCents` dit,
+et refuse la borne **avant le clic**.
+
+Vérifié de bout en bout, en transaction annulée, sur les trois magasins de la
+maquette : 140 + 12 + 2 appareils → 1 146 + 310 + 89 = **1 545 €/mois**, ou
+**16 460 €/an**. Les mêmes chiffres à l'écran et en base.
+
+## Les trois relances, et la paire qu'elles forment
+
+J+1, J+8, J+21 — trois, jamais quatre — et une rétention de **30 jours**.
+
+- **⚠️ LE CALENDRIER ET LA RÉTENTION VIVENT AU MÊME ENDROIT.** J+21 contre une
+  purge à 30 jours ne laisse que **neuf jours** de marge : si la rétention
+  redescendait sans que le calendrier suive, la troisième relance partirait sur
+  des réponses déjà effacées. Un test compare les deux.
+- **⚠️ Une relance n'est PAS une anomalie**, et ne passe donc pas par
+  `anomalies_a_signaler` : elle a sa propre mémoire, son propre calendrier et
+  son propre destinataire — le prospect, pas nous. L'y mêler lui aurait fait
+  hériter du rappel à 24 h, donc d'un quatrième envoi.
+- **⚠️ On marque APRÈS l'envoi**, et **des relances seules sont un succès** :
+  `clesEnvoyees` ne porte que les alertes, et un tour de garde qui n'avait rien
+  à signaler mais a relancé trois prospects répondait 500 — donc `pg_cron`
+  l'aurait rejoué toutes les heures. Même famille que le défaut du 4 septembre.
+
+## ⚠️ UN ÉCART ASSUMÉ AVEC LA MAQUETTE, à corriger si Julien préfère
+
+La règle 8 demandait un **jeton de reprise** aléatoire à durée limitée. Il n'y
+en a pas, et c'est délibéré : le prospect a un compte et un mot de passe dès
+l'étape 3. La relance le ramène sur `/inscription`, sa session le reconnaît (ou
+il se connecte), et `mon_inscription` retrouve son brouillon par `auth.uid()`.
+**Un jeton qui authentifie serait un identifiant de plus à protéger** pour un
+gain nul ; un jeton qui n'authentifie pas ne servirait à rien.
+
+## ⚠️ CE QUI RESTE À FAIRE, ET QUE JE NE PEUX PAS FAIRE
+
+- **Les deux Price `STRIPE_PRICE_APPAREILS_MONTHLY` / `_YEARLY`** (64 € et
+  690 € par tranche de dix) ne sont **toujours pas posés**. Sans eux, un magasin
+  au-delà de cent appareils répond `indisponible` — **avant toute écriture**.
+  Les six Price d'offre, eux, existent en mode TEST.
+- **Aucun euro n'a circulé par ce parcours.** Ce qui est prouvé : la base
+  répond juste, la fonction edge démarre et refuse ce qu'elle doit refuser
+  (401 sans session, 400 sur une action inconnue, 400 sur une adresse
+  malformée), et les écrans affichent les mêmes montants que `prix_offre`.
+- **L'e-mail du code n'a pas été reçu dans une vraie boîte.**
+
+## Six gardes réorientées, aucune affaiblie
+
+`/inscription` a cessé d'être un formulaire d'un seul tenant : six gardes
+décrivaient son ancienne écriture. Chacune vise maintenant ce qu'elle défend —
+les mots des libellés plutôt que le composant partagé, les bornes plutôt que
+des `id` figés, la fonction edge plutôt que la RPC. Et l'une d'elles garde
+désormais **l'inverse** : la page n'a **plus** de repli sur une RPC directe,
+parce que sans la fonction edge il n'y a pas de paiement.
+
+## Trois gardes qui ne mordaient pas
+
+Toutes trois du même genre, et le genre est instructif :
+
+1. **`espaces()` avant `sansCommentaires()` ne retire aucun commentaire** —
+   aplatir efface les débuts de ligne. Négations comme positives se lisaient
+   sur la documentation du fichier.
+2. **`toContain('essais >= 5')` accepte `essais >= 5000`.**
+3. **`toContain('length(v_nom) > 80')` accepte `> 800`.**
+
+*Une garde sur un nombre porte sur sa borne, pas sur son préfixe.*
+
+## Vérifications
+
+- **En base, tout en transactions annulées** : les douze comportements du code,
+  la création de compte, ce que le prospect voit (rien), le parcours complet
+  brouillon → reprise → quatre refus de saisie → dépôt → webhook → promotion,
+  le rejeu `already`, et les six cas du calendrier de relance (J+2, J+9, J+22,
+  après trois, au-delà de la rétention, brouillon déjà déposé).
+- **Parité dépôt/base** : les quinze fonctions touchées ont la même empreinte
+  MD5, corps normalisés.
+- **Dix-huit sabotages, dix-huit échecs** (après resserrement des trois gardes
+  molles).
+- **Au navigateur**, route jetable retirée, `git status` contrôlé, clair et
+  sombre à 1 280 px : les étapes 4, 6 et 8, **débordement horizontal nul**.
+  ⚠️ Le volet annonçait 204 px de débordement — c'était `clientWidth` à zéro,
+  le volet étant masqué. **Mesurer après avoir posé une largeur explicite.**
+- 1 199 tests du site, `tsc --noEmit`, `eslint .` à zéro erreur, `next build`
+  avec `/inscription` en route statique.
+- **Six fonctions edge déployées** — `inscription` (v2, `verify_jwt: false`),
+  `alerte-anomalies`, et les quatre qui embarquent `_shared/stripe.ts`
+  (`accept-quote`, `subscribe-online`, `stripe-webhook`, `libre-service`), ce
+  module ayant gagné les lignes multiples. `verify_jwt` relevé avant, recontrôlé
+  après : rien n'a bougé.
+- Zéro résidu contrôlé : 0 brouillon, 0 demande, 0 code, 2 entreprises,
+  2 magasins.
+
+Tests de garde : `web/tests/inscription.test.ts`.
