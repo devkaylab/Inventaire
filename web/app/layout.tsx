@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { Inter, Sora } from 'next/font/google'
+import { Archivo, Public_Sans } from 'next/font/google'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
@@ -12,8 +12,26 @@ import './globals.css'
 // pour éviter tout clignotement.
 const THEME_INIT = `(function(){try{var p=localStorage.getItem('quantinvo-theme')||'system';var d=p==='dark'||(p==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){document.documentElement.dataset.theme='dark';}})();`
 
-const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-inter', display: 'swap' })
-const sora = Sora({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-sora', display: 'swap' })
+/**
+ * ⚠️ LES DEUX POLICES SONT AUTO-HÉBERGÉES PAR `next/font`, et ce n'est pas un
+ * détail de performance : c'est ce qui fait qu'aucune requête ne part chez
+ * Google au chargement d'une page. La politique de confidentialité s'appuie
+ * dessus (« aucun traceur, aucune mesure d'audience »). Ne jamais remplacer
+ * par un `<link href="fonts.googleapis.com">`.
+ *
+ * Piste « Ardoise », 6 septembre 2026. Inter et Sora sont parties : ce sont
+ * les deux valeurs par défaut de l'époque, et c'est précisément ce qui donnait
+ * au produit son air de gabarit.
+ *
+ * - **Archivo** porte les titres et les nombres. C'est un grotesque de
+ *   signalétique, un peu étroit : à 38 px il tient sur une ligne là où une
+ *   grotesque large déborde, et ses chiffres tabulaires alignent les colonnes
+ *   d'un rapport.
+ * - **Public Sans** porte le texte courant. Elle a été dessinée pour le
+ *   service public américain — lisible, sobre, sans manière.
+ */
+const titre = Archivo({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--police-titre', display: 'swap' })
+const texte = Public_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--police-texte', display: 'swap' })
 
 /**
  * ⚠️ `metadataBase` n'est pas un détail : sans elle, Next rend les adresses
@@ -56,7 +74,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${sora.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${texte.variable} ${titre.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <OrganisationJsonLd />

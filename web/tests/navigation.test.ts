@@ -777,14 +777,39 @@ describe('une section est une surface, pas une marge', () => {
     return css.slice(i, css.indexOf('}', i))
   }
 
-  it('elle porte un fond, un cadre et sa respiration', () => {
+  it('elle porte un fond, et sa respiration', () => {
     const s = bloc('.admin-section')
     expect(s).toContain('background: var(--surface)')
-    expect(s).toContain('border: 1px solid var(--hairline)')
     expect(s).toMatch(/padding: \d+px \d+px/)
     // ⚠️ Et surtout : plus de `margin-top` nu. C'était TOUT ce que la règle
     // faisait, et c'est ce qui rendait cinq blocs indistinguables.
     expect(s).not.toMatch(/margin-top: 44px/)
+  })
+
+  // ⚠️ CETTE GARDE A CHANGÉ D'OBJET LE 6 SEPTEMBRE 2026, ET C'EST VOULU.
+  // Elle exigeait `border: 1px solid var(--hairline)` — le contour était le
+  // moyen retenu le 5 septembre pour détacher une section. La piste « Ardoise »
+  // le retire : mesuré sur qonto.com, leurs cartes n'ont ni bordure ni ombre,
+  // et un contour sur chaque bloc est l'un des trois signes du « fait par une
+  // IA » que Julien voulait effacer.
+  //
+  // Ce que la règle défend n'a pas bougé — une section se détache — mais elle
+  // ne peut plus le tenir par le contour. Elle le tient donc par ce qui le
+  // remplace : le FOND de la section diffère du fond de la page, dans les deux
+  // thèmes. Sans cet écart, `border: 0` donnerait cinq blocs invisibles, ce qui
+  // serait pire que l'état d'avant.
+  it('et son fond diffère de celui de la page, dans les DEUX thèmes', () => {
+    const jeton = (bloc: string, nom: string) => {
+      const m = bloc.match(new RegExp(`--${nom}: (#[0-9a-f]{3,8});`, 'i'))
+      expect(m, `jeton --${nom} introuvable`).toBeTruthy()
+      return m![1].toLowerCase()
+    }
+    const sombre = css.slice(css.indexOf(':root {'), css.indexOf(':root[data-theme="light"]'))
+    const clair = css.slice(css.indexOf(':root[data-theme="light"]'))
+    for (const [nom, t] of [['sombre', sombre], ['clair', clair]] as const) {
+      expect(jeton(t, 'surface'), `en ${nom}, la surface a la couleur du fond`)
+        .not.toBe(jeton(t, 'bg'))
+    }
   })
 
   it('chaque titre de section peut porter sa phrase', () => {
