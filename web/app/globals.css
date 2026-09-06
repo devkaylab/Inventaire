@@ -594,7 +594,7 @@ a { color: inherit; text-decoration: none; }
      derrière le texte mais devant le fond de la bande. */
   position: relative; overflow: hidden; z-index: 0;
   background: linear-gradient(120deg, #211a4d, #14183a);
-  border: 1px solid var(--hairline); border-radius: var(--r);
+  border: 0; border-radius: var(--r);
   padding: 48px; text-align: center;
 }
 .band-glow {
@@ -620,7 +620,7 @@ a { color: inherit; text-decoration: none; }
 .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 40px 24px; }
 .auth-card {
   width: 100%; max-width: 400px; background: var(--surface);
-  border: 1px solid var(--hairline); border-radius: var(--r); padding: 34px;
+  border: 0; border-radius: var(--r); padding: 34px;
   box-shadow: var(--shadow-card);
 }
 .auth-card .head { text-align: center; margin-bottom: 26px; }
@@ -695,7 +695,7 @@ a { color: inherit; text-decoration: none; }
 .magasins-cnt { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 
 .magasin {
-  border: 1px solid var(--hairline); border-radius: var(--r); padding: 14px;
+  border: 0; border-radius: var(--r); padding: 14px;
   background: var(--bg); margin-bottom: 10px;
 }
 .magasin .field { margin-bottom: 0; }
@@ -769,7 +769,7 @@ a { color: inherit; text-decoration: none; }
    magasin affiche son offre sous son champ (voir `.magasin-offre`). */
 .devis-note {
   margin: 16px 0; padding: 12px 14px; border-radius: var(--r); font-size: 12.5px;
-  background: var(--accent-soft); border: 1px solid var(--hairline);
+  background: var(--accent-soft); border: 0;
   color: var(--text-2); line-height: 1.55;
 }
 
@@ -777,7 +777,7 @@ a { color: inherit; text-decoration: none; }
 .declare { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .declare-row {
   display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 11px; border: 1px solid var(--hairline); border-radius: var(--r);
+  padding: 8px 11px; border: 0; border-radius: var(--r);
   font-size: 12.5px; background: var(--bg);
 }
 .declare-haut, .declare-bas {
@@ -807,7 +807,7 @@ a { color: inherit; text-decoration: none; }
    sombre — un lecteur de QR veut du contraste noir sur blanc. */
 .mfa-qr {
   width: 180px; height: 180px; display: block; margin: 12px 0;
-  background: #fff; padding: 10px; border-radius: var(--r); border: 1px solid var(--hairline);
+  background: #fff; padding: 10px; border-radius: var(--r); border: 0;
 }
 
 /* Ligne « se souvenir de mon identifiant » / « mot de passe oublié ». */
@@ -837,7 +837,9 @@ a { color: inherit; text-decoration: none; }
 /* Dans une liste unique, le rôle est ce qui distingue les gens : il doit se
    repérer d'un coup d'œil. Pastille neutre, pour ne voler la vedette ni à
    « Admin » (accent) ni à « Mot de passe à créer » (ambre). */
-.pill-role { color: var(--text-3); background: transparent; border: 1px solid var(--hairline); }
+/* Même mesure : 2,89:1 en `--text-3`. Le rôle est ce qui distingue les gens
+   dans une liste unique — il doit se lire, pas se deviner. */
+.pill-role { color: var(--text-2); background: transparent; border: 1px solid var(--hairline); }
 .pill-vous { color: var(--success-text); background: var(--success-soft); }
 .panel {
   background: var(--surface); border: 0; border-radius: var(--radius);
@@ -892,6 +894,36 @@ a { color: inherit; text-decoration: none; }
 .section-note { color: var(--text-2); font-size: 13.5px; margin: 3px 0 0; max-width: 62ch; }
 .admin-section-head > div:first-child { min-width: 0; }
 
+/* ── UN BLOC DANS UNE SECTION PREND LE FOND DE LA PAGE ─────────────────────
+   ⚠️ C'EST LA RÈGLE QUI REND `border: 0` TENABLE, et sans elle Ardoise
+   produirait exactement l'inverse de ce qu'on cherche.
+
+   Une section est blanche (`--surface`) posée sur la page grise (`--bg`) :
+   elle se détache par son fond, le contour ne lui sert plus à rien. Mais les
+   blocs qu'elle CONTIENT sont eux aussi en `--surface` — blanc sur blanc. Tant
+   qu'ils avaient une bordure, on les voyait quand même ; sans elle, ils
+   disparaissent purement et simplement.
+
+   À l'intérieur d'une section, un bloc est donc un CREUX : il prend le gris de
+   la page. C'est la même mécanique que celle qui a fait retirer `--surface-2`
+   de tous les fonds — un élément ne se pose jamais sur un fond de sa propre
+   couleur. Le piège s'est produit quatre fois sur ce projet ; ici on le ferme
+   d'avance, en une règle plutôt qu'en vingt-trois déclarations. */
+.admin-section .dash-kpi,
+.admin-section .dash-stat,
+.admin-section .dash-card,
+.admin-section .req-row,
+.admin-section .person-row,
+.admin-section .zone-card,
+.admin-section .mag,
+.admin-section .volet,
+.admin-section .fil,
+.panel .dash-kpi,
+.panel .dash-stat,
+.panel .req-row,
+.panel .person-row,
+.panel .zone-card { background: var(--bg); }
+
 /* ── La bande de résumé ────────────────────────────────────────────────────
    Ce qu'on vient vérifier, avant d'avoir à le chercher. Une seule rangée, en
    haut de page, et l'ambre y désigne la SEULE chose qui appelle une décision —
@@ -907,7 +939,7 @@ a { color: inherit; text-decoration: none; }
 .resume-bande > div:last-child { border-right: 0; }
 .resume-bande b {
   display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--text-3); font-weight: 650; margin-bottom: 3px;
+  color: var(--text-2); font-weight: 650; margin-bottom: 3px;
 }
 .resume-bande strong { font-size: 23px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums; }
 .resume-bande span { display: block; color: var(--text-2); font-size: 12.5px; margin-top: 1px; }
@@ -1154,7 +1186,7 @@ a { color: inherit; text-decoration: none; }
 .req-list { display: flex; flex-direction: column; gap: 10px; }
 .req-row {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r); padding: 16px 18px;
+  background: var(--surface); border: 0; border-radius: var(--r); padding: 16px 18px;
 }
 .req-name { font-size: 15px; font-weight: 600; }
 .small { font-size: 13px; }
@@ -1181,7 +1213,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Affectation superviseur ↔ magasin (admin) ──────────── */
 .store-blocks { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
-.store-block { background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--r); padding: 14px 16px; }
+.store-block { background: var(--bg); border: 0; border-radius: var(--r); padding: 14px 16px; }
 .store-block-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .store-block-name { font-size: 15px; font-weight: 700; }
 .store-sup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -1246,7 +1278,7 @@ a { color: inherit; text-decoration: none; }
    pense magasin par magasin, l'écran est rangé comme sa tête. */
 .mag-liste { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
 .mag {
-  background: var(--surface); border: 1px solid var(--hairline);
+  background: var(--surface); border: 0;
   border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden;
 }
 .mag-tete {
@@ -1348,10 +1380,10 @@ a { color: inherit; text-decoration: none; }
 .acc-inv-list { display: flex; flex-direction: column; gap: 10px; }
 .acc-inv-row {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--r); padding: 14px 16px;
+  background: var(--bg); border: 0; border-radius: var(--r); padding: 14px 16px;
   transition: border-color .2s ease;
 }
-.acc-inv-row:hover { border-color: var(--border-strong); }
+.acc-inv-row:hover { background: var(--surface); }
 .acc-inv-live { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .acc-inv-live-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); }
 .acc-inv-name { font-size: 15px; font-weight: 700; margin-top: 2px; }
@@ -1374,7 +1406,7 @@ a { color: inherit; text-decoration: none; }
 .dash-kpis-5 .kpi-note { font-size: 11.5px; margin-top: 5px; }
 /* En dessous, cinq colonnes rendraient les libellés illisibles. */
 @media (max-width: 1040px) { .dash-kpis-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.dash-kpi { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow-card); }
+.dash-kpi { background: var(--surface); border: 0; border-radius: var(--r); padding: 20px; box-shadow: var(--shadow-card); }
 /* Les grands chiffres se lisent en Sora, comme les titres : c'est ce qui
    distingue une donnée d'un paragraphe. */
 .dash-kpi-value {
@@ -1389,7 +1421,12 @@ a { color: inherit; text-decoration: none; }
 
 .dash-store { margin-top: 40px; }
 .dash-store-name { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 16px; }
-.dash-sub { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); margin: 18px 0 10px; }
+/* ⚠️ `--text-2`, PAS `--text-3` : mesuré au navigateur le 6 septembre 2026,
+   ce libellé tombait à 2,89:1 sur le fond de page — sous le seuil AA, à
+   12 px, et il porte une information qu'on lit (« compté hier », « clôturé le
+   2 septembre »). Quatrième fois que ce défaut se présente sur ce projet, avec
+   `.field-hint`, la ligne de tranche et l'en-tête du tableau d'équipe. */
+.dash-sub { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-2); margin: 18px 0 10px; }
 /* Le chiffre à côté du titre de section — « 12 900 € de devis en attente » :
    même ligne, casse normale, pour qu'il se lise comme un montant et non
    comme un titre. */
@@ -1414,11 +1451,11 @@ a { color: inherit; text-decoration: none; }
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .dash-card {
-  display: block; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r);
+  display: block; background: var(--surface); border: 0; border-radius: var(--r);
   padding: 18px; box-shadow: var(--shadow-card);
   transition: border-color .2s ease, transform .2s ease;
 }
-.dash-card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.dash-card:hover { background: var(--bg); transform: translateY(-2px); }
 .dash-card-live { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .dash-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .dash-tag { font-size: 11px; font-weight: 600; color: var(--cyan); background: color-mix(in srgb, var(--cyan) 14%, transparent); padding: 3px 8px; border-radius: 999px; }
@@ -1568,7 +1605,7 @@ a { color: inherit; text-decoration: none; }
 /* Cinq tuiles sur une ligne quand la place le permet, sans forcer : à quatre
    colonnes fixes, la cinquième se retrouvait seule sur une deuxième ligne. */
 .dash-stats-5 { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); }
-.dash-stat { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow-card); }
+.dash-stat { background: var(--surface); border: 0; border-radius: var(--r); padding: 14px; box-shadow: var(--shadow-card); }
 .dash-stat-value { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
 .dash-stat-label { color: var(--text-2); font-size: 12px; margin-top: 4px; }
 .dash-stat-sub { color: var(--text-3); font-size: 11px; margin-top: 2px; }
@@ -1937,7 +1974,7 @@ a { color: inherit; text-decoration: none; }
 .people-list { display: flex; flex-direction: column; gap: 8px; }
 .person-row {
   display: flex; align-items: center; gap: 12px;
-  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r);
+  background: var(--surface); border: 0; border-radius: var(--r);
   padding: 12px 14px; box-shadow: var(--shadow-card);
 }
 .person-row-online { border-color: color-mix(in srgb, var(--success) 40%, transparent); }
@@ -2004,7 +2041,7 @@ a { color: inherit; text-decoration: none; }
 /* ── Onglet Zones ───────────────────────────────────────── */
 .zone-list { display: flex; flex-direction: column; gap: 10px; }
 .zone-card {
-  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r);
+  background: var(--surface); border: 0; border-radius: var(--r);
   padding: 14px 16px; box-shadow: var(--shadow-card);
 }
 .zone-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -2062,7 +2099,7 @@ a { color: inherit; text-decoration: none; }
   /* ⚠️ `--bg`, pas `--surface-2` : en clair ce dernier vaut #ffffff, donc la
      boîte n'avait aucun fond sur un panneau blanc et ne tenait qu'à son
      filet. `--bg` creuse légèrement dans les DEUX thèmes. */
-  margin-top: 12px; background: var(--bg); border: 1px solid var(--hairline);
+  margin-top: 12px; background: var(--bg); border: 0;
   border-radius: var(--r); padding: 12px 14px; font-size: 13px; color: var(--text-2);
 }
 .import-notes strong { color: var(--text); }
@@ -2080,7 +2117,7 @@ a { color: inherit; text-decoration: none; }
 .dash-audit-list { display: flex; flex-direction: column; gap: 10px; }
 .dash-audit-row {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r);
+  background: var(--surface); border: 0; border-radius: var(--r);
   padding: 14px 16px; box-shadow: var(--shadow-card);
 }
 .dash-audit-failed { border-left: 3px solid var(--danger); }
@@ -2115,7 +2152,7 @@ a { color: inherit; text-decoration: none; }
   margin: 20px 0 8px; flex-wrap: wrap;
 }
 .collapsible {
-  border: 1px solid var(--hairline); border-radius: var(--r); margin-top: 16px; overflow: hidden;
+  border: 0; border-radius: var(--r); margin-top: 16px; overflow: hidden;
 }
 .collapsible > summary {
   cursor: pointer; padding: 12px 16px; font-size: 14px; font-weight: 600;
@@ -2139,7 +2176,7 @@ a { color: inherit; text-decoration: none; }
    permanence ; il tient maintenant en deux lignes, chacune disant ce
    qu'elle contient. */
 .volet {
-  background: var(--surface); border: 1px solid var(--hairline);
+  background: var(--surface); border: 0;
   border-radius: var(--r); box-shadow: var(--shadow-card); overflow: hidden;
 }
 .volet + .volet { margin-top: 14px; }
@@ -2174,7 +2211,7 @@ a { color: inherit; text-decoration: none; }
 .demarrage {
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   flex-wrap: wrap; margin-top: 18px; padding: 20px 22px;
-  background: var(--surface); border: 1px solid var(--hairline);
+  background: var(--surface); border: 0;
   border-radius: var(--radius); box-shadow: var(--shadow-card);
 }
 /* Prêt à partir : la carte se teinte, c'est le seul moment où elle appelle. */
@@ -2196,7 +2233,7 @@ a { color: inherit; text-decoration: none; }
 .modeles { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
 .modele-row {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 12px 14px; background: var(--bg); border: 1px solid var(--hairline);
+  padding: 12px 14px; background: var(--bg); border: 0;
   border-radius: var(--r); flex-wrap: wrap;
 }
 .modele-row > div:first-child { flex: 1; min-width: 260px; }
@@ -2207,7 +2244,7 @@ a { color: inherit; text-decoration: none; }
 /* ── Équipe ─────────────────────────────────────────────── */
 .cred-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 14px; background: var(--bg); border: 1px solid var(--hairline);
+  padding: 12px 14px; background: var(--bg); border: 0;
   border-radius: var(--r); margin-bottom: 8px; flex-wrap: wrap;
 }
 .cred-value {
@@ -3211,9 +3248,9 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .fil {
   display: block; width: 100%; text-align: left; cursor: pointer;
   padding: 12px 14px; border-radius: var(--r); font-family: inherit; color: inherit;
-  background: var(--surface); border: 1px solid var(--hairline);
+  background: var(--surface); border: 0;
 }
-.fil:hover { border-color: var(--border-strong); }
+.fil:hover { background: var(--bg); }
 .fil-actif { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 .fil-haut { display: flex; align-items: baseline; gap: 8px; }
 .fil-avec { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

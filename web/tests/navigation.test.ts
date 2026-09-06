@@ -812,6 +812,56 @@ describe('une section est une surface, pas une marge', () => {
     }
   })
 
+  // ⚠️ CETTE GARDE DÉDUIT, ELLE NE CITE PAS TROIS SÉLECTEURS.
+  //
+  // Le défaut « du texte gris sous le seuil AA » s'est présenté QUATRE fois sur
+  // ce projet : la ligne de tranche du 22 août, `.field-hint` du 5 septembre,
+  // l'en-tête du tableau d'équipe le même jour, et trois libellés de plus
+  // mesurés au navigateur le 6 septembre (`.dash-sub` à 2,89:1, la bande de
+  // résumé à 3,22, la pastille de rôle à 2,89).
+  //
+  // À chaque fois on a corrigé le sélecteur fautif, et à chaque fois le suivant
+  // est passé. Ce qui se répète n'est pas un oubli, c'est une PALETTE : tant
+  // qu'un jeton de texte n'atteint pas le seuil sur les fonds où on le pose,
+  // n'importe quel écran futur reproduira le défaut. La garde porte donc sur
+  // les jetons, dans les deux thèmes et sur les deux fonds.
+  //
+  // `--text-3` n'y est pas, et c'est délibéré : c'est un gris de troisième rang
+  // (icônes éteintes, séparateurs, unités d'un chiffre déjà lisible). Le jour
+  // où il porte une phrase, c'est `--text-2` qu'il faut, pas un jeton de plus.
+  it('et tout jeton de texte tient le contraste AA sur les deux fonds', () => {
+    const lum = (hex: string) => {
+      const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    }
+    const ratio = (a: string, b: string) => {
+      const [h, l] = [lum(a), lum(b)].sort((x, y) => y - x)
+      return (h + 0.05) / (l + 0.05)
+    }
+    const jeton = (bloc: string, nom: string) => {
+      const m = bloc.match(new RegExp(`--${nom}: (#[0-9a-f]{6});`, 'i'))
+      expect(m, `jeton --${nom} introuvable`).toBeTruthy()
+      return m![1]
+    }
+    const sombre = css.slice(css.indexOf(':root {'), css.indexOf(':root[data-theme="light"]'))
+    const clair = css.slice(css.indexOf(':root[data-theme="light"]'))
+
+    for (const [nomTheme, bloc] of [['sombre', sombre], ['clair', clair]] as const) {
+      for (const texte of ['text', 'text-2']) {
+        for (const fond of ['bg', 'surface']) {
+          const r = ratio(jeton(bloc, texte), jeton(bloc, fond))
+          expect(r, `en ${nomTheme}, --${texte} sur --${fond} ne fait que ${r.toFixed(2)}:1`)
+            .toBeGreaterThanOrEqual(4.5)
+        }
+      }
+      // Et le bouton plein : son texte se lit sur l'accent, ou il ne se lit pas.
+      const rb = ratio(jeton(bloc, 'on-accent'), jeton(bloc, 'accent'))
+      expect(rb, `en ${nomTheme}, le bouton plein ne fait que ${rb.toFixed(2)}:1`)
+        .toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
   it('chaque titre de section peut porter sa phrase', () => {
     expect(css).toContain('.section-note')
     // Elle est bornée : une explication qui court sur 1 400 px ne se lit pas.
