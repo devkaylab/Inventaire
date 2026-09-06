@@ -125,7 +125,7 @@ export default function LoginScreen() {
         >
           <View style={styles.header}>
             <View style={styles.logoMark}>
-              <AppLogo size={84} />
+              <AppLogo size={84} animated={false} color={theme.textPrimary} />
             </View>
             <Text style={styles.title}>Code de vérification</Text>
             <Text style={styles.subtitle}>
@@ -183,7 +183,7 @@ export default function LoginScreen() {
         >
         <View style={styles.header}>
           <View style={styles.logoMark}>
-            <AppLogo size={84} />
+            <AppLogo size={84} animated={false} color={theme.textPrimary} />
           </View>
           <Text style={styles.title}>Quantinvo</Text>
           <Text style={styles.subtitle}>Outil d&apos;inventaire</Text>
@@ -264,13 +264,10 @@ function makeStyles(t: Theme) {
     // zone visible et le bouton devient inatteignable.
     container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: Spacing.xxl },
     header: { alignItems: 'center', marginBottom: 40 },
-    logoMark: {
-      marginBottom: Spacing.lg,
-      shadowColor: '#6C5CE7',
-      shadowOpacity: 0.45,
-      shadowRadius: 24,
-      shadowOffset: { width: 0, height: 12 },
-    },
+    // ⚠️ PLUS DE HALO SOUS LA MARQUE. Il était en #6C5CE7 — l'indigo d'avant,
+    // le même que celui retiré du site le matin du 6 septembre 2026. Une
+    // marque monochrome n'a pas besoin d'un fond pour exister.
+    logoMark: { marginBottom: Spacing.lg },
     title: { fontSize: 30, fontFamily: Font.extrabold, color: t.textPrimary, letterSpacing: -0.5 },
     subtitle: { fontSize: 14, color: t.textSecondary, marginTop: Spacing.xs, fontFamily: Font.regular },
     form: { gap: Spacing.md },

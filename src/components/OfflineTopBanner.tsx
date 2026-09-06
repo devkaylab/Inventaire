@@ -40,7 +40,25 @@ const BAR_H = 30
  * orange vif en thème sombre — un contraste d'environ 1,9:1, illisible. Cette
  * encre sombre tient au-dessus de 5:1 sur les deux fonds.
  */
-const BAR_INK = '#0B0F19'
+/**
+ * ⚠️ AUCUNE ENCRE UNIQUE NE TIENT SUR LES DEUX ORANGES — MESURÉ, PAS SUPPOSÉ.
+ *
+ * Le bandeau portait une encre en dur, et ça marchait tant que l'orange
+ * d'alerte était vif dans les deux thèmes (#D97706 / #F59E0B). Ardoise a
+ * assombri celui du thème clair (#A06A12) pour qu'il tienne l'AA sur du blanc :
+ * l'encre y tombe alors à **3,88:1**, sous le seuil, sur un bandeau qui
+ * annonce précisément qu'on travaille sans réseau.
+ *
+ * | sur…              | encre #14181A | blanc |
+ * |-------------------|---------------|-------|
+ * | orange clair      | 3,88          | **4,60** |
+ * | orange sombre     | **7,27**      | 2,46  |
+ *
+ * La couleur du texte suit donc le thème. C'est le seul endroit de
+ * l'application où elle le fait dans ce sens — et c'est parce que le fond,
+ * lui, ne suit pas le thème de la même façon.
+ */
+const BAR_TEXTE = { light: '#FFFFFF', dark: '#14181A' } as const
 
 export function OfflineTopBanner() {
   const theme = useTheme()
@@ -81,8 +99,8 @@ export function OfflineTopBanner() {
     >
       <View style={[styles.bar, { height: BAR_H, backgroundColor: theme.warning }]}>
         <Animated.View style={[styles.row, { opacity }]}>
-          <View style={styles.dot} />
-          <Text style={styles.text} numberOfLines={1}>
+          <View style={[styles.dot, { backgroundColor: BAR_TEXTE[theme.name] }]} />
+          <Text style={[styles.text, { color: BAR_TEXTE[theme.name] }]} numberOfLines={1}>
             Hors ligne — le comptage continue
           </Text>
         </Animated.View>
@@ -106,6 +124,6 @@ const styles = StyleSheet.create({
     height: BAR_H,
     paddingHorizontal: Spacing.lg,
   },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: BAR_INK },
-  text: { fontFamily: Font.semibold, fontSize: 13, flexShrink: 1, color: BAR_INK },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  text: { fontFamily: Font.semibold, fontSize: 13, flexShrink: 1 },
 })

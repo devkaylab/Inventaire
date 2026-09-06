@@ -271,6 +271,7 @@ export default function AuditsScreen() {
           <RefreshControl refreshing={isRefetching || recompute.isPending} onRefresh={() => { recompute.mutate(); refetch() }} tintColor={theme.textMuted} />
         }
       >
+        <Text style={styles.docTitre}>Écarts d’audit</Text>
         <View style={styles.summary}>
           {/* Un zéro ne porte pas de couleur, des deux côtés : en rouge, « aucun
               écart » se lisait comme un problème, et un « 0 arbitré » en vert
@@ -487,9 +488,11 @@ function AuditCard({
 
 function Stat({ label, value, color, styles }: { label: string; value: number; color: string; styles: ReturnType<typeof makeStyles> }) {
   return (
+    // ⚠️ Le libellé passe AU-DESSUS du chiffre : c'est l'ordre d'un relevé,
+    // et c'est ce que « Registre » fait aussi sur le site.
     <View style={styles.stat}>
-      <Text style={[styles.statValue, { color }]}>{nb(value)}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color }]}>{nb(value)}</Text>
     </View>
   )
 }
@@ -500,26 +503,35 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     container: { padding: Spacing.lg, gap: Spacing.md },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.background },
-    summary: { flexDirection: 'row', gap: Spacing.md },
-    stat: { flex: 1, backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
-    statValue: { fontSize: 26, fontFamily: Font.extrabold, letterSpacing: -0.5, ...tabular },
-    statLabel: { fontSize: 12, color: t.textSecondary, marginTop: 2, fontFamily: Font.medium },
-    hint: { fontSize: 12, color: t.textMuted, lineHeight: 17, fontFamily: Font.regular },
+    // ⚠️ « REGISTRE » — cet écran fait foi, il se lit comme un document :
+    // filets au lieu de cartes, nombres en chasse fixe, rayon zéro. Même
+    // grammaire que l'onglet Écarts du site, et même frontière — les deux
+    // boutons de passe gardent leurs couleurs, plus bas.
+    docTitre: { fontFamily: Font.serif, fontSize: 25, color: t.textPrimary, letterSpacing: -0.2 },
+    // La rangée de chiffres devient un intervalle réglé.
+    summary: { flexDirection: 'row', borderTopWidth: 1, borderBottomWidth: 1, borderColor: t.textPrimary },
+    stat: { flex: 1, paddingVertical: Spacing.md, paddingRight: Spacing.md },
+    statValue: { fontSize: 22, fontFamily: Font.monoMedium, letterSpacing: -0.2, ...tabular },
+    statLabel: { fontSize: 11, color: t.textSecondary, marginBottom: 4, fontFamily: Font.semibold, textTransform: 'uppercase', letterSpacing: 0.5 },
+    // ⚠️ Pas de `textMuted` dans un document : mesuré à 3,06:1 sur le site,
+    // sous le seuil AA, et ces lignes se LISENT.
+    hint: { fontSize: 12, color: t.textSecondary, lineHeight: 17, fontFamily: Font.regular },
     group: { gap: Spacing.sm },
     baliseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.sm },
     baliseTitle: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2, flex: 1 },
     baliseBadge: { borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
     baliseBadgeText: { fontSize: 11, fontFamily: Font.bold },
-    card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.sm, ...t.shadowCard },
+    // Une ligne, plus une carte.
+    card: { paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: t.hairline, gap: Spacing.sm },
     cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
     sku: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary },
-    subSku: { fontSize: 12, color: t.textSecondary, ...tabular },
+    subSku: { fontSize: 12, fontFamily: Font.mono, color: t.textSecondary, ...tabular },
     figRow: { flexDirection: 'row', gap: Spacing.xxl, marginTop: 2 },
     fig: {},
-    figLabel: { fontSize: 10, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
-    figValue: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary, marginTop: 2, ...tabular },
+    figLabel: { fontSize: 10, fontFamily: Font.semibold, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
+    figValue: { fontSize: 16, fontFamily: Font.monoMedium, color: t.textPrimary, marginTop: 2, ...tabular },
     resolveRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center', marginTop: Spacing.xs },
-    input: { flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },
+    input: { flex: 1, borderWidth: 1, borderColor: t.borderStrong, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },
     resolveBtn: {
       borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
       paddingHorizontal: 16, paddingVertical: 11,
@@ -552,7 +564,7 @@ function makeStyles(t: Theme) {
         marginTop: Spacing.xs,
       },
       plusBtnText: { fontSize: 15, fontFamily: Font.semibold, color: t.accent },
-      empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
+      empty: { fontSize: 14, color: t.textSecondary, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
 
     // Aucun écart à traiter : la bonne nouvelle se dit, au lieu d'une phrase
     // grise perdue en bas de page.
@@ -578,7 +590,7 @@ function makeStyles(t: Theme) {
     arbLigne: { padding: Spacing.lg - 2 },
     arbFilet: { borderTopWidth: 1, borderTopColor: t.hairline },
     arbNom: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },
-    arbMeta: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular, marginTop: 2 },
+    arbMeta: { fontSize: 12, color: t.textSecondary, fontFamily: Font.regular, marginTop: 2 },
     arbBas: {
       flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
       gap: Spacing.md, marginTop: 10,

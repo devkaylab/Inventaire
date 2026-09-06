@@ -60,17 +60,26 @@ export function SplashAnimation({ onFinish }: SplashAnimationProps) {
       {/* Radial background matching the design (light top-center → near-black) */}
       <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
         <Defs>
+          {/* ⚠️ L'ENCRE D'ARDOISE, PLUS LE VIOLET. Le dégradé partait de
+              #161228 — un mauve sombre, reste de l'identité d'avant. Il part
+              maintenant du gris minéral de la charte et s'éteint vers son
+              encre : c'est le même noir que le bandeau de l'application et que
+              la tuile du logo. */}
           <RadialGradient id="bg" cx="0.5" cy="0" r="1.1">
-            <Stop offset="0" stopColor="#161228" />
-            <Stop offset="0.6" stopColor="#0A0912" />
-            <Stop offset="1" stopColor="#060509" />
+            <Stop offset="0" stopColor="#1B1F1E" />
+            <Stop offset="0.6" stopColor="#0E1110" />
+            <Stop offset="1" stopColor="#080A09" />
           </RadialGradient>
         </Defs>
         <Rect x="0" y="0" width={width} height={height} fill="url(#bg)" />
       </Svg>
 
+      {/* ⚠️ ELLE BALAIE À L'OUVERTURE (demande de Julien, 6 septembre 2026).
+          C'est le premier geste que l'application montre : l'allée pleine
+          saute d'une position à l'autre dans le cadre, comme on compte une
+          zone puis la suivante. Le système peut la couper — voir `AppLogo`. */}
       <Animated.View style={[styles.logoWrap, logoStyle]}>
-        <AppLogo size={logoSize} />
+        <AppLogo size={logoSize} animated />
       </Animated.View>
 
       <Animated.Text style={[styles.wordmark, wordStyle]}>QUANTINVO</Animated.Text>
@@ -80,17 +89,16 @@ export function SplashAnimation({ onFinish }: SplashAnimationProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0A0912',
+    backgroundColor: '#0E1110',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
   },
   logoWrap: {
-    // soft glow under the logo
-    shadowColor: '#6C5CE7',
-    shadowOpacity: 0.5,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 20 },
+    // ⚠️ PLUS DE LUEUR SOUS LE LOGO. Elle était en #6C5CE7 — l'indigo d'avant,
+    // le même que le halo retiré du site le matin du 6 septembre. Une marque
+    // monochrome n'a pas besoin d'un fond pour exister ; c'est la règle
+    // d'Ardoise, où rien ne se dit par la profondeur.
   },
   wordmark: {
     marginTop: 28,

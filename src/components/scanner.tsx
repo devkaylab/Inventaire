@@ -278,6 +278,17 @@ export function viseDansLeCadre(
   return cx >= c.x && cx <= c.x + c.l && cy >= c.y && cy <= c.y + c.h
 }
 
+/**
+ * ⚠️ LE VISEUR PORTE L'ACCENT SOMBRE, DANS LES DEUX THÈMES.
+ *
+ * Il était en cyan #38C9FF — le filet de scan de l'identité d'avant, le même
+ * que celui retiré du devis et des e-mails. Il prend maintenant le vert
+ * d'Ardoise, mais **celui du thème sombre quel que soit le thème** : les
+ * coins du cadre sont tracés PAR-DESSUS LA CAMÉRA, qui est toujours une
+ * surface sombre. Le vert forêt du thème clair (#1E4D3B) y disparaîtrait.
+ */
+const VISEUR = '#5FA88A'
+
 export function Scanner({
   sessionId, passNumber, onArticleResolved, initialScans,
   zoneMode = false, mode: baliseMode = 'count', onModeChange, lockMode = false, countedBy,
@@ -1913,7 +1924,7 @@ export function Scanner({
                   confirmation de quelque chose qu'on aurait fait. */}
               <View style={[styles.voletIcone, volet.genre === 'terminee' && styles.voletIconeOk]}>
                 <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
-                     stroke={volet.genre === 'terminee' ? theme.success : '#38C9FF'} strokeWidth={2.2}
+                     stroke={volet.genre === 'terminee' ? theme.success : VISEUR} strokeWidth={2.2}
                      strokeLinecap="round" strokeLinejoin="round">
                   {volet.genre === 'modes' || volet.genre === 'corriger' ? (
                     <>
@@ -2193,7 +2204,7 @@ function makeStyles(t: Theme) {
     voletBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
     amorce: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.md, backgroundColor: t.background },
     amorceViseur: { width: 96, height: 96, marginBottom: Spacing.xl },
-    coin: { position: 'absolute', width: 26, height: 26, borderColor: '#38C9FF', borderWidth: 2.5, borderRadius: 4 },
+    coin: { position: 'absolute', width: 26, height: 26, borderColor: VISEUR, borderWidth: 2.5, borderRadius: 4 },
     coinHG: { left: 0, top: 0, borderRightWidth: 0, borderBottomWidth: 0 },
     coinHD: { right: 0, top: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
     coinBG: { left: 0, bottom: 0, borderRightWidth: 0, borderTopWidth: 0 },

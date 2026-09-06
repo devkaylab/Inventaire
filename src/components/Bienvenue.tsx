@@ -107,7 +107,7 @@ export function Bienvenue({
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.corps}>
-        <AppLogo size={40} animated={false} />
+        <AppLogo size={40} animated={false} color={theme.textPrimary} />
         <Text style={styles.eyebrow}>Première ouverture</Text>
         <Text style={styles.titre}>{prenom ? `Bonjour ${prenom}.` : 'Bonjour.'}</Text>
         <Text style={styles.place}>{c.place}</Text>
