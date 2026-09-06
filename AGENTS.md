@@ -8307,11 +8307,11 @@ Deux détails demandés par Julien sur `/tarifs`, et les deux valent comme règl
   décrit un tri, « Commencer avec » dit ce qui va se passer. Un test refuse le
   retour de l'ancien libellé.
 
-⚠️ Vérifié au navigateur : la page **déborde de 40 px**, et ce n'est PAS un
-défaut — c'est le cube décoratif `.deco-droite`, coupé par l'`overflow-x: clip`
-de la racine (règle du 30 août : `clip`, jamais `hidden`, sinon l'en-tête
-collant décroche). `scrollX` reste à zéro, la page ne défile pas latéralement.
-Ne pas « corriger » ce chiffre en le voyant passer dans une mesure.
+⚠️ Vérifié au navigateur : la page débordait alors de **40 px** — le cube
+décoratif `.deco-droite`, coupé par l'`overflow-x: clip` de la racine (règle du
+30 août : `clip`, jamais `hidden`, sinon l'en-tête collant décroche). **Ce cube
+a été retiré le 6 septembre 2026** (section « Les cubes du décor sont partis »),
+donc le débordement vaut désormais zéro. La règle du `clip` ne bouge pas.
 
 ## ⚠️ LE VOCABULAIRE DE L'ÉCRAN — deux mots interdits
 
@@ -9613,8 +9613,9 @@ Deux pièges, tous deux coûteux :
 
 Au navigateur, **clair et sombre**, à **1568 px** (l'écran de Julien), 900 et
 390 px : les huit bandes, **aucun débordement de contenu** — `scrollX` reste à
-zéro, les 40 px mesurés sont le cube décoratif que la racine rogne en `clip`
-(règle du 30 août, ne pas « corriger ») — et aucune erreur de console.
+zéro, et les 40 px mesurés à l'époque étaient le cube décoratif que la racine
+rognait en `clip` (retiré le 6 septembre, le débordement vaut zéro depuis) — et
+aucune erreur de console.
 
 **Chaque bouton cliqué pour de vrai**, écran d'arrivée relu : les trois offres
 présélectionnent bien la leur, les cinq liens de la barre et les cinq du pied
@@ -10535,8 +10536,9 @@ vide, les apparitions `.reveal` qui ne se déclenchent jamais, et le `body` à
   64 px sur 748, les quatre liens atteignables au clic (`elementFromPoint`),
   espaceur à 64 px, contenu qui commence à 64 en haut de page, débordement nul.
 - **À 1280 px** : barre toujours collante, espaceur à 0, jamais retirée. Les
-  40 px de débordement mesurés sont le cube décoratif rogné par
-  `overflow-x: clip` — normal depuis le 4 septembre, ne pas « corriger ».
+  40 px de débordement mesurés ce jour-là étaient le cube décoratif rogné par
+  `overflow-x: clip` ; **le cube est parti le 6 septembre**, le débordement
+  vaut zéro. La règle du `clip` reste, elle.
 - **Cinq sabotages, cinq échecs** : la barre redevenue collante, l'espaceur
   retiré, la barre qui s'efface menu ouvert, la référence qui avance à chaque
   pixel, le fondu sans le glissement.
@@ -10636,6 +10638,76 @@ quel libellé futur est couvert.
   avec la table de routes inchangée.
 
 Tests de garde : `web/tests/textes-a-jour.test.ts`.
+
+# Les cubes du décor sont partis (6 septembre 2026)
+
+*« Retire-les, et ne répète pas le logo sur la page ; retire l'effet halo qui
+se trouve derrière le logo en même temps. »* Trois restes de l'ancienne
+identité, tombés d'un seul geste.
+
+## ⚠️ CE QUI PARTAIT, ET POURQUOI ÇA NE VOULAIT PLUS RIEN DIRE
+
+- **Les cubes filaires** (`CubeFilaire`) étaient l'esquisse au trait du logo
+  d'avant. La marque est un **plan de magasin vu du dessus** depuis la veille :
+  trois cubes isométriques flottant autour d'un plan carré, c'est deux
+  identités sur le même écran. Sept couches en tout — trois dans le héros de
+  l'accueil, quatre en décor de section — plus deux par page sur `/tarifs`,
+  `/inventaire` et `/pourquoi-nous-choisir`.
+- **Le logo du héros** faisait la **troisième** occurrence de la marque sur la
+  page d'accueil, après la barre du haut et le pied de page. Une vitrine nomme
+  la marque, elle ne la martèle pas.
+- **Le halo**, c'est-à-dire deux choses qu'il fallait retirer ensemble : le
+  `drop-shadow` **indigo en dur** (`rgba(108,92,231,0.5)`) de `.logo-glow`, un
+  reste de la palette d'avant Ardoise, et la couche `.hero-voile` — le
+  commentaire du fichier disait lui-même « le halo devient une couche animée ».
+
+⚠️ **`.hero-plein::before` reste à `content: none` SANS REMPLAÇANT.** C'est ce
+qui fait que l'accueil n'a plus aucune lueur. Remettre un dégradé là, c'est
+refaire exactement ce qui a été défait. Les pages intérieures gardent leur
+`.hero::before` : il n'y a pas de logo derrière, et Julien visait l'accueil.
+
+## ⚠️ CE QUI RESTE, ET C'EST DÉLIBÉRÉ
+
+- **`.scan-trait`** — le trait horizontal de 420 px sous le titre de l'accueil,
+  en `--cyan` à 35 % d'opacité. Il n'a pas été demandé, il n'est pas un cube, et
+  il évoque le geste du scan plutôt qu'un logo. Signalé à Julien, pas retiré.
+- **`.band-glow`** — la lueur de la bande d'appel à l'action, qui n'a jamais eu
+  de rapport avec le logo.
+- **`Parallaxe`** elle-même : elle sert encore ces deux couches.
+
+## ⚠️ LA GARDE DÉDUIT SA LISTE DE PAGES, ELLE N'EN CITE AUCUNE
+
+Elle balaie tout `app/` et `components/` — `.tsx` **et** `.css` — et refuse dix
+mots (`CubeFilaire`, `cube-a`, `logo-glow`, `hero-voile`, `flotte`…). La page
+vitrine qu'on écrira demain est couverte sans qu'on y pense ; une garde qui
+nommerait `page.tsx` ne protégerait que la page d'aujourd'hui. Même doctrine
+que les portes de `(compte)` et que la mention de TVA.
+
+⚠️ **Et elle lit le code SANS SES COMMENTAIRES** — huitième fois sur ce dépôt.
+Le commentaire de `globals.css` cite `.hero-voile` précisément pour dire qu'on
+ne le remet pas, et le verbe « flotte » se trouve dans une phrase française
+ailleurs dans la feuille. Une garde d'absence se lit elle-même si on l'oublie.
+
+⚠️ **Une garde existante a dû être amendée, pas affaiblie** : elle citait
+`.flotte, .flotte-lent, .scroll-cue svg { animation: none; }` mot pour mot. Les
+deux premières classes n'existent plus ; elle vérifie désormais que la règle de
+`prefers-reduced-motion` éteint bien ce qui bouge encore.
+
+## Vérifications
+
+- **Au navigateur**, clair et sombre : plus un seul cube sur les quatre pages
+  publiques, plus de logo dans le `<main>` de l'accueil, plus de lueur.
+  **Débordement horizontal nul sur les quatre** — c'était 40 px sur `/tarifs`,
+  et c'était justement le cube.
+- **Deux sabotages, deux échecs** : une couche `cube-a` remise dans le héros,
+  le `drop-shadow` du halo remis dans la feuille.
+- 1 296 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
+  avertissements, la famille `react-hooks/*` déjà documentée), `next build`
+  avec la table de routes **inchangée**.
+
+Tests de garde : `web/tests/navigation.test.ts`, blocs « le cube isométrique a
+quitté le décor, et le halo avec lui » et « le logo ne se répète pas dans le
+héros de l'accueil ».
 
 # La discipline des migrations est faite (6 septembre 2026)
 

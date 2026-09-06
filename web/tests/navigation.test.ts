@@ -648,8 +648,57 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
 
   it('elle respecte la préférence de réduction des animations', () => {
     expect(parallaxe).toContain('prefers-reduced-motion')
-    // Et les animations CSS du décor s'éteignent avec elle.
-    expect(css).toContain('.flotte, .flotte-lent, .scroll-cue svg { animation: none; }')
+    // Et l'animation CSS du décor s'éteint avec elle.
+    expect(css).toContain('.scroll-cue svg { animation: none; }')
+  })
+
+  it('⚠️ le cube isométrique a quitté le décor, et le halo avec lui', () => {
+    // 6 septembre 2026, décision de Julien. Les cubes filaires étaient
+    // l'esquisse de l'ANCIEN logo ; la marque est devenue un plan de magasin
+    // vu du dessus, ils ne voulaient plus rien dire. Sont partis dans le même
+    // geste le logo répété sous l'en-tête (il y est déjà, deux fois suffit
+    // rarement) et le voile en dégradé qui lui faisait un halo.
+    //
+    // ⚠️ LA GARDE DÉDUIT SA LISTE DE PAGES, ELLE NE LA CITE PAS : elle balaie
+    // tout `app/` et `components/`, donc la page vitrine qu'on écrira demain
+    // est couverte sans qu'on y pense.
+    //
+    // ⚠️ Et elle lit le code SANS SES COMMENTAIRES : celui de `globals.css`
+    // cite `.hero-voile` précisément pour dire qu'on ne le remet pas, et le
+    // verbe « flotte » se trouve dans une phrase française. Une garde qui
+    // vérifie une absence se lirait elle-même.
+    const morts = [
+      'CubeFilaire', 'cube-a', 'cube-b', 'cube-c', 'hero-cube-int',
+      'deco-cube', 'deco-cyan', 'logo-glow', 'hero-voile', 'flotte',
+    ]
+    const sources: string[] = []
+    const balayer = (dossier: string) => {
+      for (const e of readdirSync(dossier, { withFileTypes: true })) {
+        const f = path.join(dossier, e.name)
+        if (e.isDirectory()) balayer(f)
+        else if (f.endsWith('.tsx') || f.endsWith('.css')) sources.push(f)
+      }
+    }
+    balayer(path.resolve(__dirname, '../app'))
+    balayer(path.resolve(__dirname, '../components'))
+    expect(sources.length, 'plus une seule source à balayer : la garde ne garde rien')
+      .toBeGreaterThan(20)
+
+    for (const f of sources) {
+      const src = readFileSync(f, 'utf8')
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/^\s*\/\/.*$/gm, ' ')
+      for (const mort of morts) {
+        expect(src, `${path.basename(f)} : « ${mort} » est un reste de l’ancienne identité`)
+          .not.toContain(mort)
+      }
+    }
+  })
+
+  it('et le logo ne se répète pas dans le héros de l’accueil', () => {
+    // Il est déjà dans la barre du haut et dans le pied de page.
+    expect(accueil).not.toContain('<Logo')
   })
 
   it('⚠️ la racine se rogne en clip, jamais en hidden', () => {
