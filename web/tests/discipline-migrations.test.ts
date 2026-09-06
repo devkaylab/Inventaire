@@ -126,6 +126,17 @@ describe('et la mesure qui interroge la base reste à portée d’une commande',
     const s = readFileSync(script, 'utf8')
     expect(s).toContain('pg_get_functiondef')
     expect(s).toMatch(/process\.exit\(total === 0 \? 0 : 1\)/)
+
+    // ⚠️ ET LES TROIS VOLETS, PAS DEUX. La mesure du 5 septembre comparait les
+    // fonctions et les tables ; elle ne voyait pas les COLONNES, et cinq
+    // manquaient — dont `profiles.is_admin`, le drapeau qui garde les dix-huit
+    // RPC d'administration. Une garde de l'archivage en a fait les frais le
+    // lendemain : elle déduisait sa liste d'un dossier troué, et le sabotage
+    // est passé.
+    for (const volet of ['fonctions', 'tables', 'colonnes']) {
+      expect(s, `la mesure ne couvre plus les ${volet}`).toContain(`'${volet}',`)
+    }
+    expect(s, 'les colonnes ne sont plus comparées').toMatch(/orphelinesColonne/)
   })
 })
 

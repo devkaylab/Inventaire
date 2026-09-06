@@ -48,6 +48,11 @@ select json_build_object(
     select json_agg(c.relname order by c.relname)
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
+  ),
+  'colonnes', (
+    select json_agg(json_build_object('table', table_name, 'colonne', column_name)
+      order by table_name, ordinal_position)
+    from information_schema.columns where table_schema = 'public'
   )
 ) as etat;
 `
@@ -109,6 +114,49 @@ function definitTable(nom) {
   return textes.some(([, texte]) => marqueur.test(texte))
 }
 
+/**
+ * Tout ce qu'une migration écrit AU SUJET d'une table : sa création, et chaque
+ * `alter table` qui la vise.
+ *
+ * ⚠️ POURQUOI CE VOLET EXISTE. Le 6 septembre 2026, une garde de l'archivage
+ * déduisait la liste des « tables d'inventaire » en cherchant les clés
+ * étrangères du dossier — et le sabotage `delete from public.articles` est
+ * passé : `articles.session_id` n'était décrite nulle part. Une garde qui
+ * déduit d'une source trouée déduit mal, et ne le dit jamais. Cette mesure
+ * ferme la classe entière : cinq colonnes manquaient sur 282.
+ */
+const blocsParTable = (() => {
+  const out = new Map()
+  const ajoute = (t, bloc) => {
+    const k = t.toLowerCase()
+    out.set(k, (out.get(k) ?? '') + '\n' + bloc)
+  }
+  for (const [, texte] of textes) {
+    const nu = sansCommentaires(texte)
+    for (const m of nu.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?public\.([a-z0-9_]+)([\s\S]*?);/gi)) {
+      ajoute(m[1], m[2])
+    }
+    for (const m of nu.matchAll(/alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?public\.([a-z0-9_]+)([\s\S]*?);/gi)) {
+      ajoute(m[1], m[2])
+    }
+  }
+  return out
+})()
+
+/**
+ * ⚠️ UNE APPROXIMATION, ET ELLE EST ASSUMÉE. On cherche le NOM de la colonne
+ * dans ce que le dossier écrit au sujet de sa table. Une colonne renommée, ou
+ * dont le nom apparaît par coïncidence dans un `alter table` voisin, serait mal
+ * jugée. C'est une mesure, pas un compilateur : elle sert à repérer ce qui n'a
+ * jamais été écrit, et cinq colonnes sur 282 est un résultat qu'on peut
+ * vérifier à la main.
+ */
+function definitColonne(table, colonne) {
+  const corpus = blocsParTable.get(table.toLowerCase())
+  if (!corpus) return false
+  return new RegExp(`\\b${colonne}\\b`, 'i').test(corpus)
+}
+
 // ---- la base
 const tmp = mkdtempSync(path.join(tmpdir(), 'mesure-migrations-'))
 const sql = path.join(tmp, 'etat.sql')
@@ -132,6 +180,9 @@ for (const f of etat.fonctions) {
   }
 }
 const orphelinesTable = etat.tables.filter((t) => !definitTable(t))
+const orphelinesColonne = etat.colonnes
+  .filter((c) => !definitColonne(c.table, c.colonne))
+  .map((c) => `${c.table}.${c.colonne}`)
 
 const ligne = (t, n, l) => {
   console.log(`${t.padEnd(12)} ${String(n).padStart(4)} en base, ${String(l.length).padStart(3)} sans migration`)
@@ -140,10 +191,11 @@ const ligne = (t, n, l) => {
 console.log(`Dossier : ${fichiers.length} migrations`)
 ligne('Fonctions', etat.fonctions.length, orphelinesFn)
 ligne('Tables', etat.tables.length, orphelinesTable)
+ligne('Colonnes', etat.colonnes.length, orphelinesColonne)
 console.log(`Corps divergents : ${divergentes.length}`)
 for (const x of divergentes) console.log(`               · ${x}`)
 
-const total = orphelinesFn.length + orphelinesTable.length + divergentes.length
+const total = orphelinesFn.length + orphelinesTable.length + orphelinesColonne.length + divergentes.length
 console.log(total === 0
   ? '\nLe dossier décrit la base.'
   : `\n${total} écart(s) : écrire la migration qui manque, ou remettre le fichier d'accord avec la base.`)

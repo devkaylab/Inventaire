@@ -10902,3 +10902,63 @@ est tenu, c'est le texte (deux tests le comparent à la durée appliquée) et la
 classe, `banner banner-info`, déjà en place.
 
 Tests de garde : `web/tests/archivage.test.ts`.
+
+## Les cinq colonnes des premiers jours (6 septembre 2026)
+
+Suite immédiate, et **trouvée par accident** : la garde de l'archivage
+déduisait la liste des tables d'inventaire depuis le dossier, et le sabotage
+`delete from public.articles` **est passé** — `articles.session_id` n'y figure
+nulle part.
+
+⚠️ **C'EST LE VRAI COÛT D'UNE COLONNE NON DÉCRITE, ET IL EST SILENCIEUX** : une
+garde qui déduit d'une source trouée déduit mal, et ne le dit jamais. On croit
+être protégé.
+
+Mesuré ensuite sur les 282 colonnes de la base : **cinq** n'étaient décrites par
+aucune migration, toutes des huit migrations que la console a appliquées aux
+premiers jours sans jamais les versionner.
+
+| Colonne | Ce que c'est |
+|---|---|
+| `profiles.is_admin` | le drapeau que lit `is_admin()` — donc la garde des dix-huit RPC d'administration et l'exigence aal2 |
+| `inventory_sessions.name` | le nom d'un inventaire |
+| `inventory_sessions.security_code` | le code que les compteurs saisissent (⚠️ distinct de `security_code_hash`, lui déclaré dès l'origine) |
+| `inventory_sessions.uses_zones` | le mode balises, choix irréversible qui gouverne la moitié du produit |
+| `articles.session_id` | le rattachement d'un article à son inventaire |
+
+⚠️ **ET `articles.session_id` A REMPLACÉ UNE UNICITÉ GLOBALE.**
+`20260526000001` déclare `sku text NOT NULL UNIQUE` — une référence unique sur
+TOUTE la base, donc un même SKU impossible dans deux inventaires. C'est cette
+contrainte qui a sauté au profit de `(session_id, sku)`. Sans la ligne qui le
+dit, une base rebâtie depuis le dossier **refuserait le second inventaire qui
+réimporte le même catalogue**. La migration porte donc aussi le
+`drop constraint if exists articles_sku_key`.
+
+⚠️ **La plupart des contraintes qui « manquaient » ne manquaient pas.**
+`articles_pkey`, `profiles_pkey`, les `check` du `create table` : elles sont
+bien décrites, elles portent seulement un nom que Postgres génère. Chercher les
+contraintes par leur NOM dans le dossier produit une liste de faux positifs —
+ne pas s'y fier, et vérifier ce qui découle d'une déclaration en ligne.
+
+## La mesure de dérive a un troisième volet
+
+`scripts/mesurer-migrations.mjs` comparait les fonctions et les tables. Il
+compare désormais aussi les **colonnes** : 282 en base, zéro sans migration.
+Retirer le rattrapage lui fait rendre exactement les cinq.
+
+⚠️ **C'est une approximation, et elle est assumée** : on cherche le nom de la
+colonne dans ce que le dossier écrit au sujet de sa table (`create table` et
+tous les `alter table`). Une colonne renommée, ou dont le nom apparaît par
+coïncidence, serait mal jugée. Cinq sur 282 est un résultat qu'on vérifie à la
+main ; c'est une mesure, pas un compilateur.
+
+**Vérifié** : empreinte des neuf catalogues identique avant, en transaction
+annulée, et après application réelle — aucune ligne modifiée. Le script sort en
+erreur (code 1) sans le rattrapage, en 0 avec. Un sabotage sur le volet colonnes
+fait échouer la garde hors ligne.
+
+⚠️ **Ce que la discipline couvre maintenant** : fonctions, tables, colonnes,
+corps. **Ce qu'elle ne couvre toujours pas** : les policies, les index, les
+déclencheurs et les droits — un objet de ces familles créé à la main resterait
+invisible. Aucun ne l'est aujourd'hui (les empreintes le disent), mais rien ne
+le garantit demain.
