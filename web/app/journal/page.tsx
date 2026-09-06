@@ -16,6 +16,7 @@ import { AppShell } from '@/components/AppShell'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { getMyCompany, type Company } from '@/lib/account'
 import { libelleAction, type LigneJournal } from '@/lib/journal'
+import { Chargement } from '@/components/Chargement'
 
 /** « 22/08 à 14:02 » — la date d'un journal se lit à la minute. */
 function quand(iso: string): string {
@@ -58,7 +59,7 @@ export default function JournalPage() {
   }, [lignes, query, moi])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   return (

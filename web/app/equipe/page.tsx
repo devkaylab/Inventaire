@@ -20,6 +20,7 @@ import { AddCounter } from '@/components/dashboard/AddCounter'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
 import { getMyCompany, type Company } from '@/lib/account'
+import { Chargement } from '@/components/Chargement'
 
 type Store = { id: string; name: string }
 type Member = {
@@ -250,7 +251,7 @@ export default function EquipePage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const storeById: Record<string, Store> = {}

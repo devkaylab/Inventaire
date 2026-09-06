@@ -30,6 +30,7 @@ import { STATUS_LABELS } from '@/lib/inventory'
 import {
   Anneau, BarresSemaine, Kpi, lundiDeLaSemaine, type JourTb,
 } from '@/components/dashboard/TableauDeBord'
+import { Chargement } from '@/components/Chargement'
 
 type EcartMagasin = { store_id: string | null; nom: string; ecart_qte: number; ecart_valeur: number }
 type DernierTb = {
@@ -87,7 +88,7 @@ export default function EntreprisePage() {
   }, [guard, semaine])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const t = vue?.totals

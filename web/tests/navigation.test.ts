@@ -862,6 +862,63 @@ describe('une section est une surface, pas une marge', () => {
     }
   })
 
+  // ⚠️ UNE DÉCLARATION CSS INVALIDE EST JETÉE EN SILENCE, et c'est ce qui est
+  // arrivé le 6 septembre 2026 : l'animation de la marque était écrite
+  // `steps(1, jump-none)`, or `jump-none` exige au moins DEUX pas. Le
+  // navigateur a donc écarté la propriété `animation` entière — la règle
+  // figurait bien dans la feuille, `prefers-reduced-motion` était faux, et
+  // `getComputedStyle` rendait quand même « 0s ». Rien, nulle part, ne l'a dit.
+  //
+  // La garde ne peut pas valider une valeur CSS depuis Node ; elle tient les
+  // trois choses qui décident du résultat : l'animation existe, elle balaie
+  // aux positions de la planche de Julien, et la préférence de mouvement
+  // réduit la coupe.
+  describe('la marque balaie pendant les attentes', () => {
+    it('l’animation est déclarée, et pas seulement les images clés', () => {
+      const regle = bloc('.logo-allee')
+      expect(regle).toMatch(/animation: logo-balayage [\d.]+s/)
+      expect(css).toContain('@keyframes logo-balayage')
+
+      // ⚠️ ET LA FONCTION DE TEMPS N'EST PAS `steps(1, …)`. On ne peut pas
+      // valider une valeur CSS depuis Node — c'est bien le problème, puisque
+      // rien ne signale une déclaration jetée. Alors la garde interdit
+      // nommément la forme qui a mordu : `steps(1, jump-none)` est invalide
+      // (`jump-none` exige au moins deux pas) et emporte toute la propriété.
+      // Une garde étroite qui mord vaut mieux qu'une large qui laisse passer :
+      // la première version de ce test acceptait le sabotage.
+      // ⚠️ Sans ses commentaires : celui de la règle CITE `steps(1, jump-none)`
+      // pour dire qu'on ne l'écrit pas, et la garde se lisait elle-même.
+      // Huitième fois que ce piège se présente sur ce dépôt.
+      const sansCommentaires = regle.replace(/\/\*[\s\S]*?\*\//g, ' ')
+      expect(sansCommentaires, 'un `steps(1, …)` est invalide et fait jeter toute la propriété')
+        .not.toMatch(/steps\(\s*1\s*[,)]/)
+    })
+
+    it('et elle passe par les trois allées de la planche', () => {
+      // La planche anime l'attribut `x` sur 3 ; 14 ; 25, l'allée pleine faisant
+      // 8 de large et démarrant à x=3. En translation, cela vaut 0, 11 et 22.
+      // ⚠️ On ne cherche PAS l'accolade fermante : un bloc `@keyframes` en
+      // contient une par palier, et s'arrêter à la première coupe la règle en
+      // deux. Une tranche large suffit — le bloc fait cinq lignes.
+      const i = css.indexOf('@keyframes logo-balayage')
+      const images = css.slice(i, i + 400)
+      for (const px of [0, 11, 22]) {
+        // `0` s'écrit sans unité en CSS, `11` et `22` en portent une.
+        expect(images, `l’allée ne s’arrête pas à ${px}`)
+          .toMatch(new RegExp(`translateX\\(${px}(px)?\\)`))
+      }
+      // ⚠️ Et en unités du viewBox, sinon l'allée sort du cadre dès que le
+      // logo dépasse 36 px — c'est-à-dire partout.
+      expect(bloc('.logo-allee')).toContain('transform-box: view-box')
+    })
+
+    it('et un écran qui refuse le mouvement ne la voit pas', () => {
+      const i = css.indexOf('@media (prefers-reduced-motion: reduce)', css.indexOf('.logo-allee'))
+      expect(i, 'aucune coupure sous prefers-reduced-motion').toBeGreaterThan(0)
+      expect(css.slice(i, i + 200)).toContain('.logo-allee { animation: none; }')
+    })
+  })
+
   it('chaque titre de section peut porter sa phrase', () => {
     expect(css).toContain('.section-note')
     // Elle est bornée : une explication qui court sur 1 400 px ne se lit pas.

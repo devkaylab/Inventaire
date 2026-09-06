@@ -25,6 +25,7 @@ import {
   lireUsage, compteursLisibles, aRevoir, ecartTotalEuros, licencesEuros,
   LIBELLES, TRANCHES_CHIFFREES, type MagasinUsage, type UsageEntreprise,
 } from '@/lib/mesure'
+import { Chargement } from '@/components/Chargement'
 
 // Sur tout le parc, chaque magasin porte son entreprise — sans elle une liste
 // de quarante lignes ne se lit pas. `Omit` plutôt qu'une intersection : croiser
@@ -98,7 +99,7 @@ export default function AdminUsagePage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const tous = parc?.stores ?? []

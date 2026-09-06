@@ -28,6 +28,7 @@ import { euros } from '@/lib/offres'
 import { compositionOffre, lireAppareils, type AppareilsMagasin } from '@/lib/appareils'
 import { ChangerOffre, PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import type { SessionBloc } from '@/lib/entreprise'
+import { Chargement } from '@/components/Chargement'
 
 type Personne = {
   id: string
@@ -182,7 +183,7 @@ export default function FicheMagasinPage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   if (erreur) {
@@ -195,7 +196,7 @@ export default function FicheMagasinPage() {
   }
 
   if (!fiche) {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   // Ce que le décompte d'appareils veut dire — le jugement vit dans

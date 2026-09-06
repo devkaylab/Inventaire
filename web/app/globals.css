@@ -4013,3 +4013,56 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   margin: 0; font-size: 17px; font-weight: 700; color: var(--text);
   word-break: break-all;
 }
+
+/* ── L'ALLÉE QUI BALAIE — la marque pendant une attente ────────────────────
+   L'allée pleine saute d'une position à l'autre : x = 3, puis 14, puis 25.
+   C'est le geste du produit, littéralement — on compte une zone, puis la
+   suivante — et c'est ce que la planche de Julien décrit (`values="3;14;25"`,
+   `calcMode="discrete"`, 0,3 s par allée).
+
+   ⚠️ EN CSS, PAS EN SMIL, ET C'EST TOUTE LA RAISON DE CE BLOC. La planche
+   embarque un `<animate>` SVG ; il tournerait indéfiniment sans rien savoir de
+   `prefers-reduced-motion`, sur un écran de chargement, c'est-à-dire au moment
+   précis où quelqu'un attend et regarde. En CSS la préférence s'honore, et le
+   reste du site la respecte déjà partout.
+
+   ⚠️ ET C'EST UNE TRANSLATION, PAS L'ATTRIBUT `x`. Animer `x` marche sur les
+   navigateurs récents mais reste une propriété SVG2 ; `transform` est animé
+   par le compositeur, donc sans repeindre — ce qui compte pour une animation
+   qui tourne en boucle pendant qu'une page charge.
+
+   `steps(1, jump-none)` reproduit le saut net de `calcMode="discrete"` : pas
+   de glissement, on est sur une allée ou sur l'autre. */
+@keyframes logo-balayage {
+  0%, 33.32%    { transform: translateX(0); }
+  33.34%, 66.65% { transform: translateX(11px); }
+  66.67%, 100%  { transform: translateX(22px); }
+}
+.logo-allee {
+  /* ⚠️ `linear`, PAS `steps(1, jump-none)` : `jump-none` exige au moins DEUX
+     pas, donc `steps(1, jump-none)` est invalide et le navigateur jette la
+     déclaration `animation` ENTIÈRE — sans rien dire. Constaté en mesurant :
+     la règle était bien dans la feuille, `prefers-reduced-motion` était faux,
+     et `getComputedStyle` rendait quand même « 0s ». Le saut net est déjà
+     porté par les images clés, qui tiennent chaque position sur son tiers ; la
+     bascule dure alors 0,02 % de 0,9 s, soit un cinquième de milliseconde. */
+  animation: logo-balayage 0.9s linear infinite;
+  /* Les unités de `translateX` sont celles du viewBox, pas des pixels
+     d'écran : sans cela l'allée sortirait du cadre dès que le logo est rendu
+     plus grand que 36 px. */
+  transform-box: view-box;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-allee { animation: none; }
+}
+.chargement-marque {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  /* ⚠️ `--text-2`, pas `--text-3` : la marque hérite de cette couleur par
+     `currentColor`, et `--text-3` la rendait presque invisible sur le fond de
+     page (2,89:1, mesuré). Une attente doit être discrète, pas fantomatique —
+     c'est justement le moment où l'on regarde l'écran. */
+  color: var(--text-2);
+}
+/* Le mot suit la marque : `.muted` est en `--text-3`, sous le seuil AA sur
+   cette page-là comme ailleurs. */
+.chargement-marque p { margin: 0; color: var(--text-2); }

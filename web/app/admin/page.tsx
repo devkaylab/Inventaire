@@ -26,6 +26,7 @@ import {
   type VenteEnCours, alerteDensite, enAttenteCents, lienVente, lireVente, trierVentes,
 } from '@/lib/pipeline'
 import { Anneau, Kpi } from '@/components/dashboard/TableauDeBord'
+import { Chargement } from '@/components/Chargement'
 
 type CompanyRef = { id: string; name: string }
 type Overview = {
@@ -159,7 +160,7 @@ export default function AdminPage() {
   }, [guard.status, charger])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const v = vue

@@ -1,9 +1,13 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <!-- La marque « zone » en clair sur une tuile encre : un favicon doit se voir
-       sur un onglet clair comme sur un onglet sombre, donc il porte son fond. -->
+  <!-- La marque « zone » en clair sur une tuile encre. Un favicon doit se voir
+       sur un onglet clair comme sur un onglet sombre, donc il porte son fond —
+       et à 16 px cette tuile est aussi ce qui empêche les trois allées, larges
+       d'un douzième de la marque, de se réduire à une tache flottante. -->
   <rect width="512" height="512" rx="116" fill="#14181A"/>
   <g transform="translate(86 86) scale(9.4444)">
-    <rect x="2.25" y="2.25" width="31.5" height="31.5" fill="none" stroke="#ECEFEC" stroke-width="4.5"/>
-    <rect x="10.5" y="4.5" width="9" height="27" fill="#ECEFEC"/>
+    <rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke="#ECEFEC" stroke-width="3"/>
+    <rect x="11" y="3" width="3" height="30" fill="#ECEFEC"/>
+    <rect x="22" y="3" width="3" height="30" fill="#ECEFEC"/>
+    <rect x="3" y="3" width="8" height="30" fill="#ECEFEC"/>
   </g>
 </svg>

@@ -46,14 +46,19 @@ const k = N / (36 + MARGE * 2)
 const OS = [0xec, 0xef, 0xec] // --sur-encre, la couleur du texte du bandeau
 
 /**
- * La géométrie, identique à `Logo.tsx` — le cadre du magasin et l'allée
- * comptée. Le cadre est un contour : on le décrit par ses deux rectangles,
- * l'extérieur et le trou, plutôt que par un `stroke` qu'il faudrait simuler.
+ * La géométrie, identique à `Logo.tsx` — le cadre du magasin, les deux allées
+ * en attente et celle qu'on compte. Le cadre est un contour : on le décrit par
+ * ses deux rectangles, l'extérieur et le trou, plutôt que par un `stroke`
+ * qu'il faudrait simuler.
  */
-const TRAIT = 4.5
-const CADRE = { x: 2.25 - TRAIT / 2, y: 2.25 - TRAIT / 2, l: 31.5 + TRAIT, h: 31.5 + TRAIT }
-const TROU = { x: 2.25 + TRAIT / 2, y: 2.25 + TRAIT / 2, l: 31.5 - TRAIT, h: 31.5 - TRAIT }
-const ALLEE = { x: 10.5, y: 4.5, l: 9, h: 27 }
+const TRAIT = 3
+const CADRE = { x: 1.5 - TRAIT / 2, y: 1.5 - TRAIT / 2, l: 33 + TRAIT, h: 33 + TRAIT }
+const TROU = { x: 1.5 + TRAIT / 2, y: 1.5 + TRAIT / 2, l: 33 - TRAIT, h: 33 - TRAIT }
+const ALLEES = [
+  { x: 3, y: 3, l: 8, h: 30 }, // celle qu'on compte
+  { x: 11, y: 3, l: 3, h: 30 },
+  { x: 22, y: 3, l: 3, h: 30 },
+]
 
 const dans = (x, y, r) => x >= r.x && y >= r.y && x <= r.x + r.l && y <= r.y + r.h
 
@@ -63,7 +68,7 @@ for (let py = 0; py < N; py++) {
   for (let px = 0; px < N; px++) {
     const x = (px + 0.5) / k - MARGE
     const y = (py + 0.5) / k - MARGE
-    const encre = (dans(x, y, CADRE) && !dans(x, y, TROU)) || dans(x, y, ALLEE)
+    const encre = (dans(x, y, CADRE) && !dans(x, y, TROU)) || ALLEES.some((r) => dans(x, y, r))
     if (!encre) continue
     const o = (py * N + px) * 4
     grand[o] = OS[0]; grand[o + 1] = OS[1]; grand[o + 2] = OS[2]; grand[o + 3] = 255

@@ -38,6 +38,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Pagination, useRetourEnHaut } from '@/components/ui/Pagination'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Stat } from '@/components/ui/Stat'
+import { Chargement } from '@/components/Chargement'
 
 const PAGE = 50
 const DELAI_RECHERCHE_MS = 350
@@ -207,7 +208,7 @@ export default function RapportMagasinPage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const retour = guard.profile.is_company_admin

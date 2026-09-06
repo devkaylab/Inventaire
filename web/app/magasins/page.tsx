@@ -43,6 +43,7 @@ import { alertesMagasin, etatMagasin, type ApercuEntreprise, type StoreBloc } fr
 import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
 import { nb } from '@/lib/format'
+import { Chargement } from '@/components/Chargement'
 
 type StoreRequest = {
   id: string
@@ -186,7 +187,7 @@ export default function MagasinsPage() {
   }, [magasins, recherche])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   // ⚠️ La bande ne demande RIEN de plus au serveur : elle compte ce que
