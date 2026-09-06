@@ -24,11 +24,17 @@ export type Session = {
   created_by: string | null
   created_at: string
   closed_at: string | null
+  /**
+   * Le détail des scans a été effacé, douze mois après la clôture. Le rapport
+   * et les écarts, eux, restent : ils vivent sur `article_audit`, pas sur le
+   * journal des comptages. Un inventaire archivé ne se rouvre plus.
+   */
+  archived_at: string | null
   security_code: string | null
 }
 
 const SESSION_COLS =
-  'id,inventory_number,name,store_name,store_id,status,current_pass,uses_zones,created_by,created_at,closed_at,security_code'
+  'id,inventory_number,name,store_name,store_id,status,current_pass,uses_zones,created_by,created_at,closed_at,archived_at,security_code'
 
 export type SessionResultRow = {
   sku: string

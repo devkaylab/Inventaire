@@ -38,6 +38,21 @@ const RPC = [
   'scans_de_balise',
 ] as const
 
+/**
+ * Tout le dossier de migrations, d'un seul tenant.
+ *
+ * ⚠️ Pour ce qui n'est PAS une définition de fonction — un `drop function`, un
+ * `create index` — c'est ici qu'on cherche. `fichierDe()` rend la dernière
+ * migration qui définit une fonction donnée : parfaite pour lire ses GRANT,
+ * trompeuse pour tout le reste.
+ */
+function toutesLesMigrations(): string {
+  return readdirSync(dossierMigrations)
+    .filter((f) => f.endsWith('.sql')).sort()
+    .map((f) => readFileSync(path.join(dossierMigrations, f), 'utf8'))
+    .join('\n')
+}
+
 describe('le ménage de l’audit ne dépend plus du planificateur', () => {
   // ⚠️ CE BLOC A ÉTÉ RÉCRIT LE JOUR MÊME, et le revirement compte.
   //
@@ -236,8 +251,13 @@ describe('le recalcul des écarts ne repart pas de zéro à chaque fois', () => 
     // `p_force` ayant un défaut, Postgres garderait les deux et un appel à un
     // argument deviendrait ambigu — le piège de `p_event_id` et de
     // `ca_request_store`.
-    const fichier = fichierDe('recompute_session_audit')
-    expect(fichier).toContain('drop function if exists public.recompute_session_audit(uuid);')
+    // ⚠️ ON BALAIE LE DOSSIER, ON NE LIT PAS « LE FICHIER DE LA FONCTION ».
+    // `fichierDe` rend la DERNIÈRE migration qui définit `recompute_session_audit`
+    // — et un `drop function` n'appartient pas à cette fonction : il vit dans le
+    // fichier qui l'a écrit ce jour-là. Le 6 septembre 2026, une migration a
+    // redéfini la fonction et cette garde est tombée sur du code juste. C'est
+    // le piège nommé le 4 septembre : `fichierDe(fn)` ne parle QUE de `fn`.
+    expect(toutesLesMigrations()).toContain('drop function if exists public.recompute_session_audit(uuid);')
   })
 })
 
@@ -301,8 +321,8 @@ describe('l’agrégat n’a plus à trier', () => {
     // Sans lui, regrouper 764 114 comptages passait par un tri sur disque.
     // ⚠️ Si l'expression diverge du `group by`, l'index cesse d'être utilisable
     // et le tri revient sans que rien ne le signale.
-    const fichier = fichierDe('recompute_session_audit')
-    expect(fichier).toContain("on public.counts (session_id, sku, (coalesce(zone, '')))")
+    // Même raison que ci-dessus : un index n'appartient pas à une fonction.
+    expect(toutesLesMigrations()).toContain("on public.counts (session_id, sku, (coalesce(zone, '')))")
     const code = sansCommentaires(derniereDefinition('recompute_session_audit').corps)
     expect(code).toContain("group by sku, coalesce(zone, '')")
   })

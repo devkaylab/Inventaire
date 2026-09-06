@@ -31,6 +31,9 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
   const [busy, setBusy] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const closed = session.status === 'closed'
+  // Archivé : le détail des scans est parti, la base refuse la réouverture
+  // (déclencheur `sessions_archive_figee`). On ne propose pas un geste qui échoue.
+  const archive = session.archived_at !== null
 
   // Un clic ailleurs ou Échap referme : sans cela le menu reste ouvert
   // par-dessus la page pendant qu'on travaille derrière.
@@ -149,12 +152,17 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
               le refuse (policy `sessions_supervisor_update`), l'écran ne le
               propose donc pas. Clôturer reste ouvert aux participants, c'est un
               geste de terrain que le créateur peut défaire. */}
-          {(!closed || canReopen) && (
+          {(!closed || (canReopen && !archive)) && (
             <button type="button" role="menuitem" className="dash-menu-item" onClick={closed ? onReopen : onClose}>
               {closed ? 'Rouvrir l’inventaire' : 'Clôturer l’inventaire'}
             </button>
           )}
-          {closed && !canReopen && (
+          {closed && archive && (
+            <div className="dash-menu-note">
+              Inventaire archivé : le détail de ses scans a été effacé, il ne se rouvre plus.
+            </div>
+          )}
+          {closed && !archive && !canReopen && (
             <div className="dash-menu-note">
               Cet inventaire a été clôturé par son créateur. Lui seul peut le rouvrir.
             </div>

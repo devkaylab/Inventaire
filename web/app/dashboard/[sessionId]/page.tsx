@@ -200,11 +200,19 @@ export default function SessionDashboardPage() {
         </div>
       </div>
 
-      {closed && (
+      {closed && session.archived_at && (
+        <div className="banner banner-info">
+          Cet inventaire est <strong>clôturé et archivé</strong>. Son rapport et ses écarts restent
+          consultables ; le détail des scans a été effacé douze mois après la clôture, comme annoncé
+          dans la politique de confidentialité. La feuille « Détail » de l’export est donc vide, et
+          l’inventaire ne se rouvre plus.
+        </div>
+      )}
+
+      {closed && !session.archived_at && (
         <div className="banner banner-info">
           Cet inventaire est <strong>clôturé</strong> : aucun comptage ne peut plus y être enregistré,
-          y compris depuis un téléphone resté ouvert sur la session. Les données sont conservées et le
-          rapport reste téléchargeable.{' '}
+          y compris depuis un téléphone resté ouvert sur la session. Le rapport reste téléchargeable.{' '}
           {isCreator || guard.profile.is_company_admin
             ? 'Vous pouvez le rouvrir depuis le menu « ••• » en haut de page.'
             : 'Seul son créateur peut le rouvrir.'}

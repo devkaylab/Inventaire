@@ -10759,3 +10759,146 @@ d'où le script. Un quatrième test vérifie qu'il n'a pas disparu.
   ordinaire, dans un commit à elle.
 
 Tests de garde : `web/tests/discipline-migrations.test.ts`.
+
+# Archiver un inventaire : douze mois après la clôture (6 septembre 2026)
+
+*« Travaille sur l'archivage »*, puis, la décision posée : **durée annoncée**
+(pas un bouton) et **douze mois après la clôture**. Document de décision :
+https://claude.ai/code/artifact/d4421a04-8bca-4114-ab68-51e2f07efb3d
+
+Rien n'effaçait jamais un inventaire : `purge_expired_data` ne touchait **aucune**
+table d'inventaire, et un gros inventaire pèse ~680 Mo qui ne redescendent pas.
+
+## ⚠️ ON EFFACE LE JOURNAL DES SCANS, JAMAIS LE RÉSULTAT
+
+C'est la découverte qui a fait tout le chantier, et elle se vérifie en une
+requête : **le Rapport ne lit pas `counts`**. Les 27 fonctions qui touchent
+cette table ont été passées en revue — `rapport_page`, `rapport_resume`,
+`ecarts_page`, `rapport_magasin_*` vivent toutes sur `article_audit`, le
+consolidé. Effacer les scans ne retire donc rien à ce que le client relit, et
+**aucun écran principal ne change**.
+
+| | |
+|---|---|
+| Ce qui part | `counts` — une ligne par scan, avec `counted_by` et l'heure |
+| Ce qui reste | le rapport, les écarts, le rapport magasin, le référentiel, le stock théorique, l'audit |
+| Ce qu'on perd | la feuille « Détail » de l'export, le détail d'une balise, les compteurs d'activité d'une personne |
+| Place rendue | ~34 % d'un inventaire |
+
+C'est aussi la donnée **nominative** qui part en premier, ce qui est le bon sens
+côté RGPD.
+
+## ⚠️ LE VERROU DU RECALCUL EST VITAL — sans lui, l'archivage DÉTRUIT
+
+`recompute_session_audit` finit par un `delete from article_audit` qui retire
+les lignes n'ayant plus aucun comptage. **Les comptages effacés, ce delete
+emporte tout le rapport.** Il suffisait qu'un client ouvre l'onglet Écarts d'un
+inventaire archivé.
+
+Et **aucun** des deux états ne protège tout seul : l'empreinte effacée,
+`v_connue` est nul et le raccourci ne s'active pas ; l'empreinte gardée, elle
+diverge du nouveau compte et le raccourci ne s'active pas davantage. Dans les
+deux cas on tombe dans le delete.
+
+D'où une sortie immédiate sur `archived_at is not null`, **posée AVANT
+`p_force`** : l'annulation d'un arbitrage force le recalcul, et forcer sur un
+inventaire archivé détruirait le rapport. Un arbitrage reste possible — il écrit
+directement dans `article_audit` — il ne fait simplement plus recalculer.
+
+## ⚠️ ET UN INVENTAIRE ARCHIVÉ NE SE ROUVRE PAS
+
+Trou trouvé avant l'écran : la réouverture est un simple UPDATE client
+(`reopenSession`), ouvert au créateur. Rouvert, un inventaire archivé
+accepterait des comptages **dont l'audit ne tiendrait jamais compte**, en
+silence — le verrou ci-dessus étant toujours là. Retirer ce verrou serait pire.
+
+Déclencheur `sessions_archive_figee`, qui refuse le changement de statut **et**
+l'effacement du drapeau (sinon on efface, puis on rouvre). Le renommage passe.
+
+⚠️ **Il est en SECURITY INVOKER, et ce n'est pas un détail** : en DEFINER,
+`current_user` vaudrait le propriétaire et la condition ne serait jamais vraie —
+le garde-fou ne s'appliquerait à personne. Même règle que
+`profiles_pin_privileged`, même piège.
+
+Côté écran, le menu « ••• » ne propose plus « Rouvrir » sur un inventaire
+archivé : **un bouton qui échoue vaut moins que pas de bouton**, on le découvre
+après avoir accepté une confirmation.
+
+## La durée vit à deux endroits, et ils bougent ensemble
+
+`inventaires_ttl` dans `purge_expired_data`, et la phrase de `docs/privacy.html`.
+Une politique qui promet douze mois pendant que la base en efface six est un
+manquement, pas une coquille — un test compare les deux, **et le bandeau de
+l'écran**, en toutes lettres.
+
+La politique disait jusqu'ici « conservées tant que l'entreprise cliente utilise
+le service, celle-ci en décidant la durée ». C'était vrai de notre rôle de
+sous-traitant, et c'est précisément pourquoi **on ne pouvait pas effacer sans
+changer cette phrase**. Elle annonce désormais la durée.
+
+## `analyze`, pas `vacuum full`
+
+Après une grosse suppression, le planificateur croit encore à l'ancien volume
+(constat du 4 septembre : 1,27 million de lignes supposées pour 165 réelles).
+`analyze` tient dans une transaction, la fonction le fait elle-même. **Le
+`vacuum full`, qui rend l'espace au disque, verrouille les tables : il reste
+manuel, à programmer, jamais un matin d'inventaire.**
+
+## Ce qui a été vérifié
+
+**L'essai à blanc, avant toute application** — règle du projet pour une fonction
+destructrice. En transaction annulée, sur « LA Bruket » (83 scans, 101 lignes de
+rapport) :
+
+| | |
+|---|---|
+| Clos il y a 24 jours | **rien n'est archivé** |
+| Clôture antidatée de 13 mois | 83 comptages effacés, 1 inventaire archivé |
+| Lignes d'audit | 5 → **5** |
+| Le recalcul, et le recalcul **forcé** | sortent par le verrou |
+| **Le rapport** | **identique au caractère près** (101 lignes, 69 comptés, 719 théorique, −650 d'écart) |
+
+Puis les refus : durée de 3 jours et durée nulle refusées, inventaires **non
+clôturés** intacts même antidatés de trois ans, appel refusé à `authenticated`
+et à `anon`, réouverture refusée, effacement du drapeau refusé, renommage
+accepté. **Neuf sabotages, neuf échecs.** 1 286 tests du site, 416 de
+l'application, `tsc` des deux côtés, `eslint .` à zéro erreur, `next build`
+inchangé, et la mesure de dérive à zéro.
+
+## ⚠️ TROIS PIÈGES DE GARDE, LE MÊME JOUR
+
+1. **`pg_get_functiondef` rend l'en-tête en MAJUSCULES et entre quotes**
+   (`SET enable_nestloop TO 'off'`). Repartir de la base est le bon réflexe pour
+   le **corps** — c'est ce qui garantit qu'on ne réécrit que la phrase voulue —
+   mais recopier l'en-tête tel quel a fait tomber **cinq gardes** qui cherchent
+   la forme minuscule du dossier. L'en-tête se remet dans la langue du dépôt.
+   Même famille que le « CREATE OR REPLACE » du 5 septembre.
+2. **`fichierDe(fn)` ne parle QUE de `fn`** — deuxième fois. Deux gardes
+   lisaient « le fichier de `recompute_session_audit` » pour y vérifier un
+   `drop function` et un `create index`, qui n'appartiennent ni l'un ni l'autre
+   à cette fonction. Elles sont tombées le jour où une migration l'a redéfinie,
+   **sur du code juste** — et ne validaient donc plus rien depuis cet instant.
+   Elles balaient désormais tout le dossier (`toutesLesMigrations()`).
+3. **⚠️ UNE GARDE QUI DÉDUIT D'UN DOSSIER INCOMPLET DÉDUIT MAL.** Ma première
+   version listait les « tables d'inventaire » en cherchant les clés étrangères
+   vers `inventory_sessions` dans les migrations — et le sabotage
+   `delete from public.articles` **est passé** : `articles.session_id` a été
+   ajoutée par une migration des tout premiers jours qui n'a jamais eu de
+   fichier. La garde compte maintenant les suppressions **dans la fonction
+   elle-même** : une seule, et c'est `counts`. Ne dépendre d'aucune liste vaut
+   mieux que déduire d'une source trouée.
+
+## Ce que ça révèle, et qui reste ouvert
+
+⚠️ **`articles.session_id` n'est décrite dans aucune migration.** La mesure de
+dérive du 5 septembre compare les **fonctions** et l'existence des **tables** —
+pas les colonnes. Ce dixième orphelin est d'une autre nature que les neuf
+premiers, et il n'est pas rattrapé. Sans conséquence aujourd'hui ; à reprendre
+si l'on veut que le dossier décrive la base **colonne par colonne**.
+
+**Non vu à l'écran** : le bandeau d'un inventaire archivé demande une session de
+superviseur ET un inventaire vieux de douze mois — il n'en existe aucun. Ce qui
+est tenu, c'est le texte (deux tests le comparent à la durée appliquée) et la
+classe, `banner banner-info`, déjà en place.
+
+Tests de garde : `web/tests/archivage.test.ts`.

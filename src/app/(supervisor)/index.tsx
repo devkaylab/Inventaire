@@ -519,7 +519,7 @@ export default function SupervisorHomeScreen() {
     void demander({
       titre: `Clôturer « ${nom} » ?`,
       texte: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.',
-      note: 'Toutes les données sont conservées et le rapport reste disponible. Son créateur pourra le rouvrir.',
+      note: 'Le rapport reste disponible et son créateur pourra le rouvrir. Le détail des scans, lui, est effacé douze mois après la clôture.',
       action: 'Clôturer',
     }).then(async (ok) => {
       if (!ok) return
