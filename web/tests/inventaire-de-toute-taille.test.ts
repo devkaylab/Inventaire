@@ -144,6 +144,39 @@ describe('les lectures qui balaient un inventaire passent par une RPC', () => {
     const code = sansCommentaires(derniereDefinition('mes_balises_comptees').corps)
     expect(code).toContain('c.counted_by = auth.uid()')
   })
+
+  it('⚠️ et elle est bornée, comme ses voisines (6 septembre 2026)', () => {
+    // Elle était la DERNIÈRE lecture d'inventaire sans limite : toutes les
+    // autres ont été paginées le 3 septembre, celle-ci est passée à travers.
+    // Sur un gros inventaire, un compteur qui a scanné plusieurs milliers de
+    // références dépassait les 8 s — donc une erreur à la place de son propre
+    // travail, au moment où il vérifie avant de quitter le magasin.
+    const code = sansCommentaires(derniereDefinition('mes_balises_comptees').corps)
+    expect(code, 'le plafond dur a disparu').toContain('least(coalesce(p_limite, 5000), 5000)')
+    expect(code, 'la pagination doit être par clé, jamais par offset')
+      .toContain('(coalesce(c.zone, \'\'), c.sku) > (p_apres_zone, p_apres_sku)')
+    expect(code).not.toContain('offset')
+    // ⚠️ L'ordre doit rester total : (zone, sku) est la clé du regroupement,
+    // donc deux lignes ne peuvent pas être à égalité. Sans ça, une ligne se
+    // voit deux fois et une autre jamais.
+    expect(code).toContain("order by coalesce(c.zone, ''), c.sku")
+  })
+
+  it('⚠️ mais l’ÉCRAN, lui, reçoit toujours tout', () => {
+    // C'est la moitié qui compte. `CountedBalisesList` regroupe par balise et
+    // additionne par référence : avec un affichage page par page, ses totaux
+    // grandiraient au fil du défilement — le défaut « un zéro se lit comme un
+    // résultat », corrigé le 4 septembre sur le rapport. On pagine le
+    // transport, jamais l'écran.
+    const q = sansCommentaires(lire('../../src/lib/queries.ts'))
+    const i = q.indexOf('export async function getMyCounts')
+    expect(i, 'getMyCounts a disparu').toBeGreaterThan(-1)
+    const corps = q.slice(i, i + 1400)
+    expect(corps, 'la boucle de pagination a disparu').toContain('p_apres_zone')
+    expect(corps, 'la boucle doit s’arrêter sur une page incomplète')
+      .toMatch(/page\.length < TRANCHE/)
+    expect(corps, 'la fonction doit rendre la liste entière').toContain('out.push(...page)')
+  })
 })
 
 describe('les écrans ne balaient plus les tables eux-mêmes', () => {

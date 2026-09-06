@@ -104,6 +104,64 @@ export type Database = {
         }
         Relationships: []
       }
+      appareils_actifs: {
+        Row: {
+          appareil: string
+          refuse: boolean
+          store_id: string
+          vu_le: string
+        }
+        Insert: {
+          appareil: string
+          refuse?: boolean
+          store_id: string
+          vu_le?: string
+        }
+        Update: {
+          appareil?: string
+          refuse?: boolean
+          store_id?: string
+          vu_le?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appareils_actifs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appareils_par_jour: {
+        Row: {
+          jour: string
+          pic: number
+          refus: number
+          store_id: string
+        }
+        Insert: {
+          jour: string
+          pic?: number
+          refus?: number
+          store_id: string
+        }
+        Update: {
+          jour?: string
+          pic?: number
+          refus?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appareils_par_jour_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       article_audit: {
         Row: {
           final_qty: number | null
@@ -231,6 +289,33 @@ export type Database = {
           },
         ]
       }
+      codes_email: {
+        Row: {
+          code_hash: string
+          consomme_le: string | null
+          created_at: string
+          email: string
+          essais: number
+          expire_le: string
+        }
+        Insert: {
+          code_hash: string
+          consomme_le?: string | null
+          created_at?: string
+          email: string
+          essais?: number
+          expire_le: string
+        }
+        Update: {
+          code_hash?: string
+          consomme_le?: string | null
+          created_at?: string
+          email?: string
+          essais?: number
+          expire_le?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           balise_count: number
@@ -337,6 +422,7 @@ export type Database = {
           quote_sent_at: string | null
           quote_token: string | null
           siren: string | null
+          source: string
           status: string
           store_count: number
           stores: Json
@@ -345,6 +431,7 @@ export type Database = {
           stripe_invoice_id: string | null
           stripe_payment_intent_id: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -371,6 +458,7 @@ export type Database = {
           quote_sent_at?: string | null
           quote_token?: string | null
           siren?: string | null
+          source?: string
           status?: string
           store_count: number
           stores?: Json
@@ -379,6 +467,7 @@ export type Database = {
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -405,6 +494,7 @@ export type Database = {
           quote_sent_at?: string | null
           quote_token?: string | null
           siren?: string | null
+          source?: string
           status?: string
           store_count?: number
           stores?: Json
@@ -413,6 +503,7 @@ export type Database = {
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -472,8 +563,56 @@ export type Database = {
           },
         ]
       }
+      inscriptions: {
+        Row: {
+          created_at: string
+          demande_id: string | null
+          derniere_relance_le: string | null
+          email: string
+          etape: number
+          id: string
+          relances: number
+          reponses: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          demande_id?: string | null
+          derniere_relance_le?: string | null
+          email: string
+          etape?: number
+          id?: string
+          relances?: number
+          reponses?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          demande_id?: string | null
+          derniere_relance_le?: string | null
+          email?: string
+          etape?: number
+          id?: string
+          relances?: number
+          reponses?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inscriptions_demande_id_fkey"
+            columns: ["demande_id"]
+            isOneToOne: false
+            referencedRelation: "company_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_sessions: {
         Row: {
+          archived_at: string | null
           closed_at: string | null
           company_id: string
           created_at: string
@@ -490,6 +629,7 @@ export type Database = {
           uses_zones: boolean
         }
         Insert: {
+          archived_at?: string | null
           closed_at?: string | null
           company_id: string
           created_at?: string
@@ -506,6 +646,7 @@ export type Database = {
           uses_zones?: boolean
         }
         Update: {
+          archived_at?: string | null
           closed_at?: string | null
           company_id?: string
           created_at?: string
@@ -1064,6 +1205,9 @@ export type Database = {
           join_code: string
           name: string
           sqm: number | null
+          stripe_item_appareils: string | null
+          stripe_item_offre: string | null
+          stripe_subscription_id: string | null
           units: number | null
         }
         Insert: {
@@ -1075,6 +1219,9 @@ export type Database = {
           join_code: string
           name: string
           sqm?: number | null
+          stripe_item_appareils?: string | null
+          stripe_item_offre?: string | null
+          stripe_subscription_id?: string | null
           units?: number | null
         }
         Update: {
@@ -1086,6 +1233,9 @@ export type Database = {
           join_code?: string
           name?: string
           sqm?: number | null
+          stripe_item_appareils?: string | null
+          stripe_item_offre?: string | null
+          stripe_subscription_id?: string | null
           units?: number | null
         }
         Relationships: [
@@ -1541,6 +1691,19 @@ export type Database = {
         Returns: number
       }
       anomalies_a_signaler: { Args: never; Returns: Json }
+      appareils_des_magasins: { Args: { p_company_id: string }; Returns: Json }
+      appareils_du_magasin: { Args: { p_store_id: string }; Returns: Json }
+      appliquer_changement_offre: {
+        Args: {
+          p_annuel_cents: number
+          p_devices: number
+          p_item?: string
+          p_item_appareils?: string
+          p_store_id: string
+        }
+        Returns: Json
+      }
+      archiver_inventaires_anciens: { Args: { p_age?: string }; Returns: Json }
       attach_checkout_session: {
         Args: {
           p_customer_id?: string
@@ -1550,7 +1713,6 @@ export type Database = {
         }
         Returns: Json
       }
-      appareils_du_magasin: { Args: { p_store_id: string }; Returns: Json }
       ca_cancel_invitation: { Args: { p_id: string }; Returns: Json }
       ca_cancel_store_request: { Args: { p_id: string }; Returns: Json }
       ca_company_overview: { Args: never; Returns: Json }
@@ -1629,6 +1791,10 @@ export type Database = {
           total: number
         }[]
       }
+      changer_rythme_demande: {
+        Args: { p_billing_period: string; p_id: string }
+        Returns: Json
+      }
       check_invitation: { Args: { p_email: string }; Returns: boolean }
       client_ip: { Args: never; Returns: string }
       cloturer_audit_balise: {
@@ -1670,6 +1836,20 @@ export type Database = {
       delete_session: { Args: { p_session_id: string }; Returns: Json }
       delete_zone: {
         Args: { p_name: string; p_session_id: string }
+        Returns: Json
+      }
+      demande_a_reprendre: { Args: { p_id: string }; Returns: Json }
+      demander_code_email: { Args: { p_email: string }; Returns: Json }
+      deposer_ajout_magasin: {
+        Args: { p_billing_period: string; p_devices: number; p_name: string }
+        Returns: Json
+      }
+      deposer_changement_offre: {
+        Args: {
+          p_billing_period: string
+          p_devices: number
+          p_store_id: string
+        }
         Returns: Json
       }
       deposer_message_admin: {
@@ -1771,10 +1951,16 @@ export type Database = {
           nom: string
         }[]
       }
+      email_verifie_recemment: { Args: { p_email: string }; Returns: boolean }
+      enregistrer_inscription: {
+        Args: { p_etape: number; p_reponses: Json }
+        Returns: Json
+      }
       ensure_zone: {
         Args: { p_code: string; p_session_id: string }
         Returns: Json
       }
+      etat_abonnement_magasin: { Args: { p_store_id: string }; Returns: Json }
       etat_import: {
         Args: { p_session_id: string }
         Returns: {
@@ -1785,6 +1971,19 @@ export type Database = {
       }
       export_my_data: { Args: never; Returns: Json }
       fil_pour_email: { Args: { p_fil: string }; Returns: Json }
+      finaliser_inscription: {
+        Args: {
+          p_ape: string
+          p_billing_period: string
+          p_company_name: string
+          p_first: string
+          p_last: string
+          p_phone: string
+          p_siren: string
+          p_stores: Json
+        }
+        Returns: Json
+      }
       find_user_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -1933,6 +2132,18 @@ export type Database = {
           units: number
         }[]
       }
+      inscriptions_a_relancer: {
+        Args: never
+        Returns: {
+          email: string
+          etape: number
+          id: string
+          jours: number
+          rang: number
+          reponses: Json
+          user_id: string
+        }[]
+      }
       invite_company_admin_after_payment: {
         Args: {
           p_company: string
@@ -2020,15 +2231,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      magasin_cree_par: { Args: { p_id: string }; Returns: Json }
       marquer_alertes: { Args: { p_cles: string[] }; Returns: number }
       marquer_messages_lus: { Args: never; Returns: Json }
       marquer_notifications_lues: { Args: never; Returns: Json }
+      marquer_relance_inscription: { Args: { p_id: string }; Returns: Json }
       membre_ou_superviseur: {
         Args: { p_session_id: string }
         Returns: boolean
       }
       mes_balises_comptees: {
-        Args: { p_pass?: number; p_session_id: string }
+        Args: {
+          p_apres_sku?: string
+          p_apres_zone?: string
+          p_limite?: number
+          p_pass?: number
+          p_session_id: string
+        }
         Returns: {
           brand: string
           ean: string
@@ -2041,6 +2260,7 @@ export type Database = {
       mes_fils: { Args: never; Returns: Json }
       mes_messages: { Args: never; Returns: Json }
       mes_notifications: { Args: never; Returns: Json }
+      mon_inscription: { Args: never; Returns: Json }
       my_team_by_store: { Args: never; Returns: Json }
       nom_propre: { Args: { p_nom: string }; Returns: string }
       norm_balise: { Args: { p: string }; Returns: string }
@@ -2053,8 +2273,27 @@ export type Database = {
         Returns: Json
       }
       ouvrir_message_fil: { Args: { p_fil: string }; Returns: Json }
+      peut_changer_offre: { Args: { p_store_id: string }; Returns: boolean }
+      peut_lire_rapport_magasin: {
+        Args: { p_store_id: string }
+        Returns: boolean
+      }
+      peut_reprendre_paiement: { Args: { p_id: string }; Returns: boolean }
+      plafond_appareils: { Args: { p_store_id: string }; Returns: number }
       prendre_place_appareil: {
         Args: { p_appareil: string; p_session_id: string }
+        Returns: Json
+      }
+      prevenir_forfait_trop_juste: {
+        Args: { p_besoin: number; p_plafond: number; p_store_id: string }
+        Returns: undefined
+      }
+      prix_offre: {
+        Args: { p_billing_period: string; p_devices: number }
+        Returns: Json
+      }
+      promouvoir_admin_apres_paiement: {
+        Args: { p_company: string; p_user: string }
         Returns: Json
       }
       purge_expired_data: { Args: never; Returns: Json }
@@ -2074,6 +2313,69 @@ export type Database = {
           total: number
           zone: string
           zone_name: string
+        }[]
+      }
+      rapport_magasin_detail: {
+        Args: {
+          p_limite?: number
+          p_offset?: number
+          p_sessions: string[]
+          p_store_id: string
+        }
+        Returns: {
+          brand: string
+          cloture_le: string
+          counted_qty: number
+          ean: string
+          inventaire: string
+          label: string
+          numero: string
+          sku: string
+          theoretical_qty: number
+          total: number
+          variance_units: number
+          variance_value: number
+        }[]
+      }
+      rapport_magasin_inventaires: {
+        Args: { p_au?: string; p_du?: string; p_store_id: string }
+        Returns: Json
+      }
+      rapport_magasin_page: {
+        Args: {
+          p_limite?: number
+          p_multi_seulement?: boolean
+          p_offset?: number
+          p_recherche?: string
+          p_sens?: string
+          p_sessions: string[]
+          p_store_id: string
+          p_tri?: string
+        }
+        Returns: {
+          brand: string
+          counted_qty: number
+          ean: string
+          inventaires: number
+          label: string
+          sku: string
+          theoretical_qty: number
+          total: number
+          variance_units: number
+          variance_value: number
+        }[]
+      }
+      rapport_magasin_resume: {
+        Args: { p_sessions: string[]; p_store_id: string }
+        Returns: {
+          compte: number
+          doublons: number
+          ecart_unites: number
+          ecart_valeur: number
+          inventaires: number
+          lignes: number
+          non_arbitres: number
+          theorique: number
         }[]
       }
       rapport_page: {
@@ -2135,15 +2437,15 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string }
         Returns: Json
       }
+      rendre_place_appareil: {
+        Args: { p_appareil: string; p_session_id: string }
+        Returns: Json
+      }
       repondre_fil: {
         Args: { p_fil: string; p_message: string }
         Returns: Json
       }
       request_account_deletion: { Args: never; Returns: Json }
-      rendre_place_appareil: {
-        Args: { p_appareil: string; p_session_id: string }
-        Returns: Json
-      }
       resolve_audit: {
         Args: {
           p_final_qty: number
@@ -2228,6 +2530,11 @@ export type Database = {
       }
       tableau_de_bord_superviseur: {
         Args: { p_semaine?: string }
+        Returns: Json
+      }
+      tirer_code_a_six_chiffres: { Args: never; Returns: string }
+      verifier_code_email: {
+        Args: { p_code: string; p_email: string }
         Returns: Json
       }
       vider_balise: {

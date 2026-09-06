@@ -11001,3 +11001,64 @@ clés primaires et les `check` en ligne portent un nom généré par Postgres, e
 sont bien décrits par la création de leur table. Pour les droits, la garde
 existante (« toute fonction dont une migration règle les droits y est aussi
 définie ») couvre le sens qui compte, mais pas l'inverse.
+
+## « Ce que j'ai compté » ne descend plus d'un bloc (6 septembre 2026)
+
+Dernier reste de la liste « base et exploitation » du 4 septembre.
+`mes_balises_comptees` — l'écran où un compteur relit son propre travail —
+n'avait **aucune limite**, seule rescapée de la passe de pagination du
+3 septembre. Le plus gros cas réel fait 71 lignes ; sur un vrai gros
+inventaire, un compteur ayant scanné plusieurs milliers de références aurait vu
+**une erreur à la place de son travail**, au moment précis où il vérifie avant
+de quitter le magasin.
+
+## ⚠️ ON PAGINE LE TRANSPORT, PAS L'ÉCRAN
+
+C'est la décision de conception, et elle vaut d'être comprise avant d'y toucher.
+`CountedBalisesList` regroupe par balise et additionne par référence : il a
+besoin de **toutes** les lignes pour que ses totaux soient justes. Un affichage
+page par page les ferait grandir au fil du défilement — c'est le défaut « un
+zéro se lit comme un résultat », corrigé le 4 septembre sur le rapport, qu'on
+réintroduirait ici. Le téléphone reçoit donc la liste entière, mais va la
+chercher par tranches de 1 000 : **le serveur ne fait plus jamais une requête
+sans borne**, et c'est lui qui tombait à 8 s.
+
+- **Plafond dur à 5 000 quoi que demande l'appelant**, comme ses voisines.
+- **Curseur par clé, jamais `offset`** — la page N repaierait le parcours des
+  N × 5 000 lignes précédentes (mesuré le 3 septembre : page 1 à 388 ms,
+  page 29 à 10 832 ms). Le filtre porte sur les deux colonnes du `group by`,
+  donc il découpe l'agrégat sans le fausser.
+- **L'ordre est total** — `(zone, sku)` est la clé du regroupement, deux lignes
+  ne peuvent pas être à égalité. Sans ça, une ligne se voit deux fois et une
+  autre jamais.
+
+## ⚠️ L'ANCIENNE SIGNATURE EST SUPPRIMÉE, ET LES BUILDS INSTALLÉS SURVIVENT
+
+Les trois nouveaux paramètres ont un défaut : Postgres garderait les deux
+fonctions et un appel à deux arguments deviendrait ambigu (piège de
+`p_event_id` et de `ca_request_store`). D'où le `drop function` — et **un
+téléphone déjà installé continue de marcher** : PostgREST appelle par noms de
+paramètres, donc un appel qui n'envoie que `p_session_id` et `p_pass` laisse
+Postgres appliquer les défauts. Vérifié en transaction annulée. Il prend alors
+le plafond de 5 000, ce qui le protège du blocage sans rien changer chez lui.
+
+## Les types de l'application ont été régénérés
+
+⚠️ **Et c'est eux qui ont attrapé un défaut réel** : le curseur était passé à
+`null` au premier appel, alors que les paramètres optionnels sont
+`string | undefined`. Un paramètre ABSENT laisse Postgres appliquer son défaut ;
+un `null` explicite ne dit pas la même chose. `tsc` a refusé — après
+régénération seulement, l'ancien fichier de types ne connaissait pas les
+nouveaux paramètres et laissait tout passer.
+
+**Vérifié en transaction annulée, sur l'inventaire réel qui a le plus de lignes
+pour une personne** : l'appel « ancien build » rend les mêmes 5 lignes ; la même
+liste demandée par tranches de 2 rend 5 lignes en 3 appels, **aucune perdue ni
+doublée** ; un étranger à l'inventaire est refusé. Quatre sabotages, quatre
+échecs. Zéro dérive dossier/base.
+
+⚠️ **L'application doit être reconstruite** pour que la boucle serve — la borne
+serveur, elle, protège déjà les builds actuels.
+
+Tests de garde : `web/tests/inventaire-de-toute-taille.test.ts`, blocs « elle est
+bornée, comme ses voisines » et « mais l'ÉCRAN, lui, reçoit toujours tout ».

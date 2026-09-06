@@ -78,11 +78,40 @@ export type BaliseComptee = {
  * ligne de comptage, puis rechargeait les articles par un `.in()` non borné.
  */
 export async function getMyCounts(sessionId: string, passNumber: number): Promise<BaliseComptee[]> {
-  const { data, error } = await supabase.rpc('mes_balises_comptees', {
-    p_session_id: sessionId, p_pass: passNumber,
-  })
-  if (error) throwSupabase('getMyCounts', error)
-  return (data ?? []) as BaliseComptee[]
+  // ⚠️ ON PAGINE LE TRANSPORT, PAS L'ÉCRAN. `CountedBalisesList` regroupe par
+  // balise et additionne par référence : il a besoin de TOUTES les lignes pour
+  // que ses totaux soient justes. Afficher page par page donnerait des totaux
+  // qui grandissent au fil du défilement — le défaut « un zéro se lit comme un
+  // résultat » corrigé le 4 septembre sur le rapport. On rend donc la liste
+  // entière, mais on va la chercher par tranches : le serveur ne fait plus
+  // jamais une requête sans borne, et c'est lui qui tombait à 8 s.
+  const TRANCHE = 1000
+  const out: BaliseComptee[] = []
+  // ⚠️ Le curseur est ABSENT au premier appel, pas nul : la fonction applique
+  // alors ses défauts. Les types générés sont formels — ces paramètres sont
+  // `string | undefined`, jamais `string | null`.
+  let apresZone: string | undefined
+  let apresSku: string | undefined
+
+  for (;;) {
+    const { data, error } = await supabase.rpc('mes_balises_comptees', {
+      p_session_id: sessionId,
+      p_pass: passNumber,
+      p_apres_zone: apresZone,
+      p_apres_sku: apresSku,
+      p_limite: TRANCHE,
+    })
+    if (error) throwSupabase('getMyCounts', error)
+    const page = (data ?? []) as BaliseComptee[]
+    out.push(...page)
+    // Une page incomplète est la dernière : c'est ce qui arrête la boucle sans
+    // un appel de plus pour rien.
+    if (page.length < TRANCHE) break
+    const derniere = page[page.length - 1]
+    apresZone = derniere.zone ?? ''
+    apresSku = derniere.sku
+  }
+  return out
 }
 
 /**
