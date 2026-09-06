@@ -10957,8 +10957,41 @@ annulée, et après application réelle — aucune ligne modifiée. Le script so
 erreur (code 1) sans le rattrapage, en 0 avec. Un sabotage sur le volet colonnes
 fait échouer la garde hors ligne.
 
+## Les deux policies, et la leçon des familles non mesurées
+
+Question de Julien, à la lecture de la limite ci-dessus : *« Est-ce
+problématique ? »* — et j'avais écrit « aucun ne l'est aujourd'hui » **en
+m'appuyant sur les empreintes de mes propres migrations, pas sur une
+comparaison**. Mesuré pour de vrai, dans la foulée :
+
+| Famille | En base | Sans migration |
+|---|---|---|
+| Policies | 37 | **2** |
+| Déclencheurs | 6 | 0 |
+| Index explicites | 29 | 0 |
+
+`articles_member_read` (un membre lit le catalogue de son inventaire) et
+`companies_admin_select` (l'administrateur Quantinvo lit toutes les entreprises).
+
+⚠️ **CE N'ÉTAIT PAS UN TROU, ET C'EST VÉRIFIÉ, PAS SUPPOSÉ.** Les deux sont
+correctement cloisonnées — l'une par `session_members`, l'autre par
+`is_admin()`, qui porte l'exigence aal2. Le problème n'était pas leur contenu :
+c'est qu'une revue de sécurité menée depuis le dossier ne les aurait pas vues.
+La règle « l'analyse porte sur la base réelle, jamais sur `supabase/migrations/` »
+existait précisément pour ça ; elle n'a plus à couvrir ce cas.
+
+⚠️ **LA LEÇON EST DANS L'ORDRE DES DÉCOUVERTES.** Trois passes, trois familles
+regardées, deux qui ont livré des orphelins : neuf objets le 5 septembre, cinq
+colonnes le 6 au matin, deux policies l'après-midi — et chacune n'est sortie que
+parce qu'on l'a mesurée. **On ne saura jamais qu'une famille est saine tant
+qu'on ne la regarde pas.** Les déclencheurs et les index le sont ; ça aussi, il
+fallait le mesurer pour le dire.
+
 ⚠️ **Ce que la discipline couvre maintenant** : fonctions, tables, colonnes,
-corps. **Ce qu'elle ne couvre toujours pas** : les policies, les index, les
-déclencheurs et les droits — un objet de ces familles créé à la main resterait
-invisible. Aucun ne l'est aujourd'hui (les empreintes le disent), mais rien ne
-le garantit demain.
+policies, déclencheurs, index explicites, et les corps. **Ce qu'elle ne couvre
+toujours pas** : les **droits** (`grant` / `revoke`) et les **contraintes**. Pour
+les contraintes, une mesure par nom donnerait surtout des faux positifs — les
+clés primaires et les `check` en ligne portent un nom généré par Postgres, et
+sont bien décrits par la création de leur table. Pour les droits, la garde
+existante (« toute fonction dont une migration règle les droits y est aussi
+définie ») couvre le sens qui compte, mais pas l'inverse.

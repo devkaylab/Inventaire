@@ -53,6 +53,29 @@ select json_build_object(
     select json_agg(json_build_object('table', table_name, 'colonne', column_name)
       order by table_name, ordinal_position)
     from information_schema.columns where table_schema = 'public'
+  ),
+  'policies', (
+    select json_agg(json_build_object('table', tablename, 'nom', policyname)
+      order by tablename, policyname)
+    from pg_policies where schemaname = 'public'
+  ),
+  'declencheurs', (
+    select json_agg(json_build_object('table', rel.relname, 'nom', t.tgname)
+      order by rel.relname, t.tgname)
+    from pg_trigger t join pg_class rel on rel.oid = t.tgrelid
+    join pg_namespace n on n.oid = rel.relnamespace
+    where n.nspname = 'public' and not t.tgisinternal
+  ),
+  'index', (
+    -- ATTENTION : les index implicites sont exclus. Une cle primaire ou une
+    -- contrainte d'unicite cree son index avec un nom que Postgres genere : il
+    -- est decrit par la creation de la table, jamais par son nom. Les compter
+    -- produirait une liste d'orphelins qui n'en sont pas.
+    select json_agg(json_build_object('table', i.tablename, 'nom', i.indexname)
+      order by i.tablename, i.indexname)
+    from pg_indexes i
+    where i.schemaname = 'public'
+      and not exists (select 1 from pg_constraint c where c.conname = i.indexname)
   )
 ) as etat;
 `
@@ -151,6 +174,16 @@ const blocsParTable = (() => {
  * jamais été écrit, et cinq colonnes sur 282 est un résultat qu'on peut
  * vérifier à la main.
  */
+/**
+ * Un objet qui porte un nom CHOISI — policy, déclencheur, index explicite — est
+ * décrit dès lors que son nom apparaît dans le dossier. Contrairement aux
+ * colonnes, il n'y a pas d'ambiguïté : ces noms sont uniques et jamais générés.
+ */
+function nomEcrit(nom) {
+  const marqueur = new RegExp(`\\b${nom}\\b`, 'i')
+  return textes.some(([, texte]) => marqueur.test(sansCommentaires(texte)))
+}
+
 function definitColonne(table, colonne) {
   const corpus = blocsParTable.get(table.toLowerCase())
   if (!corpus) return false
@@ -183,6 +216,12 @@ const orphelinesTable = etat.tables.filter((t) => !definitTable(t))
 const orphelinesColonne = etat.colonnes
   .filter((c) => !definitColonne(c.table, c.colonne))
   .map((c) => `${c.table}.${c.colonne}`)
+const orphelinsNommes = (cle) => (etat[cle] ?? [])
+  .filter((o) => !nomEcrit(o.nom))
+  .map((o) => `${o.table}.${o.nom}`)
+const orphelinesPolicy = orphelinsNommes('policies')
+const orphelinsDeclencheur = orphelinsNommes('declencheurs')
+const orphelinsIndex = orphelinsNommes('index')
 
 const ligne = (t, n, l) => {
   console.log(`${t.padEnd(12)} ${String(n).padStart(4)} en base, ${String(l.length).padStart(3)} sans migration`)
@@ -192,10 +231,15 @@ console.log(`Dossier : ${fichiers.length} migrations`)
 ligne('Fonctions', etat.fonctions.length, orphelinesFn)
 ligne('Tables', etat.tables.length, orphelinesTable)
 ligne('Colonnes', etat.colonnes.length, orphelinesColonne)
+ligne('Policies', etat.policies.length, orphelinesPolicy)
+ligne('Déclencheurs', etat.declencheurs.length, orphelinsDeclencheur)
+ligne('Index', etat.index.length, orphelinsIndex)
 console.log(`Corps divergents : ${divergentes.length}`)
 for (const x of divergentes) console.log(`               · ${x}`)
 
-const total = orphelinesFn.length + orphelinesTable.length + orphelinesColonne.length + divergentes.length
+const total = orphelinesFn.length + orphelinesTable.length + orphelinesColonne.length
+  + orphelinesPolicy.length + orphelinsDeclencheur.length + orphelinsIndex.length
+  + divergentes.length
 console.log(total === 0
   ? '\nLe dossier décrit la base.'
   : `\n${total} écart(s) : écrire la migration qui manque, ou remettre le fichier d'accord avec la base.`)

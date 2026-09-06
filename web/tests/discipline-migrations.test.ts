@@ -133,10 +133,19 @@ describe('et la mesure qui interroge la base reste à portée d’une commande',
     // RPC d'administration. Une garde de l'archivage en a fait les frais le
     // lendemain : elle déduisait sa liste d'un dossier troué, et le sabotage
     // est passé.
-    for (const volet of ['fonctions', 'tables', 'colonnes']) {
+    // ⚠️ SIX VOLETS, PAS DEUX. La mesure du 5 septembre comparait les fonctions
+    // et les tables. Chaque famille laissée de côté a livré ses orphelins dès
+    // qu'on l'a regardée : cinq colonnes le 6 au matin — dont
+    // `profiles.is_admin`, le drapeau qui garde les dix-huit RPC
+    // d'administration — puis deux policies l'après-midi. Les déclencheurs et
+    // les index, eux, étaient propres. On ne saura jamais qu'une famille est
+    // saine tant qu'on ne la mesure pas.
+    for (const volet of ['fonctions', 'tables', 'colonnes', 'policies', 'declencheurs', 'index']) {
       expect(s, `la mesure ne couvre plus les ${volet}`).toContain(`'${volet}',`)
     }
-    expect(s, 'les colonnes ne sont plus comparées').toMatch(/orphelinesColonne/)
+    for (const compteur of ['orphelinesColonne', 'orphelinesPolicy', 'orphelinsDeclencheur', 'orphelinsIndex']) {
+      expect(s, `${compteur} ne compte plus`).toContain(compteur)
+    }
   })
 })
 
