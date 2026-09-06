@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
+import { policeNombre, policeRegistre } from '@/lib/policesRegistre'
 import { StoreBadges } from '@/components/StoreBadges'
 import { Notifications } from '@/components/Notifications'
 import { MessageAdmin } from '@/components/dashboard/MessageAdmin'
@@ -303,7 +304,13 @@ export function AppShell({
         </div>
       </nav>
 
-      <main className="app-main">{children}</main>
+      {/* ⚠️ LES DEUX POLICES DE « REGISTRE » ENTRENT ICI, PAS À LA RACINE.
+          Déclarées dans `app/layout.tsx`, elles partaient sur toutes les pages :
+          `/tarifs` téléchargeait 136,6 ko de polices au lieu de 60,1 — mesuré
+          le 6 septembre 2026. Portées par la coquille de l'espace connecté,
+          elles n'atteignent que les écrans qui les emploient : le rapport, les
+          écarts, le rapport de magasin. Voir `lib/policesRegistre.ts`. */}
+      <main className={`app-main ${policeRegistre.variable} ${policeNombre.variable}`}>{children}</main>
     </>
   )
 }

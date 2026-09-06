@@ -33,6 +33,7 @@ const THEME_INIT = `(function(){try{var p=localStorage.getItem('quantinvo-theme'
 const titre = Archivo({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--police-titre', display: 'swap' })
 const texte = Public_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--police-texte', display: 'swap' })
 
+
 /**
  * ⚠️ `metadataBase` n'est pas un détail : sans elle, Next rend les adresses
  * d'`openGraph.images` et des balises canoniques en **relatif**, et un aperçu

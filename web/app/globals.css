@@ -638,23 +638,13 @@ a { color: inherit; text-decoration: none; }
    à rouvrir quoi que ce soit. */
 .field-err { font-size: 12px; color: var(--danger-text); margin: 0; }
 
-/* Réponse du registre public sous le champ SIREN. Le ton reste sobre : c'est
-   une confirmation, pas une récompense. L'état « cessée » se distingue sans
-   crier — une société radiée peut avoir une suite, ce n'est pas une erreur de
-   saisie. */
-.registre {
-  margin-top: 9px; border-radius: var(--r); padding: 11px 13px; font-size: 12.5px;
-  background: var(--success-soft); border: 1px solid var(--hairline);
-}
-.registre-ko { background: var(--warning-soft); }
-.registre-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.registre-raison { font-weight: 700; color: var(--text); font-size: 13.5px; }
-.registre-pill {
-  font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
-  background: var(--success-soft); color: var(--success-text); border: 1px solid currentColor;
-}
-.registre-ko .registre-pill { background: var(--warning-soft); color: var(--warning-text); }
-.registre-detail { color: var(--text-2); margin: 5px 0 0; }
+/* ⚠️ ICI VIVAIT UN AUTRE `.registre` — la réponse du registre public sous le
+   champ SIREN de /inscription. Il était MORT : aucun écran ne l'a jamais rendu
+   (la page remplit ses champs et affiche un `.field-hint`), et il portait un
+   fond vert et une bordure qui se sont retrouvés SOUS la piste « Registre » du
+   6 septembre 2026 — le rapport s'est affiché sur un fond vert d'eau le temps
+   de le trouver. Retiré, et le nom appartient désormais à la piste.
+   Si la réponse SIREN doit un jour s'afficher, elle prendra `.siren-*`. */
 
 .magasins-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
@@ -4035,3 +4025,159 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* Le mot suit la marque : `.muted` est en `--text-3`, sous le seuil AA sur
    cette page-là comme ailleurs. */
 .chargement-marque p { margin: 0; color: var(--text-2); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   REGISTRE — les trois surfaces qui font foi (6 septembre 2026)
+   ----------------------------------------------------------------------------
+   Piste validée avec Ardoise le 6 septembre, périmètre tranché par Julien :
+   le rapport d'un inventaire, les écarts d'audit, le rapport consolidé d'un
+   magasin — et, hors du site, le devis PDF et les exports.
+
+   ⚠️ REGISTRE HABILLE CE QU'ON LIT, IL N'ÉTEINT PAS CE QUI ENGAGE. C'est la
+   frontière qui empêche « deux identités » de devenir « deux produits » :
+   les boutons Compteur et Auditeur des écarts gardent le vert et l'or des deux
+   passes (règle du 29 août, la même que dans l'application), et tout ce sur
+   quoi on agit garde le langage d'Ardoise. Un test le vérifie.
+
+   ⚠️ ET C'EST LA GRAMMAIRE, PAS LE PAPIER (décision 1, validée). La palette de
+   Registre est crème ; posée telle quelle dans la coquille sombre, elle
+   donnerait un rectangle blanc de 1 400 px au milieu de l'écran qu'on regarde
+   le plus longtemps de la journée. Ce qui dit « document », ce ne sont pas les
+   couleurs — ce sont les filets, les nombres alignés et l'absence de boîtes.
+   Les couleurs suivent donc le thème.
+
+   ⚠️ AUCUN ACCENT (décision 2, validée). Le marine #1D3E63 de Registre rend
+   1,6:1 sur le fond sombre — il ne sert que sur le devis PDF, qui n'a pas de
+   thème. À l'écran il n'y a que de l'encre, et l'ocre (`--warning-text`) pour
+   la seule chose qui appelle une décision : un écart non arbitré.
+
+   ⚠️ LE RAYON SE POSE ÉLÉMENT PAR ÉLÉMENT, JAMAIS PAR `--r`. Redéfinir le
+   jeton sur `.registre` carrerait aussi ce qui n'appartient pas au document —
+   la modale du format de téléchargement, l'anneau de focus. On nomme.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* En thème clair, le fond glisse vers le papier. L'écart avec `--bg` (#f2f3f1)
+   est assez petit pour qu'aucune couture ne se voie, assez grand pour qu'on
+   sente le grain. En sombre il n'y a pas de papier : on ne touche à rien. */
+:root[data-theme="light"] .registre { background: #faf9f6; }
+.registre { padding: 22px 24px 26px; margin: 0 -24px; }
+
+/* ── L'en-tête du document ───────────────────────────────────────────────
+   Il ne répète pas celui de la page : la page nomme l'INVENTAIRE, le document
+   nomme la PIÈCE et la date à laquelle elle est arrêtée. C'est aussi ce qui a
+   permis de retirer `.report-freshness`, qui disait la même heure dans un coin. */
+.registre-entete {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 12px; margin-bottom: 16px;
+}
+.registre-titre {
+  font-family: var(--police-registre), Georgia, "Times New Roman", serif;
+  font-weight: 500; font-size: 27px; letter-spacing: -0.005em; line-height: 1.15;
+  margin: 0;
+}
+.registre-arrete { display: flex; align-items: baseline; gap: 12px; font-size: 12.5px; color: var(--text-2); }
+.registre .page-title { font-family: var(--police-registre), Georgia, "Times New Roman", serif; font-weight: 500; letter-spacing: -0.005em; }
+
+/* ── Les nombres ─────────────────────────────────────────────────────────
+   Le seul changement de Registre qui ne soit pas esthétique : en chasse fixe,
+   les colonnes s'alignent au chiffre près et l'écart le plus gros se repère
+   sans lire les nombres. `.dash-art-code` porte le SKU et le code-barres —
+   ce sont des codes, ils se lisent comme des nombres. */
+.registre .num,
+.registre .dash-stat-value,
+.registre .figure-value,
+.registre .dash-art-code,
+.registre .dash-audit-input {
+  font-family: var(--police-nombre), ui-monospace, SFMono-Regular, monospace;
+  font-weight: 500;
+}
+.registre .dash-art-code { letter-spacing: -0.01em; }
+
+/* ── La bande de résumé : un intervalle réglé, plus quatre tuiles ───────── */
+.registre .dash-stats {
+  gap: 0;
+  border-top: 1px solid var(--text);
+  border-bottom: 1px solid var(--text);
+  margin-bottom: 18px;
+}
+.registre .dash-stat {
+  display: flex; flex-direction: column;
+  background: transparent; border-radius: 0; box-shadow: none;
+  padding: 13px 20px 13px 0;
+}
+.registre .dash-stat + .dash-stat { border-left: 1px solid var(--hairline); padding-left: 20px; }
+/* Le libellé passe AU-DESSUS du chiffre : c'est l'ordre d'un relevé. */
+.registre .dash-stat-label { order: 1; margin: 0 0 5px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; color: var(--text-2); }
+.registre .dash-stat-value { order: 2; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; }
+.registre .dash-stat-sub { order: 3; }
+
+/* ── La recherche : un trait, pas une boîte ─────────────────────────────── */
+.registre .toolbar input[type="search"] {
+  background: transparent; border: 0; border-radius: 0;
+  border-bottom: 1px solid var(--border-strong);
+  padding-left: 0;
+}
+.registre .toolbar input[type="search"]:focus { border-color: var(--text); }
+
+/* ── Le tableau ──────────────────────────────────────────────────────────
+   Plus de cadre autour : des filets horizontaux, et deux traits d'encre qui
+   ouvrent et ferment le document. Le conteneur garde son défilement — c'est
+   lui qui tient l'en-tête collant sur cinquante lignes. */
+.registre .dash-table-wrap { border: 0; border-radius: 0; }
+.registre .dash-table { border-top: 1px solid var(--text); }
+.registre .dash-table th, .registre .dash-table td { padding-left: 0; }
+.registre .dash-table th:last-child, .registre .dash-table td:last-child { padding-right: 0; }
+.registre .dash-table thead th { background: var(--bg); border-bottom: 1px solid var(--border-strong); }
+:root[data-theme="light"] .registre .dash-table thead th { background: #faf9f6; }
+.registre .dash-table tbody tr:last-child td { border-bottom: 1px solid var(--text); }
+
+/* ── Le statut : des petites capitales, plus une pastille ────────────────
+   Cinquante pastilles colorées font un sapin de Noël. En capitales, l'ocre ne
+   se voit que là où il reste quelque chose à faire ; ce qui est réglé passe
+   en gris. */
+.registre .dash-audit-badge {
+  background: transparent; padding: 0; border-radius: 0;
+  font-family: var(--police-nombre), ui-monospace, monospace;
+  font-weight: 500; font-size: 11px; letter-spacing: 0.05em;
+}
+.registre .dash-audit-badge-validated,
+.registre .dash-audit-badge-resolved { color: var(--text-2); }
+
+/* ── ⚠️ PAS DE `--text-3` DANS UN DOCUMENT ──────────────────────────────
+   Mesuré sur le papier de Registre (#faf9f6) : `--text-3` y donne **3,06:1**,
+   sous le seuil AA de 4,5. Or les quatre rôles ci-dessous se LISENT — on
+   cherche un code-barres, on relit un en-tête de colonne, on vérifie un
+   statut. C'est la règle posée le 6 septembre avec Ardoise (« --text-2 est le
+   jeton de tout ce qui se lit »), et un document la mérite plus qu'un écran :
+   il est fait pour être lu de bout en bout. La hiérarchie y vient de la
+   TAILLE et des capitales, pas de la valeur du gris. */
+.registre .dash-table thead th,
+.registre .dash-art-code,
+.registre .figure-label { color: var(--text-2); }
+
+/* ── Les lignes d'écart ──────────────────────────────────────────────────
+   Le filet de gauche reste : il dit de quel genre d'écart il s'agit avant
+   qu'on ait lu la ligne. Il gagne le retrait que le rayon zéro lui retire. */
+.registre .dash-audit-list { gap: 0; }
+.registre .dash-audit-row {
+  background: transparent; border-radius: 0; box-shadow: none;
+  padding: 14px 0; border-bottom: 1px solid var(--hairline);
+}
+.registre .dash-audit-failed,
+.registre .dash-audit-missing-audit,
+.registre .dash-audit-missing-count { padding-left: 12px; }
+.registre .dash-audit-actions .btn { border-radius: 0; }
+.registre .dash-audit-input { border-radius: 0; }
+
+/* ── Ce qui reste rond, et pourquoi ──────────────────────────────────────
+   Rien d'autre. Le bouton « Télécharger » est une action : il garde le
+   langage d'Ardoise, comme les boutons Compteur et Auditeur gardent leurs
+   couleurs. Registre s'arrête au bord de ce qui engage. */
+
+@media (max-width: 860px) {
+  .registre { margin: 0; padding: 18px 0 22px; }
+  :root[data-theme="light"] .registre { background: transparent; }
+  .registre .dash-stat + .dash-stat { border-left: 0; padding-left: 0; }
+}

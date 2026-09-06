@@ -208,7 +208,16 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   }
 
   return (
-    <div>
+    /* ⚠️ `registre` : la même grammaire que le rapport — même tableau, mêmes
+       nombres, mêmes lecteurs. Voir le bloc du même nom dans globals.css.
+       ⚠️ ET LES DEUX BOUTONS DE PASSE GARDENT LEURS COULEURS : le vert du
+       comptage et l'or de l'audit sont ceux de l'application depuis le
+       29 août. Registre habille ce qu'on lit, il n'éteint pas ce qui engage. */
+    <div className="registre">
+      <div className="registre-entete">
+        <h2 className="registre-titre">Écarts d’audit</h2>
+      </div>
+
       {/* ⚠️ Sans résumé, « — » et jamais « 0 » : un zéro d'écart se lit comme
           une victoire, et celui-là n'aurait rien mesuré. */}
       <div className="dash-stats">
@@ -297,7 +306,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                 <div className={`dash-audit-row dash-audit-${d.kind}`} key={d.audit.id}>
                   <div className="dash-audit-info">
                     <div className="dash-art-label">{lbl?.label || d.audit.sku}</div>
-                    <div className="muted small">
+                    <div className="muted small dash-art-code">
                       SKU {d.audit.sku}{lbl?.brand ? ` · ${lbl.brand}` : ''}
                     </div>
                     <div className="muted small" style={{ marginTop: 4 }}>{KIND_LABELS[d.kind]}</div>

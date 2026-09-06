@@ -195,7 +195,30 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
   }
 
   return (
-    <div>
+    /* ⚠️ `registre` : la piste des surfaces qui font foi. Voir le bloc du même
+       nom dans globals.css — c'est la GRAMMAIRE du document (filets, nombres
+       en chasse fixe, pas de boîtes), pas sa palette. Ce qui engage garde le
+       langage d'Ardoise. */
+    <div className="registre">
+      {/* L'en-tête du DOCUMENT, qui ne répète pas celui de la page : la page
+          nomme l'inventaire, le document nomme la pièce et l'heure à laquelle
+          elle est arrêtée. C'est ce qui a remplacé `.report-freshness`. */}
+      <div className="registre-entete">
+        <h2 className="registre-titre">Rapport d’inventaire</h2>
+        <div className="registre-arrete">
+          <span>
+            {refreshing
+              ? 'Recalcul en cours…'
+              : computedAt
+                ? `Arrêté à ${computedAt.toLocaleTimeString('fr-FR')}`
+                : 'Chiffres non calculés'}
+          </span>
+          <button type="button" className="link-btn" disabled={refreshing} onClick={() => void load({ silent: true })}>
+            Actualiser
+          </button>
+        </div>
+      </div>
+
       {/* ⚠️ Sans résumé, on écrit « — », jamais « 0 » : un zéro se lit comme un
           résultat, et celui-là serait faux. */}
       <div className="dash-stats">
@@ -251,19 +274,6 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
         </button>
       </div>
 
-      <div className="report-freshness">
-        <span className="muted small">
-          {refreshing
-            ? 'Recalcul en cours…'
-            : computedAt
-              ? `Chiffres calculés à ${computedAt.toLocaleTimeString('fr-FR')}`
-              : 'Chiffres non calculés'}
-        </span>
-        <button type="button" className="link-btn" disabled={refreshing} onClick={() => void load({ silent: true })}>
-          Actualiser
-        </button>
-      </div>
-
       {askFormat && (
         <Modal title="Format du téléchargement" onClose={() => setAskFormat(false)}>
           <div className="format-choice">
@@ -314,7 +324,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
                   <Th label="Théorique" num onClick={() => toggleSort('theoretical_qty')} active={sort.key === 'theoretical_qty'} dir={sort.dir} />
                   <Th label="Compté" num onClick={() => toggleSort('counted_qty')} active={sort.key === 'counted_qty'} dir={sort.dir} />
                   <Th label="Écart" num onClick={() => toggleSort('variance_units')} active={sort.key === 'variance_units'} dir={sort.dir} />
-                  <Th label="Valeur" num onClick={() => toggleSort('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
+                  <Th label="Valeur (€)" num onClick={() => toggleSort('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
                   <Th label="Statut" onClick={() => toggleSort('status')} active={sort.key === 'status'} dir={sort.dir} />
                 </tr>
               </thead>
@@ -326,12 +336,12 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
                     <tr key={r.sku}>
                       <td>
                         <div className="dash-art-label">{r.label || r.sku}</div>
-                        <div className="muted small">{r.brand}{r.ean ? ` · ${r.ean}` : ''}</div>
+                        <div className="muted small dash-art-code">{r.brand}{r.ean ? ` · ${r.ean}` : ''}</div>
                       </td>
                       <td className="num">{fmtQty(Number(r.theoretical_qty))}</td>
                       <td className="num">{fmtQty(Number(r.counted_qty))}</td>
                       <td className={`num ${units === 0 ? '' : units < 0 ? 'neg' : 'pos'}`}>{fmtSigned(units)}</td>
-                      <td className={`num ${value < 0 ? 'neg' : ''}`}>{money(value)} €</td>
+                      <td className={`num ${value < 0 ? 'neg' : ''}`}>{money(value)}</td>
                       <td>
                         <span className={`dash-audit-badge dash-audit-badge-${r.status}`}>
                           {AUDIT_STATUS_LABELS[r.status] ?? r.status}

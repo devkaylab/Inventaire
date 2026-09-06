@@ -71,9 +71,16 @@ describe('la barre de navigation', () => {
     // cette page seule. Une seule largeur, une seule règle : pas de
     // modificateur par page, sinon le bandeau change de dimension d'un
     // onglet à l'autre.
+    //
+    // ⚠️ LA GARDE VISE LA CLASSE, PLUS LA LIGNE ENTIÈRE. Elle exigeait
+    // `className="app-main"` mot pour mot : le 6 septembre 2026, `app-main` a
+    // gagné les deux variables de police de « Registre » (`className={\`app-main
+    // ${…}\`}`) et la garde est tombée alors que la largeur n'avait pas bougé.
+    // Ce qu'elle défend, c'est qu'il n'y ait PAS de modificateur de largeur —
+    // pas une façon d'écrire un attribut.
     const css = lire('../app/globals.css')
-    expect(shell).toContain('className="app-rail"')
-    expect(shell).toContain('className="app-main"')
+    expect(shell).toMatch(/className=[{"`][^\n]*\bapp-rail\b/)
+    expect(shell).toMatch(/className=[{"`][^\n]*\bapp-main\b/)
     expect(css).not.toContain('.app-main-wide')
     expect(css).not.toContain('.app-rail-wide')
   })

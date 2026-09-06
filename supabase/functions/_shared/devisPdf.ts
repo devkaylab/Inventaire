@@ -31,6 +31,15 @@ export async function devisEnPdf(devis: Devis): Promise<Uint8Array> {
   const page = doc.addPage([PAGE.largeur * MM, PAGE.hauteur * MM])
   const normale = await doc.embedFont(StandardFonts.Helvetica)
   const grasse = await doc.embedFont(StandardFonts.HelveticaBold)
+  /**
+   * ⚠️ TIMES EST LA SERIF DE REGISTRE SUR LE PAPIER, ET ELLE NE COÛTE RIEN.
+   * Le site porte Newsreader ; l'embarquer ici voudrait dire glisser un
+   * fichier de police dans le paquet de la fonction edge, pour un document
+   * que personne ne comparera jamais côte à côte avec un écran. Times fait
+   * partie des quatorze polices que tout lecteur PDF possède : zéro octet,
+   * zéro dépendance, et c'est bien une serif de document.
+   */
+  const serif = await doc.embedFont(StandardFonts.TimesRoman)
 
   const hautVersBas = (y: number) => (PAGE.hauteur - y) * MM
 
@@ -54,7 +63,7 @@ export async function devisEnPdf(devis: Devis): Promise<Uint8Array> {
       })
       continue
     }
-    const police = el.gras ? grasse : normale
+    const police = el.police === 'serif' ? serif : el.gras ? grasse : normale
     // Helvetica ne connaît pas toutes les ponctuations françaises : l'apostrophe
     // courbe et les espaces insécables feraient échouer l'encodage WinAnsi.
     const texte = el.texte.replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/[  ]/g, ' ')
@@ -64,7 +73,7 @@ export async function devisEnPdf(devis: Devis): Promise<Uint8Array> {
       y: hautVersBas(el.y),
       size: el.taille,
       font: police,
-      color: couleur(el.couleur ?? '#0b0f19'),
+      color: couleur(el.couleur ?? '#1b1a17'),
     })
   }
 

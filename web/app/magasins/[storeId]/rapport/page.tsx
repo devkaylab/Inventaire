@@ -235,6 +235,11 @@ export default function RapportMagasinPage() {
         {retour.texte}
       </Link>
 
+      {/* ⚠️ `registre` couvre la page ENTIÈRE ici, périmètre compris : sur un
+          rapport consolidé, la liste des inventaires retenus est la clause
+          « arrêté sur » du document, pas un réglage à côté. Seul le lien de
+          retour reste dehors — il appartient à la navigation. */}
+      <div className="registre">
       <div className="app-head">
         <div>
           <h1 className="page-title">Rapport du magasin</h1>
@@ -448,7 +453,7 @@ export default function RapportMagasinPage() {
                       <Th label="Théorique" num onClick={() => trier('theoretical_qty')} active={sort.key === 'theoretical_qty'} dir={sort.dir} />
                       <Th label="Compté" num onClick={() => trier('counted_qty')} active={sort.key === 'counted_qty'} dir={sort.dir} />
                       <Th label="Écart" num onClick={() => trier('variance_units')} active={sort.key === 'variance_units'} dir={sort.dir} />
-                      <Th label="Valeur" num onClick={() => trier('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
+                      <Th label="Valeur (€)" num onClick={() => trier('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
                       <Th label="Inventaires" onClick={() => trier('inventaires')} active={sort.key === 'inventaires'} dir={sort.dir} />
                     </tr>
                   </thead>
@@ -460,12 +465,12 @@ export default function RapportMagasinPage() {
                         <tr key={r.sku}>
                           <td>
                             <div className="dash-art-label">{r.label || r.sku}</div>
-                            <div className="muted small">{r.brand}{r.ean ? ` · ${r.ean}` : ''}</div>
+                            <div className="muted small dash-art-code">{r.brand}{r.ean ? ` · ${r.ean}` : ''}</div>
                           </td>
                           <td className="num">{fmtQty(Number(r.theoretical_qty))}</td>
                           <td className="num">{fmtQty(Number(r.counted_qty))}</td>
                           <td className={`num ${u === 0 ? '' : u < 0 ? 'neg' : 'pos'}`}>{fmtSigned(u)}</td>
-                          <td className={`num ${v < 0 ? 'neg' : ''}`}>{money(v)} €</td>
+                          <td className={`num ${v < 0 ? 'neg' : ''}`}>{money(v)}</td>
                           <td>
                             {r.inventaires > 1
                               ? <span className="pill pill-attente">{nb(r.inventaires)} inventaires</span>
@@ -488,6 +493,7 @@ export default function RapportMagasinPage() {
           )}
         </>
       )}
+      </div>
     </AppShell>
   )
 }
