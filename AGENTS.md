@@ -822,9 +822,15 @@ objets supprimés ensuite** (leçon `get_session_activity`) :
    `anon`**), `submit_supervisor_request_detailed`,
    `admin_list_supervisor_requests` et `admin_review_supervisor_request`.
 3. Edge functions `submit-supervisor-request` et `invite-supervisor`
-   redéployées en **410 Gone**, sans client Supabase ni envoi d'e-mail. La
-   console MCP ne sait pas supprimer une edge function : les retirer depuis
-   le tableau de bord Supabase quand plus aucun appel résiduel n'arrive.
+   redéployées en **410 Gone**, sans client Supabase ni envoi d'e-mail.
+   ✅ **SUPPRIMÉES DE LA PRODUCTION LE 6 SEPTEMBRE 2026**, seize jours plus
+   tard, la condition étant remplie : aucun appelant nulle part (⚠️ attention en
+   le vérifiant — `ca-invite-supervisor`, bien vivante, contient la même suite
+   de lettres et fait mentir un `grep` trop large) et zéro appel dans les
+   journaux. Leurs dossiers ont quitté le dépôt ; git en garde la trace.
+   ⚠️ **Et la console MCP ne sait toujours pas supprimer une edge function —
+   mais le CLI, si** : `supabase functions delete <nom> --project-ref …`. La
+   note qui renvoyait au tableau de bord n'avait plus lieu d'être.
 
 **La page `/superviseur` doit rester** : l'application mobile installée sur
 les téléphones partage encore cette adresse avec le code magasin (voir

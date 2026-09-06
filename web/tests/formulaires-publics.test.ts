@@ -5,7 +5,7 @@
 // nom du magasin a disparu de la réponse, parce qu'il confirmait à lui seul la
 // validité du code. Ces tests empêchent de le réintroduire côté écran, et
 // figent la formulation conditionnelle qui rend la réponse uniforme tenable.
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { derniereDefinition, dossierMigrations } from './migrations'
@@ -49,21 +49,60 @@ describe('parcours public superviseur — éteint le 21 août 2026', () => {
   })
 })
 
-describe('fonctions edge du parcours éteint', () => {
-  const edgeDepot = lire('../../supabase/functions/submit-supervisor-request/index.ts')
-  const edgeValidation = lire('../../supabase/functions/invite-supervisor/index.ts')
+describe('le parcours public superviseur ne revient pas', () => {
+  /**
+   * ⚠️ CETTE GARDE A CHANGÉ D'OBJET LE 6 SEPTEMBRE 2026, elle n'a pas été
+   * affaiblie. Elle lisait les deux fonctions edge éteintes pour vérifier
+   * qu'elles ne collectaient plus rien — un point d'entrée en 410 Gone, laissé
+   * en place le temps que d'éventuels appels résiduels s'éteignent depuis le
+   * 21 août. **Ces deux fonctions sont supprimées de la production**, plus
+   * aucun appelant nulle part, zéro appel dans les journaux : il n'y a plus de
+   * fichier à lire, et c'est le but qui était visé.
+   *
+   * Ce qui reste à défendre est plus large et se déduit : aucun code du produit
+   * ne doit appeler une fonction edge que le dépôt ne décrit pas.
+   */
+  const dossierEdge = path.resolve(__dirname, '../../supabase/functions')
 
-  it('ne collectent plus et ne touchent plus la base', () => {
-    // Les RPC qu'elles appelaient sont supprimées (migration 20260821140001) :
-    // le point d'entrée subsiste en 410 le temps que les appels résiduels
-    // s'éteignent, sans client Supabase ni envoi d'e-mail.
-    for (const edge of [edgeDepot, edgeValidation]) {
-      expect(edge).toContain('410')
-      expect(edge).not.toContain('createClient')
-      expect(edge).not.toContain('resend')
-      expect(edge).not.toContain('.rpc(')
-      expect(edge).not.toContain('Deno.env.get')
+  it('leurs deux points d’entrée ont bien disparu du dépôt', () => {
+    for (const mort of ['submit-supervisor-request', 'invite-supervisor']) {
+      expect(existsSync(path.join(dossierEdge, mort)),
+        `${mort} est supprimée de la production : son dossier n’a plus d’objet`).toBe(false)
     }
+  })
+
+  it('⚠️ et aucun écran n’appelle une fonction edge qui n’existe pas', () => {
+    // La règle générale, celle qui couvrira la prochaine suppression. Un appel
+    // à une fonction absente échoue à l'exécution, jamais à la compilation :
+    // rien ne le signale avant qu'un client ne clique.
+    const deployees = new Set(
+      readdirSync(dossierEdge, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && !e.name.startsWith('_'))
+        .map((e) => e.name),
+    )
+    expect(deployees.size, 'la détection des fonctions edge est cassée').toBeGreaterThan(10)
+
+    const appelees = new Set<string>()
+    const marcher = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name)
+        if (e.isDirectory()) {
+          if (e.name === 'node_modules' || e.name === '.next') continue
+          marcher(p)
+        } else if (/\.(ts|tsx)$/.test(e.name)) {
+          for (const m of readFileSync(p, 'utf8').matchAll(/invoke\(\s*'([a-z0-9-]+)'/g)) {
+            appelees.add(m[1])
+          }
+        }
+      }
+    }
+    for (const d of ['web/app', 'web/lib', 'web/components', 'src']) {
+      marcher(path.resolve(__dirname, '../..', d))
+    }
+    expect(appelees.size, 'la détection des appels edge est cassée').toBeGreaterThan(5)
+
+    const fantomes = [...appelees].filter((f) => !deployees.has(f)).sort()
+    expect(fantomes, 'ces fonctions sont appelées mais n’existent plus').toEqual([])
   })
 })
 
