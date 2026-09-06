@@ -10661,24 +10661,37 @@ identité, tombés d'un seul geste.
   reste de la palette d'avant Ardoise, et la couche `.hero-voile` — le
   commentaire du fichier disait lui-même « le halo devient une couche animée ».
 
-⚠️ **`.hero-plein::before` reste à `content: none` SANS REMPLAÇANT.** C'est ce
-qui fait que l'accueil n'a plus aucune lueur. Remettre un dégradé là, c'est
-refaire exactement ce qui a été défait. Les pages intérieures gardent leur
-`.hero::before` : il n'y a pas de logo derrière, et Julien visait l'accueil.
+## ⚠️ ET LES DEUX RESTES SONT PARTIS DANS LA FOULÉE
 
-## ⚠️ CE QUI RESTE, ET C'EST DÉLIBÉRÉ
+J'avais laissé deux choses en les signalant plutôt qu'en les retirant, et
+Julien a répondu « oui, retire-les aussi ». Elles comptent parce qu'elles
+étendent la décision à **toutes** les pages vitrines :
 
 - **`.scan-trait`** — le trait horizontal de 420 px sous le titre de l'accueil,
-  en `--cyan` à 35 % d'opacité. Il n'a pas été demandé, il n'est pas un cube, et
-  il évoque le geste du scan plutôt qu'un logo. Signalé à Julien, pas retiré.
+  en `--cyan` à 35 % d'opacité ;
+- **`.hero::before`** — la lueur d'accent que **tous** les héros portaient,
+  celle des pages intérieures comprise. `.hero-plein::before { content: none }`
+  n'avait plus rien à annuler : il est parti avec.
+
+⚠️ **UN HÉROS N'A DONC PLUS NI DÉCOR NI LUEUR, ET C'EST LA RÈGLE.** Il ne tient
+que par sa typographie — ce qui est la doctrine Ardoise, où l'accent ne sert
+qu'à ce qui engage. Remettre un dégradé derrière un titre, c'est refaire ce qui
+a été défait ; une garde le refuse. `overflow: hidden` reste sur `.hero`, il
+borne les couches de parallaxe.
+
+## Ce qui reste, et c'est délibéré
+
 - **`.band-glow`** — la lueur de la bande d'appel à l'action, qui n'a jamais eu
-  de rapport avec le logo.
-- **`Parallaxe`** elle-même : elle sert encore ces deux couches.
+  de rapport avec le logo ni avec un héros.
+- **`Parallaxe`** elle-même : elle sert encore cette couche et la sortie du
+  héros de l'accueil (`data-hero-exit`). L'accueil, lui, n'a plus **aucune**
+  couche `.plx`.
 
 ## ⚠️ LA GARDE DÉDUIT SA LISTE DE PAGES, ELLE N'EN CITE AUCUNE
 
-Elle balaie tout `app/` et `components/` — `.tsx` **et** `.css` — et refuse dix
-mots (`CubeFilaire`, `cube-a`, `logo-glow`, `hero-voile`, `flotte`…). La page
+Elle balaie tout `app/` et `components/` — `.tsx` **et** `.css` — et refuse
+treize mots (`CubeFilaire`, `cube-a`, `logo-glow`, `hero-voile`, `flotte`,
+`scan-trait`, `.hero::before`…). La page
 vitrine qu'on écrira demain est couverte sans qu'on y pense ; une garde qui
 nommerait `page.tsx` ne protégerait que la page d'aujourd'hui. Même doctrine
 que les portes de `(compte)` et que la mention de TVA.
@@ -10695,12 +10708,14 @@ deux premières classes n'existent plus ; elle vérifie désormais que la règle
 
 ## Vérifications
 
-- **Au navigateur**, clair et sombre : plus un seul cube sur les quatre pages
-  publiques, plus de logo dans le `<main>` de l'accueil, plus de lueur.
-  **Débordement horizontal nul sur les quatre** — c'était 40 px sur `/tarifs`,
-  et c'était justement le cube.
-- **Deux sabotages, deux échecs** : une couche `cube-a` remise dans le héros,
-  le `drop-shadow` du halo remis dans la feuille.
+- **Au navigateur**, clair et sombre, sur les quatre pages publiques : plus un
+  seul cube, plus de logo dans le `<main>` de l'accueil, `::before` du héros à
+  `none` partout, et **zéro couche `.plx` sur l'accueil**. **Débordement
+  horizontal nul sur les quatre** — c'était 40 px sur `/tarifs`, et c'était
+  justement le cube.
+- **Trois sabotages, trois échecs** : une couche `cube-a` remise dans le héros,
+  le `drop-shadow` du halo remis dans la feuille, la lueur `.hero::before`
+  remise.
 - 1 296 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
   avertissements, la famille `react-hooks/*` déjà documentée), `next build`
   avec la table de routes **inchangée**.

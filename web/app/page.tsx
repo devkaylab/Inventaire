@@ -78,7 +78,6 @@ export default function Home() {
       <main>
         <LogicielJsonLd />
         <section className="hero hero-plein">
-          <div className="plx scan-trait" data-plx="0.62" aria-hidden="true" />
           <div className="container" data-hero-exit>
             <div data-reveal="0"><span className="eyebrow">Outil d&apos;inventaire</span></div>
             <h1 data-reveal="1">La simplicité<br /><span className="grad">en main.</span></h1>

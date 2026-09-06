@@ -652,12 +652,16 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
     expect(css).toContain('.scroll-cue svg { animation: none; }')
   })
 
-  it('⚠️ le cube isométrique a quitté le décor, et le halo avec lui', () => {
+  it('⚠️ le héros n’a plus ni décor ni lueur', () => {
     // 6 septembre 2026, décision de Julien. Les cubes filaires étaient
     // l'esquisse de l'ANCIEN logo ; la marque est devenue un plan de magasin
     // vu du dessus, ils ne voulaient plus rien dire. Sont partis dans le même
     // geste le logo répété sous l'en-tête (il y est déjà, deux fois suffit
-    // rarement) et le voile en dégradé qui lui faisait un halo.
+    // rarement) et le voile en dégradé qui lui faisait un halo. Puis, dans la
+    // foulée, les deux restes que j'avais laissés : le trait de scan sous le
+    // titre de l'accueil, et la lueur d'accent que TOUS les héros portaient
+    // en `::before`. Le héros ne tient plus que par sa typographie — c'est la
+    // doctrine Ardoise, où l'accent ne sert qu'à ce qui engage.
     //
     // ⚠️ LA GARDE DÉDUIT SA LISTE DE PAGES, ELLE NE LA CITE PAS : elle balaie
     // tout `app/` et `components/`, donc la page vitrine qu'on écrira demain
@@ -670,6 +674,7 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
     const morts = [
       'CubeFilaire', 'cube-a', 'cube-b', 'cube-c', 'hero-cube-int',
       'deco-cube', 'deco-cyan', 'logo-glow', 'hero-voile', 'flotte',
+      'scan-trait', '.hero::before', '.hero-plein::before',
     ]
     const sources: string[] = []
     const balayer = (dossier: string) => {

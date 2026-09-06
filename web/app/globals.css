@@ -476,15 +476,18 @@ a { color: inherit; text-decoration: none; }
 .btn-sm { padding: 8px 14px; font-size: 14px; border-radius: var(--r); }
 
 /* ── Hero ───────────────────────────────────────────────── */
+/* ⚠️ UN HÉROS N'A AUCUNE LUEUR NI AUCUN DÉCOR (6 septembre 2026).
+   Il portait un `::before` en dégradé d'accent — une lueur derrière le titre —
+   et l'accueil y ajoutait trois cubes filaires, un voile et un trait de scan.
+   Julien a tout fait retirer : les cubes esquissaient l'ANCIEN logo, et la
+   lueur faisait un halo derrière la marque. Le héros ne tient plus que par sa
+   typographie, ce qui est la doctrine Ardoise — l'accent ne sert qu'à ce qui
+   engage. Ne pas remettre de dégradé ici : ce serait refaire ce qui a été
+   défait. `overflow: hidden` reste, il borne les couches de parallaxe. */
 .hero {
   position: relative; overflow: hidden;
   padding: 96px 0 80px;
   text-align: center;
-}
-.hero::before {
-  content: ""; position: absolute; inset: -20% 0 auto 0; height: 520px;
-  background: radial-gradient(60% 60% at 50% 0%, var(--accent-soft), transparent 70%);
-  pointer-events: none;
 }
 .eyebrow {
   display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: 0.4px;
@@ -511,18 +514,7 @@ a { color: inherit; text-decoration: none; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 48px 0 96px;
 }
-/* ⚠️ L'ACCUEIL N'A AUCUNE LUEUR, ET C'EST VOULU (6 septembre 2026).
-   Le héros portait un voile en dégradé (`.hero-voile`) posé derrière le logo :
-   Julien l'a fait retirer avec le logo lui-même. Le `content: none` reste donc
-   sans remplaçant — remettre une lueur ici, c'est refaire ce qui a été défait. */
-.hero-plein::before { content: none; }
 .hero-plein .container { position: relative; will-change: transform, opacity; }
-
-.scan-trait {
-  left: 50%; top: 58%; width: 420px; height: 2px; margin-left: -210px;
-  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-  opacity: 0.35;
-}
 
 .scroll-cue {
   position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
@@ -537,9 +529,6 @@ a { color: inherit; text-decoration: none; }
   50% { transform: translateY(6px); opacity: 1; }
 }
 
-@media (max-width: 860px) {
-  .scan-trait { display: none; }
-}
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue svg { animation: none; }
 }
