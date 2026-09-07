@@ -11931,6 +11931,38 @@ une garde inverse posée. ⚠️ Elle lit le **code seul** : le commentaire de
 l'écran cite la phrase pour dire qu'on ne la remet pas — septième variante du
 piège des commentaires sur ce dépôt.
 
+## Vérifications
+
+**Vu sur le Pixel, aux TROIS étapes, sans écrire une seule ligne** — et c'est
+le point de méthode du jour : entrer dans le tunnel demande normalement de
+créer un inventaire, donc d'écrire dans les données de travail de Julien.
+**Un lien profond y entre sans rien créer** :
+
+```bash
+adb shell am start -a android.intent.action.VIEW \
+  -d "quantinvo://<sessionId>/zones?from=new"
+```
+
+⚠️ **Le segment de groupe ne fait PAS partie de l'URL.** `quantinvo:///(supervisor)/<id>/zones`
+n'ouvre rien ; `quantinvo://<id>/zones?from=new` ouvre l'écran en mode tunnel.
+Et l'application doit être **arrêtée d'abord** (`am force-stop`) : sur une
+instance déjà lancée, l'intent est avalé sans rien changer à l'écran.
+
+Constaté : « Plus tard » en lien vert sous le bouton plein, sa phrase dessous,
+aux trois étapes — la dernière portant bien la sienne (« Sans démarrer le
+comptage… ») et **plus** « Vous pouvez commencer sans personne ». L'appui mène
+à la fiche de l'inventaire, flèche de retour comprise. Et **hors tunnel**
+(Zones ouvert depuis la fiche), aucun « Plus tard » ni « Suivant » : la garde
+`fromNew &&` tient sur de vraies données.
+
+⚠️ **Ce que le lien profond ne prouve pas** : la pile est alors vide, donc le
+`dismissAll()` de la sortie n'a rien à vider. Que la flèche de la fiche ramène
+à la **liste** et non dans le tunnel se voit seulement après un vrai parcours
+— il a été exercé le 7 septembre au soir, sur un inventaire jetable.
+
+Zéro écriture contrôlée en base après coup : 165 comptages, 142 articles,
+135 lignes de stock, 7 membres — inchangés.
+
 Tests de garde : `tests/compte.test.ts`, bloc « “Plus tard” : une sortie à
 chaque étape ».
 
