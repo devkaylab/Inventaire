@@ -32,6 +32,7 @@ import {
   View,
 } from 'react-native'
 import { Stack, router, useLocalSearchParams } from 'expo-router'
+import { SortieTunnel } from '@/components/SortieTunnel'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
@@ -241,7 +242,7 @@ export default function InviteToSessionScreen() {
           options={{
             title: 'Ajouter des compteurs',
             headerBackVisible: false,
-            headerLeft: () => null,
+            headerLeft: () => <SortieTunnel sessionId={sessionId} />,
             gestureEnabled: false,
           }}
         />

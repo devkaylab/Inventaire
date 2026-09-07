@@ -11167,6 +11167,27 @@ s'animer** — il s'affiche avant que le JavaScript existe. C'est
 `SplashAnimation` qui le recouvre et qui balaie, ~2,8 s, soit trois cycles.
 Deux écrans, deux natures ; ne pas chercher à animer le premier.
 
+### 3. ⚠️ « Attention à Quantinvo ici, toujours sous ancien format »
+
+Troisième constat, au build du 7 septembre, capture à l'appui. Le mot-symbole
+de l'écran d'ouverture s'écrivait `QUANTINVO`, en capitales espacées de six
+points et en **#8A82B8** — un mauve.
+
+- **C'était le DERNIER indigo de l'application**, et il avait survécu à la
+  passe du 6 septembre pour une raison instructive : la garde qui balaie tout
+  `src/` déduit bien son **périmètre**, mais sa liste de couleurs mortes est
+  écrite à la main, et ne nommait pas cette valeur. **Une garde qui balaie
+  large et cite une liste courte ne voit rien.** `#8A82B8` l'a rejointe.
+- **⚠️ ET LA MISE EN FORME COMPTAIT AUTANT QUE LA COULEUR.** Partout où le nom
+  s'écrit — barre publique, pied de page, mentions légales — c'est
+  « Quantinvo », en Archivo gras, chasse resserrée, de la couleur du tracé.
+  Deux mises en forme du même mot, c'est déjà deux marques.
+- **La marque passe de la moitié de la largeur à 28 %** (plafond 200 → 120 pt),
+  seconde demande de Julien : « une taille de logo naturellement moins
+  intrusive ». C'est la première chose que l'application montre — à 50 % elle
+  n'accueille pas, elle barre le passage. Elle reste largement lisible : à
+  120 pt une allée fait encore 10 pt.
+
 ## Vérifications
 
 - **Le paquet iOS s'exporte** (`expo export --platform ios`) : tous les imports
@@ -11633,3 +11654,145 @@ serveur, elle, protège déjà les builds actuels.
 
 Tests de garde : `web/tests/inventaire-de-toute-taille.test.ts`, blocs « elle est
 bornée, comme ses voisines » et « mais l'ÉCRAN, lui, reçoit toujours tout ».
+
+# Zone de comptage : une question, puis UNE chose à la fois (7 septembre 2026)
+
+*« Au lieu d'afficher le gros pavé de texte créer des balises directement,
+proposer une question "Ai-je mes balises ?" Si oui → affecter une plage, si non
+→ créer des balises puis affecter en second temps. Ne pas tout afficher en même
+temps, plus clair pour l'user. »* Plus une seconde demande : *« installe toggle
+Balise unique, ce qui efface l'obligation de renseigner deux fois la même
+balise »*. Site **et** application. Maquette validée avant codage :
+https://claude.ai/code/artifact/71d4ba82-021f-4174-b96b-a084c422e6c5
+
+## Le constat
+
+Le volet s'ouvrait sur « Créer des balises » — un paragraphe d'explication,
+trois étapes numérotées, un choix de numérotation, deux champs, un bouton — et
+l'affectation seulement en dessous. **Quelqu'un dont les balises sont déjà
+collées traversait tout cela pour rien.** Et pour rattacher la balise 42 à un
+emplacement, il fallait écrire 42 dans « début » **et** dans « fin ».
+
+## ⚠️ LA QUESTION NE SE POSE QUE TANT QUE RIEN N'EST AFFECTÉ
+
+C'est la règle qui empêche la bonne idée de devenir une gêne. Dès qu'un
+emplacement existe, la réponse est connue : le formulaire s'ouvre directement,
+et « Créer d'autres balises » reste joignable par un lien discret.
+
+C'est **la leçon du bandeau de démarrage** (28 août 2026) : une aide qui se
+rejoue des semaines plus tard, à quelqu'un qui connaît le produit, cesse d'en
+être une.
+
+- **⚠️ RIEN N'EST STOCKÉ**, et c'est délibéré : l'inventaire répond tout seul
+  (`etape = choix ?? (dejaAffecte ? 'affecter' : 'question')`). Quelqu'un qui
+  répond « Non », imprime sa planche et revient le lendemain retrouve la
+  question — **et c'est juste, il peut maintenant répondre « Oui »**. Un jalon
+  figerait cette réponse sur un fait qui change. Une garde refuse `poserJalon`,
+  `localStorage` et leurs voisins dans les deux écrans.
+- **La question ne s'accompagne d'AUCUN état vide.** « Aucun emplacement
+  affecté — indiquez une première plage ci-dessus » désignerait deux boutons
+  qui ne demandent aucune plage.
+- **Un inventaire clôturé n'a ni question, ni formulaire, ni création** : il
+  n'y a plus rien à y faire, seule la liste des emplacements reste.
+- **La création dit ce qui vient après.** Imprimer n'est pas l'objectif, c'est
+  l'avant-dernière étape : la carte finit sur « Une fois les balises collées ·
+  Affecter mes balises ». Sans cette sortie on repart avec un PDF sans savoir
+  qu'il reste à dire où les balises sont collées. La troisième étape du mode
+  d'emploi dit désormais « **Revenez ici** », plus « juste en dessous ».
+- **Sur « Mon compte » / le profil, aucune des deux sorties n'existe** : on y
+  imprime des balises sans inventaire en vue.
+
+## ⚠️ UNE BALISE SEULE EST UNE PLAGE DE UN — RIEN NE CHANGE EN BASE
+
+`define_zone` ne connaît que les plages, et n'a pas à connaître autre chose :
+la bascule est une affaire d'écran, `start` et `end` valent le même numéro. Une
+garde refuse l'apparition d'une RPC `define_balise` ou `define_zone_unique`.
+
+- **Le message de saisie suit le champ qu'on a sous les yeux.** « Indiquez la
+  première et la dernière balise de la plage » devant un seul champ ferait
+  chercher le second. D'où le quatrième paramètre de `validateRange` — il ne
+  change **que** le message.
+- Sur l'application, la bascule est un `Switch` — le motif déjà employé par
+  « Utiliser des zones / balises » à la création d'un inventaire.
+- Les cartes de choix portent `Radius.bouton` : **elles se touchent**. La garde
+  du 7 septembre le déduit du nom du style, et elle a raison de mordre là.
+
+## ⚠️ UN DÉFAUT QUE SEULE LA MESURE A MONTRÉ, ET UNE GARDE QUI NE MORDAIT PAS
+
+`.zone-form-unique` (trois colonnes) a d'abord été déclarée **en bas** de
+`globals.css`, et citée dans les deux requêtes média avec sa base. Ça semblait
+suffire ; ça ne suffisait pas. **Les deux sélecteurs ont la même spécificité :
+la déclaration posée plus bas dans la feuille gagne à toutes les largeurs.**
+Mesuré au navigateur : à 760 px la rangée gardait ses trois colonnes.
+
+Elle vit désormais **à côté de sa base, avant la section responsive**. Mesures
+après correction : 1280 → 3 colonnes, 850 → 2, 760 → 1, débordement nul.
+
+⚠️ **Et la première garde a validé le défaut** : elle vérifiait la *présence*
+de `.zone-form-unique` dans les requêtes média, ce qui était vrai. Elle vérifie
+maintenant l'**ordre** — l'index de la déclaration doit précéder celui de
+chaque requête. *Une garde sur une cascade CSS porte sur l'ordre, pas sur la
+présence.*
+
+## Le tunnel de préparation a enfin une sortie
+
+Constat du même jour : *« page zone & balises ne dispose pas d'un bouton
+retour, ainsi qu'importer les données, pareil pour ajouter des compteurs »*.
+
+Ce sont exactement les **trois étapes du tunnel** qui suit la création d'un
+inventaire. Le retour y a été fermé volontairement le 23 août pour que le
+tunnel reste linéaire — mais **rien n'a été mis à la place**, et on ne pouvait
+plus en sortir avant la dernière étape. Ouverts normalement depuis la fiche
+d'un inventaire, ces trois écrans ont bien leur flèche : c'est le tunnel, et
+lui seul, qui enfermait.
+
+`components/SortieTunnel.tsx`, posée en `headerLeft` sur les trois.
+
+- **⚠️ ELLE NE RAMÈNE PAS À L'ÉTAPE PRÉCÉDENTE.** Le tunnel reste linéaire —
+  chaque étape `replace` la suivante, il n'y a rien derrière. Ce qu'on rend,
+  c'est le droit de partir : vers **la fiche de l'inventaire**, là où le tunnel
+  finit de toute façon, et d'où les trois étapes restent accessibles.
+- **⚠️ Pas `router.back()`** : il atterrirait sur la LISTE des inventaires, un
+  cran trop loin — on vient d'en créer un, c'est lui qu'on cherche.
+- **« Plus tard », jamais « Retour »** : ce qui est vrai ici, ce n'est pas
+  qu'on revient en arrière, c'est que l'étape n'est pas faite. Le mot ne promet
+  pas un écran précédent qui n'existe pas.
+- `headerBackVisible: false` et `gestureEnabled: false` **restent** : deux
+  sorties vers deux destinations différentes se contrediraient.
+
+⚠️ **LE TEST EXISTANT CERTIFIAIT L'ENFERMEMENT.** Il vérifiait que les trois
+étapes ferment le retour natif, et rien d'autre — donc il confirmait que tout
+allait bien pendant qu'on ne pouvait pas sortir. Il **déduit** maintenant ses
+écrans (ceux de `src/` qui lisent `from === 'new'`, et il exige qu'il y en ait
+trois) et demande les deux moitiés : le retour fermé **et** la sortie présente.
+La quatrième étape qu'on ajoutera demain est couverte sans qu'on y pense.
+
+## Vérifications
+
+- **Au navigateur, sur le VRAI composant** (`ZonesSetup` exporté le temps d'une
+  route jetable, retirée — `git status` contrôlé, plus `rm -rf web/.next`, le
+  piège des types de route qui survivent), **clair et sombre**, à 1280, 850 et
+  760 px : les trois états, les deux branches de la question, la bascule dans
+  ses deux positions (`aria-checked`, 3 champs → 2, 4 colonnes → 3), le retour
+  à la question, et un inventaire clôturé qui n'affiche que sa liste.
+  **Débordement horizontal nul aux trois largeurs.** C'est ce contrôle qui a
+  trouvé le défaut de cascade ci-dessus.
+- **Huit sabotages, huit échecs** — dont celui de la cascade, qui a d'abord
+  passé et a fait resserrer sa garde.
+- 1 327 tests du site, 447 de l'application, `tsc --noEmit` des deux côtés,
+  `eslint .` à **zéro erreur** (47 avertissements, la famille `react-hooks/*`
+  déjà documentée), `next build` avec la table de routes **inchangée**.
+
+⚠️ **NON VU À L'ÉCRAN CÔTÉ APPLICATION.** L'APK est construit et **installé
+sur le Pixel** (`./scripts/pixel.sh`, code de sortie 0, « Success »), mais le
+téléphone était verrouillé et son code n'est pas à moi de saisir. Restent donc
+à regarder : la question et la bascule sur l'écran Zones — qui demandent en
+plus une session de superviseur — et la sortie « Plus tard » du tunnel. Ce qui
+est prouvé côté application, c'est le typage, les 447 tests, et que le geste
+est **le même que celui vu au navigateur** : les deux jeux de gardes se
+répondent ligne à ligne.
+
+Tests de garde : `web/tests/zone-de-comptage.test.ts` et
+`tests/zone-de-comptage.test.ts` — les deux se lisent en parallèle, c'est le
+même geste sur les deux surfaces. Le tunnel, lui, reste dans
+`tests/compte.test.ts`, bloc « le tunnel de préparation ».

@@ -1409,9 +1409,49 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     expect(compteurs).toContain("Commencer l'inventaire")
   })
 
-  it('l’écran des compteurs ferme le retour comme les deux précédents', () => {
-    expect(compteurs).toContain('headerBackVisible: false')
-    expect(compteurs).toContain('gestureEnabled: false')
+  /**
+   * ⚠️ CE TEST EXIGEAIT L'ENFERMEMENT, ET RIEN D'AUTRE. Il vérifiait que les
+   * trois étapes ferment le retour natif — ce qui reste juste, le tunnel est
+   * linéaire et il n'y a rien derrière (chaque étape `replace` la suivante).
+   * Mais rien ne demandait qu'il existe une SORTIE, et il n'y en avait pas :
+   * une fois créé un inventaire, on traversait trois écrans avant de pouvoir
+   * faire autre chose. Constat de Julien, 7 septembre 2026, sur les trois à la
+   * fois : « ne dispose pas d'un bouton retour ».
+   *
+   * ⚠️ ET LA GARDE DÉDUIT SES ÉCRANS. Elle balaie `src/` et retient ceux qui
+   * lisent `from === 'new'` : la quatrième étape qu'on ajoutera demain est
+   * couverte sans qu'on y pense. Une garde qui nommait `invite.tsx` n'a
+   * protégé qu'`invite.tsx`.
+   */
+  it('⚠️ le tunnel reste linéaire, mais il a une sortie à chaque étape', () => {
+    const etapes = fichiersSource().filter(f => readFileSync(f, 'utf8').includes("from === 'new'"))
+    expect(etapes.length, 'les étapes du tunnel de préparation').toBe(3)
+
+    for (const f of etapes) {
+      const s = readFileSync(f, 'utf8')
+      const nom = path.basename(f)
+      // Le retour natif reste fermé : il ramènerait à la liste, alors que
+      // l'inventaire vient d'être créé et que c'est LUI qu'on veut voir.
+      expect(s, `${nom} : le retour natif rouvre un chemin qui n’existe pas`)
+        .toContain('headerBackVisible: false')
+      expect(s, `${nom} : le balayage ferait la même chose que la flèche`)
+        .toContain('gestureEnabled: false')
+      // Mais on peut partir.
+      expect(s, `${nom} enferme sans sortie`)
+        .toContain('headerLeft: () => <SortieTunnel sessionId={sessionId} />')
+    }
+  })
+
+  it('⚠️ la sortie mène à la fiche de l’inventaire, pas un cran plus loin', () => {
+    const sortie = lire('components/SortieTunnel.tsx')
+    const codeSeul = sortie.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
+    expect(codeSeul).toContain('router.replace(`/(supervisor)/${sessionId}`)')
+    // ⚠️ `router.back()` atterrirait sur la LISTE des inventaires : un cran
+    // trop loin, on vient d'en créer un et c'est lui qu'on cherche.
+    expect(codeSeul, 'la liste n’est pas la bonne destination').not.toContain('router.back()')
+    // « Plus tard » et jamais « Retour » : ce qui est vrai, ce n'est pas qu'on
+    // revient en arrière, c'est que l'étape n'est pas faite.
+    expect(codeSeul).toContain('Plus tard')
   })
 
   it('le bouton de sortie garde le vert du bout du tunnel', () => {

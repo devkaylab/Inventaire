@@ -333,7 +333,26 @@ function Demarrage({ status, pret, starting, onStart, onOpenSuivi }: {
   )
 }
 
-/** Affectation des plages de balises aux emplacements (mode balises seulement). */
+/**
+ * L'affectation des plages de balises aux emplacements (mode balises
+ * seulement) — et, depuis le 7 septembre 2026, **une question avant elle**.
+ *
+ * Le volet s'ouvrait sur « Créer des balises » : un paragraphe d'explication,
+ * trois étapes numérotées, un choix de numérotation, deux champs, un bouton —
+ * et l'affectation seulement en dessous. Quelqu'un dont les balises sont déjà
+ * collées traversait tout cela pour rien. Constat de Julien : « ne pas tout
+ * afficher en même temps, plus clair pour l'user ».
+ *
+ * ⚠️ LA QUESTION NE SE POSE QUE TANT QUE RIEN N'EST AFFECTÉ. Dès qu'un
+ * emplacement existe, la réponse est connue et le formulaire s'ouvre
+ * directement — c'est la leçon du bandeau de démarrage (28 août) : une aide
+ * qui se rejoue des semaines plus tard, à quelqu'un qui connaît le produit,
+ * cesse d'en être une. « Créer d'autres balises » reste joignable par un lien.
+ *
+ * ⚠️ ET RIEN N'EST STOCKÉ : l'inventaire répond tout seul. Quelqu'un qui
+ * répond « Non », télécharge sa planche et revient le lendemain retrouve la
+ * question — et c'est juste, il peut maintenant répondre « Oui ».
+ */
 function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
   sessionId: string
   zones: ZoneDashboardRow[]
@@ -348,18 +367,34 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
   const [end, setEnd] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /**
+   * ⚠️ Une seule balise plutôt qu'une plage. Sans cette bascule, rattacher la
+   * balise 42 à un emplacement demande d'écrire 42 deux fois — un même numéro
+   * recopié est une faute qu'on invite à commettre, le second champ ne
+   * contrôlant rien. Côté serveur rien ne change : c'est une plage de un.
+   */
+  const [unique, setUnique] = useState(false)
 
   const groups = useMemo(() => groupByName(zones), [zones])
+  const dejaAffecte = groups.length > 0
+
+  // Ce qu'on répond à la question. `null` = pas encore répondu, et c'est alors
+  // l'état de l'inventaire qui décide de ce qu'on montre.
+  const [choix, setChoix] = useState<'creer' | 'affecter' | null>(null)
+  const etape = choix ?? (dejaAffecte ? 'affecter' : 'question')
 
   async function onDefine(e: React.FormEvent) {
     e.preventDefault()
-    const error = validateRange(name, start, end)
+    // Une balise seule est une plage de un : `define_zone` ne connaît que les
+    // plages, et n'a pas à connaître autre chose.
+    const fin = unique ? start : end
+    const error = validateRange(name, start, fin, unique)
     setFormError(error)
     if (error) return
 
     setBusy(true)
     try {
-      const r = await defineZoneRange(sessionId, name.trim(), Number(start), Number(end))
+      const r = await defineZoneRange(sessionId, name.trim(), Number(start), Number(fin))
       if (!r.success) { toast.error(r.error ?? "Affectation impossible."); return }
       toast.success(`${plural(r.created ?? 0, 'balise affectée', 'balises affectées')} à « ${name.trim()} ».`)
       setName(''); setStart(''); setEnd('')
@@ -393,18 +428,63 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
 
   return (
     <div>
-      {!readOnly && <BaliseSheetPanel context="setup" />}
+      {!readOnly && etape === 'question' && (
+        <section className="panel zone-question">
+          <h3>Avez-vous vos balises&nbsp;?</h3>
+          <p className="muted small" style={{ marginTop: 6 }}>
+            Les balises sont les étiquettes QR numérotées, collées dans le magasin,
+            que les compteurs scannent pour dire où ils sont.
+          </p>
+          <div className="zone-choix">
+            <button type="button" onClick={() => setChoix('affecter')}>
+              <span className="zone-choix-t">Oui, elles sont collées</span>
+              <span className="zone-choix-s">Indiquer quelles balises sont à quel endroit</span>
+            </button>
+            <button type="button" onClick={() => setChoix('creer')}>
+              <span className="zone-choix-t">Non, pas encore</span>
+              <span className="zone-choix-s">Créer et imprimer une planche de balises</span>
+            </button>
+          </div>
+        </section>
+      )}
 
-      {!readOnly && (
-        <form className="panel" onSubmit={onDefine} style={{ marginTop: 16 }}>
+      {!readOnly && etape === 'creer' && (
+        <BaliseSheetPanel
+          context="setup"
+          onRetour={dejaAffecte ? undefined : () => setChoix(null)}
+          onAffecter={() => setChoix('affecter')}
+        />
+      )}
+
+      {!readOnly && etape === 'affecter' && (
+        <form className="panel" onSubmit={onDefine}>
+          {!dejaAffecte && (
+            <div className="zone-fil">
+              <button type="button" className="link-btn" onClick={() => setChoix(null)}>
+                ← Revenir à la question
+              </button>
+            </div>
+          )}
           <h3>Affecter une plage de balises à un emplacement</h3>
-          <p className="muted small" style={{ marginTop: 6, marginBottom: 16 }}>
+          <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
             Indiquez quelles balises — imprimées et collées — sont à quel endroit.
-            Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
+            Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
             Réaffecter une plage déjà nommée la renomme. {MAX_RANGE} balises au maximum par affectation.
           </p>
 
-          <div className="zone-form">
+          <button
+            type="button" role="switch" aria-checked={unique}
+            className={`bascule${unique ? ' on' : ''}`}
+            onClick={() => { setUnique(u => !u); setFormError(null) }}
+          >
+            <span className="bascule-piste" aria-hidden="true" />
+            <span>
+              <span className="bascule-t">Une seule balise</span>
+              <span className="bascule-s">Pour rattacher une balise isolée à un emplacement</span>
+            </span>
+          </button>
+
+          <div className={unique ? 'zone-form zone-form-unique' : 'zone-form'}>
             <div className="field" style={{ marginBottom: 0 }}>
               <label htmlFor="zone-name">Emplacement</label>
               <input
@@ -413,29 +493,45 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
               />
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="zone-start">Balise début</label>
-              <input id="zone-start" value={start} onChange={e => setStart(e.target.value)} inputMode="numeric" placeholder="1" />
+              <label htmlFor="zone-start">{unique ? 'Balise' : 'Balise début'}</label>
+              <input
+                id="zone-start" value={start} onChange={e => setStart(e.target.value)}
+                inputMode="numeric" placeholder={unique ? '42' : '1'}
+              />
             </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="zone-end">Balise fin</label>
-              <input id="zone-end" value={end} onChange={e => setEnd(e.target.value)} inputMode="numeric" placeholder="10" />
-            </div>
+            {!unique && (
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="zone-end">Balise fin</label>
+                <input id="zone-end" value={end} onChange={e => setEnd(e.target.value)} inputMode="numeric" placeholder="10" />
+              </div>
+            )}
             <button className="btn btn-primary" disabled={busy} type="submit">
               {busy ? 'Affectation…' : 'Affecter'}
             </button>
           </div>
 
           {formError && <div className="error" style={{ marginTop: 14, marginBottom: 0 }} role="alert">{formError}</div>}
+
+          <div className="zone-autres">
+            <button type="button" className="link-btn" onClick={() => setChoix('creer')}>
+              Créer d’autres balises
+            </button>
+          </div>
         </form>
       )}
 
+      {/* ⚠️ La question ne s'accompagne d'AUCUN état vide : elle est déjà ce
+          qu'on a à répondre, et « indiquez une première plage ci-dessus »
+          désignerait deux boutons qui ne demandent aucune plage. */}
       {groups.length === 0 ? (
-        <EmptyState
-          title="Aucun emplacement affecté"
-          hint={readOnly
-            ? "Aucune balise n'a été rattachée à un emplacement sur cet inventaire."
-            : 'Indiquez une première plage de balises ci-dessus pour pouvoir suivre l’avancement zone par zone.'}
-        />
+        (readOnly || etape === 'affecter') && (
+          <EmptyState
+            title="Aucun emplacement affecté"
+            hint={readOnly
+              ? "Aucune balise n'a été rattachée à un emplacement sur cet inventaire."
+              : 'Indiquez une première plage de balises ci-dessus pour pouvoir suivre l’avancement zone par zone.'}
+          />
+        )
       ) : (
         <div className="zone-list" style={{ marginTop: readOnly ? 0 : 14 }}>
           {groups.map(g => (

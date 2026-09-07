@@ -7,6 +7,10 @@ import { downloadBaliseSheet } from '@/lib/balisePdf'
 type Props = {
   /** Contexte d'affichage : la phrase d'accroche s'adapte. */
   context: 'account' | 'setup'
+  /** Retour à la question « Avez-vous vos balises ? », quand elle a été posée. */
+  onRetour?: () => void
+  /** L'étape d'après : indiquer quelles balises sont à quel endroit. */
+  onAffecter?: () => void
 }
 
 /**
@@ -14,8 +18,17 @@ type Props = {
  * Pensé pour des personnes peu à l'aise : on dit ce qu'est une balise, ce
  * qu'il faut imprimer et ce qu'on en fait, avant de demander quoi que ce soit.
  * Aucun stock n'est tenu : le PDF se télécharge, c'est tout.
+ *
+ * ⚠️ SUR SET UP, IL NE S'AFFICHE PLUS D'OFFICE. Il est désormais la réponse
+ * « Non, pas encore » à la question posée en tête du volet — voir `ZonesSetup`.
+ * C'est ce qui évite de faire traverser trois étapes d'impression à quelqu'un
+ * dont les balises sont déjà collées (constat de Julien, 7 septembre 2026).
+ * D'où les deux sorties : `onRetour` revient à la question, `onAffecter` mène
+ * à l'étape suivante — **la page ne s'arrête pas au téléchargement**, elle dit
+ * ce qui vient après. Sur « Mon compte » aucune des deux n'existe : on y
+ * imprime des balises sans inventaire en vue.
  */
-export function BaliseSheetPanel({ context }: Props) {
+export function BaliseSheetPanel({ context, onRetour, onAffecter }: Props) {
   const [format, setFormat] = useState<BaliseFormat>('simple')
   const [start, setStart] = useState(String(baliseFormat('simple').defaultStart))
   const [count, setCount] = useState('')
@@ -50,6 +63,11 @@ export function BaliseSheetPanel({ context }: Props) {
 
   return (
     <section className="panel balise-panel">
+      {onRetour && (
+        <div className="zone-fil">
+          <button type="button" className="link-btn" onClick={onRetour}>← Revenir à la question</button>
+        </div>
+      )}
       <h3>Créer des balises</h3>
       <p>
         {context === 'setup'
@@ -67,8 +85,14 @@ export function BaliseSheetPanel({ context }: Props) {
           à retrouver ensuite (par exemple 1 à 10 dans la réserve, 11 à 30 en surface de vente).
         </li>
         <li>
-          <strong>Indiquez</strong> dans l’inventaire quelles balises sont à quel endroit
-          {context === 'setup' ? ' (juste en dessous)' : ' (onglet Set up de l’inventaire)'}.
+          {context === 'setup' ? (
+            <><strong>Revenez ici</strong> indiquer quelles balises sont à quel endroit.</>
+          ) : (
+            <>
+              <strong>Indiquez</strong> dans l’inventaire quelles balises sont à quel endroit
+              {' '}(onglet Set up de l’inventaire).
+            </>
+          )}
         </li>
       </ol>
 
@@ -126,6 +150,22 @@ export function BaliseSheetPanel({ context }: Props) {
           </p>
         )}
       </form>
+
+      {/* ⚠️ La page ne s'arrête pas au téléchargement : imprimer n'est pas
+          l'objectif, c'est l'avant-dernière étape. Sans cette sortie, on
+          repart avec un PDF et sans savoir qu'il reste à dire où les balises
+          sont collées. */}
+      {onAffecter && (
+        <div className="zone-suite">
+          <div>
+            <div className="zone-suite-t">Une fois les balises collées</div>
+            <div className="muted small">Vous pourrez indiquer quelles balises sont à quel endroit.</div>
+          </div>
+          <button type="button" className="btn btn-ghost" onClick={onAffecter}>
+            Affecter mes balises
+          </button>
+        </div>
+      )}
     </section>
   )
 }

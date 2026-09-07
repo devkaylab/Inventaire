@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack, router, useLocalSearchParams } from 'expo-router'
+import { SortieTunnel } from '@/components/SortieTunnel'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
 import { nb } from '@/lib/nombres'
@@ -175,7 +176,7 @@ export default function ImportScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {fromNew && (
-        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
+        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => <SortieTunnel sessionId={sessionId} />, gestureEnabled: false }} />
       )}
       <ScrollView contentContainerStyle={styles.container}>
         {repereFichiers.aVoir && (

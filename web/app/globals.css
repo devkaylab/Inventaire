@@ -2014,6 +2014,13 @@ a { color: inherit; text-decoration: none; }
 }
 .zone-chip-dot { width: 7px; height: 7px; border-radius: 50%; }
 .zone-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end; }
+/* ⚠️ ELLE SE DÉCLARE ICI, AVEC SA BASE, ET SURTOUT AVANT LA SECTION
+   RESPONSIVE. Les deux sélecteurs ont la même spécificité : posée plus bas
+   dans la feuille, elle battait les requêtes média et la rangée à un champ
+   ne se cassait JAMAIS sur un écran étroit — mesuré à 760 px, trois colonnes
+   là où il en faut une. Le fait de citer `.zone-form-unique` dans les
+   requêtes média ne suffisait pas ; c'est l'ordre qui tranche. */
+.zone-form-unique { grid-template-columns: 2fr 1fr auto; }
 
 /* Avancement par zone (onglet Suivi) : toute la carte est cliquable et mène
    au détail des balises de l'emplacement. */
@@ -2345,14 +2352,18 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 900px) {
   .dash-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-stats { grid-template-columns: repeat(2, 1fr); }
-  .zone-form { grid-template-columns: 1fr 1fr; }
+  /* ⚠️ `.zone-form-unique` est cité ICI, avec sa base. Les deux sélecteurs ont
+     la même spécificité : déclaré plus bas dans la feuille, il gagnerait à
+     toutes les largeurs et la rangée ne se casserait jamais sur un écran
+     étroit. */
+  .zone-form, .zone-form-unique { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 780px) {
   .dash-detail { grid-template-columns: 1fr; }
   .dash-rail { position: static; }
   .dash-kpis { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
-  .zone-form { grid-template-columns: 1fr; }
+  .zone-form, .zone-form-unique { grid-template-columns: 1fr; }
   /* La barre d'onglets cède la place au menu burger. */
   .dash-tabs { display: none; }
   .dash-head-links { display: none; }
@@ -2489,6 +2500,70 @@ a { color: inherit; text-decoration: none; }
   .balise-formats { grid-template-columns: 1fr; }
   .balise-form { grid-template-columns: 1fr; }
 }
+
+/* ── Zone de comptage : une question, puis UNE chose à la fois ─────────────
+   Le volet s'ouvrait sur « Créer des balises » — un paragraphe, trois étapes
+   numérotées, un choix de numérotation, deux champs, un bouton — et l'on ne
+   trouvait « Affecter une plage » qu'en dessous. Quelqu'un qui a déjà ses
+   balises collées traversait tout cela pour rien (constat de Julien,
+   7 septembre 2026). La question tranche en un clic ce qui prenait un écran.
+
+   ⚠️ ELLE NE SE POSE QUE TANT QUE RIEN N'EST AFFECTÉ. Au-delà, la réponse est
+   connue : c'est la leçon du bandeau de démarrage — une aide qui se rejoue des
+   semaines plus tard, à quelqu'un qui connaît le produit, cesse d'en être une. */
+.zone-question h3 { font-size: 19px; }
+.zone-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.zone-choix button {
+  text-align: left; font-family: inherit; color: var(--text); cursor: pointer;
+  /* `--bg` et jamais `--surface-2` : ce dernier vaut #fff en thème clair,
+     donc exactement le fond du volet — le bouton y disparaîtrait. */
+  background: var(--bg); border: 1px solid var(--border-strong);
+  border-radius: var(--r-grand); padding: 15px 16px;
+}
+.zone-choix button:hover { border-color: var(--accent); }
+.zone-choix button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.zone-choix-t {
+  display: block; font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px;
+}
+.zone-choix-s { display: block; font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
+
+/* Le retour à la question, et la suite après l'impression. */
+.zone-fil { margin-bottom: 14px; font-size: 13px; color: var(--text-3); }
+.zone-suite {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--hairline);
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+}
+.zone-suite-t { font-size: 13.5px; font-weight: 600; }
+.zone-autres { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+
+/* La bascule « Une seule balise ».
+   ⚠️ Un même numéro écrit deux fois est une faute qu'on invite à commettre :
+   le champ « fin » ne contrôle rien, il demande seulement de recopier. */
+.bascule {
+  display: flex; align-items: center; gap: 11px; margin: 14px 0;
+  background: none; border: 0; padding: 0; cursor: pointer; text-align: left;
+  font-family: inherit; color: var(--text);
+}
+.bascule-piste {
+  width: 38px; height: 22px; border-radius: var(--r-pastille); flex: none;
+  background: var(--border-strong); position: relative; transition: background .15s ease;
+}
+/* Le galet reste blanc dans les quatre cas (piste au repos ou allumée, thème
+   clair ou sombre) : c'est la seule valeur qui se détache des quatre fonds. */
+.bascule-piste::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; transition: transform .15s ease;
+}
+.bascule.on .bascule-piste { background: var(--accent); }
+.bascule.on .bascule-piste::after { transform: translateX(16px); }
+.bascule:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--r); }
+.bascule-t { display: block; font-size: 13.5px; font-weight: 600; }
+.bascule-s { display: block; font-size: 12.5px; color: var(--text-3); }
+@media (prefers-reduced-motion: reduce) {
+  .bascule-piste, .bascule-piste::after { transition: none; }
+}
+@media (max-width: 640px) { .zone-choix { grid-template-columns: 1fr; } }
 
 /* ── Rail de navigation de l'espace connecté ────────────────
    Un seul rail pour toutes les pages authentifiées (décision de Julien,
