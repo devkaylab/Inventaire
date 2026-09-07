@@ -37,7 +37,7 @@ import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
 // 1er septembre 2026, et c'est ce qui faisait échouer « Article inconnu » en
 // réserve avec « fetch failed » — sur les deux plateformes.
 import { getScanEntries, insertArticle, resolveArticle, setBalise } from '@/lib/offlineSync'
-import { parseBalise } from '@/lib/balises'
+import { deciderScan } from '@/lib/scan'
 import { passLabel, AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { useTheme } from '@/lib/theme'
 import { CroixIcon, TorcheIcon } from '@/components/ui/Icones'
@@ -783,31 +783,44 @@ export function Scanner({
     setResolving(true)
 
     try {
-      // ── Zone mode : une balise est un QR préfixé (généré par l'app) ───────
-      if (zoneModeRef.current) {
-        const parsed = parseBalise(value)
-        if (parsed) {
-          const code = parsed.code
-          if (code === ignoreBaliseRef.current) return // encore dans le champ
-          const active = activeBaliseRef.current
-          if (active && code === active.code) {
-            await closeBalise()               // rescan → clôture
-          } else if (active) {
-            await openBaliseCode(code, true)  // autre balise → clôture puis ouvre
-          } else {
-            await openBaliseCode(code, false) // ouvre la zone
-          }
-          return
-        }
-        // Pas une balise → article : il faut d'abord une zone ouverte.
-        if (!activeBaliseRef.current) {
-          playErrorSound()
-          signaler.erreur('Zone fermée', 'Scannez d’abord une balise pour ouvrir une zone.')
-          return
-        }
+      /**
+       * ⚠️ La décision vit dans `lib/scan.ts`, pas ici.
+       *
+       * Elle porte les seules RÈGLES du scan — ce qu'est un code, et ce qu'on
+       * en fait selon la passe et la zone ouverte. Sortie du composant, elle
+       * s'éprouve sans caméra ni étiquette : c'est ce que Julien a demandé le
+       * 7 septembre 2026 (« vérifie que le scan fonctionne à 100 % dans toutes
+       * les situations, compte, audit »), et c'est ce qui a permis de voir que
+       * « Zone fermée » répondait aussi à un QR qui n'est pas une balise.
+       *
+       * Ce qui reste ici est ce qui a besoin de la caméra ou du réseau : la
+       * balise encore dans le champ, l'ouverture, l'enregistrement.
+       */
+      const decision = deciderScan(value, {
+        parBalises: zoneModeRef.current,
+        baliseOuverte: activeBaliseRef.current?.code ?? null,
+        passe: baliseModeRef.current,
+      })
+
+      if (decision.action === 'refus') {
+        playErrorSound()
+        signaler.erreur(decision.titre, decision.texte)
+        return
+      }
+      if (decision.action !== 'article') {
+        // ⚠️ Le sticker encore dans le champ ne rejoue pas son geste : sans
+        // ça, une balise qu'on vient d'ouvrir se refermerait aussitôt. Ce
+        // garde-fou dépend de l'état de la CAMÉRA, il reste donc ici.
+        const vise = decision.action === 'cloturer'
+          ? (activeBaliseRef.current?.code ?? '')
+          : decision.code
+        if (vise === ignoreBaliseRef.current) return
+        if (decision.action === 'cloturer') await closeBalise()
+        else await openBaliseCode(decision.code, decision.action === 'changer')
+        return
       }
 
-      const article = await resolveArticle(sessionId, value)
+      const article = await resolveArticle(sessionId, decision.code)
       if (!article) {
         playErrorSound()
         illisibleRef.current = value

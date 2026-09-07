@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -12,7 +12,21 @@ import { BALISE_PREFIX, balisePayload, buildBaliseSheet, baliseSheetFilename } f
 const here = path.dirname(fileURLToPath(import.meta.url))
 const web = readFileSync(path.join(here, '../lib/baliseSeries.ts'), 'utf8')
 const app = readFileSync(path.join(here, '../../src/lib/baliseSeries.ts'), 'utf8')
-const appBalises = readFileSync(path.join(here, '../../src/lib/balises.ts'), 'utf8')
+/**
+ * ⚠️ Le préfixe se CHERCHE dans `src/lib/`, il ne se lit pas dans un fichier
+ * nommé en dur.
+ *
+ * Cette garde citait `balises.ts`, et elle est tombée le jour où le format du
+ * QR en est sorti (7 septembre 2026) pour rejoindre un module sans dépendance
+ * native — donc testable. Elle n'avait rien détecté de faux : elle décrivait
+ * seulement où le code habitait la veille. Ce qu'elle défend, c'est que le
+ * site et l'app encodent **le même préfixe** ; ça ne dépend pas du fichier.
+ */
+const appLib = path.join(here, '../../src/lib')
+const appBalises = readdirSync(appLib)
+  .filter(f => f.endsWith('.ts'))
+  .map(f => readFileSync(path.join(appLib, f), 'utf8'))
+  .join('\n')
 
 const stripHeader = (s: string) => s.slice(s.indexOf('export type BaliseFormat'))
 
@@ -31,7 +45,9 @@ describe('séries de balises — site et app', () => {
   })
 
   it('le QR porte le même préfixe que l’app', () => {
-    expect(appBalises).toContain(`export const BALISE_PREFIX = '${BALISE_PREFIX}'`)
+    const declarations = appBalises.match(/export const BALISE_PREFIX = '[^']*'/g) ?? []
+    // Une seule définition côté app : deux divergeraient au premier changement.
+    expect(declarations).toEqual([`export const BALISE_PREFIX = '${BALISE_PREFIX}'`])
     expect(balisePayload('12')).toBe('SCB1:12')
   })
 })

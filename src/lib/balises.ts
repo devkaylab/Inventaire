@@ -2,26 +2,14 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import QRCode from 'qrcode'
 import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
+import { balisePayload } from '@/lib/baliseCode'
 
-// Préfixe encodé dans chaque QR de balise. Distingue une balise d'un code-barres
-// article. Les balises sont un stock d'entreprise réutilisable → le QR ne contient
-// que le numéro (indépendant de l'inventaire) : SCB1:<code>.
-export const BALISE_PREFIX = 'SCB1'
+// Le format du QR vit dans `baliseCode.ts` — un module sans dépendance
+// native, donc testable sous vitest, contrairement à celui-ci qui dessine la
+// planche PDF. On le réexporte pour que les appelants n'aient rien à savoir.
+export { BALISE_PREFIX, balisePayload, parseBalise } from '@/lib/baliseCode'
 
 export type BaliseInfo = { code: string; name?: string | null }
-
-/** Charge utile du QR d'une balise : SCB1:<code>. */
-export function balisePayload(code: string): string {
-  return `${BALISE_PREFIX}:${code}`
-}
-
-/** Analyse un code scanné : est-ce une balise ? Renvoie son numéro, sinon null. */
-export function parseBalise(raw: string): { code: string } | null {
-  const parts = (raw ?? '').trim().split(':')
-  if (parts[0] !== BALISE_PREFIX) return null
-  const code = parts.slice(1).join(':').trim()
-  return code ? { code } : null
-}
 
 // Gabarit de planche d'étiquettes autocollantes (cotes en mm). Défaut : Avery L7160
 // (A4, 21 étiquettes 63,5 × 38,1, 3 × 7). Une balise = une étiquette décollable,
