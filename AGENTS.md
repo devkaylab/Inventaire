@@ -12152,8 +12152,14 @@ importent** :
 Les quatre premiers helpers sont **inchangés** dans le commit Registre (vérifié
 sur le diff : toutes ses lignes sont à l'intérieur d'`elementsDevis`). Les
 quatorze autres fonctions sont donc parties sans rien emporter d'autre que le
-gabarit. **`admin-send-quote` attend son accord**, avec `quote-pdf` — donc
-l'e-mail qui accompagne un devis garde l'ancien habillage jusque-là.
+gabarit.
+
+**⚠️ ET LE DEVIS REGISTRE EST PARTI DANS LA FOULÉE**, sur le feu vert explicite
+de Julien le 7 septembre 2026 (« je te donne mon feu vert pour l'e-mail, il faut
+clôturer ce sujet ») : `admin-send-quote` **et** `quote-pdf`, ensemble et jamais
+l'une sans l'autre — le PDF joint à l'e-mail et le PDF téléchargé sortent du
+même module, les déployer séparément ferait deux documents différents. C'est ce
+qui clôt l'attente ouverte le 6 septembre.
 
 ⚠️ **`verify_jwt` relevé sur la BASE avant de déployer, et la note du dépôt
 était incomplète** : elle annonçait cinq fonctions publiques, il y en a **huit**
@@ -12175,6 +12181,27 @@ Recontrôlé après : inchangé sur les seize.
 - **Cinq sabotages, cinq échecs** : bandeau bleu nuit, bouton indigo, gris
   bleuté, filet de scan revenu, coins ronds.
 - 1 345 tests du site, `tsc --noEmit`, `eslint .` à zéro erreur.
+
+- **⚠️ ET LE DEVIS A ÉTÉ RÉELLEMENT DESSINÉ EN PRODUCTION, puis RELU.** Devis
+  d'essai posé en base, `quote-pdf` appelée en direct : **200 ·
+  `application/pdf` · `%PDF-1.7` · 2 689 octets**, document ouvert et lu —
+  en-tête en filet, serif sur la marque et la référence, tableau ouvert sans
+  cadre, total sous un trait, mention de TVA en ocre une seule fois, plus un
+  seul indigo. Données d'essai supprimées, **zéro résidu contrôlé** (0 demande,
+  2 entreprises, 2 magasins). C'est le seul contrôle qui vaille : un libellé
+  qu'Helvetica n'encoderait pas ferait lever `drawText` et la fonction
+  répondrait 500.
+
+⚠️ **UN DÉFAUT LATENT TROUVÉ PAR CE CONTRÔLE, et il est plus vieux que ce
+chantier.** Ma première sonde a répondu **500**. Ce n'était pas Registre : c'est
+`elementsDevis` qui écrit `l.appareils === null ? '—' : nombre(l.appareils)`
+(commit du 2 septembre). Une ligne de devis dont `appareils` est **absent** —
+`undefined`, et non `null` — tombe donc dans `nombre(undefined)` et **le PDF ne
+se dessine plus du tout**, ni pour le client ni pour l'e-mail. Mon jeu d'essai
+était mal formé, donc le défaut ne s'est pas manifesté sur des données réelles ;
+mais le type déclare `appareils: number | null` sans que rien ne le vérifie à
+l'exécution. **À reprendre le jour où on touchera aux lignes de devis** : un
+`?? null` à la lecture suffirait.
 
 ⚠️ **CE QUI N'EST PAS PROUVÉ : un e-mail reçu dans une vraie boîte.** C'est la
 seule preuve qui vaille pour un gabarit — c'est comme ça que le défaut « une
