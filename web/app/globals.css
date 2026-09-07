@@ -3365,6 +3365,9 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    droite, la liste des conversations reste visible pendant qu'on écrit. */
 .boite-liste-tete { padding-bottom: 4px; }
 .boite-liste-tete .btn { width: 100%; }
+/* On n'arrive dans une liste vide qu'en écrivant son premier message : la
+   colonne ne doit pas rester muette, on croirait à un chargement. */
+.boite-liste-vide { padding: 14px 16px; color: var(--text-2); font-size: 13px; }
 .boite-redaction { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 /* Les champs reprennent la gouttière de l'en-tête du fil : le formulaire est
    dans le même panneau, il s'aligne dessus. */

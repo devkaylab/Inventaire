@@ -138,6 +138,26 @@ describe('le message à l’administrateur', () => {
     expect(boite.split('Nouveau message').length - 1).toBeGreaterThanOrEqual(2)
   })
 
+  it('⚠️ et le bouton de l’état vide MÈNE quelque part', () => {
+    // Constat de Julien, 7 septembre 2026 : « quand je n'ai aucun message et
+    // que je clique sur nouveau message, ça ne fait rien » — sur un compte
+    // sans aucun fil, alors que le même geste marchait sur un compte qui en a.
+    // `ouvrirRedaction()` posait bien son état, mais la branche de l'état vide
+    // ne le lit pas et le formulaire vit dans l'autre : le bouton ne faisait
+    // RIEN, et précisément pour qui n'a encore jamais écrit.
+    //
+    // ⚠️ La leçon dépasse ce défaut : une page à DEUX branches se regarde dans
+    // les deux. Ma vérification n'avait rejoué que celle qui porte des fils.
+    // C'est la règle du menu mobile, 5 septembre — « un composant qui bascule
+    // se regarde dans ses deux états, et celui qu'on oublie est celui qu'on
+    // vient de quitter ».
+    expect(code(boite), 'la branche de l’état vide ne cède pas la place à la rédaction')
+      .toContain('fils.length === 0 && !redaction ? (')
+    // Et la colonne de gauche, alors vide, dit qu'elle l'est : muette, on
+    // croirait à un chargement.
+    expect(boite).toContain('Aucune conversation')
+  })
+
   it('⚠️ le bouton d’en-tête dit toujours la même chose', () => {
     // Une première version le faisait basculer en « Annuler » pendant la
     // rédaction, alors que le formulaire en portait déjà un à trente

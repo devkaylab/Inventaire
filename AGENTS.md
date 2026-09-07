@@ -11920,6 +11920,41 @@ ouvrir un fil ferme la rédaction.
    ne doit pas contenir la séquence qui ferme un commentaire, sans quoi il se
    referme au milieu de lui-même.
 
+## ⚠️ LE BOUTON DE L'ÉTAT VIDE NE FAISAIT RIEN — et c'est une leçon de méthode
+
+Constat de Julien le jour même : *« quand je n'ai aucun message et que je clique
+sur nouveau message, ça ne fait rien »* — sur `julien.thiong-kay@samaritaine.com`,
+un compte sans aucun fil, **alors que le même geste marchait** sur
+`jthiongkay@gmail.com`, qui en a.
+
+La page a deux branches : `fils.length === 0 ? état vide : la boîte`.
+`ouvrirRedaction()` posait bien `redaction = true` — mais **la branche de l'état
+vide ne lit pas cet état**, et le formulaire vit dans l'autre. Le bouton ne
+menait donc nulle part, et précisément pour qui n'a **encore jamais écrit** :
+tout compte neuf.
+
+Le correctif tient en trois mots (`&& !redaction` dans la condition), plus une
+ligne « Aucune conversation pour l'instant » dans la colonne de gauche — on n'y
+arrive qu'en écrivant son premier message, et une colonne muette ferait croire à
+un chargement.
+
+**⚠️ Ce que ma vérification avait raté.** J'avais rejoué le balisage de la
+BOÎTE, donc la branche qui porte des fils, et jamais l'état vide. C'est la règle
+déjà écrite pour le menu mobile le 5 septembre — *un composant qui bascule se
+regarde dans ses deux états, et celui qu'on oublie est celui qu'on vient de
+quitter* — élargie ici : **une page à deux branches se regarde dans les deux**,
+et la branche « rien à afficher » est celle que le premier client verra.
+
+Le second contrôle a donc porté sur elle : route jetable rejouant la mécanique
+avec `fils = []`, clic RÉEL sur le bouton, formulaire ouvert (978 px de large,
+deux colonnes 320/980), dans les deux thèmes, débordement nul. ⚠️ Piège au
+passage : le volet masqué rend `innerWidth === 0`, donc **toutes** les requêtes
+média `max-width` matchent et la boîte s'affichait en une colonne. Poser une
+largeur par `resize_window` avant de conclure — cinquième variante de ce piège.
+
+Tests de garde : `web/tests/notifications.test.ts`, bloc « et le bouton de
+l'état vide MÈNE quelque part ».
+
 ## Vérifications
 
 Au navigateur, par **route jetable** rejouant le balisage de la boîte (retirée,

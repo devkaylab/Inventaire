@@ -241,12 +241,20 @@ export default function MessagesPage() {
 
       {fils === null ? (
         <div style={{ marginTop: 24 }}><SkeletonRows rows={4} height={72} /></div>
-      ) : fils.length === 0 ? (
+      ) : fils.length === 0 && !redaction ? (
         <div style={{ marginTop: 24 }}>
           {/* ⚠️ LA PHRASE NE RENVOIE PLUS VERS LE RAIL. Elle y disait « le
               bouton d'écriture est dans la barre de gauche » — devenu faux le
               7 septembre 2026. Et l'état vide est justement le seul endroit
-              où la liste, donc son bouton, n'existe pas : il s'y repose. */}
+              où la liste, donc son bouton, n'existe pas : il s'y repose.
+
+              ⚠️ ET C'EST `&& !redaction` QUI FAIT MARCHER SON BOUTON. Sans
+              lui, `ouvrirRedaction()` posait bien son état — mais cette
+              branche ne le lit pas, et le formulaire vit dans l'autre. Le
+              bouton ne faisait donc RIEN, et précisément pour qui n'a encore
+              jamais écrit (constat de Julien, 7 septembre 2026). Une page à
+              deux branches se regarde dans les DEUX : je n'avais vérifié que
+              celle qui porte des fils. */}
           <EmptyState
             title="Aucun message"
             hint={guard.profile.is_admin
@@ -285,6 +293,12 @@ export default function MessagesPage() {
                   <PlusIcone /> Nouveau message
                 </button>
               </div>
+            )}
+            {/* La liste peut être vide : on n'y arrive alors que par le
+                bouton ci-dessus, en train d'écrire son premier message. Une
+                colonne muette ferait croire à un chargement. */}
+            {fils.length === 0 && (
+              <p className="boite-liste-vide">Aucune conversation pour l&apos;instant.</p>
             )}
             {fils.map((f) => (
               <button
