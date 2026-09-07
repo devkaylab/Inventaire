@@ -34,7 +34,11 @@ const HOLD_MS = 1700 // time the logo stays fully visible before fading out
  */
 export function SplashAnimation({ onFinish }: SplashAnimationProps) {
   const { width, height } = useWindowDimensions()
-  const logoSize = Math.min(width * 0.5, 200)
+  // ⚠️ 28 % DE LA LARGEUR, PLUS 50 %. Constat de Julien au premier build du
+  // 7 septembre 2026 : à la moitié de l'écran, la marque n'accueille pas, elle
+  // barre le passage — et elle est la première chose que l'application montre.
+  // Elle reste largement lisible : à 120 pt, une allée fait encore 10 pt.
+  const logoSize = Math.min(width * 0.28, 120)
 
   const enter = useSharedValue(0) // 0 → 1 fade/scale in
   const exit = useSharedValue(0) // 0 → 1 fade the whole screen out
@@ -90,7 +94,7 @@ export function SplashAnimation({ onFinish }: SplashAnimationProps) {
         <AppLogo size={logoSize} animated />
       </Animated.View>
 
-      <Animated.Text style={[styles.wordmark, wordStyle]}>QUANTINVO</Animated.Text>
+      <Animated.Text style={[styles.wordmark, wordStyle]}>Quantinvo</Animated.Text>
     </Animated.View>
   )
 }
@@ -108,11 +112,19 @@ const styles = StyleSheet.create({
     // monochrome n'a pas besoin d'un fond pour exister ; c'est la règle
     // d'Ardoise, où rien ne se dit par la profondeur.
   },
+  // ⚠️ LE MOT-SYMBOLE EST CELUI DU SITE, PAS UN AUTRE. Il était en capitales
+  // espacées de 6 points et en #8A82B8 — un mauve, le DERNIER indigo de
+  // l'application, et une mise en forme que la marque n'emploie nulle part
+  // ailleurs (constat de Julien, 7 septembre 2026 : « toujours sous ancien
+  // format »). Partout où le nom s'écrit — barre du site, pied de page,
+  // mentions légales — c'est « Quantinvo », en Archivo gras, chasse resserrée,
+  // et de la couleur du dessin. Le mot NOMME la marque, il ne la double pas :
+  // même couleur que le tracé, ils se lisent comme un seul objet.
   wordmark: {
-    marginTop: 28,
-    fontFamily: Font.semibold,
-    fontSize: 13,
-    letterSpacing: 6,
-    color: '#8A82B8',
+    marginTop: 20,
+    fontFamily: Font.bold,
+    fontSize: 20,
+    letterSpacing: -0.3,
+    color: '#ECEFEC',
   },
 })

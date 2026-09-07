@@ -45,7 +45,12 @@ describe('Ardoise a remplacé Ink dans l’application', () => {
     // ⚠️ LA GARDE DÉDUIT SA LISTE : elle balaie `src/` en entier, donc l'écran
     // qu'on écrira demain est couvert sans qu'on y pense. Une garde qui
     // nommerait les fichiers d'aujourd'hui ne protégerait qu'eux.
-    const morts = ['#4F46E5', '#6366F1', '#4338CA', '#4636B0', '#6C5CE7', '#38C9FF', '#0B0F19']
+    // ⚠️ `#8A82B8` s'est ajouté le 7 septembre 2026 : c'était le mauve du
+    // mot-symbole de l'écran d'ouverture, le dernier indigo de l'application.
+    // Il avait survécu à la passe du 6 parce que la liste ne le nommait pas —
+    // une garde qui déduit son PÉRIMÈTRE (tout `src/`) doit aussi tenir sa
+    // liste à jour, sans quoi elle balaie large et ne voit rien.
+    const morts = ['#4F46E5', '#6366F1', '#4338CA', '#4636B0', '#6C5CE7', '#38C9FF', '#0B0F19', '#8A82B8']
     for (const f of sources()) {
       const src = code(readFileSync(f, 'utf8')).toUpperCase()
       for (const mort of morts) {
@@ -264,6 +269,32 @@ describe('la marque', () => {
     // 900 balises. Une roue dit « ça charge » ; ceci dit « Quantinvo travaille ».
     expect(code(splash)).toMatch(/<AppLogo[^/]*animated[\s/]/)
     expect(code(overlay)).toMatch(/<AppLogo[^/]*animated[\s/]/)
+  })
+
+  it('⚠️ l’écran d’ouverture porte le mot-symbole du site, et à sa mesure', () => {
+    // Deux constats de Julien au build du 7 septembre 2026, capture à l'appui :
+    // « attention à Quantinvo ici, toujours sous ancien format », et « utilise
+    // une taille de logo naturellement moins intrusive ».
+    //
+    // ⚠️ LE NOM N'A QU'UNE MISE EN FORME, ET ELLE EST CELLE DU SITE. Partout
+    // où il s'écrit — barre publique, pied de page, mentions légales — c'est
+    // « Quantinvo » en Archivo gras, chasse resserrée. Les capitales espacées
+    // de six points étaient une seconde façon d'écrire la marque, inventée
+    // pour ce seul écran ; deux mises en forme du même mot, c'est déjà deux
+    // marques. (Le mauve, lui, est refusé par la garde de l'indigo.)
+    const c = code(splash)
+    expect(c, 'le nom s’écrit « Quantinvo », comme partout ailleurs').toContain('>Quantinvo<')
+    expect(c, 'les capitales espacées sont l’ancienne mise en forme').not.toContain('QUANTINVO')
+    expect(c, 'la chasse du mot-symbole est resserrée, jamais étalée')
+      .not.toMatch(/letterSpacing:\s*[1-9]/)
+
+    // ⚠️ ET LA MARQUE NE PREND PLUS LA MOITIÉ DE L'ÉCRAN. Elle est la
+    // première chose que l'application montre : à 50 % de la largeur elle
+    // n'accueille pas, elle barre le passage.
+    const m = /Math\.min\(width \* ([\d.]+), (\d+)\)/.exec(c)
+    expect(m, 'la taille de la marque doit rester bornée').not.toBeNull()
+    expect(Number(m![1]), 'la marque déborde de sa part d’écran').toBeLessThanOrEqual(0.3)
+    expect(Number(m![2]), 'le plafond de taille est trop haut').toBeLessThanOrEqual(140)
   })
 
   it('⚠️ elle SUIT la préférence système — elle ne s’y soumet pas d’office', () => {
