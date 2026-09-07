@@ -56,6 +56,48 @@ describe('une balise ouvre, ferme, ou passe à la suivante', () => {
   })
 })
 
+describe('⚠️ une SUITE DE CHIFFRES ouvre une balise', () => {
+  /**
+   * Constat de Julien, 7 septembre 2026 : « aucune balise n'est reconnue, ni
+   * 1, ni 1001, ni 98729 » — alors que la saisie manuelle des mêmes numéros
+   * ouvrait la zone. Le scan n'acceptait que le QR `SCB1:` de nos planches.
+   * Sa règle : « je dois pouvoir lire toutes suites de chiffres ».
+   */
+  it.each(['1', '42', '1001', '98729', '007', '123456789012345678'])(
+    '%s ouvre la balise de ce numéro', (code) => {
+      expect(deciderScan(code, CTX())).toEqual({ action: 'ouvrir', code })
+    })
+
+  it.each(PASSES)('et le rescan de la MÊME étiquette clôture (%s)', (passe) => {
+    expect(deciderScan('98729', CTX({ passe, baliseOuverte: '98729' })))
+      .toEqual({ action: 'cloturer' })
+  })
+
+  it('⚠️ mais un code-barres d’ARTICLE n’ouvre pas de balise', () => {
+    // Sa clé de contrôle le dit. Sans ce tri, viser un article avant d'avoir
+    // ouvert sa zone proposerait de créer une balise portant son EAN.
+    for (const ean of ['5056635611789', '045496428280', '96385074']) {
+      const d = deciderScan(ean, CTX())
+      expect(d.action, ean).toBe('refus')
+      expect(d.action === 'refus' && d.titre, ean).toBe('Aucune zone ouverte')
+    }
+  })
+
+  it('⚠️ un EAN dont la clé est FAUSSE reste un numéro de balise', () => {
+    // On ne devine pas : ce qui ne se vérifie pas tout seul est un numéro.
+    expect(deciderScan('5056635611788', CTX())).toEqual({ action: 'ouvrir', code: '5056635611788' })
+  })
+
+  it('⚠️ dans une zone ouverte, un numéro nu est un ARTICLE', () => {
+    // Beaucoup de références sont numériques : un SKU ne doit pas fermer le
+    // rayon en cours. Seul le QR de nos planches change de balise sans clore.
+    expect(deciderScan('777', CTX({ baliseOuverte: '1000' })))
+      .toEqual({ action: 'article', code: '777' })
+    expect(deciderScan(balisePayload('1001'), CTX({ baliseOuverte: '1000' })))
+      .toEqual({ action: 'changer', code: '1001' })
+  })
+})
+
 describe('un article ne s’enregistre que dans une zone ouverte', () => {
   it.each(PASSES)('zone ouverte → il part au comptage (%s)', (passe) => {
     const d = deciderScan('5056635611789', CTX({ passe, baliseOuverte: '1000' }))
@@ -66,16 +108,14 @@ describe('un article ne s’enregistre que dans une zone ouverte', () => {
     const d = deciderScan('5056635611789', CTX({ passe }))
     expect(d.action).toBe('refus')
     if (d.action !== 'refus') return
-    // ⚠️ Le titre ne parle NI de fermeture NI d'un état de zone : les deux
-    // laissent croire que le scan a voulu clore quelque chose, alors qu'il
-    // vient seulement de ne pas reconnaître ce qu'il a lu. Règle rappelée par
-    // Julien le 7 septembre 2026 : « scanner une balise avant de compter doit
-    // ouvrir la zone, le téléphone n'est pas censé chercher à la fermer ».
-    expect(d.titre).toBe('Code non reconnu')
+    // ⚠️ Ce titre-là est réservé à ce pour quoi il a été écrit : un ARTICLE
+    // scanné avant d'avoir ouvert sa zone. Sa clé de contrôle le prouve —
+    // sans elle, ce serait un numéro de balise, et le scan l'ouvrirait.
+    expect(d.titre).toBe('Aucune zone ouverte')
     expect(d.titre).not.toContain('fermée')
-    expect(d.titre).not.toContain('zone')
-    // Et il dit le geste qui débloque : ouvrir.
-    expect(d.texte).toContain('ouvrir')
+    // Il dit le geste qui débloque, et ce qu'il a lu.
+    expect(d.texte).toContain('balise')
+    expect(d.texte).toContain('Code lu : 5056635611789')
   })
 
   it('⚠️ le refus DIT CE QU’IL A LU', () => {
@@ -136,7 +176,8 @@ describe('⚠️ un QR qui n’est pas une balise le DIT', () => {
     // même erreur, et c'est la seule chose que l'heuristique décide.
     for (const ean of ['5056635611789', '045496428280', 'REF-12', 'SKU_01']) {
       const d = deciderScan(ean, CTX())
-      expect(d.action === 'refus' && d.titre, ean).toBe('Code non reconnu')
+      const attendu = /^\d+$/.test(ean) ? 'Aucune zone ouverte' : 'Code non reconnu'
+      expect(d.action === 'refus' && d.titre, ean).toBe(attendu)
     }
   })
 

@@ -1,4 +1,5 @@
 import { parseBalise } from '@/lib/baliseCode'
+import { gtinValide } from '@/lib/douchette'
 
 /**
  * Ce qu'on fait d'un code qui vient d'être lu.
@@ -68,10 +69,63 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
   }
 
   // ── Mode balises ──────────────────────────────────────────────────────────
-  if (balise) {
-    if (ctx.baliseOuverte && balise.code === ctx.baliseOuverte) return { action: 'cloturer' }
-    if (ctx.baliseOuverte) return { action: 'changer', code: balise.code }
-    return { action: 'ouvrir', code: balise.code }
+  /**
+   * ⚠️ **UN NUMÉRO NU EST UNE BALISE, PAS SEULEMENT UN QR `SCB1:`.**
+   *
+   * Constat de Julien, 7 septembre 2026 : *« aucune balise n'est reconnue, ni
+   * 1, ni 1001, ni 98729 »*, alors que la saisie manuelle des mêmes numéros
+   * ouvrait la zone sans broncher — vérifié sur son téléphone. Le scan
+   * n'acceptait que le QR produit par nos planches ; toute autre étiquette
+   * numérotée — un code-barres imprimé par le magasin, une étiquette d'un
+   * autre système, un QR portant le seul numéro — était refusée.
+   *
+   * Sa règle : **« je dois pouvoir lire toutes suites de chiffres »**. Le
+   * champ manuel le faisait déjà ; la caméra le fait maintenant aussi. Les
+   * deux chemins lisent enfin la même chose.
+   */
+  const numero = /^\d+$/.test(valeur) ? valeur : null
+
+  if (balise || numero) {
+    const code = balise ? balise.code : (numero as string)
+
+    // Rescan de l'étiquette ouverte → clôture, quel que soit le format lu.
+    if (ctx.baliseOuverte && code === ctx.baliseOuverte) return { action: 'cloturer' }
+
+    /**
+     * ⚠️ **UNE ZONE OUVERTE CHANGE LA LECTURE D'UN NUMÉRO NU, ET C'EST VOULU.**
+     *
+     * Là, on compte : la plupart des codes visés sont des articles, et
+     * beaucoup de références sont purement numériques. Un numéro nu y reste
+     * donc un ARTICLE — seul le QR `SCB1:` passe encore à une autre balise
+     * sans clôturer. Sinon un SKU numérique fermerait le rayon en cours.
+     *
+     * La règle de Julien tient quand même : « on ouvre d'abord, on ferme
+     * ensuite » — c'est à l'ouverture qu'un numéro nu doit être lu, et à la
+     * clôture qu'on rescanne la MÊME étiquette, cas traité juste au-dessus.
+     */
+    if (ctx.baliseOuverte) {
+      if (balise) return { action: 'changer', code }
+      return { action: 'article', code: valeur }
+    }
+
+    /**
+     * ⚠️ **UN CODE-BARRES D'ARTICLE N'OUVRE PAS UNE BALISE.** Sa clé de
+     * contrôle le distingue d'un numéro de balise : EAN-8, UPC-A, EAN-13 et
+     * ITF-14 se vérifient tout seuls (`gtinValide`, déjà écrite pour la
+     * douchette). Sans ce tri, viser un article avant d'ouvrir sa zone
+     * proposerait de créer une balise portant son code-barres.
+     */
+    if (numero && !balise && gtinValide(valeur)) {
+      return {
+        action: 'refus',
+        titre: 'Aucune zone ouverte',
+        texte: `${luAffiche(valeur)}\nC’est un code-barres d’article. Scannez d’abord `
+          + `la balise du rayon : elle dit où vous ${
+            ctx.passe === 'count' ? 'comptez' : 'auditez'}.`,
+      }
+    }
+
+    return { action: 'ouvrir', code }
   }
 
   /**
