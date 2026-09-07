@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Svg, { Path } from 'react-native-svg'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -19,6 +19,7 @@ import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { IDLE_ACTIVITY, useSessionPresence } from '@/lib/presence'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
+import { useRetourSurEcran } from '@/hooks/useRetourSurEcran'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
@@ -90,6 +91,25 @@ export default function EmployeeProgressScreen() {
   useEffect(() => { if (queue.pending > 0) setAttenteVue(true) }, [queue.pending])
 
   const queryClient = useQueryClient()
+
+  /**
+   * Revenir du comptage rafraîchit ce qu'on a compté.
+   *
+   * ⚠️ Même défaut que sur la fiche du superviseur, et il coûte plus cher
+   * ici : c'est l'écran qu'on consulte AVANT DE PARTIR, et la question qu'on
+   * s'y pose est « ai-je tout remonté ? ». Ces deux requêtes sont chargées au
+   * montage, et l'écran reste monté sous celui du scan — on revenait donc sur
+   * le total d'avant son propre passage.
+   *
+   * `session` est du lot : un superviseur peut clôturer l'inventaire pendant
+   * qu'on compte, et les deux boutons de passe doivent alors disparaître.
+   */
+  const rafraichirProgression = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['my-count-totals', sessionId] })
+    void queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+  }, [queryClient, sessionId])
+  useRetourSurEcran(rafraichirProgression)
+
   const leaveMutation = useMutation({
     mutationFn: () => leaveSession(sessionId),
     onSuccess: async () => {

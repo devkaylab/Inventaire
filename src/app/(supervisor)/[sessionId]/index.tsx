@@ -27,6 +27,7 @@ import { PendingBalisesRow } from '@/components/PendingBalisesRow'
 import { useNotificationsSurInventaire } from '@/lib/push'
 import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/MenuList'
 import { useRepere } from '@/lib/reperes'
+import { useRetourSurEcran } from '@/hooks/useRetourSurEcran'
 import { demander, signaler } from '@/lib/dialogue'
 import { nb } from '@/lib/nombres'
 
@@ -169,6 +170,20 @@ export default function SessionDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] }),
     ])
   }, [queryClient, sessionId])
+
+  /**
+   * Revenir du comptage rafraîchit la progression.
+   *
+   * ⚠️ Sans cela, la fiche annonçait « 0 pièce comptée » à quelqu'un qui
+   * venait d'en scanner deux (constaté sur le Pixel le 7 septembre 2026) : ces
+   * trois requêtes sont chargées au montage, et l'écran reste monté sous celui
+   * du comptage. Il fallait toucher la flèche de rafraîchissement pour voir
+   * son propre travail.
+   *
+   * C'est `manualRefresh` qu'on rejoue, pas une seconde liste de clés : deux
+   * énumérations du même trio divergeraient au premier onglet ajouté.
+   */
+  useRetourSurEcran(manualRefresh)
 
   // Rafraîchissement par « tirer » (pull) — même action que la flèche.
   const onRefresh = useCallback(async () => {

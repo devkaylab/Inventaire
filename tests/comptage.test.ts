@@ -388,3 +388,65 @@ describe('la liste des scans se reconstruit hors ligne', () => {
     }
   })
 })
+
+/**
+ * Revenir du comptage montre ce qu'on vient de compter.
+ *
+ * Constaté sur le Pixel le 7 septembre 2026 : deux pièces scannées, retour sur
+ * la fiche de l'inventaire, « 0 pièce comptée ». Les pièces étaient en base —
+ * c'est le cache de la requête, chargée au montage. Or les deux fiches restent
+ * MONTÉES sous l'écran de scan (`router.push`), donc rien ne les relit.
+ */
+describe('revenir du comptage rafraîchit la progression', () => {
+  const hook = lire('../src/hooks/useRetourSurEcran.ts')
+
+  /**
+   * ⚠️ La liste des écrans se DÉDUIT, elle ne se cite pas.
+   *
+   * On retient ceux qui ouvrent l'écran de scan : ce sont exactement ceux qui
+   * restent montés dessous, donc ceux qui peuvent afficher un total périmé.
+   * Un troisième écran qui mènerait au comptage demain se signalera de
+   * lui-même — une garde qui nommerait les deux fiches d'aujourd'hui ne
+   * protégerait que celles-là.
+   */
+  const ecransQuiMenentAuScan = ['(supervisor)/[sessionId]/index.tsx', '(employee)/[sessionId]/index.tsx']
+    .filter((f) => /router\.push\(`?\/?\(?\w*\)?[^)]*scan/.test(lire(`../src/app/${f}`)))
+
+  it('⚠️ chaque écran qui ouvre le comptage se relit au retour', () => {
+    expect(ecransQuiMenentAuScan.length, 'aucun écran ne mène au scan : la détection est cassée')
+      .toBeGreaterThan(0)
+    for (const f of ecransQuiMenentAuScan) {
+      expect(lire(`../src/app/${f}`), `${f} garde son total d’avant le comptage`)
+        .toContain('useRetourSurEcran(')
+    }
+  })
+
+  it('⚠️ mais PAS au premier affichage', () => {
+    // `useFocusEffect` se déclenche aussi au montage : sans ce garde-fou,
+    // chaque ouverture d'écran ferait deux allers-retours au serveur pour la
+    // même réponse.
+    //
+    // ⚠️ La garde lit le hook SANS ses commentaires — celui du fichier cite
+    // « premier passage » pour l'expliquer — et surtout elle vérifie que les
+    // deux repères EXISTENT avant de comparer leurs positions : un
+    // `indexOf` rend -1 sur ce qui a disparu, et -1 est inférieur à tout.
+    // C'est ce qui a laissé passer le premier sabotage.
+    const nu = hook.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
+    const corps = nu.slice(nu.indexOf('useFocusEffect('))
+    const saut = corps.indexOf('premierPassage.current = false')
+    const appel = corps.indexOf('faire()')
+    expect(saut, 'le premier passage n’est plus consommé : chaque écran recharge deux fois')
+      .toBeGreaterThan(-1)
+    expect(appel, 'le hook n’appelle plus rien').toBeGreaterThan(-1)
+    expect(saut).toBeLessThan(appel)
+    // Et il rend la main avant, sinon le premier passage déclenche quand même.
+    expect(corps.slice(saut, appel)).toContain('return')
+  })
+
+  it('⚠️ la fiche du superviseur rejoue son rafraîchissement, sans seconde liste de clés', () => {
+    // Deux énumérations du même trio de requêtes divergeraient au premier
+    // onglet ajouté.
+    expect(lire('../src/app/(supervisor)/[sessionId]/index.tsx'))
+      .toContain('useRetourSurEcran(manualRefresh)')
+  })
+})
