@@ -6,11 +6,22 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
+
+/**
+ * Le code sans ses commentaires.
+ *
+ * ⚠️ UNE GARDE D'ABSENCE SE LIT ELLE-MÊME SANS ÇA — dixième fois sur ce
+ * dépôt. Le commentaire de l'état vide CITE « dans la barre de gauche »
+ * précisément pour dire qu'on ne l'écrit plus.
+ */
+const code = (src: string) =>
+  src.replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*\/\/.*$/gm, ' ')
 const migration = lire('../../supabase/migrations/20260830110001_notifications.sql')
 const migrationQuantinvo = lire('../../supabase/migrations/20260830140001_message_quantinvo.sql')
 const cloche = lire('../components/Notifications.tsx')
 const shell = lire('../components/AppShell.tsx')
-const message = lire('../components/dashboard/MessageAdmin.tsx')
 const edge = lire('../../supabase/functions/message-admin/index.ts')
 const recherche = lire('../components/dashboard/RechercheGlobale.tsx')
 const tableau = lire('../app/dashboard/page.tsx')
@@ -67,18 +78,74 @@ describe('les notifications', () => {
 })
 
 describe('le message à l’administrateur', () => {
-  it('le bouton vit dans le rail, à côté de la cloche — chacun écrit un cran au-dessus', () => {
-    // Demande de Julien, 30 août 2026 : écrire à qui l'on rend compte ne
-    // dépend pas de la page. Le superviseur écrit à son administrateur,
-    // l'administrateur d'entreprise à Quantinvo ; l'administrateur Quantinvo
-    // n'a personne au-dessus — pas de bouton.
-    expect(shell).toContain("profile.role === 'supervisor' && !profile.is_admin && (")
-    expect(shell).toContain("destinataire={profile.is_company_admin ? 'quantinvo' : 'entreprise'}")
-    const rail = shell.slice(shell.indexOf('className="rail-fin"'))
-    expect(rail.indexOf('<MessageAdmin')).toBeGreaterThan(-1)
-    expect(rail.indexOf('<MessageAdmin')).toBeLessThan(rail.indexOf('<Notifications />'))
-    expect(tableau).not.toContain('MessageAdmin')
+  /**
+   * ⚠️ CETTE GARDE A CHANGÉ D'OBJET LE 7 SEPTEMBRE 2026, ET ELLE N'A PAS ÉTÉ
+   * AFFAIBLIE. Elle défendait « le bouton d'écriture vit dans le rail » ; ce
+   * qu'elle défend vraiment, c'est **qui peut ouvrir un fil, et vers qui** —
+   * chacun écrit un cran au-dessus, et le destinataire se déduit du profil.
+   * Cette règle-là n'a pas bougé d'un pouce, elle a seulement déménagé du
+   * rail vers la page.
+   *
+   * Ce qui a changé : le rail ne porte plus qu'une PORTE vers la boîte, à
+   * côté de la cloche. L'ancien bouton dessinait le même tracé que l'onglet
+   * Messages, au caractère près — deux bulles identiques dans la même
+   * colonne (constat de Julien).
+   */
+  it('⚠️ chacun écrit un cran au-dessus, et c’est la page qui le sait', () => {
+    expect(boite).toContain("guard.profile.role === 'supervisor' && !guard.profile.is_admin")
+    // L'administrateur Quantinvo n'a personne au-dessus : il répond, il
+    // n'ouvre pas de fil.
+    expect(boite).toContain('peutEcrire')
+    expect(boite).toContain('const versQuantinvo = guard.status === \'ready\' && guard.profile.is_company_admin')
     expect(migration).toContain('vous_etes_administrateur')
+  })
+
+  it('⚠️ le courrier est à côté de la cloche, et il n’y est qu’une fois', () => {
+    // Demande de Julien, 7 septembre 2026 : « il faut placer l'icône messages
+    // proche de la cloche ». Ce qui ARRIVE se lit en bas du rail — le
+    // courrier, puis les notifications, puis soi.
+    const rail = shell.slice(shell.indexOf('className="rail-fin"'))
+    expect(rail.indexOf('href="/messages"')).toBeGreaterThan(-1)
+    expect(rail.indexOf('href="/messages"')).toBeLessThan(rail.indexOf('<Notifications />'))
+    // ⚠️ ET IL A QUITTÉ LES ONGLETS DU MILIEU : ceux-là nomment des LIEUX DE
+    // TRAVAIL. Le laisser aux deux endroits, c'est le doublon qu'on ferme.
+    const onglets = shell.split('export function ongletsPour')[1]?.split('\n}\n')[0] ?? ''
+    expect(code(onglets), 'le courrier n’est pas un lieu de travail').not.toContain("'/messages'")
+    expect(code(shell), 'la modale du rail a disparu').not.toContain('MessageAdmin')
+    expect(tableau).not.toContain('MessageAdmin')
+  })
+
+  it('⚠️ écrire prend la place du fil, pas une fenêtre par-dessus', () => {
+    // C'est ce qui rend la fusion vraie (demande de Julien, 7 septembre 2026 :
+    // « fusionner boîte de réception et boîte d'envoi sur la même page »). Une
+    // modale flotte AU-DESSUS : on serait toujours à deux endroits. En
+    // occupant le panneau de droite, la liste des conversations reste
+    // visible — de quoi remarquer qu'un fil sur le même sujet existe déjà.
+    expect(boite).toContain('boite-redaction')
+    expect(code(boite), 'une modale remettrait l’écriture ailleurs que la lecture')
+      .not.toContain('modal-backdrop')
+    // Le panneau n'a qu'un occupant : ouvrir un fil ferme la rédaction.
+    expect(boite).toContain('setRedaction(false)')
+  })
+
+  it('⚠️ l’état vide ne renvoie plus vers le rail', () => {
+    // Il y disait « le bouton d'écriture est dans la barre de gauche » —
+    // devenu faux. Et c'est le seul endroit où la liste, donc son bouton,
+    // n'existe pas : il s'y repose.
+    expect(code(boite), 'la phrase désigne un bouton qui n’est plus là')
+      .not.toContain('dans la barre de gauche')
+    // Le bouton apparaît DEUX fois : en tête de liste, et dans l'état vide.
+    expect(boite.split('Nouveau message').length - 1).toBeGreaterThanOrEqual(2)
+  })
+
+  it('⚠️ le bouton d’en-tête dit toujours la même chose', () => {
+    // Une première version le faisait basculer en « Annuler » pendant la
+    // rédaction, alors que le formulaire en portait déjà un à trente
+    // centimètres de là. L'annulation appartient à la rangée d'actions.
+    const tete = boite.slice(boite.indexOf('boite-liste-tete'), boite.indexOf('{fils.map('))
+    expect(code(tete), 'un bouton d’en-tête qui change de sens selon l’état')
+      .not.toContain('Annuler')
+    expect(boite).toContain('boite-redaction-actions')
   })
 
   it('⚠️ le canal se choisit sur le PROFIL, jamais sur la requête', () => {
@@ -117,14 +184,14 @@ describe('le message à l’administrateur', () => {
   it('les bornes refusent, elles ne tronquent pas — et l’écran les connaît', () => {
     expect(migrationFils).toContain('message_trop_long')
     expect(migrationFils).not.toContain('left(v_msg')
-    expect(message).toContain('maxLength={120}')
-    expect(message).toContain('maxLength={2000}')
+    expect(boite).toContain('maxLength={120}')
+    expect(boite).toContain('maxLength={2000}')
   })
 
   it('l’edge injoignable retombe sur la RPC directe', () => {
     // Le message passe alors sans e-mail, plutôt que de ne pas passer — à
     // l'ouverture comme à la réponse.
-    expect(message).toContain("rpc('ouvrir_fil'")
+    expect(boite).toContain("rpc('ouvrir_fil'")
     expect(boite).toContain("rpc('repondre_fil'")
   })
 
@@ -153,9 +220,14 @@ describe('la boîte de réception', () => {
   it('⚠️ puisqu’on répond, tout le monde a une boîte', () => {
     // Le « il écrit sans recevoir » du premier jet tombe avec le bouton
     // Répondre : un superviseur lit la réponse de son administrateur.
-    const onglets = shell.split('export function ongletsPour')[1]?.split('\n}\n')[0] ?? ''
-    const superviseur = onglets.split('profile.is_company_admin')[1]?.split('return [')[2] ?? ''
-    expect(superviseur).toContain("'/messages'")
+    // ⚠️ La boîte se joignait par un onglet ; elle se joint depuis le
+    // 7 septembre 2026 par le rang du rail, posé pour TOUS les rôles — donc
+    // sans condition. C'est plus fort que ce que cette garde vérifiait : un
+    // onglet dépendait du rôle, le rang du rail non.
+    const rail = shell.slice(shell.indexOf('className="rail-fin"'))
+    expect(rail).toContain('href="/messages"')
+    expect(rail.slice(0, rail.indexOf('href="/messages"')), 'la boîte serait réservée à certains')
+      .not.toContain('profile.role ===')
     expect(boite).not.toContain("window.location.replace('/dashboard')")
   })
 

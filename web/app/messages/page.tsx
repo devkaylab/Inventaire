@@ -53,6 +53,16 @@ type FilOuvert = {
   messages: MessageFil[]
 }
 
+/** Le « + » du bouton d'écriture — un tracé, comme toutes les icônes. */
+function PlusIcone() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
 function initiales(nom: string): string {
   const mots = nom.trim().split(/\s+/).filter(Boolean)
   if (mots.length === 0) return '?'
@@ -67,6 +77,38 @@ export default function MessagesPage() {
   const [ouvert, setOuvert] = useState<FilOuvert | null>(null)
   const [reponse, setReponse] = useState('')
   const [envoi, setEnvoi] = useState(false)
+  /**
+   * La rédaction d'un fil neuf.
+   *
+   * ⚠️ ELLE VIVAIT DANS LE RAIL, DANS UNE MODALE (`MessageAdmin`), jusqu'au
+   * 7 septembre 2026. Deux problèmes d'un coup : son icône était le MÊME
+   * tracé que l'onglet Messages, au caractère près — deux bulles identiques
+   * dans la même colonne —, et écrire se faisait ailleurs que lire. Demande
+   * de Julien : « fusionner boîte de réception et boîte d'envoi sur la même
+   * page ».
+   *
+   * ⚠️ ET ELLE PREND LA PLACE DU FIL, PAS UNE FENÊTRE PAR-DESSUS. C'est ce
+   * qui rend la fusion vraie : une modale flotte au-dessus de la page, on
+   * serait toujours à deux endroits. En prenant le panneau de droite, la
+   * liste des conversations reste visible — de quoi remarquer qu'un fil sur
+   * le même sujet existe déjà.
+   */
+  const [redaction, setRedaction] = useState(false)
+  const [sujet, setSujet] = useState('')
+  const [corps, setCorps] = useState('')
+  const [erreurEnvoi, setErreurEnvoi] = useState<string | null>(null)
+
+  /**
+   * ⚠️ QUI PEUT OUVRIR UN FIL — la règle du rail, déplacée telle quelle.
+   * Chacun écrit un cran au-dessus : le superviseur à l'administrateur de son
+   * entreprise, l'administrateur d'entreprise à Quantinvo. L'administrateur
+   * Quantinvo n'a personne au-dessus — il répond, il n'ouvre pas de fil.
+   * Le destinataire reste déduit du PROFIL par la fonction edge, jamais d'un
+   * paramètre de l'écran.
+   */
+  const peutEcrire = guard.status === 'ready'
+    && guard.profile.role === 'supervisor' && !guard.profile.is_admin
+  const versQuantinvo = guard.status === 'ready' && guard.profile.is_company_admin
 
   const chargerFils = useCallback(async () => {
     const { data } = await supabase.rpc('mes_fils')
@@ -77,6 +119,9 @@ export default function MessagesPage() {
     const { data, error } = await supabase.rpc('ouvrir_message_fil', { p_fil: id })
     if (error || !data) return
     setOuvert(data as FilOuvert)
+    // Le panneau de droite n'a qu'un occupant : ouvrir un fil ferme la
+    // rédaction, et réciproquement.
+    setRedaction(false)
     // Le fil vient d'être lu : la liste doit cesser de le signaler.
     setFils((prev) => prev?.map((f) => (f.id === id ? { ...f, non_lu: false } : f)) ?? prev)
   }, [])
@@ -124,6 +169,63 @@ export default function MessagesPage() {
     }
   }
 
+  function ouvrirRedaction() {
+    setRedaction(true)
+    setOuvert(null)
+    setSujet('')
+    setCorps('')
+    setErreurEnvoi(null)
+  }
+
+  /**
+   * L'ouverture d'un fil neuf — le corps de l'ancienne modale du rail, repris
+   * tel quel.
+   *
+   * ⚠️ RIEN NE CHANGE CÔTÉ SERVEUR : même fonction edge `message-admin`, même
+   * repli sur `ouvrir_fil` quand elle est injoignable (le message passe alors
+   * sans e-mail, plutôt que de ne pas passer du tout), mêmes bornes 120 et
+   * 2000 qui REFUSENT. C'est un déménagement d'interface, pas un second
+   * chemin d'écriture.
+   *
+   * ⚠️ Et un refus reste SOUS le formulaire le temps qu'on corrige, jamais
+   * dans une notification qui s'efface avant qu'on l'ait lue.
+   */
+  async function envoyerNouveau(e: React.FormEvent) {
+    e.preventDefault()
+    if (envoi) return
+    setEnvoi(true)
+    setErreurEnvoi(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('message-admin', {
+        body: { sujet, message: corps },
+      })
+      let succes = !error && data?.success
+      let refus: string | null = !succes ? (data?.error ?? null) : null
+      if (error && !refus) {
+        const direct = await supabase.rpc('ouvrir_fil', { p_sujet: sujet, p_message: corps })
+        succes = !direct.error && direct.data?.success
+        refus = direct.error?.message ?? null
+      }
+      if (succes) {
+        toast.success(versQuantinvo
+          ? 'Message envoyé à Quantinvo.'
+          : 'Message envoyé à l’administrateur de votre entreprise.')
+        setSujet('')
+        setCorps('')
+        setRedaction(false)
+        // Le fil neuf est en tête de la liste : on l'ouvre, c'est ce qu'on
+        // vient d'écrire.
+        const liste = await chargerFils()
+        setFils(liste)
+        if (liste[0]) void ouvrirFil(liste[0].id)
+      } else {
+        setErreurEnvoi(refus ?? 'Envoi impossible pour le moment.')
+      }
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
   if (guard.status !== 'ready') {
     return <Chargement />
   }
@@ -141,18 +243,49 @@ export default function MessagesPage() {
         <div style={{ marginTop: 24 }}><SkeletonRows rows={4} height={72} /></div>
       ) : fils.length === 0 ? (
         <div style={{ marginTop: 24 }}>
+          {/* ⚠️ LA PHRASE NE RENVOIE PLUS VERS LE RAIL. Elle y disait « le
+              bouton d'écriture est dans la barre de gauche » — devenu faux le
+              7 septembre 2026. Et l'état vide est justement le seul endroit
+              où la liste, donc son bouton, n'existe pas : il s'y repose. */}
           <EmptyState
             title="Aucun message"
             hint={guard.profile.is_admin
               ? 'Les messages des entreprises clientes arrivent ici.'
               : guard.profile.is_company_admin
                 ? 'Les messages de vos superviseurs arrivent ici — et vos échanges avec Quantinvo.'
-                : 'Vos échanges avec l’administrateur de votre entreprise arrivent ici. Le bouton d’écriture est dans la barre de gauche.'}
+                : 'Vos échanges avec l’administrateur de votre entreprise arrivent ici.'}
           />
+          {peutEcrire && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: -8 }}>
+              <button type="button" className="btn btn-primary" onClick={ouvrirRedaction}>
+                <PlusIcone /> Nouveau message
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="boite">
           <aside className="boite-liste" aria-label="Conversations">
+            {/* En tête de la liste, comme dans toute messagerie : on écrit
+                depuis sa boîte, pas depuis la barre de navigation. */}
+            {/* ⚠️ LE BOUTON DIT TOUJOURS LA MÊME CHOSE. Une première version
+                le faisait basculer en « Annuler » pendant la rédaction : le
+                formulaire en portait déjà un, à trente centimètres de là. Deux
+                « Annuler » pour un seul geste, et un bouton d'en-tête qui
+                change de sens selon l'état. L'annulation appartient à la
+                rangée d'actions, là où on regarde en finissant d'écrire.
+
+                ⚠️ Et ce commentaire se pose AVANT la condition : un
+                commentaire JSX ne peut pas être le premier enfant d'un
+                `cond && (…)` qui rend un seul élément. Quatrième fois sur ce
+                dépôt. */}
+            {peutEcrire && (
+              <div className="boite-liste-tete">
+                <button type="button" className="btn btn-primary btn-large" onClick={ouvrirRedaction}>
+                  <PlusIcone /> Nouveau message
+                </button>
+              </div>
+            )}
             {fils.map((f) => (
               <button
                 type="button"
@@ -176,8 +309,44 @@ export default function MessagesPage() {
             ))}
           </aside>
 
-          <section className="boite-fil" aria-label="Conversation">
-            {!ouvert ? (
+          <section className="boite-fil" aria-label={redaction ? 'Nouveau message' : 'Conversation'}>
+            {redaction ? (
+              <form className="boite-redaction" onSubmit={envoyerNouveau}>
+                <header className="fil-tete">
+                  <h2>{versQuantinvo ? 'Nouveau message à Quantinvo' : 'Nouveau message à votre administrateur'}</h2>
+                  <p className="fil-tete-sous">
+                    {versQuantinvo
+                      ? 'Remis à l’équipe Quantinvo, dans ses notifications et par e-mail. Elle vous répondra ici.'
+                      : 'Remis à l’administrateur de votre entreprise, dans ses notifications et par e-mail. Il vous répondra ici.'}
+                  </p>
+                </header>
+
+                <div className="field" style={{ marginTop: 18 }}>
+                  <label htmlFor="nouveau-sujet">Sujet</label>
+                  <input
+                    id="nouveau-sujet" type="text" maxLength={120} required autoFocus
+                    value={sujet} onChange={(e) => setSujet(e.target.value)}
+                    placeholder={versQuantinvo ? 'Licence, magasin, facturation…' : 'Balises, accès, magasin…'}
+                  />
+                </div>
+                <div className="field boite-redaction-corps">
+                  <label htmlFor="nouveau-corps">Message</label>
+                  <textarea
+                    id="nouveau-corps" maxLength={2000} required
+                    value={corps} onChange={(e) => setCorps(e.target.value)}
+                  />
+                </div>
+
+                {erreurEnvoi && <div className="error" role="alert">{erreurEnvoi}</div>}
+
+                <div className="boite-redaction-actions">
+                  <button type="button" className="btn btn-ghost" onClick={() => setRedaction(false)}>Annuler</button>
+                  <button type="submit" className="btn btn-primary" disabled={envoi || sujet.trim() === '' || corps.trim() === ''}>
+                    {envoi ? 'Envoi…' : 'Envoyer'}
+                  </button>
+                </div>
+              </form>
+            ) : !ouvert ? (
               <p className="tb-vide">Choisissez une conversation.</p>
             ) : (
               <>

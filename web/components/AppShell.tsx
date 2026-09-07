@@ -21,12 +21,24 @@ import { Logo } from '@/components/Logo'
 import { policeNombre, policeRegistre } from '@/lib/policesRegistre'
 import { StoreBadges } from '@/components/StoreBadges'
 import { Notifications } from '@/components/Notifications'
-import { MessageAdmin } from '@/components/dashboard/MessageAdmin'
 import { signOut, type Profile } from '@/hooks/useAuthGuard'
 
 type Onglet = { href: string; label: string }
 
 /** Les onglets d'un profil, dans l'ordre où ce profil en a besoin. */
+/**
+ * ⚠️ LE COURRIER N'EST PAS UN ONGLET, ET IL A CESSÉ DE L'ÊTRE LE 7 SEPTEMBRE
+ * 2026. Ces onglets nomment des LIEUX DE TRAVAIL — un tableau de bord, des
+ * inventaires, une équipe. Les messages sont ce qui ARRIVE, comme les
+ * notifications : ils vivent en bas du rail, à côté de la cloche (demande de
+ * Julien : « il faut placer l'icône messages proche de la cloche »).
+ *
+ * Ce déplacement ferme aussi un doublon que rien ne signalait : l'onglet
+ * Messages et le bouton « écrire à mon administrateur » dessinaient
+ * **exactement le même tracé**, au caractère près, à deux endroits de la même
+ * colonne. Deux bulles identiques, l'une ouvrant une page et l'autre une
+ * fenêtre.
+ */
 export function ongletsPour(profile: Profile): Onglet[] {
   if (profile.is_admin) {
     return [
@@ -38,8 +50,6 @@ export function ongletsPour(profile: Profile): Onglet[] {
       // L'état de la machine, à côté de ce que les clients en font.
       { href: '/admin/capacite', label: 'Capacité' },
       { href: '/admin/console', label: 'Console' },
-      // Ce que les entreprises clientes nous écrivent.
-      { href: '/messages', label: 'Messages' },
     ]
   }
   const superviseur = profile.role === 'supervisor'
@@ -54,8 +64,6 @@ export function ongletsPour(profile: Profile): Onglet[] {
       { href: '/magasins', label: 'Magasins' },
       { href: '/equipe', label: 'Équipe' },
       { href: '/inventaires', label: 'Inventaires' },
-      // Ce que ses superviseurs lui écrivent.
-      { href: '/messages', label: 'Messages' },
       { href: '/journal', label: 'Journal' },
     ]
   }
@@ -64,8 +72,6 @@ export function ongletsPour(profile: Profile): Onglet[] {
     { href: '/inventaires', label: 'Inventaires' },
     { href: '/equipe', label: 'Mon équipe' },
     { href: '/magasins', label: 'Magasins' },
-    // Il écrit à son administrateur : il doit lire la réponse.
-    { href: '/messages', label: 'Messages' },
     { href: '/outils', label: 'Boîte à outils' },
   ]
 }
@@ -253,15 +259,25 @@ export function AppShell({
         </div>
 
         <div className="rail-fin">
-          {/* Le message et la cloche vivent ici, côte à côte, et pas sur une
-              page : écrire à qui l'on rend compte ne dépend pas de l'écran où
-              l'on se trouve. Chacun écrit un cran au-dessus — le superviseur à
-              l'administrateur de son entreprise, l'administrateur à Quantinvo.
-              L'administrateur Quantinvo n'a personne au-dessus : pas de
-              bouton. */}
-          {profile.role === 'supervisor' && !profile.is_admin && (
-            <MessageAdmin destinataire={profile.is_company_admin ? 'quantinvo' : 'entreprise'} />
-          )}
+          {/* ⚠️ LE COURRIER ET LA CLOCHE, CÔTE À CÔTE, ET DANS CET ORDRE.
+              Ce qui ARRIVE se lit en bas du rail : le courrier, puis les
+              notifications, puis soi. Demande de Julien, 7 septembre 2026 :
+              « il faut placer l'icône messages proche de la cloche ».
+
+              ⚠️ CE N'EST PLUS UN BOUTON D'ÉCRITURE, C'EST LA PORTE DE LA
+              BOÎTE. Écrire se fait désormais DEPUIS la boîte — comme dans
+              toute messagerie —, ce qui a fait disparaître la seconde bulle :
+              l'onglet Messages et l'ancien bouton dessinaient le même tracé,
+              au caractère près, à deux endroits de la même colonne. */}
+          <Link
+            href="/messages"
+            className="rail-onglet"
+            title="Messages"
+            aria-label="Messages"
+            aria-current={pathname.startsWith('/messages') ? 'page' : undefined}
+          >
+            <IconeOnglet href="/messages" />
+          </Link>
           <Notifications />
           <div className="rail-qui" ref={menuRef}>
           <button
