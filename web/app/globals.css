@@ -3347,6 +3347,29 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .fil-repondre textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .fil-repondre .btn { flex: none; }
 
+/* ── Écrire depuis sa boîte (7 septembre 2026) ─────────────────────────────
+   La rédaction d'un fil neuf vivait dans une modale ouverte depuis le rail.
+   Demande de Julien : « fusionner boîte de réception et boîte d'envoi sur la
+   même page ». Elle prend donc la place du fil — une modale flotterait
+   au-dessus, on serait toujours à deux endroits ; en occupant le panneau de
+   droite, la liste des conversations reste visible pendant qu'on écrit. */
+.boite-liste-tete { padding-bottom: 4px; }
+.boite-liste-tete .btn { width: 100%; }
+.boite-redaction { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+/* Les champs reprennent la gouttière de l'en-tête du fil : le formulaire est
+   dans le même panneau, il s'aligne dessus. */
+.boite-redaction .field { padding: 0 22px; }
+.boite-redaction .error { margin: 0 22px; }
+.boite-redaction-corps { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.boite-redaction-corps textarea { flex: 1; min-height: 140px; resize: vertical; }
+.boite-redaction-actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 22px 18px; border-top: 1px solid var(--hairline); margin-top: auto;
+}
+/* Un bouton posé seul en tête d'une colonne fait la hauteur d'un champ : plus
+   bas, il se lit comme une étiquette. */
+.btn-large { height: 44px; }
+
 @media (max-width: 900px) {
   .boite { grid-template-columns: minmax(0, 1fr); }
   .boite-liste { max-height: 260px; }
