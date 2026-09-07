@@ -6,6 +6,7 @@ import { importCatalogFile, importStockFile, pickFile, type ImportProgress } fro
 import { errorMessage } from '@/lib/errors'
 import { nb } from '@/lib/nombres'
 import { useTheme } from '@/lib/theme'
+import { PlusTard } from '@/components/ui/PlusTard'
 import { Astuce, Fort } from '@/components/Astuce'
 import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
@@ -241,12 +242,15 @@ export default function ImportScreen() {
           // Le tunnel s'arrêtait ici, sur « Commencer l'inventaire » — alors
           // qu'un inventaire sans compteur ne commence pas. L'étape des
           // compteurs vient après les fichiers, et c'est d'elle qu'on entre.
-          <Pressable
-            style={styles.startBtn}
-            onPress={() => router.push(`/(supervisor)/${sessionId}/invite?from=new`)}
-          >
-            <Text style={styles.startBtnText}>Suivant : ajouter des compteurs</Text>
-          </Pressable>
+          <>
+            <Pressable
+              style={styles.startBtn}
+              onPress={() => router.push(`/(supervisor)/${sessionId}/invite?from=new`)}
+            >
+              <Text style={styles.startBtnText}>Suivant : ajouter des compteurs</Text>
+            </Pressable>
+            <PlusTard sessionId={sessionId} />
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

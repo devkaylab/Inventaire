@@ -47,6 +47,8 @@ import {
 } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
+import { quitterLeTunnel } from '@/lib/tunnel'
+import { PlusTard } from '@/components/ui/PlusTard'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
@@ -59,23 +61,6 @@ export default function InviteToSessionScreen() {
    */
   const fromNew = from === 'new'
 
-  /**
-   * ⚠️ ON VIDE LE TUNNEL AVANT D'OUVRIR LA FICHE, ET C'EST OBLIGATOIRE.
-   *
-   * Depuis que les étapes s'EMPILENT (pour qu'on puisse revenir sur ses pas —
-   * demande de Julien, 7 septembre 2026), la pile vaut ici
-   * `[liste, zones, fichiers, compteurs]`. Un simple `replace` ne changerait
-   * que le dernier écran : la flèche de la fiche de l'inventaire renverrait
-   * alors DANS le tunnel qu'on vient de finir, étape par étape.
-   *
-   * `dismissAll` revient au premier écran de la pile (la liste), et le `push`
-   * pose la fiche par-dessus : la flèche y ramène à la liste, comme partout
-   * ailleurs. Ne pas « simplifier » en un `replace`.
-   */
-  const quitterLeTunnel = () => {
-    router.dismissAll()
-    router.push(`/(supervisor)/${sessionId}`)
-  }
   const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -420,15 +405,21 @@ export default function InviteToSessionScreen() {
 
           {fromNew && (
             <View style={styles.finBloc}>
-              <Pressable style={styles.startBtn} onPress={quitterLeTunnel}>
+              <Pressable style={styles.startBtn} onPress={() => quitterLeTunnel(sessionId)}>
                 <Text style={styles.startBtnText}>{"Commencer l'inventaire"}</Text>
               </Pressable>
-              {/* Demande de Julien : le dire sur la page, plutôt que de le
-                  laisser deviner. L'étape propose, elle ne barre pas la route. */}
-              <Text style={styles.finNote}>
-                Vous pouvez commencer sans personne : on compte parfois seul, et des compteurs
-                s’ajoutent à tout moment depuis la fiche de l’inventaire.
-              </Text>
+              {/* ⚠️ « Vous pouvez commencer sans personne : des compteurs
+                  s'ajoutent à tout moment » a été RETIRÉE ici (Julien, sur la
+                  maquette du 7 septembre 2026 : « retire ce texte du coup »).
+                  Elle expliquait ce que l'écran montre déjà — le bouton est
+                  actif sans personne dans la liste — et deux phrases empilées
+                  sous deux gestes font qu'on n'en lit plus aucune. Ce qu'elle
+                  apprenait vraiment est passé dans la note ci-dessous : on
+                  peut partir SANS démarrer, et c'était le vrai doute. */}
+              <PlusTard
+                sessionId={sessionId}
+                note="Sans démarrer le comptage. Vous reprendrez depuis la fiche de l’inventaire."
+              />
             </View>
           )}
         </ScrollView>
@@ -540,6 +531,5 @@ function makeStyles(t: Theme) {
       alignItems: 'center', ...t.shadowButton,
     },
     startBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },
-    finNote: { fontSize: 12.5, color: t.textMuted, fontFamily: Font.regular, lineHeight: 18, textAlign: 'center' },
   })
 }

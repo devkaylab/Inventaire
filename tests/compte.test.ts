@@ -1379,6 +1379,111 @@ describe('aucun emoji dans les écrans du parcours', () => {
  * Maquette validée avant codage :
  * https://claude.ai/code/artifact/1bded047-76d5-4a80-a00e-9d25d8a74a65
  */
+
+/**
+ * On peut s'arrêter en cours de préparation.
+ *
+ * Constat de Julien (7 septembre 2026) : *« on a l'impression qu'on est obligé
+ * de tout faire maintenant »*. Le tunnel n'offrait qu'un geste, et il avance.
+ *
+ * ⚠️ Ce n'est PAS la sortie refusée le matin même — celle-là venait **à la
+ * place** du bouton retour. La flèche existe depuis (les étapes s'empilent) ;
+ * « Plus tard » vient en plus. Maquette validée avant codage :
+ * https://claude.ai/code/artifact/8f05aa33-aa91-4f9a-90ae-3274b22d0c34
+ */
+describe('« Plus tard » : une sortie à chaque étape', () => {
+  const plusTard = lire('components/ui/PlusTard.tsx')
+  const tunnel = lire('lib/tunnel.ts')
+
+  /**
+   * ⚠️ Les gardes d'ABSENCE lisent le code sans ses commentaires — les blocs
+   * retirés d'un coup, `{/* … *\/}` compris. Le commentaire de l'écran CITE la
+   * phrase retirée pour dire qu'on ne la remet pas : sans ce dépouillement, la
+   * garde se lirait elle-même. Même piège que six fois ailleurs sur ce dépôt.
+   */
+  const codeSeul = (source: string) =>
+    source
+      .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, '')
+      .split('\n')
+      .filter(l => !l.trim().startsWith('//'))
+      .join('\n')
+
+  /**
+   * ⚠️ La liste des étapes se DÉDUIT, elle ne se cite pas.
+   *
+   * Ce sont les écrans du tunnel — ceux qui lisent `from === 'new'`. Une
+   * quatrième étape ajoutée demain se signalerait d'elle-même ; une garde qui
+   * nommerait les trois d'aujourd'hui ne protégerait que celles-là. Même
+   * doctrine que la garde du retour, juste au-dessus.
+   */
+  const etapes = ['zones', 'import', 'invite']
+    .map((n) => ({ nom: n, code: lire(`app/(supervisor)/[sessionId]/${n}.tsx`) }))
+    .filter((e) => e.code.includes("from === 'new'"))
+
+  it('⚠️ les trois étapes offrent la sortie', () => {
+    expect(etapes.length, 'détection du tunnel cassée').toBe(3)
+    for (const { nom, code } of etapes) {
+      expect(code, `${nom} n’offre pas « Plus tard »`).toContain('<PlusTard')
+      // Elle ne s'affiche que DANS le tunnel : ouverts depuis la fiche d'un
+      // inventaire, ces écrans n'ont pas de tunnel dont sortir.
+      const i = code.indexOf('<PlusTard')
+      expect(code.slice(0, i), `${nom} montre « Plus tard » hors du tunnel`)
+        .toContain('fromNew &&')
+    }
+  })
+
+  it('⚠️ la sortie VIDE le tunnel, et il n’en existe qu’une définition', () => {
+    // Un `replace` ne changerait que le dernier écran : la flèche de la fiche
+    // renverrait dans le tunnel qu'on vient de quitter, étape par étape.
+    expect(tunnel).toContain('router.dismissAll()')
+    expect(tunnel).toContain('router.push(`/(supervisor)/${sessionId}`)')
+    expect(plusTard).toContain('quitterLeTunnel(sessionId)')
+    // « Commencer l'inventaire » passe par la MÊME fonction : deux copies
+    // divergeraient, et l'une laisserait le tunnel derrière elle.
+    const compteursCode = lire('app/(supervisor)/[sessionId]/invite.tsx')
+    expect(compteursCode).toContain("import { quitterLeTunnel } from '@/lib/tunnel'")
+    expect(compteursCode).toContain('onPress={() => quitterLeTunnel(sessionId)}')
+    expect(codeSeul(compteursCode), 'la sortie est recopiée dans l’écran')
+      .not.toContain('router.dismissAll()')
+  })
+
+  it('⚠️ un LIEN, jamais un second bouton plein', () => {
+    // Deux aplats côte à côte se disputent le regard, et c'est celui qui fait
+    // avancer qui perdrait.
+    expect(plusTard).not.toContain('backgroundColor: t.accent')
+    expect(plusTard).toContain('color: t.accent')
+    // Et 48 dp de cible, comme tout ce qui se touche (passe du 31 août 2026).
+    expect(plusTard).toContain('minHeight: 48')
+  })
+
+  it('⚠️ la PHRASE accompagne toujours le lien', () => {
+    // « Plus tard » seul peut se lire « annuler » — or l'inventaire est déjà
+    // créé. Sans la phrase, on n'ose pas plus qu'avant.
+    expect(plusTard).toContain('L’inventaire est créé')
+    expect(plusTard).toContain('{note ??')
+  })
+
+  it('⚠️ la dernière étape a SA phrase : son bouton démarre le comptage', () => {
+    const compteursCode = lire('app/(supervisor)/[sessionId]/invite.tsx')
+    const i = compteursCode.indexOf('<PlusTard')
+    expect(compteursCode.slice(i, i + 400)).toContain('Sans démarrer le comptage')
+  })
+
+  it('⚠️ « Vous pouvez commencer sans personne » a été retirée', () => {
+    // Demande de Julien sur la maquette : « retire ce texte du coup ». Elle
+    // expliquait ce que l'écran montre déjà — le bouton est actif sans
+    // personne dans la liste — et deux phrases empilées sous deux gestes font
+    // qu'on n'en lit plus aucune.
+    //
+    // ⚠️ La garde lit le CODE SEUL : le commentaire de l'écran cite la phrase
+    // pour dire qu'on ne la remet pas.
+    const compteursCode = codeSeul(lire('app/(supervisor)/[sessionId]/invite.tsx'))
+    expect(compteursCode).not.toContain('commencer sans personne')
+    expect(compteursCode, 'le style de la phrase retirée traîne encore')
+      .not.toContain('finNote')
+  })
+})
+
 describe('le tunnel de préparation (23 août 2026)', () => {
   const nouveau = lire('app/(supervisor)/new-session.tsx')
   const zonesEcran = lire('app/(supervisor)/[sessionId]/zones.tsx')
@@ -1449,11 +1554,18 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     // changerait que le dernier écran, et la flèche de la fiche renverrait
     // dans le tunnel qu'on vient de finir. `dismissAll` revient à la liste,
     // le `push` pose la fiche par-dessus.
-    expect(compteurs).toContain('router.dismissAll()')
-    expect(compteurs).toContain('router.push(`/(supervisor)/${sessionId}`)')
-    expect(compteurs).toContain("Commencer l'inventaire")
-    expect(compteurs, 'un replace laisserait les trois étapes derrière la fiche')
+    //
+    // ⚠️ Ces deux appels ont quitté l'écran le 7 septembre 2026 : « Plus tard »
+    // sort du tunnel exactement comme lui, et deux copies divergeraient — l'une
+    // laisserait le tunnel derrière elle sans que rien ne le montre. Le geste
+    // se garde donc là où il vit, dans `lib/tunnel.ts`.
+    const tunnel = lire('lib/tunnel.ts')
+    expect(tunnel).toContain('router.dismissAll()')
+    expect(tunnel).toContain('router.push(`/(supervisor)/${sessionId}`)')
+    expect(tunnel, 'un replace laisserait les trois étapes derrière la fiche')
       .not.toContain('router.replace(`/(supervisor)/${sessionId}`)')
+    expect(compteurs).toContain("import { quitterLeTunnel } from '@/lib/tunnel'")
+    expect(compteurs).toContain("Commencer l'inventaire")
   })
 
   // ⚠️ La création, elle, REMPLACE toujours : on ne revient pas sur le
@@ -1468,14 +1580,17 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     expect(compteurs).toContain('startBtn: {\n      backgroundColor: t.success')
   })
 
-  // ── Demande de Julien : le dire sur la page ─────────────────────────────
-  it('la page dit qu’on peut commencer sans personne', () => {
-    expect(compteurs).toContain('Vous pouvez commencer sans personne')
-  })
+  // ⚠️ La garde « la page dit qu'on peut commencer sans personne » a été
+  // RETIRÉE le 7 septembre 2026 : Julien a fait enlever cette phrase (« retire
+  // ce texte du coup »). Ce qu'elle défendait — on part sans personne dans la
+  // liste — est tenu par la garde ci-dessous, qui porte sur le GESTE et non sur
+  // une tournure. Le refus de son retour vit dans le bloc « Plus tard ».
 
   it('rien ne bloque la sortie', () => {
     // Le bouton de sortie n'a ni `disabled` ni condition sur les membres.
-    const bloc = compteurs.slice(compteurs.indexOf('finBloc'), compteurs.indexOf('finNote'))
+    const i = compteurs.indexOf('styles.finBloc')
+    expect(i, 'le bloc de fin du tunnel est introuvable').toBeGreaterThan(0)
+    const bloc = compteurs.slice(i, compteurs.indexOf('<PlusTard'))
     expect(bloc).not.toContain('disabled')
   })
 

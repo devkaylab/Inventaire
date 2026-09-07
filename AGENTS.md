@@ -11771,12 +11771,20 @@ d'un inventaire, ces trois écrans ont bien leur flèche : c'est le tunnel, et
 lui seul, qui enfermait.
 
 ⚠️ **UN PREMIER CORRECTIF A ÉTÉ ÉCARTÉ LE JOUR MÊME, ET C'EST LA LEÇON.** Il
-posait une sortie « Plus tard » vers la fiche de l'inventaire : elle rendait le
-droit de **partir**, pas celui de **revenir**. Julien, en le lisant : *« je ne
-veux pas plus tard, je veux pouvoir revenir à l'étape précédente si jamais j'ai
-envie de faire des changements »*. Une sortie n'est pas un retour — la question
-posée était bien « où est la flèche », pas « comment je m'échappe ». Le
-composant `SortieTunnel` a vécu une heure ; il a été supprimé.
+posait une sortie « Plus tard » **À LA PLACE** du bouton retour : elle rendait
+le droit de **partir**, pas celui de **revenir**. Julien, en le lisant : *« je
+ne veux pas plus tard, je veux pouvoir revenir à l'étape précédente si jamais
+j'ai envie de faire des changements »*. Une sortie n'est pas un retour — la
+question posée était bien « où est la flèche », pas « comment je m'échappe ».
+Le composant `SortieTunnel` a vécu une heure ; il a été supprimé.
+
+⚠️ **CE N'EST PAS UN REFUS DE LA SORTIE ELLE-MÊME**, et cette note l'a laissé
+croire pendant quelques heures. Le soir du même jour, Julien a demandé
+l'inverse : *« sur les pages set up de l'app, ajoute un bouton plus tard en
+bas, parce qu'on a l'impression qu'on est obligé de tout faire maintenant »*.
+Ce qui avait été refusé, c'est le remplacement de la flèche ; **« Plus tard »
+vient EN PLUS d'elle**, et répond à autre chose — voir la section suivante.
+Une note qui dit « X a été refusé » doit dire **à la place de quoi**.
 
 **La réponse est la pile de navigation, pas un composant.** Les trois étapes
 s'**empilent** (`router.push`) au lieu de se remplacer, et la flèche native
@@ -11856,6 +11864,75 @@ Tests de garde : `web/tests/zone-de-comptage.test.ts` et
 `tests/zone-de-comptage.test.ts` — les deux se lisent en parallèle, c'est le
 même geste sur les deux surfaces. Le tunnel, lui, reste dans
 `tests/compte.test.ts`, bloc « le tunnel de préparation ».
+
+
+## « Plus tard » : une sortie à chaque étape (7 septembre 2026, au soir)
+
+*« Sur les pages set up de l'app, ajoute un bouton plus tard en bas, parce
+qu'on a l'impression qu'on est obligé de tout faire maintenant. »* Maquette
+validée avant codage, trois décisions arbitrées :
+https://claude.ai/code/artifact/8f05aa33-aa91-4f9a-90ae-3274b22d0c34
+
+⚠️ **CE N'EST PAS LA SORTIE REFUSÉE LE MATIN MÊME** — voir juste au-dessus.
+Celle-là remplaçait la flèche ; celle-ci vient en plus. La flèche rend le droit
+de **revenir**, « Plus tard » rend celui de **s'arrêter**, et le tunnel a
+besoin des deux : la flèche remonte étape par étape jusqu'à la liste, sans
+jamais dire que ce qu'on laisse est déjà enregistré.
+
+**Les trois décisions, telles que validées :**
+
+1. **La sortie mène à la FICHE de l'inventaire**, pas à la liste. C'est
+   l'endroit d'où la préparation se reprend — Zones, Fichiers et Compteurs y
+   sont tous les trois. Rendu à la liste, on aurait à retrouver son inventaire
+   avant de comprendre qu'on peut y revenir.
+2. **Un lien « Plus tard », et une phrase sous lui.** ⚠️ **C'est la phrase qui
+   fait le travail** : « Plus tard » seul se lit « annuler » — or l'inventaire
+   est déjà créé, et c'est précisément ce qu'on ne sait pas. Sans elle, on
+   n'ose pas plus qu'avant et le lien n'aurait rien réglé.
+3. **Aux trois étapes, pas seulement à la dernière.** Le sentiment d'être
+   coincé naît à la première.
+
+**Ce qui porte le composant** (`components/ui/PlusTard.tsx`) :
+
+- **⚠️ UN LIEN, JAMAIS UN SECOND BOUTON PLEIN.** Le bouton d'avance est le
+  geste principal de l'écran ; deux aplats côte à côte se disputeraient le
+  regard, et c'est celui qui fait avancer qui perdrait. Un test refuse un
+  `backgroundColor: t.accent` dans ce fichier.
+- **48 dp de cible** (`minHeight`), comme tout ce qui se touche depuis la passe
+  du 31 août : un mot n'est pas un bouton tant qu'on ne lui a pas donné sa
+  hauteur.
+- **⚠️ IL NE S'AFFICHE QUE DANS LE TUNNEL** (`fromNew &&`). Ouverts depuis la
+  fiche d'un inventaire, ces trois écrans n'ont aucun tunnel dont sortir — la
+  flèche native y suffit, et un « Plus tard » y proposerait de quitter ce qu'on
+  vient d'ouvrir.
+- **La dernière étape a SA phrase** : son bouton d'avance **démarre le
+  comptage**, donc le doute n'est pas le même. « Sans démarrer le comptage.
+  Vous reprendrez depuis la fiche de l'inventaire. » — partir sans démarrer
+  était précisément le cas qui n'avait aucun chemin.
+
+**⚠️ ET LA SORTIE EST UNE SEULE DÉFINITION** — `lib/tunnel.ts`,
+`quitterLeTunnel(sessionId)`, appelée par « Plus tard » comme par « Commencer
+l'inventaire ». Elle porte le `dismissAll()` + `push` documenté ci-dessus.
+Deux copies divergeraient au premier ajustement, et c'est justement l'endroit
+où une divergence ne se voit pas : les deux mèneraient au bon écran, l'une
+laisserait les trois étapes derrière la fiche.
+
+## ⚠️ « Vous pouvez commencer sans personne » a été retirée
+
+Commentaire de Julien sur la maquette, ancré à cette phrase : *« retire ce
+texte du coup »*. Elle expliquait ce que l'écran montre déjà — le bouton est
+actif sans personne dans la liste — et **deux phrases empilées sous deux
+gestes font qu'on n'en lit plus aucune**. Ce qu'elle apprenait vraiment est
+passé dans la note de « Plus tard » : on peut partir SANS démarrer, et c'était
+le vrai doute.
+
+La garde qui exigeait sa présence depuis le 23 août a donc été **retirée**, et
+une garde inverse posée. ⚠️ Elle lit le **code seul** : le commentaire de
+l'écran cite la phrase pour dire qu'on ne la remet pas — septième variante du
+piège des commentaires sur ce dépôt.
+
+Tests de garde : `tests/compte.test.ts`, bloc « “Plus tard” : une sortie à
+chaque étape ».
 
 # Une seule boîte : lire et écrire au même endroit (7 septembre 2026)
 

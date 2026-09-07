@@ -27,6 +27,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
 import { nb } from '@/lib/nombres'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
+import { PlusTard } from '@/components/ui/PlusTard'
 
 type ZoneGroup = { name: string; total: number; counted: number; audited: number; codes: string[] }
 
@@ -335,12 +336,15 @@ export default function ZonesScreen() {
           )}
 
           {fromNew && (
-            <Pressable
-              style={styles.nextBtn}
-              onPress={() => router.push(`/(supervisor)/${sessionId}/import?from=new`)}
-            >
-              <Text style={styles.nextBtnText}>Suivant : importer les fichiers</Text>
-            </Pressable>
+            <>
+              <Pressable
+                style={styles.nextBtn}
+                onPress={() => router.push(`/(supervisor)/${sessionId}/import?from=new`)}
+              >
+                <Text style={styles.nextBtnText}>Suivant : importer les fichiers</Text>
+              </Pressable>
+              <PlusTard sessionId={sessionId} />
+            </>
           )}
         </ScrollView>
       </ClavierEvite>
