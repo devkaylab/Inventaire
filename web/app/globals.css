@@ -1434,65 +1434,87 @@ a { color: inherit; text-decoration: none; }
    première carte descendait de 16 px sous la barre d'onglets d'en face, et
    l'écart entre les cartes valait 36 px au lieu de 20. */
 .dash-rail > .panel { margin-top: 0; }
+/* ── La tuile Progression — piste « Vert d'appui » ────────────────
+   Maquette validée par Julien le 7 septembre 2026 (trois pistes, artifact
+   « Tuile Progression »). Elle remplace la piste « Halo » du 25 août.
 
-/* ── La tuile Progression en verre dépoli — piste « Halo » ─────────
-   Maquette validée par Julien le 25 août 2026 (trois pistes, artifact
-   « Tuile Progression en verre »). Tout est scopé sur `.dash-progress` :
-   la règle du chantier est de ne toucher que cette tuile.
-   Deux points à ne pas défaire :
-   · le halo vit dans le `::before` de la tuile, pas sur le fond de page —
-     un `backdrop-filter` ne floute que ce qui est peint DERRIÈRE l'élément,
-     et le fond de la page est uni : sans ces lueurs portées par la tuile
-     elle-même, le verre serait invisible ;
-   · ⚠️ le `::before` ne doit JAMAIS déborder de la carte (`inset: 0` et le
-     rayon hérité). La tuile est positionnée, donc peinte au-dessus de ses
-     voisines non positionnées : une première version débordait de 32 px et
-     posait un voile sur les tuiles d'à côté (constat de Julien, capture à
-     l'appui, 25 août 2026). Les lueurs se découpent aux coins de la carte —
-     le halo est sous le verre, il ne bave pas dessus les voisines. */
+   ⚠️ POURQUOI LE HALO EST PARTI, ET CE QUE ÇA APPREND. La tuile était en verre
+   dépoli : fond translucide, `backdrop-filter`, et deux lueurs radiales portées
+   par son `::before`. Ces lueurs étaient de l'indigo et du cyan D'AVANT ARDOISE
+   — `rgba(99,102,241)` et `rgba(56,201,255)` en sombre, leurs jumelles en clair
+   — écrites en dur, hors des jetons : c'est ce qui leur a permis de survivre à
+   la passe du 6 septembre, qui balaie les jetons. **Une valeur écrite en dur
+   est invisible à un changement d'identité.**
+   Et le verre ne floutait rien : le fond de la page est uni, donc ce qu'on
+   voyait n'était pas un flou mais une tache colorée sous une carte blanchâtre
+   — ce qui explique le constat de Julien, « on ne la distingue pas des autres ».
+
+   ⚠️ LES DEUX BARRES NE CHANGENT PAS. Comptage = dégradé `--accent → --cyan`,
+   audit = `--success`, reflet « Flux » compris. Ce qui suit le fond, c'est leur
+   GOUTTIÈRE : elle était écrite en dur en bleu nuit (`rgba(11,15,25,.55)`) et
+   ferait une entaille sur un fond vert. Elle est désormais une transparence,
+   donc elle se creuse dans n'importe quel fond. */
 .dash-progress {
-  position: relative;
-  background: rgba(21, 26, 39, 0.5);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  backdrop-filter: blur(28px) saturate(160%);
-  border-color: rgba(255, 255, 255, 0.1);
-  border-radius: var(--r);
-  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.18);
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+  /* Un filet EN INCRUSTATION, jamais une `border` : `.panel` est à `border: 0`
+     et 24 px de rembourrage — une vraie bordure ajouterait 2 px et décalerait
+     la tuile de ses voisines dans le rail.
+     ⚠️ C'est le SEUL filet du tableau de bord, et il ne contredit pas la règle
+     d'Ardoise (« une carte ne se détache pas parce qu'on l'a détourée ») : cette
+     règle vise le contour posé sur CHAQUE bloc, alors qu'ici une seule carte du
+     rail le porte, précisément pour dire qu'elle n'est pas une carte comme les
+     autres. En sombre, `--accent-2` plein serait criard sur un aplat déjà vert :
+     le filet s'y atténue. */
+  box-shadow: inset 0 0 0 1px rgba(95, 168, 138, 0.3);
 }
-.dash-progress::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    radial-gradient(280px 220px at 14% 16%, rgba(99, 102, 241, 0.16), transparent 68%),
-    radial-gradient(260px 230px at 88% 84%, rgba(56, 201, 255, 0.12), transparent 68%);
-}
-/* Le pourcentage reprend le dégradé de la barre de comptage ; l'unité « % »
-   garde sa couleur — le `-webkit-text-fill-color` hérité doit être rendu. */
-.dash-progress .dash-big {
-  background: linear-gradient(100deg, var(--accent), var(--cyan));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-.dash-progress .dash-big-unit { color: var(--text-2); -webkit-text-fill-color: var(--text-2); }
-/* Le rail de barre : `--bg` opaque ferait une saignée sombre dans le verre. */
-.dash-progress .dash-bar { background: rgba(11, 15, 25, 0.55); }
-/* Le reflet « Flux » (piste A de la maquette motion, mixée avec le geste
-   d'arrivée porté par ProgressRail) : un voile clair parcourt la barre de
+
+/* Le grand pourcentage perd son dégradé de texte (`background-clip: text` sur
+   `--accent → --cyan`) : sur un fond teinté, un texte dégradé se lit moins bien
+   qu'un aplat. Le dégradé reste là où il dit quelque chose — dans la barre de
+   comptage. L'unité « % » garde sa couleur de second plan. */
+.dash-progress .dash-big { color: var(--accent); }
+.dash-progress .dash-big-unit { color: var(--text-2); }
+
+/* ⚠️ MESURÉ AU NAVIGATEUR, dans les deux thèmes. Le libellé « PROGRESSION »
+   était en `--text-3`, le troisième gris : sur l'aplat vert il tombe à 2,68:1
+   en clair et 2,78:1 en sombre, loin sous le seuil AA. Il passe en `--text-2`
+   (5,5:1 et 5,3:1).
+   Le défaut est plus ancien que ce chantier — sur la surface blanche il valait
+   déjà 3,2:1 — mais un fond teinté n'a pas le droit de l'aggraver. Les autres
+   `.dash-section-label` de la page restent sur `--surface` et sortent du
+   périmètre de cette tuile. */
+.dash-progress .dash-section-label { color: var(--text-2); }
+
+/* La gouttière de barre — voir l'avertissement en tête de bloc. Deux valeurs,
+   parce qu'une seule transparence ne creuse pas dans les deux thèmes : en clair
+   l'aplat est pâle (#e7ede9) et demande peu, en sombre il est déjà sombre et
+   demande plus. */
+.dash-progress .dash-bar { background: rgba(0, 0, 0, 0.3); }
+
+/* Le thème clair reprend les deux mêmes rôles. ⚠️ Le site pose TOUJOURS
+   `data-theme` (le script de `layout.tsx` retombe sur « dark » même s'il lève) :
+   il n'y a jamais d'état non marqué, donc pas de `prefers-color-scheme` ici —
+   la règle de base sert le sombre, ce bloc sert le clair. */
+:root[data-theme="light"] .dash-progress { box-shadow: inset 0 0 0 1px var(--accent-2); }
+:root[data-theme="light"] .dash-progress .dash-bar { background: rgba(20, 25, 40, 0.09); }
+
+/* « Reste à compter » passe en surface plutôt qu'en ambre : deux pastels côte à
+   côte — un vert pâle et un beige — ne se distinguent plus. Le blanc tranche,
+   et le compte garde son ocre, qui est ce qui porte l'alerte. */
+.dash-progress .dash-missing-row { background: var(--surface); }
+
+/* Le reflet « Flux » (piste A de la maquette motion du 25 août, mixée avec le
+   geste d'arrivée porté par ProgressRail) : un voile clair parcourt la barre de
    comptage puis se repose — confiné à la barre, seule la progression bouge.
    Il vit sur le remplissage (clippé par son rayon), donc il ne peut pas
-   déborder de la tuile — même règle que le halo.
+   déborder de la tuile.
    ⚠️ Le reflet se mesure en PIXELS, pas en pourcentage du remplissage
    (constat de Julien, 25 août 2026 : « l'animation Flux n'est toujours pas
-   visible »). En %, sur la barre à 33 % de Fwee il faisait 40 px et passait
-   en un clin d'œil ; à 0 % il n'existait pas. En px, le même glint traverse
-   toutes les largeurs au même rythme — et le voile est monté à 0.45, un
-   bandeau de 8 px de haut n'ayant pas les moyens d'être timide. */
+   visible »). En %, sur une barre à 33 % il faisait 40 px et passait en un clin
+   d'œil ; à 0 % il n'existait pas. En px, le même glint traverse toutes les
+   largeurs au même rythme — et le voile est monté à 0.45, un bandeau de 8 px de
+   haut n'ayant pas les moyens d'être timide. */
 .dash-progress .dash-bar-count { position: relative; overflow: hidden; }
 .dash-progress .dash-bar-count::after {
   content: '';
@@ -1512,18 +1534,6 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .dash-progress .dash-bar-count::after { animation: none; opacity: 0; }
 }
-
-:root[data-theme="light"] .dash-progress {
-  background: rgba(255, 255, 255, 0.58);
-  border-color: rgba(20, 25, 40, 0.1);
-  box-shadow: 0 12px 36px rgba(79, 70, 229, 0.14);
-}
-:root[data-theme="light"] .dash-progress::before {
-  background:
-    radial-gradient(280px 220px at 14% 16%, rgba(79, 70, 229, 0.1), transparent 68%),
-    radial-gradient(260px 230px at 88% 84%, rgba(10, 165, 216, 0.09), transparent 68%);
-}
-:root[data-theme="light"] .dash-progress .dash-bar { background: rgba(20, 25, 40, 0.07); }
 
 .dash-big { font-size: 56px; font-weight: 800; letter-spacing: -2px; line-height: 1; margin: 10px 0 6px; }
 .dash-big-unit { font-size: 28px; font-weight: 700; color: var(--text-2); margin-left: 4px; }
