@@ -60,8 +60,8 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
       return {
         action: 'refus',
         titre: 'Balise inutile ici',
-        texte: `Cet inventaire ne fonctionne pas par balises : scannez directement les `
-          + `articles à ${VERBE[ctx.passe]}.\n\n${luAffiche(valeur)}`,
+        texte: `${luAffiche(valeur)}\nCet inventaire ne fonctionne pas par balises : `
+          + `scannez directement les articles à ${VERBE[ctx.passe]}.`,
       }
     }
     return { action: 'article', code: valeur }
@@ -92,14 +92,14 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
       ? {
         action: 'refus',
         titre: 'Ce n’est pas une balise',
-        texte: `Ce code n’a pas été produit par Quantinvo. Visez l’étiquette collée `
-          + `sur le rayon, ou saisissez son numéro ci-dessus.\n\n${luAffiche(valeur)}`,
+        texte: `${luAffiche(valeur)}\nCe code n’a pas été produit par Quantinvo. `
+          + `Saisissez le numéro de la balise ci-dessus.`,
       }
       : {
         action: 'refus',
         titre: 'Code non reconnu',
-        texte: `Ce n’est pas une balise Quantinvo. Visez l’étiquette du rayon pour `
-          + `ouvrir votre zone, ou saisissez son numéro ci-dessus.\n\n${luAffiche(valeur)}`,
+        texte: `${luAffiche(valeur)}\nCe n’est pas une balise Quantinvo. Saisissez `
+          + `son numéro ci-dessus pour ouvrir la zone.`,
       }
   }
 
@@ -119,6 +119,12 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
  * seconde : ou bien le code affiché commence par `SCB1:` et c'est notre
  * lecture qui est fautive, ou bien il porte tout autre chose et l'étiquette
  * n'est pas une balise Quantinvo.
+ *
+ * ⚠️ **ELLE VIENT EN PREMIER, ET C'EST MESURÉ.** Posée en fin de texte, elle
+ * n'apparaissait pas du tout : le bandeau d'erreur coupe à TROIS lignes
+ * (`Dialogue.tsx`, `numberOfLines={3}`), et l'explication les consommait
+ * toutes. Vu sur le Pixel — le message finissait par « … ci-dessus.... ».
+ * Ce qui doit être lu passe avant ce qui explique.
  *
  * Bornée à 40 signes : un QR peut porter une page entière, et une carte de
  * question qui déborde ne se lit plus.

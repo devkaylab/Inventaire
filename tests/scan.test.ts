@@ -87,12 +87,25 @@ describe('un article ne s’enregistre que dans une zone ouverte', () => {
     expect(d.action === 'refus' && d.texte).toContain('Code lu : 5056635611789')
   })
 
+  it('⚠️ le code lu est la PREMIÈRE chose du message', () => {
+    // Le bandeau d'erreur coupe à trois lignes : posée à la fin, la ligne
+    // n'apparaissait pas du tout. Vu sur le Pixel le 7 septembre 2026.
+    for (const code of ['5056635611789', 'https://exemple.fr/page']) {
+      const d = deciderScan(code, CTX())
+      expect(d.action === 'refus' && d.texte.startsWith('Code lu : '), code).toBe(true)
+    }
+    const b = deciderScan(balisePayload('1'), CTX({ parBalises: false }))
+    expect(b.action === 'refus' && b.texte.startsWith('Code lu : ')).toBe(true)
+  })
+
   it('⚠️ un code interminable ne fait pas déborder la carte', () => {
     const d = deciderScan('X'.repeat(300), CTX())
     if (d.action !== 'refus') throw new Error('refus attendu')
-    const lu = d.texte.slice(d.texte.indexOf('Code lu : '))
-    expect(lu.length).toBeLessThan(60)
-    expect(lu).toContain('…')
+    // C'est la PREMIÈRE ligne qui doit tenir : le bandeau coupe à trois, et
+    // un QR peut porter une page entière.
+    const premiere = d.texte.split('\n')[0]
+    expect(premiere.length).toBeLessThan(60)
+    expect(premiere).toContain('…')
   })
 })
 
@@ -114,7 +127,8 @@ describe('⚠️ un QR qui n’est pas une balise le DIT', () => {
     expect(d.action).toBe('refus')
     if (d.action !== 'refus') return
     expect(d.titre).toBe('Ce n’est pas une balise')
-    expect(d.texte).toContain('saisissez son numéro')
+    // Le geste qui débloque reste dit : on saisit le numéro.
+    expect(d.texte).toContain('numéro')
   })
 
   it('⚠️ mais un code-barres d’article garde SON refus', () => {
