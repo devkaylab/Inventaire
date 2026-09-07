@@ -465,11 +465,26 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
               </button>
             </div>
           )}
-          <h3>Affecter une plage de balises à un emplacement</h3>
+          {/* ⚠️ Le texte suit le CHAMP qu'on a sous les yeux. Avec la bascule
+              active il n'y a plus qu'un champ : parler de plage et donner un
+              exemple « 1 à 10 » fait chercher un second champ qui n'existe
+              pas. Même règle que le message de saisie, dont `validateRange`
+              change déjà le libellé selon le mode. */}
+          <h3>{unique ? 'Affecter une balise à un emplacement' : 'Affecter une plage de balises à un emplacement'}</h3>
           <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
-            Indiquez quelles balises — imprimées et collées — sont à quel endroit.
-            Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
-            Réaffecter une plage déjà nommée la renomme. {MAX_RANGE} balises au maximum par affectation.
+            {unique ? (
+              <>
+                Indiquez à quel endroit se trouve cette balise — imprimée et collée.
+                Exemple : la balise 42 est en « Réserve ».
+                Réaffecter une balise déjà nommée la renomme.
+              </>
+            ) : (
+              <>
+                Indiquez quelles balises — imprimées et collées — sont à quel endroit.
+                Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
+                Réaffecter une plage déjà nommée la renomme. {MAX_RANGE} balises au maximum par affectation.
+              </>
+            )}
           </p>
 
           <button
@@ -529,7 +544,9 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
             title="Aucun emplacement affecté"
             hint={readOnly
               ? "Aucune balise n'a été rattachée à un emplacement sur cet inventaire."
-              : 'Indiquez une première plage de balises ci-dessus pour pouvoir suivre l’avancement zone par zone.'}
+              : unique
+                ? 'Indiquez une première balise ci-dessus pour pouvoir suivre l’avancement zone par zone.'
+                : 'Indiquez une première plage de balises ci-dessus pour pouvoir suivre l’avancement zone par zone.'}
           />
         )
       ) : (

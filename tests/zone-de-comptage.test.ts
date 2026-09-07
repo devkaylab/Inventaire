@@ -126,4 +126,19 @@ describe('une seule balise', () => {
     // défaire en « harmonisant » avec les blocs voisins.
     expect(code(zones)).toMatch(/choix: \{[^}]*borderRadius: Radius\.bouton/)
   })
+  it('⚠️ et le TITRE et l’AIDE le suivent aussi', () => {
+    // Trouvé en l'exerçant sur le Pixel le 7 septembre 2026 : la bascule
+    // marchait — deux champs devenaient un — mais trois textes continuaient de
+    // parler de plage au-dessus d'un champ unique (le titre, l'exemple
+    // « balises 1 à 10 », et l'état vide). Le message de saisie, lui, suivait
+    // déjà : c'est ce décalage qui rend la lecture confuse plutôt qu'une
+    // simple maladresse.
+    const c = code(zones)
+    expect(c).toContain('Affecter une balise à un emplacement')
+    expect(c).toContain('Affecter une plage à un emplacement')
+    expect(c, 'l’exemple d’une plage ne se lit pas devant un champ unique')
+      .toContain('la balise 42 est en')
+    expect(c, 'l’état vide réclame encore une plage en mode balise seule')
+      .toContain('Indiquez une première balise ci-dessus.')
+  })
 })

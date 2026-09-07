@@ -235,10 +235,18 @@ export default function ZonesScreen() {
                   <Text style={styles.retour}>← Revenir à la question</Text>
                 </Pressable>
               )}
-              <Text style={styles.sectionTitle}>Affecter une plage à un emplacement</Text>
+              {/* ⚠️ Le texte suit le CHAMP qu'on a sous les yeux. Avec la
+                  bascule active il n'y a plus qu'un champ : parler de plage et
+                  donner un exemple « 1 à 10 » fait chercher un second champ qui
+                  n'existe pas. Même règle que le message de saisie, dont
+                  `validateRange` change déjà le libellé selon le mode. */}
+              <Text style={styles.sectionTitle}>
+                {unique ? 'Affecter une balise à un emplacement' : 'Affecter une plage à un emplacement'}
+              </Text>
               <Text style={styles.hint}>
-                Indiquez quelles balises (imprimées et collées) sont à quel endroit.
-                Ex. « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
+                {unique
+                  ? 'Indiquez à quel endroit se trouve cette balise (imprimée et collée). Ex. la balise 42 est en « Réserve ».'
+                  : 'Indiquez quelles balises (imprimées et collées) sont à quel endroit. Ex. « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.'}
               </Text>
 
               <View style={styles.switchRow}>
@@ -319,7 +327,11 @@ export default function ZonesScreen() {
               ce qu'on a à répondre, et « indiquez une première plage ci-dessus »
               désignerait deux boutons qui ne demandent aucune plage. */}
           {groups.length === 0 && (closed || etape === 'affecter') && (
-            <Text style={styles.empty}>Aucun emplacement affecté. Indiquez une première plage de balises ci-dessus.</Text>
+            <Text style={styles.empty}>
+              {unique
+                ? 'Aucun emplacement affecté. Indiquez une première balise ci-dessus.'
+                : 'Aucun emplacement affecté. Indiquez une première plage de balises ci-dessus.'}
+            </Text>
           )}
 
           {fromNew && (

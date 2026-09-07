@@ -5694,25 +5694,37 @@ Points à ne pas défaire :
 
 ## Le garde-fou du retour, et le piège de la pile
 
-Quitter le comptage avec une balise **réellement** ouverte pose la question —
-« Quitter le comptage ? », *Rester* (bouton plein) ou *Quitter*. Une balise
-seulement consultée ne demande **rien** : il n'y a rien à décider.
+⚠️ **LE RETOUR CLÔTURE LA BALISE — il ne propose pas de rester.** Demande de
+Julien du 29 août 2026, en ces termes : « Retour doit clôturer au même titre
+que les deux boutons clôturer ». Quitter le comptage avec une balise
+**réellement** ouverte ouvre donc la confirmation de `closeBalise` elle-même —
+« Clôturer la balise 1 ? — 2 pièces comptées. Vous pourrez y revenir si
+besoin. », *Annuler* ou *Clôturer*. Une balise seulement consultée ne demande
+**rien** : il n'y a rien à clôturer, donc rien à confirmer.
 
-⚠️ **Cette question ne décide pas d'une clôture, et c'est un amendement du
-soir même** (Julien : « il faut prevent from closing/returning by accident »).
-La première version proposait *Clôturer* / *Laisser ouverte* : aucune des deux
-réponses ne permettait de **rester** — un retour accidentel faisait quitter
-l'écran quoi qu'on réponde. Les deux gestes sont désormais séparés :
+⚠️ **CETTE NOTE A DÉCRIT LE CONTRAIRE PENDANT DIX JOURS**, et elle a coûté :
+le 7 septembre 2026, exerçant le retour sur le Pixel, j'ai lu la carte
+« Clôturer la balise » comme un défaut et j'ai commencé à l'annoncer à Julien.
+C'est le code qui a tranché — son commentaire cite la demande du 29 août. **Une
+description de comportement qui vit dans un fichier daté se corrige quand le
+comportement change**, exactement comme une liste de « reste à faire » se barre
+quand elle est faite (le même piège avait produit deux fausses annonces sur
+l'onboarding le 4 septembre).
 
-- **le retour protège la navigation** — la réponse voulue est *Rester*, donc
-  c'est elle le bouton plein ;
-- **la clôture a sa propre confirmation** (`closeBalise` la pose lui-même) :
-  « Clôturer la balise 1 ? — 13 pièces comptées. Vous pourrez y revenir si
-  besoin. » Les boutons de clôture sont à portée du pouce pendant qu'on
-  scanne, et une clôture de travers annonce un rayon fini qui ne l'est pas.
-  **La question nomme le compte** : c'est le seul chiffre qui fasse remarquer
-  qu'on n'est pas sur la bonne balise. Le paramètre `silencieux` a disparu
-  avec la clôture automatique à la sortie.
+Ce que la version d'avant proposait, et pourquoi elle est tombée : le 25 août,
+le retour posait « Quitter le comptage ? » avec *Rester* en bouton plein.
+Julien l'a fait retirer parce qu'une **balise laissée ouverte disparaît de
+l'écran** — la liste « Revenir sur une balise » ne montre que les clôturées —
+et ses pièces sont introuvables sans rescanner l'étiquette. Partir sans
+clôturer n'était donc pas une sortie, c'était une impasse.
+
+- **`closeBalise` porte sa propre confirmation**, et on la réutilise telle
+  quelle plutôt que d'en écrire une seconde qui dériverait. Elle rend `false`
+  si la personne annule ou si la clôture échoue — on reste alors sur l'écran,
+  ce qui donne au geste la protection que « Rester » apportait.
+- **Elle nomme le compte** : c'est le seul chiffre qui fasse remarquer qu'on
+  n'est pas sur la bonne balise. Le paramètre `silencieux` a disparu avec la
+  clôture automatique à la sortie.
 
 Même règle pour « Rouvrir » depuis la liste, dont la question a été
 **raccourcie sur capture de Julien** (la note « la simple consultation ne
@@ -11708,10 +11720,22 @@ rejoue des semaines plus tard, à quelqu'un qui connaît le produit, cesse d'en
 la bascule est une affaire d'écran, `start` et `end` valent le même numéro. Une
 garde refuse l'apparition d'une RPC `define_balise` ou `define_zone_unique`.
 
-- **Le message de saisie suit le champ qu'on a sous les yeux.** « Indiquez la
-  première et la dernière balise de la plage » devant un seul champ ferait
-  chercher le second. D'où le quatrième paramètre de `validateRange` — il ne
-  change **que** le message.
+- **⚠️ TOUT LE TEXTE suit le champ qu'on a sous les yeux**, pas seulement le
+  message d'erreur. « Indiquez la première et la dernière balise de la plage »
+  devant un seul champ ferait chercher le second. D'où le quatrième paramètre
+  de `validateRange` — il ne change **que** le message.
+  · **⚠️ Et le titre et l'aide ont mis un jour à suivre.** Exercée sur le Pixel
+    le 7 septembre 2026, la bascule marchait — deux champs devenaient un — mais
+    **trois textes continuaient de parler de plage** au-dessus d'un champ
+    unique : le titre (« Affecter une **plage** à un emplacement »), l'exemple
+    (« Réserve = balises 1 à 10 ») et l'état vide (« Indiquez une première
+    **plage** »). Le message de saisie, lui, suivait déjà : c'est ce décalage
+    entre un texte juste et trois textes faux qui rend la lecture confuse
+    plutôt qu'une simple maladresse. Corrigé des deux côtés, avec une garde
+    par surface.
+  · **La leçon vaut au-delà de ce champ** : quand une bascule change ce qu'on
+    voit, ce qui la décrit change avec — l'inventaire des textes concernés se
+    fait à l'écran, pas dans le diff.
 - Sur l'application, la bascule est un `Switch` — le motif déjà employé par
   « Utiliser des zones / balises » à la création d'un inventaire.
 - Les cartes de choix portent `Radius.bouton` : **elles se touchent**. La garde
@@ -12264,3 +12288,75 @@ tient sur ce build.
   de partage.
 
 Ces trois-là sont les mêmes que la veille : ils ne se prouvent qu'en écrivant.
+
+# Ce que seul un vrai téléphone pouvait dire (7 septembre 2026)
+
+Trois choses restaient non vérifiées depuis des jours, et elles demandaient
+toutes **d'écrire dans les données réelles de Julien** : le mode avion, le
+va-et-vient du tunnel de préparation (il faut créer un inventaire), et l'export
+Excel. Feu vert donné le 7 septembre au soir ; parcours mené sur le Pixel, sur
+son compte, dans un inventaire jetable supprimé ensuite.
+
+| Ce qui n'avait jamais tourné | Constaté |
+|---|---|
+| L'export Excel | feuille de partage, `inventaire_INV-…_2026-09-07.xlsx`, **et l'app répond après sa fermeture** |
+| Le tunnel : la flèche native | ramène à **l'étape précédente**, son état conservé (bascule, emplacement) |
+| Le tunnel : la sortie | `dismissAll` tient — la flèche de la fiche ramène à la **liste**, pas dans le tunnel |
+| La question « Avez-vous vos balises ? » | s'affiche sur un inventaire vierge, et **disparaît** dès le premier emplacement |
+| Mode avion : article inconnu | la fiche s'ouvre, **plus de « fetch failed »** (défaut du 2 septembre) |
+| Mode avion : la file | « 1 balise en attente · Envoi automatique dès le retour du réseau » |
+| Mode avion : le rescan | le code est **retrouvé dans le cache local**, pas de seconde fiche |
+| Retour du réseau | file vidée, et en base : **1 article, 2 lignes, 2 pièces, 1 zone** |
+
+Deux repères se sont joués au passage, que je n'avais jamais vus se déclencher :
+« Balise 1 ouverte » et **« Une erreur se corrige »** (deuxième scan du même
+article), tous deux du 31 août.
+
+## ⚠️ L'EXPORT EXCEL EST LA PLUS ANCIENNE DES TROIS, ET LA PLUS SILENCIEUSE
+
+Le défaut historique n'était pas le fichier, c'était **l'application qui ne
+répondait plus après la fermeture de la feuille de partage** (la `Modal` de
+`GeneratingOverlay`, corrigée le 23 août). Un export qui produit son fichier ne
+prouve donc rien tout seul : **il faut refermer la feuille et toucher l'écran
+derrière**. C'est ce contrôle-là qui manquait.
+
+## ⚠️ UNE NOTE DE CE FICHIER M'A FAIT ANNONCER UN FAUX DÉFAUT
+
+En exerçant le retour depuis le comptage, la carte qui s'est ouverte disait
+« Clôturer la balise 1 ? ». La section « Le garde-fou du retour » d'AGENTS.md
+promettait « Quitter le comptage ? · *Rester* / *Quitter* » — j'ai commencé à
+l'annoncer à Julien comme un défaut. **C'est le code qui a tranché** : son
+commentaire cite une demande de Julien du 29 août 2026, « Retour doit clôturer
+au même titre que les deux boutons clôturer ». Le comportement observé était le
+bon depuis dix jours ; c'est la note qui était périmée. Elle est corrigée.
+
+Une garde existait pourtant côté code (`tests/comptage.test.ts` refuse le
+retour de « Quitter le comptage ? ») : **le code était protégé, la
+documentation ne l'était pas**. Troisième fois que ce fichier induit en erreur —
+après la liste d'onboarding du 28 août (deux fausses annonces le 4 septembre) et
+les neuf orphelins de migrations « à rattraper » déjà rattrapés. La règle vaut
+donc pour les **descriptions de comportement** autant que pour les listes de
+reste-à-faire : *elles se corrigent quand le comportement change.*
+
+## Une observation qui n'a pas été corrigée
+
+**En revenant du comptage, la fiche de l'inventaire affiche « 0 pièce
+comptée »** jusqu'à ce qu'on touche le bouton de rafraîchissement — les
+2 pièces étaient pourtant en base. C'est le cache de la requête, et l'écran
+porte déjà de quoi le rafraîchir ; mais on vient de compter, et lire zéro à cet
+instant précis peut faire douter d'un travail qui a bien été enregistré.
+Invalider la requête au retour de l'écran de comptage le fermerait. Relevé, pas
+corrigé — ce n'était pas l'objet de la passe.
+
+## Méthode
+
+- **Piloter par `adb` demande de recapturer avant CHAQUE appui.** Un appui posé
+  à des coordonnées relevées sur une capture antérieure atterrit ailleurs dès
+  que la page a défilé — c'est ce qui a ouvert des cartes que je ne visais pas
+  (une clôture de balise, une saisie dans le mauvais champ). Le piège était
+  déjà écrit pour le 4 septembre ; il s'est reproduit trois fois ce soir.
+- Le mode avion se pose sans root : `adb shell cmd connectivity airplane-mode
+  enable` / `disable`, et `settings get global airplane_mode_on` le confirme.
+- **Zéro résidu contrôlé** après suppression : 0 inventaire `ZZTEST%`, 0 article
+  d'essai, et les six compteurs de la base (4 inventaires, 165 comptages,
+  142 articles, 72 zones, 62 audits, 135 lignes de stock) à leur valeur d'avant.
