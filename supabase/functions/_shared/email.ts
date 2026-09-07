@@ -24,18 +24,49 @@
 // fonctions edge *et* par les tests du site (web/tests/email-template.test.ts).
 // ============================================================================
 
-/** Palette « Papier » de la charte v1.1. Aucune autre couleur dans ce fichier. */
+/**
+ * La palette d'ARDOISE, thème clair. Aucune autre couleur dans ce fichier.
+ *
+ * ⚠️ ELLE A REMPLACÉ « PAPIER » LE 7 SEPTEMBRE 2026, et ce gabarit était le
+ * DERNIER endroit du produit à porter l'ancienne identité : bandeau bleu nuit
+ * `#0b0f19`, filet de scan cyan `#38c9ff`, bouton indigo `#6366f1`, gris
+ * bleutés. Le site est passé le 6, l'application l'après-midi ; les e-mails
+ * n'avaient pas suivi parce qu'ils vivent hors du site — constat de Julien,
+ * capture d'un message reçu à l'appui.
+ *
+ * ⚠️ IL N'Y A PAS DE THÈME SOMBRE ICI, et il ne faut pas en ajouter. Un e-mail
+ * se lit dans une messagerie qui compose comme elle veut ; le gabarit déclare
+ * `color-scheme: light` et s'y tient. Les valeurs sont donc celles du thème
+ * clair du site (`web/app/globals.css`, bloc `[data-theme="light"]`).
+ *
+ * Contrastes mesurés sur les fonds où chacune sert : le texte courant 10,3:1
+ * sur blanc, le second plan 6,6:1 sur blanc et 5,8:1 sur le pied, le blanc du
+ * bouton 9,6:1 sur l'accent.
+ */
 export const COULEURS = {
   blanc: '#ffffff',
-  encre: '#0b0f19',
-  encre2: '#2a3140',
-  indigoProfond: '#4636b0',
-  indigo: '#6366f1',
-  ardoise: '#5b6475',
-  brume: '#f4f5f9',
-  filet: '#e3e6ee',
-  cyan: '#38c9ff',
+  /** L'encre d'Ardoise — celle du rail du site et du bandeau de l'app. */
+  encre: '#14181a',
+  /** Le texte courant : l'encre adoucie, sans bleu. */
+  encre2: '#3a423f',
+  /**
+   * Le vert forêt du thème clair. Il ne sert QU'À CE QUI ENGAGE — le bouton et
+   * le lien secondaire — comme partout ailleurs dans Ardoise.
+   */
+  accent: '#1e4d3b',
+  /** Second plan : notes, pied, adresse de secours. */
+  ardoise: '#575f5c',
+  /** Le papier d'Ardoise : pied de page et encadré de faits. */
+  brume: '#f2f3f1',
+  filet: '#e2e5e1',
 } as const
+
+/**
+ * Les rayons. ⚠️ Trois valeurs, pas dix-sept — et petites : « un outil de
+ * travail n'a pas les coins ronds d'une application grand public ». Ils
+ * valaient 14, 13, 10 et 8 px avant Ardoise.
+ */
+const RAYON = { carte: '4px', interieur: '3px' } as const
 
 const POLICE =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
@@ -122,7 +153,7 @@ function encadreDetails(details: DetailEmail[]): string {
             </tr>`,
     )
     .join('')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:2px 0 24px;background:${COULEURS.brume};border:1px solid ${COULEURS.filet};border-radius:10px;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:2px 0 24px;background:${COULEURS.brume};border:1px solid ${COULEURS.filet};border-radius:${RAYON.interieur};">
             <tr><td style="padding:14px 16px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">${lignes}</table>
             </td></tr>
@@ -132,8 +163,8 @@ function encadreDetails(details: DetailEmail[]): string {
 function boutonHtml(bouton: BoutonEmail): string {
   const lien = echapper(lienSur(bouton.lien))
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0;">
-            <tr><td align="center" bgcolor="${COULEURS.indigo}" style="border-radius:8px;">
-              <a href="${lien}" style="display:inline-block;padding:11px 20px;font-family:${POLICE};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${echapper(bouton.libelle)}</a>
+            <tr><td align="center" bgcolor="${COULEURS.accent}" style="border-radius:${RAYON.carte};">
+              <a href="${lien}" style="display:inline-block;padding:11px 20px;font-family:${POLICE};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:${RAYON.carte};">${echapper(bouton.libelle)}</a>
             </td></tr>
           </table>
           <p style="margin:28px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">Le bouton ne fonctionne pas ? Copiez cette adresse :<br>
@@ -163,7 +194,7 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
     contenu.details?.length ? encadreDetails(contenu.details) : '',
     contenu.bouton ? boutonHtml(contenu.bouton) : '',
     contenu.lienSecondaire
-      ? `<p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:${COULEURS.encre2};"><a href="${echapper(lienSur(contenu.lienSecondaire.lien))}" style="color:${COULEURS.indigoProfond};text-decoration:underline;font-weight:600;">${echapper(contenu.lienSecondaire.libelle)}</a></p>`
+      ? `<p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:${COULEURS.encre2};"><a href="${echapper(lienSur(contenu.lienSecondaire.lien))}" style="color:${COULEURS.accent};text-decoration:underline;font-weight:600;">${echapper(contenu.lienSecondaire.libelle)}</a></p>`
       : '',
     contenu.note
       ? `<p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">${echapper(contenu.note)}</p>`
@@ -186,11 +217,15 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${echapper(apercu)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COULEURS.filet};">
   <tr><td align="center" style="padding:28px 12px;">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:${COULEURS.blanc};border:1px solid ${COULEURS.filet};border-radius:14px;font-family:${POLICE};">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background:${COULEURS.blanc};border:1px solid ${COULEURS.filet};border-radius:${RAYON.carte};font-family:${POLICE};">
 
-      <!-- En-tête : bandeau encre, tuile et mot-symbole en blanc. Le filet
-           de scan cyan fait la frontière avec le corps. -->
-      <tr><td bgcolor="${COULEURS.encre}" style="background:${COULEURS.encre};padding:28px 32px;border-radius:13px 13px 0 0;">
+      <!-- En-tête : bandeau encre, la marque et le mot-symbole en os.
+           ⚠️ LE FILET DE SCAN CYAN A DISPARU LE 7 SEPTEMBRE 2026. C'était le
+           faisceau du cube isométrique, retiré du produit le 6 ; un filet
+           décoratif n'engage rien, et dans Ardoise l'accent ne sert qu'à ce
+           qui engage. L'encre s'arrête, le blanc commence — c'est ce qu'on a
+           fait le même jour en retirant la lueur de tous les héros du site. -->
+      <tr><td bgcolor="${COULEURS.encre}" style="background:${COULEURS.encre};padding:28px 32px;border-radius:${RAYON.interieur} ${RAYON.interieur} 0 0;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td valign="middle" style="padding-right:14px;">
@@ -202,9 +237,6 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
           </tr>
         </table>
       </td></tr>
-      <tr><td style="padding:0;">
-        <div style="height:2px;line-height:2px;font-size:0;background:${COULEURS.cyan};">&nbsp;</div>
-      </td></tr>
 
       <!-- Corps -->
       <tr><td style="padding:26px 32px 30px;">
@@ -213,7 +245,7 @@ export function emailQuantinvo(contenu: ContenuEmail): { html: string; text: str
       </td></tr>
 
       <!-- Pied : bande gris clair, tout ce qui est secondaire y descend -->
-      <tr><td style="background:${COULEURS.brume};border-top:1px solid ${COULEURS.filet};padding:20px 32px 22px;border-radius:0 0 13px 13px;">
+      <tr><td style="background:${COULEURS.brume};border-top:1px solid ${COULEURS.filet};padding:20px 32px 22px;border-radius:0 0 ${RAYON.interieur} ${RAYON.interieur};">
         <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:${COULEURS.ardoise};">
           <strong style="color:${COULEURS.encre};font-weight:600;">Quantinvo</strong> — l'outil d'inventaire pour le commerce.
         </p>

@@ -14,13 +14,43 @@ const exemple = {
 }
 
 describe('Gabarit d’e-mail — charte', () => {
-  it('pose la palette Papier : fond blanc, filet de scan cyan, bouton indigo', () => {
+  it('⚠️ pose la palette d’ARDOISE — et plus une seule valeur de l’ancienne', () => {
+    // Ce gabarit était le DERNIER endroit du produit à porter l'identité
+    // d'avant : bandeau bleu nuit, filet de scan cyan, bouton indigo, gris
+    // bleutés. Constat de Julien le 7 septembre 2026, capture d'un message
+    // reçu à l'appui.
     const { html } = emailQuantinvo(exemple)
     expect(html).toContain(COULEURS.blanc)
-    expect(html).toContain(COULEURS.cyan)
-    expect(html).toContain(COULEURS.indigo)
-    // La direction sombre du site n'a pas cours dans un e-mail (règle « Papier »).
+    expect(html).toContain(COULEURS.encre)
+    expect(html).toContain(COULEURS.accent)
+    for (const morte of ['#0b0f19', '#2a3140', '#4636b0', '#6366f1', '#5b6475',
+                         '#f4f5f9', '#e3e6ee', '#38c9ff']) {
+      expect(html, `${morte} est un reste de la palette « Papier »`).not.toContain(morte)
+    }
+    // Un e-mail n'a pas de thème : la direction sombre du site n'a pas cours.
     expect(html).not.toContain('#151a27')
+    expect(html).not.toContain('#141716')
+  })
+
+  it('⚠️ le filet de scan a disparu avec le cube qui le portait', () => {
+    // C'était le faisceau du cube isométrique, retiré du produit le
+    // 6 septembre. Un filet décoratif n'engage rien, et dans Ardoise l'accent
+    // ne sert qu'à ce qui engage — même geste que la lueur retirée de tous les
+    // héros du site le même jour.
+    const { html } = emailQuantinvo(exemple)
+    expect(html).not.toMatch(/height:2px;line-height:2px/)
+  })
+
+  it('⚠️ les coins sont ceux d’un outil de travail', () => {
+    // Ils valaient 14, 13, 10 et 8 px. « Un outil de travail n'a pas les coins
+    // ronds d'une application grand public. »
+    const { html } = emailQuantinvo(exemple)
+    for (const rayon of (html.match(/border-radius:([^;"]+)/g) ?? [])) {
+      for (const px of rayon.match(/(\d+)px/g) ?? []) {
+        expect(Number(px.replace('px', '')), `${rayon} dépasse le rayon d’Ardoise`)
+          .toBeLessThanOrEqual(4)
+      }
+    }
   })
 
   it('reste du HTML d’e-mail : tableaux, styles en ligne, pas de feuille ni de script', () => {
