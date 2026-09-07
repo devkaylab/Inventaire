@@ -72,10 +72,13 @@ export function AppLogo({ size = 340, animated = true, color = '#ECEFEC', tuile 
       withTiming(POSITIONS.length, {
         duration: CYCLE_MS,
         easing: Easing.linear,
-        // ⚠️ La préférence système coupe l'animation, comme le
-        // `prefers-reduced-motion` du site. Une marque qui bouge sans qu'on
-        // l'ait demandé est exactement ce que ce réglage vise.
-        reduceMotion: ReduceMotion.Always,
+        // ⚠️ `System`, PAS `Always` — et l'erreur a coûté le geste entier.
+        // Dans Reanimated, `Always` veut dire « TOUJOURS réduire », donc
+        // toujours DÉSACTIVER : la marque ne balayait jamais, sur aucun
+        // téléphone. Constat de Julien au premier build, 6 septembre 2026.
+        // `System` est la valeur qui SUIT le réglage de l'appareil — le
+        // pendant exact du `prefers-reduced-motion` du site.
+        reduceMotion: ReduceMotion.System,
       }),
       -1,
       false,

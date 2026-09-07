@@ -203,6 +203,25 @@ describe('la marque', () => {
     expect(rects(icones), 'les icônes ont divergé du site').toEqual(attendu)
   })
 
+  it('⚠️ l’icône du projet iOS suit la source, à l’octet près', () => {
+    // ⚠️ `assets/images/` N'EST QUE LA SOURCE. Constat de Julien au premier
+    // build du 6 septembre 2026 : « l'icône de l'app n'a pas changé ». Elle
+    // avait bien changé — dans `assets/images/`, et nulle part ailleurs.
+    // `ios/` est VERSIONNÉ et ne se régénère jamais : son icône vivait dans
+    // `Images.xcassets` et datait du 19 juin. Le script l'y recopie désormais,
+    // et cette garde vérifie que la copie a bien été refaite.
+    //
+    // (Android n'est pas garda-ble ici : son dossier est généré et gitignoré.
+    // Il faut relancer `npx expo prebuild --platform android --clean`, ce que
+    // le script rappelle en clair à la fin de son exécution.)
+    const source = readFileSync(path.join(racine, 'assets/images/icon.png'))
+    const iosIcon = readFileSync(path.join(
+      racine, 'ios/Inventaire/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png'))
+    expect(iosIcon.equals(source),
+      'l’icône du projet iOS a divergé de la source : relancer `node scripts/generate-icons.mjs`')
+      .toBe(true)
+  })
+
   it('⚠️ elle balaie à l’ouverture et pendant la génération des balises', () => {
     // Demande de Julien, 6 septembre 2026. Ce sont les deux moments où
     // l'application fait attendre : l'ouverture, et le dessin d'une planche de
@@ -211,11 +230,21 @@ describe('la marque', () => {
     expect(code(overlay)).toMatch(/<AppLogo[^/]*animated[\s/]/)
   })
 
-  it('⚠️ et la préférence système peut la couper', () => {
-    // Une marque qui bouge sans qu'on l'ait demandé est exactement ce que le
-    // réglage « réduire les animations » vise. C'est le pendant du
-    // `prefers-reduced-motion` du site.
-    expect(code(logo)).toContain('ReduceMotion.Always')
+  it('⚠️ elle SUIT la préférence système — elle ne s’y soumet pas d’office', () => {
+    // ⚠️ CETTE GARDE A FIGÉ UN DÉFAUT PENDANT UNE HEURE, et c'est sa leçon.
+    // Elle exigeait `ReduceMotion.Always` — or dans Reanimated `Always` veut
+    // dire « toujours RÉDUIRE », donc toujours désactiver : la marque ne
+    // balayait sur aucun téléphone, et le test confirmait que tout allait
+    // bien. Constat de Julien au premier build.
+    //
+    // Une garde qui recopie une valeur sans savoir ce qu'elle fait ne garde
+    // rien : elle certifie l'erreur. Elle vise maintenant la valeur qui SUIT
+    // le réglage de l'appareil, et refuse nommément les deux autres.
+    expect(code(logo), 'l’animation doit suivre le réglage de l’appareil')
+      .toContain('ReduceMotion.System')
+    for (const faux of ['ReduceMotion.Always', 'ReduceMotion.Never']) {
+      expect(code(logo), `${faux} décide à la place de la personne`).not.toContain(faux)
+    }
   })
 
   it('⚠️ le décalage du balayage est en PIXELS, pas en unités de viewBox', () => {

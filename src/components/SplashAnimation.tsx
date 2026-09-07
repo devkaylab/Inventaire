@@ -20,9 +20,17 @@ interface SplashAnimationProps {
 const HOLD_MS = 1700 // time the logo stays fully visible before fading out
 
 /**
- * Full-screen animated loading screen shown over the app at launch.
- * Dark radial background + the animated scan-beam logo, fading itself out
- * when done so the app underneath is revealed.
+ * L'écran d'ouverture, posé par-dessus l'application au lancement.
+ *
+ * Un fond radial d'encre, la marque qui balaie, et l'écran qui s'efface de
+ * lui-même pour révéler l'application dessous. Il dure ~2,8 s (650 ms
+ * d'entrée, 1 700 de tenue, 450 de sortie), soit trois cycles de balayage.
+ *
+ * ⚠️ CE N'EST PAS L'ÉCRAN DE DÉMARRAGE NATIF. Celui-là est une image fixe
+ * (`assets/images/splash-icon.png`, posée par expo-splash-screen) et il ne
+ * peut pas s'animer : il s'affiche avant que le JavaScript existe. Celui-ci
+ * le recouvre dès que l'application est prête. Deux écrans, deux natures —
+ * ne pas chercher à animer le premier.
  */
 export function SplashAnimation({ onFinish }: SplashAnimationProps) {
   const { width, height } = useWindowDimensions()

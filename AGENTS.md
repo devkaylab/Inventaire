@@ -11104,6 +11104,53 @@ zéro, libellé au-dessus du chiffre dans la bande de synthèse.
 les libellés, c'est-à-dire ce qu'on **lit**. Une garde lit le bloc de styles de
 ces deux écrans et le refuse.
 
+## ⚠️ DEUX DÉFAUTS TROUVÉS PAR JULIEN AU PREMIER BUILD
+
+Les deux sont instructifs, et le second était de ma main.
+
+### 1. « L'icône de l'app n'a pas changé »
+
+Elle avait bien changé — **dans `assets/images/`, et nulle part ailleurs**.
+Les deux projets natifs ne lisent pas ce dossier au build : ils en gardent
+leur propre copie.
+
+| | Nature | Ce qui s'y trouvait |
+|---|---|---|
+| `ios/…/AppIcon.appiconset/` | **versionné**, jamais régénéré | l'icône du **19 juin** |
+| `android/app/src/main/res/mipmap-*` | **généré et gitignoré** | celle du 2 septembre |
+
+⚠️ **`pixel.sh` ne régénère `android/` QUE S'IL MANQUE.** C'est écrit plus haut
+dans ce fichier, et ça veut dire que ses icônes ne suivent jamais toutes
+seules. Deux remèdes, de natures différentes :
+
+- **iOS** : `generate-icons.mjs` recopie désormais l'icône dans le projet
+  versionné. Elle passe par git comme le reste d'`ios/`, et **un test compare
+  les deux fichiers à l'octet près** — c'est ce qui aurait attrapé le défaut.
+- **Android** : le script ne peut rien y faire, il **rappelle en clair** à la
+  fin de son exécution qu'il faut relancer
+  `npx expo prebuild --platform android --clean`. Fait le 7 septembre : les
+  `mipmap-*` et le `splashscreen_logo` portent la nouvelle marque, et
+  `iconBackground` est passé à l'encre d'Ardoise.
+
+### 2. ⚠️ « L'écran d'ouverture logo non animé » — ET MA GARDE FIGEAIT LE DÉFAUT
+
+`reduceMotion: ReduceMotion.Always`. Dans Reanimated, **`Always` veut dire
+« toujours RÉDUIRE », donc toujours DÉSACTIVER** — pas « toujours respecter le
+réglage ». La marque ne balayait sur aucun téléphone : elle sautait
+instantanément à sa valeur finale, allée pleine à droite, immobile. La valeur
+qui SUIT le réglage de l'appareil est **`ReduceMotion.System`**.
+
+⚠️ **Et le test le certifiait.** Il exigeait `ReduceMotion.Always`, la valeur
+que je venais d'écrire — donc il confirmait que tout allait bien pendant que
+rien ne bougeait. **Une garde qui recopie une valeur sans savoir ce qu'elle
+fait ne garde rien : elle certifie l'erreur.** Elle vise maintenant `System` et
+refuse nommément les deux autres.
+
+Au passage : **l'écran de démarrage natif est une image fixe et ne peut pas
+s'animer** — il s'affiche avant que le JavaScript existe. C'est
+`SplashAnimation` qui le recouvre et qui balaie, ~2,8 s, soit trois cycles.
+Deux écrans, deux natures ; ne pas chercher à animer le premier.
+
 ## Vérifications
 
 - **Le paquet iOS s'exporte** (`expo export --platform ios`) : tous les imports
@@ -11123,8 +11170,10 @@ ces deux écrans et le refuse.
 
 ## ⚠️ CE QUI N'EST PAS VÉRIFIÉ, ET POURQUOI
 
-**Rien n'a été vu à l'écran.** `./scripts/simulateur.sh` échoue sur cette
-machine depuis ce chantier, et l'échec n'a rien à voir avec le code :
+**Rien n'a été vu à l'écran DEPUIS L'AGENT** — Julien, lui, a construit et a
+trouvé les deux défauts ci-dessus en deux minutes. `./scripts/simulateur.sh`
+échoue sur cette machine depuis ce chantier, et l'échec n'a rien à voir avec
+le code :
 
 ```
 *** -[__NSDictionaryM setObject:forKey:]: object cannot be nil

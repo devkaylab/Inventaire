@@ -7,7 +7,7 @@
 // Requires the dev dependency @resvg/resvg-js (pure binary, no system deps).
 
 import { Resvg } from '@resvg/resvg-js'
-import { writeFileSync } from 'node:fs'
+import { copyFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { deflateSync } from 'node:zlib'
@@ -133,9 +133,42 @@ function render(svg, size, file, opaque = false) {
   console.log(`✓ ${file} (${size}px${opaque ? ', no alpha' : ''})`)
 }
 
+/**
+ * ⚠️ `assets/images/` N'EST QUE LA SOURCE — LES PROJETS NATIFS EN GARDENT LEUR
+ * PROPRE COPIE, ET C'EST CE QUI A FAIT CROIRE QUE L'ICÔNE N'AVAIT PAS CHANGÉ.
+ *
+ * Constat de Julien au premier build du 6 septembre 2026 : « l'icône de l'app
+ * n'a pas changé ». Elle avait bien changé dans `assets/images/` — et nulle
+ * part ailleurs. Les deux projets natifs ne lisent pas ce dossier au build :
+ *
+ * · **iOS** — `ios/` est VERSIONNÉ et ne se régénère jamais. Son icône vit
+ *   dans `Images.xcassets/AppIcon.appiconset/`, et la sienne datait du
+ *   19 juin. Le script l'y écrit donc lui-même : c'est le seul moyen pour
+ *   qu'elle suive, et le fichier passe par git comme le reste d'`ios/`.
+ *
+ * · **Android** — `android/` est GÉNÉRÉ et gitignoré, et `pixel.sh` ne le
+ *   régénère que s'il MANQUE. Ses `mipmap-*` gardent donc les anciennes
+ *   icônes indéfiniment. Le script ne peut rien y faire : il faut relancer
+ *   `npx expo prebuild --platform android --clean`, ce que ce fichier rappelle
+ *   en clair à la fin de son exécution.
+ */
+const ICONE_IOS = join(root, 'ios/Inventaire/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png')
+
 render(fullBleed, 1024, 'icon.png', true)
 render(rounded, 1024, 'splash-icon.png')
 render(adaptiveBackground, 1024, 'android-icon-background.png')
 render(adaptiveForeground, 1024, 'android-icon-foreground.png')
 render(rounded, 48, 'favicon.png')
+
+// ⚠️ L'icône iOS, dans le projet versionné. `copyFileSync` plutôt qu'un
+// `render` de plus : c'est exactement le même fichier, et deux rendus du même
+// dessin finiraient par diverger.
+copyFileSync(out('icon.png'), ICONE_IOS)
+console.log('✓ ios/…/AppIcon.appiconset/App-Icon-1024x1024@1x.png')
+
+console.log('')
+console.log('⚠️  Android : ses icônes vivent dans android/app/src/main/res/mipmap-*,')
+console.log('    un dossier GÉNÉRÉ que pixel.sh ne refait que s\'il manque.')
+console.log('    Pour qu\'elles suivent :  npx expo prebuild --platform android --clean')
+console.log('')
 console.log('Done.')
