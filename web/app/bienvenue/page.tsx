@@ -9,6 +9,7 @@ import { MentionCollecte } from '@/components/MentionCollecte'
 import { PasswordRules } from '@/components/PasswordRules'
 import { StoreBadges } from '@/components/StoreBadges'
 import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
+import { Chargement } from '@/components/Chargement'
 
 /**
  * Finalisation de compte, à l'arrivée du lien reçu par e-mail.
@@ -125,7 +126,7 @@ export default function WelcomePage() {
   }
 
   if (!ready) {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   if (!hasSession) {

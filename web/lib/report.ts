@@ -98,6 +98,69 @@ function forcerEnTexte(XLSX: typeof XLSXNS, ws: XLSXNS.WorkSheet, cols: number[]
   }
 }
 
+/**
+ * Les formats de nombre du classeur — piste « Registre », 6 septembre 2026.
+ *
+ * ⚠️ C'EST LA SEULE CHOSE QUE REGISTRE PEUT FAIRE À UN TABLEUR, ET C'EST LA
+ * PLUS UTILE. Mesuré le 6 septembre sur la version 0.20.3 du dépôt : la
+ * bibliothèque libre écrit les formats de nombre (`z`), les largeurs de
+ * colonne (`!cols`) et le filtre automatique (`!autofilter`) — mais **aucun
+ * style de cellule**. Ni gras, ni couleur, ni bordure : c'est réservé à la
+ * version payante. La ligne TOTAL ne peut donc pas être mise en gras, et elle
+ * reste reconnaissable par son libellé.
+ *
+ * ⚠️ ET LES FORMATS SE POSENT PAR NOM DE COLONNE, JAMAIS PAR INDICE. Une
+ * colonne insérée un jour décalerait tout, en silence — le fichier resterait
+ * juste, il s'afficherait faux. Le nom, lui, suit la colonne.
+ *
+ * ⚠️ Un format n'est PAS du texte : la cellule reste un nombre, le tableur la
+ * somme toujours. C'est exactement l'inverse de `forcerEnTexte`, qui fige les
+ * codes — et c'est pourquoi les deux ne visent jamais la même colonne.
+ */
+const FORMAT_QTE = '#,##0'
+const FORMAT_EUROS = '#,##0.00" €"'
+const FORMATS: Readonly<Record<string, string>> = {
+  'Prix achat unitaire': FORMAT_EUROS,
+  'Écart (valeur achat)': FORMAT_EUROS,
+  'Valeur': FORMAT_EUROS,
+  'Qté théorique': FORMAT_QTE,
+  'Qté comptée': FORMAT_QTE,
+  'Qté auditée': FORMAT_QTE,
+  'Écart (unités)': FORMAT_QTE,
+  'Inventaires': FORMAT_QTE,
+}
+
+function formaterNombres(XLSX: typeof XLSXNS, ws: XLSXNS.WorkSheet): void {
+  const range = XLSX.utils.decode_range(ws['!ref']!)
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const entete = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })]
+    const format = FORMATS[String(entete?.v ?? '')]
+    if (!format) continue
+    for (let R = range.s.r + 1; R <= range.e.r; R++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]
+      if (cell && cell.t === 'n') cell.z = format
+    }
+  }
+}
+
+/**
+ * Le filtre automatique sur l'en-tête : un clic pour trier par écart.
+ *
+ * ⚠️ IL S'ARRÊTE AVANT LA LIGNE TOTAL. Sans ça, le tableur la traite comme une
+ * ligne de données : elle se retrouve triée au milieu du tableau, ou masquée
+ * par un filtre — sur la seule ligne qu'on cherche toujours.
+ */
+function filtrerEnTete(XLSX: typeof XLSXNS, ws: XLSXNS.WorkSheet, lignesDeTotal = 0): void {
+  const range = XLSX.utils.decode_range(ws['!ref']!)
+  if (range.e.r - lignesDeTotal <= range.s.r) return
+  ws['!autofilter'] = {
+    ref: XLSX.utils.encode_range({
+      s: { r: range.s.r, c: range.s.c },
+      e: { r: range.e.r - lignesDeTotal, c: range.e.c },
+    }),
+  }
+}
+
 export async function downloadXlsx(
   inventoryNumber: string, rows: SessionResultRow[], detailRows: SessionDetailRow[] = [],
 ): Promise<string> {
@@ -110,6 +173,8 @@ export async function downloadXlsx(
     { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
   ]
   forcerEnTexte(XLSX, ws, [0, 1])
+  formaterNombres(XLSX, ws)
+  filtrerEnTete(XLSX, ws, 1) // la feuille « Écarts » finit par une ligne TOTAL
   XLSX.utils.book_append_sheet(wb, ws, 'Écarts')
 
   const wsDetail = XLSX.utils.json_to_sheet(buildDetailRows(detailRows))
@@ -119,6 +184,8 @@ export async function downloadXlsx(
   ]
   // SKU, EAN et Zone sont des codes numériques : eux aussi en texte.
   forcerEnTexte(XLSX, wsDetail, [0, 1, 4])
+  formaterNombres(XLSX, wsDetail)
+  filtrerEnTete(XLSX, wsDetail)
   XLSX.utils.book_append_sheet(wb, wsDetail, 'Détail par zone')
 
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
@@ -302,6 +369,8 @@ export async function downloadStoreXlsx(
     { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 12 },
   ]
   forcerEnTexte(XLSX, ws, [0, 1])
+  formaterNombres(XLSX, ws)
+  filtrerEnTete(XLSX, ws, 1) // « Consolidé » finit par une ligne TOTAL
   XLSX.utils.book_append_sheet(wb, ws, 'Consolidé')
 
   const wsDetail = XLSX.utils.json_to_sheet(buildStoreDetailRows(detailRows))
@@ -312,6 +381,8 @@ export async function downloadStoreXlsx(
   // Le numéro d'inventaire, le SKU et l'EAN sont des codes : en texte, sans
   // quoi ils partent en notation scientifique et perdent leurs zéros de tête.
   forcerEnTexte(XLSX, wsDetail, [1, 3, 4])
+  formaterNombres(XLSX, wsDetail)
+  filtrerEnTete(XLSX, wsDetail)
   XLSX.utils.book_append_sheet(wb, wsDetail, 'Par inventaire')
 
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer

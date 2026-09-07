@@ -805,7 +805,7 @@ function makeStyles(t: Theme) {
       // La liste espace ses éléments par `gap` : les volets doivent donc faire
       // exactement la hauteur de la carte, sans marge basse qui les
       // raccourcirait.
-      width: 96, borderRadius: Radius.lg,
+      width: 96, borderRadius: Radius.bouton,
       alignItems: 'center', justifyContent: 'center', gap: 4,
     },
     balayageVolets: { flexDirection: 'row', gap: Spacing.sm, marginLeft: Spacing.sm },
@@ -866,7 +866,7 @@ function makeStyles(t: Theme) {
     videTexte: { color: t.textSecondary, fontSize: 14, fontFamily: Font.regular, lineHeight: 20 },
     fab: {
       position: 'absolute', bottom: Spacing.xxl, left: Spacing.xxl, right: Spacing.xxl,
-      backgroundColor: t.accent, borderRadius: Radius.lg, paddingVertical: Spacing.lg,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', ...t.shadowElevated,
     },
     fabText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },

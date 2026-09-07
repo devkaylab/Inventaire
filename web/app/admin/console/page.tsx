@@ -12,6 +12,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { CompanyRequests } from '@/components/admin/CompanyRequests'
 import { AuditLog } from '@/components/admin/AuditLog'
+import { Chargement } from '@/components/Chargement'
 
 type DeletionRequest = {
   id: string; user_id: string; email: string | null
@@ -49,7 +50,7 @@ export default function AdminConsolePage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   return (

@@ -21,6 +21,7 @@ import {
   lirePlafonds, aSurveiller, pourcent, LIBELLES_ETAT, LIBELLES_SOURCE,
   type Capacite, type Pointes, type Plafond,
 } from '@/lib/capacite'
+import { Chargement } from '@/components/Chargement'
 
 type Releve = {
   success: boolean
@@ -57,7 +58,7 @@ export default function AdminCapacitePage() {
   }, [guard.status, charger])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const capacite = releve?.success ? (releve.capacite ?? null) : null

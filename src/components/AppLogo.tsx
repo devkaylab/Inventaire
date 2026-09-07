@@ -1,136 +1,137 @@
 import { useEffect } from 'react'
-import { StyleSheet, View } from 'react-native'
-import Svg, {
-  Defs,
-  LinearGradient,
-  RadialGradient,
-  Stop,
-  Rect,
-  Polygon,
-  Path,
-  G,
-} from 'react-native-svg'
+import { View } from 'react-native'
+import Svg, { Rect } from 'react-native-svg'
 import Animated, {
-  useSharedValue,
+  Easing,
+  ReduceMotion,
   useAnimatedStyle,
+  useSharedValue,
   withRepeat,
   withTiming,
-  Easing,
 } from 'react-native-reanimated'
 
 interface AppLogoProps {
   size?: number
-  /** Animate the scan beam (default true). */
+  /** Fait balayer l'allée pleine (défaut : oui). */
   animated?: boolean
+  /**
+   * La couleur de la marque. Elle est MONOCHROME : elle prend la couleur du
+   * texte qui l'entoure, comme sur le site (`currentColor`).
+   */
+  color?: string
+  /**
+   * Pose la tuile d'encre derrière la marque — l'icône de l'application, et
+   * elle seule. Partout ailleurs le fond de l'écran suffit.
+   */
+  tuile?: boolean
 }
 
 /**
- * App icon recreated from the Claude Design handoff (isometric package +
- * electric-blue scan beam). Vector, so it stays crisp at any size.
+ * La marque Quantinvo — « la zone ».
  *
- * The beam is an overlay Animated.View (not an animated SVG node): animating
- * react-native-svg props via useAnimatedProps is unreliable on Reanimated 4,
- * whereas useAnimatedStyle on a View is rock-solid. The beam stays well inside
- * the rounded icon, so no clipping is needed.
+ * Un plan de magasin réduit à son minimum : le cadre, trois allées, et celle
+ * qu'on est en train de compter, pleine. C'est le différenciateur du produit —
+ * une zone par semaine, pas un grand week-end par an.
+ *
+ * ⚠️ LE CUBE ISOMÉTRIQUE ET SON FAISCEAU BLEU ONT DISPARU LE 6 SEPTEMBRE 2026,
+ * sur décision de Julien, et avec eux l'indigo. La marque ne porte plus aucun
+ * dégradé, aucun accent : c'est cohérent avec Ardoise, où l'accent ne sert
+ * qu'à ce qui engage — un logo n'engage rien, il nomme.
+ *
+ * ⚠️ LA GÉOMÉTRIE EST CELLE DE `web/components/Logo.tsx`, AU DIXIÈME PRÈS.
+ * Elle a été reprise telle quelle de la planche de Julien après qu'une version
+ * épaissie lui a été présentée. Ce qu'il faut savoir avant d'y toucher, parce
+ * que c'est mesuré et que ça ne se voit qu'aux petites tailles :
+ *   · le bloc plein (x 3→11) et la première allée fine (x 11→14) SE TOUCHENT,
+ *     donc ils se lisent comme une seule forme de 11 de large dès 192 px ;
+ *   · les allées font 3 unités sur 36, soit un douzième — à 16 px il en reste
+ *     1,3 px et la marque devient une tache. D'où la tuile de l'icône.
+ *
+ * ⚠️ ET L'ANIMATION N'EST PAS UNE ROUE QUI TOURNE. L'allée pleine saute d'une
+ * position à l'autre dans le cadre : c'est le geste du produit, on compte une
+ * zone puis la suivante. Une roue dit « ça charge » ; ceci dit « Quantinvo
+ * travaille ».
  */
-// Enlarge the package+beam within the icon (must match scripts/generate-icons.mjs).
-const GLYPH_SCALE = 1.3
-const GLYPH_TRANSFORM = `translate(256, 256) scale(${GLYPH_SCALE}) translate(-256, -256)`
 
-export function AppLogo({ size = 340, animated = true }: AppLogoProps) {
-  const progress = useSharedValue(0)
-  const unit = (size / 512) * GLYPH_SCALE // SVG units → px (scaled like the glyph)
+/** Les trois positions de l'allée pleine, en unités du viewBox. */
+const POSITIONS = [0, 11, 22]
+/** Le temps d'un cycle complet, aligné sur la planche animée de Julien. */
+const CYCLE_MS = 900
+
+export function AppLogo({ size = 340, animated = true, color = '#ECEFEC', tuile = false }: AppLogoProps) {
+  const pas = useSharedValue(0)
 
   useEffect(() => {
-    if (!animated) return
-    // -16 → 16 → -16 (SVG units) over 3.4s, ease-in-out, forever.
-    progress.value = withRepeat(
-      withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.ease) }),
+    if (!animated) {
+      pas.value = 0
+      return
+    }
+    // 0 → 3 en continu ; c'est `Math.floor` qui fait les trois paliers.
+    pas.value = 0
+    pas.value = withRepeat(
+      withTiming(POSITIONS.length, {
+        duration: CYCLE_MS,
+        easing: Easing.linear,
+        // ⚠️ `System`, PAS `Always` — et l'erreur a coûté le geste entier.
+        // Dans Reanimated, `Always` veut dire « TOUJOURS réduire », donc
+        // toujours DÉSACTIVER : la marque ne balayait jamais, sur aucun
+        // téléphone. Constat de Julien au premier build, 6 septembre 2026.
+        // `System` est la valeur qui SUIT le réglage de l'appareil — le
+        // pendant exact du `prefers-reduced-motion` du site.
+        reduceMotion: ReduceMotion.System,
+      }),
       -1,
-      true,
+      false,
     )
-  }, [animated, progress])
+  }, [animated, pas])
 
-  const beamStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (-16 + 32 * progress.value) * unit }],
-    opacity: animated ? 0.65 + 0.35 * progress.value : 0.9,
-  }))
+  // ⚠️ LE DÉCALAGE EST EN PIXELS, PAS EN UNITÉS DE VIEWBOX. Le SVG est rendu à
+  // `size` : une unité vaut `size / 36`. C'est le piège symétrique du
+  // `transform-box: view-box` qu'il a fallu poser côté web.
+  const unite = size / 36
+  const balayage = useAnimatedStyle(() => {
+    const i = Math.min(Math.floor(pas.value), POSITIONS.length - 1)
+    return { transform: [{ translateX: POSITIONS[i] * unite }] }
+  })
+
+  const marge = tuile ? size * 0.18 : 0
+  const interieur = size - marge * 2
 
   return (
-    <View style={{ width: size, height: size }}>
-      {/* Base icon: rounded background + isometric package */}
-      <Svg width={size} height={size} viewBox="0 0 512 512">
-        <Defs>
-          <LinearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#7466F4" />
-            <Stop offset="0.52" stopColor="#4636B0" />
-            <Stop offset="1" stopColor="#1C153F" />
-          </LinearGradient>
-          <RadialGradient id="topGlow" cx="0.3" cy="0.12" r="0.95">
-            <Stop offset="0" stopColor="#ffffff" stopOpacity="0.20" />
-            <Stop offset="0.55" stopColor="#ffffff" stopOpacity="0" />
-          </RadialGradient>
-          <LinearGradient id="faceTop" x1="0" y1="0" x2="0.4" y2="1">
-            <Stop offset="0" stopColor="#A99CFA" />
-            <Stop offset="1" stopColor="#8E7FF2" />
-          </LinearGradient>
-          <LinearGradient id="faceLeft" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#6E5DEC" />
-            <Stop offset="1" stopColor="#5A49D4" />
-          </LinearGradient>
-          <LinearGradient id="faceRight" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#4A3AA8" />
-            <Stop offset="1" stopColor="#3A2C8C" />
-          </LinearGradient>
-        </Defs>
-
-        <Rect x="6" y="6" width="500" height="500" rx="116" fill="url(#bgGrad)" />
-        <Rect x="6" y="6" width="500" height="500" rx="116" fill="url(#topGlow)" />
-
-        <G transform={GLYPH_TRANSFORM}>
-          {/* Isometric package — three faces */}
-          <Polygon
-            points="256,146 352,196 256,246 160,196"
-            fill="url(#faceTop)"
-            stroke="rgba(255,255,255,0.14)"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-          <Polygon
-            points="160,196 256,246 256,366 160,316"
-            fill="url(#faceLeft)"
-            stroke="rgba(255,255,255,0.10)"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-          <Polygon
-            points="352,196 352,316 256,366 256,246"
-            fill="url(#faceRight)"
-            stroke="rgba(0,0,0,0.10)"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-
-          {/* Closed-flap seams (carton detail) */}
-          <Path
-            d="M256,146 L256,246 M160,196 L352,196"
-            stroke="rgba(255,255,255,0.22)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </G>
-      </Svg>
-
-      {/* Animated scan beam overlay — glow faked with stacked rects */}
-      <Animated.View style={[StyleSheet.absoluteFill, beamStyle]}>
-        <Svg width={size} height={size} viewBox="0 0 512 512">
-          <G transform={GLYPH_TRANSFORM}>
-            <Rect x="92" y="278" width="328" height="20" rx="10" fill="#38C9FF" opacity={0.25} />
-            <Rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF" opacity={0.9} />
-            <Rect x="92" y="285.5" width="328" height="5" rx="2.5" fill="#B6ECFF" />
-          </G>
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: tuile ? size * 0.226 : 0,
+        backgroundColor: tuile ? '#14181A' : 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ width: interieur, height: interieur }}>
+        <Svg width={interieur} height={interieur} viewBox="0 0 36 36">
+          {/* Le magasin. */}
+          <Rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke={color} strokeWidth="3" />
+          {/* Les deux allées qu'on ne compte pas maintenant. */}
+          <Rect x="11" y="3" width="3" height="30" fill={color} />
+          <Rect x="22" y="3" width="3" height="30" fill={color} />
         </Svg>
-      </Animated.View>
+
+        {/* Celle qu'on compte. Dans sa propre couche : elle passe au-dessus
+            des autres quand elle se déplace, et c'est une View qu'on anime —
+            animer une prop de react-native-svg par useAnimatedProps est
+            capricieux sur Reanimated 4, useAnimatedStyle ne l'est pas. */}
+        <Animated.View
+          style={[
+            { position: 'absolute', left: 0, top: 0, width: interieur, height: interieur },
+            balayage,
+          ]}
+        >
+          <Svg width={interieur} height={interieur} viewBox="0 0 36 36">
+            <Rect x="3" y="3" width="8" height="30" fill={color} />
+          </Svg>
+        </Animated.View>
+      </View>
     </View>
   )
 }

@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
+import { Chargement } from '@/components/Chargement'
 
 type CompanyOverview = {
   id: string
@@ -79,7 +80,7 @@ export default function AdminEntreprisesPage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   return (

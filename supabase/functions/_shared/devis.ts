@@ -30,16 +30,36 @@
  */
 export const MENTION_TVA = 'TVA non applicable, article 293 B du CGI'
 
+/**
+ * La palette du devis — piste « Registre », 6 septembre 2026.
+ *
+ * ⚠️ ELLE REMPLACE LE DERNIER INDIGO DU PRODUIT. Le PDF portait encore, à
+ * l'octet près, l'identité d'avant : bandeau #0B0F19, filet cyan #38C9FF,
+ * titre #4636B0, bouton #6366F1 — le même indigo que le halo du logo, retiré
+ * le matin même. C'était le document que le client signe.
+ *
+ * ⚠️ ET IL N'Y A PAS DE FOND. Registre a un papier crème (#FBFAF7) ; on ne le
+ * peint PAS sur la page. Un devis s'imprime : un aplat crème sur 210 × 297 mm
+ * coûte de l'encre au client pour un fond que son papier porte déjà. Le
+ * papier du document, c'est le papier.
+ */
 export const COULEURS_DEVIS = {
-  encre: '#0b0f19',
-  encre2: '#2a3140',
-  indigoProfond: '#4636b0',
-  indigo: '#6366f1',
-  ardoise: '#5b6475',
-  brume: '#f4f5f9',
-  filet: '#e3e6ee',
-  cyan: '#38c9ff',
-  blanc: '#ffffff',
+  encre: '#1b1a17',
+  /**
+   * ⚠️ IL N'Y A PAS DE TROISIÈME GRIS SUR UN DOCUMENT. La palette en portait un
+   * (#8b877c) : sur du papier blanc il donne 3,2:1, sous le seuil AA — et il
+   * portait la date de validité, le SIREN et les en-têtes de colonnes,
+   * c'est-à-dire des choses qu'on LIT. C'est la même règle qu'à l'écran, où
+   * `--text-3` est banni de Registre : dans un document la hiérarchie vient de
+   * la taille et de la casse, jamais de la pâleur.
+   */
+  encre2: '#56534c',
+  /** Le seul accent du produit qui vive hors du thème — voir la décision 2. */
+  marine: '#1d3e63',
+  /** Le signal : ce qui appelle une lecture attentive, jamais une décoration. */
+  ocre: '#8a5a10',
+  filet: '#e2ded3',
+  filetFort: '#c6c1b3',
 } as const
 
 /** Un magasin déclaré au formulaire d'inscription. */
@@ -194,7 +214,15 @@ export function referenceProposee(annee: number, graine: string): string {
 // vertical pour PDF). Page A4.
 
 export type Element =
-  | { type: 'texte'; x: number; y: number; texte: string; taille: number; gras?: boolean; couleur?: string; alignement?: 'gauche' | 'droite' }
+  /**
+   * `police: 'serif'` demande Times plutôt qu'Helvetica.
+   *
+   * ⚠️ ET C'EST TIMES, PAS NEWSREADER. Un PDF n'a droit sans embarquement
+   * qu'aux quatorze polices que tout lecteur possède ; embarquer la serif du
+   * site voudrait dire glisser un fichier de police dans la fonction edge,
+   * pour un document que personne ne comparera côte à côte avec l'écran.
+   */
+  | { type: 'texte'; x: number; y: number; texte: string; taille: number; gras?: boolean; police?: 'serif'; couleur?: string; alignement?: 'gauche' | 'droite' }
   | { type: 'trait'; x1: number; y1: number; x2: number; y2: number; epaisseur: number; couleur: string }
   | { type: 'bloc'; x: number; y: number; largeur: number; hauteur: number; couleur: string }
 
@@ -213,38 +241,38 @@ export function elementsDevis(devis: Devis): Element[] {
   const droite = largeur - marge
   const C = COULEURS_DEVIS
 
-  // En-tête encre, filet de scan cyan : la marque avant le document.
-  e.push({ type: 'bloc', x: 0, y: 0, largeur, hauteur: 26, couleur: C.encre })
-  e.push({ type: 'bloc', x: 0, y: 26, largeur, hauteur: 0.8, couleur: C.cyan })
-  e.push({ type: 'texte', x: marge, y: 15, texte: 'Quantinvo', taille: 16, gras: true, couleur: C.blanc })
+  // ⚠️ L'EN-TÊTE EST UN FILET, PLUS UN BANDEAU. Un aplat d'encre de 26 mm en
+  // haut d'une A4 est une bannière de site posée sur un document — et il
+  // s'imprime. La marque en serif à gauche, la nature de la pièce à droite,
+  // un trait d'encre dessous : c'est l'en-tête d'un acte.
+  e.push({ type: 'texte', x: marge, y: 20, texte: 'Quantinvo', taille: 17, police: 'serif', couleur: C.encre })
   e.push({
-    type: 'texte', x: droite, y: 14.5, alignement: 'droite',
-    texte: "L'outil d'inventaire pour le commerce", taille: 8, couleur: '#9aa4c0',
+    type: 'texte', x: droite, y: 20, alignement: 'droite',
+    texte: 'DEVIS', taille: 9, gras: true, couleur: C.encre2,
   })
+  e.push({ type: 'trait', x1: marge, y1: 24, x2: droite, y2: 24, epaisseur: 0.6, couleur: C.encre })
 
+  // La référence EST le titre : c'est par elle qu'on retrouve la pièce.
   let y = 42
-  e.push({ type: 'texte', x: marge, y, texte: 'DEVIS', taille: 18, gras: true, couleur: C.indigoProfond })
-  e.push({ type: 'texte', x: droite, y, texte: devis.reference, taille: 11, gras: true, couleur: C.encre, alignement: 'droite' })
-  y += 7
-  e.push({ type: 'texte', x: droite, y, texte: `Émis le ${jour(devis.emisLe)}`, taille: 9, couleur: C.ardoise, alignement: 'droite' })
-  y += 5
-  e.push({ type: 'texte', x: droite, y, texte: `Valable jusqu'au ${jour(devis.expireLe)}`, taille: 9, couleur: C.ardoise, alignement: 'droite' })
+  e.push({ type: 'texte', x: marge, y, texte: devis.reference, taille: 22, police: 'serif', couleur: C.marine })
+  e.push({ type: 'texte', x: droite, y: y - 4, texte: `Émis le ${jour(devis.emisLe)}`, taille: 9, couleur: C.encre2, alignement: 'droite' })
+  e.push({ type: 'texte', x: droite, y: y + 1, texte: `Valable jusqu'au ${jour(devis.expireLe)}`, taille: 9, couleur: C.encre2, alignement: 'droite' })
 
   // Destinataire
   y = 56
-  e.push({ type: 'texte', x: marge, y, texte: 'Établi pour', taille: 8, couleur: C.ardoise })
+  e.push({ type: 'texte', x: marge, y, texte: 'Établi pour', taille: 8, couleur: C.encre2 })
   y += 6
   e.push({ type: 'texte', x: marge, y, texte: devis.entreprise, taille: 12, gras: true, couleur: C.encre })
   y += 5.5
   e.push({ type: 'texte', x: marge, y, texte: devis.contact, taille: 9.5, couleur: C.encre2 })
   if (devis.siren) {
     y += 5
-    e.push({ type: 'texte', x: marge, y, texte: `SIREN ${devis.siren}`, taille: 9, couleur: C.ardoise })
+    e.push({ type: 'texte', x: marge, y, texte: `SIREN ${devis.siren}`, taille: 9, couleur: C.encre2 })
   }
 
   if (devis.objet) {
     y += 7
-    e.push({ type: 'texte', x: marge, y, texte: devis.objet, taille: 9.5, gras: true, couleur: C.indigoProfond })
+    e.push({ type: 'texte', x: marge, y, texte: devis.objet, taille: 9.5, gras: true, couleur: C.marine })
   }
 
   // Tableau. Les deux colonnes du milieu disent l'assiette : le nombre
@@ -252,11 +280,11 @@ export function elementsDevis(devis: Devis): Element[] {
   // tarife plus rien depuis le 2 septembre 2026.
   const mensuel = devis.rythme === 'monthly'
   y = 88
-  e.push({ type: 'texte', x: marge, y, texte: 'Magasin', taille: 8, gras: true, couleur: C.ardoise })
-  e.push({ type: 'texte', x: marge + 82, y, texte: 'Appareils', taille: 8, gras: true, couleur: C.ardoise })
-  e.push({ type: 'texte', x: marge + 118, y, texte: 'Offre', taille: 8, gras: true, couleur: C.ardoise })
+  e.push({ type: 'texte', x: marge, y, texte: 'Magasin', taille: 8, gras: true, couleur: C.encre2 })
+  e.push({ type: 'texte', x: marge + 82, y, texte: 'Appareils', taille: 8, gras: true, couleur: C.encre2 })
+  e.push({ type: 'texte', x: marge + 118, y, texte: 'Offre', taille: 8, gras: true, couleur: C.encre2 })
   e.push({
-    type: 'texte', x: droite, y, taille: 8, gras: true, couleur: C.ardoise, alignement: 'droite',
+    type: 'texte', x: droite, y, taille: 8, gras: true, couleur: C.encre2, alignement: 'droite',
     texte: mensuel ? 'Abonnement mensuel HT' : 'Licence annuelle HT',
   })
   y += 2.5
@@ -284,21 +312,23 @@ export function elementsDevis(devis: Devis): Element[] {
   if (reste > 0) {
     y += 8
     e.push({
-      type: 'texte', x: marge, y, taille: 9.5, couleur: C.ardoise,
+      type: 'texte', x: marge, y, taille: 9.5, couleur: C.encre2,
       texte: `et ${nombre(reste)} autres magasins, détaillés en annexe`,
     })
   }
 
   // Total
-  y += 14
-  e.push({ type: 'bloc', x: marge, y: y - 7, largeur: droite - marge, hauteur: 16, couleur: C.brume })
+  // Le total se pose sous un trait d'encre, sans aplat : c'est la ligne
+  // d'arrêté d'un relevé, pas un encadré à remarquer.
+  y += 12
+  e.push({ type: 'trait', x1: marge, y1: y - 4, x2: droite, y2: y - 4, epaisseur: 0.6, couleur: C.encre })
   e.push({
-    type: 'texte', x: marge + 5, y: y + 2, taille: 10.5, gras: true, couleur: C.encre,
+    type: 'texte', x: marge, y: y + 3, taille: 10.5, gras: true, couleur: C.encre,
     texte: mensuel ? 'Total mensuel hors taxes' : 'Total annuel hors taxes',
   })
   e.push({
-    type: 'texte', x: droite - 5, y: y + 3, alignement: 'droite', taille: 15, gras: true,
-    couleur: C.indigoProfond, texte: euros(devis.totalCents),
+    type: 'texte', x: droite, y: y + 4, alignement: 'droite', taille: 15, police: 'serif',
+    couleur: C.encre, texte: euros(devis.totalCents),
   })
 
   // Conditions
@@ -324,16 +354,21 @@ export function elementsDevis(devis: Devis): Element[] {
     "L'acceptation de ce devis vaut bon pour accord. La facture suit, et les accès sont",
     'ouverts dès son règlement.',
   ]) {
-    e.push({ type: 'texte', x: marge, y, texte: ligne, taille: 8.5, couleur: C.ardoise })
+    e.push({
+      type: 'texte', x: marge, y, texte: ligne, taille: 8.5,
+      // ⚠️ L'ocre ne sert qu'à ce qui appelle une lecture attentive. Sur ce
+      // document il n'y a qu'une phrase dans ce cas : la mention légale.
+      couleur: ligne === MENTION_TVA ? C.ocre : C.encre2,
+    })
     y += 5
   }
 
   // Pied
   const yPied = PAGE.hauteur - 20
-  e.push({ type: 'trait', x1: marge, y1: yPied - 6, x2: droite, y2: yPied - 6, epaisseur: 0.4, couleur: C.filet })
+  e.push({ type: 'trait', x1: marge, y1: yPied - 6, x2: droite, y2: yPied - 6, epaisseur: 0.4, couleur: C.filetFort })
   e.push({ type: 'texte', x: marge, y: yPied, texte: 'Quantinvo', taille: 9, gras: true, couleur: C.encre })
   e.push({
-    type: 'texte', x: droite, y: yPied, alignement: 'droite', taille: 8.5, couleur: C.ardoise,
+    type: 'texte', x: droite, y: yPied, alignement: 'droite', taille: 8.5, couleur: C.encre2,
     texte: 'Devis établi par Quantinvo · www.quantinvo.com',
   })
 

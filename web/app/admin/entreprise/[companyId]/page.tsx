@@ -25,6 +25,7 @@ import { densite } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
 import { TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
 import { ETIQUETTE, lireAppareils, type AppareilsDuMagasin } from '@/lib/appareils'
+import { Chargement } from '@/components/Chargement'
 
 type Company = { id: string; name: string; join_code: string; created_at: string }
 type Store = {
@@ -479,7 +480,7 @@ export default function AdminCompanyPage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
   if (erreur) {
     return (
@@ -492,7 +493,7 @@ export default function AdminCompanyPage() {
     )
   }
   if (!detail) {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const admins = supervisors.filter((m) => m.is_company_admin)

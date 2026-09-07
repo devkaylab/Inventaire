@@ -61,8 +61,12 @@ export function GeneratingOverlay({ visible, message = 'Génération en cours…
           {/* anneau extérieur (sens horaire) + anneau intérieur (sens inverse) */}
           <Animated.View style={[styles.ring, ringStyle]} />
           <Animated.View style={[styles.ringInner, innerRingStyle]} />
+          {/* ⚠️ ELLE BALAIE PENDANT L'ATTENTE (demande de Julien, 6 septembre
+              2026). Dessiner une planche de 900 balises prend plusieurs
+              secondes : c'est exactement le moment où une marque qui travaille
+              vaut mieux qu'une roue qui tourne. */}
           <Animated.View style={logoStyle}>
-            <AppLogo size={56} />
+            <AppLogo size={56} animated color={theme.textPrimary} />
           </Animated.View>
         </View>
         <Animated.Text style={[styles.msg, msgStyle]}>{message}</Animated.Text>

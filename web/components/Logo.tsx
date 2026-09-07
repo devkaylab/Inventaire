@@ -1,29 +1,67 @@
 /**
- * Le cube Quantinvo.
+ * La marque Quantinvo — « la zone ».
  *
- * `gradientId` existe parce qu'un identifiant SVG doit être **unique dans la
- * page**. Tant qu'il n'y avait qu'un logo par écran, personne ne le voyait ;
- * la barre de l'espace connecté et l'écran « ordinateur requis » en posent
- * deux. Avec le même identifiant, le navigateur résout les deux vers le
- * premier dégradé rencontré : ça marche tant que le premier est là, et le
- * second perd son fond dès qu'il disparaît. Passer un identifiant distinct
- * dès qu'une page porte deux logos.
+ * Un plan de magasin réduit à son minimum : le cadre, trois allées, et celle
+ * qu'on est en train de compter, pleine. C'est le différenciateur du produit —
+ * une zone par semaine, pas un grand week-end par an — et c'est la seule chose
+ * que le symbole raconte.
+ *
+ * ⚠️ LE CUBE ISOMÉTRIQUE A DISPARU LE 6 SEPTEMBRE 2026, sur décision de
+ * Julien, et avec lui l'indigo puis le vert forêt qu'il aura porté une
+ * journée. La marque est MONOCHROME : elle prend la couleur du texte qui
+ * l'entoure (`currentColor`) et ne porte aucun accent. C'est cohérent avec
+ * Ardoise, où l'accent ne sert qu'à ce qui engage — un logo n'engage rien,
+ * il nomme.
+ *
+ * ⚠️ LA GÉOMÉTRIE EST CELLE DE LA PLANCHE, AU DIXIÈME PRÈS, ET C'EST UN CHOIX
+ * DE JULIEN — repris tel quel après qu'une version épaissie lui a été
+ * présentée. Ce qu'il faut savoir avant d'y toucher, parce que c'est mesuré et
+ * que ça ne se voit qu'aux petites tailles :
+ *   · le bloc plein (x 3→11) et la première allée fine (x 11→14) SE TOUCHENT.
+ *     Ils se lisent donc comme une seule forme de 11 de large dès 192 px. La
+ *     seconde paire (14→22 et 22→25) fait pareil quand l'allée pleine s'y
+ *     déplace ;
+ *   · les allées font 3 unités sur 36, soit un douzième — à 16 px, la taille
+ *     du favicon, il en reste 1,3 px et la marque devient une tache.
+ * Le favicon garde donc sa tuile, qui lui donne un fond et un peu de tenue,
+ * et rien d'autre dans le produit ne connaît cette géométrie : elle se corrige
+ * ici, en un seul endroit.
+ *
+ * `gradientId` n'a plus d'objet — il n'y a plus de dégradé — mais le paramètre
+ * reste accepté : une dizaine d'écrans le passent encore, et les casser tous
+ * pour une propriété devenue inerte ne rendrait service à personne.
  */
-export function Logo({ size = 40, gradientId = 'qbg' }: { size?: number; gradientId?: string }) {
+export function Logo({
+  size = 40,
+  anime = false,
+}: {
+  size?: number
+  gradientId?: string
+  /**
+   * Fait balayer l'allée pleine d'une position à l'autre, pour les moments
+   * d'attente. Voir `.logo-allee` dans `globals.css` — l'animation est en CSS
+   * et non en SMIL, précisément pour qu'elle s'arrête sous
+   * `prefers-reduced-motion`.
+   */
+  anime?: boolean
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-label="Quantinvo">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7466F4" />
-          <stop offset="0.52" stopColor="#4636B0" />
-          <stop offset="1" stopColor="#1C153F" />
-        </linearGradient>
-      </defs>
-      <rect x="6" y="6" width="500" height="500" rx="116" fill={`url(#${gradientId})`} />
-      <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA" />
-      <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC" />
-      <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8" />
-      <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 36 36"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Quantinvo"
+    >
+      {/* Le magasin. */}
+      <rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke="currentColor" strokeWidth="3" />
+      {/* Les deux allées qu'on ne compte pas maintenant. */}
+      <rect x="11" y="3" width="3" height="30" fill="currentColor" />
+      <rect x="22" y="3" width="3" height="30" fill="currentColor" />
+      {/* Celle qu'on compte. En dernier : elle passe au-dessus des autres
+          quand elle se déplace. */}
+      <rect x="3" y="3" width="8" height="30" fill="currentColor" className={anime ? 'logo-allee' : undefined} />
     </svg>
   )
 }

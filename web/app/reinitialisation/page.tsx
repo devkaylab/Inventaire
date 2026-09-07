@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { getMySpacePath } from '@/lib/auth'
 import { PasswordRules } from '@/components/PasswordRules'
 import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
+import { Chargement } from '@/components/Chargement'
 
 /**
  * Choix d'un nouveau mot de passe, à l'arrivée du lien « mot de passe oublié ».
@@ -74,7 +75,7 @@ export default function ResetPasswordPage() {
   }
 
   if (!ready) {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   if (!hasSession) {

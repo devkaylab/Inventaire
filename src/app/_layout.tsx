@@ -6,14 +6,31 @@ import { usePorteVisible } from '@/lib/porte'
 import { contenuColonne } from '@/constants/layout'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
-} from '@expo-google-fonts/inter'
+/**
+ * ⚠️ CHAQUE GRAISSE S'IMPORTE PAR SON PROPRE CHEMIN, JAMAIS PAR LA RACINE DU
+ * PAQUET — et c'est mesuré, pas théorique.
+ *
+ * L'index de `@expo-google-fonts/<famille>` fait un `require()` de **toutes**
+ * ses graisses et de toutes leurs italiques. Metro les embarque alors toutes :
+ * en important depuis la racine, le paquet du 6 septembre 2026 emportait
+ * **64 fichiers de police, 6,9 Mo**, pour huit fichiers réellement employés.
+ *
+ * ⚠️ ET LE DÉFAUT PRÉEXISTAIT : l'application importait Inter depuis sa racine
+ * depuis le premier jour, donc elle embarquait déjà les dix-huit fichiers
+ * d'Inter. Le changement de polices ne l'a pas créé, il l'a rendu visible.
+ *
+ * `useFonts` vient donc d'`expo-font` : les entrées par graisse n'exportent
+ * que la police.
+ */
+import { useFonts } from 'expo-font'
+import { Archivo_700Bold } from '@expo-google-fonts/archivo/700Bold'
+import { Archivo_800ExtraBold } from '@expo-google-fonts/archivo/800ExtraBold'
+import { PublicSans_400Regular } from '@expo-google-fonts/public-sans/400Regular'
+import { PublicSans_500Medium } from '@expo-google-fonts/public-sans/500Medium'
+import { PublicSans_600SemiBold } from '@expo-google-fonts/public-sans/600SemiBold'
+import { Newsreader_500Medium } from '@expo-google-fonts/newsreader/500Medium'
+import { IBMPlexMono_400Regular } from '@expo-google-fonts/ibm-plex-mono/400Regular'
+import { IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono/500Medium'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { useNotificationRouting } from '@/lib/push'
 import { ThemeProvider, useThemeControls } from '@/lib/theme'
@@ -76,13 +93,32 @@ function RoutageNotifications() {
 }
 
 export default function RootLayout() {
-  // Load Inter; render nothing until ready so we never flash the system font.
+  /**
+   * On ne rend rien tant que les polices ne sont pas là : sinon l'application
+   * s'ouvre une fraction de seconde dans la police du système, puis saute.
+   *
+   * ⚠️ ARDOISE, 6 septembre 2026 — Inter est partie. Elle était l'une des deux
+   * valeurs par défaut de l'époque, et l'un des trois signes mesurés de l'air
+   * « fait par une IA ». Archivo porte les titres et les nombres, Public Sans
+   * le texte courant, comme sur le site.
+   *
+   * ⚠️ ET LES DEUX DERNIÈRES NE SERVENT QUE SUR LES ÉCRANS QUI FONT FOI —
+   * Newsreader pour le titre d'un rapport, IBM Plex Mono pour ses nombres.
+   * C'est la piste « Registre ». Ne pas les employer ailleurs : la frontière
+   * est ce qui empêche « deux identités » de devenir « deux produits ».
+   *
+   * Mesuré : les cinq graisses d'Inter pesaient 1 678 ko de TTF ; ces huit
+   * fichiers en pèsent 792. On ajoute deux familles et on allège de 886 ko.
+   */
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
+    Archivo_700Bold,
+    Archivo_800ExtraBold,
+    PublicSans_400Regular,
+    PublicSans_500Medium,
+    PublicSans_600SemiBold,
+    Newsreader_500Medium,
+    IBMPlexMono_400Regular,
+    IBMPlexMono_500Medium,
   })
   const [showSplash, setShowSplash] = useState(true)
 

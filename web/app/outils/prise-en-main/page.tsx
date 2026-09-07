@@ -17,6 +17,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { AppShell } from '@/components/AppShell'
 import { getMyCompany, type Company } from '@/lib/account'
 import { CAPTURES_LE, CAPTURES_A_REFAIRE, PARCOURS } from '@/lib/priseEnMain'
+import { Chargement } from '@/components/Chargement'
 
 export default function PriseEnMainPage() {
   const guard = useAuthGuard('supervisor')
@@ -29,7 +30,7 @@ export default function PriseEnMainPage() {
   }, [guard.status])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   return (

@@ -278,6 +278,17 @@ export function viseDansLeCadre(
   return cx >= c.x && cx <= c.x + c.l && cy >= c.y && cy <= c.y + c.h
 }
 
+/**
+ * ⚠️ LE VISEUR PORTE L'ACCENT SOMBRE, DANS LES DEUX THÈMES.
+ *
+ * Il était en cyan #38C9FF — le filet de scan de l'identité d'avant, le même
+ * que celui retiré du devis et des e-mails. Il prend maintenant le vert
+ * d'Ardoise, mais **celui du thème sombre quel que soit le thème** : les
+ * coins du cadre sont tracés PAR-DESSUS LA CAMÉRA, qui est toujours une
+ * surface sombre. Le vert forêt du thème clair (#1E4D3B) y disparaîtrait.
+ */
+const VISEUR = '#5FA88A'
+
 export function Scanner({
   sessionId, passNumber, onArticleResolved, initialScans,
   zoneMode = false, mode: baliseMode = 'count', onModeChange, lockMode = false, countedBy,
@@ -1913,7 +1924,7 @@ export function Scanner({
                   confirmation de quelque chose qu'on aurait fait. */}
               <View style={[styles.voletIcone, volet.genre === 'terminee' && styles.voletIconeOk]}>
                 <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
-                     stroke={volet.genre === 'terminee' ? theme.success : '#38C9FF'} strokeWidth={2.2}
+                     stroke={volet.genre === 'terminee' ? theme.success : VISEUR} strokeWidth={2.2}
                      strokeLinecap="round" strokeLinejoin="round">
                   {volet.genre === 'modes' || volet.genre === 'corriger' ? (
                     <>
@@ -2049,7 +2060,7 @@ function makeStyles(t: Theme) {
     // ── Zone / balise ──────────────────────────────────────────────────────────
     zoneModeToggle: {
       flexDirection: 'row', marginHorizontal: Spacing.md, marginTop: Spacing.md,
-      borderRadius: Radius.md, borderWidth: 1, borderColor: t.hairline,
+      borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.hairline,
       overflow: 'hidden', backgroundColor: t.surface, ...t.shadowCard,
     },
     zoneModeBtn: { flex: 1, paddingVertical: 11, alignItems: 'center' },
@@ -2062,7 +2073,7 @@ function makeStyles(t: Theme) {
       paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, ...t.shadowCard,
     },
     zoneBannerText: { flex: 1, fontSize: 14, fontFamily: Font.semibold, color: t.textPrimary },
-    zoneCloseBtn: { backgroundColor: t.danger, borderRadius: Radius.sm, paddingHorizontal: Spacing.md, paddingVertical: 7 },
+    zoneCloseBtn: { backgroundColor: t.danger, borderRadius: Radius.bouton, paddingHorizontal: Spacing.md, paddingVertical: 7 },
     zoneCloseText: { color: '#fff', fontSize: 13, fontFamily: Font.bold },
     zoneBannerIdle: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm,
@@ -2084,12 +2095,12 @@ function makeStyles(t: Theme) {
     // rouge passait alors PAR-DESSUS « Voir les N articles » ou « En attente
     // d'un code ». Constat de Julien le 31 août 2026 : « ça dépend du moment »
     // — c'est l'apparition de la rangée des scans qui change la hauteur totale.
-    closeFooterBtn: { marginHorizontal: Spacing.md, marginTop: Spacing.sm, marginBottom: Spacing.md, flexShrink: 0, backgroundColor: t.danger, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
+    closeFooterBtn: { marginHorizontal: Spacing.md, marginTop: Spacing.sm, marginBottom: Spacing.md, flexShrink: 0, backgroundColor: t.danger, borderRadius: Radius.bouton, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
     closeFooterText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
 
     modeToggle: {
       flexDirection: 'row', marginHorizontal: Spacing.md, marginTop: Spacing.md, marginBottom: 6,
-      borderRadius: Radius.md, borderWidth: 1, borderColor: t.hairline,
+      borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.hairline,
       overflow: 'hidden', backgroundColor: t.surface, ...t.shadowCard,
     },
     modeBtn: { flex: 1, minHeight: 48, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
@@ -2140,7 +2151,7 @@ function makeStyles(t: Theme) {
     voirScansBtn: {
       marginHorizontal: Spacing.md, marginTop: Spacing.sm, flexShrink: 0,
       backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
-      borderRadius: Radius.md, paddingVertical: 14, paddingHorizontal: Spacing.md,
+      borderRadius: Radius.bouton, paddingVertical: 14, paddingHorizontal: Spacing.md,
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     },
     voirScansTexte: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary },
@@ -2169,7 +2180,7 @@ function makeStyles(t: Theme) {
     hintTextReady: { color: FRAME_COLOR_READY, fontFamily: Font.bold },
 
     triggerBtn: {
-      marginHorizontal: Spacing.md, marginTop: Spacing.sm, borderRadius: Radius.md,
+      marginHorizontal: Spacing.md, marginTop: Spacing.sm, borderRadius: Radius.bouton,
       paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
       backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderStrong, ...t.shadowCard,
     },
@@ -2189,18 +2200,18 @@ function makeStyles(t: Theme) {
     voletFort: { color: t.textPrimary, fontFamily: Font.semibold },
     voletFilet: { height: 1, backgroundColor: t.border, marginVertical: Spacing.md },
     voletNote: { color: t.textMuted, fontSize: 13, fontFamily: Font.regular, lineHeight: 18 },
-    voletBtn: { height: 48, borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
+    voletBtn: { height: 48, borderRadius: Radius.bouton, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
     voletBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
     amorce: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.md, backgroundColor: t.background },
     amorceViseur: { width: 96, height: 96, marginBottom: Spacing.xl },
-    coin: { position: 'absolute', width: 26, height: 26, borderColor: '#38C9FF', borderWidth: 2.5, borderRadius: 4 },
+    coin: { position: 'absolute', width: 26, height: 26, borderColor: VISEUR, borderWidth: 2.5, borderRadius: 4 },
     coinHG: { left: 0, top: 0, borderRightWidth: 0, borderBottomWidth: 0 },
     coinHD: { right: 0, top: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
     coinBG: { left: 0, bottom: 0, borderRightWidth: 0, borderTopWidth: 0 },
     coinBD: { right: 0, bottom: 0, borderLeftWidth: 0, borderTopWidth: 0 },
     amorceTitre: { color: t.textPrimary, fontSize: 22, fontFamily: Font.bold, textAlign: 'center', lineHeight: 29, letterSpacing: -0.4 },
     amorceTexte: { color: t.textSecondary, fontSize: 14.5, fontFamily: Font.regular, textAlign: 'center', lineHeight: 21 },
-    amorceBtn: { height: 48, alignSelf: 'stretch', borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
+    amorceBtn: { height: 48, alignSelf: 'stretch', borderRadius: Radius.bouton, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.lg, ...t.shadowButton },
     amorceBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
     amorceNote: { color: t.textMuted, fontSize: 12.5, fontFamily: Font.regular, textAlign: 'center' },
     pleinPuce: {
@@ -2211,10 +2222,10 @@ function makeStyles(t: Theme) {
     permTitre: { color: t.textPrimary, fontSize: 17, textAlign: 'center', fontFamily: Font.semibold },
     permText: { color: t.textSecondary, fontSize: 15, textAlign: 'center', fontFamily: Font.regular },
     permAide: { color: t.textMuted, fontSize: 13, textAlign: 'center', fontFamily: Font.regular, lineHeight: 18 },
-    permBtnSecondaire: { borderColor: t.borderStrong, borderWidth: 1, borderRadius: Radius.md,
+    permBtnSecondaire: { borderColor: t.borderStrong, borderWidth: 1, borderRadius: Radius.bouton,
       paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
     permBtnSecondaireText: { color: t.textPrimary, fontFamily: Font.semibold },
-    permBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, ...t.shadowButton },
+    permBtn: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, ...t.shadowButton },
     permBtnText: { color: t.onAccent, fontFamily: Font.semibold },
 
     manualContainer: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: 6 },
@@ -2233,7 +2244,7 @@ function makeStyles(t: Theme) {
       paddingHorizontal: Spacing.lg, paddingVertical: 11, minHeight: 48, fontSize: 16,
       backgroundColor: t.surface, color: t.textPrimary, fontFamily: Font.regular, ...tabular,
     },
-    manualBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingHorizontal: Spacing.xl, paddingVertical: 11, minHeight: 48, justifyContent: 'center', ...t.shadowButton },
+    manualBtn: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingHorizontal: Spacing.xl, paddingVertical: 11, minHeight: 48, justifyContent: 'center', ...t.shadowButton },
     manualBtnText: { color: t.onAccent, fontFamily: Font.bold, fontSize: 16 },
 
     listHeader: {
@@ -2257,7 +2268,7 @@ function makeStyles(t: Theme) {
 
     stepper: {
       flexDirection: 'row', alignItems: 'center', backgroundColor: t.background,
-      borderRadius: Radius.sm, borderWidth: 1, borderColor: t.hairline, overflow: 'hidden',
+      borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.hairline, overflow: 'hidden',
     },
     stepBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface },
     stepBtnText: { fontSize: 20, fontFamily: Font.semibold, color: t.textPrimary, lineHeight: 24 },
@@ -2293,10 +2304,10 @@ function makeStyles(t: Theme) {
     illBtnRow: { flexDirection: 'row', gap: Spacing.md, marginTop: 4 },
     illBtnCancel: {
       flex: 1, borderWidth: 1, borderColor: t.borderStrong,
-      borderRadius: Radius.md, paddingVertical: 13, alignItems: 'center',
+      borderRadius: Radius.bouton, paddingVertical: 13, alignItems: 'center',
     },
     illBtnCancelText: { fontSize: 15, color: t.textSecondary, fontFamily: Font.semibold },
-    illBtnConfirm: { flex: 2, backgroundColor: t.warning, borderRadius: Radius.md, paddingVertical: 13, alignItems: 'center' },
+    illBtnConfirm: { flex: 2, backgroundColor: t.warning, borderRadius: Radius.bouton, paddingVertical: 13, alignItems: 'center' },
     illBtnConfirmText: { fontSize: 15, color: '#fff', fontFamily: Font.bold },
   })
 }

@@ -53,9 +53,29 @@ import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function InviteToSessionScreen() {
   const { sessionId, from } = useLocalSearchParams<{ sessionId: string; from?: string }>()
-  // Dernière étape du tunnel : le retour est masqué comme sur les deux écrans
-  // précédents, et la sortie se fait par « Commencer l'inventaire ».
+  /**
+   * Dernière étape du tunnel. La flèche ramène à l'étape précédente — les
+   * trois écrans s'empilent —, et « Commencer l'inventaire » en sort.
+   */
   const fromNew = from === 'new'
+
+  /**
+   * ⚠️ ON VIDE LE TUNNEL AVANT D'OUVRIR LA FICHE, ET C'EST OBLIGATOIRE.
+   *
+   * Depuis que les étapes s'EMPILENT (pour qu'on puisse revenir sur ses pas —
+   * demande de Julien, 7 septembre 2026), la pile vaut ici
+   * `[liste, zones, fichiers, compteurs]`. Un simple `replace` ne changerait
+   * que le dernier écran : la flèche de la fiche de l'inventaire renverrait
+   * alors DANS le tunnel qu'on vient de finir, étape par étape.
+   *
+   * `dismissAll` revient au premier écran de la pile (la liste), et le `push`
+   * pose la fiche par-dessus : la flèche y ramène à la liste, comme partout
+   * ailleurs. Ne pas « simplifier » en un `replace`.
+   */
+  const quitterLeTunnel = () => {
+    router.dismissAll()
+    router.push(`/(supervisor)/${sessionId}`)
+  }
   const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -240,9 +260,6 @@ export default function InviteToSessionScreen() {
         <Stack.Screen
           options={{
             title: 'Ajouter des compteurs',
-            headerBackVisible: false,
-            headerLeft: () => null,
-            gestureEnabled: false,
           }}
         />
       )}
@@ -403,7 +420,7 @@ export default function InviteToSessionScreen() {
 
           {fromNew && (
             <View style={styles.finBloc}>
-              <Pressable style={styles.startBtn} onPress={() => router.replace(`/(supervisor)/${sessionId}`)}>
+              <Pressable style={styles.startBtn} onPress={quitterLeTunnel}>
                 <Text style={styles.startBtnText}>{"Commencer l'inventaire"}</Text>
               </Pressable>
               {/* Demande de Julien : le dire sur la page, plutôt que de le
@@ -503,13 +520,13 @@ function makeStyles(t: Theme) {
     codeChipText: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary },
     codeChipTextFort: { color: t.accent, fontFamily: Font.bold, letterSpacing: 1 },
     partagerBtn: {
-      backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingVertical: 13,
+      backgroundColor: t.accentSoft, borderRadius: Radius.bouton, paddingVertical: 13,
       alignItems: 'center', marginTop: 2,
     },
     partagerBtnText: { color: t.accent, fontSize: 15, fontFamily: Font.bold },
 
     button: {
-      backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton,
     },
     buttonDisabled: { opacity: 0.6 },
@@ -519,7 +536,7 @@ function makeStyles(t: Theme) {
     // Le vert du bout du tunnel, comme sur Zones et Import : le bouton qui fait
     // avancer ne se confond pas avec les actions de l'écran.
     startBtn: {
-      backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg,
+      backgroundColor: t.success, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', ...t.shadowButton,
     },
     startBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },

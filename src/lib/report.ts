@@ -33,6 +33,60 @@ function forceTextColumns(ws: XLSX.WorkSheet, cols: number[]) {
   }
 }
 
+/**
+ * Les formats de nombre du classeur — piste « Registre », 6 septembre 2026.
+ *
+ * ⚠️ COPIE VOLONTAIRE de `web/lib/report.ts`, comme le reste de ce fichier :
+ * l'application et le site ne compilent pas ensemble, et un rapport partagé
+ * depuis le téléphone doit être **le même fichier** que celui téléchargé sur
+ * le site. Les deux bougent ensemble ; un test compare les deux tables.
+ *
+ * Ce que la bibliothèque libre sait écrire, mesuré le 6 septembre : les
+ * formats (`z`), les largeurs (`!cols`), le filtre (`!autofilter`). Pas les
+ * styles de cellule — ni gras, ni couleur : c'est la version payante.
+ */
+const FORMAT_QTE = '#,##0'
+const FORMAT_EUROS = '#,##0.00" €"'
+const FORMATS: Readonly<Record<string, string>> = {
+  'Prix achat unitaire': FORMAT_EUROS,
+  'Écart (valeur achat)': FORMAT_EUROS,
+  'Valeur': FORMAT_EUROS,
+  'Qté théorique': FORMAT_QTE,
+  'Qté comptée': FORMAT_QTE,
+  'Qté auditée': FORMAT_QTE,
+  'Écart (unités)': FORMAT_QTE,
+  'Inventaires': FORMAT_QTE,
+}
+
+// ⚠️ Par NOM de colonne, jamais par indice : une colonne insérée un jour
+// décalerait tout, en silence — le fichier resterait juste, il s'afficherait
+// faux. Et un format n'est pas du texte : la cellule reste sommable.
+function formatNumbers(ws: XLSX.WorkSheet) {
+  const range = XLSX.utils.decode_range(ws['!ref']!)
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const entete = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })]
+    const format = FORMATS[String(entete?.v ?? '')]
+    if (!format) continue
+    for (let R = range.s.r + 1; R <= range.e.r; R++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]
+      if (cell && cell.t === 'n') cell.z = format
+    }
+  }
+}
+
+// ⚠️ Le filtre s'arrête AVANT la ligne TOTAL : sinon le tableur la trie au
+// milieu du tableau, ou la masque — sur la seule ligne qu'on cherche toujours.
+function headerFilter(ws: XLSX.WorkSheet, totalRows = 0) {
+  const range = XLSX.utils.decode_range(ws['!ref']!)
+  if (range.e.r - totalRows <= range.s.r) return
+  ws['!autofilter'] = {
+    ref: XLSX.utils.encode_range({
+      s: { r: range.s.r, c: range.s.c },
+      e: { r: range.e.r - totalRows, c: range.e.c },
+    }),
+  }
+}
+
 export async function exportResultsToExcel(
   inventoryNumber: string,
   rows: SessionResultRow[],
@@ -77,6 +131,8 @@ export async function exportResultsToExcel(
     { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
   ]
   forceTextColumns(ws, [0, 1])
+  formatNumbers(ws)
+  headerFilter(ws, 1) // la feuille « Écarts » finit par une ligne TOTAL
   XLSX.utils.book_append_sheet(wb, ws, 'Écarts')
 
   // ── Onglet « Détail par zone » — une ligne par (article, balise), non sommé ──
@@ -100,6 +156,8 @@ export async function exportResultsToExcel(
   ]
   // SKU (0), EAN (1) et Zone (4) forcés en texte (codes numériques).
   forceTextColumns(wsDetail, [0, 1, 4])
+  formatNumbers(wsDetail)
+  headerFilter(wsDetail)
   XLSX.utils.book_append_sheet(wb, wsDetail, 'Détail par zone')
 
   const b64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' })

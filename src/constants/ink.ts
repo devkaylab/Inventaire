@@ -1,7 +1,23 @@
-// ─── Design system « Ink » — theme tokens ────────────────────────────────────
-// Two palettes (light + dark). Keys are a superset of the old `Colors` object so
-// existing styles keep working while we migrate. New semantic tokens (accent,
-// hairline, headerBg, …) drive the premium look.
+// ─── Ardoise — les jetons de thème de l'application ──────────────────────────
+//
+// Deux palettes (clair + sombre). Les clés sont un sur-ensemble de l'ancien
+// objet `Colors` : les styles existants continuent de marcher.
+//
+// ⚠️ ARDOISE A REMPLACÉ « INK » LE 6 SEPTEMBRE 2026, et l'application a suivi
+// le site le même jour. Ce qui est parti, et il faut le savoir avant de croire
+// à une régression : l'indigo (#4F46E5 / #6366F1), les fonds bleu nuit
+// (#0B0F19, #151A27), Inter, les ombres sous les cartes et les rayons à 16.
+//
+// Les trois signes mesurés de l'air « fait par une IA », relevés sur qonto.com
+// le 6 septembre : un accent qui revient partout, un contour sur chaque bloc,
+// et une échelle typographique trop serrée. Ardoise s'y attaque par une règle
+// simple — **l'accent ne sert qu'à ce qui ENGAGE** : le bouton principal, la
+// passe de comptage. Partout ailleurs, de l'encre.
+//
+// ⚠️ LES DEUX PRODUITS PARTAGENT CES VALEURS. Elles sont la copie de
+// `web/app/globals.css` (bloc `:root` et `:root[data-theme="light"]`) — le site
+// et l'application ne compilent pas ensemble, comme `presence.ts`, `import.ts`
+// et `report.ts`. Elles bougent ENSEMBLE, et un test compare les deux.
 
 export type ThemeName = 'light' | 'dark'
 
@@ -50,120 +66,124 @@ export interface Theme {
   shadowButton: object
 }
 
-const lightShadowCard = {
-  shadowColor: '#0B0F19',
-  shadowOpacity: 0.06,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 2,
-}
+/**
+ * ⚠️ UNE CARTE N'A PLUS D'OMBRE, ET C'EST LE POINT D'ARDOISE.
+ *
+ * Elle ne se détache pas parce qu'on l'a détourée : elle se détache parce que
+ * son fond diffère de celui de la page. Mesuré sur qonto.com le 6 septembre
+ * 2026 — leurs cartes n'ont ni bordure ni ombre. Le contour sur chaque bloc
+ * est l'un des trois signes du « fait par une IA ».
+ *
+ * ⚠️ CE QUI FLOTTE GARDE SA PROFONDEUR. Une feuille modale, un menu, un voile
+ * posé par-dessus du contenu : là, l'ombre dit quelque chose de vrai — cet
+ * objet est AU-DESSUS. `shadowElevated` reste, et lui seul.
+ *
+ * ⚠️ Et sur Android, `elevation` fait la même chose que l'ombre iOS : la
+ * retirer des deux à la fois est nécessaire, sinon les cartes se détachent sur
+ * un système et pas sur l'autre.
+ */
+const aucuneOmbre = {} as const
+
 const lightShadowElevated = {
-  shadowColor: '#0B0F19',
-  shadowOpacity: 0.12,
-  shadowRadius: 24,
+  shadowColor: '#14181A',
+  shadowOpacity: 0.14,
+  shadowRadius: 28,
   shadowOffset: { width: 0, height: 8 },
   elevation: 8,
 }
-const lightShadowButton = {
-  shadowColor: '#4F46E5',
-  shadowOpacity: 0.28,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 4,
-}
-
-const darkShadowCard = {
-  shadowColor: '#000000',
-  shadowOpacity: 0.4,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 3,
-}
 const darkShadowElevated = {
   shadowColor: '#000000',
-  shadowOpacity: 0.55,
-  shadowRadius: 30,
-  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.42,
+  shadowRadius: 28,
+  shadowOffset: { width: 0, height: 8 },
   elevation: 10,
-}
-const darkShadowButton = {
-  shadowColor: '#6366F1',
-  shadowOpacity: 0.45,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 5,
 }
 
 export const lightTheme: Theme = {
   name: 'light',
-  background: '#F7F8FA',
+  // Le papier d'Ardoise n'est ni blanc cassé ni crème : c'est un gris de
+  // chantier, très légèrement vert. La surface reste franchement blanche —
+  // c'est l'écart entre les deux qui découpe l'écran, maintenant qu'il n'y a
+  // plus ni ombre ni bordure.
+  background: '#F2F3F1',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  headerBg: '#0B0F19',
+  // ⚠️ LE BANDEAU EST SOMBRE DANS LES DEUX THÈMES, et ce n'est pas un défaut :
+  // c'est le « bandeau encre » de la charte, comme sur le site. C'est
+  // justement parce qu'il est volontairement sombre que le force-dark
+  // d'Android le rendait BLANC (31 août 2026) — ne pas « corriger ».
+  // L'encre d'Ardoise remplace le bleu nuit #0B0F19 (décision de Julien,
+  // 6 septembre) : deux noirs différents ne se voient pas isolément, ils se
+  // voient quand on pose le téléphone à côté de l'écran.
+  headerBg: '#14181A',
   headerText: '#FFFFFF',
-  headerSubtle: 'rgba(255,255,255,0.55)',
+  headerSubtle: 'rgba(255,255,255,0.58)',
   headerBtnBg: 'rgba(255,255,255,0.12)',
   headerBtnBorder: 'rgba(255,255,255,0.18)',
-  border: '#EEF0F4',
-  hairline: '#EEF0F4',
-  borderStrong: '#E2E5EA',
-  textPrimary: '#0B0F19',
-  textSecondary: '#5A6172',
-  textMuted: '#9AA0AE',
-  primary: '#4F46E5',
-  primaryDark: '#4338CA',
-  accent: '#4F46E5',
-  accentDark: '#4338CA',
-  accentSoft: '#EEF0FF',
+  border: '#E2E5E1',
+  hairline: '#E2E5E1',
+  borderStrong: '#C6CCC7',
+  textPrimary: '#14181A',
+  textSecondary: '#575F5C',
+  textMuted: '#8A918E',
+  primary: '#1E4D3B',
+  primaryDark: '#163D2E',
+  accent: '#1E4D3B',
+  accentDark: '#163D2E',
+  accentSoft: '#E7EDE9',
   onAccent: '#FFFFFF',
-  secondary: '#059669',
-  success: '#059669',
-  successSoft: '#ECFDF5',
-  warning: '#D97706',
-  warningSoft: '#FFFBEB',
-  danger: '#DC2626',
-  dangerSoft: '#FEF2F2',
-  passColors: { 1: '#4F46E5', 2: '#059669', 3: '#DC2626' },
-  cameraBg: '#11151F',
-  shadowCard: lightShadowCard,
+  // ⚠️ LE SUCCÈS EST UN VERT PLUS CLAIR ET PLUS VIF QUE L'ACCENT. Depuis
+  // qu'Ardoise a fait de l'accent un vert forêt, deux verts de même valeur sur
+  // le même écran ne se distinguent plus — c'est pourquoi le bouton
+  // « Exporter » a quitté le succès pour l'accent.
+  secondary: '#15704F',
+  success: '#15704F',
+  successSoft: '#E6F0EB',
+  warning: '#A06A12',
+  warningSoft: '#F7F0E2',
+  danger: '#96291D',
+  dangerSoft: '#F6E9E7',
+  passColors: { 1: '#1E4D3B', 2: '#15704F', 3: '#96291D' },
+  cameraBg: '#0E1110',
+  shadowCard: aucuneOmbre,
   shadowElevated: lightShadowElevated,
-  shadowButton: lightShadowButton,
+  shadowButton: aucuneOmbre,
 }
 
 export const darkTheme: Theme = {
   name: 'dark',
-  background: '#0B0F19',
-  surface: '#151A27',
-  surfaceElevated: '#1B2130',
-  headerBg: '#060910',
+  background: '#141716',
+  surface: '#1B1F1E',
+  surfaceElevated: '#232827',
+  headerBg: '#0B0D0C',
   headerText: '#FFFFFF',
-  headerSubtle: 'rgba(255,255,255,0.5)',
+  headerSubtle: 'rgba(255,255,255,0.55)',
   headerBtnBg: 'rgba(255,255,255,0.10)',
   headerBtnBorder: 'rgba(255,255,255,0.14)',
-  border: '#232A39',
-  hairline: '#232A39',
-  borderStrong: '#2D3548',
-  textPrimary: '#F3F5F9',
-  textSecondary: '#9BA3B4',
-  textMuted: '#646C7E',
-  primary: '#6366F1',
-  primaryDark: '#4F46E5',
-  accent: '#6366F1',
-  accentDark: '#4F46E5',
-  accentSoft: 'rgba(99,102,241,0.15)',
-  onAccent: '#FFFFFF',
-  secondary: '#10B981',
-  success: '#10B981',
-  successSoft: 'rgba(16,185,129,0.14)',
-  warning: '#F59E0B',
-  warningSoft: 'rgba(245,158,11,0.14)',
-  danger: '#EF4444',
-  dangerSoft: 'rgba(239,68,68,0.14)',
-  passColors: { 1: '#6366F1', 2: '#10B981', 3: '#EF4444' },
-  cameraBg: '#05070D',
-  shadowCard: darkShadowCard,
+  border: '#262B29',
+  hairline: '#262B29',
+  borderStrong: '#3A413E',
+  textPrimary: '#ECEFEC',
+  textSecondary: '#9AA39E',
+  textMuted: '#6E7772',
+  primary: '#5FA88A',
+  primaryDark: '#74B89B',
+  accent: '#5FA88A',
+  accentDark: '#74B89B',
+  accentSoft: 'rgba(95,168,138,0.16)',
+  onAccent: '#10201A',
+  secondary: '#4FBF95',
+  success: '#4FBF95',
+  successSoft: 'rgba(79,191,149,0.14)',
+  warning: '#D69A3C',
+  warningSoft: 'rgba(214,154,60,0.14)',
+  danger: '#D9695A',
+  dangerSoft: 'rgba(217,105,90,0.15)',
+  passColors: { 1: '#5FA88A', 2: '#4FBF95', 3: '#D9695A' },
+  cameraBg: '#080A09',
+  shadowCard: aucuneOmbre,
   shadowElevated: darkShadowElevated,
-  shadowButton: darkShadowButton,
+  shadowButton: aucuneOmbre,
 }
 
 export const themes: Record<ThemeName, Theme> = { light: lightTheme, dark: darkTheme }
@@ -171,16 +191,72 @@ export const themes: Record<ThemeName, Theme> = { light: lightTheme, dark: darkT
 // ─── Scales ───────────────────────────────────────────────────────────────────
 export const Spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 } as const
 
-export const Radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const
-
-// Inter font family names (registered in _layout via expo-font)
-export const Font = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
-  extrabold: 'Inter_800ExtraBold',
+/**
+ * ⚠️ TROIS RAYONS, PAS DIX-SEPT. Un outil de travail n'a pas les coins ronds
+ * d'une application grand public : le site est passé à 3 et 4 px, l'application
+ * suit. Les clés gardent leurs noms — `sm`, `md`, `lg`, `xl` sont employés dans
+ * une centaine de styles — mais elles ne portent plus que deux valeurs.
+ * `pill` reste une capsule : c'est une FORME, pas un rayon.
+ */
+export const Radius = {
+  sm: 3, md: 4, lg: 4, xl: 4,
+  /**
+   * ⚠️ UN BOUTON GARDE SES COINS RONDS — décision de Julien, 7 septembre 2026,
+   * après avoir eu l'application en main : « use rounded corners buttons for
+   * the app, as it was previously ».
+   *
+   * C'est un écart assumé avec le site, et il tient à la nature du support :
+   * un bouton de téléphone se TOUCHE. Ce qui dit « ceci se presse », sur une
+   * surface tactile, c'est sa forme — pas un survol, pas un curseur qui
+   * change. À 4 px, les boutons de l'application se lisaient comme des
+   * bandeaux d'information.
+   *
+   * ⚠️ ET C'EST LE SEUL ÉCART : les cartes, les blocs, les champs et les
+   * tableaux restent à 3-4 px comme sur le site. Ne pas l'étendre — le jour où
+   * tout redevient rond, Ardoise n'a plus d'objet.
+   *
+   * 12 est la valeur que 44 des 54 boutons portaient avant Ardoise ; les dix
+   * autres étaient à 16. Une seule valeur, pas deux : c'est ce qui évite de
+   * revenir aux dix-sept d'avant.
+   */
+  bouton: 12,
+  pill: 999,
 } as const
 
-// Helper: tabular figures for numeric values (quantities, money, codes)
+/**
+ * Les polices — Archivo pour les titres et les nombres, Public Sans pour le
+ * texte courant. Enregistrées dans `_layout.tsx` par expo-font.
+ *
+ * ⚠️ INTER EST PARTIE LE 6 SEPTEMBRE 2026, et ce n'est pas un caprice : c'est
+ * l'une des deux valeurs par défaut de l'époque (avec Sora), et l'un des trois
+ * signes mesurés de l'air « fait par une IA ». Le site l'a retirée le matin,
+ * l'application l'après-midi.
+ *
+ * ⚠️ ET LE CHANGEMENT ALLÈGE L'APPLICATION. Mesuré : les cinq graisses d'Inter
+ * pèsent **1 678 ko** de TTF à elles seules. Les quatre familles qui les
+ * remplacent — Archivo (2), Public Sans (3), IBM Plex Mono (2), Newsreader (1)
+ * — pèsent **792 ko** au total, soit **886 ko de MOINS** alors qu'on ajoute
+ * deux familles.
+ *
+ * Deux raisons de terrain, en plus de la cohérence avec le site :
+ * · Archivo a des chiffres tabulaires et une chasse étroite — sur l'écran de
+ *   comptage, un libellé d'article tient sur une ligne là où Inter le casse
+ *   en deux, et les quantités s'alignent en colonne ;
+ * · `serif` et `mono` ne servent QUE sur les deux écrans qui font foi — le
+ *   rapport et les écarts d'audit. Voir la piste « Registre ».
+ */
+export const Font = {
+  regular: 'PublicSans_400Regular',
+  medium: 'PublicSans_500Medium',
+  semibold: 'PublicSans_600SemiBold',
+  bold: 'Archivo_700Bold',
+  extrabold: 'Archivo_800ExtraBold',
+  /** Registre : le titre d'un document. Ne pas employer ailleurs. */
+  serif: 'Newsreader_500Medium',
+  /** Registre : tous les nombres d'un document. Ne pas employer ailleurs. */
+  mono: 'IBMPlexMono_400Regular',
+  monoMedium: 'IBMPlexMono_500Medium',
+} as const
+
+// Chiffres alignés en colonne — toute quantité, tout prix, tout code.
 export const tabular = { fontVariant: ['tabular-nums' as const] }

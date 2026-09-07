@@ -18,6 +18,7 @@ import { PasswordRules } from '@/components/PasswordRules'
 import { friendlyPasswordError, passwordError, passwordSatisfies } from '@/lib/password'
 import { getMyCompany, type Company } from '@/lib/account'
 import { verifyCurrentPassword } from '@/lib/reauth'
+import { Chargement } from '@/components/Chargement'
 
 export default function AccountPage() {
   const guard = useAuthGuard('auth')
@@ -70,7 +71,7 @@ export default function AccountPage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   const profile = guard.profile

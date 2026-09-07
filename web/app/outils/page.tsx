@@ -14,6 +14,7 @@ import { BaliseSheetPanel } from '@/components/BaliseSheetPanel'
 import { getMyCompany, type Company } from '@/lib/account'
 import { ModelesPanel } from '@/components/ModelesPanel'
 import Link from 'next/link'
+import { Chargement } from '@/components/Chargement'
 
 export default function OutilsPage() {
   const guard = useAuthGuard('supervisor')
@@ -29,7 +30,7 @@ export default function OutilsPage() {
   }, [guard.status, charger])
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   return (

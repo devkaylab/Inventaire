@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
-import { CubeFilaire } from '@/components/Parallaxe'
 import { TarifsGrille } from '@/components/TarifsGrille'
 import { CONTACT_EMAIL } from '@/lib/contact'
 import { MENTION_TVA, TVA_APPLICABLE } from '@/lib/offres'
@@ -62,12 +61,6 @@ export default function TarifsPage() {
       <SiteHeader />
       <main>
         <section className="hero" style={{ paddingBottom: 24 }}>
-          <div className="plx hero-cube-int-a" data-plx="0.22" aria-hidden="true">
-            <div className="flotte"><CubeFilaire size={110} /></div>
-          </div>
-          <div className="plx hero-cube-int-b" data-plx="0.5" aria-hidden="true">
-            <div className="flotte-lent"><CubeFilaire size={70} /></div>
-          </div>
           <div className="container">
             <div data-reveal="0"><span className="eyebrow">Tarifs</span></div>
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
@@ -113,9 +106,6 @@ export default function TarifsPage() {
         </section>
 
         <section className="section" style={{ paddingTop: 8 }}>
-          <div className="plx deco-cube deco-droite deco-accent" data-plx="0.3" aria-hidden="true">
-            <CubeFilaire size={110} />
-          </div>
           <div className="container">
             <h2 className="tarifs-titre" data-reveal="0">Ce qui n’est facturé nulle part</h2>
             <p className="tarifs-sous-titre" data-reveal="0">

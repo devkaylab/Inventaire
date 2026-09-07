@@ -262,19 +262,19 @@ function makeStyles(t: Theme) {
     cardTitle: { fontSize: 18, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.3 },
     notifsRangee: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
     notifsPlusTard: {
-      flex: 1, minHeight: 44, borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
+      flex: 1, minHeight: 44, borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.borderStrong,
       alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     },
     notifsPlusTardText: { color: t.textSecondary, fontSize: 15, fontFamily: Font.semibold },
     notifsActiver: {
-      flex: 1, minHeight: 44, borderRadius: Radius.md, backgroundColor: t.accent,
+      flex: 1, minHeight: 44, borderRadius: Radius.bouton, backgroundColor: t.accent,
       alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     },
     notifsActiverText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
     cardDesc: { fontSize: 14, color: t.textSecondary, lineHeight: 20, fontFamily: Font.regular },
     label: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary },
     input: { borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 13, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },
-    button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
+    button: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.xs, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
   })

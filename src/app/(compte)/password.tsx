@@ -198,7 +198,7 @@ function makeStyles(t: Theme) {
     forgot: { alignSelf: 'flex-start', paddingVertical: Spacing.sm },
     forgotText: { fontSize: 13, color: t.accent, fontFamily: Font.semibold },
     btn: {
-      marginTop: Spacing.xl, backgroundColor: t.accent, borderRadius: Radius.md,
+      marginTop: Spacing.xl, backgroundColor: t.accent, borderRadius: Radius.bouton,
       paddingVertical: 14, alignItems: 'center', ...t.shadowButton,
     },
     btnOff: { opacity: 0.45 },

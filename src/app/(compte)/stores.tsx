@@ -210,7 +210,7 @@ function makeStyles(t: Theme) {
     code: { fontSize: 17, color: t.accent, fontFamily: Font.bold, letterSpacing: 2, marginTop: 1 },
 
     shareBtn: {
-      backgroundColor: t.accentSoft, borderRadius: Radius.md,
+      backgroundColor: t.accentSoft, borderRadius: Radius.bouton,
       paddingVertical: 12, paddingHorizontal: Spacing.lg,
     },
     shareBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.semibold },

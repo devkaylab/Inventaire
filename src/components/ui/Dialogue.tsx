@@ -306,7 +306,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   btnLarge: { flex: 0, alignSelf: 'stretch', minHeight: 48 },
   btnFantome: {
     flex: 1, minHeight: 44, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center',
+    borderRadius: Radius.bouton, alignItems: 'center', justifyContent: 'center',
   },
   // 44 px : la cible tactile minimale, et la hauteur des boutons de la charte.
   //
@@ -320,7 +320,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   // bord.
   btnContour: {
     flex: 1, minHeight: 44, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
+    borderRadius: Radius.bouton,
     borderWidth: 1, borderColor: t.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -329,7 +329,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   },
   btnPlein: {
     flex: 1, minHeight: 44, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
+    borderRadius: Radius.bouton,
     alignItems: 'center', justifyContent: 'center',
   },
   btnPleinText: {

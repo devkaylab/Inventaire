@@ -8307,11 +8307,11 @@ Deux détails demandés par Julien sur `/tarifs`, et les deux valent comme règl
   décrit un tri, « Commencer avec » dit ce qui va se passer. Un test refuse le
   retour de l'ancien libellé.
 
-⚠️ Vérifié au navigateur : la page **déborde de 40 px**, et ce n'est PAS un
-défaut — c'est le cube décoratif `.deco-droite`, coupé par l'`overflow-x: clip`
-de la racine (règle du 30 août : `clip`, jamais `hidden`, sinon l'en-tête
-collant décroche). `scrollX` reste à zéro, la page ne défile pas latéralement.
-Ne pas « corriger » ce chiffre en le voyant passer dans une mesure.
+⚠️ Vérifié au navigateur : la page débordait alors de **40 px** — le cube
+décoratif `.deco-droite`, coupé par l'`overflow-x: clip` de la racine (règle du
+30 août : `clip`, jamais `hidden`, sinon l'en-tête collant décroche). **Ce cube
+a été retiré le 6 septembre 2026** (section « Les cubes du décor sont partis »),
+donc le débordement vaut désormais zéro. La règle du `clip` ne bouge pas.
 
 ## ⚠️ LE VOCABULAIRE DE L'ÉCRAN — deux mots interdits
 
@@ -9613,8 +9613,9 @@ Deux pièges, tous deux coûteux :
 
 Au navigateur, **clair et sombre**, à **1568 px** (l'écran de Julien), 900 et
 390 px : les huit bandes, **aucun débordement de contenu** — `scrollX` reste à
-zéro, les 40 px mesurés sont le cube décoratif que la racine rogne en `clip`
-(règle du 30 août, ne pas « corriger ») — et aucune erreur de console.
+zéro, et les 40 px mesurés à l'époque étaient le cube décoratif que la racine
+rognait en `clip` (retiré le 6 septembre, le débordement vaut zéro depuis) — et
+aucune erreur de console.
 
 **Chaque bouton cliqué pour de vrai**, écran d'arrivée relu : les trois offres
 présélectionnent bien la leur, les cinq liens de la barre et les cinq du pied
@@ -10535,8 +10536,9 @@ vide, les apparitions `.reveal` qui ne se déclenchent jamais, et le `body` à
   64 px sur 748, les quatre liens atteignables au clic (`elementFromPoint`),
   espaceur à 64 px, contenu qui commence à 64 en haut de page, débordement nul.
 - **À 1280 px** : barre toujours collante, espaceur à 0, jamais retirée. Les
-  40 px de débordement mesurés sont le cube décoratif rogné par
-  `overflow-x: clip` — normal depuis le 4 septembre, ne pas « corriger ».
+  40 px de débordement mesurés ce jour-là étaient le cube décoratif rogné par
+  `overflow-x: clip` ; **le cube est parti le 6 septembre**, le débordement
+  vaut zéro. La règle du `clip` reste, elle.
 - **Cinq sabotages, cinq échecs** : la barre redevenue collante, l'espaceur
   retiré, la barre qui s'efface menu ouvert, la référence qui avance à chaque
   pixel, le fondu sans le glissement.
@@ -10636,6 +10638,596 @@ quel libellé futur est couvert.
   avec la table de routes inchangée.
 
 Tests de garde : `web/tests/textes-a-jour.test.ts`.
+
+# Les cubes du décor sont partis (6 septembre 2026)
+
+*« Retire-les, et ne répète pas le logo sur la page ; retire l'effet halo qui
+se trouve derrière le logo en même temps. »* Trois restes de l'ancienne
+identité, tombés d'un seul geste.
+
+## ⚠️ CE QUI PARTAIT, ET POURQUOI ÇA NE VOULAIT PLUS RIEN DIRE
+
+- **Les cubes filaires** (`CubeFilaire`) étaient l'esquisse au trait du logo
+  d'avant. La marque est un **plan de magasin vu du dessus** depuis la veille :
+  trois cubes isométriques flottant autour d'un plan carré, c'est deux
+  identités sur le même écran. Sept couches en tout — trois dans le héros de
+  l'accueil, quatre en décor de section — plus deux par page sur `/tarifs`,
+  `/inventaire` et `/pourquoi-nous-choisir`.
+- **Le logo du héros** faisait la **troisième** occurrence de la marque sur la
+  page d'accueil, après la barre du haut et le pied de page. Une vitrine nomme
+  la marque, elle ne la martèle pas.
+- **Le halo**, c'est-à-dire deux choses qu'il fallait retirer ensemble : le
+  `drop-shadow` **indigo en dur** (`rgba(108,92,231,0.5)`) de `.logo-glow`, un
+  reste de la palette d'avant Ardoise, et la couche `.hero-voile` — le
+  commentaire du fichier disait lui-même « le halo devient une couche animée ».
+
+## ⚠️ ET LES DEUX RESTES SONT PARTIS DANS LA FOULÉE
+
+J'avais laissé deux choses en les signalant plutôt qu'en les retirant, et
+Julien a répondu « oui, retire-les aussi ». Elles comptent parce qu'elles
+étendent la décision à **toutes** les pages vitrines :
+
+- **`.scan-trait`** — le trait horizontal de 420 px sous le titre de l'accueil,
+  en `--cyan` à 35 % d'opacité ;
+- **`.hero::before`** — la lueur d'accent que **tous** les héros portaient,
+  celle des pages intérieures comprise. `.hero-plein::before { content: none }`
+  n'avait plus rien à annuler : il est parti avec.
+
+⚠️ **UN HÉROS N'A DONC PLUS NI DÉCOR NI LUEUR, ET C'EST LA RÈGLE.** Il ne tient
+que par sa typographie — ce qui est la doctrine Ardoise, où l'accent ne sert
+qu'à ce qui engage. Remettre un dégradé derrière un titre, c'est refaire ce qui
+a été défait ; une garde le refuse. `overflow: hidden` reste sur `.hero`, il
+borne les couches de parallaxe.
+
+## Ce qui reste, et c'est délibéré
+
+- **`.band-glow`** — la lueur de la bande d'appel à l'action, qui n'a jamais eu
+  de rapport avec le logo ni avec un héros.
+- **`Parallaxe`** elle-même : elle sert encore cette couche et la sortie du
+  héros de l'accueil (`data-hero-exit`). L'accueil, lui, n'a plus **aucune**
+  couche `.plx`.
+
+## ⚠️ LA GARDE DÉDUIT SA LISTE DE PAGES, ELLE N'EN CITE AUCUNE
+
+Elle balaie tout `app/` et `components/` — `.tsx` **et** `.css` — et refuse
+treize mots (`CubeFilaire`, `cube-a`, `logo-glow`, `hero-voile`, `flotte`,
+`scan-trait`, `.hero::before`…). La page
+vitrine qu'on écrira demain est couverte sans qu'on y pense ; une garde qui
+nommerait `page.tsx` ne protégerait que la page d'aujourd'hui. Même doctrine
+que les portes de `(compte)` et que la mention de TVA.
+
+⚠️ **Et elle lit le code SANS SES COMMENTAIRES** — huitième fois sur ce dépôt.
+Le commentaire de `globals.css` cite `.hero-voile` précisément pour dire qu'on
+ne le remet pas, et le verbe « flotte » se trouve dans une phrase française
+ailleurs dans la feuille. Une garde d'absence se lit elle-même si on l'oublie.
+
+⚠️ **Une garde existante a dû être amendée, pas affaiblie** : elle citait
+`.flotte, .flotte-lent, .scroll-cue svg { animation: none; }` mot pour mot. Les
+deux premières classes n'existent plus ; elle vérifie désormais que la règle de
+`prefers-reduced-motion` éteint bien ce qui bouge encore.
+
+## Vérifications
+
+- **Au navigateur**, clair et sombre, sur les quatre pages publiques : plus un
+  seul cube, plus de logo dans le `<main>` de l'accueil, `::before` du héros à
+  `none` partout, et **zéro couche `.plx` sur l'accueil**. **Débordement
+  horizontal nul sur les quatre** — c'était 40 px sur `/tarifs`, et c'était
+  justement le cube.
+- **Trois sabotages, trois échecs** : une couche `cube-a` remise dans le héros,
+  le `drop-shadow` du halo remis dans la feuille, la lueur `.hero::before`
+  remise.
+- 1 296 tests du site, `tsc --noEmit`, `eslint .` à **zéro erreur** (47
+  avertissements, la famille `react-hooks/*` déjà documentée), `next build`
+  avec la table de routes **inchangée**.
+
+Tests de garde : `web/tests/navigation.test.ts`, blocs « le cube isométrique a
+quitté le décor, et le halo avec lui » et « le logo ne se répète pas dans le
+héros de l'accueil ».
+
+# Registre — les surfaces qui font foi (6 septembre 2026)
+
+Seconde moitié de la décision du 6 septembre. Ardoise habille l'outil ;
+**Registre habille ce qui fait foi**. Périmètre tranché par Julien : le rapport
+à l'écran **et** les documents produits. Maquette validée point par point avant
+codage, trois décisions arbitrées :
+https://claude.ai/code/artifact/f968d044-db4a-4a86-8459-fb16cf635e29
+
+| Surface | Registre |
+|---|---|
+| Rapport d'un inventaire, écarts d'audit, rapport consolidé d'un magasin | oui |
+| Devis PDF | oui |
+| Exports Excel et CSV | ce que la bibliothèque libre accepte — voir plus bas |
+| Tableau de bord, Suivi, Set up, Équipe, Magasins… | **non** |
+
+⚠️ **REGISTRE S'ARRÊTE LÀ OÙ L'ON CESSE DE LIRE POUR FAIRE.** C'est cette
+frontière qui empêche « deux identités » de devenir « deux produits », et une
+garde la tient : elle balaie `app/` et `components/`, retient tout fichier qui
+pose `className="registre"`, et compare à la liste décidée. Un quatrième écran
+qui s'y mettrait se signale tout seul.
+
+## ⚠️ DÉCISION 1 — LA GRAMMAIRE, PAS LE PAPIER
+
+La palette de Registre est crème. Posée telle quelle dans la coquille sombre,
+elle donnerait **un rectangle blanc de 1 400 px** au milieu de l'écran qu'on
+regarde le plus longtemps de la journée. Et un rapport n'est pas qu'une
+lecture : on y cherche, on y trie, on y tourne les pages — une feuille de
+papier ne fait pas ça.
+
+Ce qui dit « document », ce ne sont pas les couleurs : ce sont **les filets, les
+nombres alignés et l'absence de boîtes**. Les couleurs suivent donc le thème.
+En clair seulement, le fond glisse vers le papier (#FAF9F6 contre #F2F3F1) —
+assez peu pour qu'aucune couture ne se voie, assez pour qu'on sente le grain.
+En sombre, on ne touche à rien.
+
+## ⚠️ DÉCISION 2 — AUCUN ACCENT À L'ÉCRAN
+
+Le marine **#1D3E63** de Registre rend **1,6:1** sur le fond sombre — très loin
+du seuil AA. L'éclaircir reviendrait à inventer un second marine qui ne serait
+plus celui du devis. À l'écran il n'y a donc **que de l'encre**, plus l'ocre
+d'Ardoise (`--warning-text`) sur la seule chose qui appelle une décision : un
+écart non arbitré. C'est la règle d'Ardoise — « l'accent ne sert qu'à ce qui
+engage » — appliquée à une surface où l'on ne clique pas.
+
+Le marine reprend tout son sens là où il n'y a pas de thème : **le devis**.
+
+## ⚠️ DÉCISION 3 — DEUX POLICES, ET LEUR POIDS EST MESURÉ
+
+**Newsreader** (serif de lecture) pour les titres, **IBM Plex Mono** pour tous
+les nombres. Le second n'est pas esthétique : en chasse fixe les colonnes
+s'alignent au chiffre près, et l'écart le plus gros se repère sans lire.
+
+| | Polices téléchargées |
+|---|---|
+| Vitrine (`/tarifs`, `/login`) | 2 fichiers, **60,1 ko** |
+| Espace connecté | 5 fichiers, **136,6 ko** |
+
+⚠️ **ELLES NE SONT PAS DÉCLARÉES DANS `app/layout.tsx`, ET C'EST MESURÉ.** Elles
+y étaient d'abord : la vitrine téléchargeait alors 136,6 ko — **+76,5 ko pour
+deux caractères qu'une page vitrine n'affiche jamais**. `next/font` n'émet sa
+feuille `@font-face` que dans les morceaux qui importent le module :
+`lib/policesRegistre.ts` est importé par la seule coquille `AppShell`, qui pose
+les deux variables sur `.app-main`. Mesuré au navigateur dans les deux sens.
+Elles restent **auto-hébergées**, comme les deux autres.
+
+## Ce que Registre change à l'écran
+
+- **Les nombres en chasse fixe** — `.num`, les tuiles de résumé, les codes
+  (`.dash-art-code`, une classe ajoutée pour ça : le SKU et le code-barres se
+  lisent comme des nombres).
+- **La bande de résumé devient un intervalle réglé** : un filet d'encre en
+  haut, un en bas, des cases séparées par un trait, et **le libellé passe
+  au-dessus du chiffre** — l'ordre d'un relevé.
+- **Le tableau perd son cadre** : deux traits d'encre l'ouvrent et le ferment,
+  des filets fins entre les lignes. Le conteneur garde son défilement, qui
+  tient l'en-tête collant sur cinquante lignes.
+- **Le statut n'est plus une pastille** : en petites capitales, l'ocre ne se
+  voit que là où il reste quelque chose à faire ; ce qui est réglé passe en gris.
+- **Le « € » quitte la colonne** pour l'en-tête (« Valeur (€) ») : répété
+  cinquante fois, il cassait l'alignement qu'on venait de gagner.
+- **Un en-tête de document** remplace la ligne de fraîcheur : la page nomme
+  l'inventaire, le document nomme la pièce et l'heure à laquelle elle est
+  arrêtée. Un élément ajouté, un retiré.
+
+⚠️ **ET LES DEUX BOUTONS DE PASSE GARDENT LEURS COULEURS** — le vert du
+comptage et l'or de l'audit, ceux de l'application depuis le 29 août. Registre
+habille ce qu'on lit, il n'éteint pas ce qui engage. Une garde refuse qu'on les
+reteigne sous `.registre`.
+
+⚠️ **LE RAYON SE POSE ÉLÉMENT PAR ÉLÉMENT, JAMAIS PAR `--r`.** Redéfinir le
+jeton carrerait aussi ce qui n'appartient pas au document : la modale du format
+de téléchargement, l'anneau de focus.
+
+## ⚠️ PAS DE TROISIÈME GRIS DANS UN DOCUMENT
+
+Mesuré sur le papier : `--text-3` y donne **3,06:1**, sous AA — et il portait
+les en-têtes de colonnes, les codes-barres, les libellés de tuiles et l'heure
+d'arrêté, c'est-à-dire ce qu'on **lit**. Tout est passé à `--text-2` (6,2:1 en
+clair, 7,0:1 en sombre). Même règle sur le devis, où le gris d'avant (#8B877C)
+donnait 3,2:1 sur du papier blanc **en portant la date de validité et le
+SIREN**. Dans un document, la hiérarchie vient de la taille et des capitales,
+jamais de la pâleur.
+
+## Le devis : le dernier indigo du produit
+
+Le PDF portait encore, à l'octet près, l'identité d'avant : bandeau `#0B0F19`,
+filet cyan `#38C9FF`, titre `#4636B0`, bouton `#6366F1` — le même indigo que le
+halo du logo, retiré le matin même. C'est le document que le client signe.
+
+- **L'en-tête est un filet, plus un bandeau.** Un aplat d'encre de 26 mm en
+  haut d'une A4 est une bannière de site posée sur un document — **et il
+  s'imprime**.
+- **⚠️ IL N'Y A PAS DE FOND CRÈME.** Registre a un papier ; on ne le peint pas
+  sur la page. Un aplat sur 210 × 297 mm coûte de l'encre au client pour un
+  fond que son papier porte déjà.
+- **⚠️ LA SERIF EST TIMES, PAS NEWSREADER.** Un PDF n'a droit sans embarquement
+  qu'aux quatorze polices que tout lecteur possède. Embarquer la serif du site
+  voudrait dire glisser un fichier de police dans le paquet de la fonction
+  edge, pour un document que personne ne comparera côte à côte avec un écran.
+- **L'ocre ne porte qu'une phrase** : la mention réglementaire de TVA. Une
+  garde compte les usages — un seul.
+- Le total se pose sous un trait d'encre, sans aplat : la ligne d'arrêté d'un
+  relevé, pas un encadré à remarquer.
+
+## Les exports : ce que le tableur accepte, et ce qu'il refuse
+
+Mesuré le 6 septembre en écrivant un fichier et en le relisant, sur la version
+**0.20.3** du dépôt (SheetJS libre, vendorisée en août pour deux failles) :
+
+| | |
+|---|---|
+| Formats de nombre (`z`) | **oui** |
+| Largeur des colonnes (`!cols`) | **oui** (déjà en place) |
+| Filtre automatique (`!autofilter`) | **oui** |
+| En-tête figé (`!freeze`) | non — version payante |
+| Gras, couleurs, bordures (`cell.s`) | non — version payante |
+
+Registre sur un export se réduit donc à trois choses, et c'est beaucoup à
+l'usage : aujourd'hui un comptable qui ouvre le fichier voit « −2850 » dans une
+colonne trop étroite.
+
+- **⚠️ LES FORMATS SE POSENT PAR NOM DE COLONNE, JAMAIS PAR INDICE.** Une
+  colonne insérée un jour décalerait tout **en silence** : le fichier resterait
+  juste, il s'afficherait faux.
+- **⚠️ LE FILTRE S'ARRÊTE AVANT LA LIGNE TOTAL.** Sinon le tableur la traite
+  comme une ligne de données : elle se retrouve triée au milieu du tableau, ou
+  masquée — sur la seule ligne qu'on cherche toujours.
+- **⚠️ Un format n'est PAS du texte** : la cellule reste un nombre, le tableur
+  la somme toujours. C'est l'inverse de `forcerEnTexte`, qui fige les codes —
+  et c'est pourquoi les deux ne visent jamais la même colonne.
+- **⚠️ `src/lib/report.ts` a reçu le même traitement**, et ce n'est pas
+  facultatif : un rapport partagé depuis le téléphone doit être **le même
+  fichier** que celui téléchargé sur le site. Un test compare les deux tables.
+
+## ⚠️ « REGISTRE » EST SURCHARGÉ TROIS FOIS DANS CE DÉPÔT
+
+Le mot m'a coûté deux incidents dans la même heure, et le second était
+destructeur :
+
+1. **`.registre` existait déjà en CSS** — la réponse du registre public sous le
+   champ SIREN. Bloc **mort** (aucun écran ne l'a jamais rendu), mais il posait
+   un fond `--success-soft` : le rapport s'est affiché **sur un fond vert
+   d'eau** le temps de le trouver. Retiré ; le nom appartient à la piste.
+2. **`web/tests/registre.test.ts` existait aussi** — il garde `lib/registre.ts`,
+   la recherche par SIREN. **Je l'ai écrasé.** Restauré depuis `HEAD` ; mes
+   gardes vivent dans `piste-registre.test.ts`.
+
+**Avant de nommer quoi que ce soit « registre » : regarder ce qui porte déjà ce
+nom.** Et plus généralement : un `cat >` sur un fichier de test qu'on croit
+neuf mérite un `ls` d'abord.
+
+## Deux gardes amendées, aucune affaiblie
+
+- `navigation.test.ts` exigeait `className="app-main"` **mot pour mot** ;
+  `app-main` a gagné les deux variables de police et la garde est tombée alors
+  que la largeur n'avait pas bougé. Elle vise désormais la **classe**, et ce
+  qu'elle défend reste : pas de modificateur de largeur.
+- La garde du filtre **comptait mal** : elle cherchait qu'un appel `…, 1)`
+  existe quelque part. Retirer le `1` de la feuille « Écarts » la laissait
+  passer, parce que « Consolidé » gardait le sien. Elle compte maintenant les
+  feuilles qui finissent par un TOTAL et exige autant d'appels.
+  **Une garde qui cherche UNE occurrence ne garde que la première.**
+
+⚠️ **Et le dépouilleur de commentaires tranchait au milieu du commentaire
+d'en-tête** : sans son `/*` ouvrant, tout le reste du commentaire restait en
+clair — et ce commentaire cite justement les couleurs retirées, pour dire
+qu'on ne les remet pas. La garde se lisait elle-même. **Neuvième fois.**
+
+## Vérifications
+
+- **Au navigateur**, par route jetable (retirée, `git status` contrôlé),
+  **clair et sombre** : le rapport et les écarts, contrastes mesurés dans les
+  deux thèmes (six rôles de petit texte, tous ≥ 6,2:1), débordement horizontal
+  nul, et le titre de page en Newsreader 500 à 34 px sur le rapport de magasin.
+- **Le PDF a été RÉELLEMENT DESSINÉ** et relu à l'écran, par une sonde qui
+  rejoue `elementsDevis` avec le pdf-lib du site. C'est la seule preuve qui
+  vaille : un libellé qu'Helvetica n'encoderait pas ferait lever `drawText`.
+- **Le poids des polices, mesuré dans les deux sens** (avec et sans), sur une
+  page vitrine et sur une coquille simulée.
+- **Quatorze sabotages, quatorze échecs** — dont deux qui ont d'abord **passé**
+  et ont fait resserrer leur garde.
+- 1 315 tests du site, 416 de l'application, `tsc --noEmit` des deux côtés,
+  `eslint .` à **zéro erreur** (47 avertissements, la famille `react-hooks/*`
+  déjà documentée), `next build` avec la table de routes **inchangée**.
+
+## ⚠️ CE QUI N'EST PAS DÉPLOYÉ, ET NE DOIT PAS L'ÊTRE SANS SON ACCORD
+
+- **Le devis PDF vit dans le dépôt, pas en production.** Une fonction edge n'a
+  pas de préversion : la déployer changerait le document **tout de suite**,
+  pour tout le monde. Julien a demandé « toujours sur le preview ». Le jour
+  venu : `quote-pdf` et `admin-send-quote` (elles embarquent `_shared/devis.ts`
+  et `_shared/devisPdf.ts`), plus les trois autres qui embarquent `devis.ts` —
+  `accept-quote`, `decline-quote`, `ca-request-store`. **`verify_jwt` se relève
+  sur la base AVANT de déployer**, jamais depuis cette note.
+- **L'export de l'application demande une reconstruction** : `src/lib/report.ts`
+  ne prend effet qu'au prochain build.
+- **Non vu à l'écran** : le rapport et les écarts demandent une session de
+  superviseur. Ce qui est prouvé, c'est le rendu des composants avec leurs
+  vraies classes. C'est le contrôle sur le compte de Julien qui a trouvé les
+  trois vrais défauts du tableau d'équipe le 5 septembre — celui-là vaut la
+  peine d'être refait ici.
+
+## Ce qui n'entre pas dans le périmètre, et pourquoi
+
+**Les e-mails transactionnels** portent le même bandeau encre et le même filet
+cyan que le devis d'avant (`_shared/email.ts`, `indigoProfond` compris). Ils
+n'ont pas été touchés : ce gabarit a été arrêté avec Julien le 21 août après
+plusieurs passes sur le rendu réel dans Gmail, y toucher demande de redéployer
+**quatorze** fonctions edge et de vérifier dans une vraie boîte. C'est un
+chantier à lui seul, pas une retouche.
+
+Tests de garde : `web/tests/piste-registre.test.ts`.
+
+# L'application passe à Ardoise et Registre (6 septembre 2026)
+
+Le site est passé le matin, l'application l'après-midi. Elle portait encore
+l'identité de mai, entière et cohérente avec elle-même — et c'est le même
+abonnement : un superviseur ouvre le site puis le téléphone. Maquette validée
+avant codage, deux décisions arbitrées par Julien :
+https://claude.ai/code/artifact/36b3d9cb-e5d9-4fed-bee1-524bfa43e48b
+
+| | Avant | Après |
+|---|---|---|
+| Accent | indigo #4F46E5 / #6366F1 | **vert forêt** #1E4D3B / #5FA88A |
+| Fonds | bleu nuit #0B0F19, #151A27 | **gris minéraux** #141716, #1B1F1E |
+| Bandeau du haut | #0B0F19 / #060910 | **encre d'Ardoise** #14181A / #0B0D0C |
+| Police | Inter | **Archivo + Public Sans** |
+| Une carte | bordure + ombre + rayon 16 | **ni bordure ni ombre**, rayon 4 |
+| La marque | le cube isométrique et son faisceau | **le plan de magasin**, monochrome |
+
+⚠️ **`src/constants/ink.ts` EST LA COPIE DU BLOC `:root` DE `globals.css`**, au
+même titre que `presence.ts`, `import.ts` et `report.ts` : le site et
+l'application ne compilent pas ensemble. Ils bougent **ensemble**, et un test
+compare quatre jetons dans les deux thèmes.
+
+## ⚠️ LE PIÈGE QUI COÛTAIT 5,2 Mo, ET QUI PRÉEXISTAIT
+
+Le plus utile de la journée, et il n'a rien à voir avec le dessin.
+
+**L'index de `@expo-google-fonts/<famille>` fait un `require()` de TOUTES ses
+graisses et de toutes leurs italiques.** Importer depuis la racine du paquet
+fait donc embarquer par Metro l'intégralité de la famille. Mesuré en exportant
+le paquet iOS deux fois :
+
+| | Fichiers de police | Poids |
+|---|---|---|
+| Import depuis la racine | **64** | **6,74 Mo** |
+| Import par graisse | **8** | **0,77 Mo** |
+
+⚠️ **ET LE DÉFAUT ÉTAIT LÀ DEPUIS LE PREMIER JOUR** : Inter était importée
+depuis sa racine, donc l'application embarquait ses **18 fichiers, 5,93 Mo**,
+pour cinq graisses réellement employées (1,68 Mo). Le changement de polices ne
+l'a pas créé — il l'a rendu visible, parce que quatre familles font quatre fois
+le bruit d'une seule.
+
+La forme correcte est une ligne par graisse
+(`from '@expo-google-fonts/archivo/700Bold'`), et `useFonts` vient alors
+d'`expo-font` : les entrées par graisse n'exportent que la police. Une garde
+balaie `src/` et refuse tout import depuis une racine de paquet.
+
+**Bilan du changement de polices : l'application perd 5,2 Mo** en gagnant deux
+familles.
+
+## ⚠️ DÉCISION 1 — L'ENCRE D'ARDOISE POUR LE BANDEAU
+
+Le bandeau du haut est **volontairement sombre dans les deux thèmes** — c'est
+le « bandeau encre » de la charte, et c'est justement pour ça que le force-dark
+d'Android le rendait blanc le 31 août. Il passe du bleu nuit à l'encre
+d'Ardoise : deux noirs différents ne se voient pas isolément, ils se voient
+quand on pose le téléphone à côté de l'écran — et la tuile du logo est déjà en
+#14181A.
+
+⚠️ Le test qui garde ce bandeau vérifie qu'il est **sombre**, pas sa valeur : il
+n'a pas eu à changer, et il ne doit pas devenir une garde de couleur.
+
+## ⚠️ DÉCISION 2 — ARCHIVO ET PUBLIC SANS
+
+Inter est partie. C'est l'une des deux valeurs par défaut de l'époque (avec
+Sora) et l'un des trois signes mesurés de l'air « fait par une IA ». Deux
+raisons de terrain en plus de la cohérence : Archivo a des **chiffres
+tabulaires** et une chasse étroite — sur l'écran de comptage, un libellé
+d'article tient sur une ligne là où Inter le casse en deux.
+
+`Font.serif` (Newsreader) et `Font.mono` (IBM Plex Mono) ne servent **que** sur
+les deux écrans qui font foi. Une garde déduit la liste des fichiers qui les
+emploient et la compare aux deux écrans : c'est la frontière de Registre.
+
+## Ce que j'ai tranché moi-même
+
+- **Plus d'ombre ni de bordure sous les cartes.** Une carte se détache parce
+  que son fond diffère de celui de la page. ⚠️ **Ce qui FLOTTE garde sa
+  profondeur** — feuille modale, menu, voile : là, l'ombre dit vrai.
+  `shadowElevated` reste, et lui seul. Sur Android, `elevation` fait la même
+  chose : retirer les deux à la fois est nécessaire, sinon les cartes se
+  détachent sur un système et pas sur l'autre.
+- **Rayon 4 au lieu de 16 sur les BLOCS.** Les clés (`sm`, `md`, `lg`, `xl`)
+  gardent leurs noms — une centaine de styles les emploient — mais ne portent
+  plus que deux valeurs. `pill` reste une capsule : c'est une forme.
+  ⚠️ **MAIS UN BOUTON GARDE SES COINS RONDS** (`Radius.bouton`, 12) — décision
+  de Julien le 7 septembre, l'application en main : « use rounded corners
+  buttons for the app, as it was previously ». C'est un écart assumé avec le
+  site, et il tient à la nature du support : un bouton de téléphone se
+  **touche**, et ce qui dit « ceci se presse » sur une surface tactile, c'est
+  sa forme — pas un survol, pas un curseur qui change. À 4 px, ils se lisaient
+  comme des bandeaux d'information.
+  · **C'est le SEUL écart** : cartes, blocs, champs et tableaux restent à
+    3-4 px comme sur le site. Le jour où tout redevient rond, Ardoise n'a plus
+    d'objet — une garde refuse un bloc au-delà de 4 px, et une autre refuse
+    qu'un contrôle qui se touche reprenne un rayon de bloc.
+  · ⚠️ **ET LA SECONDE GARDE DÉDUIT SA LISTE DU NOM DES STYLES**, ce qui n'est
+    pas un raffinement : j'avais converti 54 styles à la main et j'en avais
+    **oublié six** — le bouton flottant, les deux boutons de la carte des
+    notifications, les deux bascules de mode du scanner, le pas-à-pas. Le
+    balayage les a nommés en une seconde.
+- **⚠️ LE BOUTON D'EXPORT PORTE L'ACCENT, PLUS LE VERT DU SUCCÈS.** Depuis
+  qu'Ardoise a fait de l'accent un vert forêt, deux verts voisins sur le même
+  écran ne se distinguent plus — et le succès doit rester ce qui a RÉUSSI.
+- **⚠️ LE VISEUR PREND L'ACCENT SOMBRE DANS LES DEUX THÈMES.** Il était en cyan
+  #38C9FF, le filet de scan d'avant. Les coins du cadre sont tracés **par-dessus
+  la caméra**, qui est toujours une surface sombre : le vert forêt du thème
+  clair (#1E4D3B) y disparaîtrait.
+- **L'or de l'audit (#FFC349) et le vert du comptage ne bougent pas** : ce sont
+  les deux passes, et le site les porte à l'identique depuis le 29 août.
+
+## ⚠️ AUCUNE ENCRE UNIQUE NE TIENT SUR LE BANDEAU HORS LIGNE — MESURÉ
+
+Trouvé en écrivant la garde, et j'avais d'abord annoncé le contraire dans un
+commentaire : « 5,3:1 », alors que la mesure disait **3,88**.
+
+Le bandeau « hors ligne » portait une encre écrite en dur, et ça marchait tant
+que l'orange d'alerte était vif dans les deux thèmes. Ardoise a **assombri**
+celui du thème clair (#A06A12) pour qu'il tienne l'AA sur du blanc :
+
+| sur… | encre #14181A | blanc |
+|---|---|---|
+| orange clair #A06A12 | 3,88 | **4,60** |
+| orange sombre #D69A3C | **7,27** | 2,46 |
+
+La couleur du texte suit donc le thème. C'est le seul endroit de l'application
+où elle le fait dans ce sens, et c'est parce que le fond, lui, ne suit pas le
+thème de la même façon. **Ne pas « simplifier » en une constante.**
+
+## La marque, et les deux moments où elle balaie
+
+Le cube isométrique et son faisceau bleu ont disparu de l'icône, de l'écran de
+démarrage, de la connexion et de la porte de bienvenue. La géométrie est celle
+du site **au dixième près** — un test compare les quatre rectangles entre
+`web/components/Logo.tsx`, `src/components/AppLogo.tsx` et
+`scripts/generate-icons.mjs`. Si l'un bouge, les trois bougent.
+
+- **⚠️ ELLE BALAIE À L'OUVERTURE ET PENDANT LA GÉNÉRATION DES BALISES**
+  (demande de Julien). Ce sont les deux moments où l'application fait attendre.
+  Une roue dit « ça charge » ; ceci dit « Quantinvo travaille ».
+- **⚠️ LE DÉCALAGE EST EN PIXELS, PAS EN UNITÉS DE VIEWBOX.** Le SVG est rendu
+  à `size` : une unité vaut `size / 36`. C'est le piège symétrique du
+  `transform-box: view-box` qu'il a fallu poser côté web.
+- **⚠️ `ReduceMotion.Always`** : la préférence système coupe l'animation, comme
+  le `prefers-reduced-motion` du site.
+- Les deux halos indigo qui restaient — sous le logo de connexion et sous celui
+  du démarrage, tous deux en #6C5CE7, le même que celui retiré du site le matin
+  — sont partis. Une marque monochrome n'a pas besoin d'un fond pour exister.
+- **Les icônes des deux boutiques sont régénérées** (`node scripts/generate-icons.mjs`).
+  Elles ne prennent effet qu'à la prochaine **publication**, pas à la prochaine
+  installation.
+
+## Registre, sur les deux écrans qui font foi
+
+`results.tsx` (le rapport) et `audits.tsx` (les écarts) prennent la grammaire du
+site : filets au lieu de cartes, titre en serif, nombres en chasse fixe, rayon
+zéro, libellé au-dessus du chiffre dans la bande de synthèse.
+
+⚠️ **PAS DE `textMuted` DANS UN DOCUMENT.** Mesuré sur le site : ce gris donne
+3,06:1 sur le papier, sous AA — et il portait les codes-barres, les en-têtes et
+les libellés, c'est-à-dire ce qu'on **lit**. Une garde lit le bloc de styles de
+ces deux écrans et le refuse.
+
+## ⚠️ DEUX DÉFAUTS TROUVÉS PAR JULIEN AU PREMIER BUILD
+
+Les deux sont instructifs, et le second était de ma main.
+
+### 1. « L'icône de l'app n'a pas changé »
+
+Elle avait bien changé — **dans `assets/images/`, et nulle part ailleurs**.
+Les deux projets natifs ne lisent pas ce dossier au build : ils en gardent
+leur propre copie.
+
+| | Nature | Ce qui s'y trouvait |
+|---|---|---|
+| `ios/…/AppIcon.appiconset/` | **versionné**, jamais régénéré | l'icône du **19 juin** |
+| `android/app/src/main/res/mipmap-*` | **généré et gitignoré** | celle du 2 septembre |
+
+⚠️ **`pixel.sh` ne régénère `android/` QUE S'IL MANQUE.** C'est écrit plus haut
+dans ce fichier, et ça veut dire que ses icônes ne suivent jamais toutes
+seules. Deux remèdes, de natures différentes :
+
+- **iOS** : `generate-icons.mjs` recopie désormais l'icône dans le projet
+  versionné. Elle passe par git comme le reste d'`ios/`, et **un test compare
+  les deux fichiers à l'octet près** — c'est ce qui aurait attrapé le défaut.
+- **Android** : le script ne peut rien y faire, il **rappelle en clair** à la
+  fin de son exécution qu'il faut relancer
+  `npx expo prebuild --platform android --clean`. Fait le 7 septembre : les
+  `mipmap-*` et le `splashscreen_logo` portent la nouvelle marque, et
+  `iconBackground` est passé à l'encre d'Ardoise.
+
+### 2. ⚠️ « L'écran d'ouverture logo non animé » — ET MA GARDE FIGEAIT LE DÉFAUT
+
+`reduceMotion: ReduceMotion.Always`. Dans Reanimated, **`Always` veut dire
+« toujours RÉDUIRE », donc toujours DÉSACTIVER** — pas « toujours respecter le
+réglage ». La marque ne balayait sur aucun téléphone : elle sautait
+instantanément à sa valeur finale, allée pleine à droite, immobile. La valeur
+qui SUIT le réglage de l'appareil est **`ReduceMotion.System`**.
+
+⚠️ **Et le test le certifiait.** Il exigeait `ReduceMotion.Always`, la valeur
+que je venais d'écrire — donc il confirmait que tout allait bien pendant que
+rien ne bougeait. **Une garde qui recopie une valeur sans savoir ce qu'elle
+fait ne garde rien : elle certifie l'erreur.** Elle vise maintenant `System` et
+refuse nommément les deux autres.
+
+Au passage : **l'écran de démarrage natif est une image fixe et ne peut pas
+s'animer** — il s'affiche avant que le JavaScript existe. C'est
+`SplashAnimation` qui le recouvre et qui balaie, ~2,8 s, soit trois cycles.
+Deux écrans, deux natures ; ne pas chercher à animer le premier.
+
+### 3. ⚠️ « Attention à Quantinvo ici, toujours sous ancien format »
+
+Troisième constat, au build du 7 septembre, capture à l'appui. Le mot-symbole
+de l'écran d'ouverture s'écrivait `QUANTINVO`, en capitales espacées de six
+points et en **#8A82B8** — un mauve.
+
+- **C'était le DERNIER indigo de l'application**, et il avait survécu à la
+  passe du 6 septembre pour une raison instructive : la garde qui balaie tout
+  `src/` déduit bien son **périmètre**, mais sa liste de couleurs mortes est
+  écrite à la main, et ne nommait pas cette valeur. **Une garde qui balaie
+  large et cite une liste courte ne voit rien.** `#8A82B8` l'a rejointe.
+- **⚠️ ET LA MISE EN FORME COMPTAIT AUTANT QUE LA COULEUR.** Partout où le nom
+  s'écrit — barre publique, pied de page, mentions légales — c'est
+  « Quantinvo », en Archivo gras, chasse resserrée, de la couleur du tracé.
+  Deux mises en forme du même mot, c'est déjà deux marques.
+- **La marque passe de la moitié de la largeur à 28 %** (plafond 200 → 120 pt),
+  seconde demande de Julien : « une taille de logo naturellement moins
+  intrusive ». C'est la première chose que l'application montre — à 50 % elle
+  n'accueille pas, elle barre le passage. Elle reste largement lisible : à
+  120 pt une allée fait encore 10 pt.
+
+## Vérifications
+
+- **Le paquet iOS s'exporte** (`expo export --platform ios`) : tous les imports
+  se résolvent, les huit polices sont là et huit seulement, le bundle fait
+  7,3 Mo. C'est ce qui prouve que l'application démarrera.
+- **Les icônes sont dessinées et relues** — l'icône de démarrage a été regardée.
+- **Le poids des polices, mesuré dans les deux sens** : import racine contre
+  import par graisse, et le paquet Inter réinstallé le temps de le peser.
+- **Onze sabotages, onze échecs** — dont **deux qui ont d'abord passé** :
+  · la garde des ombres cherchait UNE occurrence de `shadowCard: aucuneOmbre` :
+    en remettre une sur le seul thème clair passait, et le défaut ne se serait
+    vu que sur la moitié des téléphones. Elle COMPTE désormais les palettes.
+    **Une garde qui cherche une occurrence ne garde que la première** — même
+    correction que le filtre des exports, le matin même ;
+  · la garde de géométrie comptait les rectangles de fond du script d'icônes.
+- 433 tests de l'application, 1 315 du site, `tsc --noEmit` des deux côtés.
+
+## ⚠️ CE QUI N'EST PAS VÉRIFIÉ, ET POURQUOI
+
+**Rien n'a été vu à l'écran DEPUIS L'AGENT** — Julien, lui, a construit et a
+trouvé les deux défauts ci-dessus en deux minutes. `./scripts/simulateur.sh`
+échoue sur cette machine depuis ce chantier, et l'échec n'a rien à voir avec
+le code :
+
+```
+*** -[__NSDictionaryM setObject:forKey:]: object cannot be nil
+    (key: IDEDerivedDataPathOverride)
+```
+
+C'est `xcodebuild` qui s'arrête en analysant ses options, avant toute
+compilation. Deux essais, même erreur. ⚠️ **Ne pas contourner en appelant
+`xcodebuild` à la main** : la règle du projet est que `simulateur.sh` est le
+seul chemin de build (il pose `app.config`, sans quoi l'application s'ouvre sur
+un écran rouge).
+
+Restent donc à voir, et c'est à toi : le rendu au doigt, le balayage du logo à
+l'ouverture, et les deux écrans de superviseur — le téléphone de test est
+connecté en compteur. Le Pixel (`./scripts/pixel.sh`) est le plus rapide.
+
+Tests de garde : `tests/ardoise-app.test.ts`.
 
 # La discipline des migrations est faite (6 septembre 2026)
 
@@ -11062,3 +11654,181 @@ serveur, elle, protège déjà les builds actuels.
 
 Tests de garde : `web/tests/inventaire-de-toute-taille.test.ts`, blocs « elle est
 bornée, comme ses voisines » et « mais l'ÉCRAN, lui, reçoit toujours tout ».
+
+# Zone de comptage : une question, puis UNE chose à la fois (7 septembre 2026)
+
+*« Au lieu d'afficher le gros pavé de texte créer des balises directement,
+proposer une question "Ai-je mes balises ?" Si oui → affecter une plage, si non
+→ créer des balises puis affecter en second temps. Ne pas tout afficher en même
+temps, plus clair pour l'user. »* Plus une seconde demande : *« installe toggle
+Balise unique, ce qui efface l'obligation de renseigner deux fois la même
+balise »*. Site **et** application. Maquette validée avant codage :
+https://claude.ai/code/artifact/71d4ba82-021f-4174-b96b-a084c422e6c5
+
+## Le constat
+
+Le volet s'ouvrait sur « Créer des balises » — un paragraphe d'explication,
+trois étapes numérotées, un choix de numérotation, deux champs, un bouton — et
+l'affectation seulement en dessous. **Quelqu'un dont les balises sont déjà
+collées traversait tout cela pour rien.** Et pour rattacher la balise 42 à un
+emplacement, il fallait écrire 42 dans « début » **et** dans « fin ».
+
+## ⚠️ LA QUESTION NE SE POSE QUE TANT QUE RIEN N'EST AFFECTÉ
+
+C'est la règle qui empêche la bonne idée de devenir une gêne. Dès qu'un
+emplacement existe, la réponse est connue : le formulaire s'ouvre directement,
+et « Créer d'autres balises » reste joignable par un lien discret.
+
+C'est **la leçon du bandeau de démarrage** (28 août 2026) : une aide qui se
+rejoue des semaines plus tard, à quelqu'un qui connaît le produit, cesse d'en
+être une.
+
+- **⚠️ RIEN N'EST STOCKÉ**, et c'est délibéré : l'inventaire répond tout seul
+  (`etape = choix ?? (dejaAffecte ? 'affecter' : 'question')`). Quelqu'un qui
+  répond « Non », imprime sa planche et revient le lendemain retrouve la
+  question — **et c'est juste, il peut maintenant répondre « Oui »**. Un jalon
+  figerait cette réponse sur un fait qui change. Une garde refuse `poserJalon`,
+  `localStorage` et leurs voisins dans les deux écrans.
+- **La question ne s'accompagne d'AUCUN état vide.** « Aucun emplacement
+  affecté — indiquez une première plage ci-dessus » désignerait deux boutons
+  qui ne demandent aucune plage.
+- **Un inventaire clôturé n'a ni question, ni formulaire, ni création** : il
+  n'y a plus rien à y faire, seule la liste des emplacements reste.
+- **La création dit ce qui vient après.** Imprimer n'est pas l'objectif, c'est
+  l'avant-dernière étape : la carte finit sur « Une fois les balises collées ·
+  Affecter mes balises ». Sans cette sortie on repart avec un PDF sans savoir
+  qu'il reste à dire où les balises sont collées. La troisième étape du mode
+  d'emploi dit désormais « **Revenez ici** », plus « juste en dessous ».
+- **Sur « Mon compte » / le profil, aucune des deux sorties n'existe** : on y
+  imprime des balises sans inventaire en vue.
+
+## ⚠️ UNE BALISE SEULE EST UNE PLAGE DE UN — RIEN NE CHANGE EN BASE
+
+`define_zone` ne connaît que les plages, et n'a pas à connaître autre chose :
+la bascule est une affaire d'écran, `start` et `end` valent le même numéro. Une
+garde refuse l'apparition d'une RPC `define_balise` ou `define_zone_unique`.
+
+- **Le message de saisie suit le champ qu'on a sous les yeux.** « Indiquez la
+  première et la dernière balise de la plage » devant un seul champ ferait
+  chercher le second. D'où le quatrième paramètre de `validateRange` — il ne
+  change **que** le message.
+- Sur l'application, la bascule est un `Switch` — le motif déjà employé par
+  « Utiliser des zones / balises » à la création d'un inventaire.
+- Les cartes de choix portent `Radius.bouton` : **elles se touchent**. La garde
+  du 7 septembre le déduit du nom du style, et elle a raison de mordre là.
+
+## ⚠️ UN DÉFAUT QUE SEULE LA MESURE A MONTRÉ, ET UNE GARDE QUI NE MORDAIT PAS
+
+`.zone-form-unique` (trois colonnes) a d'abord été déclarée **en bas** de
+`globals.css`, et citée dans les deux requêtes média avec sa base. Ça semblait
+suffire ; ça ne suffisait pas. **Les deux sélecteurs ont la même spécificité :
+la déclaration posée plus bas dans la feuille gagne à toutes les largeurs.**
+Mesuré au navigateur : à 760 px la rangée gardait ses trois colonnes.
+
+Elle vit désormais **à côté de sa base, avant la section responsive**. Mesures
+après correction : 1280 → 3 colonnes, 850 → 2, 760 → 1, débordement nul.
+
+⚠️ **Et la première garde a validé le défaut** : elle vérifiait la *présence*
+de `.zone-form-unique` dans les requêtes média, ce qui était vrai. Elle vérifie
+maintenant l'**ordre** — l'index de la déclaration doit précéder celui de
+chaque requête. *Une garde sur une cascade CSS porte sur l'ordre, pas sur la
+présence.*
+
+## ⚠️ LE TUNNEL DE PRÉPARATION S’EMPILE — on revient sur ses pas
+
+Constat du même jour : *« page zone & balises ne dispose pas d'un bouton
+retour, ainsi qu'importer les données, pareil pour ajouter des compteurs »*.
+
+Ce sont exactement les **trois étapes du tunnel** qui suit la création d'un
+inventaire. Le retour y a été fermé volontairement le 23 août pour que le
+tunnel reste linéaire — mais **rien n'a été mis à la place**, et on ne pouvait
+plus en sortir avant la dernière étape. Ouverts normalement depuis la fiche
+d'un inventaire, ces trois écrans ont bien leur flèche : c'est le tunnel, et
+lui seul, qui enfermait.
+
+⚠️ **UN PREMIER CORRECTIF A ÉTÉ ÉCARTÉ LE JOUR MÊME, ET C'EST LA LEÇON.** Il
+posait une sortie « Plus tard » vers la fiche de l'inventaire : elle rendait le
+droit de **partir**, pas celui de **revenir**. Julien, en le lisant : *« je ne
+veux pas plus tard, je veux pouvoir revenir à l'étape précédente si jamais j'ai
+envie de faire des changements »*. Une sortie n'est pas un retour — la question
+posée était bien « où est la flèche », pas « comment je m'échappe ». Le
+composant `SortieTunnel` a vécu une heure ; il a été supprimé.
+
+**La réponse est la pile de navigation, pas un composant.** Les trois étapes
+s'**empilent** (`router.push`) au lieu de se remplacer, et la flèche native
+reprend tout son travail — plus de `headerBackVisible: false`, plus de
+`headerLeft`, plus de `gestureEnabled: false`. Un seul contrôle, celui de tout
+le reste de l'application, et le balayage marche avec.
+
+- **⚠️ C'EST `push` QUI MET L'ÉTAPE PRÉCÉDENTE DERRIÈRE LA FLÈCHE.** Avec
+  `replace` il n'y a rien derrière : la flèche existerait, et ramènerait à la
+  liste en sautant les étapes qu'on veut justement retrouver.
+- **⚠️ LA CRÉATION, ELLE, REMPLACE TOUJOURS.** `new-session` → zones reste un
+  `replace` : on ne revient pas sur le formulaire d'un inventaire déjà créé —
+  empiler là laisserait en recréer un second. Un test le refuse.
+- **⚠️ ET LA SORTIE VIDE LE TUNNEL** (`router.dismissAll()` puis
+  `router.push`). La pile vaut `[liste, zones, fichiers, compteurs]` : un
+  `replace` ne changerait que le dernier écran, et la flèche de la fiche de
+  l'inventaire renverrait **dans** le tunnel qu'on vient de finir, étape par
+  étape. `dismissAll` revient au premier écran de la pile (la liste), le `push`
+  pose la fiche par-dessus — exactement l'état qu'on obtient en ouvrant
+  l'inventaire depuis la liste. Ne pas « simplifier » en un `replace`.
+- **La flèche de la première étape mène à la liste**, faute d'étape précédente.
+  C'est littéralement l'écran d'où l'on vient, et l'inventaire y figure.
+
+⚠️ **LE TEST EXISTANT CERTIFIAIT L'ENFERMEMENT.** Il vérifiait que les trois
+étapes ferment le retour natif, et rien d'autre — donc il confirmait que tout
+allait bien pendant qu'on ne pouvait pas sortir. Il **déduit** maintenant ses
+écrans (ceux de `src/` qui lisent `from === 'new'`, et il exige qu'il y en ait
+trois) et refuse les trois verrous ; deux autres gardes tiennent le `push` et
+la sortie. La quatrième étape qu'on ajoutera demain est couverte sans qu'on y
+pense.
+
+## Vérifications
+
+- **Au navigateur, sur le VRAI composant** (`ZonesSetup` exporté le temps d'une
+  route jetable, retirée — `git status` contrôlé, plus `rm -rf web/.next`, le
+  piège des types de route qui survivent), **clair et sombre**, à 1280, 850 et
+  760 px : les trois états, les deux branches de la question, la bascule dans
+  ses deux positions (`aria-checked`, 3 champs → 2, 4 colonnes → 3), le retour
+  à la question, et un inventaire clôturé qui n'affiche que sa liste.
+  **Débordement horizontal nul aux trois largeurs.** C'est ce contrôle qui a
+  trouvé le défaut de cascade ci-dessus.
+- **Huit sabotages, huit échecs** — dont celui de la cascade, qui a d'abord
+  passé et a fait resserrer sa garde.
+- 1 327 tests du site, 447 de l'application, `tsc --noEmit` des deux côtés,
+  `eslint .` à **zéro erreur** (47 avertissements, la famille `react-hooks/*`
+  déjà documentée), `next build` avec la table de routes **inchangée**.
+
+**VU SUR LE PIXEL**, sur le compte réel de Julien, **sans rien écrire** (règle
+du 25 août : consulter n'écrit rien) : le formulaire d'affectation qui s'ouvre
+**directement** sur les deux inventaires qui ont déjà des emplacements — donc
+la règle « la question ne se pose plus » tient sur de vraies données —, la
+bascule dans ses deux positions (deux champs « Balise début / Balise fin » →
+un seul champ « Balise »), « Créer d'autres balises » qui ouvre la carte
+d'impression **sans** « Revenir à la question » (elle n'a pas lieu d'être là),
+la troisième étape qui dit « Revenez ici », le pied « Une fois les balises
+collées · Affecter mes balises », et le retour au formulaire.
+
+⚠️ **DEUX CHOSES RESTENT NON VUES, ET IL FAUT SAVOIR POURQUOI.**
+
+- **La question elle-même.** Elle ne s'affiche que sur un inventaire **sans
+  aucun emplacement**, et les trois inventaires du compte en ont — c'est
+  précisément ce que la règle prévoit. La voir demanderait d'en créer un, donc
+  d'écrire sur des données de travail réelles : ce n'est pas à moi de le
+  décider. Le rendu est tenu par le contrôle au navigateur, qui exerce
+  exactement les mêmes conditions.
+- **Le va-et-vient du tunnel**, pour la même raison : il faut créer un
+  inventaire pour y entrer. C'est le seul point dont la mécanique (`push`,
+  puis `dismissAll` + `push`) ne se prouve qu'à l'exécution — les gardes
+  figent le code, pas le comportement de la pile.
+
+Et `./scripts/simulateur.sh` échoue toujours sur le même défaut qu'hier :
+`xcodebuild` s'arrête en analysant ses options (`IDEDerivedDataPathOverride`
+nil), avant toute compilation. **Pas de contournement par `xcodebuild` à la
+main**, c'est la règle du projet.
+
+Tests de garde : `web/tests/zone-de-comptage.test.ts` et
+`tests/zone-de-comptage.test.ts` — les deux se lisent en parallèle, c'est le
+même geste sur les deux surfaces. Le tunnel, lui, reste dans
+`tests/compte.test.ts`, bloc « le tunnel de préparation ».

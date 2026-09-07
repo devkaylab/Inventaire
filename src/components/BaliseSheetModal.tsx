@@ -159,7 +159,7 @@ function makeStyles(t: Theme) {
     preview: { fontSize: 13, color: t.accent, fontFamily: Font.semibold, marginTop: Spacing.sm, minHeight: 18 },
     error: { fontSize: 13, color: t.danger, fontFamily: Font.regular, marginTop: Spacing.sm, lineHeight: 18 },
     actions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
-    btn: { flex: 1, borderRadius: Radius.md, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+    btn: { flex: 1, borderRadius: Radius.bouton, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
     btnPrimary: { backgroundColor: t.accent, ...t.shadowButton },
     btnPrimaryText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
     btnSecondary: { backgroundColor: t.surface, borderWidth: 1, borderColor: t.borderStrong },

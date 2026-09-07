@@ -102,7 +102,7 @@ function makeStyles(t: Theme) {
     cardBody: { fontSize: 14, fontFamily: Font.regular, color: t.textSecondary, lineHeight: 20 },
     cardHint: { fontSize: 12, fontFamily: Font.regular, color: t.textMuted, lineHeight: 17 },
     button: {
-      backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton,
     },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Stack, router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
 import { nb } from '@/lib/nombres'
@@ -174,9 +174,6 @@ export default function ImportScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {fromNew && (
-        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => null, gestureEnabled: false }} />
-      )}
       <ScrollView contentContainerStyle={styles.container}>
         {repereFichiers.aVoir && (
           <View style={styles.astuceEncart}>
@@ -246,7 +243,7 @@ export default function ImportScreen() {
           // compteurs vient après les fichiers, et c'est d'elle qu'on entre.
           <Pressable
             style={styles.startBtn}
-            onPress={() => router.replace(`/(supervisor)/${sessionId}/invite?from=new`)}
+            onPress={() => router.push(`/(supervisor)/${sessionId}/invite?from=new`)}
           >
             <Text style={styles.startBtnText}>Suivant : ajouter des compteurs</Text>
           </Pressable>
@@ -296,11 +293,11 @@ function makeStyles(t: Theme) {
     errorText: { color: t.danger, fontSize: 12 },
     noteText: { color: t.textMuted, fontSize: 12 },
 
-    button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
+    button: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
     buttonDisabled: { opacity: 0.5 },
     buttonText: { color: t.onAccent, fontFamily: Font.semibold, fontSize: 15 },
 
-    startBtn: { backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    startBtn: { backgroundColor: t.success, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
     startBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },
   })
 }

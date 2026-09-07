@@ -24,6 +24,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { fmtDateTime, relativeTime } from '@/lib/format'
+import { Chargement } from '@/components/Chargement'
 
 type Fil = {
   id: string
@@ -124,7 +125,7 @@ export default function MessagesPage() {
   }
 
   if (guard.status !== 'ready') {
-    return <div className="auth-wrap"><p className="muted">Chargement…</p></div>
+    return <Chargement />
   }
 
   return (

@@ -101,10 +101,14 @@ export default function ResultsScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.textMuted} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.textSecondary} />}
       >
+        {/* ⚠️ « REGISTRE » — l'écran fait foi, il se lit comme un document.
+            Filets au lieu de cartes, nombres en chasse fixe, titre en serif,
+            rayon zéro. C'est la même grammaire que l'onglet Rapport du site.
+            Voir `src/constants/ink.ts`, `Font.serif` et `Font.mono`. */}
+        <Text style={styles.docTitre}>Rapport d’inventaire</Text>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Synthèse</Text>
           <Row styles={styles} label="Stock théorique" value={fmt(totals.theoreticalUnits)} />
           <Row styles={styles} label="Stock compté" value={fmt(totals.countedUnits)} />
           <Row styles={styles} label="Écart total (unités)" value={qteSignee(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
@@ -117,7 +121,7 @@ export default function ResultsScreen() {
           disabled={exportMutation.isPending || total === 0}
         >
           {exportMutation.isPending
-            ? <ActivityIndicator color="#fff" />
+            ? <ActivityIndicator color={theme.onAccent} />
             : <Text style={styles.exportBtnText}>Exporter le rapport Excel</Text>}
         </Pressable>
 
@@ -189,31 +193,44 @@ function makeStyles(t: Theme) {
     safe: { flex: 1, backgroundColor: t.background },
     container: { padding: Spacing.lg, gap: Spacing.md },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.background },
-    summaryCard: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: 18, borderWidth: 1, borderColor: t.hairline, ...t.shadowCard },
-    summaryTitle: { fontSize: 11, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: Spacing.md },
-    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: t.hairline },
+    // Le titre du DOCUMENT : la barre de navigation nomme l'inventaire, le
+    // document nomme la pièce.
+    docTitre: { fontFamily: Font.serif, fontSize: 25, color: t.textPrimary, letterSpacing: -0.2, marginBottom: 2 },
+    // La synthèse est un intervalle réglé, plus une carte : deux traits
+    // d'encre l'ouvrent et la ferment, comme sur un relevé.
+    summaryCard: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: t.textPrimary, paddingVertical: 4 },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 9 },
     summaryLabel: { fontSize: 13, color: t.textSecondary, fontFamily: Font.regular },
-    summaryValue: { fontSize: 17, fontFamily: Font.bold, color: t.textPrimary, ...tabular },
-    exportBtn: { backgroundColor: t.success, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center' },
-    exportBtnText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
+    summaryValue: { fontSize: 17, fontFamily: Font.monoMedium, color: t.textPrimary, ...tabular },
+    // ⚠️ L'EXPORT PORTE L'ACCENT, PLUS LE VERT DU SUCCÈS. Depuis qu'Ardoise a
+    // fait de l'accent un vert forêt, deux verts voisins sur le même écran ne
+    // se distinguent plus — et le succès doit rester ce qui a RÉUSSI.
+    exportBtn: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center' },
+    exportBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
     // « Voir N de plus » : un bouton en contour, pas un second bouton plein —
     // l'export reste l'action de l'écran, charger la suite est un pas de côté.
     // ⚠️ 48 de haut : la cible tactile minimale d'Android (31 août 2026).
     plusBtn: {
-      minHeight: 48, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline,
-      backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center',
+      minHeight: 48, borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.borderStrong,
+      alignItems: 'center', justifyContent: 'center',
       marginTop: Spacing.xs,
     },
     plusBtnText: { fontSize: 15, fontFamily: Font.semibold, color: t.accent },
-    empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
-    sectionLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.xs, marginLeft: 2 },
-    card: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: 4, ...t.shadowCard },
-    brand: { fontSize: 10, fontFamily: Font.bold, color: t.accent, textTransform: 'uppercase', letterSpacing: 0.5 },
+    empty: { fontSize: 14, color: t.textSecondary, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
+    // ⚠️ PAS DE `textMuted` DANS UN DOCUMENT. Mesuré sur le site : ce gris
+    // donne 3,06:1 sur le papier, sous le seuil AA — et il portait les
+    // en-têtes, les codes-barres et les libellés de colonnes, c'est-à-dire ce
+    // qu'on LIT. Ici la hiérarchie vient de la taille et des capitales.
+    sectionLabel: { fontSize: 11, fontFamily: Font.semibold, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: Spacing.md },
+    // Une ligne, plus une carte : un filet la sépare de la suivante.
+    card: { paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: t.hairline, gap: 4 },
+    brand: { fontSize: 10, fontFamily: Font.mono, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
     label: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: -0.2 },
-    meta: { fontSize: 12, color: t.textMuted, ...tabular },
-    qtyRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
-    cell: { flex: 1, alignItems: 'center', backgroundColor: t.background, borderRadius: Radius.sm, paddingVertical: Spacing.sm, borderWidth: 1, borderColor: t.hairline },
-    cellLabel: { fontSize: 10, color: t.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
-    cellValue: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary, marginTop: 2, ...tabular },
+    // Le SKU et le code-barres sont des codes : ils se lisent comme des nombres.
+    meta: { fontSize: 12, fontFamily: Font.mono, color: t.textSecondary, ...tabular },
+    qtyRow: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.xs },
+    cell: { flex: 1 },
+    cellLabel: { fontSize: 10, color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 },
+    cellValue: { fontSize: 15, fontFamily: Font.monoMedium, color: t.textPrimary, marginTop: 2, ...tabular },
   })
 }

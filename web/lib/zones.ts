@@ -238,12 +238,21 @@ export function codeRange(codes: string[]): string {
   return contiguous ? `${first} → ${last}` : `${first} → ${last} (${sorted.length})`
 }
 
-/** Validation de plage, alignée sur les règles du serveur (define_zone). */
-export function validateRange(name: string, start: string, end: string): string | null {
+/**
+ * Validation de plage, alignée sur les règles du serveur (define_zone).
+ *
+ * ⚠️ `unique` ne change QUE le message. Une balise seule est une plage de un —
+ * `start` et `end` valent alors le même numéro, et rien ne bouge côté serveur.
+ * Ce qui changerait sans ce paramètre, c'est ce qu'on lit quand le champ est
+ * vide : « indiquez la première et la dernière balise » devant un seul champ.
+ */
+export function validateRange(name: string, start: string, end: string, unique = false): string | null {
   if (!name.trim()) return "Indiquez le nom de l'emplacement (ex. « Réserve »)."
   const s = Number(start), e = Number(end)
   if (!Number.isInteger(s) || !Number.isInteger(e) || start.trim() === '' || end.trim() === '') {
-    return 'Indiquez la première et la dernière balise de la plage.'
+    return unique
+      ? 'Indiquez le numéro de la balise.'
+      : 'Indiquez la première et la dernière balise de la plage.'
   }
   if (s < 0) return 'Une balise ne peut pas être négative.'
   if (s > e) return 'La première balise doit être inférieure ou égale à la dernière.'

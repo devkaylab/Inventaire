@@ -80,26 +80,3 @@ export function Parallaxe() {
 
   return null
 }
-
-/**
- * Cube filaire décoratif des pages vitrines — l'esquisse du cube du logo,
- * au trait. Il prend la couleur de son conteneur (currentColor) : c'est la
- * classe du calque qui choisit le jeton, et le thème suit tout seul.
- */
-export function CubeFilaire({ size }: { size: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={0.6}
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3 20 7.5v9L12 21 4 16.5v-9L12 3z" />
-      <path d="M4 7.5 12 12l8-4.5M12 12v9" />
-    </svg>
-  )
-}

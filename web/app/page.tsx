@@ -1,10 +1,8 @@
-import { Logo } from '@/components/Logo'
 import { LogicielJsonLd } from '@/components/DonneesStructurees'
 import { AuthLink } from '@/components/AuthLink'
 import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
-import { CubeFilaire } from '@/components/Parallaxe'
 import { ApercuTableauDeBord } from '@/components/ApercuTableauDeBord'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 import { OFFRES, OFFRE_PHARE, euros } from '@/lib/offres'
@@ -80,29 +78,15 @@ export default function Home() {
       <main>
         <LogicielJsonLd />
         <section className="hero hero-plein">
-          <div className="plx hero-voile" data-plx="0.45" aria-hidden="true" />
-          <div className="plx cube-a" data-plx="0.18" aria-hidden="true">
-            <div className="flotte"><CubeFilaire size={150} /></div>
-          </div>
-          <div className="plx cube-b" data-plx="0.5" aria-hidden="true">
-            <div className="flotte-lent"><CubeFilaire size={104} /></div>
-          </div>
-          <div className="plx cube-c" data-plx="0.3" aria-hidden="true">
-            <div className="flotte"><CubeFilaire size={64} /></div>
-          </div>
-          <div className="plx scan-trait" data-plx="0.62" aria-hidden="true" />
           <div className="container" data-hero-exit>
-            <div className="logo-glow" data-reveal="0" style={{ display: 'inline-block' }}>
-              <Logo size={72} gradientId="logoHero" />
-            </div>
-            <div data-reveal="1"><span className="eyebrow">Outil d&apos;inventaire</span></div>
-            <h1 data-reveal="2">La simplicité<br /><span className="grad">en main.</span></h1>
+            <div data-reveal="0"><span className="eyebrow">Outil d&apos;inventaire</span></div>
+            <h1 data-reveal="1">La simplicité<br /><span className="grad">en main.</span></h1>
             {/*
               Trois prestations plutôt qu'une phrase : elles se lisent en un coup
               d'œil et méritent le poids d'un sous-titre, pas celui d'un
               paragraphe.
             */}
-            <p className="lead lead-trois" data-reveal="3">
+            <p className="lead lead-trois" data-reveal="2">
               Inventaire tournant. Comptage en équipe. Écarts en direct.
             </p>
             {/*
@@ -111,7 +95,7 @@ export default function Home() {
               garde le libellé explicite : c'est un repère de navigation, pas un
               argument.
             */}
-            <div className="cta" data-reveal="4">
+            <div className="cta" data-reveal="3">
               <InscriptionLink className="btn btn-primary">Fiabiliser mon stock</InscriptionLink>
               <Link href="/tarifs" className="btn btn-ghost">Voir nos offres</Link>
             </div>
@@ -135,9 +119,6 @@ export default function Home() {
         </div>
 
         <section className="section" id="en-pratique">
-          <div className="plx deco-cube deco-droite deco-accent" data-plx="0.28" aria-hidden="true">
-            <CubeFilaire size={230} />
-          </div>
           <div className="container">
             <div className="section-head" data-reveal="0">
               <span className="eyebrow">En pratique</span>
@@ -203,9 +184,6 @@ export default function Home() {
         </section>
 
         <section className="section" id="fonctionnalites">
-          <div className="plx deco-cube deco-gauche deco-cyan" data-plx="0.4" aria-hidden="true">
-            <CubeFilaire size={190} />
-          </div>
           <div className="container">
             <div className="section-head" data-reveal="0">
               <span className="eyebrow">Ce que ça fait</span>

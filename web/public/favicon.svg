@@ -1,14 +1,13 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7466F4"/>
-      <stop offset="0.52" stop-color="#4636B0"/>
-      <stop offset="1" stop-color="#1C153F"/>
-    </linearGradient>
-  </defs>
-  <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
-  <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
-  <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
-  <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
-  <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF"/>
+  <!-- La marque « zone » en clair sur une tuile encre. Un favicon doit se voir
+       sur un onglet clair comme sur un onglet sombre, donc il porte son fond —
+       et à 16 px cette tuile est aussi ce qui empêche les trois allées, larges
+       d'un douzième de la marque, de se réduire à une tache flottante. -->
+  <rect width="512" height="512" rx="116" fill="#14181A"/>
+  <g transform="translate(86 86) scale(9.4444)">
+    <rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke="#ECEFEC" stroke-width="3"/>
+    <rect x="11" y="3" width="3" height="30" fill="#ECEFEC"/>
+    <rect x="22" y="3" width="3" height="30" fill="#ECEFEC"/>
+    <rect x="3" y="3" width="8" height="30" fill="#ECEFEC"/>
+  </g>
 </svg>

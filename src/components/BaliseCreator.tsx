@@ -21,6 +21,10 @@ import { GeneratingOverlay } from './GeneratingOverlay'
 interface Props {
   /** Contexte : la phrase d'accroche et la troisième étape s'adaptent. */
   context: 'profile' | 'zones'
+  /** Retour à la question « Avez-vous vos balises ? », quand elle a été posée. */
+  onRetour?: () => void
+  /** L'étape d'après : indiquer quelles balises sont à quel endroit. */
+  onAffecter?: () => void
 }
 
 /**
@@ -35,8 +39,16 @@ interface Props {
  * par-dessus — le bouton tournait indéfiniment, aucun PDF ne sortait (vu au
  * simulateur le 23 août 2026). L'overlay est maintenant un voile posé sur
  * cette carte : plus rien n'est présenté, le partage part sans détour.
+ *
+ * ⚠️ SUR L'ÉCRAN ZONES, IL NE S'AFFICHE PLUS D'OFFICE. Il est la réponse
+ * « Non, pas encore » à la question posée en tête de l'écran — voir
+ * `zones.tsx`. D'où les deux sorties : `onRetour` revient à la question,
+ * `onAffecter` mène à l'étape suivante. **La carte ne s'arrête pas au
+ * téléchargement** : imprimer n'est pas l'objectif, c'est l'avant-dernière
+ * étape. Sur le profil, aucune des deux n'existe — on y imprime des balises
+ * sans inventaire en vue.
  */
-export function BaliseCreator({ context }: Props) {
+export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
   const theme = useTheme()
   const styles = makeStyles(theme)
   const { profile } = useAuth()
@@ -66,13 +78,18 @@ export function BaliseCreator({ context }: Props) {
   const steps = [
     ['Imprimez', 'la planche sur des feuilles d’étiquettes autocollantes Avery L7160, à 100 % (taille réelle).'],
     ['Collez', 'les balises dans le magasin, dans l’ordre des numéros : 1 à 10 dans la réserve, 11 à 30 en surface de vente, par exemple.'],
-    ['Indiquez', context === 'zones'
-      ? 'ci-dessous quelles balises sont à quel endroit.'
-      : 'dans chaque inventaire (écran Zones) quelles balises sont à quel endroit.'],
+    context === 'zones'
+      ? ['Revenez ici', 'indiquer quelles balises sont à quel endroit.']
+      : ['Indiquez', 'dans chaque inventaire (écran Zones) quelles balises sont à quel endroit.'],
   ]
 
   return (
     <View style={styles.card}>
+      {onRetour && (
+        <Pressable onPress={onRetour} hitSlop={8}>
+          <Text style={styles.retour}>← Revenir à la question</Text>
+        </Pressable>
+      )}
       <Text style={styles.title}>Créer des balises</Text>
       <Text style={styles.intro}>
         {context === 'zones'
@@ -92,6 +109,18 @@ export function BaliseCreator({ context }: Props) {
           ? <ActivityIndicator color={theme.onAccent} />
           : <Text style={styles.btnText}>Créer et imprimer des balises</Text>}
       </Pressable>
+
+      {/* ⚠️ La carte ne s'arrête pas au téléchargement : sans cette sortie, on
+          repart avec un PDF et sans savoir qu'il reste à dire où les balises
+          sont collées. */}
+      {onAffecter && (
+        <View style={styles.suite}>
+          <Text style={styles.suiteTitre}>Une fois les balises collées</Text>
+          <Pressable style={styles.suiteBtn} onPress={onAffecter}>
+            <Text style={styles.suiteBtnText}>Affecter mes balises</Text>
+          </Pressable>
+        </View>
+      )}
 
       <BaliseSheetModal
         visible={open}
@@ -124,9 +153,17 @@ function makeStyles(t: Theme) {
     stepText: { flex: 1, fontSize: 13, color: t.textSecondary, fontFamily: Font.regular, lineHeight: 18 },
     stepVerb: { color: t.textPrimary, fontFamily: Font.semibold },
     btn: {
-      marginTop: Spacing.xs, backgroundColor: t.accent, borderRadius: Radius.md,
+      marginTop: Spacing.xs, backgroundColor: t.accent, borderRadius: Radius.bouton,
       paddingVertical: 12, alignItems: 'center', justifyContent: 'center', ...t.shadowButton,
     },
     btnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
+    retour: { fontSize: 13, color: t.textMuted, fontFamily: Font.medium, marginBottom: 2 },
+    suite: { marginTop: Spacing.sm, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: t.hairline, gap: Spacing.sm },
+    suiteTitre: { fontSize: 13, color: t.textSecondary, fontFamily: Font.semibold },
+    suiteBtn: {
+      borderWidth: 1, borderColor: t.borderStrong, borderRadius: Radius.bouton,
+      paddingVertical: 12, alignItems: 'center', justifyContent: 'center',
+    },
+    suiteBtnText: { color: t.textPrimary, fontSize: 15, fontFamily: Font.bold },
   })
 }

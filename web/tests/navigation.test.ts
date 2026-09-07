@@ -71,9 +71,16 @@ describe('la barre de navigation', () => {
     // cette page seule. Une seule largeur, une seule règle : pas de
     // modificateur par page, sinon le bandeau change de dimension d'un
     // onglet à l'autre.
+    //
+    // ⚠️ LA GARDE VISE LA CLASSE, PLUS LA LIGNE ENTIÈRE. Elle exigeait
+    // `className="app-main"` mot pour mot : le 6 septembre 2026, `app-main` a
+    // gagné les deux variables de police de « Registre » (`className={\`app-main
+    // ${…}\`}`) et la garde est tombée alors que la largeur n'avait pas bougé.
+    // Ce qu'elle défend, c'est qu'il n'y ait PAS de modificateur de largeur —
+    // pas une façon d'écrire un attribut.
     const css = lire('../app/globals.css')
-    expect(shell).toContain('className="app-rail"')
-    expect(shell).toContain('className="app-main"')
+    expect(shell).toMatch(/className=[{"`][^\n]*\bapp-rail\b/)
+    expect(shell).toMatch(/className=[{"`][^\n]*\bapp-main\b/)
     expect(css).not.toContain('.app-main-wide')
     expect(css).not.toContain('.app-rail-wide')
   })
@@ -648,8 +655,62 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
 
   it('elle respecte la préférence de réduction des animations', () => {
     expect(parallaxe).toContain('prefers-reduced-motion')
-    // Et les animations CSS du décor s'éteignent avec elle.
-    expect(css).toContain('.flotte, .flotte-lent, .scroll-cue svg { animation: none; }')
+    // Et l'animation CSS du décor s'éteint avec elle.
+    expect(css).toContain('.scroll-cue svg { animation: none; }')
+  })
+
+  it('⚠️ le héros n’a plus ni décor ni lueur', () => {
+    // 6 septembre 2026, décision de Julien. Les cubes filaires étaient
+    // l'esquisse de l'ANCIEN logo ; la marque est devenue un plan de magasin
+    // vu du dessus, ils ne voulaient plus rien dire. Sont partis dans le même
+    // geste le logo répété sous l'en-tête (il y est déjà, deux fois suffit
+    // rarement) et le voile en dégradé qui lui faisait un halo. Puis, dans la
+    // foulée, les deux restes que j'avais laissés : le trait de scan sous le
+    // titre de l'accueil, et la lueur d'accent que TOUS les héros portaient
+    // en `::before`. Le héros ne tient plus que par sa typographie — c'est la
+    // doctrine Ardoise, où l'accent ne sert qu'à ce qui engage.
+    //
+    // ⚠️ LA GARDE DÉDUIT SA LISTE DE PAGES, ELLE NE LA CITE PAS : elle balaie
+    // tout `app/` et `components/`, donc la page vitrine qu'on écrira demain
+    // est couverte sans qu'on y pense.
+    //
+    // ⚠️ Et elle lit le code SANS SES COMMENTAIRES : celui de `globals.css`
+    // cite `.hero-voile` précisément pour dire qu'on ne le remet pas, et le
+    // verbe « flotte » se trouve dans une phrase française. Une garde qui
+    // vérifie une absence se lirait elle-même.
+    const morts = [
+      'CubeFilaire', 'cube-a', 'cube-b', 'cube-c', 'hero-cube-int',
+      'deco-cube', 'deco-cyan', 'logo-glow', 'hero-voile', 'flotte',
+      'scan-trait', '.hero::before', '.hero-plein::before',
+    ]
+    const sources: string[] = []
+    const balayer = (dossier: string) => {
+      for (const e of readdirSync(dossier, { withFileTypes: true })) {
+        const f = path.join(dossier, e.name)
+        if (e.isDirectory()) balayer(f)
+        else if (f.endsWith('.tsx') || f.endsWith('.css')) sources.push(f)
+      }
+    }
+    balayer(path.resolve(__dirname, '../app'))
+    balayer(path.resolve(__dirname, '../components'))
+    expect(sources.length, 'plus une seule source à balayer : la garde ne garde rien')
+      .toBeGreaterThan(20)
+
+    for (const f of sources) {
+      const src = readFileSync(f, 'utf8')
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/^\s*\/\/.*$/gm, ' ')
+      for (const mort of morts) {
+        expect(src, `${path.basename(f)} : « ${mort} » est un reste de l’ancienne identité`)
+          .not.toContain(mort)
+      }
+    }
+  })
+
+  it('et le logo ne se répète pas dans le héros de l’accueil', () => {
+    // Il est déjà dans la barre du haut et dans le pied de page.
+    expect(accueil).not.toContain('<Logo')
   })
 
   it('⚠️ la racine se rogne en clip, jamais en hidden', () => {
@@ -777,14 +838,146 @@ describe('une section est une surface, pas une marge', () => {
     return css.slice(i, css.indexOf('}', i))
   }
 
-  it('elle porte un fond, un cadre et sa respiration', () => {
+  it('elle porte un fond, et sa respiration', () => {
     const s = bloc('.admin-section')
     expect(s).toContain('background: var(--surface)')
-    expect(s).toContain('border: 1px solid var(--hairline)')
     expect(s).toMatch(/padding: \d+px \d+px/)
     // ⚠️ Et surtout : plus de `margin-top` nu. C'était TOUT ce que la règle
     // faisait, et c'est ce qui rendait cinq blocs indistinguables.
     expect(s).not.toMatch(/margin-top: 44px/)
+  })
+
+  // ⚠️ CETTE GARDE A CHANGÉ D'OBJET LE 6 SEPTEMBRE 2026, ET C'EST VOULU.
+  // Elle exigeait `border: 1px solid var(--hairline)` — le contour était le
+  // moyen retenu le 5 septembre pour détacher une section. La piste « Ardoise »
+  // le retire : mesuré sur qonto.com, leurs cartes n'ont ni bordure ni ombre,
+  // et un contour sur chaque bloc est l'un des trois signes du « fait par une
+  // IA » que Julien voulait effacer.
+  //
+  // Ce que la règle défend n'a pas bougé — une section se détache — mais elle
+  // ne peut plus le tenir par le contour. Elle le tient donc par ce qui le
+  // remplace : le FOND de la section diffère du fond de la page, dans les deux
+  // thèmes. Sans cet écart, `border: 0` donnerait cinq blocs invisibles, ce qui
+  // serait pire que l'état d'avant.
+  it('et son fond diffère de celui de la page, dans les DEUX thèmes', () => {
+    const jeton = (bloc: string, nom: string) => {
+      const m = bloc.match(new RegExp(`--${nom}: (#[0-9a-f]{3,8});`, 'i'))
+      expect(m, `jeton --${nom} introuvable`).toBeTruthy()
+      return m![1].toLowerCase()
+    }
+    const sombre = css.slice(css.indexOf(':root {'), css.indexOf(':root[data-theme="light"]'))
+    const clair = css.slice(css.indexOf(':root[data-theme="light"]'))
+    for (const [nom, t] of [['sombre', sombre], ['clair', clair]] as const) {
+      expect(jeton(t, 'surface'), `en ${nom}, la surface a la couleur du fond`)
+        .not.toBe(jeton(t, 'bg'))
+    }
+  })
+
+  // ⚠️ CETTE GARDE DÉDUIT, ELLE NE CITE PAS TROIS SÉLECTEURS.
+  //
+  // Le défaut « du texte gris sous le seuil AA » s'est présenté QUATRE fois sur
+  // ce projet : la ligne de tranche du 22 août, `.field-hint` du 5 septembre,
+  // l'en-tête du tableau d'équipe le même jour, et trois libellés de plus
+  // mesurés au navigateur le 6 septembre (`.dash-sub` à 2,89:1, la bande de
+  // résumé à 3,22, la pastille de rôle à 2,89).
+  //
+  // À chaque fois on a corrigé le sélecteur fautif, et à chaque fois le suivant
+  // est passé. Ce qui se répète n'est pas un oubli, c'est une PALETTE : tant
+  // qu'un jeton de texte n'atteint pas le seuil sur les fonds où on le pose,
+  // n'importe quel écran futur reproduira le défaut. La garde porte donc sur
+  // les jetons, dans les deux thèmes et sur les deux fonds.
+  //
+  // `--text-3` n'y est pas, et c'est délibéré : c'est un gris de troisième rang
+  // (icônes éteintes, séparateurs, unités d'un chiffre déjà lisible). Le jour
+  // où il porte une phrase, c'est `--text-2` qu'il faut, pas un jeton de plus.
+  it('et tout jeton de texte tient le contraste AA sur les deux fonds', () => {
+    const lum = (hex: string) => {
+      const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    }
+    const ratio = (a: string, b: string) => {
+      const [h, l] = [lum(a), lum(b)].sort((x, y) => y - x)
+      return (h + 0.05) / (l + 0.05)
+    }
+    const jeton = (bloc: string, nom: string) => {
+      const m = bloc.match(new RegExp(`--${nom}: (#[0-9a-f]{6});`, 'i'))
+      expect(m, `jeton --${nom} introuvable`).toBeTruthy()
+      return m![1]
+    }
+    const sombre = css.slice(css.indexOf(':root {'), css.indexOf(':root[data-theme="light"]'))
+    const clair = css.slice(css.indexOf(':root[data-theme="light"]'))
+
+    for (const [nomTheme, bloc] of [['sombre', sombre], ['clair', clair]] as const) {
+      for (const texte of ['text', 'text-2']) {
+        for (const fond of ['bg', 'surface']) {
+          const r = ratio(jeton(bloc, texte), jeton(bloc, fond))
+          expect(r, `en ${nomTheme}, --${texte} sur --${fond} ne fait que ${r.toFixed(2)}:1`)
+            .toBeGreaterThanOrEqual(4.5)
+        }
+      }
+      // Et le bouton plein : son texte se lit sur l'accent, ou il ne se lit pas.
+      const rb = ratio(jeton(bloc, 'on-accent'), jeton(bloc, 'accent'))
+      expect(rb, `en ${nomTheme}, le bouton plein ne fait que ${rb.toFixed(2)}:1`)
+        .toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  // ⚠️ UNE DÉCLARATION CSS INVALIDE EST JETÉE EN SILENCE, et c'est ce qui est
+  // arrivé le 6 septembre 2026 : l'animation de la marque était écrite
+  // `steps(1, jump-none)`, or `jump-none` exige au moins DEUX pas. Le
+  // navigateur a donc écarté la propriété `animation` entière — la règle
+  // figurait bien dans la feuille, `prefers-reduced-motion` était faux, et
+  // `getComputedStyle` rendait quand même « 0s ». Rien, nulle part, ne l'a dit.
+  //
+  // La garde ne peut pas valider une valeur CSS depuis Node ; elle tient les
+  // trois choses qui décident du résultat : l'animation existe, elle balaie
+  // aux positions de la planche de Julien, et la préférence de mouvement
+  // réduit la coupe.
+  describe('la marque balaie pendant les attentes', () => {
+    it('l’animation est déclarée, et pas seulement les images clés', () => {
+      const regle = bloc('.logo-allee')
+      expect(regle).toMatch(/animation: logo-balayage [\d.]+s/)
+      expect(css).toContain('@keyframes logo-balayage')
+
+      // ⚠️ ET LA FONCTION DE TEMPS N'EST PAS `steps(1, …)`. On ne peut pas
+      // valider une valeur CSS depuis Node — c'est bien le problème, puisque
+      // rien ne signale une déclaration jetée. Alors la garde interdit
+      // nommément la forme qui a mordu : `steps(1, jump-none)` est invalide
+      // (`jump-none` exige au moins deux pas) et emporte toute la propriété.
+      // Une garde étroite qui mord vaut mieux qu'une large qui laisse passer :
+      // la première version de ce test acceptait le sabotage.
+      // ⚠️ Sans ses commentaires : celui de la règle CITE `steps(1, jump-none)`
+      // pour dire qu'on ne l'écrit pas, et la garde se lisait elle-même.
+      // Huitième fois que ce piège se présente sur ce dépôt.
+      const sansCommentaires = regle.replace(/\/\*[\s\S]*?\*\//g, ' ')
+      expect(sansCommentaires, 'un `steps(1, …)` est invalide et fait jeter toute la propriété')
+        .not.toMatch(/steps\(\s*1\s*[,)]/)
+    })
+
+    it('et elle passe par les trois allées de la planche', () => {
+      // La planche anime l'attribut `x` sur 3 ; 14 ; 25, l'allée pleine faisant
+      // 8 de large et démarrant à x=3. En translation, cela vaut 0, 11 et 22.
+      // ⚠️ On ne cherche PAS l'accolade fermante : un bloc `@keyframes` en
+      // contient une par palier, et s'arrêter à la première coupe la règle en
+      // deux. Une tranche large suffit — le bloc fait cinq lignes.
+      const i = css.indexOf('@keyframes logo-balayage')
+      const images = css.slice(i, i + 400)
+      for (const px of [0, 11, 22]) {
+        // `0` s'écrit sans unité en CSS, `11` et `22` en portent une.
+        expect(images, `l’allée ne s’arrête pas à ${px}`)
+          .toMatch(new RegExp(`translateX\\(${px}(px)?\\)`))
+      }
+      // ⚠️ Et en unités du viewBox, sinon l'allée sort du cadre dès que le
+      // logo dépasse 36 px — c'est-à-dire partout.
+      expect(bloc('.logo-allee')).toContain('transform-box: view-box')
+    })
+
+    it('et un écran qui refuse le mouvement ne la voit pas', () => {
+      const i = css.indexOf('@media (prefers-reduced-motion: reduce)', css.indexOf('.logo-allee'))
+      expect(i, 'aucune coupure sous prefers-reduced-motion').toBeGreaterThan(0)
+      expect(css.slice(i, i + 200)).toContain('.logo-allee { animation: none; }')
+    })
   })
 
   it('chaque titre de section peut porter sa phrase', () => {
