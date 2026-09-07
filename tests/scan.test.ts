@@ -66,18 +66,33 @@ describe('un article ne s’enregistre que dans une zone ouverte', () => {
     const d = deciderScan('5056635611789', CTX({ passe }))
     expect(d.action).toBe('refus')
     if (d.action !== 'refus') return
-    // Le titre décrit l'état, il ne laisse pas croire qu'on a fermé quelque chose.
-    expect(d.titre).toBe('Aucune zone ouverte')
+    // ⚠️ Le titre ne parle NI de fermeture NI d'un état de zone : les deux
+    // laissent croire que le scan a voulu clore quelque chose, alors qu'il
+    // vient seulement de ne pas reconnaître ce qu'il a lu. Règle rappelée par
+    // Julien le 7 septembre 2026 : « scanner une balise avant de compter doit
+    // ouvrir la zone, le téléphone n'est pas censé chercher à la fermer ».
+    expect(d.titre).toBe('Code non reconnu')
     expect(d.titre).not.toContain('fermée')
-    // Et il dit le geste qui débloque.
-    expect(d.texte).toContain('balise')
+    expect(d.titre).not.toContain('zone')
+    // Et il dit le geste qui débloque : ouvrir.
+    expect(d.texte).toContain('ouvrir')
   })
 
-  it('⚠️ le refus emploie le verbe de la PASSE', () => {
-    const c = deciderScan('5056635611789', CTX({ passe: 'count' }))
-    const a = deciderScan('5056635611789', CTX({ passe: 'audit' }))
-    expect(c.action === 'refus' && c.texte).toContain('comptez')
-    expect(a.action === 'refus' && a.texte).toContain('auditez')
+  it('⚠️ le refus DIT CE QU’IL A LU', () => {
+    // C'est ce qui manquait au correctif du matin : les trois refus disaient
+    // pourquoi, aucun ne disait QUOI. Sans cette ligne, un refus se discute ;
+    // avec elle, il se tranche — ou le code commence par « SCB1: » et notre
+    // lecture est fautive, ou il porte autre chose et ce n'est pas une balise.
+    const d = deciderScan('5056635611789', CTX())
+    expect(d.action === 'refus' && d.texte).toContain('Code lu : 5056635611789')
+  })
+
+  it('⚠️ un code interminable ne fait pas déborder la carte', () => {
+    const d = deciderScan('X'.repeat(300), CTX())
+    if (d.action !== 'refus') throw new Error('refus attendu')
+    const lu = d.texte.slice(d.texte.indexOf('Code lu : '))
+    expect(lu.length).toBeLessThan(60)
+    expect(lu).toContain('…')
   })
 })
 
@@ -107,7 +122,7 @@ describe('⚠️ un QR qui n’est pas une balise le DIT', () => {
     // même erreur, et c'est la seule chose que l'heuristique décide.
     for (const ean of ['5056635611789', '045496428280', 'REF-12', 'SKU_01']) {
       const d = deciderScan(ean, CTX())
-      expect(d.action === 'refus' && d.titre, ean).toBe('Aucune zone ouverte')
+      expect(d.action === 'refus' && d.titre, ean).toBe('Code non reconnu')
     }
   })
 
@@ -171,6 +186,9 @@ describe('la matrice entière', () => {
             if (d.action === 'refus') {
               expect(d.titre.length, ou).toBeGreaterThan(0)
               expect(d.texte.length, ou).toBeGreaterThan(0)
+              // ⚠️ Tout refus dit ce qu'il a lu — sauf le code vide, où il n'y
+              // a précisément rien à montrer.
+              if (code.trim()) expect(d.texte, ou).toContain('Code lu :')
             }
             if (d.action === 'article' || d.action === 'ouvrir' || d.action === 'changer') {
               expect(d.code.length, ou).toBeGreaterThan(0)

@@ -61,7 +61,7 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
         action: 'refus',
         titre: 'Balise inutile ici',
         texte: `Cet inventaire ne fonctionne pas par balises : scannez directement les `
-          + `articles à ${VERBE[ctx.passe]}.`,
+          + `articles à ${VERBE[ctx.passe]}.\n\n${luAffiche(valeur)}`,
       }
     }
     return { action: 'article', code: valeur }
@@ -92,18 +92,41 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
       ? {
         action: 'refus',
         titre: 'Ce n’est pas une balise',
-        texte: 'Ce QR code n’a pas été produit par Quantinvo. Visez l’étiquette collée '
-          + 'sur le rayon, ou saisissez son numéro ci-dessus.',
+        texte: `Ce code n’a pas été produit par Quantinvo. Visez l’étiquette collée `
+          + `sur le rayon, ou saisissez son numéro ci-dessus.\n\n${luAffiche(valeur)}`,
       }
       : {
         action: 'refus',
-        titre: 'Aucune zone ouverte',
-        texte: `Scannez d’abord la balise du rayon : elle dit où vous ${
-          ctx.passe === 'count' ? 'comptez' : 'auditez'}.`,
+        titre: 'Code non reconnu',
+        texte: `Ce n’est pas une balise Quantinvo. Visez l’étiquette du rayon pour `
+          + `ouvrir votre zone, ou saisissez son numéro ci-dessus.\n\n${luAffiche(valeur)}`,
       }
   }
 
   return { action: 'article', code: valeur }
+}
+
+/**
+ * ⚠️ **UN REFUS DIT CE QU'IL A LU, ET C'EST LA MOITIÉ DU MESSAGE.**
+ *
+ * Constat de Julien, 7 septembre 2026 : *« je ne peux toujours pas ouvrir de
+ * balise »*, sur le message corrigé le matin même. Les trois refus disaient
+ * bien POURQUOI ils refusaient — mais aucun ne disait **ce que la caméra avait
+ * lu**, donc personne, ni lui ni moi, ne pouvait savoir si l'étiquette visée
+ * portait autre chose que le format attendu.
+ *
+ * Sans cette ligne, un refus se discute ; avec elle, il se tranche en une
+ * seconde : ou bien le code affiché commence par `SCB1:` et c'est notre
+ * lecture qui est fautive, ou bien il porte tout autre chose et l'étiquette
+ * n'est pas une balise Quantinvo.
+ *
+ * Bornée à 40 signes : un QR peut porter une page entière, et une carte de
+ * question qui déborde ne se lit plus.
+ */
+function luAffiche(valeur: string): string {
+  const uneLigne = valeur.replace(/\s+/g, ' ').trim()
+  const court = uneLigne.length > 40 ? `${uneLigne.slice(0, 40)}…` : uneLigne
+  return `Code lu : ${court}`
 }
 
 /**
