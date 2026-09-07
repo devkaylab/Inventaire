@@ -503,13 +503,13 @@ function makeStyles(t: Theme) {
     codeChipText: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary },
     codeChipTextFort: { color: t.accent, fontFamily: Font.bold, letterSpacing: 1 },
     partagerBtn: {
-      backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingVertical: 13,
+      backgroundColor: t.accentSoft, borderRadius: Radius.bouton, paddingVertical: 13,
       alignItems: 'center', marginTop: 2,
     },
     partagerBtnText: { color: t.accent, fontSize: 15, fontFamily: Font.bold },
 
     button: {
-      backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton,
     },
     buttonDisabled: { opacity: 0.6 },
@@ -519,7 +519,7 @@ function makeStyles(t: Theme) {
     // Le vert du bout du tunnel, comme sur Zones et Import : le bouton qui fait
     // avancer ne se confond pas avec les actions de l'écran.
     startBtn: {
-      backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg,
+      backgroundColor: t.success, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', ...t.shadowButton,
     },
     startBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },

@@ -198,7 +198,30 @@ export const Spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32
  * une centaine de styles — mais elles ne portent plus que deux valeurs.
  * `pill` reste une capsule : c'est une FORME, pas un rayon.
  */
-export const Radius = { sm: 3, md: 4, lg: 4, xl: 4, pill: 999 } as const
+export const Radius = {
+  sm: 3, md: 4, lg: 4, xl: 4,
+  /**
+   * ⚠️ UN BOUTON GARDE SES COINS RONDS — décision de Julien, 7 septembre 2026,
+   * après avoir eu l'application en main : « use rounded corners buttons for
+   * the app, as it was previously ».
+   *
+   * C'est un écart assumé avec le site, et il tient à la nature du support :
+   * un bouton de téléphone se TOUCHE. Ce qui dit « ceci se presse », sur une
+   * surface tactile, c'est sa forme — pas un survol, pas un curseur qui
+   * change. À 4 px, les boutons de l'application se lisaient comme des
+   * bandeaux d'information.
+   *
+   * ⚠️ ET C'EST LE SEUL ÉCART : les cartes, les blocs, les champs et les
+   * tableaux restent à 3-4 px comme sur le site. Ne pas l'étendre — le jour où
+   * tout redevient rond, Ardoise n'a plus d'objet.
+   *
+   * 12 est la valeur que 44 des 54 boutons portaient avant Ardoise ; les dix
+   * autres étaient à 16. Une seule valeur, pas deux : c'est ce qui évite de
+   * revenir aux dix-sept d'avant.
+   */
+  bouton: 12,
+  pill: 999,
+} as const
 
 /**
  * Les polices — Archivo pour les titres et les nombres, Public Sans pour le

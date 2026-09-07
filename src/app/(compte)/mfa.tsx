@@ -275,20 +275,20 @@ function makeStyles(t: Theme) {
     onText: { fontSize: 11, fontFamily: Font.semibold, color: t.success },
 
     btn: {
-      marginTop: Spacing.lg, backgroundColor: t.accent, borderRadius: Radius.md,
+      marginTop: Spacing.lg, backgroundColor: t.accent, borderRadius: Radius.bouton,
       paddingVertical: 14, alignItems: 'center', ...t.shadowButton,
     },
     btnOff: { opacity: 0.45 },
     btnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
 
     softBtn: {
-      marginTop: Spacing.lg, backgroundColor: t.accentSoft, borderRadius: Radius.md,
+      marginTop: Spacing.lg, backgroundColor: t.accentSoft, borderRadius: Radius.bouton,
       paddingVertical: 14, alignItems: 'center',
     },
     softBtnText: { color: t.accent, fontSize: 14, fontFamily: Font.semibold },
 
     dangerBtn: {
-      marginTop: Spacing.lg, backgroundColor: t.dangerSoft, borderRadius: Radius.md,
+      marginTop: Spacing.lg, backgroundColor: t.dangerSoft, borderRadius: Radius.bouton,
       paddingVertical: 14, alignItems: 'center',
     },
     dangerBtnText: { color: t.danger, fontSize: 14, fontFamily: Font.bold },

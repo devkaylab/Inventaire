@@ -696,9 +696,9 @@ function makeStyles(t: Theme) {
 
     // Boutons Compter / Auditer (couleurs de mode)
     scanBtnRow: { flexDirection: 'row', gap: Spacing.md },
-    countBtn: { flex: 1, height: BTN_H, backgroundColor: t.accent, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
+    countBtn: { flex: 1, height: BTN_H, backgroundColor: t.accent, borderRadius: Radius.bouton, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
     countBtnText: { color: t.onAccent, fontSize: Texte.courant, fontFamily: Font.bold },
-    auditBtn: { flex: 1, height: BTN_H, backgroundColor: AUDIT_COLOR, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
+    auditBtn: { flex: 1, height: BTN_H, backgroundColor: AUDIT_COLOR, borderRadius: Radius.bouton, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
     auditBtnText: { color: AUDIT_ON, fontSize: Texte.courant, fontFamily: Font.bold },
 
 
@@ -709,11 +709,11 @@ function makeStyles(t: Theme) {
     credValue: { fontSize: Texte.valeur, fontFamily: Font.bold, color: t.textPrimary, letterSpacing: 0.5, ...tabular },
     credValueSecret: { color: t.accent, letterSpacing: 2 },
     copyBtn: {
-      height: 34, paddingHorizontal: Spacing.lg, borderRadius: Radius.md,
+      height: 34, paddingHorizontal: Spacing.lg, borderRadius: Radius.bouton,
       borderWidth: 1, borderColor: t.borderStrong, alignItems: 'center', justifyContent: 'center',
     },
     copyBtnText: { color: t.accent, fontSize: Texte.second, fontFamily: Font.semibold },
-    shareBtn: { height: BTN_H, backgroundColor: t.accentSoft, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
+    shareBtn: { height: BTN_H, backgroundColor: t.accentSoft, borderRadius: Radius.bouton, alignItems: 'center', justifyContent: 'center' },
     shareBtnText: { color: t.accent, fontSize: Texte.courant, fontFamily: Font.semibold },
 
     // Members
@@ -746,7 +746,7 @@ function makeStyles(t: Theme) {
     // Une action, pas une étiquette : du texte, qui se touche.
     removeBtn: { paddingHorizontal: 4, paddingVertical: 4 },
     removeBtnText: { fontSize: Texte.second, fontFamily: Font.semibold, color: t.danger },
-    inviteBtn: { height: BTN_H, backgroundColor: t.accent, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xs, ...t.shadowButton },
+    inviteBtn: { height: BTN_H, backgroundColor: t.accent, borderRadius: Radius.bouton, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xs, ...t.shadowButton },
     inviteBtnText: { color: t.onAccent, fontSize: Texte.courant, fontFamily: Font.bold },
 
     // Info panel sheet

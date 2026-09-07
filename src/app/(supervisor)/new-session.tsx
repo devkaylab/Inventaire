@@ -212,7 +212,7 @@ function makeStyles(t: Theme) {
     labelConsigne: { color: t.accent },
     emptyStores: { fontSize: 14, color: t.textMuted, fontFamily: Font.regular, lineHeight: 20, backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, padding: Spacing.lg },
     codeRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
-    regenBtn: { backgroundColor: t.accentSoft, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
+    regenBtn: { backgroundColor: t.accentSoft, borderRadius: Radius.bouton, paddingHorizontal: Spacing.lg, paddingVertical: 13 },
     regenText: { color: t.accent, fontFamily: Font.semibold, fontSize: 14 },
     hint: { fontSize: 13, color: t.textSecondary, lineHeight: 18, fontFamily: Font.regular },
     // Le même texte que `hint`, dans la couleur du texte courant : ce n'est
@@ -220,7 +220,7 @@ function makeStyles(t: Theme) {
     hintFort: { fontSize: 13, color: t.textPrimary, lineHeight: 18, fontFamily: Font.semibold, marginTop: 6 },
     switchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: t.surface, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, padding: Spacing.lg, marginTop: Spacing.xs },
     switchLabel: { fontSize: 15, fontFamily: Font.semibold, color: t.textPrimary, marginBottom: 2 },
-    button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.lg, ...t.shadowButton },
+    button: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.lg, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
   })

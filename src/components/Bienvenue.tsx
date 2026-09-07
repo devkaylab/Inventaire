@@ -161,7 +161,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   rangTitre: { color: t.textPrimary, fontSize: 14, fontFamily: Font.semibold },
   rangTexte: { color: t.textSecondary, fontSize: 13, fontFamily: Font.regular, lineHeight: 18, marginTop: 1 },
   pied: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing.lg, gap: Spacing.xs, ...contenuColonne },
-  btn: { height: 48, borderRadius: Radius.md, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
+  btn: { height: 48, borderRadius: Radius.bouton, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', ...t.shadowButton },
   btnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.semibold },
   lien: { alignItems: 'center', paddingVertical: Spacing.md },
   lienText: { color: t.textSecondary, fontSize: 14, fontFamily: Font.medium },

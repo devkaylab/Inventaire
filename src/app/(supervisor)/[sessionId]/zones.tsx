@@ -267,7 +267,7 @@ function makeStyles(t: Theme) {
     label: { fontSize: 13, fontFamily: Font.semibold, color: t.textSecondary, marginTop: Spacing.xs },
     input: { borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 12, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular },
     rangeRow: { flexDirection: 'row', gap: Spacing.md },
-    button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    button: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
     zoneCard: { backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: t.hairline, gap: Spacing.sm, ...t.shadowCard },
@@ -278,13 +278,13 @@ function makeStyles(t: Theme) {
     progressChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.background, borderRadius: Radius.sm, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1 },
     progressDot: { width: 8, height: 8, borderRadius: 4 },
     progressText: { fontSize: 13, color: t.textPrimary, fontFamily: Font.semibold, ...tabular },
-    deleteBtn: { width: 40, height: 40, borderRadius: Radius.md, backgroundColor: t.dangerSoft, alignItems: 'center', justifyContent: 'center' },
+    deleteBtn: { width: 40, height: 40, borderRadius: Radius.bouton, backgroundColor: t.dangerSoft, alignItems: 'center', justifyContent: 'center' },
     empty: { fontSize: 14, color: t.textMuted, textAlign: 'center', marginTop: Spacing.xxl, fontFamily: Font.regular },
     // ⚠️ **Le bouton qui fait avancer ne se confond pas avec les actions de
     // l'écran.** Il était violet plein comme « Créer et imprimer des balises »
     // et « Affecter » : trois boutons identiques, dont un seul mène ailleurs.
     // L'écran d'import distingue déjà le sien en vert — on suit la même règle.
-    nextBtn: { backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    nextBtn: { backgroundColor: t.success, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
     nextBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },
   })
 }

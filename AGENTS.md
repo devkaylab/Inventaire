@@ -11039,9 +11039,25 @@ emploient et la compare aux deux écrans : c'est la frontière de Registre.
   `shadowElevated` reste, et lui seul. Sur Android, `elevation` fait la même
   chose : retirer les deux à la fois est nécessaire, sinon les cartes se
   détachent sur un système et pas sur l'autre.
-- **Rayon 4 au lieu de 16.** Les clés (`sm`, `md`, `lg`, `xl`) gardent leurs
-  noms — une centaine de styles les emploient — mais ne portent plus que deux
-  valeurs. `pill` reste une capsule : c'est une forme, pas un rayon.
+- **Rayon 4 au lieu de 16 sur les BLOCS.** Les clés (`sm`, `md`, `lg`, `xl`)
+  gardent leurs noms — une centaine de styles les emploient — mais ne portent
+  plus que deux valeurs. `pill` reste une capsule : c'est une forme.
+  ⚠️ **MAIS UN BOUTON GARDE SES COINS RONDS** (`Radius.bouton`, 12) — décision
+  de Julien le 7 septembre, l'application en main : « use rounded corners
+  buttons for the app, as it was previously ». C'est un écart assumé avec le
+  site, et il tient à la nature du support : un bouton de téléphone se
+  **touche**, et ce qui dit « ceci se presse » sur une surface tactile, c'est
+  sa forme — pas un survol, pas un curseur qui change. À 4 px, ils se lisaient
+  comme des bandeaux d'information.
+  · **C'est le SEUL écart** : cartes, blocs, champs et tableaux restent à
+    3-4 px comme sur le site. Le jour où tout redevient rond, Ardoise n'a plus
+    d'objet — une garde refuse un bloc au-delà de 4 px, et une autre refuse
+    qu'un contrôle qui se touche reprenne un rayon de bloc.
+  · ⚠️ **ET LA SECONDE GARDE DÉDUIT SA LISTE DU NOM DES STYLES**, ce qui n'est
+    pas un raffinement : j'avais converti 54 styles à la main et j'en avais
+    **oublié six** — le bouton flottant, les deux boutons de la carte des
+    notifications, les deux bascules de mode du scanner, le pas-à-pas. Le
+    balayage les a nommés en une seconde.
 - **⚠️ LE BOUTON D'EXPORT PORTE L'ACCENT, PLUS LE VERT DU SUCCÈS.** Depuis
   qu'Ardoise a fait de l'accent un vert forêt, deux verts voisins sur le même
   écran ne se distinguent plus — et le succès doit rester ce qui a RÉUSSI.

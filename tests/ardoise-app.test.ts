@@ -97,15 +97,51 @@ describe('Ardoise a remplacé Ink dans l’application', () => {
     expect(code(ink)).toContain('const aucuneOmbre = {} as const')
   })
 
-  it('⚠️ trois rayons, pas dix-sept', () => {
-    const m = /export const Radius = \{([^}]*)\}/.exec(ink)
+  it('⚠️ deux rayons de bloc, un de bouton, et rien d’autre', () => {
+    // ⚠️ AMENDÉE LE 7 SEPTEMBRE 2026, PAS AFFAIBLIE. Elle exigeait deux
+    // rayons au plus, tous ≤ 4 — et elle a mordu quand `bouton: 12` est
+    // arrivé. La décision de Julien, l'application en main : un bouton de
+    // téléphone se TOUCHE, et ce qui dit « ceci se presse » sur une surface
+    // tactile, c'est sa forme. La règle est donc plus fine, pas plus lâche :
+    // les BLOCS restent à 3-4 px, le BOUTON a sa valeur, et il n'y en a
+    // qu'une. C'est ce qui empêche de revenir aux dix-sept d'avant.
+    const m = /export const Radius = \{([\s\S]*?)\n\} as const/.exec(ink)
     expect(m, 'l’échelle de rayons a disparu').toBeTruthy()
-    const valeurs = [...m![1].matchAll(/(\w+): (\d+)/g)].map((x) => Number(x[2]))
-    // La capsule est une FORME, pas un rayon : elle ne compte pas.
-    const rayons = new Set(valeurs.filter((v) => v < 999))
-    expect(rayons.size, `${rayons.size} rayons distincts : Ardoise en veut deux`)
+    const jetons = Object.fromEntries(
+      [...m![1].matchAll(/^\s*(\w+): (\d+),/gm)].map((x) => [x[1], Number(x[2])]),
+    )
+    const blocs = new Set(
+      Object.entries(jetons).filter(([k]) => !['bouton', 'pill'].includes(k)).map(([, v]) => v),
+    )
+    expect(blocs.size, `${blocs.size} rayons de bloc distincts : Ardoise en veut deux`)
       .toBeLessThanOrEqual(2)
-    for (const r of rayons) expect(r).toBeLessThanOrEqual(4)
+    for (const r of blocs) expect(r, 'un bloc au-delà de 4 px').toBeLessThanOrEqual(4)
+    // Un seul rayon de bouton, et il est rond pour de bon.
+    expect(jetons.bouton, 'le rayon de bouton a disparu').toBeGreaterThanOrEqual(8)
+    // La capsule est une FORME, pas un rayon.
+    expect(jetons.pill).toBe(999)
+  })
+
+  it('⚠️ ce qui se touche est rond, et ça se déduit du NOM du style', () => {
+    // Décision de Julien, 7 septembre 2026 : « use rounded corners buttons for
+    // the app, as it was previously ». À 4 px, les boutons se lisaient comme
+    // des bandeaux d'information.
+    //
+    // ⚠️ LA GARDE DÉDUIT SA LISTE — et c'est ce qui compte : j'avais converti
+    // 54 styles à la main et j'en avais oublié six (le bouton flottant, les
+    // deux boutons de la carte des notifications, les deux bascules de mode,
+    // le pas-à-pas). Un balayage les aurait nommés tout de suite.
+    const NOM = /btn|bouton|button|action|choix|cta|onglet|toggle|\bfab\b/i
+    const fautifs: string[] = []
+    for (const f of sources()) {
+      const src = readFileSync(f, 'utf8')
+      for (const m of src.matchAll(/(\w+):\s*\{[^{}]*?borderRadius: Radius\.(\w+)/g)) {
+        if (NOM.test(m[1]) && !['bouton', 'pill'].includes(m[2])) {
+          fautifs.push(`${path.relative(racine, f)} · ${m[1]} → Radius.${m[2]}`)
+        }
+      }
+    }
+    expect(fautifs, 'ces contrôles se touchent : ils prennent Radius.bouton').toEqual([])
   })
 })
 

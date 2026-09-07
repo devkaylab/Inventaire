@@ -296,11 +296,11 @@ function makeStyles(t: Theme) {
     errorText: { color: t.danger, fontSize: 12 },
     noteText: { color: t.textMuted, fontSize: 12 },
 
-    button: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
+    button: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.md, alignItems: 'center', ...t.shadowButton },
     buttonDisabled: { opacity: 0.5 },
     buttonText: { color: t.onAccent, fontFamily: Font.semibold, fontSize: 15 },
 
-    startBtn: { backgroundColor: t.success, borderRadius: Radius.lg, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
+    startBtn: { backgroundColor: t.success, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center', marginTop: Spacing.sm, ...t.shadowButton },
     startBtnText: { color: '#fff', fontFamily: Font.bold, fontSize: 16 },
   })
 }

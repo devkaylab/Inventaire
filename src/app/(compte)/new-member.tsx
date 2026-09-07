@@ -215,7 +215,7 @@ function makeStyles(t: Theme) {
     storeChipText: { fontSize: 14, fontFamily: Font.semibold, color: t.textSecondary },
     storeChipTextOn: { color: t.onAccent },
     button: {
-      backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', marginTop: Spacing.lg, ...t.shadowButton,
     },
     buttonDisabled: { opacity: 0.6 },

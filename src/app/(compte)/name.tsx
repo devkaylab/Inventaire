@@ -110,7 +110,7 @@ function makeStyles(t: Theme) {
     },
     hint: { fontSize: 12, color: t.textMuted, fontFamily: Font.regular, marginTop: Spacing.sm, lineHeight: 17 },
     btn: {
-      marginTop: Spacing.lg, backgroundColor: t.accent, borderRadius: Radius.md,
+      marginTop: Spacing.lg, backgroundColor: t.accent, borderRadius: Radius.bouton,
       paddingVertical: 14, alignItems: 'center', ...t.shadowButton,
     },
     btnOff: { opacity: 0.45 },

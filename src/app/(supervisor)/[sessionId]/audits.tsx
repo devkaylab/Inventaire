@@ -533,7 +533,7 @@ function makeStyles(t: Theme) {
     resolveRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center', marginTop: Spacing.xs },
     input: { flex: 1, borderWidth: 1, borderColor: t.borderStrong, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 16, backgroundColor: t.background, color: t.textPrimary, fontFamily: Font.regular, ...tabular },
     resolveBtn: {
-      borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
+      borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.borderStrong,
       paddingHorizontal: 16, paddingVertical: 11,
     },
     resolveBtnText: { color: t.textPrimary, fontFamily: Font.bold, fontSize: 14 },
@@ -551,7 +551,7 @@ function makeStyles(t: Theme) {
     // largeur il en reste 300, et la ligne tient quel que soit le nombre.
     choixRow: { gap: Spacing.sm, marginTop: Spacing.xs },
     choixBtn: {
-      minHeight: 48, borderRadius: Radius.md,
+      minHeight: 48, borderRadius: Radius.bouton,
       alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.md,
     },
     choixTexte: { fontSize: 15, fontFamily: Font.bold },
@@ -559,7 +559,7 @@ function makeStyles(t: Theme) {
       // l'action de l'écran reste l'arbitrage. ⚠️ 48 de haut, la cible tactile
       // minimale d'Android (31 août 2026).
       plusBtn: {
-        minHeight: 48, borderRadius: Radius.lg, borderWidth: 1, borderColor: t.hairline,
+        minHeight: 48, borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.hairline,
         backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center',
         marginTop: Spacing.xs,
       },

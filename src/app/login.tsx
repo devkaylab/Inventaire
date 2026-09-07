@@ -288,7 +288,7 @@ function makeStyles(t: Theme) {
     },
     button: {
       backgroundColor: t.accent,
-      borderRadius: Radius.md,
+      borderRadius: Radius.bouton,
       paddingVertical: Spacing.lg,
       alignItems: 'center',
       marginTop: Spacing.sm,

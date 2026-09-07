@@ -295,7 +295,7 @@ function makeStyles(t: Theme) {
     empty: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, lineHeight: 19, marginLeft: 2 },
 
     addBtn: {
-      backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: 14,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: 14,
       alignItems: 'center', ...t.shadowButton,
     },
     addBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },

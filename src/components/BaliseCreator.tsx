@@ -124,7 +124,7 @@ function makeStyles(t: Theme) {
     stepText: { flex: 1, fontSize: 13, color: t.textSecondary, fontFamily: Font.regular, lineHeight: 18 },
     stepVerb: { color: t.textPrimary, fontFamily: Font.semibold },
     btn: {
-      marginTop: Spacing.xs, backgroundColor: t.accent, borderRadius: Radius.md,
+      marginTop: Spacing.xs, backgroundColor: t.accent, borderRadius: Radius.bouton,
       paddingVertical: 12, alignItems: 'center', justifyContent: 'center', ...t.shadowButton,
     },
     btnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },

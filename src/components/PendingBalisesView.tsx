@@ -123,7 +123,7 @@ const makeStyles = (t: Theme) =>
     dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: t.warning },
     button: {
       backgroundColor: t.accent,
-      borderRadius: Radius.lg,
+      borderRadius: Radius.bouton,
       paddingVertical: Spacing.lg,
       alignItems: 'center',
       marginTop: Spacing.sm,

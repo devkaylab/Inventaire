@@ -205,13 +205,13 @@ function makeStyles(t: Theme) {
     // ⚠️ L'EXPORT PORTE L'ACCENT, PLUS LE VERT DU SUCCÈS. Depuis qu'Ardoise a
     // fait de l'accent un vert forêt, deux verts voisins sur le même écran ne
     // se distinguent plus — et le succès doit rester ce qui a RÉUSSI.
-    exportBtn: { backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg, alignItems: 'center' },
+    exportBtn: { backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg, alignItems: 'center' },
     exportBtnText: { color: t.onAccent, fontSize: 15, fontFamily: Font.bold },
     // « Voir N de plus » : un bouton en contour, pas un second bouton plein —
     // l'export reste l'action de l'écran, charger la suite est un pas de côté.
     // ⚠️ 48 de haut : la cible tactile minimale d'Android (31 août 2026).
     plusBtn: {
-      minHeight: 48, borderRadius: Radius.md, borderWidth: 1, borderColor: t.borderStrong,
+      minHeight: 48, borderRadius: Radius.bouton, borderWidth: 1, borderColor: t.borderStrong,
       alignItems: 'center', justifyContent: 'center',
       marginTop: Spacing.xs,
     },

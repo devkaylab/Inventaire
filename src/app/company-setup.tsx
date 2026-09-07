@@ -75,7 +75,7 @@ function makeStyles(t: Theme) {
     subtitle: { fontSize: 15, color: t.textSecondary, fontFamily: Font.regular, lineHeight: 22 },
     form: { gap: Spacing.sm },
     button: {
-      backgroundColor: t.accent, borderRadius: Radius.md, paddingVertical: Spacing.lg,
+      backgroundColor: t.accent, borderRadius: Radius.bouton, paddingVertical: Spacing.lg,
       alignItems: 'center', ...t.shadowButton,
     },
     buttonText: { color: t.onAccent, fontSize: 16, fontFamily: Font.bold },
