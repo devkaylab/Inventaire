@@ -11734,7 +11734,7 @@ maintenant l'**ordre** — l'index de la déclaration doit précéder celui de
 chaque requête. *Une garde sur une cascade CSS porte sur l'ordre, pas sur la
 présence.*
 
-## Le tunnel de préparation a enfin une sortie
+## ⚠️ LE TUNNEL DE PRÉPARATION S’EMPILE — on revient sur ses pas
 
 Constat du même jour : *« page zone & balises ne dispose pas d'un bouton
 retour, ainsi qu'importer les données, pareil pour ajouter des compteurs »*.
@@ -11746,26 +11746,43 @@ plus en sortir avant la dernière étape. Ouverts normalement depuis la fiche
 d'un inventaire, ces trois écrans ont bien leur flèche : c'est le tunnel, et
 lui seul, qui enfermait.
 
-`components/SortieTunnel.tsx`, posée en `headerLeft` sur les trois.
+⚠️ **UN PREMIER CORRECTIF A ÉTÉ ÉCARTÉ LE JOUR MÊME, ET C'EST LA LEÇON.** Il
+posait une sortie « Plus tard » vers la fiche de l'inventaire : elle rendait le
+droit de **partir**, pas celui de **revenir**. Julien, en le lisant : *« je ne
+veux pas plus tard, je veux pouvoir revenir à l'étape précédente si jamais j'ai
+envie de faire des changements »*. Une sortie n'est pas un retour — la question
+posée était bien « où est la flèche », pas « comment je m'échappe ». Le
+composant `SortieTunnel` a vécu une heure ; il a été supprimé.
 
-- **⚠️ ELLE NE RAMÈNE PAS À L'ÉTAPE PRÉCÉDENTE.** Le tunnel reste linéaire —
-  chaque étape `replace` la suivante, il n'y a rien derrière. Ce qu'on rend,
-  c'est le droit de partir : vers **la fiche de l'inventaire**, là où le tunnel
-  finit de toute façon, et d'où les trois étapes restent accessibles.
-- **⚠️ Pas `router.back()`** : il atterrirait sur la LISTE des inventaires, un
-  cran trop loin — on vient d'en créer un, c'est lui qu'on cherche.
-- **« Plus tard », jamais « Retour »** : ce qui est vrai ici, ce n'est pas
-  qu'on revient en arrière, c'est que l'étape n'est pas faite. Le mot ne promet
-  pas un écran précédent qui n'existe pas.
-- `headerBackVisible: false` et `gestureEnabled: false` **restent** : deux
-  sorties vers deux destinations différentes se contrediraient.
+**La réponse est la pile de navigation, pas un composant.** Les trois étapes
+s'**empilent** (`router.push`) au lieu de se remplacer, et la flèche native
+reprend tout son travail — plus de `headerBackVisible: false`, plus de
+`headerLeft`, plus de `gestureEnabled: false`. Un seul contrôle, celui de tout
+le reste de l'application, et le balayage marche avec.
+
+- **⚠️ C'EST `push` QUI MET L'ÉTAPE PRÉCÉDENTE DERRIÈRE LA FLÈCHE.** Avec
+  `replace` il n'y a rien derrière : la flèche existerait, et ramènerait à la
+  liste en sautant les étapes qu'on veut justement retrouver.
+- **⚠️ LA CRÉATION, ELLE, REMPLACE TOUJOURS.** `new-session` → zones reste un
+  `replace` : on ne revient pas sur le formulaire d'un inventaire déjà créé —
+  empiler là laisserait en recréer un second. Un test le refuse.
+- **⚠️ ET LA SORTIE VIDE LE TUNNEL** (`router.dismissAll()` puis
+  `router.push`). La pile vaut `[liste, zones, fichiers, compteurs]` : un
+  `replace` ne changerait que le dernier écran, et la flèche de la fiche de
+  l'inventaire renverrait **dans** le tunnel qu'on vient de finir, étape par
+  étape. `dismissAll` revient au premier écran de la pile (la liste), le `push`
+  pose la fiche par-dessus — exactement l'état qu'on obtient en ouvrant
+  l'inventaire depuis la liste. Ne pas « simplifier » en un `replace`.
+- **La flèche de la première étape mène à la liste**, faute d'étape précédente.
+  C'est littéralement l'écran d'où l'on vient, et l'inventaire y figure.
 
 ⚠️ **LE TEST EXISTANT CERTIFIAIT L'ENFERMEMENT.** Il vérifiait que les trois
 étapes ferment le retour natif, et rien d'autre — donc il confirmait que tout
 allait bien pendant qu'on ne pouvait pas sortir. Il **déduit** maintenant ses
 écrans (ceux de `src/` qui lisent `from === 'new'`, et il exige qu'il y en ait
-trois) et demande les deux moitiés : le retour fermé **et** la sortie présente.
-La quatrième étape qu'on ajoutera demain est couverte sans qu'on y pense.
+trois) et refuse les trois verrous ; deux autres gardes tiennent le `push` et
+la sortie. La quatrième étape qu'on ajoutera demain est couverte sans qu'on y
+pense.
 
 ## Vérifications
 
@@ -11783,14 +11800,33 @@ La quatrième étape qu'on ajoutera demain est couverte sans qu'on y pense.
   `eslint .` à **zéro erreur** (47 avertissements, la famille `react-hooks/*`
   déjà documentée), `next build` avec la table de routes **inchangée**.
 
-⚠️ **NON VU À L'ÉCRAN CÔTÉ APPLICATION.** L'APK est construit et **installé
-sur le Pixel** (`./scripts/pixel.sh`, code de sortie 0, « Success »), mais le
-téléphone était verrouillé et son code n'est pas à moi de saisir. Restent donc
-à regarder : la question et la bascule sur l'écran Zones — qui demandent en
-plus une session de superviseur — et la sortie « Plus tard » du tunnel. Ce qui
-est prouvé côté application, c'est le typage, les 447 tests, et que le geste
-est **le même que celui vu au navigateur** : les deux jeux de gardes se
-répondent ligne à ligne.
+**VU SUR LE PIXEL**, sur le compte réel de Julien, **sans rien écrire** (règle
+du 25 août : consulter n'écrit rien) : le formulaire d'affectation qui s'ouvre
+**directement** sur les deux inventaires qui ont déjà des emplacements — donc
+la règle « la question ne se pose plus » tient sur de vraies données —, la
+bascule dans ses deux positions (deux champs « Balise début / Balise fin » →
+un seul champ « Balise »), « Créer d'autres balises » qui ouvre la carte
+d'impression **sans** « Revenir à la question » (elle n'a pas lieu d'être là),
+la troisième étape qui dit « Revenez ici », le pied « Une fois les balises
+collées · Affecter mes balises », et le retour au formulaire.
+
+⚠️ **DEUX CHOSES RESTENT NON VUES, ET IL FAUT SAVOIR POURQUOI.**
+
+- **La question elle-même.** Elle ne s'affiche que sur un inventaire **sans
+  aucun emplacement**, et les trois inventaires du compte en ont — c'est
+  précisément ce que la règle prévoit. La voir demanderait d'en créer un, donc
+  d'écrire sur des données de travail réelles : ce n'est pas à moi de le
+  décider. Le rendu est tenu par le contrôle au navigateur, qui exerce
+  exactement les mêmes conditions.
+- **Le va-et-vient du tunnel**, pour la même raison : il faut créer un
+  inventaire pour y entrer. C'est le seul point dont la mécanique (`push`,
+  puis `dismissAll` + `push`) ne se prouve qu'à l'exécution — les gardes
+  figent le code, pas le comportement de la pile.
+
+Et `./scripts/simulateur.sh` échoue toujours sur le même défaut qu'hier :
+`xcodebuild` s'arrête en analysant ses options (`IDEDerivedDataPathOverride`
+nil), avant toute compilation. **Pas de contournement par `xcodebuild` à la
+main**, c'est la règle du projet.
 
 Tests de garde : `web/tests/zone-de-comptage.test.ts` et
 `tests/zone-de-comptage.test.ts` — les deux se lisent en parallèle, c'est le

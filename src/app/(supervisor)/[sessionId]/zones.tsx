@@ -11,8 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { Stack, router, useLocalSearchParams } from 'expo-router'
-import { SortieTunnel } from '@/components/SortieTunnel'
+import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { defineZoneRange, deleteZone, getSession, getZoneDashboard } from '@/lib/queries'
@@ -172,9 +171,6 @@ export default function ZonesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {fromNew && (
-        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => <SortieTunnel sessionId={sessionId} />, gestureEnabled: false }} />
-      )}
       <ClavierEvite style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
@@ -329,7 +325,7 @@ export default function ZonesScreen() {
           {fromNew && (
             <Pressable
               style={styles.nextBtn}
-              onPress={() => router.replace(`/(supervisor)/${sessionId}/import?from=new`)}
+              onPress={() => router.push(`/(supervisor)/${sessionId}/import?from=new`)}
             >
               <Text style={styles.nextBtnText}>Suivant : importer les fichiers</Text>
             </Pressable>

@@ -1381,6 +1381,7 @@ describe('aucun emoji dans les écrans du parcours', () => {
  */
 describe('le tunnel de préparation (23 août 2026)', () => {
   const nouveau = lire('app/(supervisor)/new-session.tsx')
+  const zonesEcran = lire('app/(supervisor)/[sessionId]/zones.tsx')
   const importEcran = lire('app/(supervisor)/[sessionId]/import.tsx')
   const compteurs = lire('app/(supervisor)/[sessionId]/invite.tsx')
 
@@ -1404,54 +1405,63 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     expect(importEcran).toContain('Suivant : ajouter des compteurs')
   })
 
-  it('la sortie du tunnel est sur l’écran des compteurs', () => {
-    expect(compteurs).toContain("router.replace(`/(supervisor)/${sessionId}`)")
-    expect(compteurs).toContain("Commencer l'inventaire")
-  })
-
   /**
-   * ⚠️ CE TEST EXIGEAIT L'ENFERMEMENT, ET RIEN D'AUTRE. Il vérifiait que les
-   * trois étapes ferment le retour natif — ce qui reste juste, le tunnel est
-   * linéaire et il n'y a rien derrière (chaque étape `replace` la suivante).
-   * Mais rien ne demandait qu'il existe une SORTIE, et il n'y en avait pas :
-   * une fois créé un inventaire, on traversait trois écrans avant de pouvoir
-   * faire autre chose. Constat de Julien, 7 septembre 2026, sur les trois à la
-   * fois : « ne dispose pas d'un bouton retour ».
+   * ⚠️ TROIS ÉTATS SUCCESSIFS, ET LES DEUX PREMIERS ÉTAIENT FAUX.
+   *
+   * · Jusqu'au 7 septembre 2026 : les étapes se `replace` l'une l'autre et le
+   *   retour natif est fermé. **Aucune sortie** — une fois l'inventaire créé,
+   *   on traverse trois écrans avant de pouvoir faire autre chose. Ce test
+   *   exigeait cet enfermement, et rien d'autre : il CERTIFIAIT le défaut.
+   * · Premier correctif : une sortie « Plus tard » vers la fiche de
+   *   l'inventaire. Elle rendait le droit de partir, pas celui de revenir —
+   *   « je ne veux pas plus tard, je veux pouvoir revenir à l'étape précédente
+   *   si jamais j'ai envie de faire des changements » (Julien, même jour).
+   * · Aujourd'hui : les étapes **s'empilent**, et c'est la flèche native qui
+   *   fait tout le travail. Un seul contrôle, le même que partout ailleurs
+   *   dans l'application, et le balayage marche avec.
    *
    * ⚠️ ET LA GARDE DÉDUIT SES ÉCRANS. Elle balaie `src/` et retient ceux qui
    * lisent `from === 'new'` : la quatrième étape qu'on ajoutera demain est
    * couverte sans qu'on y pense. Une garde qui nommait `invite.tsx` n'a
    * protégé qu'`invite.tsx`.
    */
-  it('⚠️ le tunnel reste linéaire, mais il a une sortie à chaque étape', () => {
+  it('⚠️ on revient sur ses pas d’une étape à l’autre', () => {
     const etapes = fichiersSource().filter(f => readFileSync(f, 'utf8').includes("from === 'new'"))
     expect(etapes.length, 'les étapes du tunnel de préparation').toBe(3)
 
     for (const f of etapes) {
       const s = readFileSync(f, 'utf8')
       const nom = path.basename(f)
-      // Le retour natif reste fermé : il ramènerait à la liste, alors que
-      // l'inventaire vient d'être créé et que c'est LUI qu'on veut voir.
-      expect(s, `${nom} : le retour natif rouvre un chemin qui n’existe pas`)
-        .toContain('headerBackVisible: false')
-      expect(s, `${nom} : le balayage ferait la même chose que la flèche`)
-        .toContain('gestureEnabled: false')
-      // Mais on peut partir.
-      expect(s, `${nom} enferme sans sortie`)
-        .toContain('headerLeft: () => <SortieTunnel sessionId={sessionId} />')
+      for (const verrou of ['headerBackVisible: false', 'headerLeft: () => null', 'gestureEnabled: false']) {
+        expect(s, `${nom} ferme encore le retour (${verrou})`).not.toContain(verrou)
+      }
     }
+
+    // ⚠️ ET C'EST `push` QUI MET L'ÉTAPE PRÉCÉDENTE DERRIÈRE LA FLÈCHE. Avec
+    // `replace` il n'y a rien derrière : la flèche existerait et ramènerait
+    // à la liste, en sautant les étapes qu'on veut justement retrouver.
+    expect(zonesEcran).toContain('router.push(`/(supervisor)/${sessionId}/import?from=new`)')
+    expect(importEcran).toContain('router.push(`/(supervisor)/${sessionId}/invite?from=new`)')
   })
 
-  it('⚠️ la sortie mène à la fiche de l’inventaire, pas un cran plus loin', () => {
-    const sortie = lire('components/SortieTunnel.tsx')
-    const codeSeul = sortie.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
-    expect(codeSeul).toContain('router.replace(`/(supervisor)/${sessionId}`)')
-    // ⚠️ `router.back()` atterrirait sur la LISTE des inventaires : un cran
-    // trop loin, on vient d'en créer un et c'est lui qu'on cherche.
-    expect(codeSeul, 'la liste n’est pas la bonne destination').not.toContain('router.back()')
-    // « Plus tard » et jamais « Retour » : ce qui est vrai, ce n'est pas qu'on
-    // revient en arrière, c'est que l'étape n'est pas faite.
-    expect(codeSeul).toContain('Plus tard')
+  it('⚠️ mais la sortie ne laisse pas le tunnel derrière elle', () => {
+    // La pile vaut `[liste, zones, fichiers, compteurs]` : un `replace` ne
+    // changerait que le dernier écran, et la flèche de la fiche renverrait
+    // dans le tunnel qu'on vient de finir. `dismissAll` revient à la liste,
+    // le `push` pose la fiche par-dessus.
+    expect(compteurs).toContain('router.dismissAll()')
+    expect(compteurs).toContain('router.push(`/(supervisor)/${sessionId}`)')
+    expect(compteurs).toContain("Commencer l'inventaire")
+    expect(compteurs, 'un replace laisserait les trois étapes derrière la fiche')
+      .not.toContain('router.replace(`/(supervisor)/${sessionId}`)')
+  })
+
+  // ⚠️ La création, elle, REMPLACE toujours : on ne revient pas sur le
+  // formulaire d'un inventaire déjà créé.
+  it('⚠️ on ne revient jamais sur le formulaire de création', () => {
+    expect(nouveau).toContain('router.replace(`/(supervisor)/${sid}/zones?from=new`)')
+    expect(nouveau, 'empiler ici laisserait recréer un second inventaire')
+      .not.toContain('router.push(`/(supervisor)/${sid}/zones?from=new`)')
   })
 
   it('le bouton de sortie garde le vert du bout du tunnel', () => {

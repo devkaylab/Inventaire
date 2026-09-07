@@ -32,7 +32,6 @@ import {
   View,
 } from 'react-native'
 import { Stack, router, useLocalSearchParams } from 'expo-router'
-import { SortieTunnel } from '@/components/SortieTunnel'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
@@ -54,9 +53,29 @@ import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function InviteToSessionScreen() {
   const { sessionId, from } = useLocalSearchParams<{ sessionId: string; from?: string }>()
-  // Dernière étape du tunnel : le retour est masqué comme sur les deux écrans
-  // précédents, et la sortie se fait par « Commencer l'inventaire ».
+  /**
+   * Dernière étape du tunnel. La flèche ramène à l'étape précédente — les
+   * trois écrans s'empilent —, et « Commencer l'inventaire » en sort.
+   */
   const fromNew = from === 'new'
+
+  /**
+   * ⚠️ ON VIDE LE TUNNEL AVANT D'OUVRIR LA FICHE, ET C'EST OBLIGATOIRE.
+   *
+   * Depuis que les étapes s'EMPILENT (pour qu'on puisse revenir sur ses pas —
+   * demande de Julien, 7 septembre 2026), la pile vaut ici
+   * `[liste, zones, fichiers, compteurs]`. Un simple `replace` ne changerait
+   * que le dernier écran : la flèche de la fiche de l'inventaire renverrait
+   * alors DANS le tunnel qu'on vient de finir, étape par étape.
+   *
+   * `dismissAll` revient au premier écran de la pile (la liste), et le `push`
+   * pose la fiche par-dessus : la flèche y ramène à la liste, comme partout
+   * ailleurs. Ne pas « simplifier » en un `replace`.
+   */
+  const quitterLeTunnel = () => {
+    router.dismissAll()
+    router.push(`/(supervisor)/${sessionId}`)
+  }
   const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
@@ -241,9 +260,6 @@ export default function InviteToSessionScreen() {
         <Stack.Screen
           options={{
             title: 'Ajouter des compteurs',
-            headerBackVisible: false,
-            headerLeft: () => <SortieTunnel sessionId={sessionId} />,
-            gestureEnabled: false,
           }}
         />
       )}
@@ -404,7 +420,7 @@ export default function InviteToSessionScreen() {
 
           {fromNew && (
             <View style={styles.finBloc}>
-              <Pressable style={styles.startBtn} onPress={() => router.replace(`/(supervisor)/${sessionId}`)}>
+              <Pressable style={styles.startBtn} onPress={quitterLeTunnel}>
                 <Text style={styles.startBtnText}>{"Commencer l'inventaire"}</Text>
               </Pressable>
               {/* Demande de Julien : le dire sur la page, plutôt que de le

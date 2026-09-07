@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Stack, router, useLocalSearchParams } from 'expo-router'
-import { SortieTunnel } from '@/components/SortieTunnel'
+import { router, useLocalSearchParams } from 'expo-router'
 import { importCatalogFile, importStockFile, pickFile, type ImportProgress } from '@/lib/import'
 import { errorMessage } from '@/lib/errors'
 import { nb } from '@/lib/nombres'
@@ -175,9 +174,6 @@ export default function ImportScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {fromNew && (
-        <Stack.Screen options={{ headerBackVisible: false, headerLeft: () => <SortieTunnel sessionId={sessionId} />, gestureEnabled: false }} />
-      )}
       <ScrollView contentContainerStyle={styles.container}>
         {repereFichiers.aVoir && (
           <View style={styles.astuceEncart}>
@@ -247,7 +243,7 @@ export default function ImportScreen() {
           // compteurs vient après les fichiers, et c'est d'elle qu'on entre.
           <Pressable
             style={styles.startBtn}
-            onPress={() => router.replace(`/(supervisor)/${sessionId}/invite?from=new`)}
+            onPress={() => router.push(`/(supervisor)/${sessionId}/invite?from=new`)}
           >
             <Text style={styles.startBtnText}>Suivant : ajouter des compteurs</Text>
           </Pressable>
