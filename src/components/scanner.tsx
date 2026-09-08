@@ -879,8 +879,11 @@ export function Scanner({
         + `effacée${p} — celles de toute l’équipe, pas seulement les vôtres. `
         + `La balise redeviendra à faire, et vous la ${
           compte ? 'compterez' : 'auditerez'} comme neuve.`,
-      note: 'Rien n’est récupérable ensuite. Le rayon, lui, est toujours là : '
-        + 'il se recompte.',
+      // ⚠️ Elle dit ce qui arrive si on NE recompte pas — c'est la seule
+      // conséquence qu'on ne voit pas venir. « Le rayon est toujours là, il se
+      // recompte » rassurait ; ça ne prévenait pas (Julien, 8 septembre 2026).
+      note: 'Rien n’est récupérable ensuite. Il faudra recommencer, sinon la '
+        + 'balise restera marquée « à faire ».',
       action: `Effacer et re${compte ? 'compter' : 'faire l’audit'}`,
       annuler: 'Annuler',
       ton: 'danger',
