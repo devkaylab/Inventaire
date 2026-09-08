@@ -24,12 +24,28 @@ avant d'y retoucher :
   les versions viennent de `node_modules/react-native/gradle/libs.versions.toml`,
   pas d'un choix. Licences acceptées. `JAVA_HOME`, `ANDROID_HOME` et le PATH
   (`adb`) sont posés dans `~/.zshrc`.
-- **⚠️ L'APK release est signé avec la clé de DEBUG** (comportement du gabarit
-  Expo) : parfait pour installer sur un appareil, **interdit pour Google
-  Play**. La publication passera par un AAB et une vraie clé de signature —
-  probablement la signature gérée par Play ou EAS. Rien de tout cela n'est
-  fait ; le compte Play Console de Julien est en cours de validation
-  d'identité.
+- **La signature de publication est en place depuis le 2 septembre 2026.**
+  ⚠️ **CETTE NOTE A DIT LE CONTRAIRE PENDANT SIX JOURS**, et elle m'a fait
+  annoncer à Julien un « bloquant Android » qui n'existait plus (revue du
+  8 septembre). Une note qui décrit un manque se corrige quand le manque est
+  comblé — c'est le même piège que la liste d'onboarding du 28 août et que le
+  garde-fou du retour du 29.
+  · Le gabarit Expo signe le release avec la **clé de debug** — commode pour
+    installer sur un téléphone, refusé par Google Play. `plugins/withAndroidSigning.js`
+    ajoute la vraie configuration ; **sans les propriétés de la machine, on
+    retombe sur la clé de debug au lieu d'échouer**, délibérément, pour que
+    `pixel.sh` continue de marcher sans rien demander.
+  · **`./scripts/play.sh` est le chemin de publication** : il refuse de partir
+    si la clé n'est pas configurée, construit l'AAB, puis **vérifie la
+    signature du bundle produit** et s'arrête net s'il lit « Android Debug ».
+  · ⚠️ **La clé ne vit QUE sur la machine de Julien**
+    (`~/quantinvo-upload.keystore` + quatre propriétés dans
+    `~/.gradle/gradle.properties`), jamais dans le dépôt. **Une clé de dépôt
+    perdue rend toute mise à jour impossible** : elle se sauvegarde ailleurs.
+  · **L'identité Play Console est validée** (confirmé par Julien le
+    8 septembre 2026).
+  · ⚠️ `versionCode` est dans `app.json` et **doit augmenter à chaque dépôt** ;
+    il vaut 1 au 8 septembre 2026.
 - L'espace dans le chemin (`App inventaire`) n'a posé aucun problème à Gradle,
   au NDK ni à CMake — 642 tâches, aucune reprise à la main.
 
@@ -11232,9 +11248,15 @@ points et en **#8A82B8** — un mauve.
 ## ⚠️ CE QUI N'EST PAS VÉRIFIÉ, ET POURQUOI
 
 **Rien n'a été vu à l'écran DEPUIS L'AGENT** — Julien, lui, a construit et a
-trouvé les deux défauts ci-dessus en deux minutes. `./scripts/simulateur.sh`
-échoue sur cette machine depuis ce chantier, et l'échec n'a rien à voir avec
-le code :
+trouvé les deux défauts ci-dessus en deux minutes.
+
+⚠️ **LA PANNE DÉCRITE CI-DESSOUS EST PASSÉE : `./scripts/simulateur.sh`
+FONCTIONNE À NOUVEAU** (relancé le 8 septembre 2026, build complet, application
+lancée). Elle est gardée ici parce que le diagnostic vaut si elle revient — et
+parce qu'elle a fait dire deux fois « la chaîne iOS est cassée » alors qu'il
+suffisait de réessayer. **Relancer avant d'annoncer une panne d'outillage.**
+
+L'échec de l'époque n'avait rien à voir avec le code :
 
 ```
 *** -[__NSDictionaryM setObject:forKey:]: object cannot be nil
@@ -11867,10 +11889,11 @@ collées · Affecter mes balises », et le retour au formulaire.
   puis `dismissAll` + `push`) ne se prouve qu'à l'exécution — les gardes
   figent le code, pas le comportement de la pile.
 
-Et `./scripts/simulateur.sh` échoue toujours sur le même défaut qu'hier :
-`xcodebuild` s'arrête en analysant ses options (`IDEDerivedDataPathOverride`
-nil), avant toute compilation. **Pas de contournement par `xcodebuild` à la
-main**, c'est la règle du projet.
+Et `./scripts/simulateur.sh` échouait alors sur le même défaut que la veille
+(`xcodebuild` s'arrêtant sur `IDEDerivedDataPathOverride` nil). ⚠️ **Ce n'est
+plus vrai depuis le 8 septembre 2026** : le script remarche sans qu'on y ait
+touché. La règle, elle, ne bouge pas — **pas de contournement par `xcodebuild`
+à la main**.
 
 Tests de garde : `web/tests/zone-de-comptage.test.ts` et
 `tests/zone-de-comptage.test.ts` — les deux se lisent en parallèle, c'est le
@@ -12980,3 +13003,68 @@ déploiement.
 
 Tests de garde : `web/tests/backend-durcissement.test.ts`, bloc « un inventaire
 clôturé n'appartient plus qu'à son créateur ».
+
+
+# Prérequis de publication — l'état au 8 septembre 2026
+
+Second lot de la revue d'avant publication. Rien n'a été modifié : lecture,
+plus un build iOS pour vérifier que la chaîne passe.
+
+⚠️ **DEUX AFFIRMATIONS FAUSSES ONT ÉTÉ ANNONCÉES À JULIEN AVANT CETTE
+VÉRIFICATION**, toutes deux reprises de notes de ce fichier sans les
+contrôler : « l'APK Android est signé avec la clé de debug » (faux depuis le
+2 septembre) et « le build iOS est cassé » (il remarche). **Une note d'état se
+vérifie avant d'être citée** — c'est la quatrième fois que ce fichier induit en
+erreur, après la liste d'onboarding du 28 août, le garde-fou du retour du
+29 août et les orphelins de migrations.
+
+## Ce qui est prêt
+
+| | |
+|---|---|
+| Identité | Quantinvo, 1.0.0, `com.quantinvo.app` sur les deux boutiques |
+| iOS | build 3, chaîne vérifiée le 8 septembre (`simulateur.sh` passe) |
+| Android | clé de signature en place, `play.sh` contrôle le bundle produit |
+| Icônes | régénérées le 7 septembre, la marque « plan de magasin » |
+| Permission caméra | texte français explicite, et « aucune photo n'est enregistrée » |
+| Chiffrement | `ITSAppUsesNonExemptEncryption = false` — évite le questionnaire à chaque envoi |
+| Confidentialité | servie par le site (`/confidentialite`), et GitHub Pages en secours |
+| Suppression de compte | dans l'app — **Apple l'exige**, son absence est un refus |
+| Play Console | identité validée (Julien, 8 septembre 2026) |
+
+## ⚠️ LE SEUL BLOQUANT : le certificat « Apple Distribution »
+
+La machine ne porte qu'un certificat **Apple Development**, qui sert à
+installer sur un appareil de test. App Store Connect refuse un binaire signé
+avec — et le refus arrive **à l'envoi, après tout le build**.
+
+`scripts/appstore.sh` le vérifie en premier et s'arrête avec la marche à
+suivre : Xcode → Réglages → Comptes → ajouter le compte Apple Developer, qui
+crée certificat et profil tout seul. **C'est un geste que seul Julien peut
+faire** — c'est son identité Apple.
+
+⚠️ **L'archive `ios/build/Quantinvo.xcarchive` du 3 septembre ne sert à rien** :
+signée « Apple Development », build 2, et cinq jours de travail plus tard. Ne
+pas la déposer ; `appstore.sh` en produira une neuve.
+
+## Deux décisions qui appartiennent à Julien
+
+- **`supportsTablet: true`** → Apple exigera des **captures iPad** en plus de
+  celles d'iPhone, alors que l'app est en portrait et pensée pour un téléphone.
+  Soit on fournit les captures, soit on passe le drapeau à `false`.
+- **La vente est fermée** jusqu'à l'immatriculation (`venteOuverte()`, le
+  5 septembre). Publier maintenant, c'est laisser quelqu'un télécharger l'app
+  sans pouvoir créer de compte.
+
+## Ce qui se fait dans les consoles, pas dans le code
+
+Fiches boutique, captures, descriptions, et les deux questionnaires
+obligatoires : **App Privacy** (Apple) et **Data Safety** (Google). Ils
+décrivent ce que l'app collecte — la politique de confidentialité du site en
+donne déjà la matière.
+
+## Le jour de la publication
+
+`web/lib/appStores.ts` : passer `PUBLIEE` à `true` et remplacer les deux
+adresses par les fiches réelles. **Tout est dans ce seul fichier**, et un test
+échoue si un composant se met à écrire une adresse en dur.
