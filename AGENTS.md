@@ -12777,10 +12777,10 @@ question par une autre.
   `eslint .` à zéro erreur, `next build` avec la table de routes inchangée, et
   la mesure de dérive à zéro.
 
-⚠️ **NON VÉRIFIÉ APPAREIL EN MAIN** : l'APK est installé sur le Pixel, mais son
-écran était **verrouillé** et je n'ai pas le code. Rien de l'interface n'a donc
-été vu — c'est le contrôle qui reste, et c'est celui qui compte pour un chantier
-d'écran.
+**VÉRIFIÉ PAR JULIEN SUR LE PIXEL, le 8 septembre 2026** : « c'est bon j'ai fait
+le test, c'est parfait ». C'était le seul contrôle qui comptait pour ce chantier
+— son écran était verrouillé de mon côté et je n'ai pas le code, donc je n'avais
+rien pu voir de l'interface.
 
 ⚠️ **DEUX GARDES QUI NE MORDAIENT PAS**, toutes deux du même genre :
 · `web/tests/zones.test.ts` exigeait `can_access_session` dans `vider_balise` —
