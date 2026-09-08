@@ -358,3 +358,30 @@ describe('Registre, sur les deux écrans qui font foi', () => {
     }
   })
 })
+
+/**
+ * L'application est un outil de TÉLÉPHONE (8 septembre 2026).
+ *
+ * Décision de Julien, à la revue d'avant publication : `supportsTablet` était
+ * vrai, donc Apple aurait exigé des captures iPad — pour une application en
+ * portrait, pensée pour une main et un rayon.
+ *
+ * ⚠️ **LA CLÉ VIT À DEUX ENDROITS, ET LE SECOND EST VERSIONNÉ.** `app.json`
+ * ne gouverne que ce qu'`expo prebuild` régénère ; `ios/` ne se régénère
+ * jamais. C'est le piège exact du 6 septembre avec `UIUserInterfaceStyle` :
+ * changer `app.json` ne suffisait pas, il fallait toucher le projet Xcode à la
+ * main. Les deux doivent dire la même chose.
+ */
+describe('l’application ne se déclare pas compatible iPad', () => {
+  it('app.json et le projet Xcode disent la même chose', () => {
+    const app = JSON.parse(lire('app.json'))
+    expect(app.expo.ios.supportsTablet).toBe(false)
+
+    const projet = lire('ios/Inventaire.xcodeproj/project.pbxproj')
+    // 1 = iPhone, 2 = iPad. Les deux configurations (Debug et Release) sont
+    // concernées : une seule des deux laisserait passer un build sur l'autre.
+    const familles = projet.match(/TARGETED_DEVICE_FAMILY = "[^"]*";/g) ?? []
+    expect(familles.length).toBeGreaterThan(0)
+    for (const f of familles) expect(f).toBe('TARGETED_DEVICE_FAMILY = "1";')
+  })
+})
