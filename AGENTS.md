@@ -13032,16 +13032,48 @@ erreur, après la liste d'onboarding du 28 août, le garde-fou du retour du
 | Suppression de compte | dans l'app — **Apple l'exige**, son absence est un refus |
 | Play Console | identité validée (Julien, 8 septembre 2026) |
 
-## ⚠️ LE SEUL BLOQUANT : le certificat « Apple Distribution »
+## ⚠️ LA PUBLICATION iOS PASSE PAR XCODE, PAS PAR LE TERMINAL
+
+Décision de Julien, 8 septembre 2026 : *« la prochaine fois je fais l'étape
+d'archive moi-même sur Xcode, pas besoin de passer par le terminal »*.
+**Ne pas lancer `scripts/appstore.sh` pour lui** — le chemin est
+Xcode → Window → Organizer → Distribute App → App Store Connect.
+
+**Deux raisons, mesurées le jour même** :
+
+- `xcodebuild -exportArchive` répond **« No Accounts »** : il n'a pas les
+  identifiants Apple, Xcode les a. Il ne peut donc pas régénérer le profil de
+  distribution, et l'export s'arrête là ;
+- le projet force `CODE_SIGN_IDENTITY[sdk=iphoneos*] = "iPhone Developer"`
+  (reste du gabarit Expo, deux occurrences dans `project.pbxproj`) — donc même
+  une archive **Release** sort signée « Apple Development ». Organizer, lui,
+  re-signe avec le bon certificat et régénère le profil.
+
+⚠️ **Cela ne change rien au reste** : `./scripts/simulateur.sh` demeure le seul
+chemin de build local iOS (il pose `app.config`, sans quoi l'app s'ouvre sur un
+écran rouge), et `./scripts/play.sh` demeure celui d'Android — lui produit un
+AAB signé sans avoir besoin de parler à Google.
+
+`appstore.sh` reste dans le dépôt : sa première garde — refuser de partir sans
+certificat « Apple Distribution » — a servi, et son contrôle de signature du
+`.ipa` vaudra le jour où l'export en ligne de commande sera possible (il
+faudrait alors une clé API App Store Connect, un secret de plus à protéger).
+
+## ⚠️ LE BLOQUANT DU 8 SEPTEMBRE, LEVÉ LE JOUR MÊME : le certificat « Apple Distribution »
 
 La machine ne porte qu'un certificat **Apple Development**, qui sert à
 installer sur un appareil de test. App Store Connect refuse un binaire signé
 avec — et le refus arrive **à l'envoi, après tout le build**.
 
-`scripts/appstore.sh` le vérifie en premier et s'arrête avec la marche à
-suivre : Xcode → Réglages → Comptes → ajouter le compte Apple Developer, qui
-crée certificat et profil tout seul. **C'est un geste que seul Julien peut
-faire** — c'est son identité Apple.
+**Créé par Julien le 8 septembre 2026** (Xcode → Réglages → Comptes →
+Gérer les certificats… → + → Apple Distribution), équipe `8YL7866PHB`, celle
+que le projet attend. Vérifié : `security find-identity -v -p codesigning` rend
+bien les deux identités.
+
+⚠️ **Le guide a fait perdre du temps sur un détail inutile** : j'ai fait
+chercher un « rôle » dans l'onglet Comptes, que Julien ne voyait pas — *« je te
+dis que je suis déjà connecté »*. Le seul geste qui compte est le bouton
+**Gérer les certificats…** ; le reste de cet écran n'a pas à être décrit.
 
 ⚠️ **L'archive `ios/build/Quantinvo.xcarchive` du 3 septembre ne sert à rien** :
 signée « Apple Development », build 2, et cinq jours de travail plus tard. Ne
