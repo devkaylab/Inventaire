@@ -1,0 +1,35 @@
+-- Deux fonctions mortes rendues injoignables — 8 septembre 2026
+--
+-- Constat de la revue de sécurité d'avant publication, PROUVÉ en direct : une
+-- superviseure de Maison Oberlin a créé une balise dans un inventaire du
+-- Groupe Bon Marché (`ensure_zone`), et changé le statut d'une zone du même
+-- inventaire (`set_zone_status`). Essais joués en transaction annulée.
+--
+-- ⚠️ **LE MOTIF : UNE GARDE SUR LE RÔLE, PAS SUR LA LIGNE VISÉE.** Les deux
+-- vérifient `get_my_role() = 'supervisor'` **OU** l'appartenance à la session —
+-- donc la première branche suffit, et elle est vraie pour un superviseur de
+-- n'importe quelle entreprise. Leurs sœurs `generate_zones` et
+-- `register_balise`, écrites le même jour, bornent bien sur
+-- `created_by = auth.uid()` : c'est l'asymétrie entre fonctions voisines, qui
+-- s'est déjà produite trois fois sur ce projet.
+--
+-- ⚠️ **ET LE CORRECTIF EST UN RETRAIT, PAS UN GARDE-FOU.** Règle apprise avec
+-- `get_company_directory` le 28 août : une fonction que PERSONNE n'appelle et
+-- qui ouvre plus que nécessaire n'a pas besoin d'un contrôle, elle a besoin
+-- d'être injoignable. Vérifié avant d'écrire, dans les trois directions :
+--   • aucun appel dans `src/` (l'application),
+--   • aucun appel dans `web/` (le site) ni dans `supabase/functions/`,
+--   • aucune fonction SQL ne les appelle (mesuré sur `pg_proc.prosrc`).
+-- Elles ne subsistent que dans `src/types/database.types.ts`, qui est généré.
+--
+-- ⚠️ **LES OBJETS RESTENT, SEULS LES DROITS PARTENT.** Règle du projet : on
+-- retire les appels d'abord, on supprime l'objet plus tard. Elles sont
+-- décrites depuis le 6 septembre (`20260906120001`), donc leur suppression
+-- sera une migration ordinaire le jour venu.
+--
+-- ⚠️ **`service_role` LES GARDE.** Il n'est jamais joignable depuis un
+-- navigateur ni depuis un téléphone, et c'est ce qui laisse une porte de
+-- dépannage en base sans rien rouvrir côté client.
+
+revoke execute on function public.ensure_zone(uuid, text) from public, anon, authenticated;
+revoke execute on function public.set_zone_status(uuid, text) from public, anon, authenticated;

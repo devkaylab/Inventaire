@@ -20,7 +20,17 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, onDeleted }: {
   session: Session
   isCreator: boolean
-  /** Rouvrir appartient au créateur, ou à l'administrateur de l'entreprise. */
+  /**
+   * Clôturer ET rouvrir appartiennent au créateur, ou à l'administrateur de
+   * l'entreprise.
+   *
+   * ⚠️ **La clôture y a été ajoutée le 8 septembre 2026** (Julien : « seul le
+   * créateur de l'inventaire peut le clôturer »), ce qui révoque la règle du
+   * 22 août — « clôturer est un geste de terrain ouvert à tout superviseur
+   * participant ». Elle ne tenait plus : depuis le même jour, un invité ne
+   * voit plus un inventaire une fois clôturé, donc il se retirerait l'écran
+   * sous les doigts.
+   */
   canReopen: boolean
   onChanged: () => Promise<void> | void
   onDeleted: () => void
@@ -148,14 +158,20 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
 
       {ouvert && (
         <div className="dash-menu-pop" role="menu">
-          {/* Un inventaire clôturé ne se rouvre que par son créateur : la base
-              le refuse (policy `sessions_supervisor_update`), l'écran ne le
-              propose donc pas. Clôturer reste ouvert aux participants, c'est un
-              geste de terrain que le créateur peut défaire. */}
-          {(!closed || (canReopen && !archive)) && (
+          {/* ⚠️ Ni clôturer ni rouvrir ne s'offrent à un invité : la base les
+              refuse (policy `sessions_supervisor_update`, USING pour la
+              réouverture et WITH CHECK pour la clôture), et un bouton qui
+              échoue vaut moins que pas de bouton — on le découvre après avoir
+              accepté une confirmation. */}
+          {canReopen && (!closed || !archive) && (
             <button type="button" role="menuitem" className="dash-menu-item" onClick={closed ? onReopen : onClose}>
               {closed ? 'Rouvrir l’inventaire' : 'Clôturer l’inventaire'}
             </button>
+          )}
+          {!closed && !canReopen && (
+            <div className="dash-menu-note">
+              Seul le créateur de l’inventaire peut le clôturer.
+            </div>
           )}
           {closed && archive && (
             <div className="dash-menu-note">

@@ -960,7 +960,11 @@ describe('le geste caché, montré une fois', () => {
   it('il ne se joue que sur le premier rang qui porte un volet', () => {
     // Un inventaire invité n'en a aucun : une démonstration sur une carte qui
     // ne bouge pas apprendrait le contraire de ce qu'on veut.
-    expect(accueil).toContain("sessionsAffichees.find(s => peutSupprimer(s) || s.status !== 'closed')")
+    // ⚠️ Amendé le 8 septembre 2026, pas affaibli : depuis que la clôture
+    // suit la même règle que la suppression (seul le créateur), les deux
+    // volets ont la même condition — le rang qui n'en porte aucun est
+    // exactement celui qu'on ne peut pas supprimer.
+    expect(accueil).toContain('sessionsAffichees.find(s => peutSupprimer(s))')
     expect(accueil).toContain('indice={montrerIndice && item.session.id === premierBalayable?.id}')
   })
 

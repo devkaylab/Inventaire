@@ -157,8 +157,13 @@ describe('un inventaire archivé ne se rouvre pas', () => {
     // avoir cliqué, sur une confirmation qu'on vient d'accepter.
     const menu = lire('web/components/dashboard/SessionActionsMenu.tsx')
     expect(menu).toMatch(/archived_at !== null/)
+    // ⚠️ Amendé le 8 septembre 2026, pas affaibli. La condition portait sur la
+    // seule réouverture ; depuis que la clôture appartient elle aussi au
+    // créateur, `canReopen` gouverne les deux et `!archive` ne barre que la
+    // réouverture. Ce que la garde défend est intact : un inventaire archivé
+    // ne se rouvre pas, et l'écran ne le propose pas.
     expect(menu, 'la réouverture reste proposée sur un inventaire archivé')
-      .toMatch(/canReopen && !archive/)
+      .toMatch(/canReopen && \(!closed \|\| !archive\)/)
   })
 })
 

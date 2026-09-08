@@ -482,6 +482,25 @@ export default function SupervisorHomeScreen() {
   )
 
   /**
+   * Qui peut clôturer : **le créateur, et l'administrateur de l'entreprise**.
+   *
+   * ⚠️ **CECI RÉVOQUE LA RÈGLE DU 22 AOÛT 2026** — « clôturer est ouvert à
+   * tout superviseur participant, c'est un geste de terrain que le créateur
+   * peut défaire » (Julien, 8 septembre : « seul le créateur de l'inventaire
+   * peut le clôturer »). Elle ne tenait plus : depuis le même jour, un invité
+   * ne voit plus un inventaire une fois clôturé — il se retirerait donc
+   * l'écran sous les doigts.
+   *
+   * ⚠️ La base le refuse déjà (policy `sessions_supervisor_update`, dans son
+   * `WITH CHECK`). L'écran ne fait que ne pas proposer un geste qui échoue :
+   * on le découvrirait après avoir accepté une confirmation.
+   *
+   * Même condition que `peutSupprimer` aujourd'hui, et les deux gardent leur
+   * nom : ce sont deux droits distincts, qui peuvent diverger demain.
+   */
+  const peutCloturer = peutSupprimer
+
+  /**
    * La confirmation **nomme** l'inventaire et signale s'il est encore en
    * cours : sur un téléphone, une corbeille se touche vite, et la suppression
    * emporte comptages, stock théorique, audits, membres et référentiel.
@@ -645,7 +664,12 @@ export default function SupervisorHomeScreen() {
     [rows],
   )
   const premierBalayable = useMemo(
-    () => sessionsAffichees.find(s => peutSupprimer(s) || s.status !== 'closed') ?? null,
+    // ⚠️ Le coup d'œil ne se joue que sur un rang qui porte RÉELLEMENT un
+    // volet — une démonstration sur une carte qui ne bouge pas apprendrait le
+    // contraire de ce qu'on veut (règle du 28 août). Depuis que la clôture
+    // suit la même règle que la suppression, les deux volets ont la même
+    // condition.
+    () => sessionsAffichees.find(s => peutSupprimer(s)) ?? null,
     [sessionsAffichees, peutSupprimer],
   )
   const montrerIndice =
@@ -674,7 +698,7 @@ export default function SupervisorHomeScreen() {
                 theme={theme}
                 styles={styles}
                 onDelete={peutSupprimer(item.session) ? () => confirmerSuppression(item.session) : undefined}
-                onClose={item.session.status !== 'closed' ? () => confirmerCloture(item.session) : undefined}
+                onClose={item.session.status !== 'closed' && peutCloturer(item.session) ? () => confirmerCloture(item.session) : undefined}
                 onVoletOuvert={noterVolet}
                 onVoletFerme={oublierVolet}
                 selection={selection}
