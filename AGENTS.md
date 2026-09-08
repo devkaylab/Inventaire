@@ -13100,7 +13100,13 @@ donne déjà la matière.
 **Version 1.0.0, build 3**, envoyée par Julien depuis Xcode → Organizer →
 Distribute App → App Store Connect. L'envoi est passé.
 
-⚠️ **LE PROCHAIN ENVOI DEVRA PORTER LE BUILD 4, ET IL VIT À DEUX ENDROITS** :
+⚠️ **RIEN À CHANGER TANT QU'ON N'ENVOIE PAS UN SECOND BUILD.** Le 3 est parti,
+il est valide, il se soumet à la revue tel quel — question de Julien le jour
+même : « faut absolument changer maintenant ? ». Non. **Le numéro se change
+JUSTE AVANT la prochaine archive, jamais après un envoi réussi** : le monter
+sans envoyer ne ferait que créer un trou dans la série.
+
+⚠️ **ET LE JOUR VENU, IL VIT À DEUX ENDROITS** :
 `app.json` (`ios.buildNumber`) **et** `ios/Inventaire/Info.plist`
 (`CFBundleVersion`) — ce dernier est versionné et ne se régénère pas. Apple
 refuse un numéro déjà utilisé, et le refus arrive à la fin de l'envoi. C'est le
