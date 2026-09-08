@@ -27,7 +27,7 @@ import { usePreventRemove } from 'expo-router/build/react-navigation/core/usePre
 import type { NavigationAction as ActionNavigation } from 'expo-router/build/react-navigation/routers'
 import { useKeepAwake } from 'expo-keep-awake'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getZoneDashboard, viderBalise } from '@/lib/queries'
+import { annulerBalise, getZoneDashboard, viderBalise } from '@/lib/queries'
 import type { Article, BaliseMode, ScanEntrySeed } from '@/lib/queries'
 // Résolution d'article, création d'un article inconnu et ouverture/clôture de
 // balise passent par la couche hors ligne : mêmes signatures, avec repli sur le
@@ -570,26 +570,23 @@ export function Scanner({
   }
 
   /**
-   * Ce que QUELQU'UN D'AUTRE a déjà compté sur cette balise.
+   * Ce qui est déjà enregistré sur cette balise — **par tout le monde**.
    *
-   * ⚠️ **Trois choses ont changé le 2 septembre 2026**, après le test de Julien
-   * où deux superviseurs ont compté la même balise sans que rien ne les
-   * prévienne :
+   * ⚠️ **LE PROFIL NE COMPTE PAS, ET C'EST UNE DÉCISION DE JULIEN**
+   * (8 septembre 2026) : *« qu'importe si c'est moi ou une autre personne qui
+   * a scanné la balise initialement, celui qui rescanne le fait pour tout le
+   * monde, il ne touche pas qu'à ses comptes, il touche au compte de la
+   * balise »*.
    *
-   * 1. **on ne demande plus que la balise soit CLÔTURÉE.** C'était le trou :
-   *    un collègue qui laisse sa balise ouverte n'était signalé nulle part, et
-   *    les deux relevés s'additionnaient en silence — `counts` est un journal
-   *    en ajout pur ;
-   * 2. **on ne compte que les pièces des AUTRES** (`*_autres`, servi par
-   *    `get_zone_dashboard`). Rouvrir sa propre balise ne demande donc rien :
-   *    une carte qui s'affiche à chaque retour devient une carte qu'on ferme
-   *    sans lire ;
-   * 3. la carte dit **si le comptage est clôturé ou en cours** — ce ne sont pas
-   *    les mêmes gestes derrière, et pas la même phrase.
+   * Elle lisait `*_autres` depuis le 2 septembre — juste pour ce qu'elle
+   * disait alors (« quelqu'un d'autre compte ici »), mais ça faisait
+   * disparaître le cas le plus courant : son propre rayon, déjà fini. On
+   * revient donc au total, et il n'y a plus qu'une carte pour un seul geste.
    *
    * ⚠️ Elle ne nomme personne, et ne le doit pas : un compteur ne voit que ses
    * propres lignes (`counts_select_own`), et le suivi a été dépersonnalisé le
-   * 19 août. Le nombre de pièces suffit à comprendre qu'on n'est pas seul.
+   * 19 août. Le nombre de pièces suffit à comprendre qu'on n'arrive pas sur un
+   * rayon vierge.
    */
   function baliseDejaFaite(
     code: string,
@@ -598,8 +595,8 @@ export function Scanner({
     const z = (zoneRows ?? []).find((r) => normBalise(r.code) === cible)
     if (!z) return null
     const compte = baliseModeRef.current === 'count'
-    const unites = Math.round(Number(compte ? z.count_units_autres : z.audit_units_autres))
-    const refs = Number(compte ? z.count_lines_autres : z.audit_lines_autres)
+    const unites = Math.round(Number(compte ? z.count_units : z.audit_units))
+    const refs = Number(compte ? z.count_lines : z.audit_lines)
     if (!(unites > 0)) return null
     return { unites, refs, cloturee: (compte ? z.count_status : z.audit_status) === 'done' }
   }
@@ -626,6 +623,21 @@ export function Scanner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBalise?.code, zoneMode, passNumber])
 
+  /**
+   * Les écritures faites depuis l'ouverture de la balise en cours.
+   *
+   * ⚠️ **Ce n'est pas `recentScans`**, qui porte tout le contenu de la balise,
+   * tous compteurs confondus et depuis toujours. Annuler ne défait que ce
+   * qu'on vient de faire — sans quoi on effacerait le travail d'un collègue
+   * par un bouton qui promet de ne rien effacer.
+   */
+  const scansSessionRef = useRef<{ article: Article; qty: number }[]>([])
+  /**
+   * L'état du cycle AVANT qu'on ouvre — `pending` (rayon à faire) ou `done`
+   * (rayon fini qu'on rouvrait). Annuler y ramène : rendre `pending` une
+   * balise qui était finie la décompterait, et c'est le défaut du 25 août.
+   */
+  const etatAvantRef = useRef<'pending' | 'done'>('pending')
   const lastDetectedRef = useRef<string | null>(null)
   const detectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const processingRef = useRef(false)          // sync lock — no React render cycle
@@ -839,17 +851,6 @@ export function Scanner({
   // `allowCreate` n'est vrai qu'au second passage, quand la personne a confirmé
   // vouloir ajouter une balise absente des plages de l'inventaire.
   /**
-   * @param sansAvertir  vrai quand la personne vient **exprès** rouvrir une
-   *                     balise depuis « Revenir sur une balise » : ce rang
-   *                     affiche déjà le total et son bouton dit « Rouvrir ».
-   *                     L'avertissement long — celui qui sert au scan d'une
-   *                     étiquette qu'on croit neuve — n'y aurait rien à
-   *                     apprendre, et le répéter apprendrait à cliquer sans
-   *                     lire. ⚠️ Ce rang pose en revanche **sa propre**
-   *                     question, courte, depuis le 25 août 2026 : voir
-   *                     `rouvrirDepuisListe`.
-   */
-  /**
    * « Reprendre à zéro » : vider la balise, puis l'ouvrir neuve.
    *
    * ⚠️ **Une seconde carte, et elle nomme ce qu'on perd.** Le premier bouton
@@ -868,22 +869,29 @@ export function Scanner({
   async function reprendreAZero(
     code: string, faite: { unites: number; refs: number },
   ): Promise<boolean> {
+    const compte = baliseModeRef.current === 'count'
     const p = faite.unites > 1 ? 's' : ''
     const r = faite.refs > 1 ? 's' : ''
+    const geste = compte ? 'comptage' : 'audit'
     const ok = await demander({
-      titre: `Effacer les comptages de la balise ${code} ?`,
-      texte: `${faite.unites} pièce${p} sur ${faite.refs} référence${r} comptée${p} par `
-        + `l’équipe seront effacée${p}, audits compris. La balise redeviendra à faire, `
-        + 'et vous la compterez comme neuve.',
+      titre: `Effacer le ${geste} de la balise ${code} ?`,
+      texte: `${faite.unites} pièce${p} sur ${faite.refs} référence${r} seront `
+        + `effacée${p} — celles de toute l’équipe, pas seulement les vôtres. `
+        + `La balise redeviendra à faire, et vous la ${
+          compte ? 'compterez' : 'auditerez'} comme neuve.`,
       note: 'Rien n’est récupérable ensuite. Le rayon, lui, est toujours là : '
         + 'il se recompte.',
-      action: 'Effacer et recompter',
+      action: `Effacer et re${compte ? 'compter' : 'faire l’audit'}`,
       annuler: 'Annuler',
       ton: 'danger',
     })
     if (!ok) return false
     try {
-      const res = await viderBalise(sessionId, code)
+      // ⚠️ La passe COURANTE, jamais la balise entière : effacer depuis
+      // l'écran d'audit emporterait le comptage — le travail d'une autre
+      // équipe, souvent d'un autre jour. Le site, lui, vide tout : c'est son
+      // geste à lui, et il le dit.
+      const res = await viderBalise(sessionId, code, baliseModeRef.current)
       if (!res.success) {
         playErrorSound()
         signaler.erreur('Balise', res.error ?? 'Impossible de vider cette balise.')
@@ -891,7 +899,8 @@ export function Scanner({
       }
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
       setRecentScans([])
-      signaler.succes(`Balise ${code} remise à zéro`, 'Vous pouvez la compter comme neuve.')
+      signaler.succes(`Balise ${code} remise à zéro`,
+        `Vous pouvez ${compte ? 'la compter' : 'l’auditer'} comme neuve.`)
       return true
     } catch (e) {
       playErrorSound()
@@ -901,10 +910,21 @@ export function Scanner({
   }
 
   async function openBaliseCode(
-    code: string, closePrev: boolean, allowCreate = false, sansAvertir = false,
+    code: string, closePrev: boolean, allowCreate = false,
   ) {
     const compte = baliseModeRef.current === 'count'
-    const faite = allowCreate || sansAvertir ? null : baliseDejaFaite(code)
+    /**
+     * ⚠️ **UNE SEULE CARTE, POUR UN SEUL GESTE.** Elle se pose au scan, à la
+     * saisie du numéro ET depuis le rang « Rouvrir » : rouvrir un rayon est le
+     * même acte quel que soit le chemin, et trois questions différentes pour
+     * un même acte apprennent à répondre sans lire. `sansAvertir` a disparu
+     * avec la question courte que la liste posait de son côté.
+     */
+    const faite = allowCreate ? null : baliseDejaFaite(code)
+    /** Vrai après « Recompter à zéro » : la balise n'est plus terminée. */
+    let videe = false
+    /** Vrai après « Compléter » : on montre ce qui est déjà là. */
+    let montrerListe = false
     if (faite) {
       const p = faite.unites > 1 ? 's' : ''
       const r = faite.refs > 1 ? 's' : ''
@@ -915,27 +935,39 @@ export function Scanner({
         // encore dessus — ce n'est pas la même chose à savoir.
         titre: faite.cloturee
           ? `Balise ${code} déjà ${compte ? 'comptée' : 'auditée'}`
-          : `Quelqu’un ${compte ? 'compte' : 'audite'} sur la balise ${code}`,
+          : `Balise ${code} ${compte ? 'en cours de comptage' : 'en cours d’audit'}`,
         surtitre: faite.cloturee ? undefined : 'Attention',
         texte: faite.cloturee
-          ? `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} a été clôturé. `
-            + 'Vos scans viendront s’ajouter à ce total.'
-          : `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} n’est pas clôturé. `
-            + 'Vos scans viendront s’ajouter à ce total.',
-        note: faite.cloturee
-          ? 'Vous revenez corriger une erreur ? Continuez. Vous pensiez ouvrir une '
-            + 'balise neuve ? Vérifiez le numéro sur l’étiquette.'
-          : 'Vous vous partagez le rayon ? Continuez. Vous pensiez ouvrir une '
-            + 'balise neuve ? Vérifiez le numéro sur l’étiquette.',
-        action: compte ? 'Continuer le comptage' : 'Continuer l’audit',
-        alternative: 'Reprendre à zéro',
+          ? `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} a été clôturé.`
+          : `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} n’est pas clôturé — `
+            + 'quelqu’un est peut-être encore dessus.',
+        // ⚠️ La note dit ce que chaque bouton FAIT des pièces déjà là. C'est
+        // tout l'objet de la carte : « rien n'est effacé » promettait le
+        // contraire de ce qu'on vient faire la plupart du temps, et laissait
+        // doubler le rayon sans le dire.
+        note: `Compléter garde ${
+          faite.unites > 1 ? 'ces pièces' : 'cette pièce'} et ajoute les vôtres. `
+          + `Re${compte ? 'compter' : 'faire l’audit'} à zéro ${
+            faite.unites > 1 ? 'les' : 'la'} efface, pour toute l’équipe.`,
+        action: compte ? 'Compléter le comptage' : 'Compléter l’audit',
+        alternative: compte ? 'Recompter à zéro' : 'Refaire l’audit à zéro',
         annuler: 'Ne pas ouvrir',
       })
       if (choix === 'annuler') return
       // ⚠️ Le remplacement n'est JAMAIS le défaut, il est le second bouton — et
-      // il repasse par sa propre confirmation, qui nomme ce qu'on perd. Le
-      // modèle en ajout pur reste : rien ne s'écrase en silence.
-      if (choix === 'alternative' && !(await reprendreAZero(code, faite))) return
+      // il repasse par sa propre confirmation, qui nomme ce qu'on perd et
+      // prévient qu'elle emporte le travail de l'équipe. Le modèle en ajout
+      // pur reste : rien ne s'écrase en silence.
+      if (choix === 'alternative') {
+        if (!(await reprendreAZero(code, faite))) return
+        videe = true
+      } else {
+        // ⚠️ « Compléter » MONTRE ce qui est déjà là (demande de Julien,
+        // 8 septembre 2026). Compléter à l'aveugle, c'est rescanner ce qui est
+        // déjà compté — donc doubler, ce que le journal en ajout pur ne
+        // rattrape pas tout seul.
+        montrerListe = true
+      }
     }
 
     /**
@@ -955,12 +987,11 @@ export function Scanner({
      * fois), ni sur une balise qu'on vient de créer, ni depuis la liste — qui
      * l'a déjà posée elle-même.
      */
-    if (!faite && !allowCreate && !sansAvertir) {
-      const finie = rangeeTerminee(code)
-      if (finie) {
-        const unites = Math.round(Number(compte ? finie.count_units : finie.audit_units))
-        if (!(await confirmerReouverture(finie.code, unites))) return
-      }
+    if (!faite && !allowCreate) {
+      // Terminée mais SANS aucune pièce : un rayon vide clôturé. Il n'y a
+      // rien à compléter ni à effacer, donc pas de choix à poser — mais
+      // rouvrir reste un geste, et il se confirme.
+      if (rangeeTerminee(code) && !(await confirmerReouverture(code))) return
     }
 
     try {
@@ -974,14 +1005,20 @@ export function Scanner({
       // `materialiserOuverture`). Sans cela, la seule consultation la
       // décomptait — et le garde-fou du retour ne rattrapait pas une
       // application tuée, un téléphone à plat ou une panne au mauvais moment.
-      const terminee = allowCreate ? null : rangeeTerminee(code)
+      // ⚠️ `videe` : le cache des zones n'a pas encore été relu, il croit
+      // donc la balise encore terminée — et l'ouverture différée la laisserait
+      // « done » alors qu'elle vient d'être remise à faire.
+      const terminee = allowCreate || videe ? null : rangeeTerminee(code)
       if (terminee) {
         ignoreBaliseRef.current = terminee.code
+        scansSessionRef.current = []
+        etatAvantRef.current = 'done'
         ouvertureDiffereeRef.current = true
         setOuvertureDifferee(true)
         setActiveBalise({ code: terminee.code, name: terminee.name ?? null })
         pingSession(sessionId, 'balise')
         playScanSound()
+        if (montrerListe) setFeuilleScans(true)
         return
       }
       const result = await setBalise(sessionId, code, baliseModeRef.current, true, allowCreate)
@@ -1011,7 +1048,11 @@ export function Scanner({
         return
       }
       ignoreBaliseRef.current = result.code ?? code
+      scansSessionRef.current = []
+      // `videe` : on vient de la remettre à faire, elle n'est plus terminée.
+      etatAvantRef.current = !videe && rangeeTerminee(code) ? 'done' : 'pending'
       setActiveBalise({ code: result.code ?? code, name: result.name ?? null })
+      if (montrerListe) setFeuilleScans(true)
       if (repereOuverture.aVoir) {
         setVolet({ genre: 'ouverte', code: result.code ?? code, nom: result.name ?? null })
         repereOuverture.marquerVu()
@@ -1022,6 +1063,103 @@ export function Scanner({
     } catch (e) {
       playErrorSound()
       signaler.erreur('Erreur', errorMessage(e))
+    }
+  }
+
+  // ── Annule le comptage en cours ──────────────────────────────────────────
+  /**
+   * « Annuler » : la balise retrouve l'état qu'elle avait à l'ouverture.
+   *
+   * Demande de Julien, 8 septembre 2026 : *« ajouter un bouton annuler qui
+   * n'enregistre rien, qui n'efface rien »*. L'écran n'offrait qu'une sortie —
+   * clôturer —, et clôturer **annonce un rayon fini**. Quelqu'un qui ouvre la
+   * mauvaise balise n'avait donc aucun geste juste : partir laissait la balise
+   * ouverte, donc absente de la liste des balises à reprendre.
+   *
+   * ⚠️ **CE QU'ELLE DÉFAIT, ET RIEN DE PLUS** : les écritures de CET appareil
+   * depuis l'ouverture. Jamais le comptage d'avant, jamais celui d'un
+   * collègue — borne posée par Julien lui-même, et c'est ce qui distingue
+   * « Annuler » de « Recompter à zéro ».
+   *
+   * ⚠️ **Chaque scan s'écrit en base au moment où il est fait**, donc « rien
+   * ne sera enregistré » se tient par des lignes NÉGATIVES, pas par une
+   * suppression : `counts` est un journal en ajout pur, et une correction y
+   * est une ligne de plus. C'est déjà ce qu'écrit le « − » de la liste.
+   */
+  async function annulerComptage(): Promise<boolean> {
+    const active = activeBaliseRef.current
+    if (!active) return true
+    const compte = baliseModeRef.current === 'count'
+    const geste = compte ? 'comptage' : 'audit'
+    const aDefaire = scansSessionRef.current
+    const pieces = aDefaire.reduce((n, e) => n + e.qty, 0)
+    const p = pieces > 1 ? 's' : ''
+    const revientA = etatAvantRef.current
+    const ok = await demander({
+      titre: `Annuler le ${geste} de la balise ${active.code} ?`,
+      texte: pieces > 0
+        ? `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p} ${
+          pieces > 1 ? 'seront retirées' : 'sera retirée'}. La balise retrouvera `
+          + 'l’état qu’elle avait en l’ouvrant.'
+        : 'Rien ne sera enregistré. La balise retrouvera l’état qu’elle avait '
+          + 'en l’ouvrant.',
+      note: `Ce que d’autres ont ${compte ? 'compté' : 'audité'} sur cette balise `
+        + 'n’est pas touché.',
+      action: `Annuler le ${geste}`,
+      annuler: 'Continuer',
+      ton: 'danger',
+      surtitre: 'Confirmation',
+    })
+    if (!ok) return false
+    try {
+      /**
+       * ⚠️ **LA ZONE D'ABORD, LES LIGNES ENSUITE.**
+       *
+       * `annulerBalise` part en direct — elle n'a pas de file d'attente, comme
+       * `viderBalise` : on ne met pas en attente un geste dont on ne saura pas,
+       * au moment de l'envoi, ce qu'il défait. Sans réseau elle échoue donc, et
+       * dans cet ordre **rien n'a encore été touché**. L'ordre inverse
+       * laisserait un comptage à moitié défait dans une balise restée ouverte.
+       *
+       * Et on ne remet pas toujours « à faire » : une balise qu'on rouvrait
+       * pour compléter doit **redevenir terminée**, sinon on la décompte —
+       * c'est le défaut du 25 août. Une ouverture différée jamais matérialisée
+       * n'a rien écrit côté serveur : il n'y a rien à défaire.
+       */
+      if (!ouvertureDiffereeRef.current) {
+        const res = revientA === 'done'
+          ? await setBalise(sessionId, active.code, baliseModeRef.current, false)
+          : await annulerBalise(sessionId, active.code, baliseModeRef.current)
+        if (!res.success) {
+          playErrorSound()
+          signaler.erreur('Balise', res.error ?? 'Annulation impossible.')
+          return false
+        }
+      }
+      // Une ligne négative par ligne posée, dans l'ordre inverse.
+      for (const e of [...aDefaire].reverse()) {
+        await onArticleResolved(e.article, -e.qty, active.code)
+      }
+      scansSessionRef.current = []
+      ouvertureDiffereeRef.current = false
+      setOuvertureDifferee(false)
+      ignoreBaliseRef.current = active.code
+      setActiveBalise(null)
+      setRecentScans([])
+      queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
+      pingSession(sessionId, 'balise')
+      playScanSound()
+      signaler.info(
+        `Balise ${active.code} · ${geste} annulé`,
+        revientA === 'done'
+          ? 'Elle reste terminée, comme avant l’ouverture.'
+          : `Elle est de nouveau à ${compte ? 'compter' : 'auditer'}.`,
+      )
+      return true
+    } catch (e) {
+      playErrorSound()
+      signaler.erreur('Erreur', errorMessage(e))
+      return false
     }
   }
 
@@ -1064,6 +1202,7 @@ export function Scanner({
       ouvertureDiffereeRef.current = false
       setOuvertureDifferee(false)
       ignoreBaliseRef.current = active.code
+      scansSessionRef.current = []
       setActiveBalise(null)
       playScanSound()
       return true
@@ -1086,6 +1225,7 @@ export function Scanner({
         repereCloture.marquerVu()
       }
       ignoreBaliseRef.current = active.code
+      scansSessionRef.current = []
       setActiveBalise(null)
       queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
       pingSession(sessionId, 'balise')
@@ -1107,15 +1247,13 @@ export function Scanner({
    * plus de perdre l'état de la balise (la consultation n'écrit plus rien),
    * c'est de **compter dans un rayon déjà fini** sans l'avoir voulu.
    *
-   * Elle est volontairement courte et distincte de l'avertissement du scan :
-   * celle-ci demande une intention, celle-là apprend un fait.
+   * ⚠️ **Elle ne pose plus sa propre question depuis le 8 septembre 2026** :
+   * `openBaliseCode` porte la carte unique, qui dit ce que devient le contenu
+   * déjà enregistré. Trois questions différentes pour un même geste — rouvrir
+   * un rayon — apprenaient à répondre sans lire.
    */
   async function rouvrirDepuisListe(z: (typeof doneBalises)[number]) {
-    const compte = baliseModeRef.current === 'count'
-    const unites = Math.round(Number(compte ? z.count_units : z.audit_units))
-    if (await confirmerReouverture(z.code, unites)) {
-      await openBaliseCode(z.code, false, false, true)
-    }
+    await openBaliseCode(z.code, false)
   }
 
   /**
@@ -1127,12 +1265,12 @@ export function Scanner({
    * au premier ajustement, et c'est précisément l'asymétrie que Julien a vue
    * le 8 septembre 2026 : la liste demandait, le scan ne demandait plus.
    */
-  async function confirmerReouverture(code: string, unites: number): Promise<boolean> {
-    const p = unites > 1 ? 's' : ''
+  async function confirmerReouverture(code: string): Promise<boolean> {
+    const compte = baliseModeRef.current === 'count'
     return demander({
       titre: `Rouvrir la balise ${code} ?`,
-      texte: `Elle est terminée, avec ${unites} pièce${p} enregistrée${p}. `
-        + 'Vous pourrez en ajouter ou les corriger ; rien n’est effacé.',
+      texte: `Elle est terminée, sans aucune pièce enregistrée. Vous pourrez `
+        + `${compte ? 'la compter' : 'l’auditer'} maintenant.`,
       action: 'Rouvrir',
       annuler: 'Annuler',
     })
@@ -1183,13 +1321,52 @@ export function Scanner({
    */
   const [sortieAutorisee, setSortieAutorisee] = useState<ActionNavigation | null>(null)
   usePreventRemove(!!activeBalise && !sortieAutorisee, ({ data }) => {
-    void closeBalise().then((cloturee) => {
-      if (!cloturee) return
+    void sortirDuComptage().then((partir) => {
+      if (!partir) return
       // Retenir l'action et la rejouer au rendu suivant : c'est ce qui lève la
       // garde avant de repartir. La rejouer ici la ferait reprendre au vol.
       setSortieAutorisee(() => data.action)
     })
   })
+
+  /**
+   * Le retour pose les TROIS issues.
+   *
+   * Demande de Julien, 8 septembre 2026 : *« le bouton retour propose les deux
+   * choix Annuler le compte/audit ou Clôturer, avec un troisième bouton
+   * ignorer pour revenir à l'écran de scan »*.
+   *
+   * ⚠️ **Clôturer reste le geste principal**, et c'est la décision du 29 août
+   * qui tient : partir en laissant la balise ouverte n'est pas une sortie,
+   * c'est une impasse — une balise ouverte disparaît de la liste des balises à
+   * reprendre, et ses pièces sont introuvables sans rescanner l'étiquette.
+   * Ce que le troisième bouton offre, ce n'est pas de partir sans choisir :
+   * c'est de **rester**, quand on a touché le retour sans le vouloir.
+   *
+   * ⚠️ **Aucune des deux branches ne se rejoue à l'aveugle** : `closeBalise` et
+   * `annulerComptage` portent chacune SA confirmation, celle qui nomme la
+   * balise et compte les pièces. On ne remplace pas une question par une autre.
+   */
+  async function sortirDuComptage(): Promise<boolean> {
+    const active = activeBaliseRef.current
+    if (!active) return true
+    const compte = baliseModeRef.current === 'count'
+    const pieces = recentScansRef.current.reduce((n, e) => n + e.qty, 0)
+    const p = pieces > 1 ? 's' : ''
+    const choix = await demanderChoix({
+      surtitre: `Balise ${active.code} ouverte`,
+      titre: `Que faire de ce ${compte ? 'comptage' : 'audit'} ?`,
+      texte: `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p} sur cette balise.`,
+      note: 'Clôturer l’enregistre et marque le rayon fini. Annuler ne garde '
+        + 'rien de ce que vous venez de faire.',
+      action: 'Clôturer la balise',
+      alternative: `Annuler le ${compte ? 'comptage' : 'audit'}`,
+      annuler: 'Ignorer — revenir au scan',
+    })
+    if (choix === 'action') return closeBalise()
+    if (choix === 'alternative') return annulerComptage()
+    return false
+  }
   useEffect(() => {
     if (sortieAutorisee) navigation.dispatch(sortieAutorisee)
   }, [sortieAutorisee, navigation])
@@ -1236,6 +1413,10 @@ export function Scanner({
   async function enregistrer(article: Article, qty: number, zoneCode: string | null) {
     await materialiserOuverture()
     await onArticleResolved(article, qty, zoneCode)
+    // ⚠️ Ce que CET appareil a écrit depuis l'ouverture, et rien d'autre.
+    // C'est la seule chose qu'« Annuler » a le droit de défaire : le comptage
+    // d'avant et celui d'un collègue ne lui appartiennent pas.
+    scansSessionRef.current.push({ article, qty })
   }
 
   async function recordArticle(article: Article, zoneCode: string | null = null) {
@@ -1565,26 +1746,21 @@ export function Scanner({
               })}
             </View>
           )}
-          {/* Bandeau de la zone ouverte */}
+          {/*
+            Bandeau de la zone ouverte — il ANNONCE, il n'agit pas.
+
+            ⚠️ Son bouton « Clôturer » a été retiré le 8 septembre 2026 (« il
+            fait doublon », Julien) : le même geste à deux endroits de l'écran,
+            l'un compact en haut et l'autre pleine largeur en bas, fait douter
+            qu'il s'agisse du même — et le pied porte désormais les DEUX
+            sorties, qui ne se lisent que l'une à côté de l'autre.
+          */}
           {activeBalise ? (
             <View style={[styles.zoneBanner, { borderColor: modeColor }]}>
               <View style={[styles.passDot, { backgroundColor: modeColor }]} />
               <Text style={styles.zoneBannerText} numberOfLines={1}>
                 Zone ouverte · {activeBalise.name ?? 'Sans nom'} · balise {activeBalise.code}
               </Text>
-              {/*
-                * ⚠️ `hitSlop` plutôt qu'une pastille plus haute : le bandeau
-                * doit rester compact, et la clôture est confirmée — un appui
-                * de travers ne coûte rien, un appui qu'on rate coûte.
-                */}
-              <Pressable
-                style={styles.zoneCloseBtn}
-                onPress={() => { void closeBalise() }}
-                disabled={resolving}
-                hitSlop={{ top: 7, bottom: 7, left: 8, right: 8 }}
-              >
-                <Text style={styles.zoneCloseText}>Clôturer</Text>
-              </Pressable>
             </View>
           ) : (
             <View style={styles.zoneBannerIdle}>
@@ -1912,9 +2088,22 @@ export function Scanner({
             </Pressable>
           )}
           {activeBalise && (
-            <Pressable style={styles.closeFooterBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
-              <Text style={styles.closeFooterText}>Clôturer la balise {activeBalise.code}</Text>
-            </Pressable>
+            <>
+              <Pressable style={styles.closeFooterBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
+                <Text style={styles.closeFooterText}>Clôturer la balise {activeBalise.code}</Text>
+              </Pressable>
+              {/*
+                ⚠️ **EN CONTOUR, JAMAIS UN SECOND APLAT.** Deux boutons pleins
+                côte à côte se disputent le regard, et c'est le geste normal —
+                clôturer — qui perdrait. Le contour dit « c'est là si tu en as
+                besoin » sans appeler.
+              */}
+              <Pressable style={styles.cancelFooterBtn} onPress={() => { void annulerComptage() }} disabled={resolving}>
+                <Text style={styles.cancelFooterText}>
+                  Annuler le {baliseMode === 'count' ? 'comptage' : 'audit'}
+                </Text>
+              </Pressable>
+            </>
           )}
 
           {/* Un voile posé sur l'écran, PAS une `Modal`. iOS refuse de
@@ -2148,7 +2337,15 @@ function makeStyles(t: Theme) {
     // rouge passait alors PAR-DESSUS « Voir les N articles » ou « En attente
     // d'un code ». Constat de Julien le 31 août 2026 : « ça dépend du moment »
     // — c'est l'apparition de la rangée des scans qui change la hauteur totale.
-    closeFooterBtn: { marginHorizontal: Spacing.md, marginTop: Spacing.sm, marginBottom: Spacing.md, flexShrink: 0, backgroundColor: t.danger, borderRadius: Radius.bouton, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
+    closeFooterBtn: { marginHorizontal: Spacing.md, marginTop: Spacing.sm, marginBottom: 0, flexShrink: 0, backgroundColor: t.danger, borderRadius: Radius.bouton, paddingVertical: 14, alignItems: 'center', ...t.shadowButton },
+    // Même géométrie que « Clôturer » — c'est ce qui les fait lire comme deux
+    // sorties d'un même choix —, mais sans aplat ni élévation.
+    cancelFooterBtn: {
+      marginHorizontal: Spacing.md, marginTop: Spacing.sm, marginBottom: Spacing.md,
+      flexShrink: 0, borderRadius: Radius.bouton, paddingVertical: 14,
+      alignItems: 'center', borderWidth: 1, borderColor: t.hairline,
+    },
+    cancelFooterText: { fontSize: 15, fontFamily: Font.semibold, color: t.textSecondary },
     closeFooterText: { color: '#fff', fontSize: 15, fontFamily: Font.bold },
 
     modeToggle: {

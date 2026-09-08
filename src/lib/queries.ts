@@ -1151,13 +1151,48 @@ export async function deleteZone(sessionId: string, name: string) {
  * l'inverse — on ne saurait pas, au moment de l'envoi, ce qu'il détruit. Sans
  * réseau, l'écran le dit et n'ouvre rien.
  */
-export async function viderBalise(sessionId: string, code: string) {
+/**
+ * Efface le contenu d'une balise — **pour tout le monde**, pas seulement pour
+ * soi (décision de Julien, 8 septembre 2026 : « celui qui rescanne le fait
+ * pour tout le monde, il touche au compte de la balise »).
+ *
+ * ⚠️ **`passe` borne la destruction au cycle en cours.** Sans elle, recompter
+ * à zéro depuis l'écran d'AUDIT effacerait aussi le comptage de la passe 1 —
+ * le travail d'une autre équipe, souvent d'un autre jour. L'omettre vide la
+ * balise entière : c'est ce que fait le site depuis la fiche d'une balise,
+ * où le geste est explicitement « vider ».
+ */
+export async function viderBalise(
+  sessionId: string, code: string, passe?: BaliseMode,
+) {
   const { data, error } = await supabase.rpc('vider_balise', {
     p_session_id: sessionId,
     p_code: code,
+    ...(passe ? { p_passe: passe } : {}),
   })
   if (error) throwSupabase('viderBalise', error)
   return data as { success: boolean; error?: string; code?: string; lignes?: number; pieces?: number }
+}
+
+/**
+ * Défait l'ouverture d'une balise : elle redevient **à faire**, et rien n'est
+ * effacé.
+ *
+ * ⚠️ **`set_balise` ne savait pas faire ça** — elle ne connaît que « ouvert »
+ * et « terminé ». Une ouverture qu'on regrette n'avait donc aucune sortie :
+ * clôturer annonçait un rayon fini qui ne l'est pas, et partir laissait la
+ * balise ouverte, donc **absente de la liste des balises à reprendre**.
+ */
+export async function annulerBalise(
+  sessionId: string, code: string, mode: BaliseMode,
+) {
+  const { data, error } = await supabase.rpc('annuler_balise', {
+    p_session_id: sessionId,
+    p_code: code,
+    p_mode: mode,
+  })
+  if (error) throwSupabase('annulerBalise', error)
+  return data as { success: boolean; error?: string; code?: string; name?: string | null }
 }
 
 export async function setBalise(

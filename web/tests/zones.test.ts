@@ -6,7 +6,7 @@ import {
   type BaliseLigne, type ZoneDashboardRow,
 } from '@/lib/zones'
 import { ACTIONS } from '@/lib/journal'
-import { derniereDefinition, fichierDe } from './migrations'
+import { derniereDefinition, fichierDe, signatureDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 
@@ -174,7 +174,15 @@ describe('le serveur borne le détail à une balise', () => {
 })
 
 describe('vider une balise', () => {
+  /**
+   * ⚠️ **SANS LES COMMENTAIRES.** Douzième fois sur ce dépôt : la fonction
+   * EXPLIQUE ce qu'elle ne fait plus (« `can_access_session` devient
+   * `membre_ou_superviseur` »), donc elle cite le mot — et une garde qui lit
+   * le texte brut valide alors précisément ce qu'elle devrait refuser. Ce
+   * test-là est passé au vert sur mon propre commentaire.
+   */
   const vider = derniereDefinition('vider_balise').corps
+    .replace(/--.*$/gm, '')
 
   it('reste bornée à UNE balise, nommée', () => {
     // ⚠️ C'est ce qui la distingue de la policy retirée par VR-007 : le
@@ -192,21 +200,51 @@ describe('vider une balise', () => {
     expect(vider).toContain('count_done_at = null')
   })
 
+  /**
+   * ⚠️ **LA PASSE BORNE LA DESTRUCTION** (8 septembre 2026). Sans elle,
+   * « recompter à zéro » depuis l'écran d'AUDIT de l'application emporterait
+   * le comptage de la passe 1 — le travail d'une autre équipe, souvent d'un
+   * autre jour. Le site, lui, appelle sans passe : son geste à lui vide la
+   * balise entière, et il le dit.
+   */
+  it('et sait n’effacer QUE la passe demandée', () => {
+    expect(vider).toContain('p_passe text default null')
+    expect(vider).toContain("v_pass := case p_passe when 'count' then 1 when 'audit' then 2")
+    expect(vider).toMatch(/v_pass is null or c\.pass_number = v_pass/)
+    // Une passe inconnue est refusée, jamais interprétée comme « tout ».
+    expect(vider).toContain("p_passe not in ('count','audit')")
+  })
+
   it('laisse une trace — c’est l’aggravation relevée par VR-007', () => {
     expect(vider).toContain('company_audit_log')
     expect(vider).toContain("'balise_videe'")
   })
 
-  it('refuse un inventaire clôturé et un non-superviseur', () => {
+  /**
+   * ⚠️ **DROIT ÉLARGI AUX MEMBRES LE 8 SEPTEMBRE 2026, à la demande de
+   * Julien** : *« celui qui rescanne le fait pour tout le monde »*. Un
+   * compteur qui rouvre un rayon pour le refaire doit pouvoir en effacer le
+   * contenu. Ce que la garde défend n'a pas bougé : l'inventaire clôturé reste
+   * refusé, et un étranger à la session aussi.
+   */
+  it('refuse un inventaire clôturé et un étranger à la session', () => {
     // Le rapport d'un inventaire clôturé est sorti, souvent exporté.
     expect(vider).toContain("s.status <> 'closed'")
-    expect(vider).toContain('can_access_session')
+    expect(vider).toContain('membre_ou_superviseur')
   })
 
   it('n’est ouverte ni à anon ni à public', () => {
-    const fichier = fichierDe('vider_balise')
-    expect(fichier).toMatch(/revoke all on function public\.vider_balise\(uuid, text\) from public, anon/)
-    expect(fichier).toMatch(/grant execute on function public\.vider_balise\(uuid, text\) to authenticated/)
+    // ⚠️ La signature se DÉDUIT : elle a gagné `p_passe` le 8 septembre 2026,
+    // et une garde qui la cite en dur tombe sur du code juste.
+    // ⚠️ Ancré en DÉBUT DE LIGNE : `toContain` trouve la phrase jusque dans un
+    // `-- revoke …` commenté, donc la garde validait un droit désactivé.
+    // Treizième variante du piège des commentaires sur ce dépôt.
+    const { fichier, signature } = signatureDe('vider_balise')
+    const echappe = (t: string) => t.replace(/[.()]/g, '\\$&')
+    expect(fichier).toMatch(new RegExp(
+      `^revoke all on function ${echappe(`public.vider_balise(${signature})`)} from public, anon`, 'm'))
+    expect(fichier).toMatch(new RegExp(
+      `^grant execute on function ${echappe(`public.vider_balise(${signature})`)}`, 'm'))
   })
 })
 

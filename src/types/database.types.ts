@@ -1690,6 +1690,10 @@ export type Database = {
         }
         Returns: number
       }
+      annuler_balise: {
+        Args: { p_code: string; p_mode: string; p_session_id: string }
+        Returns: Json
+      }
       anomalies_a_signaler: { Args: never; Returns: Json }
       appareils_des_magasins: { Args: { p_company_id: string }; Returns: Json }
       appareils_du_magasin: { Args: { p_store_id: string }; Returns: Json }
@@ -2538,7 +2542,7 @@ export type Database = {
         Returns: Json
       }
       vider_balise: {
-        Args: { p_code: string; p_session_id: string }
+        Args: { p_code: string; p_passe?: string; p_session_id: string }
         Returns: Json
       }
       vider_import: {

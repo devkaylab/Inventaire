@@ -61,3 +61,24 @@ export function fichierDe(fn: string): string {
   const { fichier } = derniereDefinition(fn)
   return readFileSync(path.join(dossierMigrations, fichier), 'utf8')
 }
+
+/**
+ * La signature (les TYPES des paramètres) de la dernière définition de `fn`,
+ * plus le fichier qui la porte.
+ *
+ * ⚠️ **Une garde sur les droits ne doit pas citer la signature en dur.** Elle
+ * tombe alors le jour où la fonction gagne un paramètre — sur du code juste —
+ * et, entre-temps, elle a validé une définition qui ne tournait plus. Cas
+ * vécu : `vider_balise(uuid, text)` devenue `(uuid, text, text)` le
+ * 8 septembre 2026.
+ */
+export function signatureDe(fn: string): { fichier: string; signature: string } {
+  const { corps } = derniereDefinition(fn)
+  const params = corps.slice(corps.indexOf('(') + 1, corps.indexOf(')'))
+  const signature = params
+    .split(',')
+    .map((p) => p.trim().split(/\s+/)[1])
+    .filter(Boolean)
+    .join(', ')
+  return { fichier: fichierDe(fn), signature }
+}

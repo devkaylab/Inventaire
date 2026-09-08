@@ -1843,30 +1843,34 @@ describe('rouvrir une balise déjà comptée', () => {
     expect(question).toBeLessThan(ouverture)
   })
 
-  it('dit que les scans s’ajoutent, sans dire qui a compté', () => {
-    expect(scanner).toContain('ajouter à ce total')
-    // Le total est public entre membres ; le détail des lignes ne l'est pas.
-    // L'avertissement ne doit nommer personne.
-    const bloc = scanner.slice(scanner.indexOf('déjà ${compte'), scanner.indexOf('if (!ok) return'))
-    expect(bloc).not.toMatch(/counted_by|counted_by|par \$\{/)
+  /**
+   * ⚠️ **AMENDÉ LE 8 SEPTEMBRE 2026, PAS AFFAIBLI.** La carte ne promet plus
+   * « rien n'est effacé » — Julien : *« ce qu'on souhaite en rescannant une
+   * balise, c'est corriger, donc on remplace »*. Elle dit maintenant ce que
+   * chaque bouton FAIT des pièces déjà là. Ce que la garde défend est intact :
+   * elle ne nomme toujours personne.
+   */
+  it('dit ce que devient ce qui est déjà compté, sans dire qui a compté', () => {
+    const bloc = scanner.slice(scanner.indexOf('const choix = await demanderChoix'))
+    const carte = bloc.slice(0, bloc.indexOf('})'))
+    expect(carte).toContain('Compléter garde')
+    expect(carte).toContain('efface, pour toute l’équipe')
+    // L'ancienne promesse ne doit pas revenir : elle laissait doubler le rayon.
+    expect(carte).not.toContain('ajouter à ce total')
+    expect(carte).not.toMatch(/counted_by|par \$\{/)
   })
 
-  it('se tait sur le chemin délibéré et sur une balise neuve', () => {
-    // ⚠️ Amendé le 25 août 2026 au soir, pas affaibli. « Revenir sur une
-    // balise » ne rejoue toujours PAS cet avertissement-ci — il y apprendrait
-    // à cliquer sans lire, le rang affichant déjà le total. Mais ce rang pose
-    // désormais sa propre question, courte, à la demande de Julien (gestes
-    // accidentels) : voir `rouvrirDepuisListe` et `tests/comptage.test.ts`.
-    expect(scanner).toContain('await openBaliseCode(z.code, false, false, true)')
-    expect(scanner).toContain('allowCreate || sansAvertir ? null : baliseDejaFaite(code)')
+  it('une seule carte, quel que soit le chemin', () => {
+    // ⚠️ Le rang « Rouvrir » de la liste n'a plus sa question propre : rouvrir
+    // un rayon est le même geste au scan, à la saisie et depuis la liste.
+    expect(scanner).toContain('const faite = allowCreate ? null : baliseDejaFaite(code)')
+    expect(scanner).toContain('await openBaliseCode(z.code, false)')
   })
 
   it('lit le mode en cours, pas l’autre passe', () => {
-    // Une balise comptée mais pas auditée ne doit pas déclencher
-    // l'avertissement quand on vient l'auditer. ⚠️ L'écriture a changé le
-    // 2 septembre 2026 — la condition ne porte plus sur « clôturée » mais sur
-    // « des pièces d'autrui » — l'intention, elle, est la même.
-    expect(scanner).toContain('compte ? z.count_units_autres : z.audit_units_autres')
+    // Une balise comptée mais pas auditée ne doit pas déclencher la carte
+    // quand on vient l'auditer.
+    expect(scanner).toContain('compte ? z.count_units : z.audit_units')
     expect(scanner).toContain("(compte ? z.count_status : z.audit_status) === 'done'")
   })
 
@@ -2234,9 +2238,14 @@ describe('les cibles tactiles atteignent 48 dp', () => {
       const bloc = new RegExp(`${style}: \\{[^}]*minHeight: 48`)
       expect(bloc.test(src), `${style} doit porter minHeight: 48`).toBe(true)
     }
-    // « Clôturer » du bandeau garde sa pastille compacte : c'est le hitSlop
-    // qui l'amène à 48 (34 + 2×7).
-    expect(src).toMatch(/hitSlop=\{\{ top: 7, bottom: 7, left: 8, right: 8 \}\}/)
+    // ⚠️ La pastille « Clôturer » du bandeau a disparu le 8 septembre 2026
+    // (doublon avec le pied). Les deux sorties sont désormais deux boutons
+    // pleine largeur, et leur rembourrage vertical de 14 les met bien au-delà
+    // de 48 avec leur texte.
+    for (const style of ['closeFooterBtn', 'cancelFooterBtn']) {
+      const bloc = new RegExp(`${style}: \\{[^}]*paddingVertical: 14`)
+      expect(bloc.test(src), `${style} doit porter paddingVertical: 14`).toBe(true)
+    }
   })
 
   it('« Quitter l’inventaire » aussi', () => {
@@ -2423,36 +2432,57 @@ describe('quelqu’un d’autre a compté sur cette balise', () => {
     expect(corps).not.toMatch(/!==\s*'done'\s*\)?\s*return null/)
   })
 
-  it('il se tait sur sa propre balise — les colonnes « autres » le portent', () => {
-    // ⚠️ C'est ce qui remplace une colonne « propriétaire » sur `zones`, qui
-    // aurait été fausse dès que deux personnes se relaient sur un rayon.
-    expect(scanner).toContain('count_units_autres')
-    expect(scanner).toContain('audit_units_autres')
+  /**
+   * ⚠️ **AMENDÉ LE 8 SEPTEMBRE 2026 — LE PROFIL NE COMPTE PLUS.** Julien :
+   * *« qu'importe si c'est moi ou une autre personne qui a scanné la balise
+   * initialement, celui qui rescanne le fait pour tout le monde »*. La carte
+   * lisait `*_autres` depuis le 2 septembre, ce qui faisait disparaître le cas
+   * le plus courant : son propre rayon déjà fini.
+   */
+  it('elle parle de TOUTE la balise, plus des seules pièces d’autrui', () => {
+    const bloc = scanner.slice(scanner.indexOf('function baliseDejaFaite'))
+    const corps = bloc.slice(0, bloc.indexOf('\n  }'))
+    expect(corps).toContain('compte ? z.count_units : z.audit_units')
+    expect(corps).not.toContain('_autres')
   })
 
-  it('et il ne nomme personne', () => {
+  it('et elle ne nomme personne', () => {
     const bloc = scanner.slice(scanner.indexOf('const choix = await demanderChoix'))
     const carteTexte = bloc.slice(0, bloc.indexOf('})'))
     for (const mot of ['full_name', 'counted_by', 'par ' + '${']) {
       expect(carteTexte).not.toContain(mot)
     }
-    expect(carteTexte).toContain('Quelqu’un')
   })
 
-  it('« Reprendre à zéro » n’est jamais le défaut : il est le second bouton', () => {
-    expect(scanner).toContain("alternative: 'Reprendre à zéro'")
+  it('« Recompter à zéro » n’est jamais le défaut : il est le second bouton', () => {
+    expect(scanner).toMatch(/alternative: compte \? 'Recompter à zéro'/)
     // Le bouton plein reste le geste qui ne détruit rien.
-    expect(scanner).toMatch(/action: compte \? 'Continuer le comptage'/)
+    expect(scanner).toMatch(/action: compte \? 'Compléter le comptage'/)
   })
 
   it('et il repasse par une confirmation qui nomme ce qu’on perd', () => {
     const bloc = scanner.slice(scanner.indexOf('async function reprendreAZero'))
     const corps = bloc.slice(0, bloc.indexOf('\n  async function openBaliseCode'))
     expect(corps).toContain("ton: 'danger'")
-    expect(corps).toContain('Effacer les comptages de la balise')
-    expect(corps).toContain('audits compris')
+    expect(corps).toContain('Effacer le ${geste} de la balise')
+    // ⚠️ Elle dit que l'effacement vaut pour TOUTE L'ÉQUIPE : c'est ce qui
+    // sépare ce geste d'« Annuler », qui ne défait que les siens.
+    expect(corps).toContain('celles de toute l’équipe')
     // La confirmation vient AVANT l'effacement, jamais après.
     expect(corps.indexOf('await demander(')).toBeLessThan(corps.indexOf('viderBalise('))
+  })
+
+  /**
+   * ⚠️ **LA PASSE BORNE LA DESTRUCTION.** Sans elle, « recompter à zéro »
+   * depuis l'écran d'AUDIT effacerait aussi le comptage de la passe 1 — le
+   * travail d'une autre équipe, souvent d'un autre jour.
+   */
+  it('recompter à zéro ne touche que la passe en cours', () => {
+    const bloc = scanner.slice(scanner.indexOf('async function reprendreAZero'))
+    expect(bloc.slice(0, 3000)).toContain('viderBalise(sessionId, code, baliseModeRef.current)')
+    // Et la fonction en base sait recevoir cette borne.
+    expect(requetes).toContain('passe?: BaliseMode')
+    expect(requetes).toContain("...(passe ? { p_passe: passe } : {})")
   })
 
   it('vider une balise ne part jamais en file d’attente', () => {

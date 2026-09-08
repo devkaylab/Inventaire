@@ -26,7 +26,7 @@ describe('consulter une balise finie ne l’ouvre pas', () => {
 
   it('ouvre en local et sort avant d’appeler set_balise', () => {
     const ouverture = scanner.slice(scanner.indexOf('async function openBaliseCode'))
-    const differe = ouverture.indexOf('const terminee = allowCreate ? null : rangeeTerminee(code)')
+    const differe = ouverture.indexOf('const terminee = allowCreate || videe ? null : rangeeTerminee(code)')
     const appel = ouverture.indexOf('await setBalise(sessionId, code, baliseModeRef.current, true, allowCreate)')
     expect(differe).toBeGreaterThan(0)
     // ⚠️ L'ordre EST la garantie : la branche différée doit précéder l'appel,
@@ -39,9 +39,18 @@ describe('consulter une balise finie ne l’ouvre pas', () => {
     // Tout ce qui écrit passe par `enregistrer`, qui matérialise d'abord.
     expect(scanner).toContain('async function enregistrer(')
     expect(scanner).toContain('await materialiserOuverture()')
-    // Plus aucune écriture ne court-circuite ce passage obligé.
+    // ⚠️ **DEUX APPELS, ET DEUX SEULEMENT** — amendé le 8 septembre 2026,
+    // pas affaibli. Ce que la garde défend n'a pas bougé : aucune écriture ne
+    // court-circuite `materialiserOuverture`. Le second appel est celui
+    // d'`annulerComptage`, qui DÉFAIT — il n'ouvre rien, et si aucune ligne
+    // n'a été posée sa boucle ne tourne pas. Le faire passer par `enregistrer`
+    // matérialiserait l'ouverture qu'on est justement en train d'annuler.
     const appelsDirects = scanner.match(/await onArticleResolved\(/g) ?? []
-    expect(appelsDirects).toHaveLength(1) // le seul, à l'intérieur d'`enregistrer`
+    expect(appelsDirects).toHaveLength(2)
+    for (const fn of ['async function enregistrer', 'async function annulerComptage']) {
+      const corps = scanner.slice(scanner.indexOf(fn), scanner.indexOf(fn) + 3200)
+      expect(corps).toContain('await onArticleResolved(')
+    }
   })
 
   it('ne referme pas ce qui n’a jamais été ouvert', () => {
@@ -60,60 +69,87 @@ describe('consulter une balise finie ne l’ouvre pas', () => {
    * rescanner l'étiquette. Partir sans clôturer n'est pas une sortie, c'est
    * une impasse.
    */
-  it('le retour clôture la balise ouverte, avec la confirmation de la clôture', () => {
+  /**
+   * ⚠️ **AMENDÉ LE 8 SEPTEMBRE 2026, PAS AFFAIBLI.** Le retour pose désormais
+   * les trois issues (Julien : « annuler le compte/audit ou clôturer, avec un
+   * troisième bouton ignorer »). Ce que la garde défend est intact : le
+   * troisième bouton fait **rester**, il ne laisse pas partir en abandonnant
+   * une balise ouverte — c'est l'impasse du 29 août.
+   */
+  it('le retour pose les trois issues, et n’en invente aucune', () => {
     expect(scanner).toContain('usePreventRemove(!!activeBalise && !sortieAutorisee')
-    expect(scanner).toContain('void closeBalise().then((cloturee) => {')
-    expect(scanner).toContain('if (!cloturee) return')
-    // Une seule confirmation de clôture, réutilisée : deux dérivent.
+    expect(scanner).toContain('void sortirDuComptage().then((partir) => {')
+    expect(scanner).toContain('if (!partir) return')
+    const sortie = scanner.slice(scanner.indexOf('async function sortirDuComptage'))
+    const corps = sortie.slice(0, sortie.indexOf('\n  }\n'))
+    // Les deux gestes réutilisent leur propre confirmation : deux dérivent.
+    expect(corps).toContain('return closeBalise()')
+    expect(corps).toContain('return annulerComptage()')
+    // « Ignorer » RESTE sur l'écran — il ne laisse pas partir sans choisir.
+    expect(corps).toContain('return false')
     expect(scanner).not.toContain("titre: 'Quitter le comptage ?'")
   })
 })
 
 /**
- * « Rouvrir » depuis la liste demande confirmation (Julien, 25 août 2026).
- * Un rang se touche du pouce en faisant défiler, et l'écran qui s'ouvre a la
- * caméra vive avec le scan automatique.
+ * ⚠️ **UNE SEULE CARTE POUR ROUVRIR, QUEL QUE SOIT LE CHEMIN** (Julien,
+ * 8 septembre 2026). Elle se pose au scan, à la saisie du numéro et depuis le
+ * rang « Rouvrir » : rouvrir un rayon est le même acte, et trois questions
+ * différentes pour un même acte apprennent à répondre sans lire.
+ *
+ * Le 7 septembre le scan n'en posait aucune ; le 25 août la liste avait la
+ * sienne. Les deux ont fusionné.
  */
-describe('rouvrir depuis la liste demande confirmation', () => {
+describe('rouvrir un rayon : une seule carte', () => {
   const scanner = lire('../src/components/scanner.tsx')
 
-  it('passe par la question et n’ouvre qu’après un oui', () => {
+  it('le rang « Rouvrir » passe par la carte, il n’a plus la sienne', () => {
     expect(scanner).toContain('onPress={() => { void rouvrirDepuisListe(item) }}')
     const fonction = scanner.slice(scanner.indexOf('async function rouvrirDepuisListe'))
-    const question = fonction.indexOf('await confirmerReouverture(')
-    const ouverture = fonction.indexOf('await openBaliseCode(')
-    expect(question).toBeGreaterThan(0)
-    expect(question).toBeLessThan(ouverture)
+    const corps = fonction.slice(0, fonction.indexOf('\n  }\n'))
+    expect(corps).toContain('await openBaliseCode(z.code, false)')
+    // ⚠️ Plus de `sansAvertir` — il servait à NE PAS poser la carte depuis ce
+    // rang. La garde porte sur la signature, pas sur les appels : `allowCreate`
+    // s'y passe aussi en quatrième position d'un `true` légitime (l'ajout
+    // d'une balise hors plage).
+    expect(scanner).toContain(
+      'code: string, closePrev: boolean, allowCreate = false,\n  ) {',
+    )
+  })
+
+  it('la carte se pose avant toute écriture', () => {
+    const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
+    const carte = fonction.indexOf('const choix = await demanderChoix(')
+    expect(carte).toBeGreaterThan(0)
+    expect(carte).toBeLessThan(fonction.indexOf('await setBalise(sessionId, code'))
+  })
+
+  it('elle offre compléter, recompter à zéro, et ne pas ouvrir', () => {
+    const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
+    const carte = fonction.slice(fonction.indexOf('const choix = await demanderChoix('))
+    expect(carte).toContain("action: compte ? 'Compléter le comptage' : 'Compléter l’audit'")
+    expect(carte).toContain("alternative: compte ? 'Recompter à zéro' : 'Refaire l’audit à zéro'")
+    expect(carte).toContain("annuler: 'Ne pas ouvrir'")
   })
 
   /**
-   * ⚠️ **ET LE SCAN LA POSE AUSSI.** Constat de Julien, 8 septembre 2026 :
-   * il l'avait depuis la liste, plus au scan ni à la saisie manuelle. La carte
-   * du 2 septembre ne parle que du travail des AUTRES — juste pour ce qu'elle
-   * dit, mais elle avait fait disparaître le cas le plus courant : son propre
-   * rayon déjà fini. Or le scan est le chemin RISQUÉ, on peut viser la
-   * mauvaise étiquette.
+   * ⚠️ Compléter à l'aveugle, c'est rescanner ce qui est déjà compté — donc
+   * doubler, ce qu'un journal en ajout pur ne rattrape pas tout seul.
    */
-  it('et le scan d’une balise déjà terminée la pose aussi', () => {
+  it('« Compléter » montre ce qui est déjà là', () => {
     const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
-    const bloc = fonction.indexOf('if (!faite && !allowCreate && !sansAvertir) {')
-    expect(bloc).toBeGreaterThan(0)
-    // La question précède toute écriture : `set_balise` vit dans le `try` qui suit.
-    expect(bloc).toBeLessThan(fonction.indexOf('    try {'))
-    expect(fonction.slice(bloc, bloc + 500)).toContain('await confirmerReouverture(')
+    expect(fonction).toContain('montrerListe = true')
+    expect(fonction).toContain('if (montrerListe) setFeuilleScans(true)')
   })
 
-  it('mais une seule question à la fois', () => {
-    // `faite` (quelqu'un d'autre a compté) a déjà tout dit : on ne double pas.
-    // Et le rang de la liste l'a posée lui-même — d'où `sansAvertir`.
+  /**
+   * Une balise terminée SANS aucune pièce : rien à compléter, rien à effacer.
+   * La carte à trois choix n'aurait rien à proposer, mais rouvrir reste un
+   * geste et il se confirme.
+   */
+  it('un rayon vide clôturé garde la question courte', () => {
     const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
-    expect(fonction).toContain('if (!faite && !allowCreate && !sansAvertir) {')
-  })
-
-  it('ne rejoue pas l’avertissement long du scan', () => {
-    // Deux questions de nature différente : celle-ci demande une intention,
-    // l'autre apprend un fait. `sansAvertir` reste vrai depuis ce rang.
-    expect(scanner).toContain('await openBaliseCode(z.code, false, false, true)')
+    expect(fonction).toContain('if (rangeeTerminee(code) && !(await confirmerReouverture(code))) return')
   })
 })
 
@@ -474,3 +510,114 @@ describe('revenir du comptage rafraîchit la progression', () => {
       .toContain('useRetourSurEcran(manualRefresh)')
   })
 })
+
+/**
+ * « Annuler » — la sortie qui n'enregistre rien.
+ *
+ * Demande de Julien, 8 septembre 2026 : *« ajouter un bouton annuler qui
+ * n'enregistre rien, qui n'efface rien »*. L'écran n'offrait qu'une sortie —
+ * clôturer —, et clôturer ANNONCE un rayon fini. Quelqu'un qui ouvre la
+ * mauvaise balise n'avait donc aucun geste juste.
+ */
+describe('annuler un comptage', () => {
+  const scanner = lire('../src/components/scanner.tsx')
+  const corps = scanner.slice(
+    scanner.indexOf('async function annulerComptage'),
+    scanner.indexOf('  // ── Clôture la zone ouverte'),
+  )
+  /**
+   * ⚠️ **SANS LES COMMENTAIRES.** Quatorzième fois sur ce dépôt : la fonction
+   * EXPLIQUE qu'elle n'appelle pas `viderBalise` — donc elle écrit le mot, et
+   * la garde d'absence se lit elle-même.
+   */
+  const nu = corps.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+  it('le bandeau n’a plus de bouton — il annonce, il n’agit pas', () => {
+    // ⚠️ Doublon retiré le 8 septembre : le même geste à deux endroits de
+    // l'écran, l'un compact en haut et l'autre pleine largeur en bas, fait
+    // douter qu'il s'agisse du même.
+    const bandeau = scanner.slice(
+      scanner.indexOf('Zone ouverte · '),
+      scanner.indexOf('styles.zoneBannerIdle'),
+    )
+    expect(bandeau).not.toContain('closeBalise()')
+    expect(bandeau).not.toContain('Clôturer')
+  })
+
+  it('les deux sorties vivent en pied, et « Annuler » ne pèse pas autant', () => {
+    expect(scanner).toContain('Clôturer la balise {activeBalise.code}')
+    expect(scanner).toMatch(/Annuler le \{baliseMode === 'count' \? 'comptage' : 'audit'\}/)
+    // ⚠️ En contour : deux aplats côte à côte se disputent le regard, et c'est
+    // le geste normal — clôturer — qui perdrait.
+    const style = scanner.slice(scanner.indexOf('cancelFooterBtn: {'))
+    expect(style.slice(0, 300)).toContain('borderWidth: 1')
+    expect(style.slice(0, 300)).not.toContain('backgroundColor')
+  })
+
+  /**
+   * ⚠️ **LA BORNE QUE JULIEN A POSÉE LUI-MÊME** : *« on ne touche jamais au
+   * comptage d'avant ni à celui d'un collègue »*. C'est ce qui sépare
+   * « Annuler » de « Recompter à zéro ».
+   */
+  it('ne défait que ce que CET appareil a écrit depuis l’ouverture', () => {
+    expect(corps).toContain('const aDefaire = scansSessionRef.current')
+    // Le suivi s'alimente dans `enregistrer` — le passage obligé de toute
+    // écriture — et se vide à chaque ouverture comme à chaque fermeture.
+    expect(scanner).toContain('scansSessionRef.current.push({ article, qty })')
+    expect(scanner.match(/scansSessionRef\.current = \[\]/g)?.length ?? 0).toBeGreaterThanOrEqual(4)
+    // Jamais `viderBalise` : celle-là efface pour toute l'équipe.
+    expect(nu).not.toContain('viderBalise')
+  })
+
+  it('écrit des lignes négatives, il ne supprime pas', () => {
+    // `counts` est un journal en ajout pur : une correction y est une ligne de
+    // plus. C'est déjà ce qu'écrit le « − » de la liste.
+    expect(corps).toContain('await onArticleResolved(e.article, -e.qty, active.code)')
+  })
+
+  /**
+   * ⚠️ **LA ZONE D'ABORD, LES LIGNES ENSUITE.** `annulerBalise` part en direct
+   * (pas de file d'attente, comme `viderBalise`) : sans réseau elle échoue, et
+   * dans cet ordre rien n'a encore été touché. L'ordre inverse laisserait un
+   * comptage à moitié défait dans une balise restée ouverte.
+   */
+  it('remet la zone avant de défaire les lignes', () => {
+    const zone = corps.indexOf('await annulerBalise(sessionId, active.code')
+    const lignes = corps.indexOf('await onArticleResolved(e.article, -e.qty')
+    expect(zone).toBeGreaterThan(0)
+    expect(zone).toBeLessThan(lignes)
+  })
+
+  /**
+   * ⚠️ **PAS TOUJOURS « À FAIRE ».** Une balise qu'on rouvrait pour compléter
+   * doit REDEVENIR TERMINÉE : la remettre à faire la décompterait, et c'est le
+   * défaut du 25 août. Seule une balise qui était à faire redevient à faire.
+   */
+  it('ramène la balise à l’état qu’elle avait à l’ouverture', () => {
+    expect(scanner).toContain("etatAvantRef = useRef<'pending' | 'done'>('pending')")
+    expect(corps).toContain("const revientA = etatAvantRef.current")
+    expect(corps).toContain("revientA === 'done'")
+    expect(corps).toContain('await setBalise(sessionId, active.code, baliseModeRef.current, false)')
+    // Une ouverture différée jamais matérialisée n'a rien écrit côté serveur.
+    expect(corps).toContain('if (!ouvertureDiffereeRef.current) {')
+  })
+
+  it('et il se confirme, comme la clôture', () => {
+    expect(corps).toContain('Annuler le ${geste} de la balise ${active.code} ?')
+    expect(corps).toContain("ton: 'danger'")
+    expect(corps).toContain('Rien ne sera enregistré')
+    // Le refus dit « Continuer » : deux « Annuler » dans la même carte ne se
+    // distinguent pas l'un de l'autre.
+    expect(corps).toContain("annuler: 'Continuer'")
+    expect(corps.indexOf('await demander(')).toBeLessThan(zoneOuLignes(corps))
+  })
+})
+
+/** La première écriture d'`annulerComptage`, quelle qu'elle soit. */
+function zoneOuLignes(corps: string): number {
+  return Math.min(
+    ...['await annulerBalise(', 'await setBalise(', 'await onArticleResolved(']
+      .map((m) => corps.indexOf(m))
+      .filter((i) => i > 0),
+  )
+}
