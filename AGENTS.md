@@ -13117,6 +13117,47 @@ Ce qui reste avant de soumettre à la revue : la fiche (nom, description,
 mots-clés), les **captures iPhone** — plus besoin d'iPad, la compatibilité a
 été retirée le jour même — et le questionnaire **App Privacy**.
 
+## ✅ BUNDLE ANDROID PRODUIT — 8 septembre 2026
+
+`./scripts/play.sh` : `android/app/build/outputs/bundle/release/app-release.aab`,
+**86 Mo**, signé `CN=Thiong-kay Julien, OU=Devkaylab, O=Devkaylab, L=Paris` —
+donc la vraie clé de dépôt, pas celle de debug ; le script l'a vérifié
+lui-même sur le bundle produit.
+
+⚠️ **LES 86 Mo NE SONT PAS CE QUE LES GENS TÉLÉCHARGENT**, et il ne faut pas
+partir en chasse à l'optimisation sur ce chiffre. Mesuré : ~40 Mo de symboles
+de débogage (`BUNDLE-METADATA/debugsymbols`, jamais livrés, ils servent aux
+rapports de plantage) et **quatre architectures** — dont `x86` et `x86_64`
+(28,4 Mo chacune) qui ne visent que les émulateurs et quelques Chromebooks.
+Play découpe et ne sert à chaque appareil que la sienne : **25 à 30 Mo au
+téléchargement réel** sur un téléphone moderne (`arm64-v8a`, 26 Mo).
+
+## ⚠️ DEUX BOUTIQUES, DEUX NOMS D'ÉDITEUR — à régulariser après l'immatriculation
+
+| Boutique | Nom affiché aujourd'hui |
+|---|---|
+| Google Play | **Devkaylab** (nom du développeur du compte) |
+| App Store | **Julien Thiong-Kay** (compte Apple *Individuel*) |
+
+Un client verrait donc deux éditeurs différents selon son téléphone. **Ce n'est
+pas bloquant pour publier**, et c'est le choix retenu pour le premier
+lancement — mais ça n'inspire pas confiance sur un outil qu'on installe dans un
+magasin.
+
+- **Ce qui les réconciliera** : convertir le compte Apple en **Organisation**,
+  une fois la société immatriculée. C'est une demande au **support Apple
+  Developer** — pas un champ qu'on modifie soi-même — avec l'entité juridique
+  et son numéro **D-U-N-S**. Les apps, l'historique et les achats suivent ;
+  seul le nom affiché change. Quelques jours à quelques semaines.
+- ⚠️ **À faire dans le même lot que l'immatriculation**, avec les mentions
+  légales du site (`web/lib/legal.ts`, qui attend les sept valeurs) et la
+  réouverture de la vente (`venteOuverte()`). Les trois disent la même chose au
+  public : qui édite Quantinvo.
+- ⚠️ **La clé de signature Android, elle, ne se change JAMAIS** — elle porte
+  déjà « Devkaylab », et son nom n'est de toute façon pas public : elle ne sert
+  qu'à prouver que les mises à jour viennent de nous. La renommer voudrait dire
+  en changer, donc republier l'app sous un autre identifiant.
+
 ## Le jour de la publication
 
 `web/lib/appStores.ts` : passer `PUBLIEE` à `true` et remplacer les deux
