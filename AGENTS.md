@@ -13106,10 +13106,15 @@ même : « faut absolument changer maintenant ? ». Non. **Le numéro se change
 JUSTE AVANT la prochaine archive, jamais après un envoi réussi** : le monter
 sans envoyer ne ferait que créer un trou dans la série.
 
-⚠️ **ET LE JOUR VENU, IL VIT À DEUX ENDROITS** :
-`app.json` (`ios.buildNumber`) **et** `ios/Inventaire/Info.plist`
-(`CFBundleVersion`) — ce dernier est versionné et ne se régénère pas. Apple
-refuse un numéro déjà utilisé, et le refus arrive à la fin de l'envoi. C'est le
+⚠️ **ET LE JOUR VENU, IL VIT À TROIS ENDROITS** (la note en annonçait deux ;
+c'est la garde de `tests/compte.test.ts` qui a rattrapé le troisième au passage
+de 3 à 4, le 8 septembre 2026) : `app.json` (`ios.buildNumber`),
+`ios/Inventaire/Info.plist` (`CFBundleVersion`) et
+`ios/Inventaire.xcodeproj/project.pbxproj` (`CURRENT_PROJECT_VERSION`, **deux
+occurrences**, Debug et Release). Les deux derniers sont versionnés et ne se
+régénèrent pas. Apple refuse un numéro déjà utilisé, et le refus arrive à la
+fin de l'envoi. **Lancer `npx vitest run` après l'avoir changé** : la garde
+compare les trois. C'est le
 même piège que `supportsTablet` et `UIUserInterfaceStyle` : **une valeur iOS
 qui vit dans `app.json` vit presque toujours aussi dans le projet Xcode.**
 
