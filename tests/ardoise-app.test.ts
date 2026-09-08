@@ -380,8 +380,13 @@ describe('l’application ne se déclare pas compatible iPad', () => {
     const projet = lire('ios/Inventaire.xcodeproj/project.pbxproj')
     // 1 = iPhone, 2 = iPad. Les deux configurations (Debug et Release) sont
     // concernées : une seule des deux laisserait passer un build sur l'autre.
-    const familles = projet.match(/TARGETED_DEVICE_FAMILY = "[^"]*";/g) ?? []
+    // ⚠️ Xcode écrit la valeur SANS guillemets (`= 1;`) tant qu'elle est un
+    // simple nombre, et avec guillemets dès qu'elle en porte deux (`= "1,2";`).
+    // Une garde qui n'accepte que la forme entre guillemets ne trouve rien et
+    // échoue sur un projet parfaitement juste — c'est ce qu'elle faisait.
+    const familles = [...projet.matchAll(/TARGETED_DEVICE_FAMILY = "?([^";]*)"?;/g)]
+      .map((m) => m[1])
     expect(familles.length).toBeGreaterThan(0)
-    for (const f of familles) expect(f).toBe('TARGETED_DEVICE_FAMILY = "1";')
+    for (const f of familles) expect(f).toBe('1')
   })
 })

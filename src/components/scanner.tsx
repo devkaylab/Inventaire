@@ -324,8 +324,9 @@ export function Scanner({
   const [permission, requestPermission, relirePermission] = useCameraPermissions()
   const [mode, setMode] = useState<Mode>('camera')
   const [manualInput, setManualInput] = useState('')
-  // Douchette (Zebra/Honeywell/Inateck/BT HID) — capture keyboard-wedge en
-  // mode dédié.
+  // Douchette Bluetooth (HID) — capture keyboard-wedge en mode dédié.
+  // ⚠️ Ne nommer aucune marque à l'écran : seule une Inateck a été
+  // réellement essayée (25 et 31 août 2026).
   //
   // ⚠️ **Ces deux champs ne sont pas pilotés par un état React**, et c'est ce
   // qui rend la capture fiable : une douchette écrit treize touches en moins
@@ -1983,7 +1984,7 @@ export function Scanner({
             {resolving && <ActivityIndicator size="small" color={theme.accent} style={{ marginLeft: 'auto' }} />}
           </View>
           <Text style={styles.manualLabel}>
-            Scannez avec la douchette (Zebra, Honeywell ou Bluetooth). La saisie au clavier fonctionne aussi.
+            Scannez avec la douchette Bluetooth. La saisie au clavier fonctionne aussi.
           </Text>
           <TextInput
             /* ⚠️ La clé REMONTE le champ à chaque validation : c'est la seule

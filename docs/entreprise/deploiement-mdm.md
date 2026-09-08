@@ -36,7 +36,7 @@ elle n'apparaît alors dans aucune recherche publique et n'est visible que dans
 votre Apple Business Manager. Il nous faut pour cela votre **identifiant
 d'organisation** ABM.
 
-**Android et terminaux durcis (Zebra, Honeywell, Datalogic).** Deux voies au
+**Android et terminaux durcis.** Deux voies au
 choix : par **Managed Google Play**, en approuvant l'application dans votre
 catalogue géré ; ou en nous demandant l'**APK**, que vous chargez dans votre
 MDM comme application interne, sans passer par Google.

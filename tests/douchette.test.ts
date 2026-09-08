@@ -315,3 +315,48 @@ describe('douchette — tous les chiffres, à tous les rangs', () => {
     for (const code of CODES) expect(redresserSaisie(code, true)).toBe(code)
   })
 })
+
+/**
+ * ⚠️ **L'ÉCRAN NE NOMME AUCUNE MARQUE DE DOUCHETTE.**
+ *
+ * Le mode douchette annonçait « Scannez avec la douchette (Zebra, Honeywell ou
+ * Bluetooth) ». Constat de Julien le 8 septembre 2026 : *« on n'a jamais
+ * essayé »*. **Une seule douchette a été éprouvée, une Inateck Nano 160D**,
+ * sur son iPhone puis sur le Pixel — les deux autres noms étaient une promesse
+ * que rien ne soutient, à l'endroit précis où quelqu'un décide d'acheter un
+ * matériel.
+ *
+ * La garde balaie `src/` **sans les commentaires** : ceux-ci citent Inateck
+ * pour dire ce qui a réellement servi, et la doctrine du projet est que ce
+ * qu'on affiche ne se confond pas avec ce qu'on documente.
+ */
+describe('l’écran ne nomme aucune marque de douchette', () => {
+  const MARQUES = ['Zebra', 'Honeywell', 'Datalogic']
+
+  const sansCommentaires = (s: string) =>
+    s
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/^\s*\/\/.*$/gm, ' ')
+
+  it('aucune marque non éprouvée dans le code de l’application', async () => {
+    const { readFileSync, readdirSync, statSync } = await import('node:fs')
+    const { join } = await import('node:path')
+
+    const fichiers: string[] = []
+    const parcourir = (d: string) => {
+      for (const e of readdirSync(d)) {
+        const p = join(d, e)
+        if (statSync(p).isDirectory()) parcourir(p)
+        else if (/\.(ts|tsx)$/.test(e)) fichiers.push(p)
+      }
+    }
+    parcourir('src')
+    expect(fichiers.length).toBeGreaterThan(0)
+
+    for (const f of fichiers) {
+      const code = sansCommentaires(readFileSync(f, 'utf8'))
+      for (const m of MARQUES) expect(`${f} ${code}`).not.toContain(m)
+    }
+  })
+})

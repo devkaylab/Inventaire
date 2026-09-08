@@ -1,7 +1,7 @@
 /**
  * Douchette : remettre d'aplomb un clavier décalé.
  *
- * Une douchette Bluetooth (Zebra, Honeywell, Inateck, HID générique) ne
+ * Une douchette Bluetooth (HID, une Inateck pour ce qui a été essayé) ne
  * transmet pas des caractères, elle transmet des **touches** — les mêmes codes
  * qu'un clavier physique. C'est iOS qui décide ensuite quel caractère
  * produire, en suivant la disposition choisie dans Réglages › Général ›

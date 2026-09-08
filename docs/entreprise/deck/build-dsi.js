@@ -189,7 +189,7 @@ async function main() {
     })
     d.alineas(s, [
       ['iPhone et iPad.', "Depuis Apple Business Manager, « Apps et livres » : vous attribuez les licences, votre MDM distribue, l'installation est silencieuse. Si votre politique interdit les applications publiques, nous publions une application personnalisée réservée à votre organisation."],
-      ['Android et terminaux durcis.', "Par Managed Google Play, ou en chargeant l'APK que nous vous remettons comme application interne. Zebra, Honeywell et Datalogic fonctionnent ; le mode « application unique » est compatible."],
+      ['Android et terminaux durcis.', "Par Managed Google Play, ou en chargeant l'APK que nous vous remettons comme application interne. Le mode « application unique » est compatible. Nous n'avons pas éprouvé nous-mêmes les terminaux durcis du marché."],
     ], { x: RX, y: 4.55, w: RW, h: 2.2, size: 11.5, gap: 8 })
     d.pied(s, 6, PIED)
     s.addNotes("La fiche de déploiement MDM reprend ces éléments en une page, à remettre telle quelle à l'équipe qui administre le parc.")
