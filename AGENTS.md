@@ -13095,6 +13095,22 @@ obligatoires : **App Privacy** (Apple) et **Data Safety** (Google). Ils
 décrivent ce que l'app collecte — la politique de confidentialité du site en
 donne déjà la matière.
 
+## ✅ PREMIER ENVOI À APP STORE CONNECT — 8 septembre 2026
+
+**Version 1.0.0, build 3**, envoyée par Julien depuis Xcode → Organizer →
+Distribute App → App Store Connect. L'envoi est passé.
+
+⚠️ **LE PROCHAIN ENVOI DEVRA PORTER LE BUILD 4, ET IL VIT À DEUX ENDROITS** :
+`app.json` (`ios.buildNumber`) **et** `ios/Inventaire/Info.plist`
+(`CFBundleVersion`) — ce dernier est versionné et ne se régénère pas. Apple
+refuse un numéro déjà utilisé, et le refus arrive à la fin de l'envoi. C'est le
+même piège que `supportsTablet` et `UIUserInterfaceStyle` : **une valeur iOS
+qui vit dans `app.json` vit presque toujours aussi dans le projet Xcode.**
+
+Ce qui reste avant de soumettre à la revue : la fiche (nom, description,
+mots-clés), les **captures iPhone** — plus besoin d'iPad, la compatibilité a
+été retirée le jour même — et le questionnaire **App Privacy**.
+
 ## Le jour de la publication
 
 `web/lib/appStores.ts` : passer `PUBLIEE` à `true` et remplacer les deux
