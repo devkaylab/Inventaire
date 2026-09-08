@@ -80,10 +80,34 @@ describe('rouvrir depuis la liste demande confirmation', () => {
   it('passe par la question et n’ouvre qu’après un oui', () => {
     expect(scanner).toContain('onPress={() => { void rouvrirDepuisListe(item) }}')
     const fonction = scanner.slice(scanner.indexOf('async function rouvrirDepuisListe'))
-    const question = fonction.indexOf('titre: `Rouvrir la balise ${z.code} ?`')
-    const ouverture = fonction.indexOf('if (ok) await openBaliseCode(')
+    const question = fonction.indexOf('await confirmerReouverture(')
+    const ouverture = fonction.indexOf('await openBaliseCode(')
     expect(question).toBeGreaterThan(0)
     expect(question).toBeLessThan(ouverture)
+  })
+
+  /**
+   * ⚠️ **ET LE SCAN LA POSE AUSSI.** Constat de Julien, 8 septembre 2026 :
+   * il l'avait depuis la liste, plus au scan ni à la saisie manuelle. La carte
+   * du 2 septembre ne parle que du travail des AUTRES — juste pour ce qu'elle
+   * dit, mais elle avait fait disparaître le cas le plus courant : son propre
+   * rayon déjà fini. Or le scan est le chemin RISQUÉ, on peut viser la
+   * mauvaise étiquette.
+   */
+  it('et le scan d’une balise déjà terminée la pose aussi', () => {
+    const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
+    const bloc = fonction.indexOf('if (!faite && !allowCreate && !sansAvertir) {')
+    expect(bloc).toBeGreaterThan(0)
+    // La question précède toute écriture : `set_balise` vit dans le `try` qui suit.
+    expect(bloc).toBeLessThan(fonction.indexOf('    try {'))
+    expect(fonction.slice(bloc, bloc + 500)).toContain('await confirmerReouverture(')
+  })
+
+  it('mais une seule question à la fois', () => {
+    // `faite` (quelqu'un d'autre a compté) a déjà tout dit : on ne double pas.
+    // Et le rang de la liste l'a posée lui-même — d'où `sansAvertir`.
+    const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
+    expect(fonction).toContain('if (!faite && !allowCreate && !sansAvertir) {')
   })
 
   it('ne rejoue pas l’avertissement long du scan', () => {

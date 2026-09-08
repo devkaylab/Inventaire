@@ -937,6 +937,32 @@ export function Scanner({
       // modèle en ajout pur reste : rien ne s'écrase en silence.
       if (choix === 'alternative' && !(await reprendreAZero(code, faite))) return
     }
+
+    /**
+     * ⚠️ **SA PROPRE BALISE TERMINÉE DEMANDE AUSSI CONFIRMATION.**
+     *
+     * Constat de Julien, 8 septembre 2026 : *« je n'ai plus le pop-up êtes-vous
+     * sûr de vouloir rouvrir la balise quand je scanne ou saisis manuellement.
+     * En revanche je l'ai bien quand je tape sur Rouvrir dans la liste. »*
+     *
+     * La carte ci-dessus ne parle que du travail des AUTRES depuis le
+     * 2 septembre — c'était juste pour ce qu'elle dit, et ça a fait disparaître
+     * le cas le plus courant : le rayon qu'on a fini soi-même. L'asymétrie
+     * était à l'envers, parce que **le scan est le chemin risqué** : depuis la
+     * liste on vient exprès, l'étiquette on peut la viser par erreur.
+     *
+     * Elle ne se pose pas quand `faite` a déjà parlé (une seule question à la
+     * fois), ni sur une balise qu'on vient de créer, ni depuis la liste — qui
+     * l'a déjà posée elle-même.
+     */
+    if (!faite && !allowCreate && !sansAvertir) {
+      const finie = rangeeTerminee(code)
+      if (finie) {
+        const unites = Math.round(Number(compte ? finie.count_units : finie.audit_units))
+        if (!(await confirmerReouverture(finie.code, unites))) return
+      }
+    }
+
     try {
       if (closePrev && activeBaliseRef.current && !ouvertureDiffereeRef.current) {
         await setBalise(sessionId, activeBaliseRef.current.code, baliseModeRef.current, false)
@@ -1087,15 +1113,29 @@ export function Scanner({
   async function rouvrirDepuisListe(z: (typeof doneBalises)[number]) {
     const compte = baliseModeRef.current === 'count'
     const unites = Math.round(Number(compte ? z.count_units : z.audit_units))
+    if (await confirmerReouverture(z.code, unites)) {
+      await openBaliseCode(z.code, false, false, true)
+    }
+  }
+
+  /**
+   * La question courte : « Rouvrir la balise N ? »
+   *
+   * ⚠️ **UNE SEULE DÉFINITION, PARCE QUE C'EST UNE SEULE QUESTION.** Elle se
+   * pose aux TROIS chemins qui rouvrent un rayon fini — le rang « Rouvrir »,
+   * le scan d'une étiquette, et la saisie du numéro. Deux copies divergeraient
+   * au premier ajustement, et c'est précisément l'asymétrie que Julien a vue
+   * le 8 septembre 2026 : la liste demandait, le scan ne demandait plus.
+   */
+  async function confirmerReouverture(code: string, unites: number): Promise<boolean> {
     const p = unites > 1 ? 's' : ''
-    const ok = await demander({
-      titre: `Rouvrir la balise ${z.code} ?`,
+    return demander({
+      titre: `Rouvrir la balise ${code} ?`,
       texte: `Elle est terminée, avec ${unites} pièce${p} enregistrée${p}. `
         + 'Vous pourrez en ajouter ou les corriger ; rien n’est effacé.',
       action: 'Rouvrir',
       annuler: 'Annuler',
     })
-    if (ok) await openBaliseCode(z.code, false, false, true)
   }
 
   // ── Quitter l'écran avec une balise encore ouverte ────────────────────────
