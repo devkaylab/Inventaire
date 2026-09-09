@@ -52,32 +52,84 @@ celle qu'on envoie, elle s'affiche à l'identique partout.
 Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
 retouche serait écrasée à la prochaine génération. On modifie le script.
 
-## ⚠️ LES CAPTURES SONT D'AVANT ARDOISE (9 septembre 2026)
+## La passe de captures d'Ardoise (9 septembre 2026)
 
-**La mise en page des six decks est en Ardoise ; les captures qu'ils montrent
-ne le sont pas.** Elles datent du 1er et du 2 septembre 2026, donc d'avant la
-passe d'identité des 6 et 7 — elles portent encore l'indigo, les bleus nuit,
-Inter, les cartes à coins ronds et le mot-symbole en capitales espacées. La
-même chose vaut pour la fiche produit, qui puise dans `encadrees/`.
+Les vingt et une captures de `captures/` — et les `encadrees/` qui en
+découlent — ont été reprises le 9 septembre 2026, sur un **build Release** de
+l'iPhone 17 du simulateur, compte de démonstration. Les six decks et la fiche
+produit montrent donc l'application telle qu'elle est depuis Ardoise : encre,
+gris minéraux, vert forêt, et « Registre » sur le rapport et les écarts.
 
-Ce n'est pas un défaut de génération : ce sont deux passes de captures à
-refaire, et chacune a son obstacle.
+**Zéro écriture en base**, contrôlé après coup : 0 comptage, 0 article, 0 zone
+créée, 0 statut de balise déplacé le 9 septembre. Ce qui l'a permis, et qu'il
+faut savoir pour refaire la passe :
 
-- **Les captures du site** (`web/screenshots/`) se refont par
-  `npx playwright test screenshots` depuis `web/`. ⚠️ **Le harnais e2e est
-  cassé au 9 septembre 2026** : sous le faux Supabase, `useAuthGuard` ne passe
-  jamais à `ready` et la page reste sur « Chargement de l'inventaire… ». Les
-  vingt tests de `dashboard.spec.ts` échouent de la même façon — c'est donc une
-  dérive du harnais (ou du produit) entre le 1er et le 9 septembre, à reprendre
-  pour elle-même. ⚠️ Et le chemin du navigateur est à passer à la main :
-  `playwright.config.ts` cherche `/opt/pw-browsers/chromium`, qui n'existe pas
-  sur cette machine — voir `CHROMIUM_PATH`.
-- **Les captures de l'application** (`captures/`) demandent un build et une
-  session dans le simulateur, sur le compte de démonstration. La procédure est
-  plus bas, section « Refaire les captures de l'application ».
+- ⚠️ **On rouvre une balise DÉJÀ CLÔTURÉE, jamais une balise en attente.**
+  L'ouverture est alors *différée* (règle du 25 août) : elle ne devient réelle
+  qu'au premier scan, donc la clôture qui suit ne rappelle même pas
+  `set_balise`. Ouvrir une balise `pending` écrirait, elle, deux fois.
+- ⚠️ **`balise-hors-plage` se prend avec « Annuler », jamais « Ajouter »** —
+  ce second bouton crée une zone.
+- ⚠️ **Ne toucher ni à « Créer l'inventaire », ni à « Clôturer
+  l'inventaire », ni à « Quitter l'inventaire », ni à « Supprimer ».**
 
-Tant que ce n'est pas fait, un deck montre un produit qui ne ressemble plus à
-celui qu'on installe. Le dire au client vaut mieux que de le laisser le voir.
+### ⚠️ `balise-terminee` MANQUE, et c'est le seul écran d'avant Ardoise
+
+C'est la célébration « Première balise terminée ». Elle se déclenche **dans la
+branche du serveur** de `closeBalise` (`scanner.tsx`) — donc uniquement après
+une ouverture *matérialisée*, c'est-à-dire après un vrai scan. L'obtenir
+demande d'écrire un comptage dans le compte de démonstration ; la passe s'y est
+refusée. Le fichier reste celui du 2 septembre, en indigo, et il ne sert qu'au
+guide de prise en main.
+
+Deux façons de le combler le jour venu : scanner un article puis le corriger à
+zéro (deux lignes dans `counts`, net nul), ou ouvrir une balise en attente puis
+`annuler_balise` pour la remettre en `pending`. Les deux écrivent — c'est une
+décision, pas un oubli.
+
+### Comment se connecter sans que le mot de passe passe par la conversation
+
+Il ne se tape pas : il se **copie dans le presse-papiers du simulateur** par un
+tube, ce qui l'empêche d'apparaître où que ce soit.
+
+```bash
+sed -n '<ligne>p' <fichier-mémoire> | grep -o '`[^`]*`' | head -1 | tr -d '`' \
+  | xcrun simctl pbcopy <UDID>
+```
+
+Puis, dans l'application : **appui long** sur le champ (`duration: 1`) →
+« Paste ». Vider le presse-papiers ensuite. C'est la règle du projet — un
+secret ne se recopie jamais dans une conversation, compte de démonstration
+compris.
+
+### Trois pièges de cette passe
+
+- ⚠️ **Le simulateur doit être un iPhone 17** (1206 × 2622). Les coordonnées de
+  masquage de `preparer-captures.js` sont calées dessus ; sur un 17 Pro Max
+  (1320 × 2868) le masque tombe à côté et l'adresse réelle du compte d'essai
+  partirait chez le client.
+- ⚠️ **`mon-equipe` n'a plus de masque**, et c'est délibéré : l'écran n'affiche
+  l'adresse d'un membre que **tant qu'il ne s'est jamais connecté**. Nadia
+  s'est connectée depuis ; la ligne porte maintenant « 1 inventaire compté ».
+  Un masque laissé là peindrait une fausse adresse par-dessus une phrase juste.
+- ⚠️ **Les captures des boutiques ne remplacent pas cette passe.** Celles de
+  `~/Desktop/quantinvo-captures-boutiques/` (8 septembre) montrent bien la
+  nouvelle application, mais ce sont des **visuels de fiche** : accroche
+  incrustée, fond coloré, téléphone en perspective. Elles n'entrent ni dans le
+  cadre de téléphone des decks ni dans le bandeau de la fiche produit, et ne
+  couvrent que cinq écrans sur vingt-deux.
+
+### Ce que la passe a montré au passage
+
+- **La boîte à outils de l'application annonce encore « Prise en main ·
+  Bientôt »**, alors que le parcours existe sur le site depuis le
+  1er septembre 2026 (`/outils/prise-en-main`). À reprendre.
+- **Les captures du site (`web/screenshots/`) restent d'avant Ardoise** : le
+  harnais Playwright est cassé — sous le faux Supabase, `useAuthGuard` ne passe
+  jamais à `ready` et les vingt tests de `dashboard.spec.ts` échouent de la
+  même façon. ⚠️ Et le chemin du navigateur est à passer à la main :
+  `playwright.config.ts` cherche `/opt/pw-browsers/chromium`, absent de cette
+  machine — voir `CHROMIUM_PATH`.
 
 ## Ce qu'il reste à faire (au 2 septembre 2026)
 

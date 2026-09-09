@@ -50,11 +50,14 @@ const MASQUES = {
   'mon-compte': [{
     x: 140, y: 838, w: 926, h: 66, fond: '#FFFFFF',
     texte: 'nadia.benali@maison-oberlin.example', taille: 40, align: 'centre',
+    couleur: '#575F5C',
   }],
-  'mon-equipe': [{
-    x: 222, y: 562, w: 700, h: 58, fond: '#FFFFFF',
-    texte: 'nadia.benali@maison-oberlin.example', taille: 36, align: 'gauche',
-  }],
+  // ⚠️ « Mon équipe » N'A PLUS DE MASQUE, et ce n'est pas un oubli. L'écran
+  // n'affiche l'adresse d'un membre que TANT QU'IL NE S'EST JAMAIS CONNECTÉ
+  // (badge « Mot de passe à créer ») ; Nadia s'est connectée depuis, et la
+  // ligne porte maintenant son activité — « 1 inventaire compté ». Un masque
+  // laissé là peindrait une fausse adresse par-dessus une phrase juste.
+  // Le remettre le jour où la capture montrera de nouveau une adresse.
 }
 
 async function masquer(buffer, masques) {
@@ -66,7 +69,7 @@ async function masquer(buffer, masques) {
     calques.push({
       input: Buffer.from(`<svg width="${m.w}" height="${m.h}">
         <rect width="${m.w}" height="${m.h}" fill="${m.fond}"/>
-        <text x="${x}" y="${y}" text-anchor="${ancre}" fill="#5B6475"
+        <text x="${x}" y="${y}" text-anchor="${ancre}" fill="${m.couleur ?? '#575F5C'}"
               font-family="Helvetica, Arial, sans-serif" font-size="${m.taille}">${m.texte}</text>
       </svg>`),
       left: m.x, top: m.y,
