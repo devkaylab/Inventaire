@@ -1,9 +1,17 @@
 # Les présentations Quantinvo
 
 Six présentations PowerPoint, générées par six scripts qui partagent une même
-charte (`charte.js`). Fond blanc, règle « Papier » de la charte v1.1 : encre en
-texte, indigo profond pour les titres, indigo en accent, et le cyan réservé à
-la ligne de scan sous l'en-tête.
+charte (`charte.js`). Fond blanc, charte **« Ardoise » v2** (9 septembre 2026) :
+encre pour le texte ET pour les titres, des gris minéraux, et un vert forêt en
+accent qui ne sert qu'à ce qui engage — une pastille numérotée, un grand
+chiffre, un bouton dessiné. Coins nets, aucune ombre, aucun contour sur un bloc.
+
+⚠️ **Elle remplace « Papier » v1.1**, qui portait l'indigo pour les titres et un
+filet de scan cyan sous l'en-tête. Les trois signes qu'elle emporte — le cube
+isométrique, l'indigo, le faisceau cyan — ont été retirés du produit les 6 et
+7 septembre 2026 ; ils ne reviennent pas. Le filet sous l'en-tête est désormais
+un filet d'encre, et le logo est **la zone** : un plan de magasin monochrome,
+de la même géométrie que `web/components/Logo.tsx`.
 
 | Script | Fichier produit | Pour qui | Pages |
 |---|---|---|---|
@@ -33,13 +41,43 @@ dossier quand il n'y avait pas de `package.json` a **élagué `node_modules`** �
 npm a écrit un manifeste ne listant que `docx` et retiré `pptxgenjs` et
 `sharp`. Les six decks ne se généraient plus.
 
-`FONT_MODE=brand node build.js` produit la variante `-marque` (Sora et Inter,
-les polices de la charte), à présenter depuis un poste où elles sont
-installées — celui de Julien. La version sans suffixe est en Arial : c'est
+`FONT_MODE=brand node build.js` produit la variante `-marque` (**Archivo** et
+**Public Sans**, les polices du produit depuis le 6 septembre 2026), à présenter
+depuis un poste où elles sont installées. Elles ont été posées dans
+`~/Library/Fonts` le 9 septembre, reprises des TTF de
+`node_modules/@expo-google-fonts/` — quatre fichiers par famille (Regular, Bold
+et leurs italiques), assez pour que PowerPoint compose gras et italique. La version sans suffixe est en Arial : c'est
 celle qu'on envoie, elle s'affiche à l'identique partout.
 
 Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
 retouche serait écrasée à la prochaine génération. On modifie le script.
+
+## ⚠️ LES CAPTURES SONT D'AVANT ARDOISE (9 septembre 2026)
+
+**La mise en page des six decks est en Ardoise ; les captures qu'ils montrent
+ne le sont pas.** Elles datent du 1er et du 2 septembre 2026, donc d'avant la
+passe d'identité des 6 et 7 — elles portent encore l'indigo, les bleus nuit,
+Inter, les cartes à coins ronds et le mot-symbole en capitales espacées. La
+même chose vaut pour la fiche produit, qui puise dans `encadrees/`.
+
+Ce n'est pas un défaut de génération : ce sont deux passes de captures à
+refaire, et chacune a son obstacle.
+
+- **Les captures du site** (`web/screenshots/`) se refont par
+  `npx playwright test screenshots` depuis `web/`. ⚠️ **Le harnais e2e est
+  cassé au 9 septembre 2026** : sous le faux Supabase, `useAuthGuard` ne passe
+  jamais à `ready` et la page reste sur « Chargement de l'inventaire… ». Les
+  vingt tests de `dashboard.spec.ts` échouent de la même façon — c'est donc une
+  dérive du harnais (ou du produit) entre le 1er et le 9 septembre, à reprendre
+  pour elle-même. ⚠️ Et le chemin du navigateur est à passer à la main :
+  `playwright.config.ts` cherche `/opt/pw-browsers/chromium`, qui n'existe pas
+  sur cette machine — voir `CHROMIUM_PATH`.
+- **Les captures de l'application** (`captures/`) demandent un build et une
+  session dans le simulateur, sur le compte de démonstration. La procédure est
+  plus bas, section « Refaire les captures de l'application ».
+
+Tant que ce n'est pas fait, un deck montre un produit qui ne ressemble plus à
+celui qu'on installe. Le dire au client vaut mieux que de le laisser le voir.
 
 ## Ce qu'il reste à faire (au 2 septembre 2026)
 
@@ -206,7 +244,9 @@ de Julien du 27 août — la mesure porte sur les promesses, pas sur la thèse.
 Demande de Julien : *« un screen d'entrée avec le logo de Quantinvo sur
 l'écran de l'iPhone »*. La page 1 porte le téléphone **entier** — pas
 débordant comme ailleurs : ici c'est le sujet de la page —, la marque, le
-filet cyan. **Rien d'autre.** La couverture suit en page 2.
+filet d'encre et, depuis le 9 septembre 2026, la baseline *« La fiabilisation du
+stock au quotidien »* — ajoutée par Julien. **Rien d'autre.** La couverture suit
+en page 2.
 
 ⚠️ **Aucune phrase sur cette page, et c'est une décision.** Elle a d'abord
 porté une citation signée sur l'origine du produit, puis sept variantes

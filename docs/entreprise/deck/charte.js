@@ -1,7 +1,23 @@
-// Charte « Papier » (v1.1, 21 août 2026) pour les présentations Quantinvo.
-// Tout document qu'on imprime, signe ou projette est sur fond blanc : encre en
-// texte, indigo profond pour les titres, indigo en accent, et le cyan réservé
-// à la ligne de scan sous l'en-tête — le seul endroit où il apparaît.
+// Charte « Ardoise » (v2, 9 septembre 2026) pour les présentations Quantinvo.
+// Elle remplace « Papier » v1.1, qui portait l'indigo, le cube isométrique et
+// le filet de scan cyan — trois signes retirés du produit les 6 et 7 septembre.
+//
+// ⚠️ CE QUI FAIT ARDOISE, ET QU'IL NE FAUT PAS DÉFAIRE :
+//   · les gris sont MINÉRAUX (tirés vers le vert-gris, jamais vers le bleu) —
+//     le bleu nuit se lit « application », l'ardoise se lit « outil » ;
+//   · un titre est en ENCRE, pas en couleur. La hiérarchie vient de la taille
+//     et de la graisse, pas de la teinte ;
+//   · l'accent — un vert forêt — ne sert QU'À CE QUI ENGAGE : une pastille
+//     numérotée, un grand chiffre, un bouton dessiné. Trois usages par deck au
+//     plus. C'est la règle qui fait la moitié du travail ;
+//   · les coins sont NETS (0,04 pouce, soit rien), et un bloc n'a NI OMBRE NI
+//     CONTOUR : il se détache parce que son fond diffère de celui de la page.
+//     Le contour sur chaque bloc est l'un des trois signes du « fait par IA » ;
+//   · le filet de scan cyan A DISPARU. Il était le faisceau du cube ; le cube
+//     n'existe plus. Sous l'en-tête, un filet d'encre.
+//
+// Le fond reste BLANC : tout document qu'on imprime, signe ou projette est sur
+// du blanc. Le gris papier (#F2F3F1) ne sert qu'aux blocs en retrait.
 //
 // Les six générateurs partagent ce module (voir LISEZMOI.md).
 // Parti pris de mise en page : des pages de document, pas des grilles de
@@ -12,29 +28,40 @@ const pptxgen = require('pptxgenjs')
 const sharp = require('sharp')
 const path = require('path')
 
-// ── Palette Papier ──────────────────────────────────────────
+// ── Palette Ardoise ─────────────────────────────────────────
+// Les valeurs sont celles du thème CLAIR du produit
+// (web/app/globals.css, :root[data-theme="light"]) — un document se lit sur
+// du papier. Toute correction se fait là-bas d'abord, ici ensuite.
 const P = {
   PAPER: 'FFFFFF',
-  INK: '0B0F19',        // texte courant
-  INK2: '3D4556',       // texte courant, second niveau
-  SLATE: '5B6475',      // texte secondaire, légendes
-  DEEP: '4636B0',       // titres, grands chiffres
-  ACCENT: '6366F1',     // accent (boutons, mots en relief)
-  TINT: 'EEEEFC',       // fond mis en avant (indigo très clair)
-  MIST: 'F4F5F9',       // fond de bloc
-  HAIR: 'E3E6EE',       // filets
-  CYAN: '38C9FF',       // ligne de scan, uniquement
-  OK: '1F7A5C',         // vert : fait
-  WARN: 'B07A1E',       // ambre : attention
-  BAD: '9B2C2C',        // rouge sombre : refus, manque
+  INK: '14181A',        // titres et texte fort
+  INK2: '3A423F',       // texte courant
+  SLATE: '575F5C',      // texte secondaire, légendes
+  DEEP: '14181A',       // sous-titres : de l'encre, jamais une couleur
+  ACCENT: '1E4D3B',     // vert forêt — pastilles, grands chiffres, boutons
+  TINT: 'E7EDE9',       // fond mis en avant (accent très clair)
+  MIST: 'F2F3F1',       // fond de bloc — le papier d'Ardoise
+  HAIR: 'E2E5E1',       // filets
+  CYAN: '0A6F8A',       // conservé pour compatibilité ; plus aucun filet
+  OK: '15704F',         // vert : fait
+  WARN: 'A06A12',       // ambre : attention
+  BAD: '96291D',        // rouge sombre : refus, manque
 }
 
-// FONT_MODE=brand → Sora/Inter (polices de la charte, à installer sur la
-// machine qui présente) ; sinon Arial, qui s'affiche partout à l'identique.
+// FONT_MODE=brand → Archivo/Public Sans (les polices du produit, installées
+// dans ~/Library/Fonts) ; sinon Arial, qui s'affiche partout à l'identique.
+// ⚠️ Inter et Sora sont parties le 6 septembre 2026 : ce sont les deux valeurs
+// par défaut de l'époque, et c'est ce qui donnait au produit son air de
+// gabarit. Archivo est un grotesque de signalétique, un peu étroit — un titre
+// y tient sur une ligne là où une grotesque large déborde.
 const BRAND = process.env.FONT_MODE === 'brand'
-const FONT = BRAND ? 'Inter' : 'Arial'
-const FONTD = BRAND ? 'Sora' : 'Arial'
+const FONT = BRAND ? 'Public Sans' : 'Arial'
+const FONTD = BRAND ? 'Archivo' : 'Arial'
 const SUFFIX = BRAND ? '-marque' : ''
+
+// Rayon des blocs : 0,04 pouce, soit l'équivalent des 4 px du produit à
+// l'échelle de la diapositive. Autant dire des coins nets — c'est voulu.
+const RAD = 0.04
 
 const W = 13.33, H = 7.5
 const M = 0.8          // marge latérale
@@ -45,17 +72,22 @@ const RW = W - M - RX    // sa largeur
 const CAPTURES = path.resolve(__dirname, '../../../web/screenshots')
 const MOBILE = path.resolve(__dirname, 'captures')
 
-// ── Logo Quantinvo (tuile dégradée, inchangée en Papier) ────
-async function logoPng(px = 640) {
-  const svg = `<svg width="${px}" height="${px}" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7466F4"/><stop offset="0.52" stop-color="#4636B0"/><stop offset="1" stop-color="#1C153F"/>
-    </linearGradient></defs>
-    <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
-    <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
-    <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
-    <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
-    <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF"/>
+// ── La marque Quantinvo — « la zone » ───────────────────────
+// Un plan de magasin réduit au minimum : le cadre, trois allées, et celle
+// qu'on est en train de compter, pleine. C'est le différenciateur du produit
+// — une zone par semaine, pas un grand week-end par an — et c'est la seule
+// chose que le symbole raconte.
+//
+// ⚠️ ELLE EST MONOCHROME, et la géométrie est celle de web/components/Logo.tsx
+// AU DIXIÈME PRÈS. Le bloc plein (x 3→11) et la première allée (11→14) se
+// TOUCHENT : ils se lisent comme une seule forme. Ne pas « corriger » cet
+// écart, c'est un choix de Julien.
+async function logoPng(px = 640, couleur = '#14181A') {
+  const svg = `<svg width="${px}" height="${px}" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke="${couleur}" stroke-width="3"/>
+    <rect x="11" y="3" width="3" height="30" fill="${couleur}"/>
+    <rect x="22" y="3" width="3" height="30" fill="${couleur}"/>
+    <rect x="3" y="3" width="8" height="30" fill="${couleur}"/>
   </svg>`
   const buf = await sharp(Buffer.from(svg)).png().toBuffer()
   return 'image/png;base64,' + buf.toString('base64')
@@ -97,8 +129,8 @@ async function cadrer(fichier, { w, h }) {
   const masque = Buffer.from(`<svg width="${PW}" height="${PH}"><rect width="${PW}" height="${PH}" rx="${R}" ry="${R}" fill="#fff"/></svg>`)
   const ecran = await sharp(chemin).composite([{ input: masque, blend: 'dest-in' }]).png().toBuffer()
   const bezel = Buffer.from(`<svg width="${OW}" height="${OH}">
-    <rect x="0" y="0" width="${OW}" height="${OH}" rx="${OR}" ry="${OR}" fill="#0B0F19"/>
-    <rect x="${B * 0.4}" y="${B * 0.4}" width="${OW - B * 0.8}" height="${OH - B * 0.8}" rx="${OR - B * 0.4}" ry="${OR - B * 0.4}" fill="none" stroke="#3D4556" stroke-width="${Math.max(1, B * 0.12)}"/>
+    <rect x="0" y="0" width="${OW}" height="${OH}" rx="${OR}" ry="${OR}" fill="#14181A"/>
+    <rect x="${B * 0.4}" y="${B * 0.4}" width="${OW - B * 0.8}" height="${OH - B * 0.8}" rx="${OR - B * 0.4}" ry="${OR - B * 0.4}" fill="none" stroke="#3A413E" stroke-width="${Math.max(1, B * 0.12)}"/>
   </svg>`)
   let buf = await sharp(bezel).composite([{ input: ecran, left: B, top: B }]).png().toBuffer()
   // Hauteur visible voulue, en pixels de la capture : la largeur commande.
@@ -146,7 +178,9 @@ async function preparer({ titre }) {
   const d = {
     pres, logo,
 
-    /** En-tête : logo + mot-symbole, la ligne de scan cyan en dessous. */
+    /** En-tête : logo + mot-symbole, un filet en dessous.
+     * ⚠️ Le filet était CYAN jusqu'au 8 septembre 2026 — c'était le faisceau
+     * du cube isométrique. Le cube est parti, le faisceau avec lui. */
     entete(s, mention) {
       s.background = { color: P.PAPER }
       s.addImage({ data: logo, x: M, y: 0.42, w: 0.36, h: 0.36 })
@@ -160,7 +194,7 @@ async function preparer({ titre }) {
           color: P.SLATE, align: 'right', margin: 0, valign: 'middle',
         })
       }
-      s.addShape('rect', { x: M, y: 0.96, w: W - 2 * M, h: 0.028, fill: { color: P.CYAN }, line: { color: P.CYAN, width: 0 } })
+      s.addShape('rect', { x: M, y: 0.96, w: W - 2 * M, h: 0.012, fill: { color: P.HAIR }, line: { color: P.HAIR, width: 0 } })
     },
 
     /** Titre en colonne de gauche : une phrase, deux ou trois lignes. */
@@ -220,19 +254,21 @@ async function preparer({ titre }) {
 
     /** Encadré « sur le terrain » : fond brume, petit libellé, texte en italique. */
     encadre(s, libelle, text, { x = RX, y = 5.3, w = RW, h = 1.1, size = 11.5, fill = P.MIST } = {}) {
-      s.addShape('roundRect', { x, y, w, h, rectRadius: 0.08, fill: { color: fill }, line: { color: fill, width: 0 } })
+      s.addShape('roundRect', { x, y, w, h, rectRadius: RAD, fill: { color: fill }, line: { color: fill, width: 0 } })
       s.addText(libelle, { x: x + 0.3, y: y + 0.18, w: w - 0.6, h: 0.25, fontFace: FONT, fontSize: 9.5, bold: true, color: P.SLATE, margin: 0 })
       s.addText(text, { x: x + 0.3, y: y + 0.46, w: w - 0.6, h: h - 0.6, fontFace: FONT, fontSize: size, italic: true, color: P.INK2, margin: 0, lineSpacingMultiple: 1.15 })
     },
 
-    /** Grand chiffre et sa légende, dans la colonne de gauche. */
+    /** Grand chiffre et sa légende, dans la colonne de gauche.
+     * Le chiffre est le point de la page : c'est l'un des trois endroits où
+     * l'accent a le droit d'apparaître. */
     chiffre(s, n, legende, { x = M, y = 4.0, w = COL, size = 54 } = {}) {
-      s.addText(n, { x, y, w, h: 0.95, fontFace: FONTD, fontSize: size, bold: true, color: P.DEEP, margin: 0 })
+      s.addText(n, { x, y, w, h: 0.95, fontFace: FONTD, fontSize: size, bold: true, color: P.ACCENT, margin: 0 })
       s.addText(legende, { x, y: y + 1.0, w, h: 0.8, fontFace: FONT, fontSize: 12, color: P.SLATE, margin: 0, lineSpacingMultiple: 1.15 })
     },
 
     /** Pastille numérotée. */
-    numero(s, n, x, y, size = 0.42, fill = P.DEEP) {
+    numero(s, n, x, y, size = 0.42, fill = P.ACCENT) {
       s.addText(String(n), {
         shape: 'ellipse', x, y, w: size, h: size, fill: { color: fill }, line: { color: fill, width: 0 },
         fontFace: FONTD, fontSize: size >= 0.4 ? 12 : 10, bold: true, color: P.PAPER,
@@ -245,7 +281,7 @@ async function preparer({ titre }) {
       // On respecte le ratio : la largeur commande, la hauteur suit, ou l'inverse.
       let cw = w, ch = w / cap.ratio
       if (h && ch > h) { ch = h; cw = h * cap.ratio }
-      s.addShape('roundRect', { x: x - 0.06, y: y - 0.06, w: cw + 0.12, h: ch + 0.12, rectRadius: 0.08, fill: { color: P.PAPER }, line: { color: P.HAIR, width: 1 } })
+      s.addShape('roundRect', { x: x - 0.06, y: y - 0.06, w: cw + 0.12, h: ch + 0.12, rectRadius: RAD, fill: { color: P.PAPER }, line: { color: P.HAIR, width: 1 } })
       s.addImage({ data: cap.data, x, y, w: cw, h: ch })
       return { w: cw, h: ch }
     },
@@ -283,7 +319,7 @@ async function preparer({ titre }) {
         cy += 0.68
       }
       const hc = bas - cy
-      s.addShape('roundRect', { x, y: cy, w, h: hc, rectRadius: 0.14, fill: { color: fill }, line: { color: fill, width: 0 } })
+      s.addShape('roundRect', { x, y: cy, w, h: hc, rectRadius: RAD, fill: { color: fill }, line: { color: fill, width: 0 } })
       const tw = w - 2 * marge, th = tw / tel.ratio
       // Un téléphone entièrement visible se pose au fond de la carte ; un
       // téléphone coupé la déborde, et c'est le cas voulu.
@@ -298,10 +334,8 @@ async function preparer({ titre }) {
      */
     ecranEntier(s, { x, y, h, tel, legende }) {
       const w = h * tel.ratio
-      s.addShape('roundRect', {
-        x, y, w, h, rectRadius: 0.3, fill: { color: P.PAPER }, line: { color: P.PAPER, width: 0 },
-        shadow: { type: 'outer', color: '0B0F19', opacity: 0.18, blur: 14, offset: 3, angle: 90 },
-      })
+      // ⚠️ Pas d'ombre : le bezel encre du téléphone le détache déjà, et
+      // Ardoise retire l'ombre de tout ce qui ne flotte pas réellement.
       s.addImage({ data: tel.data, x, y, w, h })
       if (legende) {
         s.addText(legende, {
@@ -323,7 +357,7 @@ async function preparer({ titre }) {
       s.background = { color: P.PAPER }
       s.addImage({ data: logo, x: M, y: 0.75, w: 0.62, h: 0.62 })
       s.addText('Quantinvo', { x: M + 0.78, y: 0.72, w: 5, h: 0.68, fontFace: FONTD, fontSize: 24, bold: true, color: P.INK, margin: 0, valign: 'middle' })
-      s.addShape('rect', { x: M, y: 1.62, w: 2.6, h: 0.028, fill: { color: P.CYAN }, line: { color: P.CYAN, width: 0 } })
+      s.addShape('rect', { x: M, y: 1.62, w: 2.2, h: 0.022, fill: { color: P.INK }, line: { color: P.INK, width: 0 } })
       if (sur) s.addText(sur, { x: M, y: 2.55, w: 9, h: 0.4, fontFace: FONT, fontSize: 13, color: P.SLATE, margin: 0 })
       s.addText(titre, { x: M, y: 3.0, w: 9.5, h: 1.9, fontFace: FONTD, fontSize: 40, bold: true, color: P.DEEP, margin: 0, lineSpacingMultiple: 1.05 })
       if (sousTitre) s.addText(sousTitre, { x: M, y: 5.0, w: 8.2, h: 0.9, fontFace: FONT, fontSize: 15, color: P.INK2, margin: 0, lineSpacingMultiple: 1.2 })
@@ -335,7 +369,7 @@ async function preparer({ titre }) {
       s.background = { color: P.PAPER }
       s.addImage({ data: logo, x: M, y: 0.75, w: 0.62, h: 0.62 })
       s.addText('Quantinvo', { x: M + 0.78, y: 0.72, w: 5, h: 0.68, fontFace: FONTD, fontSize: 24, bold: true, color: P.INK, margin: 0, valign: 'middle' })
-      s.addShape('rect', { x: M, y: 1.62, w: 2.6, h: 0.028, fill: { color: P.CYAN }, line: { color: P.CYAN, width: 0 } })
+      s.addShape('rect', { x: M, y: 1.62, w: 2.2, h: 0.022, fill: { color: P.INK }, line: { color: P.INK, width: 0 } })
       s.addText(titre, { x: M, y: 2.6, w: 9.5, h: 1.3, fontFace: FONTD, fontSize: 36, bold: true, color: P.DEEP, margin: 0, lineSpacingMultiple: 1.05 })
       s.addText(texte, { x: M, y: 4.0, w: 8, h: 1.3, fontFace: FONT, fontSize: 14.5, color: P.INK2, margin: 0, lineSpacingMultiple: 1.2 })
       s.addText(contact, { x: M, y: 5.5, w: 9, h: 0.45, fontFace: FONTD, fontSize: 15, bold: true, color: P.DEEP, margin: 0 })
@@ -364,7 +398,7 @@ async function preparer({ titre }) {
           s.addText(r.t, { x: x + pad, y: cy, w: iw, h: 0.44, fontFace: FONT, fontSize: 10.5, bold: true, color: r.style === 'bouton' ? P.PAPER : P.INK, align: 'center', valign: 'middle', margin: 0 })
           cy += 0.56
         } else if (r.style === 'champ') {
-          s.addShape('roundRect', { x: x + pad, y: cy, w: iw, h: 0.4, rectRadius: 0.08, fill: { color: P.PAPER }, line: { color: P.HAIR, width: 1 } })
+          s.addShape('roundRect', { x: x + pad, y: cy, w: iw, h: 0.4, rectRadius: RAD, fill: { color: P.PAPER }, line: { color: P.HAIR, width: 1 } })
           s.addText(r.t, { x: x + pad + 0.12, y: cy, w: iw - 0.24, h: 0.4, fontFace: FONT, fontSize: 10, color: P.SLATE, valign: 'middle', margin: 0 })
           cy += 0.5
         } else if (r.style === 'titre') {

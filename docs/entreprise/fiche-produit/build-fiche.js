@@ -13,14 +13,15 @@
 // correction faite dans Word serait écrasée à la prochaine génération : on
 // modifie ce script.
 //
-// ⚠️ **La palette et le logo viennent de `../deck/charte.js`.** Deux dessins du
-// même cube divergeraient au premier ajustement, et la fiche cesserait de
+// ⚠️ **La palette et le logo viennent de `../deck/charte.js`.** Deux dessins de
+// la même marque divergeraient au premier ajustement, et la fiche cesserait de
 // ressembler aux présentations qui l'accompagnent. C'est la règle déjà posée
-// pour `encadrer.js`.
+// pour `encadrer.js`. Depuis le 9 septembre 2026 la charte est « Ardoise » :
+// encre, gris minéraux, un vert forêt en accent, des coins nets.
 //
 // ⚠️ **Arial, pas les polices de la charte.** C'est le document qu'on envoie :
-// il doit s'ouvrir à l'identique sur le poste du client, qui n'a ni Sora ni
-// Inter installées. Même arbitrage que la version sans suffixe des decks.
+// il doit s'ouvrir à l'identique sur le poste du client, qui n'a ni Archivo ni
+// Public Sans installées. Même arbitrage que la version sans suffixe des decks.
 //
 // ⚠️ **Les téléphones viennent TOUS de `../deck/encadrees/`.** Les trois
 // exceptions locales (`accueil-superviseur.png`, `ecarts-audit.png`,
@@ -140,23 +141,30 @@ const doc = (LOGO) => new Document({
               children: [new ImageRun({ type: 'png', data: LOGO, transformation: { width: 34, height: 34 } })],
               spacing: { after: 0 },
             })], mm(11), { valign: VerticalAlign.CENTER }),
-            cell([new Paragraph({
-              children: [new TextRun({ text: 'Quantinvo', font: F, size: 30, bold: true, color: P.INK })],
-              spacing: { after: 0 },
-            })], mm(60), { valign: VerticalAlign.CENTER, padL: mm(2.5) }),
+            cell([
+              new Paragraph({
+                children: [new TextRun({ text: 'Quantinvo', font: F, size: 30, bold: true, color: P.INK })],
+                spacing: { after: 20 },
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: 'La fiabilisation du stock au quotidien', font: F, size: 14, color: P.SLATE })],
+                spacing: { after: 0 },
+              }),
+            ], mm(72), { valign: VerticalAlign.CENTER, padL: mm(2.5) }),
             cell([new Paragraph({
               children: [new TextRun({ text: 'Fiche produit · application mobile', font: F, size: 16, color: P.SLATE })],
               alignment: AlignmentType.RIGHT, spacing: { after: 0 },
-            })], mm(109), { valign: VerticalAlign.CENTER }),
+            })], mm(97), { valign: VerticalAlign.CENTER }),
           ],
         }),
-      ], [mm(11), mm(60), mm(109)]),
+      ], [mm(11), mm(72), mm(97)]),
 
-      // La ligne de scan cyan — le seul endroit où le cyan a droit de cité.
+      // ⚠️ Un filet d'encre. C'était la ligne de scan CYAN jusqu'au 9 septembre
+      // 2026 — le faisceau du cube isométrique, parti avec lui.
       new Paragraph({
         children: [new TextRun({ text: '', font: F, size: 2 })],
         spacing: { before: 90, after: 260 },
-        border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: P.CYAN, space: 1 } },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: P.INK, space: 1 } },
       }),
 
       // ── Ce que c'est ─────────────────────────────────────────────────────
@@ -243,7 +251,7 @@ const doc = (LOGO) => new Document({
           children: [
             cell([
               section('Compatibilité'),
-              fait('iPhone', 'iOS 16.4 ou plus récent. iPad pris en charge.'),
+              fait('iPhone', 'iOS 16.4 ou plus récent.'),
               fait('Android', '7.0 (API 24) ou plus récent.'),
               fait('Langue', 'français. Portrait, thèmes clair et sombre.'),
               fait('Douchettes', 'lecteurs Bluetooth en mode clavier (HID).'),
@@ -254,7 +262,7 @@ const doc = (LOGO) => new Document({
               section('Publication'),
               fait('Nom', 'Quantinvo'),
               fait('Identifiant', 'com.quantinvo.app'),
-              fait('Version', '1.0.0'),
+              fait('Version', '1.0.0 (build 4)'),
               fait('Catégorie', 'Professionnel (Business)'),
               fait('Classification', '4+ — aucun contenu sensible.'),
               fait('Éditeur', 'Devkaylab'),
@@ -289,7 +297,7 @@ const doc = (LOGO) => new Document({
 
       // ── Pied ─────────────────────────────────────────────────────────────
       new Paragraph({
-        children: [new TextRun({ text: 'Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le 2 septembre 2026, application version 1.0.0.', font: F, size: 14, color: P.SLATE })],
+        children: [new TextRun({ text: 'Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le 9 septembre 2026, application version 1.0.0.', font: F, size: 14, color: P.SLATE })],
         spacing: { before: 130, after: 0 },
         border: { top: { style: BorderStyle.SINGLE, size: 4, color: P.HAIR, space: 5 } },
       }),

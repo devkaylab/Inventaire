@@ -66,7 +66,7 @@ async function main() {
   }
 
   function boite(s, x, y, w, h, titre, lignes, { fill = P.MIST, line = P.HAIR } = {}) {
-    s.addShape('roundRect', { x, y, w, h, rectRadius: 0.1, fill: { color: fill }, line: { color: line, width: 1 } })
+    s.addShape('roundRect', { x, y, w, h, rectRadius: 0.04, fill: { color: fill }, line: { color: line, width: 1 } })
     s.addText(titre, { x: x + 0.2, y: y + 0.15, w: w - 0.4, h: 0.3, fontFace: FONTD, fontSize: 12.5, bold: true, color: P.INK, margin: 0 })
     s.addText(lignes.join('\n'), { x: x + 0.2, y: y + 0.5, w: w - 0.4, h: h - 0.6, fontFace: FONT, fontSize: 10.5, color: P.INK2, margin: 0, lineSpacingMultiple: 1.15 })
   }

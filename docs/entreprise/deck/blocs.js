@@ -17,23 +17,25 @@ const GRILLE = lire()
  * `phare` reçoit le fond teinté et la mention « le plus courant » : Advanced,
  * comme sur le site (OFFRE_PHARE).
  */
-function grilleOffres(d, s, { x, y, w, h = 3.9, rythme = 'mois', phare = 'advanced', points = true }) {
+function grilleOffres(d, s, { x, y, w, h = 3.9, rythme = 'mois', phare = 'advanced', points = true, surtitre = 'LE PLUS COURANT' }) {
   const gap = 0.28
   const cw = (w - gap * 2) / 3
   GRILLE.offres.forEach((o, i) => {
     const cx = x + i * (cw + gap)
     const vedette = o.cle === phare
     s.addShape('roundRect', {
-      x: cx, y, w: cw, h, rectRadius: 0.12,
-      fill: { color: vedette ? P.TINT : P.PAPER },
-      line: { color: vedette ? P.ACCENT : P.HAIR, width: vedette ? 1.5 : 1 },
+      // ⚠️ Ardoise : une carte se détache par son FOND, pas par un contour.
+      // Seule la vedette garde un filet, et c'est ce qui la désigne.
+      x: cx, y, w: cw, h, rectRadius: 0.04,
+      fill: { color: vedette ? P.TINT : P.MIST },
+      line: { color: vedette ? P.ACCENT : P.MIST, width: vedette ? 1.25 : 0 },
     })
     let cy = y + 0.28
     // ⚠️ La ligne du surtitre est réservée sur les trois colonnes, même quand
     // elle est vide : ne la poser que sur la vedette décalait son contenu de
     // 0,26 pouce et désalignait les trois listes du bas.
     if (vedette) {
-      s.addText('LE PLUS COURANT', {
+      s.addText(surtitre, {
         x: cx + 0.28, y: cy - 0.06, w: cw - 0.56, h: 0.24, fontFace: FONT, fontSize: 8,
         bold: true, color: P.ACCENT, charSpacing: 0.6, margin: 0,
       })
