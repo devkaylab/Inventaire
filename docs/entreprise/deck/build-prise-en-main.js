@@ -12,7 +12,7 @@ const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer 
 async function main() {
   const d = await preparer({ titre: 'Quantinvo — prise en main' })
   const { pres } = d
-  const PIED = 'Quantinvo · prise en main · août 2026'
+  const PIED = 'Quantinvo · prise en main · septembre 2026'
 
   // ── Captures du tableau de bord (site), recadrées hors en-tête ──
   // ⚠️ Recadrages calés sur la mise en page AU RAIL (30 août 2026) : ceux
@@ -83,7 +83,7 @@ async function main() {
       sur: 'Guide de prise en main',
       titre: 'Compter avec Quantinvo. Une demi-heure de lecture, puis on y va.',
       sousTitre: "Pour les superviseurs, qui préparent et pilotent. Pour les compteurs, qui scannent. Les écrans de ce guide sont ceux de l'application, tels quels.",
-      bas: 'Devkaylab  ·  août 2026  ·  contact@quantinvo.com',
+      bas: 'Devkaylab  ·  septembre 2026  ·  contact@quantinvo.com',
     })
     s.addNotes("Ce guide se remet au client après la signature, avec le plan de déploiement. La partie compteur tient en cinq pages : c'est voulu, elle peut être imprimée seule.")
   }

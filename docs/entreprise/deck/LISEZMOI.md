@@ -52,17 +52,19 @@ celle qu'on envoie, elle s'affiche à l'identique partout.
 Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
 retouche serait écrasée à la prochaine génération. On modifie le script.
 
-## La passe de captures d'Ardoise (9 septembre 2026)
+## La passe de captures d’Ardoise (9 et 10 septembre 2026)
 
-Les vingt et une captures de `captures/` — et les `encadrees/` qui en
-découlent — ont été reprises le 9 septembre 2026, sur un **build Release** de
-l'iPhone 17 du simulateur, compte de démonstration. Les six decks et la fiche
-produit montrent donc l'application telle qu'elle est depuis Ardoise : encre,
-gris minéraux, vert forêt, et « Registre » sur le rapport et les écarts.
+Les vingt-deux captures de `captures/` — et les `encadrees/` qui en
+découlent — ont été reprises sur un **build Release** de l'iPhone 17 du
+simulateur, compte de démonstration : vingt et une le 9 septembre 2026, la
+dernière (`balise-terminee`) le 10. Les six decks et la fiche produit montrent
+donc l'application telle qu'elle est depuis Ardoise : encre, gris minéraux,
+vert forêt, et « Registre » sur le rapport et les écarts.
 
-**Zéro écriture en base**, contrôlé après coup : 0 comptage, 0 article, 0 zone
-créée, 0 statut de balise déplacé le 9 septembre. Ce qui l'a permis, et qu'il
-faut savoir pour refaire la passe :
+**Zéro écriture en base le 9 septembre**, contrôlé après coup : 0 comptage,
+0 article, 0 zone créée, 0 statut de balise déplacé. La vingt-deuxième, elle,
+en a coûté une — voir plus bas, elle a été défaite. Ce qui a permis les vingt
+et une premières, et qu'il faut savoir pour refaire la passe :
 
 - ⚠️ **On rouvre une balise DÉJÀ CLÔTURÉE, jamais une balise en attente.**
   L'ouverture est alors *différée* (règle du 25 août) : elle ne devient réelle
@@ -73,19 +75,55 @@ faut savoir pour refaire la passe :
 - ⚠️ **Ne toucher ni à « Créer l'inventaire », ni à « Clôturer
   l'inventaire », ni à « Quitter l'inventaire », ni à « Supprimer ».**
 
-### ⚠️ `balise-terminee` MANQUE, et c'est le seul écran d'avant Ardoise
+### `balise-terminee`, prise le 10 septembre 2026 — et elle a coûté une écriture
 
-C'est la célébration « Première balise terminée ». Elle se déclenche **dans la
-branche du serveur** de `closeBalise` (`scanner.tsx`) — donc uniquement après
-une ouverture *matérialisée*, c'est-à-dire après un vrai scan. L'obtenir
-demande d'écrire un comptage dans le compte de démonstration ; la passe s'y est
-refusée. Le fichier reste celui du 2 septembre, en indigo, et il ne sert qu'au
-guide de prise en main.
+C'est la célébration « Première balise terminée », et **c'était la seule
+capture qui manquait à la passe**. Elle se déclenche dans la branche du serveur
+de `closeBalise` (`scanner.tsx`), donc uniquement après une ouverture
+*matérialisée* — celle d'une balise `pending`, jamais la réouverture différée
+d'une balise déjà clôturée. Il n'existe aucun chemin qui n'écrive pas : la
+passe du 9 s'y était refusée, Julien a donné le feu vert le 10.
 
-Deux façons de le combler le jour venu : scanner un article puis le corriger à
-zéro (deux lignes dans `counts`, net nul), ou ouvrir une balise en attente puis
-`annuler_balise` pour la remettre en `pending`. Les deux écrivent — c'est une
-décision, pas un oubli.
+Ce qui a été écrit, puis défait, sur la balise **1018** de « Rayon textile » :
+
+1. ouverture de la balise (`pending` → `open`) ;
+2. douze pièces sur trois références (TF-1001 ×5, AC-3001 ×4, AC-3002 ×3) ;
+3. clôture → la célébration s'affiche, capture prise ;
+4. **restauration par les gestes du produit, pas par du SQL** : réouverture,
+   « Recompter à zéro » (`vider_balise`, qui efface les douze lignes et remet
+   le cycle de comptage à faire), puis « Annuler le comptage »
+   (`annuler_balise`, qui repasse la balise de `open` à `pending`).
+
+⚠️ **« Recompter à zéro » ne suffit PAS à remettre l'état d'origine** : il
+laisse la balise **ouverte**, puisqu'on est censé la recompter dans la foulée.
+C'est « Annuler le comptage » qui la rend à `pending`. Il faut les deux, dans
+cet ordre.
+
+Contrôlé après coup, à l'identique de l'avant : 52 balises `pending/pending`,
+12 `done/pending`, 6 `done/done` ; 72 comptages, 23 articles, 70 zones,
+23 lignes de stock théorique, et `count_done_at` de 1018 à nul. **Ce qui
+reste** : une ligne `balise_videe` dans `company_audit_log` — c'est une trace,
+elle ne se défait pas, et c'est normal.
+
+### ⚠️ Le clavier du simulateur mange les chiffres — sauf en mode Douchette
+
+Piège du jour, et il fait perdre un quart d'heure. Le champ **Manuel** reçoit
+la frappe telle quelle : `TF-1001` y arrive en `TF)&ÀÀ&` (disposition AZERTY du
+Mac), et l'application ouvre « Article inconnu » sur ce charabia.
+
+**Le mode Douchette, lui, redresse** — c'est exactement ce pour quoi
+`lib/douchette.ts` a été écrit, et la clé de contrôle d'un EAN-13 tranche sans
+ambiguïté. On saisit donc les articles par leur **code-barres, en mode
+Douchette**, avec un saut de ligne final qui vaut validation :
+
+```
+3701000010017\n   → T-shirt coton blanc, M
+```
+
+⚠️ **Et un repère qui s'ouvre avale les frappes suivantes.** Au deuxième scan
+du même article, le volet « Une erreur se corrige » se pose sur l'écran : neuf
+saisies enchaînées derrière lui n'ont rien enregistré. Refermer le volet,
+retoucher le champ, et **contrôler le compte en base** avant de clôturer.
 
 ### Comment se connecter sans que le mot de passe passe par la conversation
 

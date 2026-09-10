@@ -14,7 +14,7 @@
  */
 
 /** Le jour où les captures ont été prises. À remonter à chaque nouvelle passe. */
-export const CAPTURES_LE = '2 septembre 2026'
+export const CAPTURES_LE = '10 septembre 2026'
 
 /**
  * ⚠️ Le drapeau ne se baisse QUE dans le commit qui refait les captures, et
