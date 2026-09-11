@@ -234,6 +234,32 @@ describe('le produit se voit', () => {
     expect(bloc).not.toMatch(/grid-template-columns:[^;]*1fr\s+1fr/)
   })
 
+  it('⚠️ la barre ne répète pas le titre de la diapositive', () => {
+    // Constat de Julien, 11 septembre 2026 : « retire le texte "Du scan dans
+    // le rayon" répétitif ». Il s'écrivait DEUX fois sur le même écran — en
+    // titre du bloc de texte, et en légende sous les pastilles. Une légende
+    // qui recopie le titre juste au-dessus n'apprend rien.
+    //
+    // Ce qui reste : chaque pastille porte le titre de sa diapositive en
+    // `aria-label`, donc un lecteur d'écran sait toujours où il va.
+    const diapo = sansCommentaires(lire('../components/DiaporamaProduit.tsx'))
+    expect(diapo).not.toMatch(/diaporama-legende/)
+    expect(diapo).toMatch(/aria-label=\{d\.titre\}/)
+    expect(css).not.toContain('.diaporama-legende')
+  })
+
+  it('⚠️ les deux boutons du diaporama ont la même taille', () => {
+    // « Précédent » est plus long que « Suivant » : à largeur libre la rangée
+    // penche, et les pastilles ne tombent plus au centre. La garde porte sur
+    // le mécanisme — une largeur PLANCHER commune aux deux — pas sur sa
+    // valeur, qui bougera avec la police ou les libellés.
+    const bloc = /\.diaporama-nav\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(bloc).toMatch(/min-width:\s*\d+px/)
+    // Et elle ne doit pas être annulée par un étirement : un bouton qui grandit
+    // pour remplir la rangée reprendrait deux largeurs différentes.
+    expect(bloc).toMatch(/flex:\s*0\s+0\s+auto/)
+  })
+
   it('⚠️ montre la capture ENCADRÉE, et ne lui dessine aucun cadre', () => {
     // Constat de Julien, 11 septembre 2026 : « je veux celle avec l'encadré ».
     // La capture encadrée porte le téléphone dessiné sur fond TRANSPARENT —

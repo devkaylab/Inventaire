@@ -126,7 +126,6 @@ export function DiaporamaProduit({
           {suivant}
         </button>
       </div>
-      <p className="diaporama-legende">{diapos[courante].titre}</p>
     </div>
   )
 }

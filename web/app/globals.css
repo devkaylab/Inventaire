@@ -75,14 +75,23 @@
   --shadow-elev: 0 8px 28px rgba(0, 0, 0, 0.42);
   --shadow-btn: none;
 
-  /* Rayons — trois valeurs, pas dix-sept. Un outil de travail n'a pas les
-     coins ronds d'une application grand public. `--r-pastille` reste une
-     capsule : c'est une forme, pas un rayon. */
-  --r: 3px;
-  --r-grand: 4px;
+  /* Rayons — quatre valeurs, pas dix-sept. `--r-pastille` reste une capsule :
+     c'est une forme, pas un rayon.
+     ⚠️ ADOUCIS LE 11 SEPTEMBRE 2026 (demande de Julien, Qonto à l'appui). Ils
+     valaient 3 et 4 px depuis Ardoise — presque carrés. Mesuré chez Qonto : le
+     bouton principal est à 8 px, les tuiles à 24. On reprend leur bouton à
+     l'identique, et on adoucit les tuiles sans aller jusqu'à 24 — un outil de
+     travail n'a pas les coins d'une application grand public, et la sobriété
+     d'Ardoise tient à cet écart.
+     ⚠️ `--r-bouton` est un jeton À PART, comme dans l'application depuis le
+     7 septembre : ce qui se PRESSE garde des coins plus ronds que ce qui se
+     lit. Ne pas le fondre dans `--r`. */
+  --r: 6px;
+  --r-bouton: 8px;
+  --r-grand: 10px;
   --r-pastille: 999px;
 
-  --radius: 4px;
+  --radius: 16px;
   --max: 1080px;
 }
 
@@ -488,7 +497,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 /* ── Boutons ────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 11px 20px; border-radius: var(--r); font-size: 15px; font-weight: 600;
+  padding: 11px 20px; border-radius: var(--r-bouton); font-size: 15px; font-weight: 600;
   cursor: pointer; border: 1px solid transparent;
   /* Sans cette ligne, un `<button class="btn">` et un `<a class="btn">` n'ont
      pas la même hauteur : le navigateur impose `line-height: normal` aux
@@ -519,7 +528,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .btn-compteur:hover:not(:disabled) { background: var(--accent-2); }
 .btn-auditeur { background: #FFC349; color: #1A1A1A; }
 .btn-auditeur:hover:not(:disabled) { filter: brightness(1.06); }
-.btn-sm { padding: 8px 14px; font-size: 14px; border-radius: var(--r); }
+.btn-sm { padding: 8px 14px; font-size: 14px; border-radius: var(--r-bouton); }
 
 /* ── Hero ───────────────────────────────────────────────── */
 /* ⚠️ UN HÉROS N'A AUCUNE LUEUR NI AUCUN DÉCOR (6 septembre 2026).
@@ -4077,12 +4086,17 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .diaporama-pastille[aria-current="true"] { background: var(--accent); }
 .diaporama-nav {
   appearance: none; cursor: pointer; background: transparent;
-  border: 1px solid var(--hairline); border-radius: var(--r-btn, 12px);
+  border: 1px solid var(--hairline); border-radius: var(--r-bouton);
   color: var(--text-2); font: inherit; font-size: 13.5px; font-weight: 500;
   padding: 8px 14px; min-height: 40px;
+  /* ⚠️ LES DEUX BOUTONS ONT LA MÊME TAILLE. « Précédent » est plus long que
+     « Suivant » : à largeur libre, la rangée est bancale et les pastilles ne
+     sont plus au centre. La largeur plancher tient les deux libellés, en
+     français comme en anglais, sans les figer — un mot plus long grandirait
+     les deux de la même façon. */
+  flex: 0 0 auto; min-width: 116px; text-align: center;
 }
 .diaporama-nav:hover { color: var(--text-1); border-color: var(--text-3); }
-.diaporama-legende { text-align: center; color: var(--text-2); font-size: 14px; margin: 14px 0 0; }
 
 /* Les quatre points passent sur deux rangs, puis sur un seul. */
 @media (max-width: 1000px) {
