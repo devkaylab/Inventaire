@@ -214,17 +214,23 @@ describe('le produit se voit', () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[^}]*\{[^]*?\.duo-points li \{ opacity: 1/)
   })
 
-  it('⚠️ la colonne du téléphone reste BORNÉE', () => {
-    // Sur l'écran de Julien (1568 px), une grille à deux parts égales étirait
-    // la capture à plus du double de sa résolution. Le remède du 5 septembre
-    // 2026 : on remplit la largeur, on n'étire jamais.
+  it('⚠️ les deux diapositives ont la MÊME taille', () => {
+    // Constat de Julien, 11 septembre 2026 : « ça fait trop bizarre d'avoir
+    // deux tailles ». Le téléphone avait une largeur figée, la capture suivait
+    // l'écran : 718 px de haut contre 468 sur un portable. La largeur du
+    // téléphone se CALCULE donc à partir de celle de la section, pour que les
+    // deux hauteurs s'égalent quelle que soit la largeur d'écran.
     //
-    // ⚠️ La garde porte sur la BORNE, pas sur sa valeur : elle citait
-    // « minmax(180px, 236px) » mot pour mot et elle est tombée le 11 septembre
-    // quand la colonne a grandi — sur un changement voulu, sans rien avoir
-    // protégé. Ce qu'elle défend, c'est qu'il y ait un plafond en pixels.
+    // ⚠️ La garde porte sur le mécanisme, pas sur la valeur : elle citait
+    // « minmax(180px, 236px) » mot pour mot, et elle est tombée deux fois sur
+    // des changements voulus sans rien avoir protégé.
     const bloc = /\.duo\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
-    expect(bloc).toMatch(/minmax\(\s*\d+px\s*,\s*\d+px\s*\)/)
+    // Un plafond en pixels — sans lui la capture s'étirerait au-delà de sa
+    // résolution sur un grand écran.
+    expect(bloc).toMatch(/min\(\s*\d+px\s*,/)
+    // Et une largeur qui SUIT celle de la section, sinon les deux se
+    // désaccordent dès qu'on change d'écran.
+    expect(bloc).toMatch(/calc\([^)]*100vw/)
     expect(bloc).not.toMatch(/grid-template-columns:[^;]*1fr\s+1fr/)
   })
 
@@ -241,14 +247,29 @@ describe('le produit se voit', () => {
     }
   })
 
-  it('⚠️ la capture du tableau de bord passe en pleine largeur avant le téléphone', () => {
-    // À deux colonnes sur un écran de 900 px, elle tombait à 425 px et on n'y
-    // lisait plus rien. Elle s'empile donc bien plus tôt que le téléphone, qui
-    // est étroit par nature et tient à côté de son texte jusqu'au bout.
-    const seuil = /@media \(max-width: (\d+)px\)\s*\{\s*\.duo--paysage \{[^}]*grid-template-columns: minmax\(0, 1fr\)/
-      .exec(css)
-    expect(seuil, 'le paysage ne s’empile nulle part').not.toBeNull()
-    expect(Number(seuil![1])).toBeGreaterThan(900)
+  it('⚠️ la capture du tableau de bord prend TOUTE la largeur', () => {
+    // C'est la seule façon qu'elle atteigne la hauteur du téléphone d'en face :
+    // deux fois plus large que haute, il lui faudrait 1 500 px de large pour
+    // l'égaler — plus que la section entière. Elle n'est donc pas une colonne
+    // d'une grille à deux, et son texte passe dessous.
+    const bloc = /\.duo--paysage\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(bloc).toContain('display: block')
+    expect(bloc).not.toContain('grid-template-columns')
+    // Les quatre points forment une rangée sous la capture.
+    expect(css).toMatch(/\.duo--paysage \.duo-points \{[^}]*flex-direction: row/)
+  })
+
+  it('⚠️ l’en-tête et le pied tiennent les DEUX BORDS de l’écran', () => {
+    // `.container` plafonne à 1080 px : c'est une largeur de TEXTE. Une barre
+    // de navigation bridée à cette largeur flotte au milieu avec deux marges
+    // vides — constat de Julien, 11 septembre 2026, Qonto à l'appui.
+    //
+    // ⚠️ Cela ne vaut QUE pour la coquille : les blocs de texte gardent leur
+    // largeur de lecture. La garde vérifie donc aussi que `.container` n'a pas
+    // été élargi au passage.
+    expect(css).toMatch(/\.site-header \.inner,\s*\n\.site-footer \.inner \{[^}]*max-width: none/)
+    expect(css).toMatch(/\.container \{[^}]*max-width: var\(--max\)/)
+    expect(css).toMatch(/--max:\s*1080px/)
   })
 
   it('⚠️ la section des visuels sort du gabarit de LECTURE, et elle seule', () => {

@@ -82,10 +82,20 @@ export function DiaporamaProduit({
           key={d.titre}
           hidden={n !== courante}
         >
+          {/*
+            ⚠️ LE PAYSAGE PREND TOUTE LA LARGEUR, ET SON TEXTE PASSE DESSOUS.
+            Les deux visuels ne peuvent pas avoir la même hauteur en restant
+            côte à côte avec leur texte : le téléphone fait 718 px de haut, et
+            la capture, deux fois plus large que haute, demanderait 1 500 px de
+            large pour l'égaler — plus que la section entière. À pleine largeur
+            elle fait 703 px : les deux diapositives ont enfin la même taille.
+            Constat de Julien, 11 septembre 2026 : « ça fait trop bizarre
+            d'avoir deux tailles ».
+          */}
           {d.paysage ? (
             <>
-              <Propos diapo={d} vus={vus} />
               <Visuel diapo={d} />
+              <Propos diapo={d} vus={vus} />
             </>
           ) : (
             <>
