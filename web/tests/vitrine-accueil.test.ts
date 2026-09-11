@@ -283,6 +283,16 @@ describe('le produit se voit', () => {
     // renverse — ces deux règles viennent APRÈS celles qu'elles annulent.
     expect(css.indexOf('.hero-accueil p.lead-trois')).toBeGreaterThan(css.indexOf('.hero p.lead-trois'))
     expect(css.indexOf('.hero-accueil h1')).toBeGreaterThan(css.indexOf('.hero h1'))
+
+    // ⚠️ Et les deux blocs alignent leurs TRACÉS, pas leurs boîtes : une lettre
+    // garde un blanc à gauche proportionnel au corps, donc 5,4 px sous les
+    // prestations contre 1,6 sous la signature — 3,8 px d'écart à l'œil pour
+    // deux boîtes au même pixel (constat de Julien, 11 septembre 2026).
+    // La compensation est en EM, jamais en pixels : la taille est fluide.
+    for (const sel of ['.hero-accueil p.lead-trois', '.hero-accueil h1']) {
+      const b = new RegExp(sel.replace(/[.\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}').exec(css)?.[1] ?? ''
+      expect(b).toMatch(/margin-left:\s*-0?\.\d+em/)
+    }
   })
 
   it('⚠️ les trois prestations passent AVANT le titre', () => {
@@ -295,9 +305,13 @@ describe('le produit se voit', () => {
     expect(lead).toBeGreaterThan(-1)
     expect(titre).toBeGreaterThan(-1)
     expect(lead).toBeLessThan(titre)
-    // Une ligne chacune : la coupure ne se laisse pas au hasard de la largeur.
-    expect(code).toMatch(/t\('Inventaire tournant\.'\)\}<br \/>/)
-    expect(code).toMatch(/t\('Comptage en équipe\.'\)\}<br \/>/)
+    // ⚠️ Une ligne chacune, et la garde DÉDUIT les trois : citer les libellés
+    // la ferait tomber au prochain mot changé — ils l'ont été deux fois en une
+    // journée. Ce qu'elle défend, c'est qu'il y ait bien trois lignes posées à
+    // la main, pas une phrase laissée au hasard de la largeur.
+    const trois = /className="lead lead-trois"[^>]*>([\s\S]*?)<\/p>/.exec(code)?.[1] ?? ''
+    expect(trois.match(/\{t\('[^']+'\)\}/g) ?? []).toHaveLength(3)
+    expect(trois.match(/<br \/>/g) ?? []).toHaveLength(2)
   })
 
   it('⚠️ la barre ne répète pas le titre de la diapositive', () => {

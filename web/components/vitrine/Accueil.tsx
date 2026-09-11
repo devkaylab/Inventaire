@@ -118,11 +118,17 @@ export function Accueil({ langue }: { langue: Langue }) {
                 coup d'œil et méritent le poids d'un sous-titre, pas celui d'un
                 paragraphe. ⚠️ Une ligne chacune — la coupure ne se laisse pas
                 au hasard de la largeur, c'est ce qui en fait une liste.
+
+                ⚠️ ET AUCUNE NE PORTE DE POINT. Julien a raccourci les deux
+                premières le 11 septembre 2026 — « Inventaires », « En équipe ».
+                Ce ne sont plus des phrases mais les trois mots d'une liste :
+                garder le point sur la seule troisième aurait fait lire un
+                mélange de deux grammaires, à 64 px et sur trois lignes.
               */}
               <p className="lead lead-trois" data-reveal="1">
-                {t('Inventaire tournant.')}<br />
-                {t('Comptage en équipe.')}<br />
-                {t('Écarts en direct.')}
+                {t('Inventaires')}<br />
+                {t('En équipe')}<br />
+                {t('Écarts en direct')}
               </p>
               {/* ⚠️ NI SURTITRE NI DÉGRADÉ (demande de Julien, 11 septembre
                   2026). « Outil d'inventaire » répétait ce que la phrase
@@ -134,7 +140,7 @@ export function Accueil({ langue }: { langue: Langue }) {
                   un titre de 64 px ; depuis que les deux échelles sont
                   échangées, la signature en fait 21 et tient sur une ligne —
                   la couper en deux ne ferait que la hacher. */}
-              <h1 data-reveal="2">{t('La simplicité en main.')}</h1>
+              <h1 data-reveal="2">{t('La simplicité au bout des doigts')}</h1>
             </div>
             {/*
               ⚠️ LE BOUTON DIT LE BÉNÉFICE, PAS LA DÉMARCHE. Personne ne se lève

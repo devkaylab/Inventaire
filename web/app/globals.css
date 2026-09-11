@@ -3998,11 +3998,32 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .hero-accueil p.lead-trois {
   font-size: clamp(38px, 6vw, 64px); font-weight: 800;
   letter-spacing: -1.5px; line-height: 1.05;
+  margin-left: -0.087em;
 }
 .hero-accueil h1 {
   font-size: clamp(18px, 2.4vw, 21px); font-weight: 600;
   letter-spacing: -0.3px; line-height: 1.35;
+  margin-left: -0.076em;
 }
+
+/* ⚠️ LES DEUX `margin-left` NÉGATIFS ALIGNENT LES TRACÉS, PAS LES BOÎTES —
+   c'est le constat de Julien du 11 septembre 2026 : « le sous-titre n'est pas
+   correctement aligné avec les titres ».
+
+   Une lettre ne touche pas le bord de sa boîte : elle garde un blanc à gauche
+   (le « bearing ») proportionnel au corps. Mesuré au canvas sur Archivo :
+   0,0874 em pour les capitales à fût vertical, 0,076 em pour le « L ». À 61 px
+   contre 21, cela faisait 5,4 px d'un côté et 1,6 de l'autre — donc 3,8 px
+   d'écart visible, alors que les deux boîtes étaient au même pixel.
+
+   ⚠️ EN EM, JAMAIS EN PIXELS : la taille est fluide (`clamp`), le blanc l'est
+   donc aussi. Une compensation figée serait juste à une seule largeur d'écran.
+
+   ⚠️ Et une seule valeur suffit pour les trois prestations : « Inventaires »,
+   « En équipe » et « Écarts » ont le MÊME bearing au millième près — ce sont
+   trois fûts verticaux. En anglais, « As a team » et « Variances live »
+   commencent par des obliques, qui dépasseront légèrement : c'est ce que fait
+   un alignement optique, et non un défaut à rattraper. */
 
 /* Sous 900 px il n'y a plus la place de deux colonnes : les boutons passent
    dessous, et restent alignés à gauche comme le texte. */
@@ -4016,14 +4037,17 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   /* ⚠️ LA TAILLE SE CALE SUR LA LIGNE LA PLUS LONGUE, ET C'EST MESURÉ.
      Les trois prestations ont une ligne chacune : si l'une déborde, elle se
      casse en deux et la liste en compte quatre — c'est exactement ce que les
-     `<br />` existent pour éviter. Constaté à 390 px sur « Comptage en
-     équipe. », la plus large des six (français et anglais confondus) : elle
-     demande 9,65 px de largeur par pixel de corps, mesuré au navigateur.
-     La largeur utile vaut `100vw - 48` (les deux marges), d'où la pente
-     10vw — le retrait de 6 px laisse la marge de sécurité, sans quoi un mot
-     plus long ou une police qui bouge referait la coupure.
-     Contrôlé : 33 px à 390, 26 px à 320, plafonné à 64 dès 700. */
-  .hero-accueil p.lead-trois { font-size: clamp(24px, calc(10vw - 6px), 64px); }
+     `<br />` existent pour éviter. La plus large des six (français et anglais
+     confondus) est « Écarts en direct » : elle demande 7,43 px de largeur par
+     pixel de corps, mesuré au navigateur. La largeur utile vaut `100vw - 48`
+     (les deux marges), d'où la pente 13vw — le retrait de 8 px laisse la marge
+     de sécurité, sans quoi un mot plus long ou une police qui bouge referait la
+     coupure.
+     ⚠️ CETTE PENTE SE REMESURE À CHAQUE CHANGEMENT DE LIBELLÉ : elle valait
+     10vw quand la plus longue était « Comptage en équipe. » (9,65 px/px), que
+     Julien a raccourcie le jour même.
+     Contrôlé : 43 px à 390, 34 px à 320, plafonné à 64 dès 554. */
+  .hero-accueil p.lead-trois { font-size: clamp(24px, calc(13vw - 8px), 64px); }
 }
 
 /* ── La preuve, avant le premier argument ────────────────────────────────────
