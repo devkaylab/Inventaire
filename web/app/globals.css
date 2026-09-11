@@ -148,7 +148,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .brand, .eyebrow {
+h1, h2, h3, .brand {
   font-family: var(--police-titre), system-ui, sans-serif;
 }
 
@@ -535,11 +535,6 @@ body:has(.site-footer) .theme-toggle { display: none; }
   padding: 96px 0 80px;
   text-align: center;
 }
-.eyebrow {
-  display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: 0.4px;
-  color: var(--accent); background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-  padding: 6px 14px; border-radius: 999px; margin-bottom: 20px;
-}
 .hero h1 { font-size: clamp(38px, 6vw, 64px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; }
 .grad {
   background: linear-gradient(120deg, var(--accent-light), var(--cyan));
@@ -611,11 +606,6 @@ body:has(.site-footer) .theme-toggle { display: none; }
   color: var(--sur-encre);
 }
 .hero-film-fond h1 { color: var(--sur-encre); }
-.hero-film-fond .eyebrow {
-  color: var(--cyan);
-  background: color-mix(in srgb, var(--cyan) 14%, transparent);
-  border-color: color-mix(in srgb, var(--cyan) 30%, transparent);
-}
 .hero-film-fond .btn-ghost { color: var(--sur-encre); border-color: var(--encre-hairline); }
 .hero-film-fond .btn-ghost:hover { border-color: var(--sur-encre-2); }
 
@@ -3948,9 +3938,6 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .bande-surface .card, .bande-surface .offre-carte { background: var(--bg); }
 .bande-accent { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 
-/* Le surtitre annonce la bande : on sait où on est avant de lire le titre. */
-.section-head .eyebrow { margin-bottom: 14px; }
-.bande-encre .eyebrow { color: var(--cyan); background: color-mix(in srgb, var(--cyan) 14%, transparent); border-color: color-mix(in srgb, var(--cyan) 30%, transparent); }
 
 /* ── Le héros : trois prestations, pas une phrase ─────────────────────────── */
 .hero p.lead-trois {

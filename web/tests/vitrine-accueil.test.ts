@@ -5,7 +5,7 @@
 // on aurait dit une page brouillon faite par un débutant ». Mesuré : nos huit
 // sections vivaient sur une seule couleur, sans surtitre, sans preuve, sans
 // image du produit et sans prix. Ces gardes figent le remède.
-import { readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { OFFRES } from '../lib/offres'
@@ -410,5 +410,33 @@ describe('le héros va à l’essentiel, et les réglages sont dans la coquille'
     // émoji pour dire qu'on ne les emploie pas.
     expect(drapeau).toContain('<svg')
     expect(sansCommentaires(drapeau)).not.toMatch(/[\u{1F1E6}-\u{1F1FF}]/u)
+  })
+})
+
+describe('⚠️ la vitrine n’a plus de surtitres', () => {
+  // Demande de Julien, 11 septembre 2026, et c'est une RÈGLE, pas une
+  // correction ponctuelle : « tu n'utiliseras plus ce genre de design qui fait
+  // trop IA ». La pastille de surtitre au-dessus de chaque titre — « En
+  // pratique », « Ce qui nous distingue », « Ce que ça fait » — est l'un des
+  // signes les plus reconnaissables d'une page générée : elle annonce ce que
+  // le titre juste dessous dit déjà, et elle le dit dans une capsule colorée.
+  //
+  // ⚠️ LA GARDE BALAIE, ELLE NE CITE PAS. Huit surtitres ont été retirés sur
+  // quatre fichiers ; celui qu'on écrira demain sur une page neuve doit se
+  // signaler tout seul.
+  const dossier = path.resolve(__dirname, '../components/vitrine')
+  const pages = readdirSync(dossier).filter((f) => f.endsWith('.tsx'))
+
+  it('aucune page de la vitrine ne porte de pastille de surtitre', () => {
+    expect(pages.length).toBeGreaterThan(4)
+    for (const f of pages) {
+      const src = readFileSync(path.join(dossier, f), 'utf8')
+      expect(sansCommentaires(src), `${f} porte un surtitre`).not.toContain('eyebrow')
+    }
+  })
+
+  it('et son style a disparu avec lui', () => {
+    // Un style laissé derrière est une invitation à s'en resservir.
+    expect(css).not.toContain('.eyebrow')
   })
 })

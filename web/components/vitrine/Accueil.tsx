@@ -140,7 +140,6 @@ export function Accueil({ langue }: { langue: Langue }) {
         <section className="section" id="en-pratique">
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <span className="eyebrow">{t('En pratique')}</span>
               <h2>{t("Trois gestes, et c'est parti")}</h2>
             </div>
             <div className="etapes">
@@ -206,7 +205,6 @@ export function Accueil({ langue }: { langue: Langue }) {
         <section className="section bande-encre" id="rythmes">
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <span className="eyebrow">{t('Ce qui nous distingue')}</span>
               <h2>{t('Comptez sans fermer le magasin')}</h2>
               <p>{t("Une zone par semaine plutôt qu'un grand week-end par an. Le stock reste juste toute l'année.")}</p>
             </div>
@@ -224,7 +222,6 @@ export function Accueil({ langue }: { langue: Langue }) {
         <section className="section" id="fonctionnalites">
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <span className="eyebrow">{t('Ce que ça fait')}</span>
               <h2>{t('Tout pour un inventaire maîtrisé')}</h2>
               <p>{t('Du premier scan au rapport final.')}</p>
             </div>
@@ -249,7 +246,6 @@ export function Accueil({ langue }: { langue: Langue }) {
         <section className="section bande-surface" id="offres">
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <span className="eyebrow">{t('Tarifs')}</span>
               <h2>{t('Une licence par magasin')}</h2>
               <p>
                 {t("Le prix suit le nombre d'appareils qui comptent en même temps. Comptes et inventaires illimités.")}
@@ -295,7 +291,6 @@ export function Accueil({ langue }: { langue: Langue }) {
         <section className="section">
           <div className="container">
             <div className="section-head" data-reveal="0">
-              <span className="eyebrow">{t("Pensé pour l'entreprise")}</span>
               <h2>{t('Votre stock est votre principal actif')}</h2>
               <p>{t("L'outil qui le compte doit être irréprochable.")}</p>
             </div>

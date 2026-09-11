@@ -56,7 +56,6 @@ export function Tarifs({ langue }: { langue: Langue }) {
       <main>
         <section className="hero" style={{ paddingBottom: 24 }}>
           <div className="container">
-            <div data-reveal="0"><span className="eyebrow">{t('Tarifs')}</span></div>
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
               {t('Découvrez l’offre')} <span className="grad">Quantinvo.</span>
             </h1>

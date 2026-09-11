@@ -68,7 +68,6 @@ export function Pourquoi({ langue }: { langue: Langue }) {
       <main>
         <section className="hero" style={{ paddingBottom: 40 }}>
           <div className="container">
-            <div data-reveal="0"><span className="eyebrow">{t('Pourquoi nous choisir ?')}</span></div>
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
               {t('Six raisons de compter')}<br /><span className="grad">{t('avec Quantinvo.')}</span>
             </h1>
