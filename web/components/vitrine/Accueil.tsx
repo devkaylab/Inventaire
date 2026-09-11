@@ -144,7 +144,7 @@ export function Accueil({ langue }: { langue: Langue }) {
 
         {/* Le produit se voit — la moitié terrain, la moitié bureau. */}
         <section className="section bande-surface">
-          <div className="container">
+          <div className="container container-large">
             <div className="section-head" data-reveal="0">
               <h2>{t('Du rayon au tableau de bord')}</h2>
             </div>
@@ -154,9 +154,17 @@ export function Accueil({ langue }: { langue: Langue }) {
                   <img> et non next/image : ce PNG est servi en demi-résolution
                   et jamais redimensionné côté serveur — même raison que le
                   guide de prise en main.
+
+                  ⚠️ LA CAPTURE ENCADRÉE, PAS LA BRUTE. Elle vient du même
+                  pipeline (`docs/entreprise/deck/encadrees/`), mais posée dans
+                  le téléphone dessiné, sur fond TRANSPARENT — c'est le corps du
+                  téléphone qui fait le cadre. Un filet ou une ombre en CSS
+                  dessinerait un rectangle autour de lui : `.duo-tel img` n'en
+                  porte donc aucun. Elle vit dans `public/vitrine/` et non dans
+                  `public/prise-en-main/`, qui est le jeu du guide.
                 */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/prise-en-main/comptage.png" alt={t('L’écran de comptage de l’application, dans un rayon')} />
+                <img src="/vitrine/comptage-encadre.png" alt={t('L’écran de comptage de l’application, dans un rayon')} />
                 <figcaption>{t('Du scan dans le rayon')}</figcaption>
               </figure>
               <figure className="duo-ecran" data-reveal="2">

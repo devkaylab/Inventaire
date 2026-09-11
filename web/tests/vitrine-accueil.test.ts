@@ -185,10 +185,40 @@ describe('le produit se voit', () => {
     }
   })
 
-  it('⚠️ la colonne du téléphone est bornée', () => {
+  it('⚠️ la colonne du téléphone reste BORNÉE', () => {
     // Sur l'écran de Julien (1568 px), une grille à deux parts égales étirait
     // la capture à plus du double de sa résolution. Le remède du 5 septembre
     // 2026 : on remplit la largeur, on n'étire jamais.
-    expect(css).toMatch(/\.duo\s*\{[^}]*minmax\(180px,\s*236px\)/)
+    //
+    // ⚠️ La garde porte sur la BORNE, pas sur sa valeur : elle citait
+    // « minmax(180px, 236px) » mot pour mot et elle est tombée le 11 septembre
+    // quand la colonne a grandi — sur un changement voulu, sans rien avoir
+    // protégé. Ce qu'elle défend, c'est qu'il y ait un plafond en pixels.
+    const bloc = /\.duo\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(bloc).toMatch(/minmax\(\s*\d+px\s*,\s*\d+px\s*\)/)
+    expect(bloc).not.toMatch(/grid-template-columns:[^;]*1fr\s+1fr/)
+  })
+
+  it('⚠️ montre la capture ENCADRÉE, et ne lui dessine aucun cadre', () => {
+    // Constat de Julien, 11 septembre 2026 : « je veux celle avec l'encadré ».
+    // La capture encadrée porte le téléphone dessiné sur fond TRANSPARENT —
+    // un `border`, un `box-shadow` ou un `border-radius` en CSS tracerait donc
+    // un rectangle autour de lui, ou lui rognerait les coins.
+    expect(accueil).toContain('/vitrine/comptage-encadre.png')
+    const bloc = /\.duo-tel img\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(bloc.length).toBeGreaterThan(0)
+    for (const interdit of ['border', 'box-shadow', 'radius']) {
+      expect(bloc, `.duo-tel img ne doit pas porter ${interdit}`).not.toContain(interdit)
+    }
+  })
+
+  it('⚠️ la section des visuels sort du gabarit de LECTURE, et elle seule', () => {
+    // `.container` plafonne à 1080 px parce que c'est une largeur de lecture.
+    // Ici il n'y a pas de texte à lire mais deux visuels à voir : les brider à
+    // une largeur de texte les rendait petits. Ne pas généraliser.
+    expect(accueil).toContain('container container-large')
+    expect(css).toMatch(/\.container-large\s*\{[^}]*max-width/)
+    const usages = (accueil.match(/container-large/g) ?? []).length
+    expect(usages, 'un seul bloc échappe au gabarit de lecture').toBe(1)
   })
 })

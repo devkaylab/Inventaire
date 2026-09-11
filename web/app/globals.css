@@ -3915,16 +3915,23 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    ⚠️ La colonne du téléphone est BORNÉE (236 px). Sur l'écran de Julien
    (1568 px), une grille à deux parts égales étirait la capture à plus du
    double de sa résolution — floue, et démesurée à côté du tableau de bord. */
+/* ⚠️ CETTE SECTION SORT DU GABARIT DE LECTURE, ET ELLE SEULE. `.container`
+   plafonne à 1080 px parce que c'est une largeur de LECTURE : un paragraphe
+   plus large se lit mal. Ici il n'y a pas de texte à lire, il y a deux visuels
+   à voir — les brider à une largeur de texte les rendait petits (constat de
+   Julien, 11 septembre 2026 : « je trouve les captures de la page trop
+   petites »). Ne pas généraliser `.container-large` aux blocs de texte. */
+.container-large { max-width: 1320px; }
 .duo {
-  display: grid; grid-template-columns: minmax(180px, 236px) minmax(0, 1fr);
-  gap: 40px; align-items: center; max-width: 960px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(200px, 340px) minmax(0, 1fr);
+  gap: 56px; align-items: center; margin: 0 auto;
 }
 .duo figure { margin: 0; }
 .duo figcaption { color: var(--text-2); font-size: 14px; margin-top: 14px; text-align: center; }
-.duo-tel img {
-  width: 100%; height: auto; display: block; border-radius: var(--r);
-  border: 1px solid var(--hairline); box-shadow: 0 12px 34px rgba(6, 9, 16, 0.28);
-}
+/* ⚠️ AUCUN FILET, AUCUNE OMBRE, AUCUN RAYON. La capture est encadrée dans le
+   téléphone dessiné, sur fond transparent : un `border` ou un `box-shadow`
+   tracerait un rectangle autour de lui, et le rayon rognerait ses coins. */
+.duo-tel img { width: 100%; height: auto; display: block; }
 @media (max-width: 860px) { .duo { grid-template-columns: 1fr; gap: 34px; max-width: 420px; } }
 
 .ecran-navigateur {
