@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
 import type { TablesInsert } from '@/types/database.types'
 import { errorMessage } from './errors'
+import { t, tn } from '@/lib/i18n'
 
 export interface CatalogRow {
   sku: string
@@ -202,7 +203,7 @@ export async function importCatalogFile(
     const sku = pickCode(r, SKU_KEYS) || ean
     if (!sku) {
       skipped++
-      if (errors.length < 10) errors.push(`Ligne ${i + 2}: ni SKU ni EAN — ignorée`)
+      if (errors.length < 10) errors.push(t('Ligne %{n}: ni SKU ni EAN — ignorée', { n: i + 2 }))
       continue
     }
     // Colonne prix d'achat optionnelle — en-têtes normalisés (sans séparateurs).
@@ -229,13 +230,13 @@ export async function importCatalogFile(
   // Les deux constats ci-dessous ne perdent AUCUN article : ce sont des
   // regroupements, pas des lignes écartées. D'où `notes` et non `errors`.
   if (keptByEan > 0) {
-    notes.push(`${keptByEan} ligne(s) au même SKU sous un EAN différent — conservée(s) séparément, sous leur EAN`)
+    notes.push(tn('%{count} ligne au même SKU sous un EAN différent — conservée séparément, sous son EAN', '%{count} lignes au même SKU sous un EAN différent — conservées séparément, sous leur EAN', keptByEan))
   }
   const dupes = total - skipped - articles.length
   if (dupes > 0) {
     // Le message dit ce qui s'est passé : la même référence répétée est le cas
     // ordinaire d'un référentiel (une ligne par emplacement), pas un défaut.
-    notes.push(`${dupes} ligne(s) répètent une référence déjà vue — une seule fiche par référence, la dernière ligne fait foi`)
+    notes.push(tn('%{count} ligne répète une référence déjà vue — une seule fiche par référence, la dernière ligne fait foi', '%{count} lignes répètent une référence déjà vue — une seule fiche par référence, la dernière ligne fait foi', dupes))
   }
 
   onProgress?.({ parsed: total, uploaded: 0, total: articles.length })
@@ -298,7 +299,7 @@ export async function importStockFile(
     const sku = pickCode(r, SKU_KEYS)
     if (!sku) {
       skipped++
-      if (errors.length < 10) errors.push(`Ligne ${i + 2}: SKU manquant — ignorée`)
+      if (errors.length < 10) errors.push(t('Ligne %{n}: SKU manquant — ignorée', { n: i + 2 }))
       continue
     }
     const qty = parseFloat(String(r['theoreticalqty'] ?? r['qtetheorique'] ?? r['quantitetheorique'] ?? r['quantite'] ?? r['qty'] ?? r['qte'] ?? r['stock'] ?? r['quantity'] ?? '0'))
@@ -311,7 +312,7 @@ export async function importStockFile(
   const uniqueSkus = payload.length
   // Sommer plusieurs emplacements est le comportement attendu, pas un défaut.
   if (locations > uniqueSkus) notes.push(
-    `${locations - uniqueSkus} ligne(s) multi-emplacements agrégée(s) — quantités sommées par SKU`
+    tn('%{count} ligne multi-emplacements agrégée — quantités sommées par SKU', '%{count} lignes multi-emplacements agrégées — quantités sommées par SKU', locations - uniqueSkus)
   )
 
   onProgress?.({ parsed: total, uploaded: 0, total: payload.length })

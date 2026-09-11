@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { AppLogo } from '@/components/AppLogo'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 export type RoleBienvenue = 'employee' | 'supervisor' | 'company_admin'
@@ -45,42 +46,44 @@ function contenu(role: RoleBienvenue, magasin: string | null, entreprise: string
   if (role === 'employee') {
     return {
       place: magasin
-        ? `Vous faites partie de l’équipe d’inventaire de ${magasin}.`
-        : 'Vous faites partie d’une équipe d’inventaire.',
-      titreListe: 'Ce que vous ferez ici',
+        ? t('Vous faites partie de l’équipe d’inventaire de %{magasin}.', { magasin })
+        : t('Vous faites partie d’une équipe d’inventaire.'),
+      titreListe: t('Ce que vous ferez ici'),
       lignes: [
-        { icone: 'balise', titre: 'Scanner la balise d’un rayon', texte: 'L’étiquette collée sur l’étagère ouvre la zone.' },
-        { icone: 'scan', titre: 'Scanner les articles', texte: 'Chaque lecture ajoute une pièce. La quantité s’ajuste d’un geste.' },
-        { icone: 'coche', titre: 'Terminer la balise', texte: 'Et passer au rayon suivant. Votre superviseur voit l’avancement en direct.' },
+        { icone: 'balise', titre: t('Scanner la balise d’un rayon'), texte: t('L’étiquette collée sur l’étagère ouvre la zone.') },
+        { icone: 'scan', titre: t('Scanner les articles'), texte: t('Chaque lecture ajoute une pièce. La quantité s’ajuste d’un geste.') },
+        { icone: 'coche', titre: t('Terminer la balise'), texte: t('Et passer au rayon suivant. Votre superviseur voit l’avancement en direct.') },
       ] as Ligne[],
-      action: 'Commencer',
+      action: t('Commencer'),
     }
   }
   if (role === 'company_admin') {
     return {
       place: entreprise
-        ? `Vous administrez ${entreprise}.`
-        : 'Vous administrez votre entreprise.',
-      titreListe: 'Ce que vous voyez ici',
+        ? t('Vous administrez %{entreprise}.', { entreprise })
+        : t('Vous administrez votre entreprise.'),
+      titreListe: t('Ce que vous voyez ici'),
       lignes: [
-        { icone: 'magasin', titre: 'Vos magasins', texte: 'Leurs codes, leurs équipes, leurs inventaires.' },
-        { icone: 'equipe', titre: 'Vos superviseurs', texte: 'Ce sont eux qui préparent et lancent les inventaires.' },
-        { icone: 'ordi', titre: 'L’administration, sur l’ordinateur', texte: 'Inviter, affecter, lire le journal : sur le site.' },
+        { icone: 'magasin', titre: t('Vos magasins'), texte: t('Leurs codes, leurs équipes, leurs inventaires.') },
+        { icone: 'equipe', titre: t('Vos superviseurs'), texte: t('Ce sont eux qui préparent et lancent les inventaires.') },
+        { icone: 'ordi', titre: t('L’administration, sur l’ordinateur'), texte: t('Inviter, affecter, lire le journal : sur le site.') },
       ] as Ligne[],
-      action: 'Voir mes magasins',
+      action: t('Voir mes magasins'),
     }
   }
   return {
     place: magasin
-      ? `Vous supervisez ${magasin}${entreprise ? ` pour ${entreprise}` : ''}.`
-      : 'Vous supervisez un magasin.',
-    titreListe: 'Un inventaire, c’est',
+      ? (entreprise
+        ? t('Vous supervisez %{magasin} pour %{entreprise}.', { magasin, entreprise })
+        : t('Vous supervisez %{magasin}.', { magasin }))
+      : t('Vous supervisez un magasin.'),
+    titreListe: t('Un inventaire, c’est'),
     lignes: [
-      { icone: 'planche', titre: 'Des balises imprimées', texte: 'Collées sur les rayons, elles découpent le magasin en zones.' },
-      { icone: 'fichier', titre: 'Votre référentiel et votre stock', texte: 'Importés depuis l’app ou depuis le site. C’est ce qui rend l’écart lisible.' },
-      { icone: 'equipe', titre: 'Vos compteurs', texte: 'Ils scannent depuis leur téléphone ; vous suivez en direct.' },
+      { icone: 'planche', titre: t('Des balises imprimées'), texte: t('Collées sur les rayons, elles découpent le magasin en zones.') },
+      { icone: 'fichier', titre: t('Votre référentiel et votre stock'), texte: t('Importés depuis l’app ou depuis le site. C’est ce qui rend l’écart lisible.') },
+      { icone: 'equipe', titre: t('Vos compteurs'), texte: t('Ils scannent depuis leur téléphone ; vous suivez en direct.') },
     ] as Ligne[],
-    action: 'Préparer mon premier inventaire',
+    action: t('Préparer mon premier inventaire'),
   }
 }
 
@@ -108,8 +111,8 @@ export function Bienvenue({
     <SafeAreaView style={styles.safe}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.corps}>
         <AppLogo size={40} animated={false} color={theme.textPrimary} />
-        <Text style={styles.eyebrow}>Première ouverture</Text>
-        <Text style={styles.titre}>{prenom ? `Bonjour ${prenom}.` : 'Bonjour.'}</Text>
+        <Text style={styles.eyebrow}>{t('Première ouverture')}</Text>
+        <Text style={styles.titre}>{prenom ? t('Bonjour %{prenom}.', { prenom }) : t('Bonjour.')}</Text>
         <Text style={styles.place}>{c.place}</Text>
 
         <View style={styles.carte}>
@@ -135,7 +138,7 @@ export function Bienvenue({
           <Text style={styles.btnText}>{action}</Text>
         </Pressable>
         <Pressable style={styles.lien} onPress={onPlusTard}>
-          <Text style={styles.lienText}>Plus tard</Text>
+          <Text style={styles.lienText}>{t('Plus tard')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

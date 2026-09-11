@@ -8,6 +8,8 @@ import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { getMySpacePath, homePathForRole } from '@/lib/auth'
 import { challengeAndVerify, mfaPending, verifiedTotpFactor } from '@/lib/mfa'
+import { LangueToggle } from '@/components/LangueToggle'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Un échec réseau et un mauvais mot de passe ne doivent pas dire la même chose.
@@ -35,6 +37,7 @@ const REMEMBER_KEY = 'quantinvo-identifiant'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useTraduction()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
@@ -77,7 +80,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     if (!email || !password) {
-      setError('Veuillez remplir tous les champs.')
+      setError(t('Veuillez remplir tous les champs.'))
       return
     }
     setLoading(true)
@@ -86,8 +89,8 @@ export default function LoginPage() {
       setLoading(false)
       setError(
         isNetworkFailure(error)
-          ? 'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.'
-          : 'E-mail ou mot de passe incorrect.',
+          ? t('Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.')
+          : t('E-mail ou mot de passe incorrect.'),
       )
       return
     }
@@ -116,7 +119,7 @@ export default function LoginPage() {
     const r = await challengeAndVerify(mfaFactorId, code)
     if (!r.success) {
       setLoading(false)
-      setError('Code incorrect ou expiré. Vérifiez le code affiché par votre application.')
+      setError(t('Code incorrect ou expiré. Vérifiez le code affiché par votre application.'))
       return
     }
     const { data: { session } } = await supabase.auth.getSession()
@@ -138,15 +141,15 @@ export default function LoginPage() {
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>Double authentification</h1>
-            <p className="sub">Saisissez le code affiché par votre application d&apos;authentification.</p>
+            <h1>{t('Double authentification')}</h1>
+            <p className="sub">{t("Saisissez le code affiché par votre application d'authentification.")}</p>
           </div>
 
           {error && <div className="error">{error}</div>}
 
           <form onSubmit={handleCodeSubmit}>
             <div className="field">
-              <label htmlFor="totp-code">Code de vérification</label>
+              <label htmlFor="totp-code">{t('Code de vérification')}</label>
               <input
                 id="totp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
                 value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456"
@@ -154,16 +157,17 @@ export default function LoginPage() {
               />
             </div>
             <button type="submit" className="btn btn-primary btn-block" disabled={loading || code.trim().length < 6}>
-              {loading ? 'Vérification…' : 'Vérifier'}
+              {loading ? t('Vérification…') : t('Vérifier')}
             </button>
           </form>
 
           <div className="center-link">
             <button type="button" className="link-btn" onClick={() => void cancelMfa()}>
-              ← Revenir à la connexion
+              {t('← Revenir à la connexion')}
             </button>
           </div>
         </div>
+        <LangueToggle />
       </div>
     )
   }
@@ -173,15 +177,15 @@ export default function LoginPage() {
       <div className="auth-card">
         <div className="head">
           <Link href="/"><Logo size={56} /></Link>
-          <h1>Connexion</h1>
-          <p className="sub">Accédez à votre espace Quantinvo.</p>
+          <h1>{t('Connexion')}</h1>
+          <p className="sub">{t('Accédez à votre espace Quantinvo.')}</p>
         </div>
 
         {error && <div className="error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="email">E-mail</label>
+            <label htmlFor="email">{t('E-mail')}</label>
             <input
               id="email"
               type="email"
@@ -192,7 +196,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="field">
-            <label htmlFor="password">Mot de passe</label>
+            <label htmlFor="password">{t('Mot de passe')}</label>
             <input
               id="password"
               type="password"
@@ -210,24 +214,25 @@ export default function LoginPage() {
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
               />
-              Se souvenir de mon identifiant
+              {t('Se souvenir de mon identifiant')}
             </label>
-            <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+            <Link href="/mot-de-passe-oublie">{t('Mot de passe oublié ?')}</Link>
           </div>
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-            {loading ? 'Connexion…' : 'Se connecter'}
+            {loading ? t('Connexion…') : t('Se connecter')}
           </button>
         </form>
 
         <div className="center-link">
         </div>
         <div className="center-link" style={{ marginTop: 8 }}>
-          <InscriptionLink>Inscrire mon entreprise</InscriptionLink>
+          <InscriptionLink ferme={t('Nous écrire')}>{t('Inscrire mon entreprise')}</InscriptionLink>
         </div>
         <div className="center-link" style={{ marginTop: 8 }}>
-          <Link href="/">← Retour à l&apos;accueil</Link>
+          <Link href="/">{t("← Retour à l'accueil")}</Link>
         </div>
       </div>
+      <LangueToggle />
     </div>
   )
 }

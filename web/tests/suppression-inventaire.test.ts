@@ -67,7 +67,7 @@ describe('sélection multiple', () => {
     // Pas de RPC de suppression groupée : on appelle `delete_session` une fois
     // par inventaire. Sur dix, un refus ne doit pas passer inaperçu.
     expect(page).toContain('const echecs: string[] = []')
-    expect(page).toMatch(/toast\.error\(`\$\{faits\} supprimés, \$\{echecs\.length\} refusés/)
+    expect(page).toContain("toast.error(t('%{faits} supprimés, %{refus} refusés. %{detail}', { faits, refus: echecs.length")
   })
 
   it('la tuile étant un lien, la case retient le clic', () => {

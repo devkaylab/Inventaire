@@ -22,6 +22,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
@@ -54,17 +55,17 @@ export default function PasswordScreen() {
   async function enregistrer() {
     const probleme = passwordError(password)
     if (probleme) {
-      signaler.erreur('Mot de passe refusé', probleme)
+      signaler.erreur(t('Mot de passe refusé'), probleme)
       return
     }
     if (password !== confirm) {
-      signaler.erreur('Mot de passe refusé', 'Les deux saisies ne sont pas identiques.')
+      signaler.erreur(t('Mot de passe refusé'), t('Les deux saisies ne sont pas identiques.'))
       return
     }
 
     const email = session?.user.email
     if (!email) {
-      signaler.erreur('Erreur', 'Votre session a expiré. Reconnectez-vous.')
+      signaler.erreur(t('Erreur'), t('Votre session a expiré. Reconnectez-vous.'))
       return
     }
 
@@ -72,24 +73,24 @@ export default function PasswordScreen() {
     try {
       if (!(await verifyCurrentPassword(email, actuel))) {
         signaler.erreur(
-          'Mot de passe actuel incorrect',
-          'Vérifiez votre saisie. Si vous ne vous en souvenez plus, passez par « Mot de passe oublié ».',
+          t('Mot de passe actuel incorrect'),
+          t('Vérifiez votre saisie. Si vous ne vous en souvenez plus, passez par « Mot de passe oublié ».'),
         )
         return
       }
 
       const { error } = await supabase.auth.updateUser({ password })
       if (error) {
-        signaler.erreur('Mot de passe refusé', friendlyPasswordError(error.message))
+        signaler.erreur(t('Mot de passe refusé'), t(friendlyPasswordError(error.message)))
         return
       }
       signaler.succes(
-          'Mot de passe modifié',
-          'Votre nouveau mot de passe est actif, sur le téléphone comme sur le site.',
+          t('Mot de passe modifié'),
+          t('Votre nouveau mot de passe est actif, sur le téléphone comme sur le site.'),
         )
         router.back()
     } catch (e) {
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -102,11 +103,10 @@ export default function PasswordScreen() {
           automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.intro}>
-              Le nouveau mot de passe remplace l&apos;ancien tout de suite, sur le téléphone comme
-              sur le site.
+              {t("Le nouveau mot de passe remplace l'ancien tout de suite, sur le téléphone comme sur le site.")}
             </Text>
 
-            <Text style={styles.label}>Mot de passe actuel</Text>
+            <Text style={styles.label}>{t('Mot de passe actuel')}</Text>
             <TextInput
               style={styles.input}
               value={actuel}
@@ -115,14 +115,14 @@ export default function PasswordScreen() {
               autoCapitalize="none"
               autoComplete="current-password"
               textContentType="password"
-              placeholder="Votre mot de passe d’aujourd’hui"
+              placeholder={t('Votre mot de passe d’aujourd’hui')}
               placeholderTextColor={theme.textMuted}
             />
             <Pressable style={styles.forgot} onPress={() => Linking.openURL(PASSWORD_FORGOT_URL)}>
-              <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+              <Text style={styles.forgotText}>{t('Mot de passe oublié ?')}</Text>
             </Pressable>
 
-            <Text style={styles.label}>Nouveau mot de passe</Text>
+            <Text style={styles.label}>{t('Nouveau mot de passe')}</Text>
             <TextInput
               style={styles.input}
               value={password}
@@ -136,7 +136,7 @@ export default function PasswordScreen() {
             />
             <PasswordRules password={password} />
 
-            <Text style={styles.label}>Confirmer</Text>
+            <Text style={styles.label}>{t('Confirmer')}</Text>
             <TextInput
               style={styles.input}
               value={confirm}
@@ -145,11 +145,11 @@ export default function PasswordScreen() {
               autoCapitalize="none"
               autoComplete="new-password"
               textContentType="newPassword"
-              placeholder="Retapez le mot de passe"
+              placeholder={t('Retapez le mot de passe')}
               placeholderTextColor={theme.textMuted}
             />
             {confirm.length > 0 && !identiques && (
-              <Text style={styles.mismatch}>Les deux saisies ne sont pas identiques.</Text>
+              <Text style={styles.mismatch}>{t('Les deux saisies ne sont pas identiques.')}</Text>
             )}
 
             <Pressable
@@ -160,14 +160,13 @@ export default function PasswordScreen() {
               {busy ? (
                 <ActivityIndicator color={theme.onAccent} />
               ) : (
-                <Text style={styles.btnText}>Enregistrer</Text>
+                <Text style={styles.btnText}>{t('Enregistrer')}</Text>
               )}
             </Pressable>
           </View>
 
           <Text style={styles.note}>
-            Un mot de passe qui figure dans une fuite de données connue est refusé : il est déjà à
-            la disposition des attaquants.
+            {t('Un mot de passe qui figure dans une fuite de données connue est refusé : il est déjà à la disposition des attaquants.')}
           </Text>
         </ScrollView>
       </ClavierEvite>

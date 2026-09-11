@@ -126,7 +126,7 @@ describe('une seule balise', () => {
     expect(c).toContain('aria-checked={unique}')
     expect(c).toContain('role="switch"')
     // Le libellé du champ suit la bascule, et le second champ disparaît.
-    expect(c).toContain("{unique ? 'Balise' : 'Balise début'}")
+    expect(c).toContain("{unique ? t('Balise') : t('Balise début')}")
     expect(c).toContain('{!unique && (')
   })
 

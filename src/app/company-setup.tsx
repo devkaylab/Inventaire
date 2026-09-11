@@ -13,6 +13,7 @@ import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
+import { t } from '@/lib/i18n'
 
 /**
  * Écran de repli : un compte superviseur sans entreprise rattachée.
@@ -42,22 +43,22 @@ export default function CompanySetupScreen() {
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Text style={styles.title}>
-              {administrateur ? 'Compte administrateur' : 'Accès pas encore ouvert'}
+              {administrateur ? t('Compte administrateur') : t('Accès pas encore ouvert')}
             </Text>
             <Text style={styles.subtitle}>
               {administrateur
-                ? 'Ce compte administre Quantinvo depuis le site : entreprises, magasins et accès. L’application, elle, sert à compter — elle demande un compte rattaché à un magasin.'
-                : 'Votre compte n’est rattaché à aucun magasin. C’est l’administrateur de votre entreprise qui vous y rattache, depuis la page Mon équipe du site. Prévenez-le : vous n’avez rien à faire de votre côté.'}
+                ? t('Ce compte administre Quantinvo depuis le site : entreprises, magasins et accès. L’application, elle, sert à compter — elle demande un compte rattaché à un magasin.')
+                : t('Votre compte n’est rattaché à aucun magasin. C’est l’administrateur de votre entreprise qui vous y rattache, depuis la page Mon équipe du site. Prévenez-le : vous n’avez rien à faire de votre côté.')}
             </Text>
           </View>
 
           <View style={styles.form}>
             <Pressable style={styles.button} onPress={() => Linking.openURL(SITE_URL)}>
-              <Text style={styles.buttonText}>Ouvrir le site</Text>
+              <Text style={styles.buttonText}>{t('Ouvrir le site')}</Text>
             </Pressable>
 
             <Pressable style={styles.link} onPress={() => signOut()}>
-              <Text style={styles.linkText}>Se déconnecter</Text>
+              <Text style={styles.linkText}>{t('Se déconnecter')}</Text>
             </Pressable>
           </View>
         </ScrollView>

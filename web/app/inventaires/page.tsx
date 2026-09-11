@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { t, tn, useTraduction } from '@/lib/i18n'
 
 // La liste complète des inventaires. Elle vivait sur /dashboard ; depuis le
 // 30 août 2026, /dashboard est le tableau de bord d'atterrissage et la liste
@@ -21,6 +22,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 export default function InventairesPage() {
   const toast = useToast()
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -120,18 +122,18 @@ export default function InventairesPage() {
     const ouverts = cibles.filter(s => s.status !== 'closed').length
     const ok = await confirm({
       title: cibles.length === 1
-        ? 'Supprimer définitivement cet inventaire ?'
-        : `Supprimer définitivement ${cibles.length} inventaires ?`,
-      message: 'Cette action est irréversible et ne peut pas être annulée.',
+        ? t('Supprimer définitivement cet inventaire ?')
+        : t('Supprimer définitivement %{n} inventaires ?', { n: cibles.length }),
+      message: t('Cette action est irréversible et ne peut pas être annulée.'),
       details: [
         ...cibles.slice(0, 8).map(s => `${s.name || s.store_name} — ${s.store_name}`),
-        ...(cibles.length > 8 ? [`… et ${cibles.length - 8} autres`] : []),
-        'Comptages, stock théorique, audits, membres et référentiel articles seront effacés.',
+        ...(cibles.length > 8 ? [t('… et %{n} autres', { n: cibles.length - 8 })] : []),
+        t('Comptages, stock théorique, audits, membres et référentiel articles seront effacés.'),
         ...(ouverts > 0
-          ? [ouverts === 1 ? 'Dont 1 inventaire encore en cours.' : `Dont ${ouverts} inventaires encore en cours.`]
+          ? [tn('Dont %{count} inventaire encore en cours.', 'Dont %{count} inventaires encore en cours.', ouverts)]
           : []),
       ],
-      confirmLabel: cibles.length === 1 ? 'Supprimer définitivement' : `Supprimer les ${cibles.length}`,
+      confirmLabel: cibles.length === 1 ? t('Supprimer définitivement') : t('Supprimer les %{n}', { n: cibles.length }),
       tone: 'danger',
       requireText: cibles.length === 1 ? cibles[0].inventory_number : undefined,
     })
@@ -144,7 +146,7 @@ export default function InventairesPage() {
       try {
         const r = await deleteSession(s.id)
         if (r.success) faits += 1
-        else echecs.push(`${s.name || s.store_name} : ${r.error ?? 'refus du serveur'}`)
+        else echecs.push(`${s.name || s.store_name} : ${r.error ?? t('refus du serveur')}`)
       } catch (err) {
         echecs.push(`${s.name || s.store_name} : ${friendlyError(err)}`)
       }
@@ -156,11 +158,11 @@ export default function InventairesPage() {
     setSelection([])
 
     if (echecs.length === 0) {
-      toast.success(faits === 1 ? 'Inventaire supprimé.' : `${faits} inventaires supprimés.`)
+      toast.success(tn('%{count} inventaire supprimé.', '%{count} inventaires supprimés.', faits))
     } else if (faits === 0) {
       toast.error(echecs[0])
     } else {
-      toast.error(`${faits} supprimés, ${echecs.length} refusés. ${echecs[0]}`)
+      toast.error(t('%{faits} supprimés, %{refus} refusés. %{detail}', { faits, refus: echecs.length, detail: echecs[0] }))
     }
   }
   const activeCount = useMemo(() => sessions.filter(s => s.status !== 'closed').length, [sessions])
@@ -180,8 +182,8 @@ export default function InventairesPage() {
     <AppShell profile={guard.profile} companyName={companyName}>
       <div className="app-head">
         <div>
-          <h1 className="page-title">Inventaires</h1>
-          <p className="page-sub">Ce que vos magasins comptent, et ce qu’ils ont compté.</p>
+          <h1 className="page-title">{t('Inventaires')}</h1>
+          <p className="page-sub">{t('Ce que vos magasins comptent, et ce qu’ils ont compté.')}</p>
         </div>
         <div className="app-head-actions">
           {selectionnables.length > 0 && (
@@ -192,22 +194,20 @@ export default function InventairesPage() {
                 ref={el => { if (el) el.indeterminate = selectionnes.length > 0 && !toutSelectionne }}
                 onChange={basculerTout}
               />
-              Tout sélectionner
+              {t('Tout sélectionner')}
             </label>
           )}
-          <Link href="/dashboard/new" className="btn btn-primary">Nouvel inventaire</Link>
+          <Link href="/dashboard/new" className="btn btn-primary">{t('Nouvel inventaire')}</Link>
         </div>
       </div>
 
       {selectionnes.length > 0 && (
-        <div className="select-bar" role="region" aria-label="Sélection">
+        <div className="select-bar" role="region" aria-label={t('Sélection')}>
           <span className="select-bar-count">
-            {selectionnes.length === 1
-              ? '1 inventaire sélectionné'
-              : `${selectionnes.length} inventaires sélectionnés`}
+            {tn('%{count} inventaire sélectionné', '%{count} inventaires sélectionnés', selectionnes.length)}
           </span>
           <button type="button" className="select-bar-ghost" onClick={() => setSelection([])}>
-            Tout désélectionner
+            {t('Tout désélectionner')}
           </button>
           <button
             type="button"
@@ -215,7 +215,7 @@ export default function InventairesPage() {
             disabled={busy}
             onClick={() => supprimer(selectionnes)}
           >
-            {busy ? 'Suppression…' : `Supprimer (${selectionnes.length})`}
+            {busy ? t('Suppression…') : `${t('Supprimer')} (${selectionnes.length})`}
           </button>
         </div>
       )}
@@ -229,19 +229,19 @@ export default function InventairesPage() {
       <div className="resume-bande">
         <div>
           <strong className="num">{storeCount}</strong>
-          <span>Magasin{storeCount > 1 ? 's' : ''}</span>
+          <span>{tn('Magasin', 'Magasins', storeCount)}</span>
         </div>
         <div className={activeCount > 0 ? 'attention' : undefined}>
           <strong className="num">{activeCount}</strong>
-          <span>Inventaire{activeCount > 1 ? 's' : ''} en cours</span>
+          <span>{tn('Inventaire en cours', 'Inventaires en cours', activeCount)}</span>
         </div>
         <div>
           <strong className="num">{closedThisMonth}</strong>
-          <span>Clôturé{closedThisMonth > 1 ? 's' : ''} ce mois-ci</span>
+          <span>{tn('Clôturé ce mois-ci', 'Clôturés ce mois-ci', closedThisMonth)}</span>
         </div>
         <div>
           <strong className="num">{sessions.length}</strong>
-          <span>Nombre total d&apos;inventaires</span>
+          <span>{t("Nombre total d'inventaires")}</span>
         </div>
       </div>
 
@@ -250,8 +250,8 @@ export default function InventairesPage() {
           <div className="champ-borne">
             <input
               type="search" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Rechercher un inventaire, un magasin, un numéro…"
-              aria-label="Rechercher un inventaire"
+              placeholder={t('Rechercher un inventaire, un magasin, un numéro…')}
+              aria-label={t('Rechercher un inventaire')}
             />
           </div>
         </div>
@@ -262,14 +262,14 @@ export default function InventairesPage() {
       ) : sessions.length === 0 ? (
         <div style={{ marginTop: 24 }}>
           <EmptyState
-            title="Aucun inventaire pour l’instant"
-            hint="Vous verrez ici les inventaires que vous avez créés, et plus bas ceux auxquels on vous a invité."
-            action={<Link href="/dashboard/new" className="btn btn-primary">Créer mon premier inventaire</Link>}
+            title={t('Aucun inventaire pour l’instant')}
+            hint={t('Vous verrez ici les inventaires que vous avez créés, et plus bas ceux auxquels on vous a invité.')}
+            action={<Link href="/dashboard/new" className="btn btn-primary">{t('Créer mon premier inventaire')}</Link>}
           />
         </div>
       ) : groups.length === 0 && invites.length === 0 ? (
         <div style={{ marginTop: 24 }}>
-          <EmptyState title="Aucun résultat" hint={`Rien ne correspond à « ${query} ».`} />
+          <EmptyState title={t('Aucun résultat')} hint={t('Rien ne correspond à « %{q} ».', { q: query })} />
         </div>
       ) : (
         groups.map(({ store, sessions: list }) => {
@@ -287,9 +287,9 @@ export default function InventairesPage() {
                   <h2>{store}</h2>
                   <p className="section-note">
                     {active.length > 0
-                      ? `${active.length} inventaire${active.length > 1 ? 's' : ''} en cours`
-                      : 'Aucun inventaire en cours'}
-                    {past.length > 0 && ` · ${past.length} clôturé${past.length > 1 ? 's' : ''}`}
+                      ? tn('%{count} inventaire en cours', '%{count} inventaires en cours', active.length)
+                      : t('Aucun inventaire en cours')}
+                    {past.length > 0 && ` · ${tn('%{count} clôturé', '%{count} clôturés', past.length)}`}
                   </p>
                 </div>
               </div>
@@ -315,10 +315,9 @@ export default function InventairesPage() {
         <section className="admin-section">
           <div className="admin-section-head">
             <div>
-              <h2>Inventaires invités</h2>
+              <h2>{t('Inventaires invités')}</h2>
               <p className="section-note">
-                Vous y comptez sans les avoir créés. Vous pouvez consulter le rapport ;
-                leur clôture définitive et leur réouverture appartiennent à leur créateur.
+                {t('Vous y comptez sans les avoir créés. Vous pouvez consulter le rapport ; leur clôture définitive et leur réouverture appartiennent à leur créateur.')}
               </p>
             </div>
           </div>
@@ -367,21 +366,21 @@ function SessionCard({ s, live, deletable, selected, onToggle, onDelete }: {
             type="checkbox"
             className="dash-card-check"
             checked={selected}
-            aria-label={`Sélectionner ${s.name || s.store_name}`}
+            aria-label={t('Sélectionner %{nom}', { nom: s.name || s.store_name })}
             onClick={e => retenir(e, onToggle)}
             onChange={() => {}}
           />
         )}
         <span className={`dash-badge dash-badge-${s.status}`}>
-          <span className="dash-dot" />{STATUS_LABELS[s.status] ?? s.status}
+          <span className="dash-dot" />{t(STATUS_LABELS[s.status] ?? s.status)}
         </span>
-        {s.uses_zones && <span className="dash-tag">Zones</span>}
+        {s.uses_zones && <span className="dash-tag">{t('Zones')}</span>}
         {deletable && (
           <button
             type="button"
             className="dash-card-trash"
-            aria-label={`Supprimer ${s.name || s.store_name}`}
-            title="Supprimer cet inventaire"
+            aria-label={t('Supprimer %{nom}', { nom: s.name || s.store_name })}
+            title={t('Supprimer cet inventaire')}
             onClick={e => retenir(e, onDelete)}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -390,7 +389,7 @@ function SessionCard({ s, live, deletable, selected, onToggle, onDelete }: {
           </button>
         )}
       </div>
-      {live && <div className="dash-live-label">Inventaire en cours</div>}
+      {live && <div className="dash-live-label">{t('Inventaire en cours')}</div>}
       <div className="dash-card-title">{s.name || s.store_name}</div>
       <div className="dash-card-meta">
         <span className="num">{s.inventory_number}</span> · {fmtDate(s.created_at)}

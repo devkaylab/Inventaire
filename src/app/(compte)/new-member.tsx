@@ -18,6 +18,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { avertir, signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function NewMemberScreen() {
@@ -44,12 +45,12 @@ export default function NewMemberScreen() {
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim().toLowerCase()
-    if (!first) return signaler.erreur('Erreur', 'Saisissez le prénom du compteur.')
-    if (!last) return signaler.erreur('Erreur', 'Saisissez le nom du compteur.')
-    if (!mail || !mail.includes('@')) return signaler.erreur('Erreur', "Saisissez une adresse e-mail valide.")
-    if (!company) return signaler.erreur('Erreur', 'Entreprise introuvable.')
+    if (!first) return signaler.erreur(t('Erreur'), t('Saisissez le prénom du compteur.'))
+    if (!last) return signaler.erreur(t('Erreur'), t('Saisissez le nom du compteur.'))
+    if (!mail || !mail.includes('@')) return signaler.erreur(t('Erreur'), t('Saisissez une adresse e-mail valide.'))
+    if (!company) return signaler.erreur(t('Erreur'), t('Entreprise introuvable.'))
     if (multiStore && selectedStores.length === 0) {
-      return signaler.erreur('Erreur', 'Choisissez au moins un magasin auquel rattacher ce compteur.')
+      return signaler.erreur(t('Erreur'), t('Choisissez au moins un magasin auquel rattacher ce compteur.'))
     }
 
     const name = `${first} ${last}`
@@ -69,12 +70,12 @@ export default function NewMemberScreen() {
       // 23 août 2026). Le cache tient 30 s, un retour ne suffit pas.
       await queryClient.invalidateQueries({ queryKey: ['my-team'] })
       signaler.succes(
-          'Compteur ajouté',
+          t('Compteur ajouté'),
           res.emailSent
-            ? `${name} reçoit un e-mail à l'adresse ${mail}. Le lien lui permettra de choisir son mot de passe.`
+            ? t("%{nom} reçoit un e-mail à l'adresse %{mail}. Le lien lui permettra de choisir son mot de passe.", { nom: name, mail })
             : res.alreadyInvited
-              ? `${name} avait déjà été invité : le lien reçu précédemment reste valable.`
-              : `${name} a été ajouté, mais l'e-mail n'a pas pu partir (${res.emailError ?? 'raison inconnue'}). Relancez l'ajout pour réessayer.`,
+              ? t('%{nom} avait déjà été invité : le lien reçu précédemment reste valable.', { nom: name })
+              : t("%{nom} a été ajouté, mais l'e-mail n'a pas pu partir (%{raison}). Relancez l'ajout pour réessayer.", { nom: name, raison: res.emailError ?? t('raison inconnue') }),
         )
         router.back()
     } catch (e) {
@@ -85,14 +86,14 @@ export default function NewMemberScreen() {
       // avec la marche à suivre, et non sous un titre « Erreur ».
       if (code === 'other_company') {
         void avertir({
-          titre: 'Cette personne n’est pas de votre entreprise',
+          titre: t('Cette personne n’est pas de votre entreprise'),
           texte: msg,
         })
       } else {
         signaler.erreur(
-          'Erreur',
+          t('Erreur'),
           /duplicate|unique/i.test(msg)
-            ? 'Cette adresse e-mail est déjà invitée ou déjà utilisée.'
+            ? t('Cette adresse e-mail est déjà invitée ou déjà utilisée.')
             : msg,
         )
       }
@@ -111,36 +112,34 @@ export default function NewMemberScreen() {
         <ScrollView
           automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
-            Pré-inscrivez un compteur de votre équipe. Il recevra un e-mail, vérifiera son prénom et
-            son nom, et choisira son propre mot de passe. Son rattachement au magasin est automatique
-            — le code magasin ne lui est jamais communiqué.
+            {t('Pré-inscrivez un compteur de votre équipe. Il recevra un e-mail, vérifiera son prénom et son nom, et choisira son propre mot de passe. Son rattachement au magasin est automatique — le code magasin ne lui est jamais communiqué.')}
           </Text>
 
-          <Text style={styles.label}>Prénom</Text>
+          <Text style={styles.label}>{t('Prénom')}</Text>
           <TextInput
             style={styles.input}
             value={firstName}
             onChangeText={setFirstName}
-            placeholder="Ex: Marie"
+            placeholder={t('Ex: Marie')}
             placeholderTextColor={theme.textMuted}
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Nom</Text>
+          <Text style={styles.label}>{t('Nom')}</Text>
           <TextInput
             style={styles.input}
             value={lastName}
             onChangeText={setLastName}
-            placeholder="Ex: Dupont"
+            placeholder={t('Ex: Dupont')}
             placeholderTextColor={theme.textMuted}
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Adresse e-mail</Text>
+          <Text style={styles.label}>{t('Adresse e-mail')}</Text>
           <TextInput
             style={styles.input}
             value={email}
@@ -154,15 +153,14 @@ export default function NewMemberScreen() {
             onSubmitEditing={handleSubmit}
           />
           <Text style={styles.hint}>
-            {"Le compteur recevra à cette adresse un lien personnel : il y vérifiera son prénom et son nom, puis choisira son mot de passe."}
+            {t('Le compteur recevra à cette adresse un lien personnel : il y vérifiera son prénom et son nom, puis choisira son mot de passe.')}
           </Text>
 
           {multiStore && (
             <>
-              <Text style={styles.label}>Magasins accessibles</Text>
+              <Text style={styles.label}>{t('Magasins accessibles')}</Text>
               <Text style={styles.hint}>
-                Vous supervisez plusieurs magasins : choisissez celui ou ceux où ce compteur pourra
-                intervenir.
+                {t('Vous supervisez plusieurs magasins : choisissez celui ou ceux où ce compteur pourra intervenir.')}
               </Text>
               <View style={styles.storeList}>
                 {(stores ?? []).map(s => {
@@ -185,7 +183,7 @@ export default function NewMemberScreen() {
             {loading ? (
               <ActivityIndicator color={theme.onAccent} />
             ) : (
-              <Text style={styles.buttonText}>{"Ajouter à l'équipe"}</Text>
+              <Text style={styles.buttonText}>{t("Ajouter à l'équipe")}</Text>
             )}
           </Pressable>
         </ScrollView>

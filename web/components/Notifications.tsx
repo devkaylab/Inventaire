@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { relativeTime } from '@/lib/format'
 import { proposer } from '@/lib/appareils'
+import { t, tn, useTraduction } from '@/lib/i18n'
 
 type Notif = {
   id: string
@@ -44,21 +45,23 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
   switch (n.type) {
     case 'invitation_inventaire':
       return {
-        titre: 'Invitation reçue',
-        texte: `${d.par ? `${d.par} vous a ajouté` : 'Vous avez été ajouté'} à l’inventaire « ${d.nom ?? ''} » — ${d.magasin ?? ''}.`,
+        titre: t('Invitation reçue'),
+        texte: d.par
+          ? t('%{par} vous a ajouté à l’inventaire « %{nom} » — %{magasin}.', { par: d.par, nom: d.nom ?? '', magasin: d.magasin ?? '' })
+          : t('Vous avez été ajouté à l’inventaire « %{nom} » — %{magasin}.', { nom: d.nom ?? '', magasin: d.magasin ?? '' }),
         lien: d.session_id ? `/dashboard/${d.session_id}` : null,
       }
     case 'compteur_actif':
       return {
-        titre: 'Compte activé',
-        texte: `${d.nom || 'Un compteur'} s’est connecté pour la première fois : son profil de compteur est prêt.`,
+        titre: t('Compte activé'),
+        texte: t('%{nom} s’est connecté pour la première fois : son profil de compteur est prêt.', { nom: d.nom || t('Un compteur') }),
         lien: '/equipe',
       }
     // Le rang mène AU FIL : la conversation s'y lit en entier et s'y
     // poursuit (constat de Julien, 30 août 2026).
     case 'message':
       return {
-        titre: `Message de ${d.de || 'quelqu’un'}${d.entreprise ? ` — ${d.entreprise}` : ''}`,
+        titre: t('Message de %{de}', { de: d.de || t('quelqu’un') }) + (d.entreprise ? ` — ${d.entreprise}` : ''),
         texte: d.sujet ?? '',
         lien: d.fil_id ? `/messages?fil=${d.fil_id}` : '/messages',
       }
@@ -67,8 +70,8 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
     // l'e-mail — une boîte ne s'ouvre pas toujours, la cloche attend sur place.
     case 'inventaire_volumineux':
       return {
-        titre: 'Un inventaire approche de la limite',
-        texte: `« ${d.nom || 'Sans nom'} » — ${d.mesure ?? ''}. Au-delà, le rapport et les écarts deviennent trop lents : à regarder avant le jour du comptage.`,
+        titre: t('Un inventaire approche de la limite'),
+        texte: t('« %{nom} » — %{mesure}. Au-delà, le rapport et les écarts deviennent trop lents : à regarder avant le jour du comptage.', { nom: d.nom || t('Sans nom'), mesure: d.mesure ?? '' }),
         lien: d.session_id ? `/dashboard/${d.session_id}` : '/admin',
       }
     // Des appareils n'ont pas pu compter. Elle ne va qu'à l'administrateur
@@ -86,17 +89,17 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
       const couvert = Number(d.forfait ?? 0)
       const offre = proposer(couvert, Number(d.besoin ?? 0))
       return {
-        titre: 'Votre offre semble trop juste',
+        titre: t('Votre offre semble trop juste'),
         texte: offre
-          ? `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place. Votre offre en couvre ${couvert} à la fois — n’hésitez pas à passer à ${offre.nom}, qui en couvre ${offre.couvre}.`
-          : `Sur ${d.magasin || 'un de vos magasins'}, des appareils n’ont pas pu compter faute de place.`,
+          ? t('Sur %{magasin}, des appareils n’ont pas pu compter faute de place. Votre offre en couvre %{couvert} à la fois — n’hésitez pas à passer à %{offre}, qui en couvre %{couvre}.', { magasin: d.magasin || t('un de vos magasins'), couvert, offre: offre.nom, couvre: offre.couvre })
+          : t('Sur %{magasin}, des appareils n’ont pas pu compter faute de place.', { magasin: d.magasin || t('un de vos magasins') }),
         // ⚠️ L'ANCRE MÈNE À LA SECTION, pas en haut de la fiche : le geste
         // qu'on propose est à mi-page, et sans elle il faut le chercher.
         lien: d.store_id ? `/magasins/${d.store_id}#appareils` : '/magasins',
         // ⚠️ LE LIBELLÉ NOMME L'OFFRE. « Découvrir » seul ne dit pas quoi, et
         // une invitation sans objet ne fait pas agir (Julien, 4 septembre
         // 2026). Le nom vient de `proposer()`, jamais d'une chaîne écrite ici.
-        action: offre ? `Découvrir ${offre.nom}` : 'Découvrir les offres',
+        action: offre ? t('Découvrir %{offre}', { offre: offre.nom }) : t('Découvrir les offres'),
       }
     }
   }
@@ -152,17 +155,19 @@ function AvisForfait({ notif, onOuvrir }: { notif: Notif; onOuvrir: (lien: strin
             className="btn btn-primary btn-sm"
             onClick={() => { refermer(); onOuvrir(p.lien as string) }}
           >
-            {p.action ?? 'Voir'}
+            {p.action ?? t('Voir')}
           </button>
         )}
       </div>
-      <button type="button" className="toast-close" onClick={refermer} aria-label="Fermer">×</button>
+      <button type="button" className="toast-close" onClick={refermer} aria-label={t('Fermer')}>×</button>
     </div>
   )
 }
 
 export function Notifications() {
   const router = useRouter()
+  // L'abonnement : c'est lui qui redessine la cloche au changement de langue.
+  useTraduction()
   const [ouvert, setOuvert] = useState(false)
   const [nonLues, setNonLues] = useState(0)
   const [liste, setListe] = useState<Notif[]>([])
@@ -221,8 +226,8 @@ export function Notifications() {
       <button
         type="button"
         className="rail-onglet"
-        title="Notifications"
-        aria-label={nonLues > 0 ? `Notifications — ${nonLues} non lue${nonLues > 1 ? 's' : ''}` : 'Notifications'}
+        title={t('Notifications')}
+        aria-label={nonLues > 0 ? `${t('Notifications')} — ${tn('%{count} non lue', '%{count} non lues', nonLues)}` : t('Notifications')}
         aria-haspopup="dialog"
         aria-expanded={ouvert}
         onClick={basculer}
@@ -235,10 +240,10 @@ export function Notifications() {
       </button>
 
       {ouvert && (
-        <div className="notif-panneau" role="dialog" aria-label="Notifications">
-          <div className="notif-panneau-tete">Notifications</div>
+        <div className="notif-panneau" role="dialog" aria-label={t('Notifications')}>
+          <div className="notif-panneau-tete">{t('Notifications')}</div>
           {liste.length === 0 ? (
-            <p className="notif-vide">Rien pour l’instant.</p>
+            <p className="notif-vide">{t('Rien pour l’instant.')}</p>
           ) : (
             liste.map((n) => {
               const p = presenter(n)
@@ -255,12 +260,12 @@ export function Notifications() {
               return p.lien ? (
                 <button type="button" className="notif-rang notif-rang-lien" key={n.id} onClick={() => ouvrir(p.lien)}>
                   <span className="notif-corps">{corps}</span>
-                  {!n.lu && <span className="notif-point" aria-label="non lue" />}
+                  {!n.lu && <span className="notif-point" aria-label={t('non lue')} />}
                 </button>
               ) : (
                 <div className="notif-rang" key={n.id}>
                   <span className="notif-corps">{corps}</span>
-                  {!n.lu && <span className="notif-point" aria-label="non lue" />}
+                  {!n.lu && <span className="notif-point" aria-label={t('non lue')} />}
                 </div>
               )
             })

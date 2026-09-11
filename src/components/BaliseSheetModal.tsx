@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import {
   BALISE_FORMATS,
@@ -55,7 +56,7 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
 
   const preview = planBaliseSeries(format, start, count)
   const previewText = preview.ok
-    ? `Balises ${preview.series.from} à ${preview.series.to}`
+    ? t('Balises %{de} à %{a}', { de: preview.series.from, a: preview.series.to })
     : null
 
   return (
@@ -63,19 +64,18 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
       <ClavierEvite style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.card}>
-          <Text style={styles.title}>Créer des balises</Text>
+          <Text style={styles.title}>{t('Créer des balises')}</Text>
           <Text style={styles.intro}>
-            Choisissez la numérotation, puis imprimez la planche. Vous pourrez en créer d&apos;autres plus tard
-            en reprenant la série où elle s&apos;est arrêtée.
+            {t("Choisissez la numérotation, puis imprimez la planche. Vous pourrez en créer d'autres plus tard en reprenant la série où elle s'est arrêtée.")}
           </Text>
 
-          <Text style={styles.label}>Numérotation</Text>
+          <Text style={styles.label}>{t('Numérotation')}</Text>
           <View style={styles.chips}>
             {BALISE_FORMATS.map((f) => {
               const on = f.id === format
               return (
                 <Pressable key={f.id} style={[styles.chip, on && styles.chipOn]} onPress={() => pickFormat(f.id)}>
-                  <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{f.label}</Text>
+                  <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{t(f.label)}</Text>
                   <Text style={[styles.chipExample, on && styles.chipExampleOn, tabular]}>{f.example}</Text>
                 </Pressable>
               )
@@ -84,7 +84,7 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
 
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Premier numéro</Text>
+              <Text style={styles.label}>{t('Premier numéro')}</Text>
               <TextInput
                 style={[styles.input, tabular]}
                 value={start}
@@ -94,13 +94,13 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Nombre de balises</Text>
+              <Text style={styles.label}>{t('Nombre de balises')}</Text>
               <TextInput
                 style={[styles.input, tabular]}
                 value={count}
                 onChangeText={(v) => { setCount(v); setError(null) }}
                 keyboardType="number-pad"
-                placeholder="Ex: 50"
+                placeholder={t('Ex: 50')}
                 placeholderTextColor={theme.textMuted}
                 autoFocus
                 returnKeyType="done"
@@ -115,10 +115,10 @@ export function BaliseSheetModal({ visible, onClose, onSubmit }: Props) {
 
           <View style={styles.actions}>
             <Pressable style={[styles.btn, styles.btnSecondary]} onPress={onClose}>
-              <Text style={styles.btnSecondaryText}>Annuler</Text>
+              <Text style={styles.btnSecondaryText}>{t('Annuler')}</Text>
             </Pressable>
             <Pressable style={[styles.btn, styles.btnPrimary]} onPress={submit}>
-              <Text style={styles.btnPrimaryText}>Imprimer</Text>
+              <Text style={styles.btnPrimaryText}>{t('Imprimer')}</Text>
             </Pressable>
           </View>
         </View>

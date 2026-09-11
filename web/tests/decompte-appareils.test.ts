@@ -353,7 +353,7 @@ describe('le forfait trop juste se dit au client', () => {
     expect(cloche).toContain('proposer(')
     // ⚠️ Le libellé NOMME l'offre : « Découvrir » seul ne dit pas quoi, et une
     // invitation sans objet ne fait pas agir.
-    expect(cloche).toContain('`Découvrir ${offre.nom}`')
+    expect(cloche).toContain("t('Découvrir %{offre}', { offre: offre.nom })")
   })
 
   it('une bannière double la cloche, en haut à droite', () => {

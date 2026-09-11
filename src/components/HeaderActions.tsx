@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg'
 import { useThemeControls } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 
 // Icône profil (silhouette) — dessinée en SVG, pas d'emoji.
 function ProfileIcon() {
@@ -65,7 +66,7 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
           hitSlop={8}
           style={styles.btn}
           accessibilityRole="button"
-          accessibilityLabel="Mon compte"
+          accessibilityLabel={t('Mon compte')}
         >
           <ProfileIcon />
         </Pressable>
@@ -75,7 +76,7 @@ export function HeaderActions({ onProfile }: { onProfile?: () => void }) {
         hitSlop={8}
         style={styles.btn}
         accessibilityRole="button"
-        accessibilityLabel={`Thème : ${preference === 'system' ? 'système' : preference === 'light' ? 'clair' : 'sombre'}`}
+        accessibilityLabel={t('Thème : %{mode}', { mode: preference === 'system' ? t('système') : preference === 'light' ? t('clair') : t('sombre') })}
       >
         <ThemeIcon preference={preference} />
       </Pressable>

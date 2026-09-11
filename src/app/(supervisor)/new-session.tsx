@@ -19,6 +19,7 @@ import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 function generateCode(): string {
@@ -48,20 +49,20 @@ export default function NewSessionScreen() {
     // sans titrer « Erreur ». C'est le premier inventaire de quelqu'un qui
     // découvre l'app — le ton compte.
     if (!name.trim()) {
-      signaler.erreur('Nom manquant', "Donnez un nom à l'inventaire.")
+      signaler.erreur(t('Nom manquant'), t("Donnez un nom à l'inventaire."))
       return
     }
     // Le bouton est déjà inactif dans ce cas : garde silencieuse, pas d'alerte.
     if (!storeId) return
     if (securityCode.trim().length < 4) {
-      signaler.erreur('Code trop court', 'Le code de sécurité doit comporter au moins 4 caractères.')
+      signaler.erreur(t('Code trop court'), t('Le code de sécurité doit comporter au moins 4 caractères.'))
       return
     }
     setLoading(true)
     try {
       const result = await createSession(name.trim(), storeId, securityCode.trim(), usesZones)
       if (!result.success) {
-        signaler.erreur('Erreur', result.error ?? 'Impossible de créer l’inventaire.')
+        signaler.erreur(t('Erreur'), result.error ? errorMessage(result.error) : t('Impossible de créer l’inventaire.'))
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
@@ -78,7 +79,7 @@ export default function NewSessionScreen() {
       else router.replace(`/(supervisor)/${sid}/import?from=new`)
     } catch (e: unknown) {
       console.error('[new-session] createSession', e)
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -106,14 +107,14 @@ export default function NewSessionScreen() {
       <ClavierEvite style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.sectionTitle}>Informations de l&apos;inventaire</Text>
+          <Text style={styles.sectionTitle}>{t("Informations de l'inventaire")}</Text>
 
-          <Text style={styles.label}>{"Nom de l'inventaire"}</Text>
+          <Text style={styles.label}>{t("Nom de l'inventaire")}</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Ex: Inventaire annuel 2026"
+            placeholder={t('Ex: Inventaire annuel 2026')}
             placeholderTextColor={theme.textMuted}
           />
 
@@ -121,13 +122,13 @@ export default function NewSessionScreen() {
               « Magasin » ne dit pas qu'il y a un geste à faire. Avec un seul
               magasin il est déjà choisi, donc le titre reste neutre. */}
           <Text style={[styles.label, choixAttendu && styles.labelConsigne]}>
-            {choixAttendu ? 'Choisissez un magasin' : 'Magasin'}
+            {choixAttendu ? t('Choisissez un magasin') : t('Magasin')}
           </Text>
           {storesLoading ? (
             <ActivityIndicator color={theme.accent} style={{ marginVertical: Spacing.md }} />
           ) : noStores ? (
             <Text style={styles.emptyStores}>
-              Aucun magasin ne vous est affecté. Contactez votre administrateur pour être rattaché à un magasin.
+              {t('Aucun magasin ne vous est affecté. Contactez votre administrateur pour être rattaché à un magasin.')}
             </Text>
           ) : (
             <View style={styles.storeList}>
@@ -147,7 +148,7 @@ export default function NewSessionScreen() {
             </View>
           )}
 
-          <Text style={styles.label}>Code inventaire</Text>
+          <Text style={styles.label}>{t('Code inventaire')}</Text>
           <View style={styles.codeRow}>
             <TextInput
               style={[styles.input, { flex: 1 }]}
@@ -159,25 +160,25 @@ export default function NewSessionScreen() {
               placeholderTextColor={theme.textMuted}
             />
             <Pressable style={styles.regenBtn} onPress={() => setSecurityCode(generateCode())}>
-              <Text style={styles.regenText}>Générer</Text>
+              <Text style={styles.regenText}>{t('Générer')}</Text>
             </Pressable>
           </View>
           <Text style={styles.hint}>
-            {"Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cet inventaire."}
+            {t("Communiquez ce code à tous les membres de l'équipe pour qu'ils rejoignent cet inventaire.")}
           </Text>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Utiliser des zones / balises</Text>
+              <Text style={styles.switchLabel}>{t('Utiliser des zones / balises')}</Text>
               {/* ⚠️ Ce texte n'explique plus le mécanisme, il dit ce que le
                   choix CHANGE pour la personne — et qu'il est définitif. Le
                   mécanisme, elle le découvrira à l'écran suivant ; ce qu'elle
                   ne peut pas deviner, c'est qu'on ne revient pas là-dessus. */}
               <Text style={styles.hint}>
-                {"Chaque rayon porte une étiquette à scanner : plusieurs personnes comptent en parallèle sans se gêner, et l'avancement se lit rayon par rayon. Sans balises, on scanne les articles sans découpage — plus simple sur un petit stock."}
+                {t("Chaque rayon porte une étiquette à scanner : plusieurs personnes comptent en parallèle sans se gêner, et l'avancement se lit rayon par rayon. Sans balises, on scanne les articles sans découpage — plus simple sur un petit stock.")}
               </Text>
               <Text style={styles.hintFort}>
-                {"Ce choix ne se change plus après la création."}
+                {t('Ce choix ne se change plus après la création.')}
               </Text>
             </View>
             <Switch
@@ -189,7 +190,7 @@ export default function NewSessionScreen() {
           </View>
 
           <Pressable style={[styles.button, (loading || noStores || choixAttendu) && styles.buttonDisabled]} onPress={handleCreate} disabled={loading || noStores || choixAttendu}>
-            {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Créer l&apos;inventaire</Text>}
+            {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>{t("Créer l'inventaire")}</Text>}
           </Pressable>
         </ScrollView>
       </ClavierEvite>

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MODELE_REFERENCEMENT, MODELE_STOCK, telechargerModele, type Modele } from '@/lib/modeles'
 import { useToast } from '@/components/ui/Toast'
+import { t } from '@/lib/i18n'
 
 /**
  * Les deux modèles de fichiers d'import (demande de Julien, 25 août 2026).
@@ -18,7 +19,7 @@ export function ModelesPanel() {
     try {
       await telechargerModele(modele)
     } catch {
-      toast.error('Le téléchargement du modèle a échoué. Réessayez.')
+      toast.error(t('Le téléchargement du modèle a échoué. Réessayez.'))
     } finally {
       setOccupé(null)
     }
@@ -26,19 +27,16 @@ export function ModelesPanel() {
 
   return (
     <div className="panel">
-      <h3>Modèles de fichiers</h3>
+      <h3>{t('Modèles de fichiers')}</h3>
       <p>
-        Les deux fichiers attendus par l&apos;onglet Set up d&apos;un inventaire, avec leurs
-        colonnes déjà nommées et quelques lignes d&apos;exemple à remplacer. Les colonnes de
-        codes y sont en Texte — c&apos;est ce qui préserve les zéros de tête.
+        {t("Les deux fichiers attendus par l'onglet Set up d'un inventaire, avec leurs colonnes déjà nommées et quelques lignes d'exemple à remplacer. Les colonnes de codes y sont en Texte — c'est ce qui préserve les zéros de tête.")}
       </p>
       <div className="modeles">
         <div className="modele-row">
           <div>
-            <div className="modele-nom">Référencement <span className="role-tag">requis</span></div>
+            <div className="modele-nom">{t('Référencement')} <span className="role-tag">{t('requis')}</span></div>
             <p className="muted small" style={{ margin: 0 }}>
-              SKU, EAN, marque, libellé, prix d&apos;achat. Un même SKU peut occuper plusieurs
-              lignes, une par EAN — deux tailles d&apos;un article, chacune son code-barres.
+              {t("SKU, EAN, marque, libellé, prix d'achat. Un même SKU peut occuper plusieurs lignes, une par EAN — deux tailles d'un article, chacune son code-barres.")}
             </p>
           </div>
           <button
@@ -46,14 +44,14 @@ export function ModelesPanel() {
             disabled={occupe !== null}
             onClick={() => telecharger(MODELE_REFERENCEMENT)}
           >
-            {occupe === MODELE_REFERENCEMENT.fichier ? 'Préparation…' : 'Télécharger'}
+            {occupe === MODELE_REFERENCEMENT.fichier ? t('Préparation…') : t('Télécharger')}
           </button>
         </div>
         <div className="modele-row">
           <div>
-            <div className="modele-nom">Stock théorique <span className="role-tag">optionnel</span></div>
+            <div className="modele-nom">{t('Stock théorique')} <span className="role-tag">{t('optionnel')}</span></div>
             <p className="muted small" style={{ margin: 0 }}>
-              SKU et quantité attendue. Sans ce fichier, le rapport ne calcule aucun écart.
+              {t('SKU et quantité attendue. Sans ce fichier, le rapport ne calcule aucun écart.')}
             </p>
           </div>
           <button
@@ -61,7 +59,7 @@ export function ModelesPanel() {
             disabled={occupe !== null}
             onClick={() => telecharger(MODELE_STOCK)}
           >
-            {occupe === MODELE_STOCK.fichier ? 'Préparation…' : 'Télécharger'}
+            {occupe === MODELE_STOCK.fichier ? t('Préparation…') : t('Télécharger')}
           </button>
         </div>
       </div>

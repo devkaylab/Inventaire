@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Pagination, useRetourEnHaut } from '@/components/ui/Pagination'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Figure, Stat } from '@/components/ui/Stat'
+import { t, tn } from '@/lib/i18n'
 
 /**
  * ⚠️ LA LISTE SE LIT PAR PAGES (3 septembre 2026).
@@ -139,11 +140,11 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
     try {
       const r = await resolveAudit(sessionId, d.audit.sku, qty, d.audit.zone)
       if (!r.success) {
-        toast.error(r.error === 'invalid_qty' ? 'Quantité invalide.' : 'Correction impossible.')
+        toast.error(r.error === 'invalid_qty' ? t('Quantité invalide.') : t('Correction impossible.'))
         return
       }
       setInputs(p => { const next = { ...p }; delete next[d.key]; return next })
-      toast.success(`${labels[d.audit.sku]?.label || d.audit.sku} : ${fmtQty(qty)} retenu.`)
+      toast.success(t('%{article} : %{qte} retenu.', { article: labels[d.audit.sku]?.label || d.audit.sku, qte: fmtQty(qty) }))
       await load()
       await onResolved()
     } catch (err) {
@@ -157,7 +158,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
     const raw = inputs[d.key]
     const qty = raw == null || raw.trim() === '' ? d.audited : parseDecimal(raw)
     if (qty == null || qty < 0) {
-      toast.error('Entrez une quantité valide (nombre positif). La virgule est acceptée.')
+      toast.error(t('Entrez une quantité valide (nombre positif). La virgule est acceptée.'))
       return
     }
     await onResolve(d, qty)
@@ -165,9 +166,9 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
 
   async function onUndo(a: ArticleAudit) {
     const ok = await confirm({
-      title: 'Annuler cet arbitrage ?',
-      message: 'La ligne repassera en écart et devra être arbitrée à nouveau.',
-      confirmLabel: 'Annuler l’arbitrage',
+      title: t('Annuler cet arbitrage ?'),
+      message: t('La ligne repassera en écart et devra être arbitrée à nouveau.'),
+      confirmLabel: t('Annuler l’arbitrage'),
     })
     if (!ok) return
     setBusy(auditKey(a))
@@ -176,7 +177,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
       // dès que la ligne n'est plus « resolved » ; il suffit donc de la
       // supprimer de l'agrégat, sans toucher aux comptages eux-mêmes.
       await recomputeAuditAfterUndo(sessionId, a)
-      toast.success('Arbitrage annulé.')
+      toast.success(t('Arbitrage annulé.'))
       await load()
       await onResolved()
     } catch (err) {
@@ -191,16 +192,15 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
   // « 0 » des tuiles se lisait comme un résultat (constat de Julien).
   const pagesEcarts = Math.max(1, Math.ceil(totalFiltre / PAGE))
   const compteAffiche = totalFiltre === 0
-    ? 'Aucun écart à afficher'
+    ? t('Aucun écart à afficher')
     : `${nb(page * PAGE + 1)}–${nb(Math.min(totalFiltre, (page + 1) * PAGE))}`
-      + ` sur ${nb(totalFiltre)} écart${totalFiltre > 1 ? 's' : ''}`
+      + ` ${t('sur')} ${tn('%{count} écart', '%{count} écarts', totalFiltre)}`
 
   if (loading) {
     return (
       <div>
         <p className="chargement-note" role="status">
-          Recherche des écarts en cours… Sur un inventaire de plusieurs dizaines de milliers de
-          références, comptez quelques secondes.
+          {t('Recherche des écarts en cours… Sur un inventaire de plusieurs dizaines de milliers de références, comptez quelques secondes.')}
         </p>
         <SkeletonRows rows={4} />
       </div>
@@ -215,45 +215,42 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
        29 août. Registre habille ce qu'on lit, il n'éteint pas ce qui engage. */
     <div className="registre">
       <div className="registre-entete">
-        <h2 className="registre-titre">Écarts d’audit</h2>
+        <h2 className="registre-titre">{t('Écarts d’audit')}</h2>
       </div>
 
       {/* ⚠️ Sans résumé, « — » et jamais « 0 » : un zéro d'écart se lit comme
           une victoire, et celui-là n'aurait rien mesuré. */}
       <div className="dash-stats">
         <Stat
-          label="Écarts à traiter"
+          label={t('Écarts à traiter')}
           value={resume ? nb(stats.total) : '—'}
           tone={!resume ? 'neutral' : stats.total > 0 ? 'neg' : 'pos'}
         />
-        <Stat label="Quantités différentes" value={resume ? nb(stats.byKind.quantity) : '—'} />
+        <Stat label={t('Quantités différentes')} value={resume ? nb(stats.byKind.quantity) : '—'} />
         <Stat
-          label="Non retrouvés à l’audit"
+          label={t('Non retrouvés à l’audit')}
           value={resume ? nb(stats.byKind['missing-audit']) : '—'}
           tone={resume && stats.byKind['missing-audit'] > 0 ? 'warn' : 'neutral'}
         />
-        <Stat label="Arbitrés" value={resume ? nb(resume.arbitres) : '—'} tone={resume ? 'pos' : 'neutral'} />
+        <Stat label={t('Arbitrés')} value={resume ? nb(resume.arbitres) : '—'} tone={resume ? 'pos' : 'neutral'} />
       </div>
 
       {!resume && (
         <div className="banner banner-warn">
-          Les écarts n’ont pas pu être calculés — le serveur a mis trop de temps à répondre.
-          Rien n’est perdu, les comptages sont intacts :{' '}
-          <button type="button" className="link-btn" onClick={() => void load()}>réessayer</button>.
+          {t('Les écarts n’ont pas pu être calculés — le serveur a mis trop de temps à répondre. Rien n’est perdu, les comptages sont intacts :')}{' '}
+          <button type="button" className="link-btn" onClick={() => void load()}>{t('réessayer')}</button>.
         </div>
       )}
 
       <p className="muted small" style={{ marginBottom: 12 }}>
-        L’écart se lit <strong>du point de vue de l’auditeur</strong> : écart = quantité de l’auditeur
-        moins quantité du compteur. La comparaison n’a lieu que dans une balise dont l’audit est
-        terminé — sinon tout article pas encore repassé ressortirait à tort en écart.
+        {t('L’écart se lit ')}<strong>{t('du point de vue de l’auditeur')}</strong>{t(' : écart = quantité de l’auditeur moins quantité du compteur. La comparaison n’a lieu que dans une balise dont l’audit est terminé — sinon tout article pas encore repassé ressortirait à tort en écart.')}
       </p>
 
       {zoneOptions.length > 1 && (
         <div className="toolbar">
-          <label htmlFor="zone-filter" className="dash-section-label">Emplacement</label>
+          <label htmlFor="zone-filter" className="dash-section-label">{t('Emplacement')}</label>
           <select id="zone-filter" value={zoneFilter} onChange={e => setZoneFilter(e.target.value)}>
-            <option value="all">Tous ({nb(stats.total)})</option>
+            <option value="all">{t('Tous')} ({nb(stats.total)})</option>
             {zoneOptions.map(z => (
               <option key={z.nom} value={z.nom}>{z.nom} ({nb(z.lignes)})</option>
             ))}
@@ -269,7 +266,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         <Pagination page={page} pages={pagesEcarts} chargement={chargeantPage} onPage={setPage}>
           <span className="muted small">
             {compteAffiche}
-            {chargeantPage && ' · chargement…'}
+            {chargeantPage && ` · ${t('chargement…')}`}
           </span>
         </Pagination>
       )}
@@ -278,21 +275,21 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
         <EmptyState
           tone={(resume?.arbitres ?? 0) > 0 || stats.total > 0 ? 'ok' : 'neutral'}
           title={stats.total === 0
-            ? 'Aucun écart entre le comptage et l’audit'
-            : 'Aucun écart dans cet emplacement'}
+            ? t('Aucun écart entre le comptage et l’audit')
+            : t('Aucun écart dans cet emplacement')}
           hint={stats.total === 0
-            ? 'Soit les chiffres concordent, soit l’audit des balises concernées n’est pas encore terminé.'
-            : 'Choisissez « Tous » pour voir les autres emplacements.'}
+            ? t('Soit les chiffres concordent, soit l’audit des balises concernées n’est pas encore terminé.')
+            : t('Choisissez « Tous » pour voir les autres emplacements.')}
         />
       ) : groups.map(g => (
         <div key={g.zone || '_'} style={{ marginBottom: 20 }}>
           {g.zone !== '' && (
             <div className="group-head">
               <div className="dash-section-label">
-                Balise {g.zone}{g.name ? ` · ${g.name}` : ''}
+                {t('Balise')} {g.zone}{g.name ? ` · ${g.name}` : ''}
               </div>
               <span className="dash-audit-badge dash-audit-badge-failed">
-                {g.rows.length} écart{g.rows.length > 1 ? 's' : ''}
+                {tn('%{count} écart', '%{count} écarts', g.rows.length)}
               </span>
             </div>
           )}
@@ -309,14 +306,14 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                     <div className="muted small dash-art-code">
                       SKU {d.audit.sku}{lbl?.brand ? ` · ${lbl.brand}` : ''}
                     </div>
-                    <div className="muted small" style={{ marginTop: 4 }}>{KIND_LABELS[d.kind]}</div>
+                    <div className="muted small" style={{ marginTop: 4 }}>{t(KIND_LABELS[d.kind])}</div>
                   </div>
 
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <Figure label="Compteur" value={fmtQty(d.counted)} />
-                    <Figure label="Auditeur" value={fmtQty(d.audited)} />
-                    <Figure label="Écart" value={`${fmtSigned(d.ecart)} u`} tone={d.ecart < 0 ? 'neg' : 'pos'} />
-                    <Figure label="Valeur" value={`${money(d.ecartValue)} €`} tone={d.ecartValue < 0 ? 'neg' : undefined} />
+                    <Figure label={t('Compteur')} value={fmtQty(d.counted)} />
+                    <Figure label={t('Auditeur')} value={fmtQty(d.audited)} />
+                    <Figure label={t('Écart')} value={`${fmtSigned(d.ecart)} u`} tone={d.ecart < 0 ? 'neg' : 'pos'} />
+                    <Figure label={t('Valeur')} value={`${money(d.ecartValue)} €`} tone={d.ecartValue < 0 ? 'neg' : undefined} />
                   </div>
 
                   {!readOnly && (
@@ -325,24 +322,24 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                         type="button" className="btn btn-compteur btn-sm"
                         disabled={busy === d.key}
                         onClick={() => onResolve(d, d.counted)}
-                        title="Retenir la quantité du compteur"
+                        title={t('Retenir la quantité du compteur')}
                       >
-                        Compteur
+                        {t('Compteur')}
                       </button>
                       <button
                         type="button" className="btn btn-auditeur btn-sm"
                         disabled={busy === d.key}
                         onClick={() => onResolve(d, d.audited)}
-                        title="Retenir la quantité de l'auditeur"
+                        title={t("Retenir la quantité de l'auditeur")}
                       >
-                        Auditeur
+                        {t('Auditeur')}
                       </button>
                       <input
                         className="dash-audit-input"
                         inputMode="decimal"
-                        aria-label="Quantité retenue"
+                        aria-label={t('Quantité retenue')}
                         aria-invalid={invalid}
-                        placeholder="Autre"
+                        placeholder={t('Autre')}
                         value={typed}
                         onChange={e => setInputs(p => ({ ...p, [d.key]: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') void onResolveTyped(d) }}
@@ -352,7 +349,7 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                         disabled={busy === d.key || invalid}
                         onClick={() => onResolveTyped(d)}
                       >
-                        Retenir
+                        {t('Retenir')}
                       </button>
                     </div>
                   )}
@@ -371,11 +368,10 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
 
       {resolved.length > 0 && (
         <details className="collapsible">
-          <summary>Écarts arbitrés ({nb(resume?.arbitres ?? resolved.length)})</summary>
+          <summary>{t('Écarts arbitrés')} ({nb(resume?.arbitres ?? resolved.length)})</summary>
           <div className="collapsible-body">
             <p className="muted small" style={{ marginBottom: 12 }}>
-              Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport.
-              Un nouveau comptage ne l’écrase pas.
+              {t('Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport. Un nouveau comptage ne l’écrase pas.')}
             </p>
             <div className="dash-audit-list">
               {resolved.map(a => (
@@ -383,23 +379,23 @@ export function EcartsTab({ sessionId, zones, readOnly, onResolved }: {
                   <div className="dash-audit-info">
                     <div className="dash-art-label">{labels[a.sku]?.label || a.sku}</div>
                     <div className="muted small">
-                      SKU {a.sku}{a.zone ? ` · balise ${a.zone}` : ''} · arbitré {relativeTime(a.updated_at)}
+                      SKU {a.sku}{a.zone ? ` · ${t('balise')} ${a.zone}` : ''} · {t('arbitré %{quand}', { quand: relativeTime(a.updated_at) })}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <Figure label="Compteur" value={fmtQty(Number(a.qty_pass1 ?? 0))} />
-                    <Figure label="Auditeur" value={fmtQty(Number(a.qty_pass2 ?? 0))} />
-                    <Figure label="Retenu" value={fmtQty(Number(a.final_qty ?? 0))} tone="accent" />
+                    <Figure label={t('Compteur')} value={fmtQty(Number(a.qty_pass1 ?? 0))} />
+                    <Figure label={t('Auditeur')} value={fmtQty(Number(a.qty_pass2 ?? 0))} />
+                    <Figure label={t('Retenu')} value={fmtQty(Number(a.final_qty ?? 0))} tone="accent" />
                   </div>
                   {!readOnly && (
                     <div className="dash-audit-actions">
-                      <span className="dash-audit-badge dash-audit-badge-resolved">Arbitré</span>
+                      <span className="dash-audit-badge dash-audit-badge-resolved">{t('Arbitré')}</span>
                       <button
                         type="button" className="link-btn"
                         disabled={busy === auditKey(a)}
                         onClick={() => onUndo(a)}
                       >
-                        Annuler l’arbitrage
+                        {t('Annuler l’arbitrage')}
                       </button>
                     </div>
                   )}

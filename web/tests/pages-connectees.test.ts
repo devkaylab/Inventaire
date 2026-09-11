@@ -173,7 +173,7 @@ describe('/equipe : une équipe se compare, elle ne se lit pas', () => {
     expect(src).toContain('className="membres"')
     for (const colonne of ['Personne', 'Rôle', 'Magasins', 'Activité']) {
       expect(src, `la colonne ${colonne} doit avoir son en-tête`)
-        .toContain(`<div className="membres-th">${colonne}</div>`)
+        .toContain(`<div className="membres-th">{t('${colonne}')}</div>`)
     }
   })
 
@@ -193,8 +193,8 @@ describe('/equipe : une équipe se compare, elle ne se lit pas', () => {
     const menu = code(lire('components/ui/MenuActions.tsx'))
     expect(menu).toContain('destructif')
     // L'action destructive est écrite en dernier dans la liste des actions.
-    const iSupprimer = src.indexOf("libelle: 'Supprimer le compte'")
-    const iRole = src.indexOf("libelle: superviseur ? 'Passer compteur'")
+    const iSupprimer = src.indexOf("libelle: t('Supprimer le compte')")
+    const iRole = src.indexOf("libelle: superviseur ? t('Passer compteur')")
     expect(iSupprimer).toBeGreaterThan(iRole)
   })
 
@@ -227,7 +227,7 @@ describe('/magasins : le compte quitte le titre', () => {
     // Un nombre entre parenthèses dans un titre n'aide personne à décider ; il
     // vit dans la bande, où il se compare aux autres. Même geste que
     // « Superviseurs · 3 » sur la fiche d'un magasin.
-    expect(src).toContain('<h1 className="page-title">Magasins</h1>')
+    expect(src).toContain("<h1 className=\"page-title\">{t('Magasins')}</h1>")
     expect(src).not.toMatch(/Magasins\{estAdmin && magasins\.length > 0/)
   })
 
@@ -246,8 +246,8 @@ describe('/magasins : le compte quitte le titre', () => {
   })
 
   it('les demandes passent DEVANT l’ajout, et disparaissent quand il n’y en a pas', () => {
-    const iDemandes = src.indexOf('<h2>Demandes en cours</h2>')
-    const iAjout = src.indexOf('<h2>Ajouter un magasin</h2>')
+    const iDemandes = src.indexOf("<h2>{t('Demandes en cours')}</h2>")
+    const iAjout = src.indexOf("<h2>{t('Ajouter un magasin')}</h2>")
     expect(iDemandes).toBeGreaterThan(-1)
     expect(iDemandes).toBeLessThan(iAjout)
     expect(src).toMatch(/demandes\.length > 0 && \(\s*<section className="admin-section">/)

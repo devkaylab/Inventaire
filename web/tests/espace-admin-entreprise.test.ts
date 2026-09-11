@@ -295,9 +295,9 @@ describe('la fiche d’un magasin', () => {
     // devenu « Équipe » — le mot de la page qui les gère. Une garde qui tient
     // à une tournure casse au premier ajustement de texte sans rien avoir
     // protégé ; celle-ci vise les SECTIONS et leur source.
-    expect(fiche).toContain('Code d&apos;accès')
-    expect(fiche).toContain('<h2>Équipe</h2>')
-    expect(fiche).toContain('<h2>Inventaires</h2>')
+    expect(fiche).toContain("Code d'accès")
+    expect(fiche).toContain("<h2>{t('Équipe')}</h2>")
+    expect(fiche).toContain("<h2>{t('Inventaires')}</h2>")
     expect(fiche).toContain('fiche.supervisors.map')
     expect(fiche).toContain('fiche.counters.map')
     expect(fiche).toContain("rpc('ca_store_detail'")

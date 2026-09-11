@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { Modal } from '@/components/ui/Modal'
+import { t, tn } from '@/lib/i18n'
 
 type Membre = {
   id: string
@@ -36,7 +37,7 @@ type Membre = {
 /** Le nom qu'on affiche, sans jamais laisser un blanc à la place de quelqu'un. */
 function nomDe(m: Membre): string {
   const complet = [m.first_name, m.last_name].filter(Boolean).join(' ').trim()
-  return m.full_name?.trim() || complet || m.email || 'Sans nom'
+  return m.full_name?.trim() || complet || m.email || t('Sans nom')
 }
 
 export function QuiSupervise({
@@ -72,7 +73,7 @@ export function QuiSupervise({
     })
     setEnCours(null)
     if (error || !data?.success) {
-      setErreur(data?.error ?? error?.message ?? 'Affectation impossible.')
+      setErreur(data?.error ?? error?.message ?? t('Affectation impossible.'))
       return
     }
     setFaits((f) => [...f, m.id])
@@ -82,13 +83,13 @@ export function QuiSupervise({
 
   return (
     <Modal
-      title={`« ${magasin} » est créé`}
+      title={t('« %{nom} » est créé', { nom: magasin })}
       onClose={onClose}
       footer={
         <>
-          <Link href="/equipe" className="btn btn-ghost btn-sm">Inviter un superviseur</Link>
+          <Link href="/equipe" className="btn btn-ghost btn-sm">{t('Inviter un superviseur')}</Link>
           <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>
-            {faits.length > 0 ? 'Terminé' : 'Plus tard'}
+            {faits.length > 0 ? t('Terminé') : t('Plus tard')}
           </button>
         </>
       }
@@ -97,14 +98,14 @@ export function QuiSupervise({
         {/* ⚠️ On dit POURQUOI la question se pose ici : sans superviseur, le
             magasin ne sert à rien. Sans ce mot, la fenêtre passe pour une
             étape de plus. */}
-        Un magasin sans superviseur ne peut pas lancer d’inventaire.
+        {t('Un magasin sans superviseur ne peut pas lancer d’inventaire.')}
       </p>
 
       {membres === null ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t('Chargement…')}</p>
       ) : membres.length === 0 ? (
         <p className="muted small">
-          Votre entreprise n’a pas encore de superviseur. Invitez-en un depuis la page Équipe.
+          {t('Votre entreprise n’a pas encore de superviseur. Invitez-en un depuis la page Équipe.')}
         </p>
       ) : (
         <div className="req-list">
@@ -119,13 +120,13 @@ export function QuiSupervise({
                   <span className="qs-mail">{m.email}</span>
                   {(m.store_ids?.length ?? 0) > 0 && (
                     <span className="qs-compte">
-                      · {m.store_ids.length} magasin{m.store_ids.length > 1 ? 's' : ''}
+                      · {tn('%{count} magasin', '%{count} magasins', m.store_ids.length)}
                     </span>
                   )}
                 </div>
               </div>
               {faits.includes(m.id) ? (
-                <span className="pill pill-vous">Affecté</span>
+                <span className="pill pill-vous">{t('Affecté')}</span>
               ) : (
                 <button
                   type="button"
@@ -133,7 +134,7 @@ export function QuiSupervise({
                   disabled={enCours === m.id}
                   onClick={() => affecter(m)}
                 >
-                  {enCours === m.id ? 'Un instant…' : 'Affecter'}
+                  {enCours === m.id ? t('Un instant…') : t('Affecter')}
                 </button>
               )}
             </div>

@@ -3,6 +3,7 @@ import Svg, { Path, Circle } from 'react-native-svg'
 
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 
 /**
  * Une astuce : ce que l'écran ne dit pas, dit une fois, à sa place.
@@ -32,7 +33,7 @@ export function Astuce({
   children,
   ton = 'info',
   onCompris,
-  libelleCompris = 'Compris',
+  libelleCompris,
 }: {
   titre: string
   /** Absent : l'astuce tient en une ligne. Un ÉTAT permanent n'explique pas. */
@@ -73,7 +74,7 @@ export function Astuce({
           accessibilityRole="button"
           hitSlop={{ top: 6, bottom: 6, left: 12, right: 12 }}
         >
-          <Text style={styles.boutonTexte}>{libelleCompris}</Text>
+          <Text style={styles.boutonTexte}>{libelleCompris ?? t('Compris')}</Text>
         </Pressable>
       )}
     </View>

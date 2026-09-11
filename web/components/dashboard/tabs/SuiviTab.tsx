@@ -11,6 +11,7 @@ import { ZoneProgressList } from '@/components/dashboard/ZoneProgressList'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { Stat } from '@/components/ui/Stat'
 import { fmtQty, nb, plural } from '@/lib/format'
+import { t, tn } from '@/lib/i18n'
 
 export function SuiviTab({
   session, zones, presence, recent, unknownVersions, totals, readOnly, onZonesChanged,
@@ -75,15 +76,15 @@ export function SuiviTab({
           une deuxième ligne. Voir `.dash-stats-5` dans globals.css. */}
       <div className="dash-stats dash-stats-5">
         <Stat
-          label="Appareils connectés"
+          label={t('Appareils connectés')}
           value={nb(live.devices)}
           tone={live.devices > 0 ? 'pos' : 'neutral'}
           sub={live.devices > 0 ? 'sur cet inventaire' : 'aucun appareil connecté'}
         />
-        <Stat label="En comptage" value={nb(live.counting)} />
-        <Stat label="En audit" value={nb(live.auditing)} />
+        <Stat label={t('En comptage')} value={nb(live.counting)} />
+        <Stat label={t('En audit')} value={nb(live.auditing)} />
         <Stat
-          label="Pièces comptées"
+          label={t('Pièces comptées')}
           value={fmtQty(totals.counted)}
           sub={plural(totals.audited, 'auditée', 'auditées')}
         />
@@ -91,7 +92,7 @@ export function SuiviTab({
             300 pièces sur 4 références n'est pas le même inventaire que
             300 pièces sur 250 références. */}
         <Stat
-          label="Références comptées"
+          label={t('Références comptées')}
           value={fmtQty(totals.countedSkus)}
           sub={plural(totals.auditedSkus, 'auditée', 'auditées')}
         />
@@ -99,20 +100,19 @@ export function SuiviTab({
 
       {unknownVersions > 0 && (
         <div className="banner banner-warn">
-          {plural(unknownVersions, 'appareil utilise', 'appareils utilisent')} une version de
-          l&apos;application dont le format est inconnu : {unknownVersions === 1 ? 'il n’est' : 'ils ne sont'}{' '}
-          pas {unknownVersions === 1 ? 'compté' : 'comptés'} ci-dessus. Les scans, eux, remontent normalement.
+          {tn("%{count} appareil utilise une version de l'application dont le format est inconnu : il n’est pas compté ci-dessus. Les scans, eux, remontent normalement.",
+            "%{count} appareils utilisent une version de l'application dont le format est inconnu : ils ne sont pas comptés ci-dessus. Les scans, eux, remontent normalement.", unknownVersions)}
         </div>
       )}
 
       {session.uses_zones && (
         <>
-          <div className="dash-section-label" style={{ margin: '4px 0 10px' }}>Avancement par zone</div>
+          <div className="dash-section-label" style={{ margin: '4px 0 10px' }}>{t('Avancement par zone')}</div>
           <ZoneProgressList zones={zones} onOpenZone={g => setOpenZone(g.name)} />
         </>
       )}
 
-      <div className="dash-section-label" style={{ margin: '28px 0 10px' }}>Derniers scans</div>
+      <div className="dash-section-label" style={{ margin: '28px 0 10px' }}>{t('Derniers scans')}</div>
       <ActivityFeed events={recent} zoneNames={zoneNames} />
     </div>
   )

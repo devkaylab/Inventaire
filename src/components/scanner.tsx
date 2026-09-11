@@ -50,6 +50,7 @@ import { loadScanSound, playScanSound, playErrorSound, unloadScanSound } from '@
 import { pingSession, useSessionPresence, type PresenceActivity } from '@/lib/presence'
 import { usePlaceAppareil } from '@/lib/appareil'
 import { demander, demanderChoix, signaler } from '@/lib/dialogue'
+import { t, tn } from '@/lib/i18n'
 import { redresserSaisie, redresserNumero, clavierDecale } from '@/lib/douchette'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
@@ -117,7 +118,7 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
     // (report.ts) blanks the SKU column when sku === ean, so it stays invisible.
     const trimmedSku = sku.trim() || trimmedEan
     if (!trimmedSku) {
-      signaler.erreur('Erreur', 'Saisissez au moins un code (SKU ou EAN).')
+      signaler.erreur(t('Erreur'), t('Saisissez au moins un code (SKU ou EAN).'))
       return
     }
     setSaving(true)
@@ -132,7 +133,7 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
       }, zone)
       onConfirm(article)
     } catch (e) {
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -149,19 +150,19 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
               <Text style={styles.illIcon}>?</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.illTitle}>Article inconnu</Text>
-              <Text style={styles.illSub}>Saisissez les informations disponibles</Text>
+              <Text style={styles.illTitle}>{t('Article inconnu')}</Text>
+              <Text style={styles.illSub}>{t('Saisissez les informations disponibles')}</Text>
             </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* EAN / barcode — pre-filled with the scanned code */}
-            <Text style={styles.fieldLabel}>EAN / code-barres</Text>
+            <Text style={styles.fieldLabel}>{t('EAN / code-barres')}</Text>
             <TextInput
               style={styles.fieldInput}
               value={ean}
               onChangeText={setEan}
-              placeholder="Ex: 3701234567890"
+              placeholder={t('Ex: 3701234567890')}
               placeholderTextColor={theme.textMuted}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -169,38 +170,38 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
             />
 
             {/* SKU / code article — optional */}
-            <Text style={styles.fieldLabel}>Code article (SKU)</Text>
+            <Text style={styles.fieldLabel}>{t('Code article (SKU)')}</Text>
             <TextInput
               style={styles.fieldInput}
               value={sku}
               onChangeText={setSku}
-              placeholder="Ex: REF-001 (optionnel)"
+              placeholder={t('Ex: REF-001 (optionnel)')}
               placeholderTextColor={theme.textMuted}
               autoCapitalize="characters"
               autoCorrect={false}
               returnKeyType="next"
             />
-            <Text style={styles.fieldHint}>Renseignez au moins un des deux codes.</Text>
+            <Text style={styles.fieldHint}>{t('Renseignez au moins un des deux codes.')}</Text>
 
             {/* Brand */}
-            <Text style={styles.fieldLabel}>Marque</Text>
+            <Text style={styles.fieldLabel}>{t('Marque')}</Text>
             <TextInput
               style={styles.fieldInput}
               value={brand}
               onChangeText={setBrand}
-              placeholder="Ex: Nike, Adidas…"
+              placeholder={t('Ex: Nike, Adidas…')}
               placeholderTextColor={theme.textMuted}
               autoCorrect={false}
               returnKeyType="next"
             />
 
             {/* Label / details */}
-            <Text style={styles.fieldLabel}>Désignation / Détails</Text>
+            <Text style={styles.fieldLabel}>{t('Désignation / Détails')}</Text>
             <TextInput
               style={[styles.fieldInput, styles.fieldInputMulti]}
               value={label}
               onChangeText={setLabel}
-              placeholder="Ex: T-shirt rouge taille M, Pantalon bleu L…"
+              placeholder={t('Ex: T-shirt rouge taille M, Pantalon bleu L…')}
               placeholderTextColor={theme.textMuted}
               multiline
               numberOfLines={3}
@@ -208,14 +209,14 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
             />
 
             <Text style={styles.illNote}>
-              {"Cet article sera ajouté au référentiel de l'inventaire avec un prix d'achat à 0 €."}
+              {t("Cet article sera ajouté au référentiel de l'inventaire avec un prix d'achat à 0 €.")}
             </Text>
           </ScrollView>
 
           {/* Buttons */}
           <View style={styles.illBtnRow}>
             <Pressable style={styles.illBtnCancel} onPress={onCancel}>
-              <Text style={styles.illBtnCancelText}>Ignorer</Text>
+              <Text style={styles.illBtnCancelText}>{t('Ignorer')}</Text>
             </Pressable>
             <Pressable
               style={[styles.illBtnConfirm, saving && { opacity: 0.6 }]}
@@ -224,7 +225,7 @@ function IllisibleModal({ scannedCode, sessionId, zone, onConfirm, onCancel }: I
             >
               {saving
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.illBtnConfirmText}>Ajouter au comptage</Text>}
+                : <Text style={styles.illBtnConfirmText}>{t('Ajouter au comptage')}</Text>}
             </Pressable>
           </View>
         </View>
@@ -871,22 +872,24 @@ export function Scanner({
     code: string, faite: { unites: number; refs: number },
   ): Promise<boolean> {
     const compte = baliseModeRef.current === 'count'
-    const p = faite.unites > 1 ? 's' : ''
-    const r = faite.refs > 1 ? 's' : ''
-    const geste = compte ? 'comptage' : 'audit'
+    const refs = tn('%{count} référence', '%{count} références', faite.refs)
     const ok = await demander({
-      titre: `Effacer le ${geste} de la balise ${code} ?`,
-      texte: `${faite.unites} pièce${p} sur ${faite.refs} référence${r} seront `
-        + `effacée${p} — celles de toute l’équipe, pas seulement les vôtres. `
-        + `La balise redeviendra à faire, et vous la ${
-          compte ? 'compterez' : 'auditerez'} comme neuve.`,
+      titre: compte
+        ? t('Effacer le comptage de la balise %{code} ?', { code })
+        : t('Effacer l’audit de la balise %{code} ?', { code }),
+      texte: compte
+        ? tn('%{count} pièce sur %{refs} sera effacée — celle de toute l’équipe, pas seulement la vôtre. La balise redeviendra à faire, et vous la compterez comme neuve.',
+            '%{count} pièces sur %{refs} seront effacées — celles de toute l’équipe, pas seulement les vôtres. La balise redeviendra à faire, et vous la compterez comme neuve.',
+            faite.unites, { refs })
+        : tn('%{count} pièce sur %{refs} sera effacée — celle de toute l’équipe, pas seulement la vôtre. La balise redeviendra à faire, et vous l’auditerez comme neuve.',
+            '%{count} pièces sur %{refs} seront effacées — celles de toute l’équipe, pas seulement les vôtres. La balise redeviendra à faire, et vous l’auditerez comme neuve.',
+            faite.unites, { refs }),
       // ⚠️ Elle dit ce qui arrive si on NE recompte pas — c'est la seule
       // conséquence qu'on ne voit pas venir. « Le rayon est toujours là, il se
       // recompte » rassurait ; ça ne prévenait pas (Julien, 8 septembre 2026).
-      note: 'Rien n’est récupérable ensuite. Il faudra recommencer, sinon la '
-        + 'balise restera marquée « à faire ».',
-      action: `Effacer et re${compte ? 'compter' : 'faire l’audit'}`,
-      annuler: 'Annuler',
+      note: t('Rien n’est récupérable ensuite. Il faudra recommencer, sinon la balise restera marquée « à faire ».'),
+      action: compte ? t('Effacer et recompter') : t('Effacer et refaire l’audit'),
+      annuler: t('Annuler'),
       ton: 'danger',
     })
     if (!ok) return false
@@ -898,17 +901,17 @@ export function Scanner({
       const res = await viderBalise(sessionId, code, baliseModeRef.current)
       if (!res.success) {
         playErrorSound()
-        signaler.erreur('Balise', res.error ?? 'Impossible de vider cette balise.')
+        signaler.erreur(t('Balise'), res.error ? errorMessage(res.error) : t('Impossible de vider cette balise.'))
         return false
       }
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
       setRecentScans([])
-      signaler.succes(`Balise ${code} remise à zéro`,
-        `Vous pouvez ${compte ? 'la compter' : 'l’auditer'} comme neuve.`)
+      signaler.succes(t('Balise %{code} remise à zéro', { code }),
+        compte ? t('Vous pouvez la compter comme neuve.') : t('Vous pouvez l’auditer comme neuve.'))
       return true
     } catch (e) {
       playErrorSound()
-      signaler.erreur('Balise', errorMessage(e))
+      signaler.erreur(t('Balise'), errorMessage(e))
       return false
     }
   }
@@ -930,32 +933,33 @@ export function Scanner({
     /** Vrai après « Compléter » : on montre ce qui est déjà là. */
     let montrerListe = false
     if (faite) {
-      const p = faite.unites > 1 ? 's' : ''
-      const r = faite.refs > 1 ? 's' : ''
-      const dejaLa = `${faite.unites} pièce${p} sur ${faite.refs} référence${r} y sont déjà `
-        + `enregistrée${p}`
+      const refs = tn('%{count} référence', '%{count} références', faite.refs)
+      const dejaLa = tn('%{count} pièce sur %{refs} y est déjà enregistrée',
+        '%{count} pièces sur %{refs} y sont déjà enregistrées', faite.unites, { refs })
       const choix = await demanderChoix({
         // Clôturée : quelqu'un a fini. En cours : quelqu'un est peut-être
         // encore dessus — ce n'est pas la même chose à savoir.
         titre: faite.cloturee
-          ? `Balise ${code} déjà ${compte ? 'comptée' : 'auditée'}`
-          : `Balise ${code} ${compte ? 'en cours de comptage' : 'en cours d’audit'}`,
-        surtitre: faite.cloturee ? undefined : 'Attention',
+          ? (compte ? t('Balise %{code} déjà comptée', { code }) : t('Balise %{code} déjà auditée', { code }))
+          : (compte ? t('Balise %{code} en cours de comptage', { code }) : t('Balise %{code} en cours d’audit', { code })),
+        surtitre: faite.cloturee ? undefined : t('Attention'),
         texte: faite.cloturee
-          ? `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} a été clôturé.`
-          : `${dejaLa}, et le ${compte ? 'comptage' : 'audit'} n’est pas clôturé — `
-            + 'quelqu’un est peut-être encore dessus.',
+          ? (compte ? t('%{deja}, et le comptage a été clôturé.', { deja: dejaLa }) : t('%{deja}, et l’audit a été clôturé.', { deja: dejaLa }))
+          : (compte
+            ? t('%{deja}, et le comptage n’est pas clôturé — quelqu’un est peut-être encore dessus.', { deja: dejaLa })
+            : t('%{deja}, et l’audit n’est pas clôturé — quelqu’un est peut-être encore dessus.', { deja: dejaLa })),
         // ⚠️ La note dit ce que chaque bouton FAIT des pièces déjà là. C'est
         // tout l'objet de la carte : « rien n'est effacé » promettait le
         // contraire de ce qu'on vient faire la plupart du temps, et laissait
         // doubler le rayon sans le dire.
-        note: `Compléter garde ${
-          faite.unites > 1 ? 'ces pièces' : 'cette pièce'} et ajoute les vôtres. `
-          + `Re${compte ? 'compter' : 'faire l’audit'} à zéro ${
-            faite.unites > 1 ? 'les' : 'la'} efface, pour toute l’équipe.`,
-        action: compte ? 'Compléter le comptage' : 'Compléter l’audit',
-        alternative: compte ? 'Recompter à zéro' : 'Refaire l’audit à zéro',
-        annuler: 'Ne pas ouvrir',
+        note: compte
+          ? tn('Compléter garde cette pièce et ajoute les vôtres. Recompter à zéro la efface, pour toute l’équipe.',
+              'Compléter garde ces pièces et ajoute les vôtres. Recompter à zéro les efface, pour toute l’équipe.', faite.unites)
+          : tn('Compléter garde cette pièce et ajoute les vôtres. Refaire l’audit à zéro la efface, pour toute l’équipe.',
+              'Compléter garde ces pièces et ajoute les vôtres. Refaire l’audit à zéro les efface, pour toute l’équipe.', faite.unites),
+        action: compte ? t('Compléter le comptage') : t('Compléter l’audit'),
+        alternative: compte ? t('Recompter à zéro') : t('Refaire l’audit à zéro'),
+        annuler: t('Ne pas ouvrir'),
       })
       if (choix === 'annuler') return
       // ⚠️ Le remplacement n'est JAMAIS le défaut, il est le second bouton — et
@@ -1037,10 +1041,10 @@ export function Scanner({
         // de code d'erreur distinct côté base).
         if (!allowCreate && /non\s+d[ée]finie/i.test(result.error ?? '')) {
           void demander({
-            titre: 'Balise hors plage',
-            texte: `La balise ${code} n'appartient à aucune plage de cet inventaire. Vérifiez le numéro.`,
-            note: 'Si l’étiquette est bien collée dans ce magasin, ajoutez-la pour compter tout de suite — le superviseur lui donnera son emplacement ensuite.',
-            action: 'Ajouter',
+            titre: t('Balise hors plage'),
+            texte: t("La balise %{code} n'appartient à aucune plage de cet inventaire. Vérifiez le numéro.", { code }),
+            note: t('Si l’étiquette est bien collée dans ce magasin, ajoutez-la pour compter tout de suite — le superviseur lui donnera son emplacement ensuite.'),
+            action: t('Ajouter'),
           }).then((ok) => {
             // La zone précédente a déjà été clôturée au premier passage :
             // ne pas la reclôturer.
@@ -1048,7 +1052,7 @@ export function Scanner({
           })
           return
         }
-        signaler.erreur('Balise', result.error ?? 'Balise inconnue.')
+        signaler.erreur(t('Balise'), result.error ? errorMessage(result.error) : t('Balise inconnue.'))
         return
       }
       ignoreBaliseRef.current = result.code ?? code
@@ -1066,7 +1070,7 @@ export function Scanner({
       playScanSound()
     } catch (e) {
       playErrorSound()
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     }
   }
 
@@ -1094,25 +1098,28 @@ export function Scanner({
     const active = activeBaliseRef.current
     if (!active) return true
     const compte = baliseModeRef.current === 'count'
-    const geste = compte ? 'comptage' : 'audit'
     const aDefaire = scansSessionRef.current
     const pieces = aDefaire.reduce((n, e) => n + e.qty, 0)
-    const p = pieces > 1 ? 's' : ''
     const revientA = etatAvantRef.current
+    const code = active.code
     const ok = await demander({
-      titre: `Annuler le ${geste} de la balise ${active.code} ?`,
+      titre: compte
+        ? t('Annuler le comptage de la balise %{code} ?', { code })
+        : t('Annuler l’audit de la balise %{code} ?', { code }),
       texte: pieces > 0
-        ? `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p} ${
-          pieces > 1 ? 'seront retirées' : 'sera retirée'}. La balise retrouvera `
-          + 'l’état qu’elle avait en l’ouvrant.'
-        : 'Rien ne sera enregistré. La balise retrouvera l’état qu’elle avait '
-          + 'en l’ouvrant.',
-      note: `Ce que d’autres ont ${compte ? 'compté' : 'audité'} sur cette balise `
-        + 'n’est pas touché.',
-      action: `Annuler le ${geste}`,
-      annuler: 'Continuer',
+        ? (compte
+          ? tn('%{count} pièce comptée sera retirée. La balise retrouvera l’état qu’elle avait en l’ouvrant.',
+              '%{count} pièces comptées seront retirées. La balise retrouvera l’état qu’elle avait en l’ouvrant.', pieces)
+          : tn('%{count} pièce auditée sera retirée. La balise retrouvera l’état qu’elle avait en l’ouvrant.',
+              '%{count} pièces auditées seront retirées. La balise retrouvera l’état qu’elle avait en l’ouvrant.', pieces))
+        : t('Rien ne sera enregistré. La balise retrouvera l’état qu’elle avait en l’ouvrant.'),
+      note: compte
+        ? t('Ce que d’autres ont compté sur cette balise n’est pas touché.')
+        : t('Ce que d’autres ont audité sur cette balise n’est pas touché.'),
+      action: compte ? t('Annuler le comptage') : t('Annuler l’audit'),
+      annuler: t('Continuer'),
       ton: 'danger',
-      surtitre: 'Confirmation',
+      surtitre: t('Confirmation'),
     })
     if (!ok) return false
     try {
@@ -1136,7 +1143,7 @@ export function Scanner({
           : await annulerBalise(sessionId, active.code, baliseModeRef.current)
         if (!res.success) {
           playErrorSound()
-          signaler.erreur('Balise', res.error ?? 'Annulation impossible.')
+          signaler.erreur(t('Balise'), res.error ? errorMessage(res.error) : t('Annulation impossible.'))
           return false
         }
       }
@@ -1154,15 +1161,15 @@ export function Scanner({
       pingSession(sessionId, 'balise')
       playScanSound()
       signaler.info(
-        `Balise ${active.code} · ${geste} annulé`,
+        compte ? t('Balise %{code} · comptage annulé', { code }) : t('Balise %{code} · audit annulé', { code }),
         revientA === 'done'
-          ? 'Elle reste terminée, comme avant l’ouverture.'
-          : `Elle est de nouveau à ${compte ? 'compter' : 'auditer'}.`,
+          ? t('Elle reste terminée, comme avant l’ouverture.')
+          : (compte ? t('Elle est de nouveau à compter.') : t('Elle est de nouveau à auditer.')),
       )
       return true
     } catch (e) {
       playErrorSound()
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
       return false
     }
   }
@@ -1183,12 +1190,13 @@ export function Scanner({
     if (!active) return true
     const compte = baliseModeRef.current === 'count'
     const pieces = recentScansRef.current.reduce((n, e) => n + e.qty, 0)
-    const p = pieces > 1 ? 's' : ''
     const ok = await demander({
-      titre: `Clôturer la balise ${active.code} ?`,
-      texte: `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p}. Vous pourrez y revenir si besoin.`,
-      action: 'Clôturer',
-      annuler: 'Annuler',
+      titre: t('Clôturer la balise %{code} ?', { code: active.code }),
+      texte: compte
+        ? tn('%{count} pièce comptée. Vous pourrez y revenir si besoin.', '%{count} pièces comptées. Vous pourrez y revenir si besoin.', pieces)
+        : tn('%{count} pièce auditée. Vous pourrez y revenir si besoin.', '%{count} pièces auditées. Vous pourrez y revenir si besoin.', pieces),
+      action: t('Clôturer'),
+      annuler: t('Annuler'),
       // Le rouge du bouton qui a ouvert la question. Un geste et sa
       // confirmation doivent porter la même couleur, sinon la carte a l'air
       // de proposer autre chose que ce qu'on vient de toucher.
@@ -1196,7 +1204,7 @@ export function Scanner({
       // ⚠️ Mais on garde « Confirmation » : le surtitre par défaut du ton
       // danger est « Action définitive », et clôturer ne l'est pas — la
       // phrase juste au-dessus dit qu'on pourra y revenir.
-      surtitre: 'Confirmation',
+      surtitre: t('Confirmation'),
     })
     if (!ok) return false
     // Ouverture différée jamais concrétisée : rien n'a été ouvert, il n'y a
@@ -1214,7 +1222,7 @@ export function Scanner({
     try {
       const result = await setBalise(sessionId, active.code, baliseModeRef.current, false)
       if (!result.success) {
-        signaler.erreur('Balise', result.error ?? 'Clôture impossible.')
+        signaler.erreur(t('Balise'), result.error ? errorMessage(result.error) : t('Clôture impossible.'))
         return true
       }
       if (repereCloture.aVoir) {
@@ -1236,7 +1244,7 @@ export function Scanner({
       playScanSound()
       return true
     } catch (e) {
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
       // La clôture a échoué : on ne quitte pas l'écran dans son dos.
       return false
     }
@@ -1272,11 +1280,12 @@ export function Scanner({
   async function confirmerReouverture(code: string): Promise<boolean> {
     const compte = baliseModeRef.current === 'count'
     return demander({
-      titre: `Rouvrir la balise ${code} ?`,
-      texte: `Elle est terminée, sans aucune pièce enregistrée. Vous pourrez `
-        + `${compte ? 'la compter' : 'l’auditer'} maintenant.`,
-      action: 'Rouvrir',
-      annuler: 'Annuler',
+      titre: t('Rouvrir la balise %{code} ?', { code }),
+      texte: compte
+        ? t('Elle est terminée, sans aucune pièce enregistrée. Vous pourrez la compter maintenant.')
+        : t('Elle est terminée, sans aucune pièce enregistrée. Vous pourrez l’auditer maintenant.'),
+      action: t('Rouvrir'),
+      annuler: t('Annuler'),
     })
   }
 
@@ -1356,16 +1365,16 @@ export function Scanner({
     if (!active) return true
     const compte = baliseModeRef.current === 'count'
     const pieces = recentScansRef.current.reduce((n, e) => n + e.qty, 0)
-    const p = pieces > 1 ? 's' : ''
     const choix = await demanderChoix({
-      surtitre: `Balise ${active.code} ouverte`,
-      titre: `Que faire de ce ${compte ? 'comptage' : 'audit'} ?`,
-      texte: `${pieces} pièce${p} ${compte ? 'comptée' : 'auditée'}${p} sur cette balise.`,
-      note: 'Clôturer l’enregistre et marque le rayon fini. Annuler ne garde '
-        + 'rien de ce que vous venez de faire.',
-      action: 'Clôturer la balise',
-      alternative: `Annuler le ${compte ? 'comptage' : 'audit'}`,
-      annuler: 'Ignorer — revenir au scan',
+      surtitre: t('Balise %{code} ouverte', { code: active.code }),
+      titre: compte ? t('Que faire de ce comptage ?') : t('Que faire de cet audit ?'),
+      texte: compte
+        ? tn('%{count} pièce comptée sur cette balise.', '%{count} pièces comptées sur cette balise.', pieces)
+        : tn('%{count} pièce auditée sur cette balise.', '%{count} pièces auditées sur cette balise.', pieces),
+      note: t('Clôturer l’enregistre et marque le rayon fini. Annuler ne garde rien de ce que vous venez de faire.'),
+      action: t('Clôturer la balise'),
+      alternative: compte ? t('Annuler le comptage') : t('Annuler l’audit'),
+      annuler: t('Ignorer — revenir au scan'),
     })
     if (choix === 'action') return closeBalise()
     if (choix === 'alternative') return annulerComptage()
@@ -1408,7 +1417,7 @@ export function Scanner({
     const active = activeBaliseRef.current
     if (!active) return
     const r = await setBalise(sessionId, active.code, baliseModeRef.current, true)
-    if (!r.success) throw new Error(r.error ?? 'Ouverture impossible.')
+    if (!r.success) throw new Error(r.error ?? t('Ouverture impossible.'))
     ouvertureDiffereeRef.current = false
     setOuvertureDifferee(false)
     queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
@@ -1539,7 +1548,7 @@ export function Scanner({
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty + 1, timestamp: Date.now() } : e)
       )
     } catch {
-      signaler.erreur('Erreur', "Impossible d'enregistrer la modification.")
+      signaler.erreur(t('Erreur'), t("Impossible d'enregistrer la modification."))
     }
   }
 
@@ -1551,15 +1560,15 @@ export function Scanner({
         prev.map(e => e.id === entry.id ? { ...e, qty: e.qty - 1 } : e)
       )
     } catch {
-      signaler.erreur('Erreur', "Impossible d'enregistrer la modification.")
+      signaler.erreur(t('Erreur'), t("Impossible d'enregistrer la modification."))
     }
   }
 
   function handleDelete(entry: ScanEntry) {
     void demander({
-      titre: 'Supprimer la ligne ?',
-      texte: `Retirer « ${entry.article.label || entry.article.sku} » (×${entry.qty}) de ce comptage ?`,
-      action: 'Supprimer',
+      titre: t('Supprimer la ligne ?'),
+      texte: t('Retirer « %{article} » (×%{qte}) de ce comptage ?', { article: entry.article.label || entry.article.sku, qte: entry.qty }),
+      action: t('Supprimer'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
@@ -1567,7 +1576,7 @@ export function Scanner({
         await enregistrer(entry.article, -entry.qty, activeBaliseRef.current?.code ?? null)
         setRecentScans(prev => prev.filter(e => e.id !== entry.id))
       } catch {
-        signaler.erreur('Erreur', 'Impossible de supprimer la ligne.')
+        signaler.erreur(t('Erreur'), t('Impossible de supprimer la ligne.'))
       }
     })
   }
@@ -1618,15 +1627,14 @@ export function Scanner({
           <View style={[styles.coin, styles.coinBG]} />
           <View style={[styles.coin, styles.coinBD]} />
         </View>
-        <Text style={styles.amorceTitre}>La caméra lit les balises et les codes-barres</Text>
+        <Text style={styles.amorceTitre}>{t('La caméra lit les balises et les codes-barres')}</Text>
         <Text style={styles.amorceTexte}>
-          Pour compter, vous scannez d&apos;abord l&apos;étiquette collée sur le rayon,
-          puis les articles. Aucune photo n&apos;est enregistrée.
+          {t("Pour compter, vous scannez d'abord l'étiquette collée sur le rayon, puis les articles. Aucune photo n'est enregistrée.")}
         </Text>
         <Pressable style={styles.amorceBtn} onPress={() => { void requestPermission() }}>
-          <Text style={styles.amorceBtnText}>Continuer</Text>
+          <Text style={styles.amorceBtnText}>{t('Continuer')}</Text>
         </Pressable>
-        <Text style={styles.amorceNote}>Votre téléphone vous demandera ensuite l&apos;autorisation.</Text>
+        <Text style={styles.amorceNote}>{t("Votre téléphone vous demandera ensuite l'autorisation.")}</Text>
       </View>
     )
   }
@@ -1662,22 +1670,21 @@ export function Scanner({
         </View>
         <Text style={styles.amorceTitre}>
           {place.plafond === 1
-            ? 'Un appareil compte déjà'
-            : `${place.plafond ?? ''} appareils comptent déjà`}
+            ? t('Un appareil compte déjà')
+            : t('%{n} appareils comptent déjà', { n: place.plafond ?? '' })}
         </Text>
         <Text style={styles.amorceTexte}>
-          L&apos;offre de ce magasin couvre {place.plafond ?? ''} appareil{(place.plafond ?? 0) > 1 ? 's' : ''} à
-          la fois. Vous pourrez compter dès que l&apos;un d&apos;eux aura terminé.
+          {tn("L'offre de ce magasin couvre %{count} appareil à la fois. Vous pourrez compter dès que l'un d'eux aura terminé.",
+            "L'offre de ce magasin couvre %{count} appareils à la fois. Vous pourrez compter dès que l'un d'eux aura terminé.", place.plafond ?? 0)}
         </Text>
         <Text style={styles.amorceTexte}>
-          L&apos;administrateur de l&apos;entreprise peut ajouter des appareils
-          depuis le site.
+          {t("L'administrateur de l'entreprise peut ajouter des appareils depuis le site.")}
         </Text>
         <Pressable style={styles.amorceBtn} onPress={place.reessayer}>
-          <Text style={styles.amorceBtnText}>Réessayer</Text>
+          <Text style={styles.amorceBtnText}>{t('Réessayer')}</Text>
         </Pressable>
         <Text style={styles.amorceNote}>
-          Cet écran se débloque tout seul dès qu&apos;une place se libère.
+          {t("Cet écran se débloque tout seul dès qu'une place se libère.")}
         </Text>
       </View>
     )
@@ -1698,10 +1705,10 @@ export function Scanner({
   const conseil = rangConseil === 0
     ? null
     : rangConseil === 1
-      ? 'Rapprochez-vous, le code doit remplir le cadre'
+      ? t('Rapprochez-vous, le code doit remplir le cadre')
       : torch
-        ? 'Reculez un peu, et tenez le téléphone droit'
-        : 'Trop sombre ? Allumez la lampe'
+        ? t('Reculez un peu, et tenez le téléphone droit')
+        : t('Trop sombre ? Allumez la lampe')
 
   const totalScanned = recentScans.reduce((s, e) => s + e.qty, 0)
   // La trace du dernier scan : elle lève le doute « est-ce que ça a pris ? »
@@ -1709,16 +1716,16 @@ export function Scanner({
   const dernierScan = !balisePhase && recentScans.length > 0
     // Le CODE, pas le libellé : ce qu'on vérifie d'un coup d'œil, c'est que le
     // bon code-barres est passé — le nom du produit, on l'a sous les yeux.
-    ? `Dernier scan · ${recentScans[0].article.ean || recentScans[0].article.sku}`
+    ? `${t('Dernier scan')} · ${recentScans[0].article.ean || recentScans[0].article.sku}`
     : null
   const triggerLabel = balisePhase
-    ? (barcodeReady ? 'Scanner la balise' : 'Visez une balise…')
-    : (barcodeReady ? 'Scanner maintenant' : 'En attente d\'un code…')
+    ? (barcodeReady ? t('Scanner la balise') : t('Visez une balise…'))
+    : (barcodeReady ? t('Scanner maintenant') : t("En attente d'un code…"))
   const camHint = resolving
-    ? 'Enregistrement…'
+    ? t('Enregistrement…')
     : barcodeReady
-      ? (balisePhase ? 'Balise détectée — appuyez pour ouvrir' : 'Scan automatique — Vol − ou bouton pour forcer')
-      : (balisePhase ? 'Visez la balise de la zone' : 'Pointez la caméra vers un code-barres')
+      ? (balisePhase ? t('Balise détectée — appuyez pour ouvrir') : t('Scan automatique — Vol − ou bouton pour forcer'))
+      : (balisePhase ? t('Visez la balise de la zone') : t('Pointez la caméra vers un code-barres'))
   // Ce que la barre dit, par ordre de priorité : ce qui se passe maintenant,
   // puis ce qu'il faut essayer, puis ce qui vient d'être enregistré.
   const barreTexte = (resolving || barcodeReady) ? camHint : (conseil ?? dernierScan ?? camHint)
@@ -1743,7 +1750,7 @@ export function Scanner({
                     disabled={!!activeBalise}
                   >
                     <Text style={[styles.zoneModeText, active && { color: m === 'audit' ? AUDIT_ON : '#fff', fontFamily: Font.bold }, !!activeBalise && !active && { opacity: 0.4 }]}>
-                      {m === 'count' ? 'Comptage' : 'Audit'}
+                      {m === 'count' ? t('Comptage') : t('Audit')}
                     </Text>
                   </Pressable>
                 )
@@ -1763,13 +1770,13 @@ export function Scanner({
             <View style={[styles.zoneBanner, { borderColor: modeColor }]}>
               <View style={[styles.passDot, { backgroundColor: modeColor }]} />
               <Text style={styles.zoneBannerText} numberOfLines={1}>
-                Zone ouverte · {activeBalise.name ?? 'Sans nom'} · balise {activeBalise.code}
+                {t('Zone ouverte')} · {activeBalise.name ?? t('Sans nom')} · {t('balise')} {activeBalise.code}
               </Text>
             </View>
           ) : (
             <View style={styles.zoneBannerIdle}>
               <Text style={styles.zoneBannerIdleText}>
-                Scannez une balise pour ouvrir une zone ({baliseMode === 'count' ? 'Comptage' : 'Audit'})
+                {t('Scannez une balise pour ouvrir une zone (%{mode})', { mode: baliseMode === 'count' ? t('Comptage') : t('Audit') })}
               </Text>
               {resolving && <ActivityIndicator size="small" color={theme.accent} />}
             </View>
@@ -1778,7 +1785,7 @@ export function Scanner({
       ) : (
         <View style={[styles.passBanner, { borderLeftWidth: 4, borderLeftColor: modeColor }]}>
           <View style={[styles.passDot, { backgroundColor: modeColor }]} />
-          <Text style={styles.passLabel}>{passLabel(passNumber)} en cours</Text>
+          <Text style={styles.passLabel}>{t('%{passe} en cours', { passe: t(passLabel(passNumber)) })}</Text>
           {resolving && <ActivityIndicator size="small" color={modeColor} style={{ marginLeft: 'auto' }} />}
         </View>
       )}
@@ -1786,7 +1793,7 @@ export function Scanner({
       {/* Phase balise : ouverture délibérée par saisie du numéro (ou scan manuel) */}
       {balisePhase && (
         <View style={styles.baliseField}>
-          <Text style={styles.baliseFieldLabel}>Ouvrir une balise — saisissez son numéro ou scannez-la</Text>
+          <Text style={styles.baliseFieldLabel}>{t('Ouvrir une balise — saisissez son numéro ou scannez-la')}</Text>
           <View style={styles.manualRow}>
             <TextInput
               ref={baliseInputRef}
@@ -1794,13 +1801,13 @@ export function Scanner({
               defaultValue=""
               onChangeText={t => { baliseBufRef.current = t }}
               keyboardType="number-pad"
-              placeholder="N° de balise"
+              placeholder={t('N° de balise')}
               placeholderTextColor={theme.textMuted}
               returnKeyType="go"
               onSubmitEditing={openBaliseManual}
             />
             <Pressable style={[styles.manualBtn, { backgroundColor: modeColor }, resolving && { opacity: 0.6 }]} onPress={openBaliseManual} disabled={resolving}>
-              {resolving ? <ActivityIndicator color={modeOn} /> : <Text style={[styles.manualBtnText, { color: modeOn }]}>Ouvrir</Text>}
+              {resolving ? <ActivityIndicator color={modeOn} /> : <Text style={[styles.manualBtnText, { color: modeOn }]}>{t('Ouvrir')}</Text>}
             </Pressable>
           </View>
         </View>
@@ -1812,7 +1819,7 @@ export function Scanner({
           {(['camera', 'manual', 'hardware'] as const).map(m => (
             <Pressable key={m} style={[styles.modeBtn, mode === m && styles.modeBtnActive]} onPress={() => setMode(m)}>
               <Text style={[styles.modeBtnText, mode === m && styles.modeBtnTextActive]}>
-                {m === 'camera' ? 'Caméra' : m === 'manual' ? 'Manuel' : 'Douchette'}
+                {m === 'camera' ? t('Caméra') : m === 'manual' ? t('Manuel') : t('Douchette')}
               </Text>
             </Pressable>
           ))}
@@ -1822,7 +1829,7 @@ export function Scanner({
       {/* Auto-scan toggle — articles, caméra */}
       {!balisePhase && mode === 'camera' && (
         <Pressable style={styles.autoScanRow} onPress={() => setAutoScan(v => !v)}>
-          <Text style={styles.autoScanLabel}>Scan automatique</Text>
+          <Text style={styles.autoScanLabel}>{t('Scan automatique')}</Text>
           <View style={[styles.autoScanPill, autoScan && styles.autoScanPillOn]}>
             <Text style={[styles.autoScanPillText, autoScan && styles.autoScanPillTextOn]}>
               {autoScan ? 'ON' : 'OFF'}
@@ -1873,7 +1880,7 @@ export function Scanner({
                 onPress={() => setTorch(v => !v)}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
+                accessibilityLabel={torch ? t('Éteindre la lampe') : t('Allumer la lampe')}
               >
                 <TorcheIcon color={torch ? '#111' : '#fff'} />
               </Pressable>
@@ -1885,7 +1892,7 @@ export function Scanner({
               {resolving && (
                 <View style={styles.overlay}>
                   <ActivityIndicator color="#fff" size="small" />
-                  <Text style={styles.overlayText}>Enregistrement…</Text>
+                  <Text style={styles.overlayText}>{t('Enregistrement…')}</Text>
                 </View>
               )}
               {/* La forme du cadre annonce ce qu'on attend : un carré pour un
@@ -1934,7 +1941,7 @@ export function Scanner({
               {resolving ? (
                 <>
                   <ActivityIndicator color="#fff" />
-                  <Text style={[styles.triggerBtnText, { color: '#fff' }]}>Enregistrement…</Text>
+                  <Text style={[styles.triggerBtnText, { color: '#fff' }]}>{t('Enregistrement…')}</Text>
                 </>
               ) : (
                 <Text style={[styles.triggerBtnText, barcodeReady && { color: '#fff' }]}>
@@ -1945,32 +1952,32 @@ export function Scanner({
           </>
         ) : (
           <View style={styles.permBox}>
-            <Text style={styles.permTitre}>Caméra désactivée</Text>
+            <Text style={styles.permTitre}>{t('Caméra désactivée')}</Text>
             <Text style={styles.permText}>
-              Sans la caméra, Quantinvo ne peut lire ni les balises ni les codes-barres.
+              {t('Sans la caméra, Quantinvo ne peut lire ni les balises ni les codes-barres.')}
             </Text>
             {permission?.canAskAgain ? (
               <Pressable onPress={requestPermission} style={styles.permBtn}>
-                <Text style={styles.permBtnText}>Autoriser la caméra</Text>
+                <Text style={styles.permBtnText}>{t('Autoriser la caméra')}</Text>
               </Pressable>
             ) : (
               // Après un refus définitif, seule l'appli Réglages peut rendre
               // l'accès : un bouton qui redemande ne ferait rien.
               <Pressable onPress={() => { void Linking.openSettings() }} style={styles.permBtn}>
-                <Text style={styles.permBtnText}>Ouvrir les Réglages</Text>
+                <Text style={styles.permBtnText}>{t('Ouvrir les Réglages')}</Text>
               </Pressable>
             )}
             {/* Le comptage ne doit pas s'arrêter là : les deux phases ont un
                 repli clavier, encore fallait-il le dire ici. */}
             {balisePhase ? (
               <Text style={styles.permAide}>
-                En attendant, saisissez le numéro de la balise dans le champ ci-dessus.
+                {t('En attendant, saisissez le numéro de la balise dans le champ ci-dessus.')}
               </Text>
             ) : (
               <>
-                <Text style={styles.permAide}>En attendant, saisissez les codes à la main.</Text>
+                <Text style={styles.permAide}>{t('En attendant, saisissez les codes à la main.')}</Text>
                 <Pressable onPress={() => setMode('manual')} style={styles.permBtnSecondaire}>
-                  <Text style={styles.permBtnSecondaireText}>Passer en saisie manuelle</Text>
+                  <Text style={styles.permBtnSecondaireText}>{t('Passer en saisie manuelle')}</Text>
                 </Pressable>
               </>
             )}
@@ -1980,7 +1987,7 @@ export function Scanner({
         <View style={styles.manualContainer}>
           <View style={styles.hwHeader}>
             <View style={styles.hwDot} />
-            <Text style={styles.hwTitle}>Douchette prête</Text>
+            <Text style={styles.hwTitle}>{t('Douchette prête')}</Text>
             {resolving && <ActivityIndicator size="small" color={theme.accent} style={{ marginLeft: 'auto' }} />}
           </View>
           <Text style={styles.manualLabel}>
@@ -2000,7 +2007,7 @@ export function Scanner({
             autoFocus={illisibleCode === null}
             autoCapitalize="characters"
             autoCorrect={false}
-            placeholder="En attente d'un scan…"
+            placeholder={t("En attente d'un scan…")}
             placeholderTextColor={theme.textMuted}
             onBlur={() => {
               if (mode === 'hardware' && illisibleCode === null) {
@@ -2014,7 +2021,7 @@ export function Scanner({
               31 août 2026, alors que l'article était bien compté. */}
           {hwPlein ? (
             <Pressable onPress={viderChampDouchette} style={styles.hwEffacer} hitSlop={12}>
-              <Text style={styles.hwEffacerText}>Effacer le champ</Text>
+              <Text style={styles.hwEffacerText}>{t('Effacer le champ')}</Text>
             </Pressable>
           ) : dernierScan ? (
             <View style={styles.hwDernier}>
@@ -2027,14 +2034,14 @@ export function Scanner({
         </View>
       ) : (
         <View style={styles.manualContainer}>
-          <Text style={styles.manualLabel}>SKU ou EAN — appuyez sur OK pour valider</Text>
+          <Text style={styles.manualLabel}>{t('SKU ou EAN — appuyez sur OK pour valider')}</Text>
           <View style={styles.manualRow}>
             <TextInput
               ref={manualInputRef}
               style={[styles.manualInput, { flex: 1 }]}
               value={manualInput}
               onChangeText={setManualInput}
-              placeholder="Ex: 3701234567890 ou SKU-123"
+              placeholder={t('Ex: 3701234567890 ou SKU-123')}
               placeholderTextColor={theme.textMuted}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -2053,7 +2060,7 @@ export function Scanner({
         <>
           <View style={styles.listHeader}>
             <Text style={styles.listHeaderText}>
-              {doneBalises.length === 0 ? 'Aucune balise terminée' : `Revenir sur une balise — ${doneBalises.length}`}
+              {doneBalises.length === 0 ? t('Aucune balise terminée') : `${t('Revenir sur une balise')} — ${doneBalises.length}`}
             </Text>
           </View>
           <FlatList
@@ -2063,15 +2070,15 @@ export function Scanner({
             renderItem={({ item }) => (
               <Pressable style={styles.reopenRow} onPress={() => { void rouvrirDepuisListe(item) }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.reopenName} numberOfLines={1}>{item.name ?? 'Sans zone'}</Text>
+                  <Text style={styles.reopenName} numberOfLines={1}>{item.name ?? t('Sans zone')}</Text>
                   <Text style={styles.reopenMeta}>
-                    Balise {item.code} · {baliseMode === 'count' ? item.count_units : item.audit_units} u.
+                    {t('Balise')} {item.code} · {baliseMode === 'count' ? item.count_units : item.audit_units} {t('u.')}
                   </Text>
                 </View>
-                <Text style={styles.reopenAction}>Rouvrir</Text>
+                <Text style={styles.reopenAction}>{t('Rouvrir')}</Text>
               </Pressable>
             )}
-            ListEmptyComponent={<Text style={styles.emptyHint}>Terminez une balise pour pouvoir y revenir.</Text>}
+            ListEmptyComponent={<Text style={styles.emptyHint}>{t('Terminez une balise pour pouvoir y revenir.')}</Text>}
           />
         </>
       ) : (
@@ -2086,7 +2093,7 @@ export function Scanner({
               accessibilityRole="button"
             >
               <Text style={styles.voirScansTexte}>
-                Voir les {recentScans.length} article{recentScans.length > 1 ? 's' : ''} scanné{recentScans.length > 1 ? 's' : ''}
+                {tn('Voir l’article scanné', 'Voir les %{count} articles scannés', recentScans.length)}
               </Text>
               <ChevronIcon color={theme.textMuted} />
             </Pressable>
@@ -2094,7 +2101,7 @@ export function Scanner({
           {activeBalise && (
             <>
               <Pressable style={styles.closeFooterBtn} onPress={() => { void closeBalise() }} disabled={resolving}>
-                <Text style={styles.closeFooterText}>Clôturer la balise {activeBalise.code}</Text>
+                <Text style={styles.closeFooterText}>{t('Clôturer la balise %{code}', { code: activeBalise.code })}</Text>
               </Pressable>
               {/*
                 ⚠️ **EN CONTOUR, JAMAIS UN SECOND APLAT.** Deux boutons pleins
@@ -2104,7 +2111,7 @@ export function Scanner({
               */}
               <Pressable style={styles.cancelFooterBtn} onPress={() => { void annulerComptage() }} disabled={resolving}>
                 <Text style={styles.cancelFooterText}>
-                  Annuler le {baliseMode === 'count' ? 'comptage' : 'audit'}
+                  {baliseMode === 'count' ? t('Annuler le comptage') : t('Annuler l’audit')}
                 </Text>
               </Pressable>
             </>
@@ -2120,9 +2127,9 @@ export function Scanner({
               <View style={styles.feuille}>
                 <View style={styles.feuilleTete}>
                   <Text style={styles.feuilleTitre}>
-                    {totalScanned} unité{totalScanned > 1 ? 's' : ''} · {recentScans.length} article{recentScans.length > 1 ? 's' : ''}
+                    {tn('%{count} unité', '%{count} unités', totalScanned)} · {tn('%{count} article', '%{count} articles', recentScans.length)}
                   </Text>
-                  <Pressable onPress={() => setFeuilleScans(false)} hitSlop={10} accessibilityLabel="Fermer">
+                  <Pressable onPress={() => setFeuilleScans(false)} hitSlop={10} accessibilityLabel={t('Fermer')}>
                     <CroixIcon color={theme.textMuted} />
                   </Pressable>
                 </View>
@@ -2184,63 +2191,58 @@ export function Scanner({
               </View>
               {volet.genre === 'ouverte' && (
                 <>
-                  <Text style={styles.voletTitre}>Balise {volet.code} ouverte</Text>
+                  <Text style={styles.voletTitre}>{t('Balise %{code} ouverte', { code: volet.code })}</Text>
                   {volet.nom && <Text style={styles.voletSous} numberOfLines={2}>{volet.nom}</Text>}
                   <Text style={styles.voletTexte}>
-                    Scannez maintenant les articles de ce rayon. Chaque lecture ajoute une pièce ;
-                    la quantité s&apos;ajuste dans la liste. Quand le rayon est fini, touchez
-                    <Text style={styles.voletFort}> Clôturer</Text>.
+                    {t("Scannez maintenant les articles de ce rayon. Chaque lecture ajoute une pièce ; la quantité s'ajuste dans la liste. Quand le rayon est fini, touchez")}
+                    <Text style={styles.voletFort}> {t('Clôturer')}</Text>.
                   </Text>
                 </>
               )}
               {volet.genre === 'terminee' && (
                 <>
-                  <Text style={styles.voletTitre}>Première balise terminée</Text>
+                  <Text style={styles.voletTitre}>{t('Première balise terminée')}</Text>
                   <Text style={styles.voletTexte}>
-                    Balise {volet.code}{volet.nom ? ` · ${volet.nom}` : ''} —{' '}
-                    <Text style={styles.voletFort}>{volet.pieces} pièce{volet.pieces > 1 ? 's' : ''}</Text>
-                    {' '}sur {volet.refs} référence{volet.refs > 1 ? 's' : ''}.
-                    Elles sont déjà sur le tableau de bord de votre superviseur.
+                    {t('Balise')} {volet.code}{volet.nom ? ` · ${volet.nom}` : ''} —{' '}
+                    <Text style={styles.voletFort}>{tn('%{count} pièce', '%{count} pièces', volet.pieces)}</Text>
+                    {' '}{t('sur')} {tn('%{count} référence', '%{count} références', volet.refs)}.{' '}
+                    {t('Elles sont déjà sur le tableau de bord de votre superviseur.')}
                   </Text>
                   <View style={styles.voletFilet} />
                   <Text style={styles.voletNote}>
-                    Rendez-vous au rayon suivant et scannez sa balise. Si vous perdez le réseau,
-                    le comptage continue et s&apos;envoie tout seul au retour.
+                    {t("Rendez-vous au rayon suivant et scannez sa balise. Si vous perdez le réseau, le comptage continue et s'envoie tout seul au retour.")}
                   </Text>
                 </>
               )}
               {volet.genre === 'modes' && (
                 <>
-                  <Text style={styles.voletTitre}>Trois façons de scanner</Text>
+                  <Text style={styles.voletTitre}>{t('Trois façons de scanner')}</Text>
                   <Text style={styles.voletTexte}>
-                    La <Text style={styles.voletFort}>caméra</Text> du téléphone, la saisie{' '}
-                    <Text style={styles.voletFort}>manuelle</Text> d&apos;un code, ou une{' '}
-                    <Text style={styles.voletFort}>douchette</Text> Bluetooth appairée au téléphone.
+                    {t('La ')}<Text style={styles.voletFort}>{t('caméra')}</Text>{t(' du téléphone, la saisie ')}
+                    <Text style={styles.voletFort}>{t('manuelle')}</Text>{t(" d'un code, ou une ")}
+                    <Text style={styles.voletFort}>{t('douchette')}</Text>{t(' Bluetooth appairée au téléphone.')}
                   </Text>
                   <View style={styles.voletFilet} />
                   <Text style={styles.voletNote}>
-                    La douchette est bien plus rapide sur un gros rayon. Le choix se fait en haut
-                    de l&apos;écran, et il tient pour tout le comptage.
+                    {t("La douchette est bien plus rapide sur un gros rayon. Le choix se fait en haut de l'écran, et il tient pour tout le comptage.")}
                   </Text>
                 </>
               )}
               {volet.genre === 'corriger' && (
                 <>
-                  <Text style={styles.voletTitre}>Une erreur se corrige</Text>
+                  <Text style={styles.voletTitre}>{t('Une erreur se corrige')}</Text>
                   <Text style={styles.voletTexte}>
-                    Vous venez de scanner deux fois le même article. Ouvrez la liste des articles
-                    scannés : le <Text style={styles.voletFort}>−</Text> retire une pièce.
+                    {t('Vous venez de scanner deux fois le même article. Ouvrez la liste des articles scannés : le ')}<Text style={styles.voletFort}>−</Text>{t(' retire une pièce.')}
                   </Text>
                   <View style={styles.voletFilet} />
                   <Text style={styles.voletNote}>
-                    Rien n&apos;est effacé sur le serveur : une correction est une ligne de plus.
-                    Votre superviseur voit le total juste, pas l&apos;erreur.
+                    {t("Rien n'est effacé sur le serveur : une correction est une ligne de plus. Votre superviseur voit le total juste, pas l'erreur.")}
                   </Text>
                 </>
               )}
               <Pressable style={styles.voletBtn} onPress={fermerVolet}>
                 <Text style={styles.voletBtnText}>
-                  {volet.genre === 'terminee' ? 'Balise suivante' : 'Compris'}
+                  {volet.genre === 'terminee' ? t('Balise suivante') : t('Compris')}
                 </Text>
               </Pressable>
             </Pressable>

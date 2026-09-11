@@ -1,3 +1,5 @@
+import { t, tn } from '@/lib/i18n'
+
 /**
  * « il y a 12 min » — situer un événement sans afficher une heure absolue, qui
  * ne dit rien à qui lit.
@@ -18,11 +20,11 @@ export function depuis(quand: number | string, opts?: { minutes?: boolean }): st
   const ts = typeof quand === 'string' ? Date.parse(quand) : quand
   if (!Number.isFinite(ts)) return ''
   const min = Math.max(0, Math.round((Date.now() - ts) / 60000))
-  if (min < 1) return "à l'instant"
-  if (min < 60) return `il y a ${min} min`
+  if (min < 1) return t("à l'instant")
+  if (min < 60) return t('il y a %{n} min', { n: min })
   const h = Math.floor(min / 60)
-  if (opts?.minutes) return `il y a ${h} h ${String(min % 60).padStart(2, '0')}`
-  if (h < 24) return `il y a ${h} h`
+  if (opts?.minutes) return t('il y a %{h} h %{m}', { h, m: String(min % 60).padStart(2, '0') })
+  if (h < 24) return t('il y a %{h} h', { h })
   const j = Math.floor(h / 24)
-  return j === 1 ? 'hier' : `il y a ${j} j`
+  return j === 1 ? t('hier') : tn('il y a %{count} j', 'il y a %{count} j', j)
 }

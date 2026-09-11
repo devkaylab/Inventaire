@@ -13,6 +13,7 @@
 
 import { supabase } from '@/lib/supabaseClient'
 import { errorMessage } from '@/lib/errors'
+import { t } from '@/lib/i18n'
 
 export type ZoneDashboardRow = {
   id: string
@@ -247,15 +248,15 @@ export function codeRange(codes: string[]): string {
  * vide : « indiquez la première et la dernière balise » devant un seul champ.
  */
 export function validateRange(name: string, start: string, end: string, unique = false): string | null {
-  if (!name.trim()) return "Indiquez le nom de l'emplacement (ex. « Réserve »)."
+  if (!name.trim()) return t("Indiquez le nom de l'emplacement (ex. « Réserve »).")
   const s = Number(start), e = Number(end)
   if (!Number.isInteger(s) || !Number.isInteger(e) || start.trim() === '' || end.trim() === '') {
     return unique
-      ? 'Indiquez le numéro de la balise.'
-      : 'Indiquez la première et la dernière balise de la plage.'
+      ? t('Indiquez le numéro de la balise.')
+      : t('Indiquez la première et la dernière balise de la plage.')
   }
-  if (s < 0) return 'Une balise ne peut pas être négative.'
-  if (s > e) return 'La première balise doit être inférieure ou égale à la dernière.'
-  if (e - s + 1 > MAX_RANGE) return `Plage trop grande : ${MAX_RANGE} balises au maximum par affectation.`
+  if (s < 0) return t('Une balise ne peut pas être négative.')
+  if (s > e) return t('La première balise doit être inférieure ou égale à la dernière.')
+  if (e - s + 1 > MAX_RANGE) return t('Plage trop grande : %{max} balises au maximum par affectation.', { max: MAX_RANGE })
   return null
 }

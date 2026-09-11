@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { fmtQty, nb, plural } from '@/lib/format'
 import type { ZoneDashboardRow } from '@/lib/zones'
 import type { Totals } from '@/hooks/useSessionData'
+import { t } from '@/lib/i18n'
 
 /**
  * Le geste d'arrivée de la tuile (piste E de la maquette « Tuile Progression
@@ -108,7 +109,7 @@ export function ProgressRail({
       : 0
     return (
       <aside className="dash-progress panel">
-        <div className="dash-section-label">Progression</div>
+        <div className="dash-section-label">{t('Progression')}</div>
         <div className="dash-big num">{fmtQty(Math.round(totals.counted * arrivee))}</div>
         <div className="dash-progress-sub">
           {totals.counted > 1 ? 'pièces scannées' : 'pièce scannée'} en comptage
@@ -116,7 +117,7 @@ export function ProgressRail({
 
         <div className="dash-bar-row">
           <div className="dash-bar-legend">
-            <span>Audit</span>
+            <span>{t('Audit')}</span>
             <strong className="num">{fmtQty(totals.audited)}</strong>
           </div>
           <div className="dash-progress-sub small">
@@ -126,7 +127,7 @@ export function ProgressRail({
 
         <div className="dash-bar-row">
           <div className="dash-bar-legend">
-            <span>Stock théorique attendu</span>
+            <span>{t('Stock théorique attendu')}</span>
             <strong className="num">{fmtQty(theoreticalQty)}</strong>
           </div>
           {theoreticalQty > 0 ? (
@@ -159,13 +160,13 @@ export function ProgressRail({
 
   return (
     <aside className="dash-progress panel">
-      <div className="dash-section-label">Progression</div>
+      <div className="dash-section-label">{t('Progression')}</div>
       <div className="dash-big num">{Math.round(stats.countPct * arrivee)}<span className="dash-big-unit">%</span></div>
-      <div className="dash-progress-sub">des balises comptées</div>
+      <div className="dash-progress-sub">{t('des balises comptées')}</div>
 
       <div className="dash-bar-row">
         <div className="dash-bar-legend">
-          <span>Comptage</span>
+          <span>{t('Comptage')}</span>
           <strong className="num">{nb(stats.counted)}/{nb(stats.total)}</strong>
         </div>
         <div className="dash-bar">
@@ -181,7 +182,7 @@ export function ProgressRail({
 
       <div className="dash-bar-row">
         <div className="dash-bar-legend">
-          <span>Audit</span>
+          <span>{t('Audit')}</span>
           <strong className="num">{nb(stats.audited)}/{nb(stats.total)}</strong>
         </div>
         <div className="dash-bar">
@@ -205,11 +206,11 @@ export function ProgressRail({
           </button>
         </div>
       ) : stats.total - stats.counted === 0 ? (
-        <div className="dash-ok">Toutes les balises ont été comptées.</div>
+        <div className="dash-ok">{t('Toutes les balises ont été comptées.')}</div>
       ) : (
         <div className="dash-missing">
           <div className="dash-missing-row">
-            <span>Reste à compter</span>
+            <span>{t('Reste à compter')}</span>
             <span className="dash-missing-count num">
               {plural(stats.total - stats.counted, 'balise')}
             </span>

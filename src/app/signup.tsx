@@ -13,6 +13,7 @@ import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
+import { t } from '@/lib/i18n'
 
 /**
  * Plus d'inscription depuis l'application.
@@ -37,44 +38,38 @@ export default function SignupScreen() {
       <ClavierEvite>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>Créer mon compte</Text>
+            <Text style={styles.title}>{t('Créer mon compte')}</Text>
             <Text style={styles.subtitle}>
-              Les comptes Quantinvo se créent sur invitation. Vous n&apos;avez rien à saisir ici.
+              {t("Les comptes Quantinvo se créent sur invitation. Vous n'avez rien à saisir ici.")}
             </Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Vous êtes compteur</Text>
+              <Text style={styles.cardTitle}>{t('Vous êtes compteur')}</Text>
               <Text style={styles.cardBody}>
-                Votre superviseur vous ajoute à son équipe. Vous recevez alors un e-mail : le lien
-                vous permet de vérifier votre prénom et votre nom, puis de choisir votre mot de
-                passe. Votre accès est actif immédiatement après.
+                {t('Votre superviseur vous ajoute à son équipe. Vous recevez alors un e-mail : le lien vous permet de vérifier votre prénom et votre nom, puis de choisir votre mot de passe. Votre accès est actif immédiatement après.')}
               </Text>
               <Text style={styles.cardHint}>
-                Pas d&apos;e-mail reçu ? Vérifiez vos indésirables, puis demandez à votre superviseur
-                de relancer l&apos;invitation.
+                {t("Pas d'e-mail reçu ? Vérifiez vos indésirables, puis demandez à votre superviseur de relancer l'invitation.")}
               </Text>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Vous êtes superviseur</Text>
+              <Text style={styles.cardTitle}>{t('Vous êtes superviseur')}</Text>
               <Text style={styles.cardBody}>
-                Votre accès est ouvert par l&apos;administrateur de votre entreprise, depuis la
-                page Mon équipe du site. Il vous envoie une invitation par e-mail, avec le lien
-                de création de votre mot de passe.
+                {t("Votre accès est ouvert par l'administrateur de votre entreprise, depuis la page Mon équipe du site. Il vous envoie une invitation par e-mail, avec le lien de création de votre mot de passe.")}
               </Text>
               <Text style={styles.cardBody}>
-                Vous n&apos;avez pas d&apos;administrateur d&apos;entreprise ? Écrivez-nous depuis
-                le site.
+                {t("Vous n'avez pas d'administrateur d'entreprise ? Écrivez-nous depuis le site.")}
               </Text>
               <Pressable style={styles.button} onPress={() => Linking.openURL(SITE_URL)}>
-                <Text style={styles.buttonText}>Ouvrir le site</Text>
+                <Text style={styles.buttonText}>{t('Ouvrir le site')}</Text>
               </Pressable>
             </View>
 
             <Pressable style={styles.link} onPress={() => router.back()}>
-              <Text style={styles.linkText}>Retour à la connexion</Text>
+              <Text style={styles.linkText}>{t('Retour à la connexion')}</Text>
             </Pressable>
           </View>
         </ScrollView>

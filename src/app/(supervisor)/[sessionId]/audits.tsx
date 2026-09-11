@@ -21,6 +21,7 @@ import { CocheIcon } from '@/components/ui/Icones'
 import type { ArticleAudit, EtiquetteArticle } from '@/lib/queries'
 import { depuis } from '@/lib/temps'
 import { useTheme } from '@/lib/theme'
+import { t, tn } from '@/lib/i18n'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
 import { euros as euro, nb, qte as fmt, qteSignee } from '@/lib/nombres'
@@ -46,7 +47,7 @@ const PAGE = 50
 
 /** « 3 unités » — un nombre seul ne dit pas ce qu'il compte. */
 function unites(v: number): string {
-  return `${fmt(v)} unité${v >= 2 ? 's' : ''}`
+  return v >= 2 ? t('%{n} unités', { n: fmt(v) }) : t('%{n} unité', { n: fmt(v) })
 }
 
 
@@ -153,7 +154,7 @@ export default function AuditsScreen() {
     mutationFn: ({ sku, zone, qty }: { sku: string; zone: string; qty: number }) => resolveAudit(sessionId, sku, qty, zone),
     onSuccess: async (result, variables) => {
       if (!result.success) {
-        signaler.erreur('Erreur', result.error === 'invalid_qty' ? 'Quantité invalide.' : 'Correction impossible.')
+        signaler.erreur(t('Erreur'), result.error === 'invalid_qty' ? t('Quantité invalide.') : t('Correction impossible.'))
         return
       }
       setInputs((prev) => { const n = { ...prev }; delete n[`${variables.zone} ${variables.sku}`]; return n })
@@ -164,14 +165,14 @@ export default function AuditsScreen() {
   const annuler = useMutation({
     mutationFn: ({ sku, zone }: { sku: string; zone: string }) => annulerArbitrage(sessionId, sku, zone),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['audits', sessionId] }),
-    onError: () => signaler.erreur('Erreur', 'Annulation impossible.'),
+    onError: () => signaler.erreur(t('Erreur'), t('Annulation impossible.')),
   })
 
   function onResolve(a: ArticleAudit) {
     // La virgule est acceptée : c'est ce que donne le clavier français.
     const qty = parseFloat((inputs[keyOf(a)] ?? '').replace(',', '.'))
     if (isNaN(qty) || qty < 0) {
-      signaler.erreur('Quantité manquante', 'Entrez un nombre positif, ou touchez « Compteur » ou « Auditeur ».')
+      signaler.erreur(t('Quantité manquante'), t('Entrez un nombre positif, ou touchez « Compteur » ou « Auditeur ».'))
       return
     }
     resolve.mutate({ sku: a.sku, zone: a.zone, qty })
@@ -183,10 +184,10 @@ export default function AuditsScreen() {
   // même carte ne se distingueraient pas.
   function confirmAnnuler(a: ArticleAudit, nom: string) {
     void demander({
-      titre: 'Annuler cet arbitrage ?',
-      texte: `« ${nom} » repassera en écart. Il faudra l’arbitrer à nouveau.`,
-      action: 'Annuler l’arbitrage',
-      annuler: 'Garder',
+      titre: t('Annuler cet arbitrage ?'),
+      texte: t('« %{nom} » repassera en écart. Il faudra l’arbitrer à nouveau.', { nom }),
+      action: t('Annuler l’arbitrage'),
+      annuler: t('Garder'),
     }).then((ok) => { if (ok) annuler.mutate({ sku: a.sku, zone: a.zone }) })
   }
 
@@ -271,27 +272,27 @@ export default function AuditsScreen() {
           <RefreshControl refreshing={isRefetching || recompute.isPending} onRefresh={() => { recompute.mutate(); refetch() }} tintColor={theme.textMuted} />
         }
       >
-        <Text style={styles.docTitre}>Écarts d’audit</Text>
+        <Text style={styles.docTitre}>{t('Écarts d’audit')}</Text>
         <View style={styles.summary}>
           {/* Un zéro ne porte pas de couleur, des deux côtés : en rouge, « aucun
               écart » se lisait comme un problème, et un « 0 arbitré » en vert
               annonçait une réussite qui n'a pas eu lieu. */}
           <Stat
             styles={styles}
-            label="À traiter"
+            label={t('À traiter')}
             value={ecartsCount}
             color={ecartsCount > 0 ? theme.danger : theme.textPrimary}
           />
           <Stat
             styles={styles}
-            label="Arbitrés"
+            label={t('Arbitrés')}
             value={arbitresTotal}
             color={arbitresTotal > 0 ? theme.success : theme.textPrimary}
           />
         </View>
 
         {ecartsCount === 0 && arbitresTotal === 0 && (
-          <Text style={styles.empty}>Les articles apparaîtront après le comptage.</Text>
+          <Text style={styles.empty}>{t('Les articles apparaîtront après le comptage.')}</Text>
         )}
 
         {/* La consigne ne s'affiche que s'il y a quelque chose à corriger : sinon
@@ -299,8 +300,8 @@ export default function AuditsScreen() {
         {groups.length > 0 && (
           <Text style={styles.hint}>
             {usesZones
-              ? 'Les écarts se comparent balise par balise. Retenez le compte du compteur ou celui de l’auditeur, ou saisissez une autre quantité.'
-              : 'Un écart apparaît quand le comptage et l’audit diffèrent. Retenez le compte du compteur ou celui de l’auditeur, ou saisissez une autre quantité.'}
+              ? t('Les écarts se comparent balise par balise. Retenez le compte du compteur ou celui de l’auditeur, ou saisissez une autre quantité.')
+              : t('Un écart apparaît quand le comptage et l’audit diffèrent. Retenez le compte du compteur ou celui de l’auditeur, ou saisissez une autre quantité.')}
           </Text>
         )}
 
@@ -308,10 +309,9 @@ export default function AuditsScreen() {
           <View style={styles.okCard}>
             <View style={styles.okIcone}><CocheIcon color={theme.success} size={18} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.okTitre}>Aucun écart à traiter</Text>
+              <Text style={styles.okTitre}>{t('Aucun écart à traiter')}</Text>
               <Text style={styles.okTexte}>
-                Le comptage et l’audit concordent
-                {usesZones ? ' sur toutes les balises auditées' : ''}.
+                {usesZones ? t('Le comptage et l’audit concordent sur toutes les balises auditées.') : t('Le comptage et l’audit concordent.')}
               </Text>
             </View>
           </View>
@@ -321,9 +321,9 @@ export default function AuditsScreen() {
           <View key={g.zone || '_'} style={styles.group}>
             {usesZones && g.zone !== '' && (
               <View style={styles.baliseHeader}>
-                <Text style={styles.baliseTitle}>Balise {g.zone}{g.name ? ` · ${g.name}` : ''}</Text>
+                <Text style={styles.baliseTitle}>{t('Balise %{code}', { code: g.zone })}{g.name ? ` · ${g.name}` : ''}</Text>
                 {g.failed > 0
-                  ? <View style={[styles.baliseBadge, { backgroundColor: theme.dangerSoft }]}><Text style={[styles.baliseBadgeText, { color: theme.danger }]}>{g.failed} écart{g.failed > 1 ? 's' : ''}</Text></View>
+                  ? <View style={[styles.baliseBadge, { backgroundColor: theme.dangerSoft }]}><Text style={[styles.baliseBadgeText, { color: theme.danger }]}>{tn('%{count} écart', '%{count} écarts', g.failed)}</Text></View>
                   : <View style={[styles.baliseBadge, { backgroundColor: theme.successSoft }]}><Text style={[styles.baliseBadgeText, { color: theme.success }]}>OK</Text></View>}
               </View>
             )}
@@ -341,7 +341,7 @@ export default function AuditsScreen() {
               ? <ActivityIndicator color={theme.accent} />
               : (
                 <Text style={styles.plusBtnText}>
-                  Voir {Math.min(PAGE, ecartsCount - discrepancies.length)} écarts de plus
+                  {t('Voir %{n} écarts de plus', { n: Math.min(PAGE, ecartsCount - discrepancies.length) })}
                 </Text>
               )}
           </Pressable>
@@ -352,7 +352,7 @@ export default function AuditsScreen() {
             {/* En-tête calqué sur celui d'une balise : deux sections d'une même
                 page se présentent de la même façon. */}
             <View style={styles.baliseHeader}>
-              <Text style={styles.baliseTitle}>Écarts arbitrés</Text>
+              <Text style={styles.baliseTitle}>{t('Écarts arbitrés')}</Text>
               <View style={[styles.baliseBadge, { backgroundColor: theme.successSoft }]}>
                 <Text style={[styles.baliseBadgeText, { color: theme.success }, tabular]}>
                   {arbitres.length}
@@ -360,7 +360,7 @@ export default function AuditsScreen() {
               </View>
             </View>
             <Text style={styles.hint}>
-              La quantité retenue part dans le rapport. Un nouveau comptage ne l’écrase pas.
+              {t('La quantité retenue part dans le rapport. Un nouveau comptage ne l’écrase pas.')}
             </Text>
             <View style={styles.arbCard}>
               {arbitresVus.map((a, i) => {
@@ -373,9 +373,9 @@ export default function AuditsScreen() {
                     </Text>
                     <View style={styles.arbBas}>
                       <View style={styles.arbFigs}>
-                        <Fig styles={styles} label="Compteur" value={fmt(Number(a.qty_pass1 ?? 0))} />
-                        <Fig styles={styles} label="Auditeur" value={fmt(Number(a.qty_pass2 ?? 0))} />
-                        <Fig styles={styles} label="Retenu" value={fmt(Number(a.final_qty ?? 0))} color={theme.accent} />
+                        <Fig styles={styles} label={t('Compteur')} value={fmt(Number(a.qty_pass1 ?? 0))} />
+                        <Fig styles={styles} label={t('Auditeur')} value={fmt(Number(a.qty_pass2 ?? 0))} />
+                        <Fig styles={styles} label={t('Retenu')} value={fmt(Number(a.final_qty ?? 0))} color={theme.accent} />
                       </View>
                       <Pressable
                         onPress={() => confirmAnnuler(a, nom)}
@@ -384,7 +384,7 @@ export default function AuditsScreen() {
                         // débord, la cible passe sous les 44 pt de la charte.
                         hitSlop={{ top: 14, bottom: 14, left: 16, right: 10 }}
                       >
-                        <Text style={styles.arbAnnuler}>Annuler l’arbitrage</Text>
+                        <Text style={styles.arbAnnuler}>{t('Annuler l’arbitrage')}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -437,12 +437,12 @@ function AuditCard({
       <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.sku}>{name}</Text>
-          <Text style={styles.subSku}>SKU : {a.sku}{brand ? ` · ${brand}` : ''}</Text>
+          <Text style={styles.subSku}>{t('SKU')} : {a.sku}{brand ? ` · ${brand}` : ''}</Text>
         </View>
       </View>
       <View style={styles.figRow}>
-        <Fig styles={styles} label="Écart" value={`${qteSignee(ecart)} u`} color={ecart < 0 ? theme.danger : theme.success} />
-        <Fig styles={styles} label="Écart valeur" value={euro(ecartValue)} color={ecartValue < 0 ? theme.danger : undefined} />
+        <Fig styles={styles} label={t('Écart')} value={`${qteSignee(ecart)} u`} color={ecart < 0 ? theme.danger : theme.success} />
+        <Fig styles={styles} label={t('Écart valeur')} value={euro(ecartValue)} color={ecartValue < 0 ? theme.danger : undefined} />
       </View>
       {/* Trancher, c'est presque toujours choisir l'un des deux comptes : un
           appui suffit. Les deux boutons portent la quantité qu'ils retiennent
@@ -456,7 +456,7 @@ function AuditCard({
           disabled={busy}
         >
           <Text style={[styles.choixTexte, { color: theme.onAccent }, tabular]} numberOfLines={1} adjustsFontSizeToFit>
-            Compteur {unites(counted)}
+            {t('Compteur')} {unites(counted)}
           </Text>
         </Pressable>
         <Pressable
@@ -465,7 +465,7 @@ function AuditCard({
           disabled={busy}
         >
           <Text style={[styles.choixTexte, { color: AUDIT_ON }, tabular]} numberOfLines={1} adjustsFontSizeToFit>
-            Auditeur {unites(audited)}
+            {t('Auditeur')} {unites(audited)}
           </Text>
         </Pressable>
       </View>
@@ -475,11 +475,11 @@ function AuditCard({
           value={value}
           onChangeText={onChange}
           keyboardType="numeric"
-          placeholder="Autre quantité"
+          placeholder={t('Autre quantité')}
           placeholderTextColor={theme.textMuted}
         />
         <Pressable style={[styles.resolveBtn, busy && { opacity: 0.6 }]} onPress={onSave} disabled={busy}>
-          <Text style={styles.resolveBtnText}>Retenir</Text>
+          <Text style={styles.resolveBtnText}>{t('Retenir')}</Text>
         </Pressable>
       </View>
     </View>

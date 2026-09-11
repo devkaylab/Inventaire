@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { CONTACT_EMAIL } from '@/lib/contact'
+import { NoteVersionFrancaise } from '@/components/NoteVersionFrancaise'
 
 /**
  * Politique de confidentialité, servie par le site.
@@ -65,6 +66,7 @@ export default function ConfidentialitePage() {
 
       {/* Le document est injecté tel qu'il est écrit : c'est une pièce
           juridique, on ne la remet pas en forme au passage. */}
+      <div className="legal" style={{ paddingBottom: 0 }}><NoteVersionFrancaise /></div>
       <main className="legal" dangerouslySetInnerHTML={{ __html: corpsDeLaPolitique() }} />
 
       <footer className="legal-pied">

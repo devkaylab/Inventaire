@@ -7,6 +7,7 @@ import { getZoneDashboard } from '@/lib/queries'
 import type { ZoneDashboardRow } from '@/lib/queries'
 import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
+import { t, tn } from '@/lib/i18n'
 import { nb } from '@/lib/nombres'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
@@ -18,7 +19,7 @@ function groupMissing(rows: ZoneDashboardRow[]): MissingGroup[] {
   const map = new Map<string, MissingGroup>()
   for (const r of rows) {
     if (r.count_status === 'done') continue
-    const name = r.name ?? 'Non affectées'
+    const name = r.name ?? t('Non affectées')
     const g = map.get(name) ?? { name, codes: [] }
     g.codes.push(r.code)
     map.set(name, g)
@@ -58,13 +59,12 @@ export default function MissingBalisesScreen() {
         {totalMissing === 0 ? (
           <View style={styles.doneCard}>
             <CocheIcon color={theme.success} size={18} />
-            <Text style={styles.doneText}>Toutes les balises ont été comptées</Text>
+            <Text style={styles.doneText}>{t('Toutes les balises ont été comptées')}</Text>
           </View>
         ) : (
           <>
             <Text style={styles.intro}>
-              {nb(totalMissing)} balise{totalMissing > 1 ? 's' : ''} n'{totalMissing > 1 ? 'ont' : 'a'} pas encore été comptée{totalMissing > 1 ? 's' : ''}.
-              Rendez-vous aux emplacements ci-dessous.
+              {tn("%{count} balise n'a pas encore été comptée. Rendez-vous aux emplacements ci-dessous.", "%{count} balises n'ont pas encore été comptées. Rendez-vous aux emplacements ci-dessous.", totalMissing)}
             </Text>
             {groups.map((g) => (
               <View key={g.name} style={styles.card}>

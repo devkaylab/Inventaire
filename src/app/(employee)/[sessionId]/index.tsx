@@ -25,6 +25,7 @@ import { useAuth } from '@/lib/auth'
 import { baliseSummary } from '@/components/OfflineBanner'
 import { Astuce, Fort } from '@/components/Astuce'
 import { demander, signaler } from '@/lib/dialogue'
+import { t, tn } from '@/lib/i18n'
 import { nb } from '@/lib/nombres'
 
 export default function EmployeeProgressScreen() {
@@ -114,23 +115,26 @@ export default function EmployeeProgressScreen() {
     mutationFn: () => leaveSession(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      signaler.succes('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
+      signaler.succes(t('Inventaire quitté'), t('Vous avez quitté cet inventaire. Vos comptages restent enregistrés.'))
       if (router.canGoBack()) router.back()
       else router.replace('/(employee)/')
     },
-    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur(t('Erreur'), errorMessage(e)) },
   })
 
   function confirmLeave() {
     // Partir avec des balises non remontées, c'est perdre le comptage : on le
     // dit avant, pas après.
     const warning = queue.pending > 0
-      ? `\n\nAttention : ${queue.pending} balise${queue.pending > 1 ? 's' : ''} (${baliseSummary(queue.balises, 5)}) n'${queue.pending > 1 ? 'ont' : 'a'} pas encore été remontée${queue.pending > 1 ? 's' : ''}. Retrouvez du réseau avant de quitter.`
+      ? '\n\n' + tn(
+        "Attention : %{count} balise (%{liste}) n'a pas encore été remontée. Retrouvez du réseau avant de quitter.",
+        "Attention : %{count} balises (%{liste}) n'ont pas encore été remontées. Retrouvez du réseau avant de quitter.",
+        queue.pending, { liste: baliseSummary(queue.balises, 5) })
       : ''
     void demander({
-      titre: 'Quitter l’inventaire ?',
-      texte: `Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l'équipe.${warning}`,
-      action: 'Quitter',
+      titre: t('Quitter l’inventaire ?'),
+      texte: t("Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l'équipe.") + warning,
+      action: t('Quitter'),
       ton: 'danger',
     }).then((ok) => { if (ok) leaveMutation.mutate() })
   }
@@ -166,12 +170,12 @@ export default function EmployeeProgressScreen() {
                     genre de chiffre qu'on croit. */}
                 <Text style={styles.summaryLine}>
                   {totaux
-                    ? `${nb(countedPieces)} pièce${countedPieces > 1 ? 's' : ''} comptée${countedPieces > 1 ? 's' : ''} · ${nb(auditedPieces)} auditée${auditedPieces > 1 ? 's' : ''}`
-                    : '— pièce comptée · — auditée'}
+                    ? `${tn('%{count} pièce comptée', '%{count} pièces comptées', countedPieces)} · ${tn('%{count} auditée', '%{count} auditées', auditedPieces)}`
+                    : t('— pièce comptée · — auditée')}
                 </Text>
                 {totaux && horsLigne && (
                   <Text style={styles.summaryDate}>
-                    Au dernier passage du réseau. Ce qui attend sur ce téléphone n&apos;y est pas encore.
+                    {t("Au dernier passage du réseau. Ce qui attend sur ce téléphone n'y est pas encore.")}
                   </Text>
                 )}
               </View>
@@ -184,11 +188,11 @@ export default function EmployeeProgressScreen() {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.pendingTitle}>
-                    {queue.pending} balise{queue.pending > 1 ? 's' : ''} en attente d&apos;envoi
+                    {tn("%{count} balise en attente d'envoi", "%{count} balises en attente d'envoi", queue.pending)}
                   </Text>
                   <Text style={styles.pendingCodes}>{baliseSummary(queue.balises)}</Text>
                   <Text style={styles.pendingHint}>
-                    {queue.syncing ? 'Envoi en cours…' : 'Envoi automatique au retour du réseau'}
+                    {queue.syncing ? t('Envoi en cours…') : t('Envoi automatique au retour du réseau')}
                   </Text>
                 </View>
                 <Chevron color={theme.warning} />
@@ -200,10 +204,8 @@ export default function EmployeeProgressScreen() {
                 n'était écrite nulle part. */}
             {queue.pending > 0 && expliquerFile && (
               <View style={styles.astuceEncart}>
-                <Astuce titre="Deux listes, et la différence compte" onCompris={fileVue}>
-                  <Fort>Balises comptées</Fort> vient du serveur&nbsp;: ce travail est sauvé, même si
-                  vous perdez le téléphone. <Fort>En attente</Fort> est encore ici, sur cet
-                  appareil. Retrouvez du réseau avant de partir&nbsp;; l&apos;envoi se fait tout seul.
+                <Astuce titre={t('Deux listes, et la différence compte')} onCompris={fileVue}>
+                  <Fort>{t('Balises comptées')}</Fort>{t(' vient du serveur\u00a0: ce travail est sauvé, même si vous perdez le téléphone. ')}<Fort>{t('En attente')}</Fort>{t(" est encore ici, sur cet appareil. Retrouvez du réseau avant de partir\u00a0; l'envoi se fait tout seul.")}
                 </Astuce>
               </View>
             )}
@@ -219,7 +221,7 @@ export default function EmployeeProgressScreen() {
                     coup d'œil. Le miroir exact de l'encart ambre d'en face
                     (« N balises en attente d'envoi ») — même mot, même
                     grammaire, la comparaison se fait sans y penser. */}
-                <Astuce titre="Aucune balise en attente" ton="succes" />
+                <Astuce titre={t('Aucune balise en attente')} ton="succes" />
               </View>
             )}
 
@@ -228,8 +230,8 @@ export default function EmployeeProgressScreen() {
               onPress={() => router.push(`/(employee)/${sessionId}/counted`)}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.navTitle}>Balises comptées</Text>
-                <Text style={styles.navHint}>Le détail de ce qui est arrivé sur le serveur</Text>
+                <Text style={styles.navTitle}>{t('Balises comptées')}</Text>
+                <Text style={styles.navHint}>{t('Le détail de ce qui est arrivé sur le serveur')}</Text>
               </View>
               <Chevron color={theme.textMuted} />
             </Pressable>
@@ -238,23 +240,23 @@ export default function EmployeeProgressScreen() {
           {session && session.status !== 'closed' && (
             <View style={styles.footer}>
               <Pressable style={styles.countBtn} onPress={() => { expliqueVu(); router.push(`/(employee)/${sessionId}/scan?mode=count`) }}>
-                <Text style={styles.countBtnText}>Compter des articles</Text>
+                <Text style={styles.countBtnText}>{t('Compter des articles')}</Text>
               </Pressable>
               {expliquer && (
                 <Text style={styles.aide}>
-                  Premier passage : vous scannez une balise, puis les articles du rayon.
+                  {t('Premier passage : vous scannez une balise, puis les articles du rayon.')}
                 </Text>
               )}
               <Pressable style={styles.auditBtn} onPress={() => { expliqueVu(); router.push(`/(employee)/${sessionId}/scan?mode=audit`) }}>
-                <Text style={styles.auditBtnText}>Auditer des articles</Text>
+                <Text style={styles.auditBtnText}>{t('Auditer des articles')}</Text>
               </Pressable>
               {expliquer && (
                 <Text style={styles.aide}>
-                  Second passage, pour vérifier un rayon déjà compté. Votre superviseur vous dira quand.
+                  {t('Second passage, pour vérifier un rayon déjà compté. Votre superviseur vous dira quand.')}
                 </Text>
               )}
               <Pressable style={styles.leaveBtn} onPress={confirmLeave}>
-                <Text style={styles.leaveBtnText}>{"Quitter l'inventaire"}</Text>
+                <Text style={styles.leaveBtnText}>{t("Quitter l'inventaire")}</Text>
               </Pressable>
             </View>
           )}

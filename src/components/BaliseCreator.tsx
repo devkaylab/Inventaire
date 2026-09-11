@@ -15,6 +15,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { BaliseSheetModal } from './BaliseSheetModal'
 import { GeneratingOverlay } from './GeneratingOverlay'
 
@@ -68,33 +69,33 @@ export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
       setDessin(false)
       shareBaliseSheet(planche)
         .then(ouvert => {
-          if (!ouvert) signaler.succes('PDF généré', `Le fichier ${planche.filename} a été créé.`)
+          if (!ouvert) signaler.succes(t('PDF généré'), t('Le fichier %{fichier} a été créé.', { fichier: planche.filename }))
         })
-        .catch(e => signaler.erreur('Erreur', errorMessage(e)))
+        .catch(e => signaler.erreur(t('Erreur'), errorMessage(e)))
     },
-    onError: (e) => { setDessin(false); signaler.erreur('Erreur', errorMessage(e)) },
+    onError: (e) => { setDessin(false); signaler.erreur(t('Erreur'), errorMessage(e)) },
   })
 
   const steps = [
-    ['Imprimez', 'la planche sur des feuilles d’étiquettes autocollantes Avery L7160, à 100 % (taille réelle).'],
-    ['Collez', 'les balises dans le magasin, dans l’ordre des numéros : 1 à 10 dans la réserve, 11 à 30 en surface de vente, par exemple.'],
+    [t('Imprimez'), t('la planche sur des feuilles d’étiquettes autocollantes Avery L7160, à 100 % (taille réelle).')],
+    [t('Collez'), t('les balises dans le magasin, dans l’ordre des numéros : 1 à 10 dans la réserve, 11 à 30 en surface de vente, par exemple.')],
     context === 'zones'
-      ? ['Revenez ici', 'indiquer quelles balises sont à quel endroit.']
-      : ['Indiquez', 'dans chaque inventaire (écran Zones) quelles balises sont à quel endroit.'],
+      ? [t('Revenez ici'), t('indiquer quelles balises sont à quel endroit.')]
+      : [t('Indiquez'), t('dans chaque inventaire (écran Zones) quelles balises sont à quel endroit.')],
   ]
 
   return (
     <View style={styles.card}>
       {onRetour && (
         <Pressable onPress={onRetour} hitSlop={8}>
-          <Text style={styles.retour}>← Revenir à la question</Text>
+          <Text style={styles.retour}>{t('← Revenir à la question')}</Text>
         </Pressable>
       )}
-      <Text style={styles.title}>Créer des balises</Text>
+      <Text style={styles.title}>{t('Créer des balises')}</Text>
       <Text style={styles.intro}>
         {context === 'zones'
-          ? 'Avant de compter, chaque emplacement reçoit des balises : des étiquettes QR numérotées que les compteurs scannent pour dire où ils sont.'
-          : 'Les balises sont des étiquettes QR numérotées, collées dans le magasin, que les compteurs scannent pour dire où ils sont. Elles s’impriment une fois et servent pour tous vos inventaires.'}
+          ? t('Avant de compter, chaque emplacement reçoit des balises : des étiquettes QR numérotées que les compteurs scannent pour dire où ils sont.')
+          : t('Les balises sont des étiquettes QR numérotées, collées dans le magasin, que les compteurs scannent pour dire où ils sont. Elles s’impriment une fois et servent pour tous vos inventaires.')}
       </Text>
       {steps.map(([verb, rest], i) => (
         <View key={verb} style={styles.step}>
@@ -107,7 +108,7 @@ export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
       <Pressable style={styles.btn} onPress={() => setOpen(true)} disabled={dessin}>
         {dessin
           ? <ActivityIndicator color={theme.onAccent} />
-          : <Text style={styles.btnText}>Créer et imprimer des balises</Text>}
+          : <Text style={styles.btnText}>{t('Créer et imprimer des balises')}</Text>}
       </Pressable>
 
       {/* ⚠️ La carte ne s'arrête pas au téléchargement : sans cette sortie, on
@@ -115,9 +116,9 @@ export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
           sont collées. */}
       {onAffecter && (
         <View style={styles.suite}>
-          <Text style={styles.suiteTitre}>Une fois les balises collées</Text>
+          <Text style={styles.suiteTitre}>{t('Une fois les balises collées')}</Text>
           <Pressable style={styles.suiteBtn} onPress={onAffecter}>
-            <Text style={styles.suiteBtnText}>Affecter mes balises</Text>
+            <Text style={styles.suiteBtnText}>{t('Affecter mes balises')}</Text>
           </Pressable>
         </View>
       )}
@@ -129,8 +130,8 @@ export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
       />
       <GeneratingOverlay
         visible={dessin}
-        message="Préparation de l’impression…"
-        sub="Création du PDF des balises"
+        message={t('Préparation de l’impression…')}
+        sub={t('Création du PDF des balises')}
       />
     </View>
   )

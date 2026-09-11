@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native'
 import { useTheme } from '@/lib/theme'
 import { Font } from '@/constants/ink'
 import { HeaderActions } from '@/components/HeaderActions'
+import { t } from '@/lib/i18n'
 
 export default function EmployeeLayout() {
   const { profile, loading } = useAuth()
@@ -28,7 +29,7 @@ export default function EmployeeLayout() {
     // iOS reprend par défaut le titre de l'écran précédent — « Mon compte »,
     // « Session »… Un seul mot, toujours le même, se lit plus vite qu'un
     // libellé qui change à chaque écran, et ne risque pas d'être tronqué.
-    headerBackTitle: 'Retour',
+    headerBackTitle: t('Retour'),
   }
 
   const actionsRight = () => <HeaderActions />
@@ -41,11 +42,11 @@ export default function EmployeeLayout() {
 
   return (
     <Stack screenOptions={{ contentStyle: contenuColonne }}>
-      <Stack.Screen name="index" options={{ title: 'Rejoindre un inventaire', ...headerBase, headerRight: actionsProfileRight }} />
-      <Stack.Screen name="[sessionId]/index" options={{ title: 'Ma progression', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="[sessionId]/scan" options={{ title: 'Comptage', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="[sessionId]/counted" options={{ title: "Balises comptées", ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="[sessionId]/pending" options={{ title: "Balises en attente", ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="index" options={{ title: t('Rejoindre un inventaire'), ...headerBase, headerRight: actionsProfileRight }} />
+      <Stack.Screen name="[sessionId]/index" options={{ title: t('Ma progression'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="[sessionId]/scan" options={{ title: t('Comptage'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="[sessionId]/counted" options={{ title: t('Balises comptées'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="[sessionId]/pending" options={{ title: t('Balises en attente'), ...headerBase, headerRight: actionsRight }} />
     </Stack>
   )
 }

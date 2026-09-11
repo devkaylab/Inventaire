@@ -280,7 +280,7 @@ describe('les écrans', () => {
 
   it('la page Magasins crée le magasin au lieu de le demander', () => {
     const page = sansCommentaires(lire('web/app/magasins/page.tsx'))
-    expect(page).toContain('libelle="Créer le magasin"')
+    expect(page).toContain("libelle={t('Créer le magasin')}")
     // ⚠️ « à garder uniquement : "Créer le magasin" » (Julien, 4 septembre
     // 2026) : le bouton dit l'action, jamais le montant.
     expect(page).not.toContain('Envoyer la demande')

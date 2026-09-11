@@ -23,6 +23,13 @@
 // pourtant le même des deux côtés — le défaut n'était pas qu'il manquait,
 // c'était qu'il était invisible. `web/lib/format.ts` porte la même règle, et
 // un test compare les deux modules.
+//
+// ⚠️ LA LOCALE EST CELLE DE L'INTERFACE, PAS CELLE DU TÉLÉPHONE (10 septembre
+// 2026). `locale()` rend « fr-FR » ou « en-GB » selon la langue choisie dans
+// Mon compte : une interface en anglais écrit « 18,402 », et le symbole de
+// l'euro passe devant le montant, comme l'anglais l'écrit.
+
+import { langue, locale } from '@/lib/i18n'
 
 /** Le séparateur de milliers, en un seul point. */
 const SEPARATEUR = '\u00a0'
@@ -39,7 +46,7 @@ function grouper(s: string): string {
  */
 export function qte(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—'
-  return grouper((v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 }))
+  return grouper((v || 0).toLocaleString(locale(), { maximumFractionDigits: 3 }))
 }
 
 /** Écart signé : le + reste, c'est lui qui donne le sens. */
@@ -47,13 +54,14 @@ export function qteSignee(v: number): string {
   return v > 0 ? `+${qte(v)}` : qte(v)
 }
 
-/** Montant en euros, deux décimales, séparateurs français. */
+/** Montant en euros, deux décimales, dans la locale de l'interface. */
 export function euros(v: number): string {
   if (!Number.isFinite(v)) v = 0
-  return `${grouper((v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} €`
+  const n = grouper((v || 0).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+  return langue() === 'en' ? `€${n}` : `${n} €`
 }
 
 /** Un entier avec ses séparateurs de milliers : 18402 → « 18 402 ». */
 export function nb(n: number): string {
-  return grouper((Number.isFinite(n) ? n : 0).toLocaleString('fr-FR'))
+  return grouper((Number.isFinite(n) ? n : 0).toLocaleString(locale()))
 }

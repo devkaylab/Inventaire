@@ -17,6 +17,7 @@ import {
 } from '@/lib/queries'
 import { exportResultsToExcel } from '@/lib/report'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
 import { euros, qte as fmt, qteSignee } from '@/lib/nombres'
@@ -84,10 +85,10 @@ export default function ResultsScreen() {
     },
     onSuccess: (result) => {
       if (!result.shared) {
-        signaler.succes('Rapport généré', `Le fichier ${result.filename} a été créé mais le partage n'est pas disponible sur cette plateforme.`)
+        signaler.succes(t('Rapport généré'), t("Le fichier %{fichier} a été créé mais le partage n'est pas disponible sur cette plateforme.", { fichier: result.filename }))
       }
     },
-    onError: () => signaler.erreur('Erreur', "La génération du rapport Excel a échoué."),
+    onError: () => signaler.erreur(t('Erreur'), t('La génération du rapport Excel a échoué.')),
   })
 
   if (isLoading) {
@@ -107,12 +108,12 @@ export default function ResultsScreen() {
             Filets au lieu de cartes, nombres en chasse fixe, titre en serif,
             rayon zéro. C'est la même grammaire que l'onglet Rapport du site.
             Voir `src/constants/ink.ts`, `Font.serif` et `Font.mono`. */}
-        <Text style={styles.docTitre}>Rapport d’inventaire</Text>
+        <Text style={styles.docTitre}>{t('Rapport d’inventaire')}</Text>
         <View style={styles.summaryCard}>
-          <Row styles={styles} label="Stock théorique" value={fmt(totals.theoreticalUnits)} />
-          <Row styles={styles} label="Stock compté" value={fmt(totals.countedUnits)} />
-          <Row styles={styles} label="Écart total (unités)" value={qteSignee(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
-          <Row styles={styles} label="Écart total (valeur achat)" value={euros(totals.varianceValue)} color={totals.varianceValue < 0 ? theme.danger : theme.success} />
+          <Row styles={styles} label={t('Stock théorique')} value={fmt(totals.theoreticalUnits)} />
+          <Row styles={styles} label={t('Stock compté')} value={fmt(totals.countedUnits)} />
+          <Row styles={styles} label={t('Écart total (unités)')} value={qteSignee(totals.varianceUnits)} color={totals.varianceUnits < 0 ? theme.danger : theme.success} />
+          <Row styles={styles} label={t('Écart total (valeur achat)')} value={euros(totals.varianceValue)} color={totals.varianceValue < 0 ? theme.danger : theme.success} />
         </View>
 
         <Pressable
@@ -122,16 +123,16 @@ export default function ResultsScreen() {
         >
           {exportMutation.isPending
             ? <ActivityIndicator color={theme.onAccent} />
-            : <Text style={styles.exportBtnText}>Exporter le rapport Excel</Text>}
+            : <Text style={styles.exportBtnText}>{t('Exporter le rapport Excel')}</Text>}
         </Pressable>
 
         {total === 0 && (
-          <Text style={styles.empty}>Aucun résultat. Importez le stock théorique et effectuez les comptages.</Text>
+          <Text style={styles.empty}>{t('Aucun résultat. Importez le stock théorique et effectuez les comptages.')}</Text>
         )}
 
         {total > 0 && (
           <Text style={styles.sectionLabel}>
-            Détail par article · {list.length} sur {total}
+            {t('Détail par article')} · {list.length} {t('sur')} {total}
           </Text>
         )}
         {list.map((r) => <ResultCard key={r.sku} row={r} theme={theme} styles={styles} />)}
@@ -144,7 +145,7 @@ export default function ResultsScreen() {
           >
             {isFetchingNextPage
               ? <ActivityIndicator color={theme.accent} />
-              : <Text style={styles.plusBtnText}>Voir {Math.min(PAGE, total - list.length)} de plus</Text>}
+              : <Text style={styles.plusBtnText}>{t('Voir %{n} de plus', { n: Math.min(PAGE, total - list.length) })}</Text>}
           </Pressable>
         )}
       </ScrollView>
@@ -159,12 +160,12 @@ function ResultCard({ row, theme, styles }: { row: SessionResultRow; theme: Them
     <View style={styles.card}>
       {row.brand ? <Text style={styles.brand}>{row.brand}</Text> : null}
       <Text style={styles.label} numberOfLines={2}>{row.label || row.sku}</Text>
-      <Text style={styles.meta}>SKU : {row.sku}{row.ean ? ` · EAN : ${row.ean}` : ''}</Text>
+      <Text style={styles.meta}>{t('SKU')} : {row.sku}{row.ean ? ` · ${t('EAN')} : ${row.ean}` : ''}</Text>
       <View style={styles.qtyRow}>
-        <Cell styles={styles} label="Théorique" value={fmt(Number(row.theoretical_qty))} />
-        <Cell styles={styles} label="Compté" value={fmt(Number(row.counted_qty))} />
-        <Cell styles={styles} label="Écart" value={qteSignee(variance)} color={vColor} />
-        <Cell styles={styles} label="Valeur" value={euros(Number(row.variance_value))} color={vColor} />
+        <Cell styles={styles} label={t('Théorique')} value={fmt(Number(row.theoretical_qty))} />
+        <Cell styles={styles} label={t('Compté')} value={fmt(Number(row.counted_qty))} />
+        <Cell styles={styles} label={t('Écart')} value={qteSignee(variance)} color={vColor} />
+        <Cell styles={styles} label={t('Valeur')} value={euros(Number(row.variance_value))} color={vColor} />
       </View>
     </View>
   )

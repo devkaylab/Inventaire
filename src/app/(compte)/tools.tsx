@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { BaliseCreator } from '@/components/BaliseCreator'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 /**
@@ -32,14 +33,13 @@ export default function ToolsScreen() {
         <BaliseCreator context="profile" />
 
         <View style={styles.card}>
-          <Text style={styles.title}>Prise en main de l&apos;application</Text>
+          <Text style={styles.title}>{t("Prise en main de l'application")}</Text>
           <Text style={styles.text}>
-            Le parcours de découverte, à retrouver ici quand il sera prêt, pour le refaire ou le
-            montrer à une nouvelle recrue.
+            {t('Le parcours de découverte, à retrouver ici quand il sera prêt, pour le refaire ou le montrer à une nouvelle recrue.')}
           </Text>
           <View style={styles.badge}>
             <View style={styles.badgeDot} />
-            <Text style={styles.badgeText}>Bientôt</Text>
+            <Text style={styles.badgeText}>{t('Bientôt')}</Text>
           </View>
         </View>
       </ScrollView>

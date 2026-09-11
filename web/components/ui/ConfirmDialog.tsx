@@ -8,6 +8,7 @@
 // demander de recopier le numéro d'inventaire (`requireText`).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { t } from '@/lib/i18n'
 
 export type ConfirmOptions = {
   title: string
@@ -75,7 +76,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             {pending.requireText && (
               <div className="field" style={{ marginTop: 16 }}>
                 <label htmlFor="confirm-echo">
-                  Recopiez <strong>{pending.requireText}</strong> pour confirmer
+                  {t('Recopiez')} <strong>{pending.requireText}</strong> {t('pour confirmer')}
                 </label>
                 <input
                   id="confirm-echo"
@@ -89,7 +90,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             )}
             <div className="modal-actions">
               <button type="button" className="btn btn-ghost" onClick={() => close(false)}>
-                {pending.cancelLabel ?? 'Annuler'}
+                {pending.cancelLabel ?? t('Annuler')}
               </button>
               <button
                 type="button"
@@ -98,7 +99,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 disabled={blocked}
                 onClick={() => close(true)}
               >
-                {pending.confirmLabel ?? 'Confirmer'}
+                {pending.confirmLabel ?? t('Confirmer')}
               </button>
             </div>
           </div>

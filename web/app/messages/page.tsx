@@ -25,6 +25,7 @@ import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { fmtDateTime, relativeTime } from '@/lib/format'
 import { Chargement } from '@/components/Chargement'
+import { t, tn, useTraduction } from '@/lib/i18n'
 
 type Fil = {
   id: string
@@ -72,6 +73,7 @@ function initiales(nom: string): string {
 export default function MessagesPage() {
   const toast = useToast()
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const [companyName, setCompanyName] = useState<string | null>(null)
   const [fils, setFils] = useState<Fil[] | null>(null)
   const [ouvert, setOuvert] = useState<FilOuvert | null>(null)
@@ -157,7 +159,7 @@ export default function MessagesPage() {
         ok = !direct.error && direct.data?.success
         if (direct.error) toast.error(friendlyError(direct.error))
       } else if (!ok) {
-        toast.error(data?.error ?? 'Envoi impossible pour le moment.')
+        toast.error(data?.error ?? t('Envoi impossible pour le moment.'))
       }
       if (ok) {
         setReponse('')
@@ -208,8 +210,8 @@ export default function MessagesPage() {
       }
       if (succes) {
         toast.success(versQuantinvo
-          ? 'Message envoyé à Quantinvo.'
-          : 'Message envoyé à l’administrateur de votre entreprise.')
+          ? t('Message envoyé à Quantinvo.')
+          : t('Message envoyé à l’administrateur de votre entreprise.'))
         setSujet('')
         setCorps('')
         setRedaction(false)
@@ -219,7 +221,7 @@ export default function MessagesPage() {
         setFils(liste)
         if (liste[0]) void ouvrirFil(liste[0].id)
       } else {
-        setErreurEnvoi(refus ?? 'Envoi impossible pour le moment.')
+        setErreurEnvoi(refus ?? t('Envoi impossible pour le moment.'))
       }
     } finally {
       setEnvoi(false)
@@ -234,8 +236,8 @@ export default function MessagesPage() {
     <AppShell profile={guard.profile} companyName={companyName}>
       <div className="app-head">
         <div>
-          <h1 className="page-title">Messages</h1>
-          <p className="page-sub">Vos conversations, la plus récente en premier.</p>
+          <h1 className="page-title">{t('Messages')}</h1>
+          <p className="page-sub">{t('Vos conversations, la plus récente en premier.')}</p>
         </div>
       </div>
 
@@ -256,24 +258,24 @@ export default function MessagesPage() {
               deux branches se regarde dans les DEUX : je n'avais vérifié que
               celle qui porte des fils. */}
           <EmptyState
-            title="Aucun message"
+            title={t('Aucun message')}
             hint={guard.profile.is_admin
-              ? 'Les messages des entreprises clientes arrivent ici.'
+              ? t('Les messages des entreprises clientes arrivent ici.')
               : guard.profile.is_company_admin
-                ? 'Les messages de vos superviseurs arrivent ici — et vos échanges avec Quantinvo.'
-                : 'Vos échanges avec l’administrateur de votre entreprise arrivent ici.'}
+                ? t('Les messages de vos superviseurs arrivent ici — et vos échanges avec Quantinvo.')
+                : t('Vos échanges avec l’administrateur de votre entreprise arrivent ici.')}
           />
           {peutEcrire && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: -8 }}>
               <button type="button" className="btn btn-primary" onClick={ouvrirRedaction}>
-                <PlusIcone /> Nouveau message
+                <PlusIcone /> {t('Nouveau message')}
               </button>
             </div>
           )}
         </div>
       ) : (
         <div className="boite">
-          <aside className="boite-liste" aria-label="Conversations">
+          <aside className="boite-liste" aria-label={t('Conversations')}>
             {/* En tête de la liste, comme dans toute messagerie : on écrit
                 depuis sa boîte, pas depuis la barre de navigation. */}
             {/* ⚠️ LE BOUTON DIT TOUJOURS LA MÊME CHOSE. Une première version
@@ -290,7 +292,7 @@ export default function MessagesPage() {
             {peutEcrire && (
               <div className="boite-liste-tete">
                 <button type="button" className="btn btn-primary btn-large" onClick={ouvrirRedaction}>
-                  <PlusIcone /> Nouveau message
+                  <PlusIcone /> {t('Nouveau message')}
                 </button>
               </div>
             )}
@@ -298,7 +300,7 @@ export default function MessagesPage() {
                 bouton ci-dessus, en train d'écrire son premier message. Une
                 colonne muette ferait croire à un chargement. */}
             {fils.length === 0 && (
-              <p className="boite-liste-vide">Aucune conversation pour l&apos;instant.</p>
+              <p className="boite-liste-vide">{t("Aucune conversation pour l'instant.")}</p>
             )}
             {fils.map((f) => (
               <button
@@ -313,7 +315,7 @@ export default function MessagesPage() {
                   <span className="fil-date">{relativeTime(f.dernier_le)}</span>
                 </div>
                 <div className="fil-sujet">
-                  {f.non_lu && <span className="fil-point" aria-label="non lu" />}
+                  {f.non_lu && <span className="fil-point" aria-label={t('non lu')} />}
                   {f.sujet}
                 </div>
                 <div className="fil-extrait">
@@ -323,28 +325,28 @@ export default function MessagesPage() {
             ))}
           </aside>
 
-          <section className="boite-fil" aria-label={redaction ? 'Nouveau message' : 'Conversation'}>
+          <section className="boite-fil" aria-label={redaction ? t('Nouveau message') : t('Conversation')}>
             {redaction ? (
               <form className="boite-redaction" onSubmit={envoyerNouveau}>
                 <header className="fil-tete">
-                  <h2>{versQuantinvo ? 'Nouveau message à Quantinvo' : 'Nouveau message à votre administrateur'}</h2>
+                  <h2>{versQuantinvo ? t('Nouveau message à Quantinvo') : t('Nouveau message à votre administrateur')}</h2>
                   <p className="fil-tete-sous">
                     {versQuantinvo
-                      ? 'Remis à l’équipe Quantinvo, dans ses notifications et par e-mail. Elle vous répondra ici.'
-                      : 'Remis à l’administrateur de votre entreprise, dans ses notifications et par e-mail. Il vous répondra ici.'}
+                      ? t('Remis à l’équipe Quantinvo, dans ses notifications et par e-mail. Elle vous répondra ici.')
+                      : t('Remis à l’administrateur de votre entreprise, dans ses notifications et par e-mail. Il vous répondra ici.')}
                   </p>
                 </header>
 
                 <div className="field" style={{ marginTop: 18 }}>
-                  <label htmlFor="nouveau-sujet">Sujet</label>
+                  <label htmlFor="nouveau-sujet">{t('Sujet')}</label>
                   <input
                     id="nouveau-sujet" type="text" maxLength={120} required autoFocus
                     value={sujet} onChange={(e) => setSujet(e.target.value)}
-                    placeholder={versQuantinvo ? 'Licence, magasin, facturation…' : 'Balises, accès, magasin…'}
+                    placeholder={versQuantinvo ? t('Licence, magasin, facturation…') : t('Balises, accès, magasin…')}
                   />
                 </div>
                 <div className="field boite-redaction-corps">
-                  <label htmlFor="nouveau-corps">Message</label>
+                  <label htmlFor="nouveau-corps">{t('Message')}</label>
                   <textarea
                     id="nouveau-corps" maxLength={2000} required
                     value={corps} onChange={(e) => setCorps(e.target.value)}
@@ -354,14 +356,14 @@ export default function MessagesPage() {
                 {erreurEnvoi && <div className="error" role="alert">{erreurEnvoi}</div>}
 
                 <div className="boite-redaction-actions">
-                  <button type="button" className="btn btn-ghost" onClick={() => setRedaction(false)}>Annuler</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setRedaction(false)}>{t('Annuler')}</button>
                   <button type="submit" className="btn btn-primary" disabled={envoi || sujet.trim() === '' || corps.trim() === ''}>
-                    {envoi ? 'Envoi…' : 'Envoyer'}
+                    {envoi ? t('Envoi…') : t('Envoyer')}
                   </button>
                 </div>
               </form>
             ) : !ouvert ? (
-              <p className="tb-vide">Choisissez une conversation.</p>
+              <p className="tb-vide">{t('Choisissez une conversation.')}</p>
             ) : (
               <>
                 <header className="fil-tete">
@@ -370,7 +372,7 @@ export default function MessagesPage() {
                     {fils.find((f) => f.id === ouvert.id)?.avec}
                     {ouvert.entreprise && guard.profile.is_admin && ` · ${ouvert.entreprise}`}
                     {' · '}
-                    {ouvert.messages.length} message{ouvert.messages.length > 1 ? 's' : ''}
+                    {tn('%{count} message', '%{count} messages', ouvert.messages.length)}
                   </p>
                 </header>
 
@@ -379,7 +381,7 @@ export default function MessagesPage() {
                     <article className={`bulle${m.de_moi ? ' bulle-moi' : ''}`} key={m.id}>
                       <div className="bulle-tete">
                         <span className="bulle-avatar">{initiales(m.auteur)}</span>
-                        <span className="bulle-auteur">{m.de_moi ? 'Vous' : m.auteur}</span>
+                        <span className="bulle-auteur">{m.de_moi ? t('Vous') : m.auteur}</span>
                         <span className="bulle-date" title={fmtDateTime(m.cree_le)}>
                           {relativeTime(m.cree_le)}
                         </span>
@@ -392,14 +394,14 @@ export default function MessagesPage() {
                 </div>
 
                 <form className="fil-repondre" onSubmit={repondre}>
-                  <label htmlFor="fil-reponse" className="sr-only">Votre réponse</label>
+                  <label htmlFor="fil-reponse" className="sr-only">{t('Votre réponse')}</label>
                   <textarea
                     id="fil-reponse" rows={3} maxLength={2000}
                     value={reponse} onChange={(e) => setReponse(e.target.value)}
-                    placeholder="Répondre…"
+                    placeholder={t('Répondre…')}
                   />
                   <button type="submit" className="btn btn-primary" disabled={envoi || reponse.trim() === ''}>
-                    {envoi ? 'Envoi…' : 'Répondre'}
+                    {envoi ? t('Envoi…') : t('Répondre')}
                   </button>
                 </form>
               </>

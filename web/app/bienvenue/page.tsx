@@ -10,6 +10,8 @@ import { PasswordRules } from '@/components/PasswordRules'
 import { StoreBadges } from '@/components/StoreBadges'
 import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
 import { Chargement } from '@/components/Chargement'
+import { LangueToggle } from '@/components/LangueToggle'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Finalisation de compte, à l'arrivée du lien reçu par e-mail.
@@ -30,6 +32,7 @@ import { Chargement } from '@/components/Chargement'
  */
 export default function WelcomePage() {
   const router = useRouter()
+  const { t } = useTraduction()
   const [ready, setReady] = useState(false)
   const [hasSession, setHasSession] = useState(false)
   const [firstName, setFirstName] = useState('')
@@ -85,18 +88,18 @@ export default function WelcomePage() {
     e.preventDefault()
     setError(null)
     if (!firstName.trim() || !lastName.trim()) {
-      setError('Renseignez votre prénom et votre nom.')
+      setError(t('Renseignez votre prénom et votre nom.'))
       return
     }
     // Mêmes règles que le serveur (voir `lib/password.ts`) : les énoncer ici
     // évite un refus en anglais après envoi.
     const pwdError = passwordError(password)
     if (pwdError) {
-      setError(pwdError)
+      setError(t(pwdError))
       return
     }
     if (password !== confirm) {
-      setError('Les deux mots de passe ne correspondent pas.')
+      setError(t('Les deux mots de passe ne correspondent pas.'))
       return
     }
 
@@ -108,7 +111,7 @@ export default function WelcomePage() {
     })
     if (authError || !updated.user) {
       setBusy(false)
-      setError(authError ? friendlyPasswordError(authError.message) : 'Enregistrement impossible.')
+      setError(authError ? t(friendlyPasswordError(authError.message)) : t('Enregistrement impossible.'))
       return
     }
 
@@ -119,7 +122,7 @@ export default function WelcomePage() {
       .eq('id', updated.user.id)
     setBusy(false)
     if (profError) {
-      setError('Mot de passe enregistré, mais votre nom n’a pas pu être mis à jour. Vous pourrez le corriger depuis votre compte.')
+      setError(t('Mot de passe enregistré, mais votre nom n’a pas pu être mis à jour. Vous pourrez le corriger depuis votre compte.'))
       return
     }
     setDone(true)
@@ -135,15 +138,14 @@ export default function WelcomePage() {
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>Lien expiré</h1>
+            <h1>{t('Lien expiré')}</h1>
             <p className="sub">
-              Ce lien d&apos;invitation n&apos;est plus valable ou a déjà été utilisé.
-              Si vous avez déjà choisi votre mot de passe, connectez-vous.
-              Sinon, demandez une nouvelle invitation à la personne qui vous a ajouté.
+              {t("Ce lien d'invitation n'est plus valable ou a déjà été utilisé. Si vous avez déjà choisi votre mot de passe, connectez-vous. Sinon, demandez une nouvelle invitation à la personne qui vous a ajouté.")}
             </p>
           </div>
-          <Link href="/login" className="btn btn-primary btn-block">Se connecter</Link>
+          <Link href="/login" className="btn btn-primary btn-block">{t('Se connecter')}</Link>
         </div>
+        <LangueToggle />
       </div>
     )
   }
@@ -155,21 +157,21 @@ export default function WelcomePage() {
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>Compte activé</h1>
+            <h1>{t('Compte activé')}</h1>
             <p className="sub">
               {isSupervisor ? (
-                <>Bienvenue {firstName}. Votre compte est actif : vous pouvez vous connecter dès maintenant.</>
+                <>{t('Bienvenue %{prenom}. Votre compte est actif : vous pouvez vous connecter dès maintenant.', { prenom: firstName })}</>
               ) : (
                 <>
-                  Bienvenue {firstName}. Il ne reste qu&apos;à installer l&apos;application Quantinvo,
-                  puis à vous connecter avec <b>{email}</b> et le mot de passe que vous venez de choisir.
+                  {t("Bienvenue %{prenom}. Il ne reste qu'à installer l'application Quantinvo, puis à vous connecter avec ", { prenom: firstName })}
+                  <b>{email}</b>{t(' et le mot de passe que vous venez de choisir.')}
                 </>
               )}
             </p>
           </div>
           {isSupervisor ? (
             <button className="btn btn-primary btn-block" onClick={() => router.replace('/account')}>
-              Accéder à mon espace
+              {t('Accéder à mon espace')}
             </button>
           ) : (
             /* Le cul-de-sac d'avant : cette page disait « ouvrez l'application »
@@ -190,11 +192,12 @@ export default function WelcomePage() {
                lirait « cet espace se pilote depuis un ordinateur » sur
                l'appareil qu'il tient. */
             <>
-              <Link href="/open" className="btn btn-primary btn-block">Ouvrir l&apos;application</Link>
+              <Link href="/open" className="btn btn-primary btn-block">{t("Ouvrir l'application")}</Link>
               <StoreBadges />
             </>
           )}
         </div>
+        <LangueToggle />
       </div>
     )
   }
@@ -204,9 +207,9 @@ export default function WelcomePage() {
       <div className="auth-card">
         <div className="head">
           <Link href="/"><Logo size={56} /></Link>
-          <h1>Finaliser mon compte</h1>
+          <h1>{t('Finaliser mon compte')}</h1>
           <p className="sub">
-            Vérifiez vos informations et choisissez votre mot de passe.
+            {t('Vérifiez vos informations et choisissez votre mot de passe.')}
           </p>
         </div>
 
@@ -214,29 +217,29 @@ export default function WelcomePage() {
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="email">E-mail</label>
+            <label htmlFor="email">{t('E-mail')}</label>
             <input id="email" value={email} disabled readOnly />
-            <p className="field-hint">C&apos;est l&apos;adresse à laquelle vous avez été invité.</p>
+            <p className="field-hint">{t("C'est l'adresse à laquelle vous avez été invité.")}</p>
           </div>
           <div className="field">
-            <label htmlFor="firstName">Prénom</label>
+            <label htmlFor="firstName">{t('Prénom')}</label>
             <input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="lastName">Nom</label>
+            <label htmlFor="lastName">{t('Nom')}</label>
             <input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="password">Mot de passe</label>
+            <label htmlFor="password">{t('Mot de passe')}</label>
             <input
               id="password" type="password" autoComplete="new-password"
               value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder={`${MIN_PASSWORD_LENGTH} caractères minimum`}
+              placeholder={t('%{n} caractères minimum', { n: MIN_PASSWORD_LENGTH })}
             />
             <PasswordRules password={password} />
           </div>
           <div className="field">
-            <label htmlFor="confirm">Confirmer le mot de passe</label>
+            <label htmlFor="confirm">{t('Confirmer le mot de passe')}</label>
             <input
               id="confirm" type="password" autoComplete="new-password"
               value={confirm} onChange={(e) => setConfirm(e.target.value)}
@@ -244,11 +247,12 @@ export default function WelcomePage() {
           </div>
 
           <button className="btn btn-primary btn-block" disabled={busy}>
-            {busy ? 'Activation…' : 'Activer mon compte'}
+            {busy ? t('Activation…') : t('Activer mon compte')}
           </button>
-          <MentionCollecte finalite="créer votre compte et vous permettre de vous connecter" />
+          <MentionCollecte finalite={t('créer votre compte et vous permettre de vous connecter')} />
         </form>
       </div>
+      <LangueToggle />
     </div>
   )
 }

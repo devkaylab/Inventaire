@@ -17,6 +17,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
@@ -44,7 +45,7 @@ export default function NameScreen() {
       await refreshProfile()
       router.back()
     } catch (e) {
-      signaler.erreur('Modification impossible', errorMessage(e))
+      signaler.erreur(t('Modification impossible'), errorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -56,18 +57,18 @@ export default function NameScreen() {
         <ScrollView
           automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
-            <Text style={styles.label}>Prénom et nom</Text>
+            <Text style={styles.label}>{t('Prénom et nom')}</Text>
             <TextInput
               style={styles.input}
               value={nom}
               onChangeText={setNom}
               autoCapitalize="words"
               autoComplete="name"
-              placeholder="Marie Lambert"
+              placeholder={t('Marie Lambert')}
               placeholderTextColor={theme.textMuted}
             />
             <Text style={styles.hint}>
-              C&apos;est le nom que voient votre équipe et les personnes que vous invitez.
+              {t("C'est le nom que voient votre équipe et les personnes que vous invitez.")}
             </Text>
 
             <Pressable
@@ -78,14 +79,13 @@ export default function NameScreen() {
               {busy ? (
                 <ActivityIndicator color={theme.onAccent} />
               ) : (
-                <Text style={styles.btnText}>Enregistrer</Text>
+                <Text style={styles.btnText}>{t('Enregistrer')}</Text>
               )}
             </Pressable>
           </View>
 
           <Text style={styles.note}>
-            Votre adresse e-mail identifie votre compte et ne peut pas être changée ici. Votre
-            rôle et votre entreprise sont fixés par votre administrateur.
+            {t('Votre adresse e-mail identifie votre compte et ne peut pas être changée ici. Votre rôle et votre entreprise sont fixés par votre administrateur.')}
           </Text>
         </ScrollView>
       </ClavierEvite>

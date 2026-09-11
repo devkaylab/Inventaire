@@ -15,6 +15,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Pagination, useRetourEnHaut } from '@/components/ui/Pagination'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Stat } from '@/components/ui/Stat'
+import { locale, t, tn } from '@/lib/i18n'
 
 type SortKey = Exclude<RapportTri, 'sku'>
 
@@ -147,26 +148,24 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
 
   async function onExport(format: 'xlsx' | 'csv') {
     setExporting(format)
-    setAvance('Préparation…')
+    setAvance(t('Préparation…'))
     try {
-      // ⚠️ Le fichier remis au client contient TOUT. C'est le seul endroit du
-      // site où l'on redemande l'ensemble — par tranches, jamais d'un bloc.
       const suivi = (quoi: string) => (fait: number, total: number) =>
         setAvance(`${quoi} ${nb(fait)} / ${nb(total)}`)
 
-      const tout = await getAllRapportRows(sessionId, suivi('Écarts'))
-      const detail = await getSessionDetail(sessionId, suivi('Détail par zone'))
+      const tout = await getAllRapportRows(sessionId, suivi(t('Écarts')))
+      const detail = await getSessionDetail(sessionId, suivi(t('Détail par zone')))
 
       if (format === 'csv') {
         const names = downloadCsv(inventoryNumber, tout, detail)
         toast.success(
           names.length > 1
-            ? `${names.length} fichiers téléchargés : écarts et détail par zone.`
-            : `${names[0]} téléchargé.`,
+            ? t('%{n} fichiers téléchargés : écarts et détail par zone.', { n: names.length })
+            : t('%{fichier} téléchargé.', { fichier: names[0] }),
         )
       } else {
         const name = await downloadXlsx(inventoryNumber, tout, detail)
-        toast.success(`${name} téléchargé (2 feuilles : Écarts, Détail par zone).`)
+        toast.success(t('%{fichier} téléchargé (2 feuilles : Écarts, Détail par zone).', { fichier: name }))
       }
     } catch (err) {
       toast.error(friendlyError(err))
@@ -186,8 +185,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
     return (
       <div>
         <p className="chargement-note" role="status">
-          Calcul du rapport en cours… Sur un inventaire de plusieurs dizaines de milliers de
-          références, comptez quelques secondes.
+          {t('Calcul du rapport en cours… Sur un inventaire de plusieurs dizaines de milliers de références, comptez quelques secondes.')}
         </p>
         <SkeletonRows rows={5} />
       </div>
@@ -204,17 +202,17 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
           nomme l'inventaire, le document nomme la pièce et l'heure à laquelle
           elle est arrêtée. C'est ce qui a remplacé `.report-freshness`. */}
       <div className="registre-entete">
-        <h2 className="registre-titre">Rapport d’inventaire</h2>
+        <h2 className="registre-titre">{t('Rapport d’inventaire')}</h2>
         <div className="registre-arrete">
           <span>
             {refreshing
-              ? 'Recalcul en cours…'
+              ? t('Recalcul en cours…')
               : computedAt
-                ? `Arrêté à ${computedAt.toLocaleTimeString('fr-FR')}`
-                : 'Chiffres non calculés'}
+                ? t('Arrêté à %{heure}', { heure: computedAt.toLocaleTimeString(locale()) })
+                : t('Chiffres non calculés')}
           </span>
           <button type="button" className="link-btn" disabled={refreshing} onClick={() => void load({ silent: true })}>
-            Actualiser
+            {t('Actualiser')}
           </button>
         </div>
       </div>
@@ -222,15 +220,15 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
       {/* ⚠️ Sans résumé, on écrit « — », jamais « 0 » : un zéro se lit comme un
           résultat, et celui-là serait faux. */}
       <div className="dash-stats">
-        <Stat label="Stock théorique" value={resume ? fmtQty(totals.theoUnits) : '—'} />
-        <Stat label="Stock compté" value={resume ? fmtQty(totals.countedUnits) : '—'} />
+        <Stat label={t('Stock théorique')} value={resume ? fmtQty(totals.theoUnits) : '—'} />
+        <Stat label={t('Stock compté')} value={resume ? fmtQty(totals.countedUnits) : '—'} />
         <Stat
-          label="Écart total (unités)"
+          label={t('Écart total (unités)')}
           value={resume ? fmtSigned(totals.varUnits) : '—'}
           tone={!resume ? 'neutral' : totals.varUnits < 0 ? 'neg' : 'pos'}
         />
         <Stat
-          label="Écart total (valeur achat)"
+          label={t('Écart total (valeur achat)')}
           value={resume ? `${money(totals.varValue)} €` : '—'}
           tone={!resume ? 'neutral' : totals.varValue < 0 ? 'neg' : 'pos'}
         />
@@ -238,20 +236,16 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
 
       {!resume && (
         <div className="banner banner-warn">
-          Les totaux n’ont pas pu être calculés — le serveur a mis trop de temps à répondre.
-          Rien n’est perdu, les comptages sont intacts :{' '}
+          {t('Les totaux n’ont pas pu être calculés — le serveur a mis trop de temps à répondre. Rien n’est perdu, les comptages sont intacts :')}{' '}
           <button type="button" className="link-btn" disabled={refreshing} onClick={() => void load({ silent: true })}>
-            réessayer
+            {t('réessayer')}
           </button>.
         </div>
       )}
 
       {totals.unresolved > 0 && (
         <div className="banner banner-warn">
-          {totals.unresolved} article{totals.unresolved > 1 ? 's présentent' : ' présente'} encore un écart
-          non arbitré entre le comptage et l’audit. Sans arbitrage, c’est <strong>la quantité de
-          l’auditeur</strong> qui part dans le rapport. Tranchez-les depuis l’onglet Écarts d’audit pour un
-          rapport définitif.
+          {tn('%{count} article présente encore un écart non arbitré entre le comptage et l’audit. Sans arbitrage, c’est ', '%{count} articles présentent encore un écart non arbitré entre le comptage et l’audit. Sans arbitrage, c’est ', totals.unresolved)}<strong>{t('la quantité de l’auditeur')}</strong>{t(' qui part dans le rapport. Tranchez-les depuis l’onglet Écarts d’audit pour un rapport définitif.')}
         </div>
       )}
 
@@ -261,8 +255,8 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
             type="search"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Rechercher un article, un SKU, un EAN…"
-            aria-label="Rechercher dans le rapport"
+            placeholder={t('Rechercher un article, un SKU, un EAN…')}
+            aria-label={t('Rechercher dans le rapport')}
           />
         </div>
         <button
@@ -270,25 +264,23 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
           disabled={(resume?.lignes ?? 0) === 0 || exporting !== null}
           onClick={() => setAskFormat(true)}
         >
-          {exporting ? (avance ?? 'Préparation…') : 'Télécharger'}
+          {exporting ? (avance ?? t('Préparation…')) : t('Télécharger')}
         </button>
       </div>
 
       {askFormat && (
-        <Modal title="Format du téléchargement" onClose={() => setAskFormat(false)}>
+        <Modal title={t('Format du téléchargement')} onClose={() => setAskFormat(false)}>
           <div className="format-choice">
             <button type="button" className="format-option" onClick={() => { setAskFormat(false); void onExport('xlsx') }}>
               <strong>Excel (.xlsx)</strong>
               <span className="muted small">
-                Deux feuilles : « Écarts » (une ligne par article) et « Détail par zone »
-                (une ligne par balise, avec Compté par et Audité par).
+                {t('Deux feuilles : « Écarts » (une ligne par article) et « Détail par zone » (une ligne par balise, avec Compté par et Audité par).')}
               </span>
             </button>
             <button type="button" className="format-option" onClick={() => { setAskFormat(false); void onExport('csv') }}>
-              <strong>CSV (2 fichiers)</strong>
+              <strong>{t('CSV (2 fichiers)')}</strong>
               <span className="muted small">
-                Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux en
-                deux fichiers, avec exactement les mêmes colonnes qu&apos;Excel.
+                {t("Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux en deux fichiers, avec exactement les mêmes colonnes qu'Excel.")}
               </span>
             </button>
           </div>
@@ -297,11 +289,11 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
 
       {(resume?.lignes ?? 0) === 0 ? (
         <EmptyState
-          title="Aucun résultat"
-          hint="Le rapport se remplit à mesure des comptages. Importez le stock théorique si vous voulez comparer au stock attendu."
+          title={t('Aucun résultat')}
+          hint={t('Le rapport se remplit à mesure des comptages. Importez le stock théorique si vous voulez comparer au stock attendu.')}
         />
       ) : totalFiltre === 0 && !chargeantPage ? (
-        <EmptyState title="Aucun article ne correspond" hint={`Rien ne correspond à « ${recherche} ».`} />
+        <EmptyState title={t('Aucun article ne correspond')} hint={t('Rien ne correspond à « %{q} ».', { q: recherche })} />
       ) : (
         <>
           {/* Les boutons sont AUSSI en tête : sur un écran de 14 pouces,
@@ -310,9 +302,9 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
           <div ref={hautDuTableau} />
           <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
             <span className="muted small">
-              {nb(premier)}–{nb(dernier)} sur{' '}
+              {nb(premier)}–{nb(dernier)} {t('sur')}{' '}
               {nb(totalFiltre)}
-              {chargeantPage && ' · chargement…'}
+              {chargeantPage && ` · ${t('chargement…')}`}
             </span>
           </Pagination>
 
@@ -320,12 +312,12 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
             <table className="dash-table">
               <thead>
                 <tr>
-                  <Th label="Article" onClick={() => toggleSort('label')} active={sort.key === 'label'} dir={sort.dir} />
-                  <Th label="Théorique" num onClick={() => toggleSort('theoretical_qty')} active={sort.key === 'theoretical_qty'} dir={sort.dir} />
-                  <Th label="Compté" num onClick={() => toggleSort('counted_qty')} active={sort.key === 'counted_qty'} dir={sort.dir} />
-                  <Th label="Écart" num onClick={() => toggleSort('variance_units')} active={sort.key === 'variance_units'} dir={sort.dir} />
-                  <Th label="Valeur (€)" num onClick={() => toggleSort('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
-                  <Th label="Statut" onClick={() => toggleSort('status')} active={sort.key === 'status'} dir={sort.dir} />
+                  <Th label={t('Article')} onClick={() => toggleSort('label')} active={sort.key === 'label'} dir={sort.dir} />
+                  <Th label={t('Théorique')} num onClick={() => toggleSort('theoretical_qty')} active={sort.key === 'theoretical_qty'} dir={sort.dir} />
+                  <Th label={t('Compté')} num onClick={() => toggleSort('counted_qty')} active={sort.key === 'counted_qty'} dir={sort.dir} />
+                  <Th label={t('Écart')} num onClick={() => toggleSort('variance_units')} active={sort.key === 'variance_units'} dir={sort.dir} />
+                  <Th label={t('Valeur (€)')} num onClick={() => toggleSort('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
+                  <Th label={t('Statut')} onClick={() => toggleSort('status')} active={sort.key === 'status'} dir={sort.dir} />
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +336,7 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
                       <td className={`num ${value < 0 ? 'neg' : ''}`}>{money(value)}</td>
                       <td>
                         <span className={`dash-audit-badge dash-audit-badge-${r.status}`}>
-                          {AUDIT_STATUS_LABELS[r.status] ?? r.status}
+                          {t(AUDIT_STATUS_LABELS[r.status] ?? r.status)}
                         </span>
                       </td>
                     </tr>
@@ -356,10 +348,10 @@ export function RapportTab({ sessionId, inventoryNumber, liveTick }: {
 
           <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
             <span className="muted small">
-              {nb(premier)}–{nb(dernier)} sur{' '}
+              {nb(premier)}–{nb(dernier)} {t('sur')}{' '}
               {nb(totalFiltre)}
-              {recherche && ` (${nb(resume?.lignes ?? 0)} au total)`}
-              . Quantité retenue : arbitrage, sinon auditeur, sinon compteur.
+              {recherche && ` (${t('%{n} au total', { n: nb(resume?.lignes ?? 0) })})`}
+              . {t('Quantité retenue : arbitrage, sinon auditeur, sinon compteur.')}
             </span>
           </Pagination>
         </>

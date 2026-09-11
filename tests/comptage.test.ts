@@ -127,9 +127,9 @@ describe('rouvrir un rayon : une seule carte', () => {
   it('elle offre compléter, recompter à zéro, et ne pas ouvrir', () => {
     const fonction = scanner.slice(scanner.indexOf('async function openBaliseCode'))
     const carte = fonction.slice(fonction.indexOf('const choix = await demanderChoix('))
-    expect(carte).toContain("action: compte ? 'Compléter le comptage' : 'Compléter l’audit'")
-    expect(carte).toContain("alternative: compte ? 'Recompter à zéro' : 'Refaire l’audit à zéro'")
-    expect(carte).toContain("annuler: 'Ne pas ouvrir'")
+    expect(carte).toContain("action: compte ? t('Compléter le comptage') : t('Compléter l’audit')")
+    expect(carte).toContain("alternative: compte ? t('Recompter à zéro') : t('Refaire l’audit à zéro')")
+    expect(carte).toContain("annuler: t('Ne pas ouvrir')")
   })
 
   /**
@@ -175,8 +175,8 @@ describe('quitter le comptage avec une balise ouverte', () => {
   })
 
   it('la clôture garde sa confirmation, rouge et nommée', () => {
-    expect(scanner).toContain("titre: `Clôturer la balise ${active.code} ?`")
-    expect(scanner).toContain("action: 'Clôturer'")
+    expect(scanner).toContain("titre: t('Clôturer la balise %{code} ?', { code: active.code })")
+    expect(scanner).toContain("action: t('Clôturer')")
     expect(scanner).toContain("ton: 'danger'")
   })
 
@@ -210,7 +210,7 @@ describe('quitter le comptage avec une balise ouverte', () => {
     // un rayon fini qui ne l'est pas. Le chiffre est le seul moyen de voir
     // qu'on n'est pas sur la bonne balise.
     const cloture = scanner.slice(scanner.indexOf('async function closeBalise'))
-    const question = cloture.indexOf('titre: `Clôturer la balise ${active.code} ?`')
+    const question = cloture.indexOf("titre: t('Clôturer la balise %{code} ?'")
     const appel = cloture.indexOf('await setBalise(')
     expect(question).toBeGreaterThan(0)
     expect(question).toBeLessThan(appel)
@@ -255,9 +255,9 @@ describe('quitter le comptage avec une balise ouverte', () => {
    * dit qu'on pourra y revenir. Retirer cette ligne rendrait la carte menteuse.
    */
   it('la confirmation de clôture est rouge, sans se dire définitive', () => {
-    const bloc = scanner.split('Clôturer la balise ${active.code} ?')[1]?.slice(0, 700) ?? ''
+    const bloc = scanner.split("t('Clôturer la balise %{code} ?'")[1]?.slice(0, 900) ?? ''
     expect(bloc).toContain("ton: 'danger'")
-    expect(bloc).toContain("surtitre: 'Confirmation'")
+    expect(bloc).toContain("surtitre: t('Confirmation')")
   })
 })
 
@@ -545,8 +545,8 @@ describe('annuler un comptage', () => {
   })
 
   it('les deux sorties vivent en pied, et « Annuler » ne pèse pas autant', () => {
-    expect(scanner).toContain('Clôturer la balise {activeBalise.code}')
-    expect(scanner).toMatch(/Annuler le \{baliseMode === 'count' \? 'comptage' : 'audit'\}/)
+    expect(scanner).toContain("t('Clôturer la balise %{code}', { code: activeBalise.code })")
+    expect(scanner).toMatch(/\{baliseMode === 'count' \? t\('Annuler le comptage'\) : t\('Annuler l’audit'\)\}/)
     // ⚠️ En contour : deux aplats côte à côte se disputent le regard, et c'est
     // le geste normal — clôturer — qui perdrait.
     const style = scanner.slice(scanner.indexOf('cancelFooterBtn: {'))
@@ -603,12 +603,12 @@ describe('annuler un comptage', () => {
   })
 
   it('et il se confirme, comme la clôture', () => {
-    expect(corps).toContain('Annuler le ${geste} de la balise ${active.code} ?')
+    expect(corps).toContain("t('Annuler le comptage de la balise %{code} ?'")
     expect(corps).toContain("ton: 'danger'")
     expect(corps).toContain('Rien ne sera enregistré')
     // Le refus dit « Continuer » : deux « Annuler » dans la même carte ne se
     // distinguent pas l'un de l'autre.
-    expect(corps).toContain("annuler: 'Continuer'")
+    expect(corps).toContain("annuler: t('Continuer')")
     expect(corps.indexOf('await demander(')).toBeLessThan(zoneOuLignes(corps))
   })
 })

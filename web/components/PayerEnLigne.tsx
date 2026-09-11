@@ -26,6 +26,7 @@ import { ecrivezNous } from '@/lib/contact'
 import { compositionOffre, proposer } from '@/lib/appareils'
 import { nombreOuNull } from '@/components/MagasinSaisie'
 import { nb } from '@/lib/format'
+import { t } from '@/lib/i18n'
 
 export type OffreAPayer = {
   /** Le nom du palier — il vient d'`OFFRES`, jamais réinventé ici. */
@@ -74,7 +75,7 @@ function ChoixRythme({
   onChange: (r: 'monthly' | 'yearly') => void
 }) {
   return (
-    <div className="payer-rythmes" role="radiogroup" aria-label="Rythme de paiement">
+    <div className="payer-rythmes" role="radiogroup" aria-label={t('Rythme de paiement')}>
       {(['monthly', 'yearly'] as const).map((r) => (
         <button
           key={r}
@@ -84,7 +85,7 @@ function ChoixRythme({
           className={`payer-rythme${valeur === r ? ' est-choisi' : ''}`}
           onClick={() => onChange(r)}
         >
-          <span className="payer-rythme-nom">{r === 'monthly' ? 'Au mois' : 'À l’année'}</span>
+          <span className="payer-rythme-nom">{r === 'monthly' ? t('Au mois') : t('À l’année')}</span>
           <span className="prix">{euros(r === 'monthly' ? offre.mois : offre.an)}</span>
         </button>
       ))}
@@ -123,7 +124,7 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
       setErreur(
         (reponse?.error as string | undefined) ??
           error?.message ??
-          'Le changement n’a pas pu se faire. Réessayez dans un instant.',
+          t('Le changement n’a pas pu se faire. Réessayez dans un instant.'),
       )
       return
     }
@@ -140,7 +141,7 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
   if (fait) {
     return (
       <p className="signal-txt small" role="status">
-        C’est fait. Votre abonnement couvre maintenant {offre.couvre} appareils.
+        {t('C’est fait. Votre abonnement couvre maintenant %{n} appareils.', { n: offre.couvre })}
       </p>
     )
   }
@@ -150,7 +151,7 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
       <ChoixRythme offre={offre} valeur={rythme} onChange={setRythme} />
 
       <button type="button" className="btn btn-primary btn-sm" disabled={busy || disabled} onClick={payer}>
-        {busy ? 'Un instant…' : libelle}
+        {busy ? t('Un instant…') : libelle}
       </button>
 
       {erreur && (
@@ -216,7 +217,7 @@ export function ReprendrePaiement({
     setErreur(
       (reponse?.error as string | undefined) ??
         error?.message ??
-        'Le paiement n’a pas pu se rouvrir. Réessayez dans un instant.',
+        t('Le paiement n’a pas pu se rouvrir. Réessayez dans un instant.'),
     )
   }
 
@@ -226,7 +227,7 @@ export function ReprendrePaiement({
           (Julien, 4 septembre 2026) : ce qu'on achète ne change pas. */}
       {offre && <ChoixRythme offre={offre} valeur={rythme} onChange={setRythme} />}
       <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={reprendre}>
-        {busy ? 'Un instant…' : 'Reprendre le paiement'}
+        {busy ? t('Un instant…') : t('Reprendre le paiement')}
       </button>
       {erreur && <p className="field-hint" role="alert" style={{ marginTop: 8 }}>{erreur}</p>}
     </div>
@@ -306,7 +307,7 @@ export function ChangerOffre({
   return (
     <div className="offre-pied-ouvert">
       <div className="field offre-champ">
-        <label htmlFor={`${uid}-appareils`}>Appareils qui comptent en même temps</label>
+        <label htmlFor={`${uid}-appareils`}>{t('Appareils qui comptent en même temps')}</label>
         <input
           id={`${uid}-appareils`}
           type="number"
@@ -318,31 +319,30 @@ export function ChangerOffre({
         />
         <p className="field-hint">
           {plafond == null
-            ? 'Ce magasin n’a pas encore d’offre en appareils.'
-            : `Votre offre en couvre ${nb(plafond)} aujourd’hui.`}
+            ? t('Ce magasin n’a pas encore d’offre en appareils.')
+            : t('Votre offre en couvre %{n} aujourd’hui.', { n: nb(plafond) })}
         </p>
       </div>
 
       {dejaCouvert && (
         <p className="offre-refus" role="status">
-          Votre offre couvre déjà {nb(plafond ?? 0)} appareils&nbsp;: il n’y a rien à changer.
+          {t('Votre offre couvre déjà %{n} appareils : il n’y a rien à changer.', { n: nb(plafond ?? 0) })}
         </p>
       )}
 
       {horsGrille && (
         <p className="offre-refus" role="status">
-          Au-delà de {nb(PLAFOND_LIBRE_SERVICE)} appareils, l&apos;offre d&apos;un magasin ne se
-          prolonge plus&nbsp;: l&apos;abonnement est par magasin, déclarez-les séparément.
+          {t("Au-delà de %{n} appareils, l'offre d'un magasin ne se prolonge plus : l'abonnement est par magasin, déclarez-les séparément.", { n: nb(PLAFOND_LIBRE_SERVICE) })}
           {/* ⚠️ `ecrivezNous` se tait quand l'adresse n'est pas posée : on
               n'invite jamais à écrire sans dire où. Règle du 22 août 2026. */}
-          {ecrivezNous() && <> Si votre cas ne rentre pas, {ecrivezNous()}.</>}
+          {ecrivezNous() && <> {t('Si votre cas ne rentre pas,')} {ecrivezNous()}.</>}
         </p>
       )}
 
       {offre && (
         <>
           <p className="muted small offre-resume">
-            <strong>{offre.nom}</strong> couvre {nb(offre.couvre)} appareils à la fois
+            <strong>{offre.nom}</strong> {t('couvre %{n} appareils à la fois', { n: nb(offre.couvre) })}
             {/* La page Stripe décompose en deux lignes dès qu'on sort d'un
                 palier : si notre écran ne le dit pas, le « Qté 4 » s'y
                 découvre sans prévenir. Et une tranche entamée se paie
@@ -360,7 +360,7 @@ export function ChangerOffre({
 
       <div className="inline-form" style={{ marginTop: 10 }}>
         <button type="button" className="link-btn" onClick={() => { setOuvert(false); setSaisie('') }}>
-          Annuler
+          {t('Annuler')}
         </button>
       </div>
     </div>

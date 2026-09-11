@@ -7,6 +7,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { getMyCounts, getZones } from '@/lib/queries'
 import { isOffline } from '@/lib/offlineSync'
 import { useTheme } from '@/lib/theme'
+import { t, tn } from '@/lib/i18n'
 
 /**
  * Ce que ce compteur a déjà compté **et qui est bien arrivé sur le serveur**.
@@ -74,7 +75,7 @@ export function CountedBalisesList({
     .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
     .map(([code, g]) => ({
       code,
-      title: zoneName.get(code) ? `Balise ${code} · ${zoneName.get(code)}` : `Balise ${code}`,
+      title: zoneName.get(code) ? `${t('Balise %{code}', { code })} · ${zoneName.get(code)}` : t('Balise %{code}', { code }),
       total: g.total,
       data: [...g.skus.entries()].map(([sku, qty]) => ({ sku, qty })).sort((a, b) => b.qty - a.qty),
     }))
@@ -98,7 +99,7 @@ export function CountedBalisesList({
         </View>
         <View style={styles.qtyWrap}>
           <Text style={styles.qty}>{item.qty}</Text>
-          <Text style={styles.qtyUnit}>pièce{item.qty > 1 ? 's' : ''}</Text>
+          <Text style={styles.qtyUnit}>{item.qty > 1 ? t('pièces') : t('pièce')}</Text>
         </View>
       </View>
     )
@@ -122,13 +123,12 @@ export function CountedBalisesList({
     <View style={styles.center}>
       <Text style={styles.emptyText}>
         {isError || isOffline()
-          ? 'Impossible de joindre le serveur pour l’instant.'
-          : 'Aucune pièce remontée pour l’instant'}
+          ? t('Impossible de joindre le serveur pour l’instant.')
+          : t('Aucune pièce remontée pour l’instant')}
       </Text>
       {(isError || isOffline()) && (
         <Text style={styles.emptyHint}>
-          Cette liste vient du serveur. Ce que ce téléphone retient encore se lit sur
-          « En attente », et part tout seul au retour du réseau.
+          {t('Cette liste vient du serveur. Ce que ce téléphone retient encore se lit sur « En attente », et part tout seul au retour du réseau.')}
         </Text>
       )}
     </View>
@@ -161,7 +161,7 @@ export function CountedBalisesList({
               <View style={{ flex: 1 }}>
                 <Text style={styles.baliseRowTitle} numberOfLines={1}>{item.title}</Text>
                 <Text style={styles.baliseRowMeta}>
-                  {item.data.length} article{item.data.length > 1 ? 's' : ''} · {item.total} pièce{item.total > 1 ? 's' : ''}
+                  {tn('%{count} article', '%{count} articles', item.data.length)} · {tn('%{count} pièce', '%{count} pièces', item.total)}
                 </Text>
               </View>
               <Chevron open={open} color={theme.textMuted} />

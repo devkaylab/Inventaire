@@ -4292,3 +4292,22 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   :root[data-theme="light"] .registre { background: transparent; }
   .registre .dash-stat + .dash-stat { border-left: 0; padding-left: 0; }
 }
+
+/* ── Bouton de langue (10 septembre 2026) ───────────────────
+   Même dessin que le bouton de thème, posé juste au-dessus. Espace connecté
+   et portes de connexion seulement — voir components/LangueToggle.tsx. */
+.langue-toggle {
+  position: fixed; bottom: 72px; right: 20px; z-index: 50;
+  min-width: 44px; height: 44px; padding: 0 12px; border-radius: 22px;
+  background: var(--surface); color: var(--text-2);
+  border: 1px solid var(--hairline); cursor: pointer;
+  display: grid; place-items: center;
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 12px; font-weight: 600; letter-spacing: .08em;
+  box-shadow: var(--shadow-elev);
+  transition: color .2s ease, border-color .2s ease, transform .08s ease;
+}
+.langue-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+.langue-toggle:active { transform: translateY(1px); }
+
+.langue-choix { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }

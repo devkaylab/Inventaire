@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Stat } from '@/components/ui/Stat'
+import { t, tn } from '@/lib/i18n'
 
 type Phase = 'idle' | 'parsing' | 'uploading' | 'done' | 'error'
 
@@ -77,7 +78,7 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
     setStarting(true)
     try {
       await startSession(sessionId)
-      toast.success('Inventaire démarré : l’équipe peut compter.')
+      toast.success(t('Inventaire démarré : l’équipe peut compter.'))
       await onChanged()
       // La préparation est finie : on n'a plus rien à faire ici. Le geste
       // suivant est de regarder l'équipe compter, donc l'écran y va — après
@@ -101,10 +102,10 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
     // dire avant, pas après.
     if (existing > 0) {
       const ok = await confirm({
-        title: kind === 'catalogue' ? 'Remplacer le référentiel articles ?' : 'Remplacer le stock théorique ?',
-        message: `${existing} ligne(s) sont déjà chargées pour cet inventaire. Elles seront remplacées par le contenu de « ${file.name} ».`,
-        details: ['Les comptages déjà enregistrés ne sont pas touchés.'],
-        confirmLabel: 'Remplacer',
+        title: kind === 'catalogue' ? t('Remplacer le référentiel articles ?') : t('Remplacer le stock théorique ?'),
+        message: tn('%{count} ligne est déjà chargée pour cet inventaire. Elle sera remplacée par le contenu de « %{fichier} ».', '%{count} lignes sont déjà chargées pour cet inventaire. Elles seront remplacées par le contenu de « %{fichier} ».', existing, { fichier: file.name }),
+        details: [t('Les comptages déjà enregistrés ne sont pas touchés.')],
+        confirmLabel: t('Remplacer'),
       })
       if (!ok) return
     }
@@ -116,9 +117,9 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
       })
       setState(s => ({
         ...s, phase: 'done', uploaded: result.uploaded, errors: result.errors, notes: result.notes,
-        message: `${result.uploaded} ligne(s) importée(s).`,
+        message: tn('%{count} ligne importée.', '%{count} lignes importées.', result.uploaded),
       }))
-      toast.success(`${file.name} : ${result.uploaded} ligne(s) importée(s).`)
+      toast.success(`${file.name} : ${tn('%{count} ligne importée.', '%{count} lignes importées.', result.uploaded)}`)
       await onChanged()
     } catch (err) {
       const message = friendlyError(err)
@@ -134,33 +135,32 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
   // d'intérêt que si on n'a pas besoin d'ouvrir pour savoir où on en est.
   const resumeZones = useMemo(() => {
     const groups = groupByName(zones)
-    if (groups.length === 0) return 'Aucun emplacement affecté — les balises ne sont rattachées à rien'
+    if (groups.length === 0) return t('Aucun emplacement affecté — les balises ne sont rattachées à rien')
     const balises = groups.reduce((n, g) => n + g.total, 0)
     return `${plural(groups.length, 'emplacement')} · ${plural(balises, 'balise affectée', 'balises affectées')}`
   }, [zones])
 
   const resumeFichiers = importState.articles === 0
-    ? 'Aucun fichier chargé — le référentiel articles est indispensable'
+    ? t('Aucun fichier chargé — le référentiel articles est indispensable')
     : `${plural(importState.articles, 'référence')} · ${
         importState.theoreticalQty > 0
-          ? `${fmtQty(importState.theoreticalQty)} pièces attendues`
-          : 'aucun stock théorique'
+          ? t('%{n} pièces attendues', { n: fmtQty(importState.theoreticalQty) })
+          : t('aucun stock théorique')
       }`
 
   const etat = (fait: boolean) =>
-    fait ? { libelle: 'Prêt', ton: 'pret' as const } : { libelle: 'À faire', ton: 'faire' as const }
+    fait ? { libelle: t('Prêt'), ton: 'pret' as const } : { libelle: t('À faire'), ton: 'faire' as const }
 
   return (
     <div>
       {readOnly && (
         <div className="banner banner-warn">
-          Cet inventaire est clôturé : les fichiers ne peuvent plus être remplacés ni les
-          balises réaffectées. Rouvrez-le depuis l’onglet Équipe si nécessaire.
+          {t('Cet inventaire est clôturé : les fichiers ne peuvent plus être remplacés ni les balises réaffectées. Rouvrez-le depuis l’onglet Équipe si nécessaire.')}
         </div>
       )}
 
       {usesZones && (
-        <Volet titre="Zone de comptage" resume={resumeZones} etat={etat(zones.length > 0)}>
+        <Volet titre={t('Zone de comptage')} resume={resumeZones} etat={etat(zones.length > 0)}>
           <ZonesSetup
             sessionId={sessionId}
             zones={zones}
@@ -171,57 +171,51 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
       )}
 
       <Volet
-        titre="Données d’inventaire"
+        titre={t('Données d’inventaire')}
         resume={resumeFichiers}
         etat={etat(importState.articles > 0)}
       >
       <div className="dash-stats" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <Stat
-          label="Référentiel articles"
+          label={t('Référentiel articles')}
           value={nb(importState.articles)}
           tone={importState.articles > 0 ? 'pos' : 'warn'}
-          sub={importState.articles > 0 ? 'références chargées' : 'aucun fichier chargé'}
+          sub={importState.articles > 0 ? t('références chargées') : t('aucun fichier chargé')}
         />
         <Stat
-          label="Stock théorique attendu"
+          label={t('Stock théorique attendu')}
           value={fmtQty(importState.theoreticalQty)}
           tone={importState.theoreticalQty > 0 ? 'pos' : 'neutral'}
           sub={
             importState.theoreticalQty > 0
-              ? `pièces attendues sur ${importState.stock} SKU`
-              : 'aucun stock théorique importé — fichier optionnel, sans lui aucun écart'
+              ? t('pièces attendues sur %{n} SKU', { n: importState.stock })
+              : t('aucun stock théorique importé — fichier optionnel, sans lui aucun écart')
           }
         />
       </div>
 
       <details className="collapsible" style={{ marginBottom: 14 }}>
-        <summary>Conseils de format (CSV / Excel)</summary>
+        <summary>{t('Conseils de format (CSV / Excel)')}</summary>
         <div className="collapsible-body">
           <p className="muted small" style={{ marginBottom: 10 }}>
-            CSV ou Excel (.xlsx, .xls) — première feuille du classeur. Les en-têtes sont reconnus
-            quelle que soit la casse, les accents ou la ponctuation — « Prix d’achat »,
-            « PRIX D ACHAT » et « prixdachat » sont équivalents.
+            {t('CSV ou Excel (.xlsx, .xls) — première feuille du classeur. Les en-têtes sont reconnus quelle que soit la casse, les accents ou la ponctuation — « Prix d’achat », « PRIX D ACHAT » et « prixdachat » sont équivalents.')}
           </p>
           <p className="muted small" style={{ marginBottom: 0 }}>
-            Formatez vos colonnes de codes (SKU, EAN) en <strong>Texte</strong> dans le tableur :
-            un tableur transforme <span className="num">0123</span> en <span className="num">123</span> et
-            l’information est perdue avant même l’import. Le scan reste tolérant aux zéros de tête,
-            mais l’export vous rendra le code tel qu’il a été chargé.
+            {t('Formatez vos colonnes de codes (SKU, EAN) en ')}<strong>{t('Texte')}</strong>{t(' dans le tableur : un tableur transforme ')}<span className="num">0123</span>{t(' en ')}<span className="num">123</span>{t(' et l’information est perdue avant même l’import. Le scan reste tolérant aux zéros de tête, mais l’export vous rendra le code tel qu’il a été chargé.')}
           </p>
         </div>
       </details>
 
       <ImportStep
-        title="Référentiel articles"
+        title={t('Référentiel articles')}
         required
         description={
           <ul className="col-list">
-            <li><strong>SKU</strong> — ou Code article, Référence, Réf</li>
-            <li><strong>EAN</strong> — ou Code-barres, GTIN, Gencod</li>
-            <li><strong>Marque</strong> — ou Fournisseur</li>
-            <li><strong>Libellé</strong> — ou Désignation, Description, Nom</li>
-            <li><strong>Prix d’achat</strong> <em>(optionnel)</em> — ou PA, Coût, Cost, COGS.
-              Sans cette colonne, l’écart en valeur sera de 0.</li>
+            <li><strong>SKU</strong> — {t('ou Code article, Référence, Réf')}</li>
+            <li><strong>EAN</strong> — {t('ou Code-barres, GTIN, Gencod')}</li>
+            <li><strong>{t('Marque')}</strong> — {t('ou Fournisseur')}</li>
+            <li><strong>{t('Libellé')}</strong> — {t('ou Désignation, Description, Nom')}</li>
+            <li><strong>{t('Prix d’achat')}</strong> <em>{t('(optionnel)')}</em> — {t('ou PA, Coût, Cost, COGS. Sans cette colonne, l’écart en valeur sera de 0.')}</li>
           </ul>
         }
         state={catalog}
@@ -230,17 +224,15 @@ export function SetupTab({ sessionId, status, readOnly, importState, usesZones, 
       />
 
       <ImportStep
-        title="Stock théorique"
+        title={t('Stock théorique')}
         description={
           <>
             <p className="muted small">
-              Fichier optionnel — uniquement si vous voulez comparer le comptage au stock attendu.
-              Le rapprochement se fait par SKU ; les EAN viennent du fichier précédent.
-              Un même SKU présent sur plusieurs emplacements voit ses quantités additionnées.
+              {t('Fichier optionnel — uniquement si vous voulez comparer le comptage au stock attendu. Le rapprochement se fait par SKU ; les EAN viennent du fichier précédent. Un même SKU présent sur plusieurs emplacements voit ses quantités additionnées.')}
             </p>
             <ul className="col-list">
-              <li><strong>SKU</strong> — ou Code article, Référence, Réf</li>
-              <li><strong>Quantité théorique</strong> — ou Quantité, Qté, Stock, Qty</li>
+              <li><strong>SKU</strong> — {t('ou Code article, Référence, Réf')}</li>
+              <li><strong>{t('Quantité théorique')}</strong> — {t('ou Quantité, Qté, Stock, Qty')}</li>
             </ul>
           </>
         }
@@ -301,14 +293,13 @@ function Demarrage({ status, pret, starting, onStart, onOpenSuivi }: {
     return (
       <section className="demarrage">
         <div className="demarrage-txt">
-          <div className="demarrage-titre">L’inventaire est en cours</div>
+          <div className="demarrage-titre">{t('L’inventaire est en cours')}</div>
           <p className="demarrage-sous">
-            L’équipe peut compter depuis l’application. La préparation reste modifiable
-            ici — un fichier se remplace, une plage de balises se réaffecte.
+            {t('L’équipe peut compter depuis l’application. La préparation reste modifiable ici — un fichier se remplace, une plage de balises se réaffecte.')}
           </p>
         </div>
         <button type="button" className="btn btn-ghost" onClick={onOpenSuivi}>
-          Suivre l’avancement
+          {t('Suivre l’avancement')}
         </button>
       </section>
     )
@@ -318,16 +309,16 @@ function Demarrage({ status, pret, starting, onStart, onOpenSuivi }: {
     <section className={`demarrage${pret ? ' demarrage-pret' : ''}`}>
       <div className="demarrage-txt">
         <div className="demarrage-titre">
-          {pret ? 'Tout est prêt : commencez l’inventaire' : 'Il reste une chose à faire'}
+          {pret ? t('Tout est prêt : commencez l’inventaire') : t('Il reste une chose à faire')}
         </div>
         <p className="demarrage-sous">
           {pret
-            ? 'Le démarrage signale à l’équipe que la préparation est terminée : les compteurs peuvent scanner depuis l’application, et vous suivez l’avancement dans l’onglet Suivi.'
-            : 'Chargez le référentiel articles dans « Données d’inventaire », juste au-dessus : sans lui, les scans n’ont aucune référence à laquelle se rattacher.'}
+            ? t('Le démarrage signale à l’équipe que la préparation est terminée : les compteurs peuvent scanner depuis l’application, et vous suivez l’avancement dans l’onglet Suivi.')
+            : t('Chargez le référentiel articles dans « Données d’inventaire », juste au-dessus : sans lui, les scans n’ont aucune référence à laquelle se rattacher.')}
         </p>
       </div>
       <button type="button" className="btn btn-primary" disabled={!pret || starting} onClick={onStart}>
-        {starting ? 'Démarrage…' : 'Commencer l’inventaire'}
+        {starting ? t('Démarrage…') : t('Commencer l’inventaire')}
       </button>
     </section>
   )
@@ -395,8 +386,8 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
     setBusy(true)
     try {
       const r = await defineZoneRange(sessionId, name.trim(), Number(start), Number(fin))
-      if (!r.success) { toast.error(r.error ?? "Affectation impossible."); return }
-      toast.success(`${plural(r.created ?? 0, 'balise affectée', 'balises affectées')} à « ${name.trim()} ».`)
+      if (!r.success) { toast.error(r.error ?? t('Affectation impossible.')); return }
+      toast.success(t('%{n} à « %{nom} ».', { n: plural(r.created ?? 0, 'balise affectée', 'balises affectées'), nom: name.trim() }))
       setName(''); setStart(''); setEnd('')
       await onChanged()
     } catch (err) {
@@ -408,18 +399,18 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
 
   async function onDelete(zoneName: string, count: number) {
     const ok = await confirm({
-      title: `Retirer l'emplacement « ${zoneName} » ?`,
-      message: `Ses ${count} balises ne seront plus rattachées à un emplacement.`,
-      details: ['Les comptages déjà enregistrés sur ces balises sont conservés.'],
-      confirmLabel: 'Retirer',
+      title: t("Retirer l'emplacement « %{nom} » ?", { nom: zoneName }),
+      message: tn('Sa balise ne sera plus rattachée à un emplacement.', 'Ses %{count} balises ne seront plus rattachées à un emplacement.', count),
+      details: [t('Les comptages déjà enregistrés sur ces balises sont conservés.')],
+      confirmLabel: t('Retirer'),
       tone: 'danger',
     })
     if (!ok) return
 
     try {
       const r = await deleteZone(sessionId, zoneName)
-      if (!r.success) { toast.error(r.error ?? 'Suppression impossible.'); return }
-      toast.success(`Emplacement « ${zoneName} » retiré.`)
+      if (!r.success) { toast.error(r.error ?? t('Suppression impossible.')); return }
+      toast.success(t('Emplacement « %{nom} » retiré.', { nom: zoneName }))
       await onChanged()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -430,19 +421,18 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
     <div>
       {!readOnly && etape === 'question' && (
         <section className="panel zone-question">
-          <h3>Avez-vous vos balises&nbsp;?</h3>
+          <h3>{t('Avez-vous vos balises ?')}</h3>
           <p className="muted small" style={{ marginTop: 6 }}>
-            Les balises sont les étiquettes QR numérotées, collées dans le magasin,
-            que les compteurs scannent pour dire où ils sont.
+            {t('Les balises sont les étiquettes QR numérotées, collées dans le magasin, que les compteurs scannent pour dire où ils sont.')}
           </p>
           <div className="zone-choix">
             <button type="button" onClick={() => setChoix('affecter')}>
-              <span className="zone-choix-t">Oui, elles sont collées</span>
-              <span className="zone-choix-s">Indiquer quelles balises sont à quel endroit</span>
+              <span className="zone-choix-t">{t('Oui, elles sont collées')}</span>
+              <span className="zone-choix-s">{t('Indiquer quelles balises sont à quel endroit')}</span>
             </button>
             <button type="button" onClick={() => setChoix('creer')}>
-              <span className="zone-choix-t">Non, pas encore</span>
-              <span className="zone-choix-s">Créer et imprimer une planche de balises</span>
+              <span className="zone-choix-t">{t('Non, pas encore')}</span>
+              <span className="zone-choix-s">{t('Créer et imprimer une planche de balises')}</span>
             </button>
           </div>
         </section>
@@ -461,7 +451,7 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
           {!dejaAffecte && (
             <div className="zone-fil">
               <button type="button" className="link-btn" onClick={() => setChoix(null)}>
-                ← Revenir à la question
+                {t('← Revenir à la question')}
               </button>
             </div>
           )}
@@ -470,19 +460,15 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
               exemple « 1 à 10 » fait chercher un second champ qui n'existe
               pas. Même règle que le message de saisie, dont `validateRange`
               change déjà le libellé selon le mode. */}
-          <h3>{unique ? 'Affecter une balise à un emplacement' : 'Affecter une plage de balises à un emplacement'}</h3>
+          <h3>{unique ? t('Affecter une balise à un emplacement') : t('Affecter une plage de balises à un emplacement')}</h3>
           <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
             {unique ? (
               <>
-                Indiquez à quel endroit se trouve cette balise — imprimée et collée.
-                Exemple : la balise 42 est en « Réserve ».
-                Réaffecter une balise déjà nommée la renomme.
+                {t('Indiquez à quel endroit se trouve cette balise — imprimée et collée. Exemple : la balise 42 est en « Réserve ». Réaffecter une balise déjà nommée la renomme.')}
               </>
             ) : (
               <>
-                Indiquez quelles balises — imprimées et collées — sont à quel endroit.
-                Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.
-                Réaffecter une plage déjà nommée la renomme. {MAX_RANGE} balises au maximum par affectation.
+                {t('Indiquez quelles balises — imprimées et collées — sont à quel endroit. Exemple : « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30. Réaffecter une plage déjà nommée la renomme. %{max} balises au maximum par affectation.', { max: MAX_RANGE })}
               </>
             )}
           </p>
@@ -494,21 +480,21 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
           >
             <span className="bascule-piste" aria-hidden="true" />
             <span>
-              <span className="bascule-t">Une seule balise</span>
-              <span className="bascule-s">Pour rattacher une balise isolée à un emplacement</span>
+              <span className="bascule-t">{t('Une seule balise')}</span>
+              <span className="bascule-s">{t('Pour rattacher une balise isolée à un emplacement')}</span>
             </span>
           </button>
 
           <div className={unique ? 'zone-form zone-form-unique' : 'zone-form'}>
             <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="zone-name">Emplacement</label>
+              <label htmlFor="zone-name">{t('Emplacement')}</label>
               <input
                 id="zone-name" value={name} onChange={e => setName(e.target.value)}
-                placeholder="Réserve" autoComplete="off"
+                placeholder={t('Réserve')} autoComplete="off"
               />
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="zone-start">{unique ? 'Balise' : 'Balise début'}</label>
+              <label htmlFor="zone-start">{unique ? t('Balise') : t('Balise début')}</label>
               <input
                 id="zone-start" value={start} onChange={e => setStart(e.target.value)}
                 inputMode="numeric" placeholder={unique ? '42' : '1'}
@@ -516,12 +502,12 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
             </div>
             {!unique && (
               <div className="field" style={{ marginBottom: 0 }}>
-                <label htmlFor="zone-end">Balise fin</label>
+                <label htmlFor="zone-end">{t('Balise fin')}</label>
                 <input id="zone-end" value={end} onChange={e => setEnd(e.target.value)} inputMode="numeric" placeholder="10" />
               </div>
             )}
             <button className="btn btn-primary" disabled={busy} type="submit">
-              {busy ? 'Affectation…' : 'Affecter'}
+              {busy ? t('Affectation…') : t('Affecter')}
             </button>
           </div>
 
@@ -529,7 +515,7 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
 
           <div className="zone-autres">
             <button type="button" className="link-btn" onClick={() => setChoix('creer')}>
-              Créer d’autres balises
+              {t('Créer d’autres balises')}
             </button>
           </div>
         </form>
@@ -541,12 +527,12 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
       {groups.length === 0 ? (
         (readOnly || etape === 'affecter') && (
           <EmptyState
-            title="Aucun emplacement affecté"
+            title={t('Aucun emplacement affecté')}
             hint={readOnly
-              ? "Aucune balise n'a été rattachée à un emplacement sur cet inventaire."
+              ? t("Aucune balise n'a été rattachée à un emplacement sur cet inventaire.")
               : unique
-                ? 'Indiquez une première balise ci-dessus pour pouvoir suivre l’avancement zone par zone.'
-                : 'Indiquez une première plage de balises ci-dessus pour pouvoir suivre l’avancement zone par zone.'}
+                ? t('Indiquez une première balise ci-dessus pour pouvoir suivre l’avancement zone par zone.')
+                : t('Indiquez une première plage de balises ci-dessus pour pouvoir suivre l’avancement zone par zone.')}
           />
         )
       ) : (
@@ -556,11 +542,11 @@ function ZonesSetup({ sessionId, zones, readOnly, onChanged }: {
               <div className="zone-card-head">
                 <div>
                   <div className="zone-name">{g.name}</div>
-                  <div className="zone-range num">Balises {codeRange(g.codes)} · {g.total} au total</div>
+                  <div className="zone-range num">{t('Balises')} {codeRange(g.codes)} · {t('%{n} au total', { n: g.total })}</div>
                 </div>
                 {!readOnly && !g.unnamed && (
                   <button type="button" className="link-btn danger-link" onClick={() => onDelete(g.name, g.total)}>
-                    Retirer
+                    {t('Retirer')}
                   </button>
                 )}
               </div>
@@ -588,20 +574,20 @@ function ImportStep({ title, description, state, disabled, onFile, required }: {
     <section className="panel import-step">
       <h3>
         {title}
-        <span className="role-tag" style={{ marginLeft: 8 }}>{required ? 'requis' : 'optionnel'}</span>
+        <span className="role-tag" style={{ marginLeft: 8 }}>{required ? t('requis') : t('optionnel')}</span>
       </h3>
       <div style={{ marginTop: 8, marginBottom: 16 }}>{description}</div>
 
       <FileDrop
         accept={ACCEPTED_EXTENSIONS}
         disabled={disabled}
-        label={state.fileName ? `Remplacer « ${state.fileName} »` : 'Déposez un fichier ou cliquez pour le choisir'}
-        hint="CSV, XLSX ou XLS — première feuille du classeur"
+        label={state.fileName ? t('Remplacer « %{fichier} »', { fichier: state.fileName }) : t('Déposez un fichier ou cliquez pour le choisir')}
+        hint={t('CSV, XLSX ou XLS — première feuille du classeur')}
         onFile={onFile}
       />
 
       {state.phase === 'parsing' && (
-        <p className="muted small" style={{ marginTop: 12 }}>Lecture du fichier…</p>
+        <p className="muted small" style={{ marginTop: 12 }}>{t('Lecture du fichier…')}</p>
       )}
 
       {state.phase === 'uploading' && (
@@ -610,7 +596,7 @@ function ImportStep({ title, description, state, disabled, onFile, required }: {
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <p className="muted small">
-            <span className="num">{pct}%</span> — {state.progress.uploaded} / {state.progress.total} lignes
+            <span className="num">{pct}%</span> — {state.progress.uploaded} / {state.progress.total} {t('lignes')}
           </p>
         </>
       )}
@@ -626,7 +612,7 @@ function ImportStep({ title, description, state, disabled, onFile, required }: {
       {/* Ce qui n'a PAS été importé : le seul cas qui appelle un geste. */}
       {state.errors.length > 0 && (
         <div className="import-errors">
-          <strong>Lignes non importées</strong>
+          <strong>{t('Lignes non importées')}</strong>
           <ul>{state.errors.map(e => <li key={e}>{e}</li>)}</ul>
         </div>
       )}
@@ -637,7 +623,7 @@ function ImportStep({ title, description, state, disabled, onFile, required }: {
           import réussi. */}
       {state.notes.length > 0 && (
         <div className="import-notes">
-          <strong>À savoir</strong>
+          <strong>{t('À savoir')}</strong>
           <ul>{state.notes.map(e => <li key={e}>{e}</li>)}</ul>
         </div>
       )}

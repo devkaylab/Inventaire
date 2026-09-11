@@ -19,6 +19,7 @@ import { AppLogo } from '@/components/AppLogo'
 import { PASSWORD_FORGOT_URL, PRIVACY_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { avertir, signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function LoginScreen() {
@@ -29,11 +30,9 @@ export default function LoginScreen() {
   /** L'invitation vient du responsable — on dit à qui la redemander. */
   function expliquerInvitation() {
     void avertir({
-      titre: 'Votre invitation vient de votre responsable',
-      texte:
-        "C'est la personne qui vous a ajouté à son équipe qui envoie l'invitation, à l'adresse " +
-        "qu'elle a saisie. Regardez dans vos courriers indésirables, puis demandez-lui de vous la renvoyer.",
-      note: "Si vous n'avez jamais été ajouté à une équipe, aucun compte ne peut s'ouvrir depuis cet écran.",
+      titre: t('Votre invitation vient de votre responsable'),
+      texte: t("C'est la personne qui vous a ajouté à son équipe qui envoie l'invitation, à l'adresse qu'elle a saisie. Regardez dans vos courriers indésirables, puis demandez-lui de vous la renvoyer."),
+      note: t("Si vous n'avez jamais été ajouté à une équipe, aucun compte ne peut s'ouvrir depuis cet écran."),
     })
   }
   const [email, setEmail] = useState('')
@@ -61,9 +60,9 @@ export default function LoginScreen() {
     if (!factorId) {
       setLoading(false)
       void avertir({
-        titre: 'Second facteur introuvable',
-        texte: 'Aucune application d’authentification n’est associée à ce compte. Reconnectez-vous.',
-        action: 'Revenir à la connexion',
+        titre: t('Second facteur introuvable'),
+        texte: t('Aucune application d’authentification n’est associée à ce compte. Reconnectez-vous.'),
+        action: t('Revenir à la connexion'),
       }).then(() => { void abandonner() })
       return
     }
@@ -72,8 +71,8 @@ export default function LoginScreen() {
       setLoading(false)
       setCode('')
       signaler.erreur(
-        'Code refusé',
-        'Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.',
+        t('Code refusé'),
+        t('Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.'),
       )
       return
     }
@@ -88,7 +87,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email || !password) {
-      setErreur('Saisissez votre adresse e-mail et votre mot de passe.')
+      setErreur(t('Saisissez votre adresse e-mail et votre mot de passe.'))
       return
     }
     setLoading(true)
@@ -127,16 +126,16 @@ export default function LoginScreen() {
             <View style={styles.logoMark}>
               <AppLogo size={84} animated={false} color={theme.textPrimary} />
             </View>
-            <Text style={styles.title}>Code de vérification</Text>
+            <Text style={styles.title}>{t('Code de vérification')}</Text>
             <Text style={styles.subtitle}>
               {session?.user.email
-                ? `${session.user.email} est protégé par une application d’authentification. Saisissez le code qu’elle affiche.`
-                : 'Ce compte est protégé par une application d’authentification. Saisissez le code qu’elle affiche.'}
+                ? t('%{email} est protégé par une application d’authentification. Saisissez le code qu’elle affiche.', { email: session.user.email })
+                : t('Ce compte est protégé par une application d’authentification. Saisissez le code qu’elle affiche.')}
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>Code à six chiffres</Text>
+            <Text style={styles.label}>{t('Code à six chiffres')}</Text>
             <TextInput
               style={[styles.input, styles.codeInput]}
               value={code}
@@ -158,12 +157,12 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color={theme.onAccent} />
               ) : (
-                <Text style={styles.buttonText}>Vérifier</Text>
+                <Text style={styles.buttonText}>{t('Vérifier')}</Text>
               )}
             </Pressable>
 
             <Pressable style={styles.link} onPress={abandonner}>
-              <Text style={styles.linkText}>Se déconnecter et changer de compte</Text>
+              <Text style={styles.linkText}>{t('Se déconnecter et changer de compte')}</Text>
             </Pressable>
           </View>
           </ScrollView>
@@ -186,11 +185,11 @@ export default function LoginScreen() {
             <AppLogo size={84} animated={false} color={theme.textPrimary} />
           </View>
           <Text style={styles.title}>Quantinvo</Text>
-          <Text style={styles.subtitle}>Outil d&apos;inventaire</Text>
+          <Text style={styles.subtitle}>{t("Outil d'inventaire")}</Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{t('E-mail')}</Text>
           <TextInput
             style={styles.input}
             value={email}
@@ -198,11 +197,11 @@ export default function LoginScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
-            placeholder="votre@email.com"
+            placeholder={t('votre@email.com')}
             placeholderTextColor={theme.textMuted}
           />
 
-          <Text style={styles.label}>Mot de passe</Text>
+          <Text style={styles.label}>{t('Mot de passe')}</Text>
           <TextInput
             style={styles.input}
             value={password}
@@ -223,14 +222,14 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color={theme.onAccent} />
             ) : (
-              <Text style={styles.buttonText}>Se connecter</Text>
+              <Text style={styles.buttonText}>{t('Se connecter')}</Text>
             )}
           </Pressable>
 
           {/* Absent jusqu'ici : qui avait oublié son mot de passe n'avait
               aucune sortie depuis l'application. */}
           <Pressable style={styles.link} onPress={() => Linking.openURL(PASSWORD_FORGOT_URL)}>
-            <Text style={styles.linkText}>Mot de passe oublié ?</Text>
+            <Text style={styles.linkText}>{t('Mot de passe oublié ?')}</Text>
           </Pressable>
 
           {/* Le premier écran d'aide est le responsable, jamais nous : c'est lui
@@ -238,15 +237,15 @@ export default function LoginScreen() {
               renvoyer l'invitation. « Contactez le support » ferait attendre
               pour rien quelqu'un qui a la réponse à côté de lui. */}
           <Pressable style={styles.link} onPress={expliquerInvitation}>
-            <Text style={styles.linkText}>Je n&apos;ai pas reçu mon invitation</Text>
+            <Text style={styles.linkText}>{t("Je n'ai pas reçu mon invitation")}</Text>
           </Pressable>
 
           <Pressable style={styles.link} onPress={() => router.push('/signup')}>
-            <Text style={styles.linkText}>Comment obtenir un compte ?</Text>
+            <Text style={styles.linkText}>{t('Comment obtenir un compte ?')}</Text>
           </Pressable>
 
           <Pressable style={styles.privacyLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
-            <Text style={styles.privacyLinkText}>Politique de confidentialité</Text>
+            <Text style={styles.privacyLinkText}>{t('Politique de confidentialité')}</Text>
           </Pressable>
         </View>
         </ScrollView>

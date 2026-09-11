@@ -33,6 +33,8 @@
  * quand plus rien n'est présenté.
  */
 
+import { t } from '@/lib/i18n'
+
 export type TonQuestion = 'neutre' | 'danger'
 
 /**
@@ -171,7 +173,7 @@ function annoncer(ton: TonNouvelle, titre: string, texte?: string) {
  * marche à suivre — sinon, `signaler.erreur` suffit.
  */
 export async function avertir(a: Omit<Question, 'annuler' | 'seul'>): Promise<void> {
-  await demander({ ...a, action: a.action ?? 'J’ai compris', seul: true })
+  await demander({ ...a, action: a.action ?? t('J’ai compris'), seul: true })
 }
 
 /** Annonce ce qui vient de se passer, dans un bandeau qui passe tout seul. */

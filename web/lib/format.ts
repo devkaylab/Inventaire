@@ -1,3 +1,5 @@
+import { langue, locale, t, tn } from '@/lib/i18n'
+
 // Formatage et parsing partagés par tout le site. L'app mobile a les mêmes
 // règles (voir src/app/(supervisor)/[sessionId]/results.tsx) : on les garde
 // alignées pour qu'un même inventaire s'affiche à l'identique des deux côtés.
@@ -59,7 +61,7 @@ export function grouper(s: string): string {
 
 export function fmtQty(v: number): string {
   if (!Number.isFinite(v)) return '0'
-  return grouper((v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 }))
+  return grouper((v || 0).toLocaleString(locale(), { maximumFractionDigits: 3 }))
 }
 
 /** Écart signé : on garde le + pour que le sens saute aux yeux. */
@@ -74,7 +76,7 @@ export function fmtSigned(v: number): string {
  */
 export function money(v: number): string {
   if (!Number.isFinite(v)) v = 0
-  return grouper((v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+  return grouper((v || 0).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
 }
 
 /**
@@ -94,26 +96,36 @@ export function moneyCourt(v: number): string {
   if (!Number.isFinite(v)) v = 0
   v = v || 0
   const abs = Math.abs(v)
-  if (abs < 1000) return `${money(v)} €`
+  if (abs < 1000) return euro(money(v))
   const k = v / 1000
-  return `${grouper(k.toLocaleString('fr-FR', {
+  return euro(grouper(k.toLocaleString(locale(), {
     minimumFractionDigits: 0,
     maximumFractionDigits: Math.abs(k) < 100 ? 1 : 0,
-  }))} k€`
+  })), 'k')
+}
+
+/**
+ * Le symbole de l'euro, placé comme la langue l'écrit : « 12 750,00 € » en
+ * français, « €12,750.00 » en anglais. `k` pour la forme abrégée (« 12,8 k€ »,
+ * « €12.8k »).
+ */
+export function euro(montant: string, k?: 'k'): string {
+  if (langue() === 'en') return `€${montant}${k ? 'k' : ''}`
+  return `${montant} ${k ? 'k€' : '€'}`
 }
 
 export function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR')
+  return new Date(iso).toLocaleDateString(locale())
 }
 
 export function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('fr-FR', {
+  return new Date(iso).toLocaleString(locale(), {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
   })
 }
 
 /** Un entier avec ses séparateurs de milliers : 18402 → « 18 402 ». */
-export const nb = (n: number) => grouper(n.toLocaleString('fr-FR'))
+export const nb = (n: number) => grouper(n.toLocaleString(locale()))
 
 /**
  * « il y a 40 s », « il y a 12 min »… Utilisé partout où l'on montre une
@@ -121,17 +133,17 @@ export const nb = (n: number) => grouper(n.toLocaleString('fr-FR'))
  * l'information est fraîche.
  */
 export function relativeTime(iso: string | null | undefined, now = Date.now()): string {
-  if (!iso) return 'jamais'
+  if (!iso) return t('jamais')
   const diff = Math.max(0, now - new Date(iso).getTime())
   const sec = Math.round(diff / 1000)
-  if (sec < 10) return "à l'instant"
-  if (sec < 60) return `il y a ${sec} s`
+  if (sec < 10) return t("à l'instant")
+  if (sec < 60) return t('il y a %{n} s', { n: sec })
   const min = Math.round(sec / 60)
-  if (min < 60) return `il y a ${min} min`
+  if (min < 60) return t('il y a %{n} min', { n: min })
   const hours = Math.round(min / 60)
-  if (hours < 24) return `il y a ${hours} h`
+  if (hours < 24) return t('il y a %{h} h', { h: hours })
   const days = Math.round(hours / 24)
-  return days === 1 ? 'hier' : `il y a ${days} j`
+  return days === 1 ? t('hier') : tn('il y a %{count} j', 'il y a %{count} j', days)
 }
 
 /**
@@ -141,16 +153,23 @@ export function relativeTime(iso: string | null | undefined, now = Date.now()): 
  */
 export function sinceDuration(ms: number): string {
   const sec = Math.max(0, Math.round(ms / 1000))
-  if (sec < 60) return 'depuis moins d’une minute'
+  if (sec < 60) return t('depuis moins d’une minute')
   const min = Math.round(sec / 60)
-  if (min < 60) return `depuis ${min} min`
+  if (min < 60) return t('depuis %{n} min', { n: min })
   const hours = Math.round(min / 60)
-  return `depuis ${hours} h`
+  return t('depuis %{h} h', { h: hours })
 }
 
-/** « 1 balise » / « 3 balises » sans répéter le ternaire partout. */
+/**
+ * « 1 balise » / « 3 balises » sans répéter le ternaire partout.
+ *
+ * ⚠️ Le singulier français est aussi la CLÉ du dictionnaire anglais : l'entrée
+ * `'%{count} balise': { one: '%{count} tag', other: '%{count} tags' }` sert
+ * les deux formes. Un mot sans entrée reste en français, avec son pluriel
+ * français — jamais un pluriel anglais deviné.
+ */
 export function plural(n: number, singular: string, plural?: string): string {
-  return `${nb(n)} ${n > 1 ? (plural ?? `${singular}s`) : singular}`
+  return tn(`%{count} ${singular}`, `%{count} ${plural ?? `${singular}s`}`, n)
 }
 
 /**
@@ -165,5 +184,5 @@ export function octets(v: number | null | undefined): string {
   let i = 0
   while (n >= 1024 && i < unites.length - 1) { n /= 1024; i += 1 }
   const arrondi = n < 10 && i > 0 ? Math.round(n * 10) / 10 : Math.round(n)
-  return `${grouper(arrondi.toLocaleString('fr-FR'))} ${unites[i]}`
+  return `${grouper(arrondi.toLocaleString(locale()))} ${unites[i]}`
 }

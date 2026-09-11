@@ -16,6 +16,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { nb } from '@/lib/format'
+import { t } from '@/lib/i18n'
 
 export type JourTb = { jour: string; pieces: number; valeur: number }
 
@@ -191,18 +192,18 @@ export function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enC
   return (
     <div className="panel tb-carte" style={{ opacity: enChargement ? 0.6 : 1 }}>
       <div className="tb-carte-tete">
-        <h2>{mesure === 'pieces' ? 'Pièces comptées par jour' : 'Valeur comptée par jour'}</h2>
+        <h2>{mesure === 'pieces' ? t('Pièces comptées par jour') : t('Valeur comptée par jour')}</h2>
         <div className="tb-filtres">
-          <div className="tb-segmente" role="group" aria-label="Mesure du graphique">
-            <button type="button" aria-pressed={mesure === 'pieces'} className={mesure === 'pieces' ? 'choisi' : ''} onClick={() => onMesure('pieces')}>Quantité</button>
-            <button type="button" aria-pressed={mesure === 'valeur'} className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>Valeur</button>
+          <div className="tb-segmente" role="group" aria-label={t('Mesure du graphique')}>
+            <button type="button" aria-pressed={mesure === 'pieces'} className={mesure === 'pieces' ? 'choisi' : ''} onClick={() => onMesure('pieces')}>{t('Quantité')}</button>
+            <button type="button" aria-pressed={mesure === 'valeur'} className={mesure === 'valeur' ? 'choisi' : ''} onClick={() => onMesure('valeur')}>{t('Valeur')}</button>
           </div>
           <select
             value={semaine}
             onChange={(e) => onSemaine(Number(e.target.value))}
-            aria-label="Semaine affichée"
+            aria-label={t('Semaine affichée')}
           >
-            {SEMAINES.map(s => <option key={s.valeur} value={s.valeur}>{s.label}</option>)}
+            {SEMAINES.map(s => <option key={s.valeur} value={s.valeur}>{t(s.label)}</option>)}
           </select>
         </div>
       </div>
@@ -237,7 +238,7 @@ export function BarresSemaine({ jours, mesure, onMesure, semaine, onSemaine, enC
           </div>
         </div>
         <div className="tb-jours-noms">
-          {jours.map((j, i) => <span key={j.jour}>{JOURS_COURTS[i] ?? ''}</span>)}
+          {jours.map((j, i) => <span key={j.jour}>{t(JOURS_COURTS[i] ?? '')}</span>)}
         </div>
       </div>
     </div>

@@ -39,6 +39,7 @@ import { Pagination, useRetourEnHaut } from '@/components/ui/Pagination'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Stat } from '@/components/ui/Stat'
 import { Chargement } from '@/components/Chargement'
+import { locale, t, tn, useTraduction } from '@/lib/i18n'
 
 const PAGE = 50
 const DELAI_RECHERCHE_MS = 350
@@ -60,6 +61,7 @@ function jour(d: Date): string {
 
 export default function RapportMagasinPage() {
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const params = useParams<{ storeId: string }>()
   const storeId = params?.storeId
   const toast = useToast()
@@ -182,22 +184,21 @@ export default function RapportMagasinPage() {
   async function exporter(format: 'xlsx' | 'csv') {
     if (!magasin) return
     setExporting(format)
-    setAvance('Préparation…')
+    setAvance(t('Préparation…'))
     try {
       const suivi = (quoi: string) => (fait: number, total: number) =>
         setAvance(`${quoi} ${nb(fait)} / ${nb(total)}`)
-      // ⚠️ Le fichier remis au client contient TOUT le périmètre, par tranches.
-      const tout = await getToutesLesLignesMagasin(storeId!, coches, suivi('Références'))
-      const detail = await getToutLeDetailMagasin(storeId!, coches, suivi('Par inventaire'))
+      const tout = await getToutesLesLignesMagasin(storeId!, coches, suivi(t('Références')))
+      const detail = await getToutLeDetailMagasin(storeId!, coches, suivi(t('Par inventaire')))
 
       if (format === 'csv') {
         const noms = downloadStoreCsv(magasin.nom, tout, detail)
         toast.success(noms.length > 1
-          ? `${noms.length} fichiers téléchargés : consolidé et détail par inventaire.`
-          : `${noms[0]} téléchargé.`)
+          ? t('%{n} fichiers téléchargés : consolidé et détail par inventaire.', { n: noms.length })
+          : t('%{fichier} téléchargé.', { fichier: noms[0] }))
       } else {
         const nom = await downloadStoreXlsx(magasin.nom, tout, detail)
-        toast.success(`${nom} téléchargé (2 feuilles : Consolidé, Par inventaire).`)
+        toast.success(t('%{fichier} téléchargé (2 feuilles : Consolidé, Par inventaire).', { fichier: nom }))
       }
     } catch (err) {
       toast.error(friendlyError(err))
@@ -212,14 +213,14 @@ export default function RapportMagasinPage() {
   }
 
   const retour = guard.profile.is_company_admin
-    ? { href: `/magasins/${storeId}`, texte: '← Retour au magasin' }
-    : { href: magasin ? `/admin/entreprise/${magasin.entreprise_id}` : '/admin', texte: '← Retour à l’entreprise' }
+    ? { href: `/magasins/${storeId}`, texte: t('← Retour au magasin') }
+    : { href: magasin ? `/admin/entreprise/${magasin.entreprise_id}` : '/admin', texte: t('← Retour à l’entreprise') }
 
   if (erreur) {
     return (
       <AppShell profile={guard.profile} companyName={company?.name}>
-        <p className="muted">Ce rapport n&apos;est pas accessible.</p>
-        <Link href="/magasins" className="btn btn-ghost" style={{ marginTop: 16 }}>← Tous les magasins</Link>
+        <p className="muted">{t("Ce rapport n'est pas accessible.")}</p>
+        <Link href="/magasins" className="btn btn-ghost" style={{ marginTop: 16 }}>{t('← Tous les magasins')}</Link>
       </AppShell>
     )
   }
@@ -242,9 +243,9 @@ export default function RapportMagasinPage() {
       <div className="registre">
       <div className="app-head">
         <div>
-          <h1 className="page-title">Rapport du magasin</h1>
+          <h1 className="page-title">{t('Rapport du magasin')}</h1>
           <p className="page-sub">
-            {magasin ? `${magasin.nom} · ${magasin.entreprise}` : 'Chargement…'}
+            {magasin ? `${magasin.nom} · ${magasin.entreprise}` : t('Chargement…')}
           </p>
         </div>
         <div className="app-head-actions">
@@ -253,7 +254,7 @@ export default function RapportMagasinPage() {
             disabled={retenus === 0 || exporting !== null}
             onClick={() => setAskFormat(true)}
           >
-            {exporting ? (avance ?? 'Préparation…') : 'Télécharger'}
+            {exporting ? (avance ?? t('Préparation…')) : t('Télécharger')}
           </button>
         </div>
       </div>
@@ -261,24 +262,24 @@ export default function RapportMagasinPage() {
       <section className="perimetre">
         <div className="perimetre-haut">
           <div className="perimetre-champ">
-            <label htmlFor="du">Du</label>
+            <label htmlFor="du">{t('Du')}</label>
             <input id="du" type="date" value={du} max={au} onChange={e => setDu(e.target.value)} />
           </div>
           <div className="perimetre-champ">
-            <label htmlFor="au">Au</label>
+            <label htmlFor="au">{t('Au')}</label>
             <input id="au" type="date" value={au} min={du} onChange={e => setAu(e.target.value)} />
           </div>
           <div className="perimetre-retenus">
             <span>
-              <b>{nb(coches.length)}</b> inventaire{coches.length > 1 ? 's' : ''} retenu{coches.length > 1 ? 's' : ''}
-              {' sur '}{nb(clos.length)} clôturé{clos.length > 1 ? 's' : ''}
+              <b>{nb(coches.length)}</b> {tn('inventaire retenu', 'inventaires retenus', coches.length)}
+              {` ${t('sur')} `}{tn('%{count} clôturé', '%{count} clôturés', clos.length)}
             </span>
             <button
               type="button" className="btn btn-ghost btn-sm"
               aria-expanded={listeOuverte} aria-controls="liste-inventaires"
               onClick={() => setListeOuverte(o => !o)}
             >
-              {listeOuverte ? 'Masquer' : 'Choisir'}
+              {listeOuverte ? t('Masquer') : t('Choisir')}
             </button>
           </div>
         </div>
@@ -286,7 +287,7 @@ export default function RapportMagasinPage() {
         {listeOuverte && (
           <div className="liste-inv" id="liste-inventaires">
             {inventaires.length === 0 && !chargementListe && (
-              <p className="muted small">Ce magasin n&apos;a encore aucun inventaire.</p>
+              <p className="muted small">{t("Ce magasin n'a encore aucun inventaire.")}</p>
             )}
             {clos.map(i => (
               <label className="inv-rang" key={i.session_id}>
@@ -298,11 +299,11 @@ export default function RapportMagasinPage() {
                 <span className="inv-nom">
                   {i.nom}
                   <span className="inv-date">
-                    Clôturé le {i.cloture_le ? new Date(i.cloture_le).toLocaleDateString('fr-FR') : '—'}
-                    {i.references_attendues > 0 && ` · ${nb(i.references_attendues)} réf. attendues`}
+                    {t('Clôturé le %{date}', { date: i.cloture_le ? new Date(i.cloture_le).toLocaleDateString(locale()) : '—' })}
+                    {i.references_attendues > 0 && ` · ${t('%{n} réf. attendues', { n: nb(i.references_attendues) })}`}
                   </span>
                 </span>
-                {!i.dans_periode && <span className="pill">Hors période</span>}
+                {!i.dans_periode && <span className="pill">{t('Hors période')}</span>}
               </label>
             ))}
             {enCours.length > 0 && (
@@ -311,18 +312,17 @@ export default function RapportMagasinPage() {
                     retient que les inventaires clôturés. Les cacher ferait
                     croire à un magasin qui ne compte plus. */}
                 <p className="muted small inv-note">
-                  {enCours.length === 1 ? 'Un inventaire est' : `${nb(enCours.length)} inventaires sont`} encore
-                  en cours. Ils n&apos;entrent dans le total qu&apos;une fois clôturés.
+                  {tn("%{count} inventaire est encore en cours. Il n'entre dans le total qu'une fois clôturé.", "%{count} inventaires sont encore en cours. Ils n'entrent dans le total qu'une fois clôturés.", enCours.length)}
                 </p>
                 {enCours.map(i => (
                   <div className="inv-rang inv-rang-inerte" key={i.session_id}>
                     <span className="inv-nom">
                       {i.nom}
                       <span className="inv-date">
-                        Ouvert le {new Date(i.cree_le).toLocaleDateString('fr-FR')}
+                        {t('Ouvert le %{date}', { date: new Date(i.cree_le).toLocaleDateString(locale()) })}
                       </span>
                     </span>
-                    <span className="pill pill-attente">En cours</span>
+                    <span className="pill pill-attente">{t('En cours')}</span>
                   </div>
                 ))}
               </>
@@ -334,8 +334,7 @@ export default function RapportMagasinPage() {
       {chargementResume && !resume ? (
         <div>
           <p className="chargement-note" role="status">
-            Consolidation en cours… Sur un magasin qui porte plusieurs gros inventaires,
-            comptez quelques secondes.
+            {t('Consolidation en cours… Sur un magasin qui porte plusieurs gros inventaires, comptez quelques secondes.')}
           </p>
           <SkeletonRows rows={5} />
         </div>
@@ -344,15 +343,15 @@ export default function RapportMagasinPage() {
           {/* ⚠️ Sans résumé, on écrit « — », jamais « 0 » : un zéro se lit
               comme un résultat, et celui-là serait faux. */}
           <div className="dash-stats">
-            <Stat label="Stock théorique" value={resume ? fmtQty(resume.theorique) : '—'} />
-            <Stat label="Stock compté" value={resume ? fmtQty(resume.compte) : '—'} />
+            <Stat label={t('Stock théorique')} value={resume ? fmtQty(resume.theorique) : '—'} />
+            <Stat label={t('Stock compté')} value={resume ? fmtQty(resume.compte) : '—'} />
             <Stat
-              label="Écart total (unités)"
+              label={t('Écart total (unités)')}
               value={resume ? fmtSigned(resume.ecart_unites) : '—'}
               tone={!resume ? 'neutral' : resume.ecart_unites < 0 ? 'neg' : 'pos'}
             />
             <Stat
-              label="Écart total (valeur achat)"
+              label={t('Écart total (valeur achat)')}
               value={resume ? `${money(resume.ecart_valeur)} €` : '—'}
               tone={!resume ? 'neutral' : resume.ecart_valeur < 0 ? 'neg' : 'pos'}
             />
@@ -360,32 +359,29 @@ export default function RapportMagasinPage() {
 
           {!resume && (
             <div className="banner banner-warn">
-              Les totaux n’ont pas pu être calculés — le serveur a mis trop de temps à répondre.
-              Rien n’est perdu&nbsp;: réduisez le périmètre, ou réessayez.
+              {t('Les totaux n’ont pas pu être calculés — le serveur a mis trop de temps à répondre. Rien n’est perdu : réduisez le périmètre, ou réessayez.')}
             </div>
           )}
 
           {resume && resume.non_arbitres > 0 && (
             <div className="banner banner-warn">
-              {nb(resume.non_arbitres)} référence{resume.non_arbitres > 1 ? 's présentent' : ' présente'} encore
-              un écart non arbitré entre le comptage et l’audit. Sans arbitrage, c’est{' '}
-              <strong>la quantité de l’auditeur</strong> qui part dans le rapport.
+              {tn('%{count} référence présente encore un écart non arbitré entre le comptage et l’audit. Sans arbitrage, c’est ', '%{count} références présentent encore un écart non arbitré entre le comptage et l’audit. Sans arbitrage, c’est ', resume.non_arbitres)}
+              <strong>{t('la quantité de l’auditeur')}</strong>{t(' qui part dans le rapport.')}
             </div>
           )}
 
           {resume && resume.doublons > 0 && (
             <div className="banner banner-warn bandeau-doublons">
               <span>
-                <b>{nb(resume.doublons)} référence{resume.doublons > 1 ? 's' : ''}</b>{' '}
-                {resume.doublons > 1 ? 'apparaissent' : 'apparaît'} dans plusieurs inventaires.
-                Leurs quantités sont <b>additionnées</b>.
+                <b>{tn('%{count} référence', '%{count} références', resume.doublons)}</b>{' '}
+                {tn('apparaît dans plusieurs inventaires. Ses quantités sont ', 'apparaissent dans plusieurs inventaires. Leurs quantités sont ', resume.doublons)}<b>{t('additionnées')}</b>.
               </span>
               <button
                 type="button" className="btn btn-ghost btn-sm"
                 aria-pressed={multi}
                 onClick={() => setMulti(m => !m)}
               >
-                {multi ? 'Voir toutes les références' : 'Ne voir que celles-ci'}
+                {multi ? t('Voir toutes les références') : t('Ne voir que celles-ci')}
               </button>
             </div>
           )}
@@ -396,28 +392,25 @@ export default function RapportMagasinPage() {
                 type="search"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="Rechercher un article, un SKU, un EAN…"
-                aria-label="Rechercher dans le rapport du magasin"
+                placeholder={t('Rechercher un article, un SKU, un EAN…')}
+                aria-label={t('Rechercher dans le rapport du magasin')}
               />
             </div>
           </div>
 
           {askFormat && (
-            <Modal title="Format du téléchargement" onClose={() => setAskFormat(false)}>
+            <Modal title={t('Format du téléchargement')} onClose={() => setAskFormat(false)}>
               <div className="format-choice">
                 <button type="button" className="format-option" onClick={() => { setAskFormat(false); void exporter('xlsx') }}>
                   <strong>Excel (.xlsx)</strong>
                   <span className="muted small">
-                    Deux feuilles : « Consolidé » (une ligne par référence, tous inventaires
-                    additionnés) et « Par inventaire » (la même chose, ligne par ligne, avec
-                    l&apos;inventaire d&apos;origine).
+                    {t("Deux feuilles : « Consolidé » (une ligne par référence, tous inventaires additionnés) et « Par inventaire » (la même chose, ligne par ligne, avec l'inventaire d'origine).")}
                   </span>
                 </button>
                 <button type="button" className="format-option" onClick={() => { setAskFormat(false); void exporter('csv') }}>
-                  <strong>CSV (2 fichiers)</strong>
+                  <strong>{t('CSV (2 fichiers)')}</strong>
                   <span className="muted small">
-                    Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux
-                    en deux fichiers, avec exactement les mêmes colonnes qu&apos;Excel.
+                    {t("Le CSV ne connaît pas les feuilles : vous recevez les deux mêmes tableaux en deux fichiers, avec exactement les mêmes colonnes qu'Excel.")}
                   </span>
                 </button>
               </div>
@@ -426,22 +419,22 @@ export default function RapportMagasinPage() {
 
           {retenus === 0 ? (
             <EmptyState
-              title="Aucun inventaire retenu"
-              hint="Élargissez la période, ou cochez un inventaire clôturé dans la liste ci-dessus. Un inventaire encore en cours n’entre pas dans le total."
+              title={t('Aucun inventaire retenu')}
+              hint={t('Élargissez la période, ou cochez un inventaire clôturé dans la liste ci-dessus. Un inventaire encore en cours n’entre pas dans le total.')}
             />
           ) : totalFiltre === 0 && !chargeantPage ? (
             <EmptyState
-              title="Aucune référence ne correspond"
-              hint={recherche ? `Rien ne correspond à « ${recherche} ».` : 'Le périmètre choisi ne porte aucune référence.'}
+              title={t('Aucune référence ne correspond')}
+              hint={recherche ? t('Rien ne correspond à « %{q} ».', { q: recherche }) : t('Le périmètre choisi ne porte aucune référence.')}
             />
           ) : (
             <>
               <div ref={hautDuTableau} />
               <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
                 <span className="muted small">
-                  {nb(premier)}–{nb(dernier)} sur {nb(totalFiltre)}{' '}
-                  {multi ? 'références vues dans plusieurs inventaires' : 'références'}
-                  {chargeantPage && ' · chargement…'}
+                  {nb(premier)}–{nb(dernier)} {t('sur')} {nb(totalFiltre)}{' '}
+                  {multi ? t('références vues dans plusieurs inventaires') : t('références')}
+                  {chargeantPage && ` · ${t('chargement…')}`}
                 </span>
               </Pagination>
 
@@ -449,12 +442,12 @@ export default function RapportMagasinPage() {
                 <table className="dash-table">
                   <thead>
                     <tr>
-                      <Th label="Article" onClick={() => trier('sku')} active={sort.key === 'sku'} dir={sort.dir} />
-                      <Th label="Théorique" num onClick={() => trier('theoretical_qty')} active={sort.key === 'theoretical_qty'} dir={sort.dir} />
-                      <Th label="Compté" num onClick={() => trier('counted_qty')} active={sort.key === 'counted_qty'} dir={sort.dir} />
-                      <Th label="Écart" num onClick={() => trier('variance_units')} active={sort.key === 'variance_units'} dir={sort.dir} />
-                      <Th label="Valeur (€)" num onClick={() => trier('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
-                      <Th label="Inventaires" onClick={() => trier('inventaires')} active={sort.key === 'inventaires'} dir={sort.dir} />
+                      <Th label={t('Article')} onClick={() => trier('sku')} active={sort.key === 'sku'} dir={sort.dir} />
+                      <Th label={t('Théorique')} num onClick={() => trier('theoretical_qty')} active={sort.key === 'theoretical_qty'} dir={sort.dir} />
+                      <Th label={t('Compté')} num onClick={() => trier('counted_qty')} active={sort.key === 'counted_qty'} dir={sort.dir} />
+                      <Th label={t('Écart')} num onClick={() => trier('variance_units')} active={sort.key === 'variance_units'} dir={sort.dir} />
+                      <Th label={t('Valeur (€)')} num onClick={() => trier('variance_value')} active={sort.key === 'variance_value'} dir={sort.dir} />
+                      <Th label={t('Inventaires')} onClick={() => trier('inventaires')} active={sort.key === 'inventaires'} dir={sort.dir} />
                     </tr>
                   </thead>
                   <tbody>
@@ -473,7 +466,7 @@ export default function RapportMagasinPage() {
                           <td className={`num ${v < 0 ? 'neg' : ''}`}>{money(v)}</td>
                           <td>
                             {r.inventaires > 1
-                              ? <span className="pill pill-attente">{nb(r.inventaires)} inventaires</span>
+                              ? <span className="pill pill-attente">{nb(r.inventaires)} {t('inventaires')}</span>
                               : <span className="muted small">1</span>}
                           </td>
                         </tr>
@@ -485,8 +478,8 @@ export default function RapportMagasinPage() {
 
               <Pagination page={page} pages={pages} chargement={chargeantPage} onPage={setPage}>
                 <span className="muted small">
-                  {nb(premier)}–{nb(dernier)} sur {nb(totalFiltre)}.{' '}
-                  Quantité retenue : arbitrage, sinon auditeur, sinon compteur.
+                  {nb(premier)}–{nb(dernier)} {t('sur')} {nb(totalFiltre)}.{' '}
+                  {t('Quantité retenue : arbitrage, sinon auditeur, sinon compteur.')}
                 </span>
               </Pagination>
             </>

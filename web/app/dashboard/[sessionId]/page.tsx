@@ -21,6 +21,7 @@ import { RapportTab } from '@/components/dashboard/tabs/RapportTab'
 import { EquipeTab } from '@/components/dashboard/tabs/EquipeTab'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useTraduction } from '@/lib/i18n'
 
 type Tab = 'suivi' | 'setup' | 'ecarts' | 'rapport' | 'equipe'
 
@@ -59,6 +60,7 @@ export default function SessionDashboardPage() {
   const sessionId = params.sessionId
 
   const guard = useAuthGuard('supervisor')
+  const { t } = useTraduction()
   const [tab, setTab] = useState<Tab>('suivi')
   const [companyName, setCompanyName] = useState<string | null>(null)
   const data = useSessionData(sessionId, LIVE_SCOPES[tab])
@@ -115,7 +117,7 @@ export default function SessionDashboardPage() {
   if (guard.status === 'loading') {
     return (
       <div className="dash">
-        <span className="muted">Chargement de l’inventaire…</span>
+        <span className="muted">{t('Chargement de l’inventaire…')}</span>
         <SkeletonRows rows={5} height={72} />
       </div>
     )
@@ -126,7 +128,7 @@ export default function SessionDashboardPage() {
   if (data.loading) {
     return (
       <AppShell profile={guard.profile} companyName={companyName}>
-        <p className="muted" style={{ marginBottom: 16 }}>Chargement de l’inventaire…</p>
+        <p className="muted" style={{ marginBottom: 16 }}>{t('Chargement de l’inventaire…')}</p>
         <SkeletonRows rows={5} height={72} />
       </AppShell>
     )
@@ -136,9 +138,9 @@ export default function SessionDashboardPage() {
     return (
       <AppShell profile={guard.profile} companyName={companyName}>
         <EmptyState
-          title="Cet inventaire n’est pas accessible"
-          hint={data.error ?? "Vous n’en êtes ni le créateur ni un participant. Demandez au créateur de vous y inviter."}
-          action={<Link href="/dashboard" className="btn btn-primary">Retour à mes inventaires</Link>}
+          title={t('Cet inventaire n’est pas accessible')}
+          hint={data.error ?? t('Vous n’en êtes ni le créateur ni un participant. Demandez au créateur de vous y inviter.')}
+          action={<Link href="/dashboard" className="btn btn-primary">{t('Retour à mes inventaires')}</Link>}
         />
       </AppShell>
     )
@@ -163,7 +165,7 @@ export default function SessionDashboardPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M15 6l-6 6 6 6" />
             </svg>
-            Mes inventaires
+            {t('Mes inventaires')}
           </Link>
           <h1 className="page-title">{session.name || session.store_name}</h1>
           <p className="page-sub">
@@ -172,12 +174,12 @@ export default function SessionDashboardPage() {
         </div>
         <div className="app-head-actions">
           <span className={`dash-badge dash-badge-${session.status}`}>
-            <span className="dash-dot" />{STATUS_LABELS[session.status] ?? session.status}
+            <span className="dash-dot" />{t(STATUS_LABELS[session.status] ?? session.status)}
           </span>
           {!closed && (
             <span className="live-status">
               <span className={`live-pulse${live.channelReady ? '' : ' live-pulse-off'}`} />
-              {live.channelReady ? 'Temps réel actif' : 'Temps réel indisponible'}
+              {live.channelReady ? t('Temps réel actif') : t('Temps réel indisponible')}
             </span>
           )}
           <button
@@ -185,10 +187,10 @@ export default function SessionDashboardPage() {
             className="refresh-btn"
             data-busy={live.refreshing}
             onClick={live.refresh}
-            title="Actualiser maintenant"
+            title={t('Actualiser maintenant')}
           >
             <RefreshIcon />
-            <span>{live.refreshing ? 'Actualisation…' : `Mis à jour ${relativeTime(new Date(live.lastRefreshAt).toISOString())}`}</span>
+            <span>{live.refreshing ? t('Actualisation…') : t('Mis à jour %{quand}', { quand: relativeTime(new Date(live.lastRefreshAt).toISOString()) })}</span>
           </button>
           <SessionActionsMenu
             session={session}
@@ -202,20 +204,16 @@ export default function SessionDashboardPage() {
 
       {closed && session.archived_at && (
         <div className="banner banner-info">
-          Cet inventaire est <strong>clôturé et archivé</strong>. Son rapport et ses écarts restent
-          consultables ; le détail des scans a été effacé douze mois après la clôture, comme annoncé
-          dans la politique de confidentialité. La feuille « Détail » de l’export est donc vide, et
-          l’inventaire ne se rouvre plus.
+          {t('Cet inventaire est ')}<strong>{t('clôturé et archivé')}</strong>{t('. Son rapport et ses écarts restent consultables ; le détail des scans a été effacé douze mois après la clôture, comme annoncé dans la politique de confidentialité. La feuille « Détail » de l’export est donc vide, et l’inventaire ne se rouvre plus.')}
         </div>
       )}
 
       {closed && !session.archived_at && (
         <div className="banner banner-info">
-          Cet inventaire est <strong>clôturé</strong> : aucun comptage ne peut plus y être enregistré,
-          y compris depuis un téléphone resté ouvert sur la session. Le rapport reste téléchargeable.{' '}
+          {t('Cet inventaire est ')}<strong>{t('clôturé')}</strong>{t(' : aucun comptage ne peut plus y être enregistré, y compris depuis un téléphone resté ouvert sur la session. Le rapport reste téléchargeable.')}{' '}
           {isCreator || guard.profile.is_company_admin
-            ? 'Vous pouvez le rouvrir depuis le menu « ••• » en haut de page.'
-            : 'Seul son créateur peut le rouvrir.'}
+            ? t('Vous pouvez le rouvrir depuis le menu « ••• » en haut de page.')
+            : t('Seul son créateur peut le rouvrir.')}
         </div>
       )}
 
@@ -232,23 +230,23 @@ export default function SessionDashboardPage() {
         </div>
 
         <div className="dash-main">
-          <div className="dash-tabs" role="tablist" aria-label="Sections de l’inventaire">
-            {visibleTabs.map(t => (
+          <div className="dash-tabs" role="tablist" aria-label={t('Sections de l’inventaire')}>
+            {visibleTabs.map(x => (
               <button
-                key={t.key}
+                key={x.key}
                 role="tab"
-                id={`tab-${t.key}`}
-                aria-selected={tab === t.key}
-                aria-controls={`panel-${t.key}`}
-                className={`dash-tab${tab === t.key ? ' active' : ''}`}
-                onClick={() => selectTab(t.key)}
+                id={`tab-${x.key}`}
+                aria-selected={tab === x.key}
+                aria-controls={`panel-${x.key}`}
+                className={`dash-tab${tab === x.key ? ' active' : ''}`}
+                onClick={() => selectTab(x.key)}
                 onKeyDown={e => {
                   const i = visibleTabs.findIndex(x => x.key === tab)
                   if (e.key === 'ArrowRight') selectTab(visibleTabs[(i + 1) % visibleTabs.length].key)
                   if (e.key === 'ArrowLeft') selectTab(visibleTabs[(i - 1 + visibleTabs.length) % visibleTabs.length].key)
                 }}
               >
-                {t.label}
+                {t(x.label)}
               </button>
             ))}
           </div>
@@ -257,7 +255,7 @@ export default function SessionDashboardPage() {
               est, et le burger à côté mène aux autres sections. */}
           <div className="dash-mobile-bar">
             <div className="dash-mobile-title dash-section-label" aria-hidden="true">
-              {TABS.find(t => t.key === tab)?.label}
+              {t(TABS.find(x => x.key === tab)?.label ?? '')}
             </div>
             <MobileNav tabs={TABS} active={tab} onSelect={k => selectTab(k as Tab)} />
           </div>

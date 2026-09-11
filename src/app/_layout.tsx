@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Stack, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -34,6 +34,8 @@ import { IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono/500Mediu
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { useNotificationRouting } from '@/lib/push'
 import { ThemeProvider, useThemeControls } from '@/lib/theme'
+import { useLangue } from '@/lib/i18n'
+import { chargerLangue } from '@/lib/langueAppareil'
 import { SplashAnimation } from '@/components/SplashAnimation'
 import { OfflineTopBanner } from '@/components/OfflineTopBanner'
 import { PorteBienvenue } from '@/components/PorteBienvenue'
@@ -121,13 +123,28 @@ export default function RootLayout() {
     IBMPlexMono_500Medium,
   })
   const [showSplash, setShowSplash] = useState(true)
+  /**
+   * La langue se lit AVANT le premier rendu, comme les polices : sinon
+   * l'application s'ouvre en français et saute en anglais une fraction de
+   * seconde plus tard. Elle vient de l'appareil, ou du choix fait dans
+   * Mon compte (`langueAppareil.ts`).
+   */
+  const [langueChargee, setLangueChargee] = useState(false)
+  useEffect(() => {
+    chargerLangue().finally(() => setLangueChargee(true))
+  }, [])
+  // ⚠️ La pile est CLÉE sur la langue : en changer remonte tous les écrans,
+  // y compris ceux restés ouverts sous celui du choix. Sans cette clé, un
+  // écran déjà monté garderait ses textes dans l'ancienne langue jusqu'à ce
+  // qu'on le rouvre — et c'est justement celui vers lequel on revient.
+  const langueCourante = useLangue()
 
   // Reveal our JS content (and the animated splash overlay) by hiding the native splash.
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) await SplashScreen.hideAsync()
   }, [fontsLoaded])
 
-  if (!fontsLoaded) return null
+  if (!fontsLoaded || !langueChargee) return null
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -142,7 +159,7 @@ export default function RootLayout() {
                 chaque écran, et rester visible quelle que soit la page. */}
             <OfflineTopBanner />
             <RoutageNotifications />
-            <Stack screenOptions={{ headerShown: false, contentStyle: contenuColonne }}>
+            <Stack key={langueCourante} screenOptions={{ headerShown: false, contentStyle: contenuColonne }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="login" />
               <Stack.Screen name="signup" />

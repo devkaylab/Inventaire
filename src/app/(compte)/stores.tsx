@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t, tn } from '@/lib/i18n'
 
 /**
  * Magasins — les magasins du superviseur et leurs codes.
@@ -65,7 +66,7 @@ export default function StoresScreen() {
   /** Deux noms, puis « et N autres » — la règle du 23 août 2026. */
   function nommer(noms: string[]): string {
     if (noms.length <= 2) return noms.join(', ')
-    return `${noms[0]}, ${noms[1]} et ${noms.length - 2} autre${noms.length - 2 > 1 ? 's' : ''}`
+    return tn('%{liste} et %{count} autre', '%{liste} et %{count} autres', noms.length - 2, { liste: `${noms[0]}, ${noms[1]}` })
   }
 
   const onRefresh = useCallback(() => { refetch() }, [refetch])
@@ -81,13 +82,11 @@ export default function StoresScreen() {
     try {
       await Share.share({
         message:
-          `Code du magasin « ${name} » : ${code}\n\n` +
-          'Ce code identifie le magasin dans Quantinvo. Les accès superviseur sont ouverts par ' +
-          'l’administrateur de votre entreprise (page Mon équipe du site). ' +
-          'Ce code est confidentiel : ne le communiquez pas aux compteurs.',
+          t('Code du magasin « %{nom} » : %{code}', { nom: name, code }) + '\n\n' +
+          t('Ce code identifie le magasin dans Quantinvo. Les accès superviseur sont ouverts par l’administrateur de votre entreprise (page Mon équipe du site). Ce code est confidentiel : ne le communiquez pas aux compteurs.'),
       })
     } catch (e) {
-      signaler.erreur('Partage impossible', errorMessage(e))
+      signaler.erreur(t('Partage impossible'), errorMessage(e))
     }
   }
 
@@ -113,22 +112,21 @@ export default function StoresScreen() {
           // distinction, une coupure de réseau annonçait « Aucun magasin » à
           // quelqu'un qui en a — et l'envoyait réclamer un accès pour rien.
           <View style={styles.card}>
-            <Text style={styles.emptyTitle}>Chargement impossible</Text>
+            <Text style={styles.emptyTitle}>{t('Chargement impossible')}</Text>
             <Text style={styles.emptyText}>
-              Vos magasins n&apos;ont pas pu être chargés. Vérifiez votre connexion, puis tirez
-              vers le bas pour réessayer.
+              {t("Vos magasins n'ont pas pu être chargés. Vérifiez votre connexion, puis tirez vers le bas pour réessayer.")}
             </Text>
           </View>
         ) : (stores?.length ?? 0) === 0 ? (
           <View style={styles.card}>
-            <Text style={styles.emptyTitle}>Aucun magasin</Text>
+            <Text style={styles.emptyTitle}>{t('Aucun magasin')}</Text>
             <Text style={styles.emptyText}>
               {/* Un administrateur d'entreprise supervise tous les magasins de
                   son entreprise : s'il n'en voit aucun, c'est qu'elle n'en a
                   aucun. Lui parler d'affectation le renverrait à lui-même. */}
               {profile?.is_company_admin
-                ? 'Votre entreprise n’a encore aucun magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.'
-                : 'Vous n’êtes affecté à aucun magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'}
+                ? t('Votre entreprise n’a encore aucun magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.')
+                : t('Vous n’êtes affecté à aucun magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.')}
             </Text>
           </View>
         ) : (
@@ -145,10 +143,10 @@ export default function StoresScreen() {
                     ) : (
                       // Une pastille, pas une phrase : c'est ce qu'on cherche
                       // du regard en parcourant la liste.
-                      <Text style={styles.aPourvoir}>Aucun superviseur · à pourvoir</Text>
+                      <Text style={styles.aPourvoir}>{t('Aucun superviseur · à pourvoir')}</Text>
                     )
                   )}
-                  <Text style={styles.codeLabel}>Code magasin</Text>
+                  <Text style={styles.codeLabel}>{t('Code magasin')}</Text>
                   <Text style={[styles.code, tabular]}>{s.join_code ?? '—'}</Text>
                 </View>
                 {!!s.join_code && (
@@ -156,22 +154,18 @@ export default function StoresScreen() {
                     style={styles.shareBtn}
                     onPress={() => shareStoreCode(s.name, s.join_code!)}
                   >
-                    <Text style={styles.shareBtnText}>Partager</Text>
+                    <Text style={styles.shareBtnText}>{t('Partager')}</Text>
                   </Pressable>
                 )}
               </View>
             ))}
             {estAdmin && (apercu?.stores ?? []).some(m => m.supervisors.length === 0) && (
               <Text style={styles.note}>
-                Un magasin sans superviseur n&apos;a personne pour y lancer un inventaire.
-                L&apos;accès s&apos;ouvre depuis la page Mon équipe du site : l&apos;application
-                n&apos;a pas d&apos;écran d&apos;administration.
+                {t("Un magasin sans superviseur n'a personne pour y lancer un inventaire. L'accès s'ouvre depuis la page Mon équipe du site : l'application n'a pas d'écran d'administration.")}
               </Text>
             )}
             <Text style={styles.note}>
-              Ce code est confidentiel : ne le communiquez jamais aux compteurs. Les accès
-              superviseur sont ouverts par l&apos;administrateur de votre entreprise, depuis le
-              site.
+              {t("Ce code est confidentiel : ne le communiquez jamais aux compteurs. Les accès superviseur sont ouverts par l'administrateur de votre entreprise, depuis le site.")}
             </Text>
           </View>
         )}

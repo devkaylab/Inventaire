@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { EDITEUR, HEBERGEUR, mentionsCompletes, mentionsManquantes, type Mention } from '@/lib/legal'
 import { PRIVACY_URL } from '@/lib/links'
+import { NoteVersionFrancaise } from '@/components/NoteVersionFrancaise'
 
 /**
  * Mentions légales — obligation de la LCEN (art. 6 III), indépendante du RGPD.
@@ -49,6 +50,7 @@ export default function MentionsLegalesPage() {
       </header>
 
       <main className="legal">
+        <NoteVersionFrancaise />
         <h1>Mentions légales</h1>
 
         {manquantes.length > 0 && (

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Font, Spacing } from '@/constants/ink'
 import { isOffline, subscribeNetwork } from '@/lib/offlineSync'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 
 /**
  * Bandeau « hors ligne », en haut de toutes les pages.
@@ -101,7 +102,7 @@ export function OfflineTopBanner() {
         <Animated.View style={[styles.row, { opacity }]}>
           <View style={[styles.dot, { backgroundColor: BAR_TEXTE[theme.name] }]} />
           <Text style={[styles.text, { color: BAR_TEXTE[theme.name] }]} numberOfLines={1}>
-            Hors ligne — le comptage continue
+            {t('Hors ligne — le comptage continue')}
           </Text>
         </Animated.View>
       </View>

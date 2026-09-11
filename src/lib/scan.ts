@@ -1,5 +1,6 @@
 import { parseBalise } from '@/lib/baliseCode'
 import { gtinValide } from '@/lib/douchette'
+import { t } from '@/lib/i18n'
 
 /**
  * Ce qu'on fait d'un code qui vient d'être lu.
@@ -41,11 +42,10 @@ export type ContexteScan = {
  * l'« audite » en passe 2 : un message qui dirait « compter » à un auditeur
  * lui ferait croire qu'il s'est trompé d'écran.
  */
-const VERBE = { count: 'compter', audit: 'auditer' } as const
 
 export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
   const valeur = (code ?? '').trim()
-  if (!valeur) return { action: 'refus', titre: 'Code vide', texte: 'Rien n’a été lu.' }
+  if (!valeur) return { action: 'refus', titre: t('Code vide'), texte: t('Rien n’a été lu.') }
 
   const balise = parseBalise(valeur)
 
@@ -60,9 +60,10 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
     if (balise) {
       return {
         action: 'refus',
-        titre: 'Balise inutile ici',
-        texte: `${luAffiche(valeur)}\nCet inventaire ne fonctionne pas par balises : `
-          + `scannez directement les articles à ${VERBE[ctx.passe]}.`,
+        titre: t('Balise inutile ici'),
+        texte: `${luAffiche(valeur)}\n` + (ctx.passe === 'count'
+          ? t('Cet inventaire ne fonctionne pas par balises : scannez directement les articles à compter.')
+          : t('Cet inventaire ne fonctionne pas par balises : scannez directement les articles à auditer.')),
       }
     }
     return { action: 'article', code: valeur }
@@ -118,10 +119,10 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
     if (numero && !balise && gtinValide(valeur)) {
       return {
         action: 'refus',
-        titre: 'Aucune zone ouverte',
-        texte: `${luAffiche(valeur)}\nC’est un code-barres d’article. Scannez d’abord `
-          + `la balise du rayon : elle dit où vous ${
-            ctx.passe === 'count' ? 'comptez' : 'auditez'}.`,
+        titre: t('Aucune zone ouverte'),
+        texte: `${luAffiche(valeur)}\n` + (ctx.passe === 'count'
+          ? t('C’est un code-barres d’article. Scannez d’abord la balise du rayon : elle dit où vous comptez.')
+          : t('C’est un code-barres d’article. Scannez d’abord la balise du rayon : elle dit où vous auditez.')),
       }
     }
 
@@ -145,15 +146,13 @@ export function deciderScan(code: string, ctx: ContexteScan): DecisionScan {
     return estQrQuelconque(valeur)
       ? {
         action: 'refus',
-        titre: 'Ce n’est pas une balise',
-        texte: `${luAffiche(valeur)}\nCe code n’a pas été produit par Quantinvo. `
-          + `Saisissez le numéro de la balise ci-dessus.`,
+        titre: t('Ce n’est pas une balise'),
+        texte: `${luAffiche(valeur)}\n` + t('Ce code n’a pas été produit par Quantinvo. Saisissez le numéro de la balise ci-dessus.'),
       }
       : {
         action: 'refus',
-        titre: 'Code non reconnu',
-        texte: `${luAffiche(valeur)}\nCe n’est pas une balise Quantinvo. Saisissez `
-          + `son numéro ci-dessus pour ouvrir la zone.`,
+        titre: t('Code non reconnu'),
+        texte: `${luAffiche(valeur)}\n` + t('Ce n’est pas une balise Quantinvo. Saisissez son numéro ci-dessus pour ouvrir la zone.'),
       }
   }
 

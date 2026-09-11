@@ -19,8 +19,20 @@ type SupabaseLike = { message?: string; details?: string; hint?: string; code?: 
  * de retrouver l'incident dans les journaux ; le reste de l'objet est déjà
  * tracé par le `console.error` de l'appelant, il n'a rien à faire à l'écran.
  */
+import { langue, t } from '@/lib/i18n'
+import { traduireErreurServeur } from '@/lib/erreursServeur'
+
+/** Un refus venu de la base parle français ; en anglais on le traduit à la lecture. */
+function traduit(msg: string): string {
+  return langue() === 'en' ? traduireErreurServeur(msg) : msg
+}
+
 export function errorMessage(e: unknown): string {
-  if (!e) return 'Erreur inconnue'
+  return traduit(messageBrut(e))
+}
+
+function messageBrut(e: unknown): string {
+  if (!e) return t('Erreur inconnue')
   if (typeof e === 'string') return e
   if (e instanceof Error) return e.message
 
@@ -28,12 +40,12 @@ export function errorMessage(e: unknown): string {
   if (s.message) {
     let out = s.message
     if (s.details) out += ` (${s.details})`
-    if (s.hint) out += ` Conseil : ${s.hint}`
+    if (s.hint) out += ` ${t('Conseil')} : ${s.hint}`
     if (s.code) out += ` [${s.code}]`
     return out
   }
-  if (s.code) return `Erreur inconnue [${s.code}]`
-  return 'Erreur inconnue'
+  if (s.code) return `${t('Erreur inconnue')} [${s.code}]`
+  return t('Erreur inconnue')
 }
 
 /**
@@ -44,25 +56,25 @@ export function errorMessage(e: unknown): string {
 export function friendlyError(e: unknown): string {
   const msg = errorMessage(e)
   if (/row-level security|42501|permission denied/i.test(msg)) {
-    return "Action refusée. Vous n'êtes probablement pas participant de cet inventaire, ou il vient d'être clôturé."
+    return t("Action refusée. Vous n'êtes probablement pas participant de cet inventaire, ou il vient d'être clôturé.")
   }
   if (/forbidden/i.test(msg)) {
-    return "Accès refusé : cet inventaire ne vous est pas ouvert. Demandez au créateur de vous y inviter."
+    return t("Accès refusé : cet inventaire ne vous est pas ouvert. Demandez au créateur de vous y inviter.")
   }
   // Délai serveur dépassé. Nommé explicitement parce que ce n'est ni un refus
   // ni une panne de réseau : l'opération est partie, elle a été interrompue en
   // route. Le conseil qui suit est vrai — elle repasse au second essai.
   if (/57014|statement timeout|canceling statement/i.test(msg)) {
-    return "Le serveur a mis trop de temps à répondre et a interrompu l’opération. Réessayez dans un instant."
+    return t('Le serveur a mis trop de temps à répondre et a interrompu l’opération. Réessayez dans un instant.')
   }
   if (/network|fetch|timeout|Failed to fetch/i.test(msg)) {
-    return 'Connexion perdue. Vérifiez votre réseau puis réessayez.'
+    return t('Connexion perdue. Vérifiez votre réseau puis réessayez.')
   }
   // Une erreur sans texte est le plus souvent la même chose vue de plus loin :
   // le serveur a coupé sans rien dire. On ne l'affirme pas, on dit ce qu'on
   // sait et ce qu'il y a à faire.
-  if (msg === 'Erreur inconnue' || /^Erreur inconnue \[/.test(msg)) {
-    return `Le serveur a interrompu l’opération sans en donner la raison. Réessayez dans un instant. (${msg})`
+  if (msg === t('Erreur inconnue') || msg.startsWith(`${t('Erreur inconnue')} [`)) {
+    return t('Le serveur a interrompu l’opération sans en donner la raison. Réessayez dans un instant. (%{msg})', { msg })
   }
   return msg
 }

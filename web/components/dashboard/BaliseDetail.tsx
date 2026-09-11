@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
 import { BaliseGrid } from '@/components/dashboard/BaliseGrid'
+import { t, tn } from '@/lib/i18n'
 
 /**
  * Détail des balises : la grille, et au clic une fenêtre qui montre **ce qui a
@@ -34,8 +35,8 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
   async function onMarquerComptee(z: ZoneDashboardRow) {
     try {
       const r = await setBalise(sessionId, z.code, 'count', false)
-      if (!r.success) { toast.error(r.error ?? 'Action impossible.'); return }
-      toast.success(`Balise ${z.code} marquée comptée.`)
+      if (!r.success) { toast.error(r.error ?? t('Action impossible.')); return }
+      toast.success(t('Balise %{code} marquée comptée.', { code: z.code }))
       setSelected(null)
       await onChanged()
     } catch (err) {
@@ -58,24 +59,24 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
   async function onMarquerAuditee(z: ZoneDashboardRow) {
     if (z.audit_lines === 0) {
       const ok = await confirm({
-        title: `Marquer la balise ${z.code} auditée ?`,
-        message: 'Personne n’a audité cette balise. Les quantités du comptage seront reprises telles quelles.',
+        title: t('Marquer la balise %{code} auditée ?', { code: z.code }),
+        message: t('Personne n’a audité cette balise. Les quantités du comptage seront reprises telles quelles.'),
         details: [
-          `${plural(z.count_lines, 'référence')} reprise${z.count_lines > 1 ? 's' : ''}, ${plural(Math.round(z.count_units), 'pièce')}`,
-          'La balise sortira donc sans écart : le comptage fait foi.',
-          'Pour auditer réellement, ouvrez la balise en audit depuis l’application.',
+          tn('%{count} référence reprise, %{pieces}', '%{count} références reprises, %{pieces}', z.count_lines, { pieces: plural(Math.round(z.count_units), 'pièce') }),
+          t('La balise sortira donc sans écart : le comptage fait foi.'),
+          t('Pour auditer réellement, ouvrez la balise en audit depuis l’application.'),
         ],
-        confirmLabel: 'Reprendre le comptage',
+        confirmLabel: t('Reprendre le comptage'),
       })
       if (!ok) return
     }
     try {
       const r = await cloturerAuditBalise(sessionId, z.code)
-      if (!r.success) { toast.error(r.error ?? 'Action impossible.'); return }
+      if (!r.success) { toast.error(r.error ?? t('Action impossible.')); return }
       toast.success(
         r.reprises
-          ? `Balise ${z.code} marquée auditée — ${r.reprises} référence(s) reprise(s) du comptage.`
-          : `Balise ${z.code} marquée auditée.`,
+          ? tn('Balise %{code} marquée auditée — %{count} référence reprise du comptage.', 'Balise %{code} marquée auditée — %{count} références reprises du comptage.', r.reprises, { code: z.code })
+          : t('Balise %{code} marquée auditée.', { code: z.code }),
       )
       setSelected(null)
       await onChanged()
@@ -89,22 +90,22 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
     // il est à quelques centimètres de « Marquer comptée », et il efface le
     // travail de toute l'équipe sur ce rayon.
     const ok = await confirm({
-      title: `Vider la balise ${z.code} ?`,
-      message: `Tout ce qui a été relevé sur cette balise sera effacé, et elle repassera « à faire ».`,
+      title: t('Vider la balise %{code} ?', { code: z.code }),
+      message: t('Tout ce qui a été relevé sur cette balise sera effacé, et elle repassera « à faire ».'),
       details: [
-        `${z.count_lines} référence${z.count_lines > 1 ? 's' : ''} comptée${z.count_lines > 1 ? 's' : ''}, ${Math.round(z.count_units)} pièce${z.count_units > 1 ? 's' : ''}`,
-        'Les audits et arbitrages de cette balise partent aussi.',
-        'C’est définitif : les comptages ne se récupèrent pas.',
+        `${tn('%{count} référence comptée', '%{count} références comptées', z.count_lines)}, ${plural(Math.round(z.count_units), 'pièce')}`,
+        t('Les audits et arbitrages de cette balise partent aussi.'),
+        t('C’est définitif : les comptages ne se récupèrent pas.'),
       ],
-      confirmLabel: 'Vider la balise',
+      confirmLabel: t('Vider la balise'),
       tone: 'danger',
       requireText: z.code,
     })
     if (!ok) return
     try {
       const r = await viderBalise(sessionId, z.code)
-      if (!r.success) { toast.error(r.error ?? 'Suppression impossible.'); return }
-      toast.success(`Balise ${z.code} vidée — ${r.lignes ?? 0} ligne(s) effacée(s).`)
+      if (!r.success) { toast.error(r.error ?? t('Suppression impossible.')); return }
+      toast.success(tn('Balise %{code} vidée — %{count} ligne effacée.', 'Balise %{code} vidée — %{count} lignes effacées.', r.lignes ?? 0, { code: z.code }))
       setSelected(null)
       await onChanged()
     } catch (err) {
@@ -116,23 +117,23 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
     <div>
       <p className="muted small" style={{ marginBottom: 12 }}>
         {readOnly
-          ? 'Cliquez sur une balise pour voir ce qui a été compté dessus.'
-          : 'Cliquez sur une balise pour voir ce qui a été compté dessus, et clôturer son comptage ou son audit — utile quand un compteur a quitté l’application en laissant une balise ouverte.'}
+          ? t('Cliquez sur une balise pour voir ce qui a été compté dessus.')
+          : t('Cliquez sur une balise pour voir ce qui a été compté dessus, et clôturer son comptage ou son audit — utile quand un compteur a quitté l’application en laissant une balise ouverte.')}
       </p>
       <BaliseGrid zones={zones} onSelect={setSelected} showGroupLabels={false} />
 
       {selected && (
-        <Modal title={`Balise ${selected.code}`} onClose={() => setSelected(null)} large>
-          <p className="modal-sub">{selected.name ?? 'Sans emplacement'}</p>
+        <Modal title={`${t('Balise')} ${selected.code}`} onClose={() => setSelected(null)} large>
+          <p className="modal-sub">{selected.name ?? t('Sans emplacement')}</p>
 
           <div className="dash-info-grid" style={{ marginTop: 16 }}>
             <BaliseCycle
-              label="Comptage" statut={selected.count_status} readOnly={readOnly}
-              action="Marquer comptée" onCloturer={() => onMarquerComptee(selected)}
+              label={t('Comptage')} statut={selected.count_status} readOnly={readOnly}
+              action={t('Marquer comptée')} onCloturer={() => onMarquerComptee(selected)}
             />
             <BaliseCycle
-              label="Audit" statut={selected.audit_status} readOnly={readOnly}
-              action="Marquer auditée" onCloturer={() => onMarquerAuditee(selected)}
+              label={t('Audit')} statut={selected.audit_status} readOnly={readOnly}
+              action={t('Marquer auditée')} onCloturer={() => onMarquerAuditee(selected)}
             />
           </div>
 
@@ -141,9 +142,9 @@ export function BaliseDetail({ sessionId, zones, readOnly, onChanged }: {
           {!readOnly && (
             <div className="balise-zone-sensible">
               <button type="button" className="link-btn danger" onClick={() => onVider(selected)}>
-                Vider la balise
+                {t('Vider la balise')}
               </button>
-              <span className="muted small">Efface les comptages et repasse la balise « à faire ».</span>
+              <span className="muted small">{t('Efface les comptages et repasse la balise « à faire ».')}</span>
             </div>
           )}
         </Modal>
@@ -176,10 +177,10 @@ function BaliseCycle({ label, statut, readOnly, action, onCloturer }: {
     <div className="dash-info-row">
       <span className="dash-info-label">{label}</span>
       <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span className="dash-info-value">{STATUS_FR[statut]}</span>
+        <span className="dash-info-value">{t(STATUS_FR[statut])}</span>
         {!readOnly && (
           statut === 'done'
-            ? <span className="muted small">Pour rouvrir, passez par l’application</span>
+            ? <span className="muted small">{t('Pour rouvrir, passez par l’application')}</span>
             : <button type="button" className="link-btn" onClick={onCloturer}>{action}</button>
         )}
       </span>
@@ -205,15 +206,15 @@ function LignesBalise({ sessionId, code }: { sessionId: string; code: string }) 
   useEffect(() => { void charger() }, [charger])
 
   if (erreur) return <p className="balise-vide">{erreur}</p>
-  if (lignes === null) return <p className="balise-vide">Chargement…</p>
+  if (lignes === null) return <p className="balise-vide">{t('Chargement…')}</p>
 
   if (lignes.length === 0) {
     return (
       <div className="balise-bloc">
-        <div className="balise-bloc-head"><span className="balise-bloc-title">Ce qui a été compté</span></div>
+        <div className="balise-bloc-head"><span className="balise-bloc-title">{t('Ce qui a été compté')}</span></div>
         <div className="balise-vide">
-          <strong>Rien pour l’instant</strong>
-          Aucun article n’a encore été scanné sur cette balise.
+          <strong>{t('Rien pour l’instant')}</strong>
+          {t('Aucun article n’a encore été scanné sur cette balise.')}
         </div>
       </div>
     )
@@ -226,10 +227,10 @@ function LignesBalise({ sessionId, code }: { sessionId: string; code: string }) 
   return (
     <div className="balise-bloc">
       <div className="balise-bloc-head">
-        <span className="balise-bloc-title">Ce qui a été compté</span>
+        <span className="balise-bloc-title">{t('Ce qui a été compté')}</span>
         <span className="balise-bloc-count">
-          {lignes.length} référence{lignes.length > 1 ? 's' : ''} · {pieces} pièce{pieces > 1 ? 's' : ''} comptée{pieces > 1 ? 's' : ''}
-          {auditees > 0 && ` · ${auditees} auditée${auditees > 1 ? 's' : ''}`}
+          {tn('%{count} référence', '%{count} références', lignes.length)} · {tn('%{count} pièce comptée', '%{count} pièces comptées', pieces)}
+          {auditees > 0 && ` · ${tn('%{count} auditée', '%{count} auditées', auditees)}`}
         </span>
       </div>
 
@@ -237,10 +238,10 @@ function LignesBalise({ sessionId, code }: { sessionId: string; code: string }) 
         <table>
           <thead>
             <tr>
-              <th>Article</th>
-              <th className="num">Comptage</th>
-              <th className="num">Audit</th>
-              <th className="num">Écart</th>
+              <th>{t('Article')}</th>
+              <th className="num">{t('Comptage')}</th>
+              <th className="num">{t('Audit')}</th>
+              <th className="num">{t('Écart')}</th>
             </tr>
           </thead>
           <tbody>
@@ -251,8 +252,7 @@ function LignesBalise({ sessionId, code }: { sessionId: string; code: string }) 
 
       {audit !== 'done' && (
         <p className="balise-note">
-          L’écart se calcule une fois l’audit de la balise clôturé : tant qu’il tourne,
-          « pas encore vu » et « pas trouvé » ne se distinguent pas.
+          {t('L’écart se calcule une fois l’audit de la balise clôturé : tant qu’il tourne, « pas encore vu » et « pas trouvé » ne se distinguent pas.')}
         </p>
       )}
     </div>
@@ -267,8 +267,8 @@ function Ligne({ l }: { l: BaliseLigne }) {
       <td>
         <div className="balise-art">
           {nom}
-          {l.label === 'INCONNU' && <span className="tag tag-inconnu">créé au scan</span>}
-          {l.final_qty != null && <span className="tag tag-arbitre">arbitré · {Number(l.final_qty)}</span>}
+          {l.label === 'INCONNU' && <span className="tag tag-inconnu">{t('créé au scan')}</span>}
+          {l.final_qty != null && <span className="tag tag-arbitre">{t('arbitré')} · {Number(l.final_qty)}</span>}
         </div>
         {nom !== l.sku && <div className="balise-ref">{l.sku}</div>}
       </td>

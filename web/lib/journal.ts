@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n'
 // Le journal de l'entreprise, mis en français.
 //
 // `company_audit_log` enregistre des actions techniques (`acces_retires`,
@@ -25,35 +26,35 @@ export type LigneJournal = {
  * « Vous a invité » que produisait la première version.
  */
 export const ACTIONS: Record<string, (cible: string) => string> = {
-  superviseur_invite: (c) => `invité ${c} comme superviseur`,
-  superviseur_magasins_modifies: (c) => `modifié les magasins de ${c}`,
-  compteur_magasins_modifies: (c) => `modifié les magasins de ${c}`,
-  magasin_renomme: (c) => `renommé un magasin en « ${c} »`,
-  entreprise_renommee: (c) => `renommé l’entreprise en « ${c} »`,
-  acces_retires: (c) => `retiré tous les accès de ${c}`,
+  superviseur_invite: (c) => t('invité %{c} comme superviseur', { c }),
+  superviseur_magasins_modifies: (c) => t('modifié les magasins de %{c}', { c }),
+  compteur_magasins_modifies: (c) => t('modifié les magasins de %{c}', { c }),
+  magasin_renomme: (c) => t('renommé un magasin en « %{c} »', { c }),
+  entreprise_renommee: (c) => t('renommé l’entreprise en « %{c} »', { c }),
+  acces_retires: (c) => t('retiré tous les accès de %{c}', { c }),
   // ⚠️ Écrite par `remove_counter_from_store`, pas par une fonction `ca_*` — et
   // c'est pour ça qu'elle a manqué : la garde ne balayait que les `ca_*`. Vue
   // en clair sur le journal réel le 5 septembre 2026 (« Test Sup sans inv —
   // compteur_retire_du_magasin — Julien Compteur »). Le retrait vise UN
   // magasin, jamais tous : le libellé doit le dire.
-  compteur_retire_du_magasin: (c) => `retiré ${c} d’un magasin`,
-  promu_superviseur: (c) => `promu ${c} superviseur`,
-  retrograde_compteur: (c) => `passé ${c} en compteur`,
-  invitation_annulee: (c) => `annulé l’invitation de ${c}`,
-  compte_supprime: (c) => `supprimé le compte de ${c}`,
-  magasin_demande: (c) => `demandé l’ajout du magasin « ${c} »`,
-  magasin_demande_annulee: (c) => `annulé la demande du magasin « ${c} »`,
-  magasin_suppression_demandee: (c) => `demandé la suppression du magasin « ${c} »`,
+  compteur_retire_du_magasin: (c) => t('retiré %{c} d’un magasin', { c }),
+  promu_superviseur: (c) => t('promu %{c} superviseur', { c }),
+  retrograde_compteur: (c) => t('passé %{c} en compteur', { c }),
+  invitation_annulee: (c) => t('annulé l’invitation de %{c}', { c }),
+  compte_supprime: (c) => t('supprimé le compte de %{c}', { c }),
+  magasin_demande: (c) => t('demandé l’ajout du magasin « %{c} »', { c }),
+  magasin_demande_annulee: (c) => t('annulé la demande du magasin « %{c} »', { c }),
+  magasin_suppression_demandee: (c) => t('demandé la suppression du magasin « %{c} »', { c }),
   // Le libre-service (4 septembre 2026) : `offre_changee` est le geste du
   // client, `offre_appliquee` ce que Stripe a confirmé. Les deux existent parce
   // qu'entre les deux il y a un paiement, et qu'il peut ne jamais aboutir.
-  offre_changee: (c) => `demandé une offre plus large pour « ${c} »`,
-  offre_appliquee: (c) => `élargi l’offre de « ${c} »`,
-  rythme_change: (c) => `changé le rythme de paiement de « ${c} »`,
+  offre_changee: (c) => t('demandé une offre plus large pour « %{c} »', { c }),
+  offre_appliquee: (c) => t('élargi l’offre de « %{c} »', { c }),
+  rythme_change: (c) => t('changé le rythme de paiement de « %{c} »', { c }),
   // Écrite par `vider_balise`, pas par une fonction `ca_*` : les comptages ne
   // sont journalisés nulle part ailleurs, et c'est la seule trace qu'un rayon
   // a été effacé.
-  balise_videe: (c) => `vidé la ${c}`,
+  balise_videe: (c) => t('vidé la %{c}', { c }),
 }
 
 /**
@@ -64,11 +65,13 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
  */
 export function libelleAction(ligne: LigneJournal, moi: string | null): string {
   const soi = !!ligne.actor_id && ligne.actor_id === moi
-  const auteur = soi ? 'Vous' : (ligne.actor_label || 'Quelqu’un')
+  const auteur = soi ? t('Vous') : (ligne.actor_label || t('Quelqu’un'))
   const cible = ligne.target_label || '—'
   const phrase = ACTIONS[ligne.action]
   // Une action inconnue reste lisible plutôt que muette : on montre son nom
   // technique, ce qui se remarque et se corrige.
   if (!phrase) return `${auteur} — ${ligne.action} — ${cible}`
-  return `${auteur} ${soi ? 'avez' : 'a'} ${phrase(cible)}`
+  return soi
+    ? t('%{auteur} avez %{phrase}', { auteur, phrase: phrase(cible) })
+    : t('%{auteur} a %{phrase}', { auteur, phrase: phrase(cible) })
 }

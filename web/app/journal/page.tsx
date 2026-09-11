@@ -17,15 +17,17 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { getMyCompany, type Company } from '@/lib/account'
 import { libelleAction, type LigneJournal } from '@/lib/journal'
 import { Chargement } from '@/components/Chargement'
+import { locale, t, useTraduction } from '@/lib/i18n'
 
 /** « 22/08 à 14:02 » — la date d'un journal se lit à la minute. */
 function quand(iso: string): string {
   const d = new Date(iso)
-  return `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+  return t('%{jour} à %{heure}', { jour: d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' }), heure: d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) })
 }
 
 export default function JournalPage() {
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const [lignes, setLignes] = useState<LigneJournal[]>([])
   const [company, setCompany] = useState<Company | null>(null)
   const [query, setQuery] = useState('')
@@ -66,8 +68,8 @@ export default function JournalPage() {
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
         <div>
-          <h1 className="page-title">Journal</h1>
-          <p className="page-sub">Qui a fait quoi dans votre entreprise</p>
+          <h1 className="page-title">{t('Journal')}</h1>
+          <p className="page-sub">{t('Qui a fait quoi dans votre entreprise')}</p>
         </div>
         {/* Un champ de recherche a une largeur de lecture : il faisait toute la
             largeur de la page, ce qui laissait croire qu'il cherchait ailleurs
@@ -78,22 +80,22 @@ export default function JournalPage() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une personne, un magasin…"
-              aria-label="Rechercher dans le journal"
+              placeholder={t('Rechercher une personne, un magasin…')}
+              aria-label={t('Rechercher dans le journal')}
             />
           </div>
         </div>
       </div>
 
       {!pret ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t('Chargement…')}</p>
       ) : lignes.length === 0 ? (
         <EmptyState
-          title="Aucune action enregistrée"
-          hint="Les invitations, retraits d’accès, suppressions de comptes et demandes de magasin s’inscriront ici."
+          title={t('Aucune action enregistrée')}
+          hint={t('Les invitations, retraits d’accès, suppressions de comptes et demandes de magasin s’inscriront ici.')}
         />
       ) : filtrees.length === 0 ? (
-        <EmptyState title="Aucun résultat" hint={`Rien ne correspond à « ${query} ».`} />
+        <EmptyState title={t('Aucun résultat')} hint={t('Rien ne correspond à « %{q} ».', { q: query })} />
       ) : (
         <section className="admin-section">
           {/* La phrase remonte SOUS le titre au lieu d'être reléguée en pied :
@@ -101,10 +103,9 @@ export default function JournalPage() {
               pas une note de bas de page. */}
           <div className="admin-section-head">
             <div>
-              <h2>Actions</h2>
+              <h2>{t('Actions')}</h2>
               <p className="section-note">
-                Les 200 dernières, conservées un an. Invitations, retraits d’accès,
-                suppressions de comptes et demandes de magasin.
+                {t('Les 200 dernières, conservées un an. Invitations, retraits d’accès, suppressions de comptes et demandes de magasin.')}
               </p>
             </div>
             <span className="dash-sub-n">{filtrees.length}</span>

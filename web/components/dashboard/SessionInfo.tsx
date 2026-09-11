@@ -1,6 +1,7 @@
 'use client'
 
 import { fmtDate, fmtDateTime } from '@/lib/format'
+import { t } from '@/lib/i18n'
 
 /**
  * Informations d'un inventaire — magasin, statut, mode, dates.
@@ -28,13 +29,13 @@ export type SessionInfoData = {
 export function SessionInfo({ session }: { session: SessionInfoData }) {
   return (
     <section className="panel">
-      <div className="dash-section-label">Informations</div>
+      <div className="dash-section-label">{t('Informations')}</div>
       <div className="dash-info-grid" style={{ marginTop: 12 }}>
-        <Info label="Magasin" value={session.store_name} />
-        <Info label="Statut" value={STATUS_LABELS[session.status] ?? session.status} />
-        <Info label="Mode" value={session.uses_zones ? 'Zones et balises' : 'Classique (sans balise)'} />
-        <Info label="Créé le" value={fmtDate(session.created_at)} />
-        {session.closed_at && <Info label="Clôturé le" value={fmtDateTime(session.closed_at)} />}
+        <Info label={t('Magasin')} value={session.store_name} />
+        <Info label={t('Statut')} value={t(STATUS_LABELS[session.status] ?? session.status)} />
+        <Info label={t('Mode')} value={session.uses_zones ? t('Zones et balises') : t('Classique (sans balise)')} />
+        <Info label={t('Créé le')} value={fmtDate(session.created_at)} />
+        {session.closed_at && <Info label={t('Clôturé le')} value={fmtDateTime(session.closed_at)} />}
       </div>
     </section>
   )

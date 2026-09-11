@@ -42,7 +42,7 @@ describe('la barre de navigation', () => {
     expect(shell).toContain('href="/"')
     // Le rail n'a pas la place du libellé « ← retour au site » : le logo
     // porte la destination en title, comme les onglets portent la leur.
-    expect(shell).toContain('title="Retour au site Quantinvo"')
+    expect(shell).toContain("title={t('Retour au site Quantinvo')}")
   })
 
   it('porte le nom, l’entreprise ET le rôle, ensemble', () => {
@@ -95,8 +95,8 @@ describe('la barre de navigation', () => {
       .join('\n')
     expect(codeSeul).not.toContain('▾')
     expect(codeSeul).toContain('IconeOnglet')
-    expect(codeSeul).toContain('title={o.label}')
-    expect(codeSeul).toContain('aria-label={o.label}')
+    expect(codeSeul).toContain('title={t(o.label)}')
+    expect(codeSeul).toContain('aria-label={t(o.label)}')
   })
 
   it('se referme au clic ailleurs et à Échap', () => {
@@ -262,8 +262,8 @@ describe('l’onglet Set up tient en deux volets', () => {
   const volet = lire('../components/ui/Volet.tsx')
 
   it('porte les deux sections, aux mots de Julien', () => {
-    expect(setup).toContain('titre="Zone de comptage"')
-    expect(setup).toContain('titre="Données d’inventaire"')
+    expect(setup).toContain("titre={t('Zone de comptage')}")
+    expect(setup).toContain("titre={t('Données d’inventaire')}")
   })
 
   it('ne s’ouvre jamais tout seul', () => {
@@ -280,8 +280,8 @@ describe('l’onglet Set up tient en deux volets', () => {
     // pastille, il faudrait ouvrir chaque volet pour savoir où on en est.
     expect(setup).toContain('resumeZones')
     expect(setup).toContain('resumeFichiers')
-    expect(setup).toContain("libelle: 'Prêt'")
-    expect(setup).toContain("libelle: 'À faire'")
+    expect(setup).toContain("libelle: t('Prêt')")
+    expect(setup).toContain("libelle: t('À faire')")
     expect(volet).toContain('volet-resume')
     expect(volet).toContain('volet-pastille')
   })
@@ -369,7 +369,7 @@ describe('les boutons des boutiques d’applications', () => {
     expect(bienvenue).toContain('<StoreBadges />')
     // « Ouvrir l'application » reste l'action première : tant que l'app n'est
     // pas publiée, un badge mène à une recherche qui ne trouve rien.
-    expect(bienvenue).toMatch(/btn btn-primary btn-block">Ouvrir l&apos;application/)
+    expect(bienvenue).toMatch(/btn btn-primary btn-block">\{t\("Ouvrir l'application"\)\}/)
     // Et rien ne renvoie vers le web : un compteur y trouverait « Mon compte »,
     // que l'espace connecté referme sous 720 px.
     expect(bienvenue).not.toContain('Continuer sur le web')
@@ -551,7 +551,7 @@ describe('un superviseur gère vraiment son équipe', () => {
     // Le bloc du superviseur ordinaire : de sa boucle par magasin jusqu'aux
     // invitations en cours.
     const bloc = equipe.split('(sup?.stores ?? []).map((s) => (')[1]?.split('Invitations en cours')[0] ?? ''
-    expect(bloc).toContain('>Retirer du magasin</button>')
+    expect(bloc).toContain(">{t('Retirer du magasin')}</button>")
     // Amendé le 22 août 2026 : la ligne porte désormais une seconde action,
     // « Supprimer le compte », qui elle est réservée à l'administrateur
     // d'entreprise. La garde porte donc sur ce qui précède : le retrait d'un

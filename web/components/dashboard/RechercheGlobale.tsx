@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { getAccessibleSessions, type Session } from '@/lib/inventory'
+import { t } from '@/lib/i18n'
 
 type Personne = { id: string; nom: string; email: string | null; magasin: string }
 
@@ -92,28 +93,28 @@ export function RechercheGlobale() {
       <input
         type="search"
         value={texte}
-        placeholder="Rechercher un inventaire, un membre…"
-        aria-label="Rechercher un inventaire ou un membre de l’équipe"
+        placeholder={t('Rechercher un inventaire, un membre…')}
+        aria-label={t('Rechercher un inventaire ou un membre de l’équipe')}
         onFocus={() => { precharger(); setOuvert(true) }}
         onChange={(e) => { setTexte(e.target.value); setOuvert(true) }}
       />
 
       {ouvert && q.length >= 2 && (
-        <div className="tb-recherche-resultats" role="listbox" aria-label="Résultats">
+        <div className="tb-recherche-resultats" role="listbox" aria-label={t('Résultats')}>
           {enCharge ? (
-            <div className="tb-recherche-vide">Recherche…</div>
+            <div className="tb-recherche-vide">{t('Recherche…')}</div>
           ) : inventaires.length === 0 && membres.length === 0 ? (
-            <div className="tb-recherche-vide">Rien ne correspond à « {texte.trim()} ».</div>
+            <div className="tb-recherche-vide">{t('Rien ne correspond à « %{q} ».', { q: texte.trim() })}</div>
           ) : (
             <>
-              {inventaires.length > 0 && <div className="tb-recherche-groupe">Inventaires</div>}
+              {inventaires.length > 0 && <div className="tb-recherche-groupe">{t('Inventaires')}</div>}
               {inventaires.map(s => (
                 <button type="button" className="tb-recherche-rang" key={s.id} onClick={() => aller(`/dashboard/${s.id}`)}>
                   <span className="tb-recherche-nom">{s.name || s.store_name}</span>
                   <span className="tb-recherche-sous">{s.store_name} · <span className="num">{s.inventory_number}</span></span>
                 </button>
               ))}
-              {membres.length > 0 && <div className="tb-recherche-groupe">Équipe</div>}
+              {membres.length > 0 && <div className="tb-recherche-groupe">{t('Équipe')}</div>}
               {membres.map(m => (
                 <button type="button" className="tb-recherche-rang" key={m.id} onClick={() => aller('/equipe')}>
                   <span className="tb-recherche-nom">{m.nom || m.email || '—'}</span>

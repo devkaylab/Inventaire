@@ -29,9 +29,11 @@ import { ChevronIcon, MenuCard, MenuRow, SectionLabel } from '@/components/ui/Me
 import { useRepere } from '@/lib/reperes'
 import { useRetourSurEcran } from '@/hooks/useRetourSurEcran'
 import { demander, signaler } from '@/lib/dialogue'
+import { t, tn } from '@/lib/i18n'
 import { nb } from '@/lib/nombres'
 
-const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
+// Une fonction, pas une constante : la langue n'est pas connue au chargement du module.
+const statusLabel = (s: string) => ({ open: t('Ouverte'), counting: t('En cours'), closed: t('Clôturée') } as Record<string, string>)[s] ?? s
 
 // Icônes SVG (pas d'emoji) ────────────────────────────────────────────────────
 function InfoIcon({ color }: { color: string }) {
@@ -121,11 +123,11 @@ export default function SessionDetailScreen() {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
       signaler.succes(
-        'Inventaire clôturé',
-        'Plus aucun comptage ne peut y être enregistré. Les données sont conservées et le rapport reste disponible.',
+        t('Inventaire clôturé'),
+        t('Plus aucun comptage ne peut y être enregistré. Les données sont conservées et le rapport reste disponible.'),
       )
     },
-    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur(t('Erreur'), errorMessage(e)) },
   })
 
   const reopenMutation = useMutation({
@@ -133,31 +135,31 @@ export default function SessionDetailScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
-      signaler.succes('Inventaire rouvert', 'Le comptage peut reprendre.')
+      signaler.succes(t('Inventaire rouvert'), t('Le comptage peut reprendre.'))
     },
-    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur(t('Erreur'), errorMessage(e)) },
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteSessionPermanently(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      signaler.succes('Inventaire supprimé', 'L\'inventaire et toutes ses données ont été supprimés.')
+      signaler.succes(t('Inventaire supprimé'), t("L'inventaire et toutes ses données ont été supprimés."))
       if (router.canGoBack()) router.back()
       else router.replace('/(supervisor)/')
     },
-    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur(t('Erreur'), errorMessage(e)) },
   })
 
   const leaveMutation = useMutation({
     mutationFn: () => leaveSession(sessionId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      signaler.succes('Inventaire quitté', 'Vous avez quitté cet inventaire. Vos comptages restent enregistrés.')
+      signaler.succes(t('Inventaire quitté'), t('Vous avez quitté cet inventaire. Vos comptages restent enregistrés.'))
       if (router.canGoBack()) router.back()
       else router.replace('/(supervisor)/')
     },
-    onError: (e) => { signaler.erreur('Erreur', errorMessage(e)) },
+    onError: (e) => { signaler.erreur(t('Erreur'), errorMessage(e)) },
   })
 
   const refreshing = countsFetching || zonesFetching
@@ -209,40 +211,40 @@ export default function SessionDetailScreen() {
 
   async function handleRemoveMember(userId: string, name: string) {
     void demander({
-      titre: `Retirer ${name} ?`,
-      texte: 'Cette personne ne verra plus l’inventaire. Ses comptages déjà saisis sont conservés.',
-      action: 'Retirer',
+      titre: t('Retirer %{nom} ?', { nom: name }),
+      texte: t('Cette personne ne verra plus l’inventaire. Ses comptages déjà saisis sont conservés.'),
+      action: t('Retirer'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
       try {
         await removeSessionMember(sessionId, userId)
         await queryClient.invalidateQueries({ queryKey: ['session-members', sessionId] })
-      } catch (e) { signaler.erreur('Erreur', errorMessage(e)) }
+      } catch (e) { signaler.erreur(t('Erreur'), errorMessage(e)) }
     })
   }
 
   async function handleDeleteInvite(id: string, label: string) {
     void demander({
-      titre: 'Annuler l’invitation ?',
-      texte: `${label} ne pourra plus rejoindre cet inventaire.`,
-      action: 'Annuler l’invitation',
-      annuler: 'Retour',
+      titre: t('Annuler l’invitation ?'),
+      texte: t('%{nom} ne pourra plus rejoindre cet inventaire.', { nom: label }),
+      action: t('Annuler l’invitation'),
+      annuler: t('Retour'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
       try {
         await deleteSessionInvitation(id)
         await queryClient.invalidateQueries({ queryKey: ['session-invitations', sessionId] })
-      } catch (e) { signaler.erreur('Erreur', errorMessage(e)) }
+      } catch (e) { signaler.erreur(t('Erreur'), errorMessage(e)) }
     })
   }
 
   function confirmLeave() {
     void demander({
-      titre: 'Quitter l’inventaire ?',
-      texte: 'Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l’équipe.',
-      action: 'Quitter',
+      titre: t('Quitter l’inventaire ?'),
+      texte: t('Vous ne verrez plus cet inventaire. Vos comptages et audits déjà saisis restent enregistrés pour l’équipe.'),
+      action: t('Quitter'),
       ton: 'danger',
     }).then((ok) => { if (ok) leaveMutation.mutate() })
   }
@@ -254,40 +256,42 @@ export default function SessionDetailScreen() {
     // manques. C'est le seul chiffre qui puisse faire changer d'avis, donc il
     // passe avant le reste.
     const reste = usesZones && zoneMissing.length > 0
-      ? `${nb(zoneMissing.length)} balise${zoneMissing.length > 1 ? 's' : ''} sur ${nb(zoneTotal)} n${zoneMissing.length > 1 ? "'ont" : "'a"} pas été comptée${zoneMissing.length > 1 ? 's' : ''}. Elle${zoneMissing.length > 1 ? 's' : ''} compteront pour zéro dans le rapport.\n\n`
+      ? tn("%{count} balise sur %{total} n'a pas été comptée. Elle comptera pour zéro dans le rapport.",
+           "%{count} balises sur %{total} n'ont pas été comptées. Elles compteront pour zéro dans le rapport.",
+           zoneMissing.length, { total: nb(zoneTotal) }) + '\n\n'
       : ''
     void demander({
-      titre: 'Clôturer l’inventaire ?',
-      texte: `${reste}Il passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.`,
-      note: 'Toutes les données sont conservées et le rapport reste disponible. Vous pourrez le rouvrir si besoin.',
-      action: 'Clôturer',
+      titre: t('Clôturer l’inventaire ?'),
+      texte: reste + t('Il passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.'),
+      note: t('Toutes les données sont conservées et le rapport reste disponible. Vous pourrez le rouvrir si besoin.'),
+      action: t('Clôturer'),
     }).then((ok) => { if (ok) closeMutation.mutate() })
   }
 
   function confirmReopen() {
     void demander({
-      titre: 'Rouvrir l’inventaire ?',
-      texte: 'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
-      action: 'Rouvrir',
+      titre: t('Rouvrir l’inventaire ?'),
+      texte: t('Le comptage pourra reprendre et le rapport évoluera de nouveau.'),
+      action: t('Rouvrir'),
     }).then((ok) => { if (ok) reopenMutation.mutate() })
   }
 
   function confirmDelete() {
     void demander({
-      titre: 'Supprimer cet inventaire ?',
-      texte: 'Comptages, stock théorique, écarts d’audit, membres et référentiel articles seront effacés.',
-      note: 'Pensez à exporter le rapport avant : cette action est irréversible.',
-      action: 'Supprimer',
+      titre: t('Supprimer cet inventaire ?'),
+      texte: t('Comptages, stock théorique, écarts d’audit, membres et référentiel articles seront effacés.'),
+      note: t('Pensez à exporter le rapport avant : cette action est irréversible.'),
+      action: t('Supprimer'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
       // Seconde question : le geste est irréversible, et le numéro nommé
       // ici est la dernière chance de voir qu'on vise le mauvais inventaire.
       const sur = await demander({
-        titre: 'Dernière confirmation',
-        texte: `Supprimer « ${session?.name || session?.inventory_number} » et toutes ses données ?`,
-        surtitre: 'Irréversible',
-        action: 'Oui, supprimer',
+        titre: t('Dernière confirmation'),
+        texte: t('Supprimer « %{nom} » et toutes ses données ?', { nom: session?.name || session?.inventory_number || '' }),
+        surtitre: t('Irréversible'),
+        action: t('Oui, supprimer'),
         ton: 'danger',
       })
       if (sur) deleteMutation.mutate()
@@ -297,7 +301,7 @@ export default function SessionDetailScreen() {
   async function shareCredentials() {
     try {
       await Share.share({
-        message: `Inventaire : ${session?.inventory_number}\nCode inventaire : ${session?.security_code ?? '—'}\nMagasin : ${session?.store_name}`,
+        message: `${t('Inventaire')} : ${session?.inventory_number}\n${t('Code inventaire')} : ${session?.security_code ?? '—'}\n${t('Magasin')} : ${session?.store_name}`,
       })
     } catch { /* user dismissed */ }
   }
@@ -306,7 +310,7 @@ export default function SessionDetailScreen() {
     try {
       await Share.share({ message: value })
     } catch { /* user dismissed */ }
-    signaler.succes(`${label} copié`, value)
+    signaler.succes(t('%{label} copié', { label }), value)
   }
 
   if (isLoading || !session) {
@@ -352,7 +356,7 @@ export default function SessionDetailScreen() {
           </View>
           <View style={styles.statusBadge}>
             <View style={styles.statusBadgeDot} />
-            <Text style={styles.statusBadgeText}>{STATUS_LABELS[session.status]}</Text>
+            <Text style={styles.statusBadgeText}>{statusLabel(session.status)}</Text>
           </View>
           <View style={styles.infoBtn}><InfoIcon color={theme.accent} /></View>
         </Pressable>
@@ -360,13 +364,13 @@ export default function SessionDetailScreen() {
         {/* Progression */}
         {usesZones ? (
           <View style={styles.progressBlock}>
-            <SectionLabel>Progression</SectionLabel>
+            <SectionLabel>{t('Progression')}</SectionLabel>
             <View style={styles.progressBigRow}>
               <Text style={styles.progressBig}>{countPct}%</Text>
               {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
             </View>
-            <Text style={styles.progressSub}>{countPct}% des balises comptées</Text>
-            <Text style={styles.progressSub}>{auditPct}% des balises auditées</Text>
+            <Text style={styles.progressSub}>{t('%{pct}% des balises comptées', { pct: countPct })}</Text>
+            <Text style={styles.progressSub}>{t('%{pct}% des balises auditées', { pct: auditPct })}</Text>
             {/* ⚠️ L'avancement se compte en BALISES — c'est ce qui dit où en
                 est le magasin. Mais le nombre de pièces L'ACCOMPAGNE sans le
                 remplacer (maquette d'onboarding du 23 août 2026) : « 60 % »
@@ -374,27 +378,27 @@ export default function SessionDetailScreen() {
                 mille, et c'est la première question qu'on se pose en le
                 lisant. Les deux nombres sont déjà chargés pour l'autre mode. */}
             <Text style={styles.progressSub}>
-              {nb(countedPieces)} pièce{countedPieces > 1 ? 's' : ''} comptée{countedPieces > 1 ? 's' : ''}
-              {' · '}{nb(auditedPieces)} auditée{auditedPieces > 1 ? 's' : ''}
+              {tn('%{count} pièce comptée', '%{count} pièces comptées', countedPieces)}
+              {' · '}{tn('%{count} auditée', '%{count} auditées', auditedPieces)}
             </Text>
 
             {zoneTotal === 0 ? (
-              <Text style={styles.zoneEmpty}>Aucune balise affectée. Ouvrez « Zones & balises » depuis le panneau infos.</Text>
+              <Text style={styles.zoneEmpty}>{t('Aucune balise affectée. Ouvrez « Zones & balises » depuis le panneau infos.')}</Text>
             ) : montrerManquantes ? (
               <Pressable style={styles.missingRow} onPress={() => router.push(`/(supervisor)/${sessionId}/missing`)}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.missingCount}>{zoneMissing.length} balise{zoneMissing.length > 1 ? 's' : ''} pas encore comptée{zoneMissing.length > 1 ? 's' : ''}</Text>
-                  <Text style={styles.missingHint}>Voir les emplacements concernés</Text>
+                  <Text style={styles.missingCount}>{tn('%{count} balise pas encore comptée', '%{count} balises pas encore comptées', zoneMissing.length)}</Text>
+                  <Text style={styles.missingHint}>{t('Voir les emplacements concernés')}</Text>
                 </View>
                 <ChevronIcon color={theme.warning} />
               </Pressable>
             ) : toutCompte ? (
               <View style={styles.missingDoneRow}>
-                <Text style={styles.missingDone}>Toutes les balises ont été comptées</Text>
+                <Text style={styles.missingDone}>{t('Toutes les balises ont été comptées')}</Text>
               </View>
             ) : (
               <Text style={styles.zoneEmpty}>
-                {nb(zoneTotal)} balise{zoneTotal > 1 ? 's' : ''} prête{zoneTotal > 1 ? 's' : ''} à être comptée{zoneTotal > 1 ? 's' : ''}.
+                {tn('%{count} balise prête à être comptée.', '%{count} balises prêtes à être comptées.', zoneTotal)}
               </Text>
             )}
 
@@ -402,13 +406,13 @@ export default function SessionDetailScreen() {
           </View>
         ) : (
           <View style={styles.progressBlock}>
-            <SectionLabel>Progression</SectionLabel>
+            <SectionLabel>{t('Progression')}</SectionLabel>
             <View style={styles.progressBigRow}>
               <Text style={styles.progressBig}>{nb(countedPieces)}</Text>
               {live && <RefreshGlyph spinning={refreshing} onPress={manualRefresh} theme={theme} />}
             </View>
-            <Text style={styles.progressSub}>pièce{countedPieces > 1 ? 's' : ''} scannée{countedPieces > 1 ? 's' : ''}</Text>
-            <Text style={styles.progressSub}>{nb(auditedPieces)} pièce{auditedPieces > 1 ? 's' : ''} auditée{auditedPieces > 1 ? 's' : ''}</Text>
+            <Text style={styles.progressSub}>{countedPieces > 1 ? t('pièces scannées') : t('pièce scannée')}</Text>
+            <Text style={styles.progressSub}>{tn('%{count} pièce auditée', '%{count} pièces auditées', auditedPieces)}</Text>
           </View>
         )}
 
@@ -416,10 +420,10 @@ export default function SessionDetailScreen() {
         {!closed && (
           <View style={styles.scanBtnRow}>
             <Pressable style={styles.countBtn} onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=count`)}>
-              <Text style={styles.countBtnText}>Compter des articles</Text>
+              <Text style={styles.countBtnText}>{t('Compter des articles')}</Text>
             </Pressable>
             <Pressable style={styles.auditBtn} onPress={() => router.push(`/(supervisor)/${sessionId}/scan?mode=audit`)}>
-              <Text style={styles.auditBtnText}>Auditer des articles</Text>
+              <Text style={styles.auditBtnText}>{t('Auditer des articles')}</Text>
             </Pressable>
           </View>
         )}
@@ -428,32 +432,31 @@ export default function SessionDetailScreen() {
         {repereMenuAVoir && countedPieces > 0 && (
           <View style={styles.repereCarte}>
             <Text style={styles.repereTexte}>
-              Les écarts d&apos;audit et le rapport sont juste en dessous. L&apos;export Excel se
-              trouve dans le rapport, et le site montre les mêmes tableaux en plus large.
+              {t("Les écarts d'audit et le rapport sont juste en dessous. L'export Excel se trouve dans le rapport, et le site montre les mêmes tableaux en plus large.")}
             </Text>
             <Pressable onPress={repereMenuVu} hitSlop={10} style={styles.repereBtn}>
-              <Text style={styles.repereCompris}>Compris</Text>
+              <Text style={styles.repereCompris}>{t('Compris')}</Text>
             </Pressable>
           </View>
         )}
-        <SectionLabel>Actions</SectionLabel>
+        <SectionLabel>{t('Actions')}</SectionLabel>
         <MenuCard>
           {!closed && (
-            <MenuRow label="Inviter une personne" onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
+            <MenuRow label={t('Inviter une personne')} onPress={() => router.push(`/(supervisor)/${sessionId}/invite`)} />
           )}
-          <MenuRow label="Écarts d'audit" onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
-          <MenuRow label="Rapport inventaire" onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} />
+          <MenuRow label={t("Écarts d'audit")} onPress={() => router.push(`/(supervisor)/${sessionId}/audits`)} />
+          <MenuRow label={t('Rapport inventaire')} onPress={() => router.push(`/(supervisor)/${sessionId}/results`)} />
           {!closed && isCreator && (
-            <MenuRow label="Clôturer l'inventaire" onPress={confirmClose} />
+            <MenuRow label={t("Clôturer l'inventaire")} onPress={confirmClose} />
           )}
           {closed && isCreator && (
-            <MenuRow label="Rouvrir l'inventaire" onPress={confirmReopen} />
+            <MenuRow label={t("Rouvrir l'inventaire")} onPress={confirmReopen} />
           )}
           {isCreator && (
-            <MenuRow label="Supprimer définitivement" onPress={confirmDelete} danger last />
+            <MenuRow label={t('Supprimer définitivement')} onPress={confirmDelete} danger last />
           )}
           {!closed && !isCreator && (
-            <MenuRow label="Quitter l'inventaire" onPress={confirmLeave} danger last />
+            <MenuRow label={t("Quitter l'inventaire")} onPress={confirmLeave} danger last />
           )}
         </MenuCard>
       </ScrollView>
@@ -516,27 +519,27 @@ function InfoPanel({
           <Text style={styles.sheetTitle}>{session.name || session.store_name}</Text>
           <View style={styles.statusBadge}>
             <View style={styles.statusBadgeDot} />
-            <Text style={styles.statusBadgeText}>{STATUS_LABELS[session.status]}</Text>
+            <Text style={styles.statusBadgeText}>{statusLabel(session.status)}</Text>
           </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.sheetBody}>
-          <SectionLabel>Identifiants</SectionLabel>
+          <SectionLabel>{t('Identifiants')}</SectionLabel>
           <CredRow
             styles={styles}
-            label="N° d'inventaire"
+            label={t("N° d'inventaire")}
             value={session.inventory_number}
-            onCopy={() => onCopy("N° d'inventaire", session.inventory_number)}
+            onCopy={() => onCopy(t("N° d'inventaire"), session.inventory_number)}
           />
           <CredRow
             styles={styles}
-            label="Code inventaire"
+            label={t('Code inventaire')}
             value={session.security_code ?? '—'}
             secret
-            onCopy={() => onCopy('Code inventaire', session.security_code ?? '')}
+            onCopy={() => onCopy(t('Code inventaire'), session.security_code ?? '')}
           />
           <Pressable style={styles.shareBtn} onPress={onShare}>
-            <Text style={styles.shareBtnText}>Partager les identifiants</Text>
+            <Text style={styles.shareBtnText}>{t('Partager les identifiants')}</Text>
           </Pressable>
 
           {/* La configuration passe avant les membres : on prépare un
@@ -544,23 +547,23 @@ function InfoPanel({
               où Set up précède Équipe. */}
           {!closed && (
             <>
-              <SectionLabel>Configuration</SectionLabel>
+              <SectionLabel>{t('Configuration')}</SectionLabel>
               <MenuCard>
-                <MenuRow label="Importer les données" onPress={onImport} last={!usesZones} />
-                {usesZones && <MenuRow label="Zones & balises" onPress={onZones} last />}
+                <MenuRow label={t('Importer les données')} onPress={onImport} last={!usesZones} />
+                {usesZones && <MenuRow label={t('Zones & balises')} onPress={onZones} last />}
               </MenuCard>
             </>
           )}
 
-          <SectionLabel>Membres ({memberList.length})</SectionLabel>
+          <SectionLabel>{t('Membres')} ({memberList.length})</SectionLabel>
           {memberList.length === 0 ? (
-            <Text style={styles.zoneEmpty}>{"Aucun membre pour l'instant."}</Text>
+            <Text style={styles.zoneEmpty}>{t("Aucun membre pour l'instant.")}</Text>
           ) : memberList.map(m => {
             const mm = m as unknown as {
               profiles: { full_name: string; is_active?: boolean | null } | null
               role?: string
             }
-            const name = mm.profiles?.full_name ?? 'Inconnu'
+            const name = mm.profiles?.full_name ?? t('Inconnu')
             // ⚠️ `is_active` veut dire « s'est déjà connecté », rien d'autre —
             // même piège de lecture que sur « Mon équipe », où le badge disait
             // « Accès retiré ». Le libellé est celui du site.
@@ -575,19 +578,19 @@ function InfoPanel({
                   <Text style={styles.memberName}>{name}</Text>
                   {/* Sous le nom, pas à côté : à la largeur d'un téléphone, la
                       rangée casserait le nom sur deux lignes. */}
-                  {jamaisEntre && <Text style={styles.memberAttente}>Mot de passe à créer</Text>}
+                  {jamaisEntre && <Text style={styles.memberAttente}>{t('Mot de passe à créer')}</Text>}
                 </View>
                 {/* « Créateur » dit un état, « Retirer » supprime quelqu'un.
                     Les deux étaient des pastilles colorées de même taille :
                     rien ne les distinguait au premier coup d'œil. */}
                 {isOwner ? (
-                  <Text style={styles.memberTag}>Créateur</Text>
+                  <Text style={styles.memberTag}>{t('Créateur')}</Text>
                 ) : mm.role === 'supervisor' ? (
-                  <Text style={styles.memberTag}>Co-superviseur</Text>
+                  <Text style={styles.memberTag}>{t('Co-superviseur')}</Text>
                 ) : null}
                 {canManage && !closed && !isOwner && (
                   <Pressable style={styles.removeBtn} onPress={() => onRemoveMember(m.user_id, name)} hitSlop={8}>
-                    <Text style={styles.removeBtnText}>Retirer</Text>
+                    <Text style={styles.removeBtnText}>{t('Retirer')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -596,7 +599,7 @@ function InfoPanel({
 
           {pendingInvites.length > 0 && (
             <>
-              <SectionLabel>Invitations en attente ({pendingInvites.length})</SectionLabel>
+              <SectionLabel>{t('Invitations en attente')} ({pendingInvites.length})</SectionLabel>
               {pendingInvites.map(inv => (
                 <View key={inv.id} style={styles.memberRow}>
                   <View style={[styles.memberAvatar, styles.memberAvatarPending]}>
@@ -604,12 +607,12 @@ function InfoPanel({
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.memberName}>{inv.full_name || inv.email}</Text>
-                    <Text style={styles.invitePendingHint}>{inv.email}{" · en attente d'inscription"}</Text>
+                    <Text style={styles.invitePendingHint}>{inv.email}{' · '}{t("en attente d'inscription")}</Text>
                   </View>
-                  {inv.role === 'supervisor' && <Text style={styles.memberTag}>Co-superviseur</Text>}
+                  {inv.role === 'supervisor' && <Text style={styles.memberTag}>{t('Co-superviseur')}</Text>}
                   {canManage && !closed && (
                     <Pressable style={styles.removeBtn} onPress={() => onDeleteInvite(inv.id, inv.full_name || inv.email)} hitSlop={8}>
-                      <Text style={styles.removeBtnText}>Annuler</Text>
+                      <Text style={styles.removeBtnText}>{t('Annuler')}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -619,14 +622,14 @@ function InfoPanel({
 
           {!closed && (
             <Pressable style={styles.inviteBtn} onPress={() => { onClose(); router.push(`/(supervisor)/${session.id}/invite`) }}>
-              <Text style={styles.inviteBtnText}>Inviter une personne</Text>
+              <Text style={styles.inviteBtnText}>{t('Inviter une personne')}</Text>
             </Pressable>
           )}
 
         </ScrollView>
 
         <Pressable style={styles.sheetClose} onPress={onClose}>
-          <Text style={styles.sheetCloseText}>Fermer</Text>
+          <Text style={styles.sheetCloseText}>{t('Fermer')}</Text>
         </Pressable>
       </View>
     </Modal>
@@ -643,7 +646,7 @@ function CredRow({ label, value, secret, onCopy, styles }: { label: string; valu
         </Text>
       </View>
       <Pressable style={styles.copyBtn} onPress={onCopy}>
-        <Text style={styles.copyBtnText}>Copier</Text>
+        <Text style={styles.copyBtnText}>{t('Copier')}</Text>
       </Pressable>
     </View>
   )

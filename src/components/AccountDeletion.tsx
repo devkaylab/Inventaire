@@ -6,6 +6,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 
 /**
  * Demande de suppression de compte.
@@ -32,16 +33,16 @@ export function useAccountDeletion() {
     try {
       const res = await requestAccountDeletion()
       if (!res.success) {
-        signaler.erreur('Erreur', res.error ?? "Impossible d'envoyer la demande.")
+        signaler.erreur(t('Erreur'), res.error ? errorMessage(res.error) : t("Impossible d'envoyer la demande."))
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['my-deletion-request'] })
       signaler.succes(
-        'Demande envoyée',
-        "Votre demande de suppression a été transmise à l'administrateur. Il la traitera prochainement ; votre compte et vos données personnelles seront alors supprimés.",
+        t('Demande envoyée'),
+        t("Votre demande de suppression a été transmise à l'administrateur. Il la traitera prochainement ; votre compte et vos données personnelles seront alors supprimés."),
       )
     } catch (e) {
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -49,9 +50,9 @@ export function useAccountDeletion() {
 
   function confirm() {
     void demander({
-      titre: 'Supprimer mon compte ?',
-      texte: "Une demande de suppression sera envoyée à l'administrateur. Une fois traitée, votre compte et vos données personnelles seront supprimés définitivement.",
-      action: 'Envoyer la demande',
+      titre: t('Supprimer mon compte ?'),
+      texte: t("Une demande de suppression sera envoyée à l'administrateur. Une fois traitée, votre compte et vos données personnelles seront supprimés définitivement."),
+      action: t('Envoyer la demande'),
       ton: 'danger',
     }).then((ok) => { if (ok) submit() })
   }
@@ -65,7 +66,7 @@ export function DeletionPendingNote() {
   return (
     <View style={styles.pendingBox}>
       <Text style={styles.pendingText}>
-        Suppression de compte demandée — en attente de traitement par l&apos;administrateur.
+        {t("Suppression de compte demandée — en attente de traitement par l'administrateur.")}
       </Text>
     </View>
   )

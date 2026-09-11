@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert } from '@/types/database.types'
 import { errorMessage } from '@/lib/errors'
+import { t } from '@/lib/i18n'
 
 function throwSupabase(context: string, error: unknown): never {
   console.error(`[queries] ${context}`, error)
@@ -344,7 +345,7 @@ export async function inviteTeammate(input: {
     // « Erreur » et recopier le texte. Certaines réponses ne sont pas des
     // fautes de saisie — un compte qui appartient à une autre entreprise, par
     // exemple — et se présentent autrement.
-    const err = new Error(res.error ?? "Échec de l'ajout") as Error & { code?: string }
+    const err = new Error(res.error ?? t("Échec de l'ajout")) as Error & { code?: string }
     err.code = res.code
     throw err
   }
@@ -375,7 +376,7 @@ export async function removeCounterFromStore(userId: string, storeId: string) {
   if (error) throwSupabase('removeCounterFromStore', error)
   const result = data as { success?: boolean; error?: string } | null
   if (result && result.success === false) {
-    throwSupabase('removeCounterFromStore', new Error(result.error ?? 'Retrait impossible.'))
+    throwSupabase('removeCounterFromStore', new Error(result.error ?? t('Retrait impossible.')))
   }
 }
 
@@ -383,7 +384,7 @@ export async function cancelMyInvitation(id: string) {
   const { data, error } = await supabase.rpc('cancel_my_invitation', { p_id: id })
   if (error) throwSupabase('cancelMyInvitation', error)
   const r = data as { success?: boolean; error?: string } | null
-  if (r && r.success === false) throw new Error(r.error ?? "Annulation impossible.")
+  if (r && r.success === false) throw new Error(r.error ?? t('Annulation impossible.'))
 }
 
 /**
@@ -435,7 +436,7 @@ export async function inviteToSession(input: {
   })
   if (error) throwSupabase('inviteToSession', error)
   const result = data as { success: boolean; outcome?: 'added' | 'invited'; emailSent?: boolean; pushSent?: boolean; error?: string }
-  if (!result.success) throwSupabase('inviteToSession', new Error(result.error ?? "Échec de l'invitation"))
+  if (!result.success) throwSupabase('inviteToSession', new Error(result.error ?? t("Échec de l'invitation")))
   return result
 }
 

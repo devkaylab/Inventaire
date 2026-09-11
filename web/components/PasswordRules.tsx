@@ -1,6 +1,7 @@
 'use client'
 
 import { checkPassword, PASSWORD_RULES } from '@/lib/password'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Les exigences du mot de passe, cochées à mesure de la frappe.
@@ -11,12 +12,13 @@ import { checkPassword, PASSWORD_RULES } from '@/lib/password'
  */
 export function PasswordRules({ password }: { password: string }) {
   const c = checkPassword(password)
+  const { t } = useTraduction()
   return (
-    <ul className="pwd-rules" aria-label="Exigences du mot de passe">
+    <ul className="pwd-rules" aria-label={t('Exigences du mot de passe')}>
       {PASSWORD_RULES.map(r => (
         <li key={r.key} className={c[r.key] ? 'ok' : undefined}>
           <span aria-hidden="true">{c[r.key] ? '✓' : '·'}</span>
-          {r.label}
+          {t(r.label)}
         </li>
       ))}
     </ul>

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { Font } from '@/constants/ink'
 import { HeaderActions } from '@/components/HeaderActions'
+import { t } from '@/lib/i18n'
 
 /**
  * « Mon compte » et tout ce qu'il ouvre — une seule pile de navigation.
@@ -50,7 +51,7 @@ function RetourVersApp() {
           fill="none"
         />
       </Svg>
-      <Text style={styles.retourText}>Retour</Text>
+      <Text style={styles.retourText}>{t('Retour')}</Text>
     </Pressable>
   )
 }
@@ -86,7 +87,7 @@ export default function CompteLayout() {
     // iOS reprend par défaut le titre de l'écran précédent — « Mon compte »,
     // « Session »… Un seul mot, toujours le même, se lit plus vite qu'un
     // libellé qui change à chaque écran, et ne risque pas d'être tronqué.
-    headerBackTitle: 'Retour',
+    headerBackTitle: t('Retour'),
   }
 
   const actionsRight = () => <HeaderActions />
@@ -96,7 +97,7 @@ export default function CompteLayout() {
       <Stack.Screen
         name="account"
         options={{
-          title: 'Mon compte',
+          title: t('Mon compte'),
           ...headerBase,
           headerLeft: () => <RetourVersApp />,
           headerRight: actionsRight,
@@ -117,15 +118,16 @@ export default function CompteLayout() {
           DÉDUIT la liste du code (`tests/compte.test.ts`, « une porte s'ouvre
           des deux côtés ») au lieu de citer des écrans à la main : la
           prochaine porte se signalera toute seule. */}
-      <Stack.Screen name="stores" options={{ title: 'Magasins', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
-      <Stack.Screen name="team" options={{ title: 'Mon équipe', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
-      <Stack.Screen name="new-member" options={{ title: 'Ajouter un membre', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="tools" options={{ title: 'Boîte à outils', ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
-      <Stack.Screen name="profile" options={{ title: 'Mon profil', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="password" options={{ title: 'Mot de passe', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="mfa" options={{ title: 'Double authentification', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="my-data" options={{ title: 'Mes données', ...headerBase, headerRight: actionsRight }} />
-      <Stack.Screen name="name" options={{ title: 'Mon nom', ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="stores" options={{ title: t('Magasins'), ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
+      <Stack.Screen name="team" options={{ title: t('Mon équipe'), ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
+      <Stack.Screen name="new-member" options={{ title: t('Ajouter un membre'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="tools" options={{ title: t('Boîte à outils'), ...headerBase, headerLeft: () => <RetourVersApp />, headerRight: actionsRight }} />
+      <Stack.Screen name="profile" options={{ title: t('Mon profil'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="password" options={{ title: t('Mot de passe'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="mfa" options={{ title: t('Double authentification'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="my-data" options={{ title: t('Mes données'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="name" options={{ title: t('Mon nom'), ...headerBase, headerRight: actionsRight }} />
+      <Stack.Screen name="langue" options={{ title: t('Langue'), ...headerBase, headerRight: actionsRight }} />
     </Stack>
   )
 }

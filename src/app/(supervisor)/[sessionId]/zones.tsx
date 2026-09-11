@@ -25,6 +25,7 @@ import { useRepere } from '@/lib/reperes'
 import { useAuth } from '@/lib/auth'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { nb } from '@/lib/nombres'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 import { PlusTard } from '@/components/ui/PlusTard'
@@ -111,7 +112,7 @@ export default function ZonesScreen() {
     },
     onSuccess: async (result) => {
       if (!result.success) {
-        signaler.erreur('Erreur', result.error ?? 'Affectation impossible.')
+        signaler.erreur(t('Erreur'), result.error ? errorMessage(result.error) : t('Affectation impossible.'))
         return
       }
       setName('')
@@ -119,43 +120,43 @@ export default function ZonesScreen() {
       setEnd('')
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     },
-    onError: (e) => signaler.erreur('Erreur', errorMessage(e)),
+    onError: (e) => signaler.erreur(t('Erreur'), errorMessage(e)),
   })
 
   const del = useMutation({
     mutationFn: (zoneName: string) => deleteZone(sessionId, zoneName),
     onSuccess: async (result) => {
       if (!result.success) {
-        signaler.erreur('Erreur', result.error ?? 'Suppression impossible.')
+        signaler.erreur(t('Erreur'), result.error ? errorMessage(result.error) : t('Suppression impossible.'))
         return
       }
       await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     },
-    onError: (e) => signaler.erreur('Erreur', errorMessage(e)),
+    onError: (e) => signaler.erreur(t('Erreur'), errorMessage(e)),
   })
 
   function onAssign() {
     const s = parseInt(start, 10)
     const e = unique ? s : parseInt(end, 10)
     // Saisie incomplète : on dit ce qu'il manque, on ne titre pas « Erreur ».
-    if (!name.trim()) { signaler.erreur('Nom manquant', 'Donnez un nom à l’emplacement.'); return }
+    if (!name.trim()) { signaler.erreur(t('Nom manquant'), t('Donnez un nom à l’emplacement.')); return }
     if (isNaN(s) || isNaN(e)) {
       // ⚠️ Le message suit le champ qu'on a sous les yeux : « saisissez une
       // balise de début et de fin » devant un seul champ ferait chercher le
       // second.
-      if (unique) signaler.erreur('Balise manquante', 'Saisissez le numéro de la balise.')
-      else signaler.erreur('Plage incomplète', 'Saisissez une balise de début et de fin.')
+      if (unique) signaler.erreur(t('Balise manquante'), t('Saisissez le numéro de la balise.'))
+      else signaler.erreur(t('Plage incomplète'), t('Saisissez une balise de début et de fin.'))
       return
     }
-    if (s > e) { signaler.erreur('Plage à revoir', 'La balise de début doit être inférieure ou égale à celle de fin.'); return }
+    if (s > e) { signaler.erreur(t('Plage à revoir'), t('La balise de début doit être inférieure ou égale à celle de fin.')); return }
     assign.mutate()
   }
 
   function confirmDelete(zoneName: string) {
     void demander({
-      titre: 'Retirer l’emplacement ?',
-      texte: `L’affectation « ${zoneName} » sera supprimée.`,
-      action: 'Retirer',
+      titre: t('Retirer l’emplacement ?'),
+      texte: t('L’affectation « %{nom} » sera supprimée.', { nom: zoneName }),
+      action: t('Retirer'),
       ton: 'danger',
     }).then((ok) => { if (ok) del.mutate(zoneName) })
   }
@@ -181,11 +182,9 @@ export default function ZonesScreen() {
         >
           {repereBalises.aVoir && (
             <View style={styles.astuceEncart}>
-              <Astuce titre="Balise, emplacement, plage" onCompris={repereBalises.marquerVu}>
-                Une <Fort>balise</Fort> est l&apos;étiquette collée sur un rayon. Un{' '}
-                <Fort>emplacement</Fort> est le nom que vous lui donnez — Surface de vente,
-                Réserve. Une <Fort>plage</Fort> relie les deux&nbsp;: les balises 1000 à 1049
-                sont la Surface de vente. Imprimez d&apos;abord, collez, puis affectez ici.
+              <Astuce titre={t('Balise, emplacement, plage')} onCompris={repereBalises.marquerVu}>
+                {t('Une ')}<Fort>{t('balise')}</Fort>{t(" est l'étiquette collée sur un rayon. Un ")}
+                <Fort>{t('emplacement')}</Fort>{t(' est le nom que vous lui donnez — Surface de vente, Réserve. Une ')}<Fort>{t('plage')}</Fort>{t(" relie les deux\u00a0: les balises 1000 à 1049 sont la Surface de vente. Imprimez d'abord, collez, puis affectez ici.")}
               </Astuce>
             </View>
           )}
@@ -194,29 +193,28 @@ export default function ZonesScreen() {
             <View style={styles.summary}>
               <View style={styles.stat}>
                 <Text style={[styles.statValue, { color: theme.passColors[1] }]}>{nb(totals.counted)}/{nb(totals.total)}</Text>
-                <Text style={styles.statLabel}>Comptées · {countPct}%</Text>
+                <Text style={styles.statLabel}>{t('Comptées')} · {countPct}%</Text>
               </View>
               <View style={styles.stat}>
                 <Text style={[styles.statValue, { color: theme.passColors[2] }]}>{nb(totals.audited)}/{nb(totals.total)}</Text>
-                <Text style={styles.statLabel}>Auditées · {auditPct}%</Text>
+                <Text style={styles.statLabel}>{t('Auditées')} · {auditPct}%</Text>
               </View>
             </View>
           )}
 
           {!closed && etape === 'question' && (
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Avez-vous vos balises&nbsp;?</Text>
+              <Text style={styles.sectionTitle}>{t('Avez-vous vos balises\u00a0?')}</Text>
               <Text style={styles.hint}>
-                Les balises sont les étiquettes QR numérotées, collées dans le magasin,
-                que les compteurs scannent pour dire où ils sont.
+                {t('Les balises sont les étiquettes QR numérotées, collées dans le magasin, que les compteurs scannent pour dire où ils sont.')}
               </Text>
               <Pressable style={styles.choix} onPress={() => setChoix('affecter')}>
-                <Text style={styles.choixTitre}>Oui, elles sont collées</Text>
-                <Text style={styles.choixSous}>Indiquer quelles balises sont à quel endroit</Text>
+                <Text style={styles.choixTitre}>{t('Oui, elles sont collées')}</Text>
+                <Text style={styles.choixSous}>{t('Indiquer quelles balises sont à quel endroit')}</Text>
               </Pressable>
               <Pressable style={styles.choix} onPress={() => setChoix('creer')}>
-                <Text style={styles.choixTitre}>Non, pas encore</Text>
-                <Text style={styles.choixSous}>Créer et imprimer une planche de balises</Text>
+                <Text style={styles.choixTitre}>{t('Non, pas encore')}</Text>
+                <Text style={styles.choixSous}>{t('Créer et imprimer une planche de balises')}</Text>
               </Pressable>
             </View>
           )}
@@ -233,7 +231,7 @@ export default function ZonesScreen() {
             <View style={styles.card}>
               {!dejaAffecte && (
                 <Pressable onPress={() => setChoix(null)} hitSlop={8}>
-                  <Text style={styles.retour}>← Revenir à la question</Text>
+                  <Text style={styles.retour}>{t('← Revenir à la question')}</Text>
                 </Pressable>
               )}
               {/* ⚠️ Le texte suit le CHAMP qu'on a sous les yeux. Avec la
@@ -242,18 +240,18 @@ export default function ZonesScreen() {
                   n'existe pas. Même règle que le message de saisie, dont
                   `validateRange` change déjà le libellé selon le mode. */}
               <Text style={styles.sectionTitle}>
-                {unique ? 'Affecter une balise à un emplacement' : 'Affecter une plage à un emplacement'}
+                {unique ? t('Affecter une balise à un emplacement') : t('Affecter une plage à un emplacement')}
               </Text>
               <Text style={styles.hint}>
                 {unique
-                  ? 'Indiquez à quel endroit se trouve cette balise (imprimée et collée). Ex. la balise 42 est en « Réserve ».'
-                  : 'Indiquez quelles balises (imprimées et collées) sont à quel endroit. Ex. « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.'}
+                  ? t('Indiquez à quel endroit se trouve cette balise (imprimée et collée). Ex. la balise 42 est en « Réserve ».')
+                  : t('Indiquez quelles balises (imprimées et collées) sont à quel endroit. Ex. « Réserve » = balises 1 à 10, « Surface de vente » = 11 à 30.')}
               </Text>
 
               <View style={styles.switchRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.switchLabel}>Une seule balise</Text>
-                  <Text style={styles.hint}>Pour rattacher une balise isolée à un emplacement</Text>
+                  <Text style={styles.switchLabel}>{t('Une seule balise')}</Text>
+                  <Text style={styles.hint}>{t('Pour rattacher une balise isolée à un emplacement')}</Text>
                 </View>
                 <Switch
                   value={unique}
@@ -263,47 +261,47 @@ export default function ZonesScreen() {
                 />
               </View>
 
-              <Text style={styles.label}>Emplacement</Text>
+              <Text style={styles.label}>{t('Emplacement')}</Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Ex : Réserve"
+                placeholder={t('Ex : Réserve')}
                 placeholderTextColor={theme.textMuted}
               />
               {unique ? (
                 <View>
-                  <Text style={styles.label}>Balise</Text>
+                  <Text style={styles.label}>{t('Balise')}</Text>
                   <TextInput style={[styles.input, tabular]} value={start} onChangeText={setStart} keyboardType="number-pad" placeholder="42" placeholderTextColor={theme.textMuted} />
                 </View>
               ) : (
                 <View style={styles.rangeRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Balise début</Text>
+                    <Text style={styles.label}>{t('Balise début')}</Text>
                     <TextInput style={[styles.input, tabular]} value={start} onChangeText={setStart} keyboardType="number-pad" placeholder="1" placeholderTextColor={theme.textMuted} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Balise fin</Text>
+                    <Text style={styles.label}>{t('Balise fin')}</Text>
                     <TextInput style={[styles.input, tabular]} value={end} onChangeText={setEnd} keyboardType="number-pad" placeholder="10" placeholderTextColor={theme.textMuted} />
                   </View>
                 </View>
               )}
               <Pressable style={[styles.button, busy && styles.buttonDisabled]} onPress={onAssign} disabled={busy}>
-                {assign.isPending ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Affecter</Text>}
+                {assign.isPending ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>{t('Affecter')}</Text>}
               </Pressable>
               <Pressable onPress={() => setChoix('creer')} hitSlop={8}>
-                <Text style={styles.autres}>Créer d&apos;autres balises</Text>
+                <Text style={styles.autres}>{t("Créer d'autres balises")}</Text>
               </Pressable>
             </View>
           )}
 
-          {groups.length > 0 && <Text style={styles.sectionTitle}>Emplacements ({groups.length})</Text>}
+          {groups.length > 0 && <Text style={styles.sectionTitle}>{t('Emplacements')} ({groups.length})</Text>}
           {groups.map((g) => (
             <View key={g.name} style={styles.zoneCard}>
               <View style={styles.zoneHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.zoneName}>{g.name}</Text>
-                  <Text style={styles.zoneMeta}>Balises {codeRange(g.codes)} · {g.total}</Text>
+                  <Text style={styles.zoneMeta}>{t('Balises')} {codeRange(g.codes)} · {g.total}</Text>
                 </View>
                 {!closed && (
                   <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(g.name)} disabled={busy} hitSlop={6}>
@@ -314,11 +312,11 @@ export default function ZonesScreen() {
               <View style={styles.zoneProgress}>
                 <View style={[styles.progressChip, { borderColor: theme.passColors[1] }]}>
                   <View style={[styles.progressDot, { backgroundColor: theme.passColors[1] }]} />
-                  <Text style={styles.progressText}>Compte {g.counted}/{g.total}</Text>
+                  <Text style={styles.progressText}>{t('Compte')} {g.counted}/{g.total}</Text>
                 </View>
                 <View style={[styles.progressChip, { borderColor: theme.passColors[2] }]}>
                   <View style={[styles.progressDot, { backgroundColor: theme.passColors[2] }]} />
-                  <Text style={styles.progressText}>Audit {g.audited}/{g.total}</Text>
+                  <Text style={styles.progressText}>{t('Audit')} {g.audited}/{g.total}</Text>
                 </View>
               </View>
             </View>
@@ -330,8 +328,8 @@ export default function ZonesScreen() {
           {groups.length === 0 && (closed || etape === 'affecter') && (
             <Text style={styles.empty}>
               {unique
-                ? 'Aucun emplacement affecté. Indiquez une première balise ci-dessus.'
-                : 'Aucun emplacement affecté. Indiquez une première plage de balises ci-dessus.'}
+                ? t('Aucun emplacement affecté. Indiquez une première balise ci-dessus.')
+                : t('Aucun emplacement affecté. Indiquez une première plage de balises ci-dessus.')}
             </Text>
           )}
 
@@ -341,7 +339,7 @@ export default function ZonesScreen() {
                 style={styles.nextBtn}
                 onPress={() => router.push(`/(supervisor)/${sessionId}/import?from=new`)}
               >
-                <Text style={styles.nextBtnText}>Suivant : importer les fichiers</Text>
+                <Text style={styles.nextBtnText}>{t('Suivant : importer les fichiers')}</Text>
               </Pressable>
               <PlusTard sessionId={sessionId} />
             </>

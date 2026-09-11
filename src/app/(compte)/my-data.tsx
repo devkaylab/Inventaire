@@ -15,6 +15,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 
 /**
  * Droit d'accès et de portabilité (articles 15 et 20 du RGPD).
@@ -43,14 +44,14 @@ export default function MyDataScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, {
           mimeType: 'application/json',
-          dialogTitle: 'Mes données Quantinvo',
+          dialogTitle: t('Mes données Quantinvo'),
           UTI: 'public.json',
         })
       } else {
-        signaler.succes('Fichier créé', `Vos données ont été enregistrées dans ${filename}.`)
+        signaler.succes(t('Fichier créé'), t('Vos données ont été enregistrées dans %{fichier}.', { fichier: filename }))
       }
     } catch (e) {
-      signaler.erreur('Export impossible', errorMessage(e))
+      signaler.erreur(t('Export impossible'), errorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -60,25 +61,21 @@ export default function MyDataScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Une copie de vos données</Text>
+          <Text style={styles.title}>{t('Une copie de vos données')}</Text>
           <Text style={styles.text}>
-            Votre profil, vos inventaires, vos invitations et vos demandes, dans un fichier
-            lisible et réutilisable.
+            {t('Votre profil, vos inventaires, vos invitations et vos demandes, dans un fichier lisible et réutilisable.')}
           </Text>
 
           <Pressable style={[styles.btn, busy && styles.btnOff]} onPress={telecharger} disabled={busy}>
             {busy ? (
               <ActivityIndicator color={theme.onAccent} />
             ) : (
-              <Text style={styles.btnText}>Télécharger mes données</Text>
+              <Text style={styles.btnText}>{t('Télécharger mes données')}</Text>
             )}
           </Pressable>
 
           <Text style={styles.note}>
-            Le fichier s&apos;ouvre dans la fenêtre de partage : enregistrez-le dans Fichiers, ou
-            envoyez-le où vous voulez. Aucun code d&apos;accès n&apos;y figure, et le détail de
-            chaque comptage appartient à votre employeur — adressez-vous à lui pour en obtenir le
-            détail.
+            {t("Le fichier s'ouvre dans la fenêtre de partage : enregistrez-le dans Fichiers, ou envoyez-le où vous voulez. Aucun code d'accès n'y figure, et le détail de chaque comptage appartient à votre employeur — adressez-vous à lui pour en obtenir le détail.")}
           </Text>
         </View>
       </ScrollView>

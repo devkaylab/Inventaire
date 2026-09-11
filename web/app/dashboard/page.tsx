@@ -31,6 +31,7 @@ import { friendlyError } from '@/lib/errors'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { RechercheGlobale } from '@/components/dashboard/RechercheGlobale'
+import { useTraduction } from '@/lib/i18n'
 import {
   Anneau, BarresSemaine, Kpi, lundiDeLaSemaine, type JourTb,
 } from '@/components/dashboard/TableauDeBord'
@@ -63,6 +64,7 @@ type EquipeRang = Compteur & { magasin: string }
 export default function DashboardPage() {
   const toast = useToast()
   const guard = useAuthGuard('supervisor')
+  const { t, tn } = useTraduction()
   const [companyName, setCompanyName] = useState<string | null>(null)
   const [tb, setTb] = useState<TableauDeBord | null>(null)
   const [equipe, setEquipe] = useState<EquipeRang[] | null>(null)
@@ -115,12 +117,12 @@ export default function DashboardPage() {
       <div className="tb-plein">
       <div className="app-head">
         <div>
-          <h1 className="page-title">{prenom ? `Bonjour, ${prenom}` : 'Tableau de bord'}</h1>
-          <p className="page-sub">L&apos;essentiel de vos inventaires et de votre équipe.</p>
+          <h1 className="page-title">{prenom ? t('Bonjour, %{prenom}', { prenom }) : t('Tableau de bord')}</h1>
+          <p className="page-sub">{t("L'essentiel de vos inventaires et de votre équipe.")}</p>
         </div>
         <div className="app-head-actions">
           <RechercheGlobale />
-          <Link href="/dashboard/new" className="btn btn-primary">Nouvel inventaire</Link>
+          <Link href="/dashboard/new" className="btn btn-primary">{t('Nouvel inventaire')}</Link>
         </div>
       </div>
 
@@ -130,35 +132,35 @@ export default function DashboardPage() {
         <>
           <section className="tb-kpis">
             <Kpi
-              nom="Pièces comptées ce mois-ci"
+              nom={t('Pièces comptées ce mois-ci')}
               icone="pieces"
               valeur={nb(tb.pieces_mois)}
               precedent={tb.pieces_mois_prec}
               actuel={tb.pieces_mois}
-              refTexte={`${nb(tb.pieces_mois_prec)} le mois dernier`}
+              refTexte={t('%{n} le mois dernier', { n: nb(tb.pieces_mois_prec) })}
             />
             <Kpi
-              nom="Inventaires clôturés ce mois-ci"
+              nom={t('Inventaires clôturés ce mois-ci')}
               icone="clotures"
               valeur={nb(tb.clotures_mois)}
               precedent={tb.clotures_mois_prec}
               actuel={tb.clotures_mois}
               absolu
-              refTexte={`${nb(tb.clotures_mois_prec)} le mois dernier`}
+              refTexte={t('%{n} le mois dernier', { n: nb(tb.clotures_mois_prec) })}
             />
             {/* ⚠️ Les montants sont abrégés en k€ à partir de 1 000 (demande de
                 Julien, 3 septembre 2026) — jamais les pièces, qui se comptent.
                 Le montant exact revient au survol : un chiffre arrondi qu'on ne
                 peut pas déplier serait un chiffre faux. */}
             <Kpi
-              nom="Valeur comptée ce mois-ci"
+              nom={t('Valeur comptée ce mois-ci')}
               icone="valeur"
               valeur={moneyCourt(tb.valeur_mois)}
               valeurExacte={`${money(tb.valeur_mois)} €`}
               precedent={tb.valeur_mois_prec}
               actuel={tb.valeur_mois}
-              refTexte={`${moneyCourt(tb.valeur_mois_prec)} le mois dernier`}
-              refExact={`${money(tb.valeur_mois_prec)} € le mois dernier`}
+              refTexte={t('%{n} le mois dernier', { n: moneyCourt(tb.valeur_mois_prec) })}
+              refExact={t('%{n} le mois dernier', { n: `${money(tb.valeur_mois_prec)} €` })}
             />
           </section>
 
@@ -170,15 +172,15 @@ export default function DashboardPage() {
               semaine={semaine}
               onSemaine={setSemaine}
               enChargement={chargement}
-              format={{ pieces: (v) => `${nb(v)} pièces`, valeur: (v) => `${money(v)} €` }}
+              format={{ pieces: (v) => tn('%{count} pièce', '%{count} pièces', v), valeur: (v) => `${money(v)} €` }}
               axe={(v, m) => (m !== 'valeur' ? nb(v) : v === 0 ? '0 €' : moneyCourt(v))}
             />
             <Anneau
-              titre="Écart"
+              titre={t('Écart')}
               entetes={
-                <div className="tb-segmente" role="group" aria-label="Mesure de l’écart">
-                  <button type="button" aria-pressed={mesureEcarts === 'valeur'} className={mesureEcarts === 'valeur' ? 'choisi' : ''} onClick={() => setMesureEcarts('valeur')}>Valeur</button>
-                  <button type="button" aria-pressed={mesureEcarts === 'qte'} className={mesureEcarts === 'qte' ? 'choisi' : ''} onClick={() => setMesureEcarts('qte')}>Quantité</button>
+                <div className="tb-segmente" role="group" aria-label={t('Mesure de l’écart')}>
+                  <button type="button" aria-pressed={mesureEcarts === 'valeur'} className={mesureEcarts === 'valeur' ? 'choisi' : ''} onClick={() => setMesureEcarts('valeur')}>{t('Valeur')}</button>
+                  <button type="button" aria-pressed={mesureEcarts === 'qte'} className={mesureEcarts === 'qte' ? 'choisi' : ''} onClick={() => setMesureEcarts('qte')}>{t('Quantité')}</button>
                 </div>
               }
               parts={tb.ecarts.map((e) => ({
@@ -188,21 +190,21 @@ export default function DashboardPage() {
               }))}
               format={(v) => (mesureEcarts === 'valeur' ? moneyCourt(v) : nb(v))}
               formatExact={(v) => (mesureEcarts === 'valeur' ? `${money(v)} €` : nb(v))}
-              sous="sur 30 jours"
-              note="Parts en écart absolu"
-              vide={<>Aucun écart sur 30 jours. Seuls les inventaires avec un stock théorique importé entrent dans ce calcul.</>}
+              sous={t('sur 30 jours')}
+              note={t('Parts en écart absolu')}
+              vide={<>{t('Aucun écart sur 30 jours. Seuls les inventaires avec un stock théorique importé entrent dans ce calcul.')}</>}
             />
           </section>
 
           <section className="tb-listes">
             <div className="panel tb-carte">
               <div className="tb-carte-tete">
-                <h2>Derniers inventaires</h2>
-                <Link href="/inventaires" className="tb-tout">Tout voir</Link>
+                <h2>{t('Derniers inventaires')}</h2>
+                <Link href="/inventaires" className="tb-tout">{t('Tout voir')}</Link>
               </div>
               {tb.derniers.length === 0 ? (
                 <p className="tb-vide">
-                  Aucun inventaire pour l&apos;instant. <Link href="/dashboard/new">Créez le premier</Link>.
+                  {t("Aucun inventaire pour l'instant. ")}<Link href="/dashboard/new">{t('Créez le premier')}</Link>.
                 </p>
               ) : (
                 <div className="tb-rangs">
@@ -222,7 +224,7 @@ export default function DashboardPage() {
                       <div className="tb-rang-fin">
                         <div className="tb-rang-valeur num" title={`${money(d.valeur)} €`}>{moneyCourt(d.valeur)}</div>
                         <span className={`dash-badge dash-badge-${d.statut}`}>
-                          <span className="dash-dot" />{STATUS_LABELS[d.statut as keyof typeof STATUS_LABELS] ?? d.statut}
+                          <span className="dash-dot" />{t(STATUS_LABELS[d.statut as keyof typeof STATUS_LABELS] ?? d.statut)}
                         </span>
                       </div>
                     </Link>
@@ -233,14 +235,14 @@ export default function DashboardPage() {
 
             <div className="panel tb-carte">
               <div className="tb-carte-tete">
-                <h2>Mon équipe</h2>
-                <Link href="/equipe" className="tb-tout">Tout voir</Link>
+                <h2>{t('Mon équipe')}</h2>
+                <Link href="/equipe" className="tb-tout">{t('Tout voir')}</Link>
               </div>
               {equipe === null ? (
                 <SkeletonRows rows={3} height={44} />
               ) : equipe.length === 0 ? (
                 <p className="tb-vide">
-                  Personne pour l&apos;instant. <Link href="/equipe">Ajoutez un membre</Link>.
+                  {t("Personne pour l'instant. ")}<Link href="/equipe">{t('Ajoutez un membre')}</Link>.
                 </p>
               ) : (
                 <div className="tb-rangs">
@@ -257,10 +259,10 @@ export default function DashboardPage() {
                       <div className="tb-rang-fin">
                         {m.is_active ? (
                           <span className="tb-rang-sous">
-                            {m.last_count_at ? `a compté ${relativeTime(m.last_count_at)}` : 'n’a pas encore compté'}
+                            {m.last_count_at ? t('a compté %{quand}', { quand: relativeTime(m.last_count_at) }) : t('n’a pas encore compté')}
                           </span>
                         ) : (
-                          <span className="tb-attente">Mot de passe à créer</span>
+                          <span className="tb-attente">{t('Mot de passe à créer')}</span>
                         )}
                       </div>
                     </div>

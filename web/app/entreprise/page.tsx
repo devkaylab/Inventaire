@@ -31,6 +31,7 @@ import {
   Anneau, BarresSemaine, Kpi, lundiDeLaSemaine, type JourTb,
 } from '@/components/dashboard/TableauDeBord'
 import { Chargement } from '@/components/Chargement'
+import { t, tn, useTraduction } from '@/lib/i18n'
 
 type EcartMagasin = { store_id: string | null; nom: string; ecart_qte: number; ecart_valeur: number }
 type DernierTb = {
@@ -46,6 +47,7 @@ type TbEntreprise = {
 
 export default function EntreprisePage() {
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const [vue, setVue] = useState<ApercuEntreprise | null>(null)
   const [journal, setJournal] = useState<LigneJournal[]>([])
   const [tb, setTb] = useState<TbEntreprise | null>(null)
@@ -91,7 +93,7 @@ export default function EntreprisePage() {
     return <Chargement />
   }
 
-  const t = vue?.totals
+  const tot = vue?.totals
 
   return (
     <AppShell profile={guard.profile} companyName={vue?.company.name}>
@@ -104,53 +106,53 @@ export default function EntreprisePage() {
           {vue?.company.name ? (
             <Renommer
               nom={vue.company.name}
-              label="votre entreprise"
+              label={t('votre entreprise')}
               className="page-title"
               onValider={async (nom) => {
                 const { data, error } = await supabase.rpc('ca_rename_company', { p_name: nom })
-                if (error || !data?.success) return error?.message ?? data?.error ?? 'Renommage impossible.'
+                if (error || !data?.success) return error?.message ?? data?.error ?? t('Renommage impossible.')
                 await charger()
                 return null
               }}
             />
           ) : (
-            <h1 className="page-title">Mon entreprise</h1>
+            <h1 className="page-title">{t('Mon entreprise')}</h1>
           )}
-          <p className="page-sub">Tableau de bord</p>
+          <p className="page-sub">{t('Tableau de bord')}</p>
         </div>
       </div>
 
       {!pret ? (
         <div style={{ marginTop: 24 }}><SkeletonRows rows={3} height={110} /></div>
-      ) : !t ? (
+      ) : !tot ? (
         <EmptyState
-          title="Tableau de bord indisponible"
-          hint="Rechargez la page dans un instant."
+          title={t('Tableau de bord indisponible')}
+          hint={t('Rechargez la page dans un instant.')}
         />
       ) : (
         <>
           <section className="tb-kpis tb-kpis-5">
             <Kpi
-              nom="Magasins" icone="magasin" valeur={nb(t.stores)}
-              refTexte={t.store_requests > 0
-                ? `${nb(t.store_requests)} demande${t.store_requests > 1 ? 's' : ''} en attente chez Quantinvo`
+              nom={t('Magasins')} icone="magasin" valeur={nb(tot.stores)}
+              refTexte={tot.store_requests > 0
+                ? tn('%{count} demande en attente chez Quantinvo', '%{count} demandes en attente chez Quantinvo', tot.store_requests)
                 : undefined}
             />
             <Kpi
-              nom="Inventaires en cours" icone="pieces" valeur={nb(t.sessions_open)}
-              refTexte={`${nb(t.sessions_month)} lancé${t.sessions_month > 1 ? 's' : ''} ce mois-ci`}
+              nom={t('Inventaires en cours')} icone="pieces" valeur={nb(tot.sessions_open)}
+              refTexte={tn('%{count} lancé ce mois-ci', '%{count} lancés ce mois-ci', tot.sessions_month)}
             />
             <Kpi
-              nom="Personnes" icone="equipe" valeur={nb(t.people)}
-              refTexte={`${nb(t.supervisors)} superviseur${t.supervisors > 1 ? 's' : ''} · ${nb(t.counters)} compteur${t.counters > 1 ? 's' : ''}`}
+              nom={t('Personnes')} icone="equipe" valeur={nb(tot.people)}
+              refTexte={`${tn('%{count} superviseur', '%{count} superviseurs', tot.supervisors)} · ${tn('%{count} compteur', '%{count} compteurs', tot.counters)}`}
             />
             <Kpi
-              nom="Ont compté aujourd’hui" icone="actif" valeur={nb(t.active_today)}
-              refTexte={t.never_signed_in > 0
-                ? `${nb(t.never_signed_in)} mot${t.never_signed_in > 1 ? 's' : ''} de passe à créer`
-                : 'Tout le monde s’est déjà connecté'}
+              nom={t('Ont compté aujourd’hui')} icone="actif" valeur={nb(tot.active_today)}
+              refTexte={tot.never_signed_in > 0
+                ? tn('%{count} mot de passe à créer', '%{count} mots de passe à créer', tot.never_signed_in)
+                : t('Tout le monde s’est déjà connecté')}
             />
-            <Kpi nom="Pièces comptées ce mois-ci" icone="clotures" valeur={nb(t.pieces_month)} />
+            <Kpi nom={t('Pièces comptées ce mois-ci')} icone="clotures" valeur={nb(tot.pieces_month)} />
           </section>
 
           {tb && (
@@ -162,14 +164,14 @@ export default function EntreprisePage() {
                 semaine={semaine}
                 onSemaine={setSemaine}
                 enChargement={chargement}
-                format={{ pieces: (v) => `${nb(v)} pièces`, valeur: (v) => `${money(v)} €` }}
+                format={{ pieces: (v) => tn('%{count} pièce', '%{count} pièces', v), valeur: (v) => `${money(v)} €` }}
               />
               <Anneau
-                titre="Écart par magasin"
+                titre={t('Écart par magasin')}
                 entetes={
-                  <div className="tb-segmente" role="group" aria-label="Mesure de l’écart">
-                    <button type="button" aria-pressed={mesureEcarts === 'valeur'} className={mesureEcarts === 'valeur' ? 'choisi' : ''} onClick={() => setMesureEcarts('valeur')}>Valeur</button>
-                    <button type="button" aria-pressed={mesureEcarts === 'qte'} className={mesureEcarts === 'qte' ? 'choisi' : ''} onClick={() => setMesureEcarts('qte')}>Quantité</button>
+                  <div className="tb-segmente" role="group" aria-label={t('Mesure de l’écart')}>
+                    <button type="button" aria-pressed={mesureEcarts === 'valeur'} className={mesureEcarts === 'valeur' ? 'choisi' : ''} onClick={() => setMesureEcarts('valeur')}>{t('Valeur')}</button>
+                    <button type="button" aria-pressed={mesureEcarts === 'qte'} className={mesureEcarts === 'qte' ? 'choisi' : ''} onClick={() => setMesureEcarts('qte')}>{t('Quantité')}</button>
                   </div>
                 }
                 parts={tb.ecarts_magasins.map((m) => ({
@@ -178,9 +180,9 @@ export default function EntreprisePage() {
                   lien: m.store_id ? `/magasins/${m.store_id}` : undefined,
                 }))}
                 format={(v) => (mesureEcarts === 'valeur' ? `${money(v)} €` : nb(v))}
-                sous="sur 30 jours"
-                note="Parts en écart absolu"
-                vide={<>Aucun écart sur 30 jours. Seuls les inventaires avec un stock théorique importé entrent dans ce calcul.</>}
+                sous={t('sur 30 jours')}
+                note={t('Parts en écart absolu')}
+                vide={<>{t('Aucun écart sur 30 jours. Seuls les inventaires avec un stock théorique importé entrent dans ce calcul.')}</>}
               />
             </section>
           )}
@@ -188,11 +190,11 @@ export default function EntreprisePage() {
           <section className="tb-listes">
             <div className="panel tb-carte">
               <div className="tb-carte-tete">
-                <h2>Derniers inventaires</h2>
-                <Link href="/inventaires" className="tb-tout">Tout voir</Link>
+                <h2>{t('Derniers inventaires')}</h2>
+                <Link href="/inventaires" className="tb-tout">{t('Tout voir')}</Link>
               </div>
               {!tb || tb.derniers.length === 0 ? (
-                <p className="tb-vide">Aucun inventaire pour l&apos;instant.</p>
+                <p className="tb-vide">{t("Aucun inventaire pour l'instant.")}</p>
               ) : (
                 <div className="tb-rangs">
                   {tb.derniers.map((d) => (
@@ -211,7 +213,7 @@ export default function EntreprisePage() {
                       <div className="tb-rang-fin">
                         <div className="tb-rang-valeur num">{money(d.valeur)} €</div>
                         <span className={`dash-badge dash-badge-${d.statut}`}>
-                          <span className="dash-dot" />{STATUS_LABELS[d.statut as keyof typeof STATUS_LABELS] ?? d.statut}
+                          <span className="dash-dot" />{t(STATUS_LABELS[d.statut as keyof typeof STATUS_LABELS] ?? d.statut)}
                         </span>
                       </div>
                     </Link>
@@ -222,11 +224,11 @@ export default function EntreprisePage() {
 
             <div className="panel tb-carte">
               <div className="tb-carte-tete">
-                <h2>Activité récente</h2>
-                <Link href="/journal" className="tb-tout">Tout le journal</Link>
+                <h2>{t('Activité récente')}</h2>
+                <Link href="/journal" className="tb-tout">{t('Tout le journal')}</Link>
               </div>
               {journal.length === 0 ? (
-                <p className="tb-vide">Aucune action enregistrée pour l&apos;instant.</p>
+                <p className="tb-vide">{t("Aucune action enregistrée pour l'instant.")}</p>
               ) : (
                 <div className="tb-rangs">
                   {journal.map((l) => (

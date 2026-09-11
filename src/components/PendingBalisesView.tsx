@@ -5,6 +5,7 @@ import { baliseLabel } from '@/components/OfflineBanner'
 import type { PendingBalise } from '@/lib/offlineSync'
 import { depuis } from '@/lib/temps'
 import { useTheme } from '@/lib/theme'
+import { t, tn } from '@/lib/i18n'
 
 /**
  * Détail des balises qui n'ont pas encore rejoint le serveur.
@@ -31,9 +32,9 @@ export function PendingBalisesView({
   if (balises.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyTitle}>Tout est remonté</Text>
+        <Text style={styles.emptyTitle}>{t('Tout est remonté')}</Text>
         <Text style={styles.emptyBody}>
-          Aucune balise en attente sur ce téléphone. Les comptages sont enregistrés sur le serveur.
+          {t('Aucune balise en attente sur ce téléphone. Les comptages sont enregistrés sur le serveur.')}
         </Text>
       </View>
     )
@@ -45,14 +46,13 @@ export function PendingBalisesView({
     <ScrollView style={styles.safe} contentContainerStyle={styles.content}>
       <View style={styles.head}>
         <Text style={styles.headTitle}>
-          {balises.length} balise{balises.length > 1 ? 's' : ''} en attente
+          {tn('%{count} balise en attente', '%{count} balises en attente', balises.length)}
         </Text>
         <Text style={styles.headSub}>
-          {totalScans} article{totalScans > 1 ? 's' : ''} compté{totalScans > 1 ? 's' : ''} conservé
-          {totalScans > 1 ? 's' : ''} sur ce téléphone.{' '}
+          {tn('%{count} article compté conservé sur ce téléphone.', '%{count} articles comptés conservés sur ce téléphone.', totalScans)}{' '}
           {offline
-            ? "L'envoi repartira seul dès que le réseau sera capté."
-            : 'Envoi en cours dès que possible.'}
+            ? t("L'envoi repartira seul dès que le réseau sera capté.")
+            : t('Envoi en cours dès que possible.')}
         </Text>
       </View>
 
@@ -61,13 +61,13 @@ export function PendingBalisesView({
           <View style={{ flex: 1 }}>
             <Text style={[styles.code, tabular]}>{baliseLabel(b)}</Text>
             <Text style={styles.meta}>
-              {b.scans} article{b.scans > 1 ? 's' : ''}
-              {b.units !== b.scans ? ` · ${b.units} pièce${Math.abs(b.units) > 1 ? 's' : ''}` : ''}
+              {tn('%{count} article', '%{count} articles', b.scans)}
+              {b.units !== b.scans ? ` · ${tn('%{count} pièce', '%{count} pièces', b.units)}` : ''}
               {' · '}
               {depuis(b.since, { minutes: true })}
             </Text>
             {b.hasBaliseOp && (
-              <Text style={styles.flag}>Ouverture ou clôture de balise également en attente</Text>
+              <Text style={styles.flag}>{t('Ouverture ou clôture de balise également en attente')}</Text>
             )}
           </View>
           <View style={styles.dot} />
@@ -78,12 +78,11 @@ export function PendingBalisesView({
         {syncing ? (
           <ActivityIndicator color={theme.onAccent} />
         ) : (
-          <Text style={styles.buttonText}>Réessayer maintenant</Text>
+          <Text style={styles.buttonText}>{t('Réessayer maintenant')}</Text>
         )}
       </Pressable>
       <Text style={styles.footnote}>
-        Ce bouton n&apos;est qu&apos;un raccourci : l&apos;envoi se fait tout seul dès que le
-        téléphone retrouve du réseau, sans que personne ait à y penser.
+        {t("Ce bouton n'est qu'un raccourci : l'envoi se fait tout seul dès que le téléphone retrouve du réseau, sans que personne ait à y penser.")}
       </Text>
     </ScrollView>
   )

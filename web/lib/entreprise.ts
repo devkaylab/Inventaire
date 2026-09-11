@@ -1,3 +1,4 @@
+import { t, tn } from '@/lib/i18n'
 // L'entreprise vue par son administrateur.
 //
 // Les chiffres viennent de `ca_company_overview` ; ce module ne fait que les
@@ -60,7 +61,7 @@ export function joursDepuis(iso: string | null, maintenant = Date.now()): number
   return Math.floor((maintenant - t) / 86_400_000)
 }
 
-const jours = (n: number) => `${n} jour${n > 1 ? 's' : ''}`
+const jours = (n: number) => tn('%{count} jour', '%{count} jours', n)
 
 /** Les seuils, en un seul endroit — ils se discutent, ils ne se devinent pas. */
 export const SEUILS = {
@@ -87,7 +88,7 @@ export function alertesMagasin(store: StoreBloc, maintenant = Date.now()): Alert
     if (age !== null && age >= SEUILS.inventaireOuvert) {
       alertes.push({
         cle: `ouvert-${s.id}`,
-        titre: `Inventaire ouvert depuis ${jours(age)}`,
+        titre: t('Inventaire ouvert depuis %{duree}', { duree: jours(age) }),
         detail: s.name,
       })
     }
@@ -98,14 +99,14 @@ export function alertesMagasin(store: StoreBloc, maintenant = Date.now()): Alert
       if (age !== null && age >= 1) {
         alertes.push({
           cle: `vide-${s.id}`,
-          titre: 'Personne n’a encore compté',
+          titre: t('Personne n’a encore compté'),
           detail: s.name,
         })
       }
     } else if (dernier !== null && dernier >= SEUILS.sansScan) {
       alertes.push({
         cle: `arret-${s.id}`,
-        titre: `Personne n’a compté depuis ${jours(dernier)}`,
+        titre: t('Personne n’a compté depuis %{duree}', { duree: jours(dernier) }),
         detail: s.name,
       })
     }
@@ -114,17 +115,17 @@ export function alertesMagasin(store: StoreBloc, maintenant = Date.now()): Alert
   if (store.sessions.length === 0 && store.last_session_at === null) {
     alertes.push({
       cle: `jamais-${store.id}`,
-      titre: 'Aucun inventaire n’a jamais été lancé ici',
+      titre: t('Aucun inventaire n’a jamais été lancé ici'),
       detail: store.counters > 0
         ? `${store.counters} compteur${store.counters > 1 ? 's' : ''} y ${store.counters > 1 ? 'sont rattachés' : 'est rattaché'}`
-        : 'Aucun compteur n’y est rattaché',
+        : t('Aucun compteur n’y est rattaché'),
     })
   } else if (ouverts.length === 0) {
     const depuis = joursDepuis(store.last_session_at, maintenant)
     if (depuis !== null && depuis >= SEUILS.magasinInactif) {
       alertes.push({
         cle: `dormant-${store.id}`,
-        titre: `Aucun inventaire depuis ${jours(depuis)}`,
+        titre: t('Aucun inventaire depuis %{duree}', { duree: jours(depuis) }),
         detail: 'Le dernier date de plus de trois mois',
       })
     }
@@ -138,8 +139,8 @@ export function etatMagasin(store: StoreBloc): { cle: string; libelle: string } 
   const ouvert = store.sessions.find((s) => s.status !== 'closed')
   if (!ouvert) return null
   return ouvert.status === 'counting'
-    ? { cle: 'counting', libelle: 'Comptage en cours' }
-    : { cle: 'open', libelle: 'Inventaire ouvert' }
+    ? { cle: 'counting', libelle: t('Comptage en cours') }
+    : { cle: 'open', libelle: t('Inventaire ouvert') }
 }
 
 /**

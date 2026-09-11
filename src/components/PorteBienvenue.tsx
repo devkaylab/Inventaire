@@ -26,6 +26,7 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
+import { t } from '@/lib/i18n'
 import { useAuth } from '@/lib/auth'
 import { useRepere } from '@/lib/reperes'
 import { getMyAssignedStores, getMyCompany, getSessions } from '@/lib/queries'
@@ -73,17 +74,17 @@ export function PorteBienvenue() {
   /** Le libellé dit ce qui va se passer, et le geste le fait. */
   const { libelle, aller } = (() => {
     if (role === 'company_admin') {
-      return { libelle: 'Voir mes magasins', aller: () => router.push('/(compte)/stores') }
+      return { libelle: t('Voir mes magasins'), aller: () => router.push('/(compte)/stores') }
     }
     if (role === 'supervisor') {
       return miennes.length === 0
-        ? { libelle: 'Préparer mon premier inventaire', aller: () => router.push('/(supervisor)/new-session') }
-        : { libelle: 'Voir mes inventaires', aller: () => router.replace('/(supervisor)/') }
+        ? { libelle: t('Préparer mon premier inventaire'), aller: () => router.push('/(supervisor)/new-session') }
+        : { libelle: t('Voir mes inventaires'), aller: () => router.replace('/(supervisor)/') }
     }
     // Un compteur qui n'a qu'un inventaire n'a rien à choisir : on l'ouvre.
     return sessions.length === 1
-      ? { libelle: 'Ouvrir mon inventaire', aller: () => router.push(`/(employee)/${sessions[0].id}`) }
-      : { libelle: 'Commencer', aller: () => router.replace('/(employee)/') }
+      ? { libelle: t('Ouvrir mon inventaire'), aller: () => router.push(`/(employee)/${sessions[0].id}`) }
+      : { libelle: t('Commencer'), aller: () => router.replace('/(employee)/') }
   })()
 
   return (

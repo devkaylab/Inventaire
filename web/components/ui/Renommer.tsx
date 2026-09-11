@@ -14,6 +14,7 @@
  * renvoie s'affiche ici tel quel.
  */
 import { useEffect, useRef, useState } from 'react'
+import { t } from '@/lib/i18n'
 
 export function Renommer({
   nom, label, onValider, className,
@@ -55,7 +56,7 @@ export function Renommer({
     return (
       <span className="renommer-ligne">
         <span className={className}>{nom}</span>
-        <button type="button" className="link-btn" onClick={ouvrir}>Renommer</button>
+        <button type="button" className="link-btn" onClick={ouvrir}>{t('Renommer')}</button>
       </span>
     )
   }
@@ -68,7 +69,7 @@ export function Renommer({
           className="renommer-champ"
           value={valeur}
           maxLength={80}
-          aria-label={`Nouveau nom de ${label}`}
+          aria-label={t('Nouveau nom de %{quoi}', { quoi: label })}
           onChange={(e) => { setValeur(e.target.value); setErreur(null) }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); valider() }
@@ -78,7 +79,7 @@ export function Renommer({
         <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={valider}>
           Enregistrer
         </button>
-        <button type="button" className="link-btn" onClick={() => setOuvert(false)}>Annuler</button>
+        <button type="button" className="link-btn" onClick={() => setOuvert(false)}>{t('Annuler')}</button>
       </div>
       {erreur && <p className="field-err">{erreur}</p>}
     </div>

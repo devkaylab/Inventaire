@@ -18,9 +18,11 @@ import { AppShell } from '@/components/AppShell'
 import { getMyCompany, type Company } from '@/lib/account'
 import { CAPTURES_LE, CAPTURES_A_REFAIRE, PARCOURS } from '@/lib/priseEnMain'
 import { Chargement } from '@/components/Chargement'
+import { useTraduction } from '@/lib/i18n'
 
 export default function PriseEnMainPage() {
   const guard = useAuthGuard('supervisor')
+  const { t } = useTraduction()
   const [company, setCompany] = useState<Company | null>(null)
   const [actif, setActif] = useState<'compteur' | 'superviseur'>('compteur')
 
@@ -37,15 +39,15 @@ export default function PriseEnMainPage() {
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
         <div>
-          <h1 className="page-title">Prise en main</h1>
+          <h1 className="page-title">{t('Prise en main')}</h1>
           <p className="page-sub">
-            L&apos;application mobile, écran par écran · captures du {CAPTURES_LE}
+            {t("L'application mobile, écran par écran · captures du %{date}", { date: t(CAPTURES_LE) })}
           </p>
         </div>
         <div className="app-head-actions pem-actions">
-          <Link href="/outils" className="btn btn-ghost btn-sm">Retour à la boîte à outils</Link>
+          <Link href="/outils" className="btn btn-ghost btn-sm">{t('Retour à la boîte à outils')}</Link>
           <button type="button" className="btn btn-sm" onClick={() => window.print()}>
-            Imprimer
+            {t('Imprimer')}
           </button>
         </div>
       </div>
@@ -56,16 +58,15 @@ export default function PriseEnMainPage() {
       {CAPTURES_A_REFAIRE && (
         <div className="panel pem-avis">
           <p>
-            <strong>Les captures datent du {CAPTURES_LE} et l&apos;application a changé depuis.</strong>{' '}
-            Les gestes et l&apos;ordre des étapes sont à jour ; certains écrans ne sont plus
-            exactement ceux-là. Une nouvelle passe de captures est prévue.
+            <strong>{t("Les captures datent du %{date} et l'application a changé depuis.", { date: t(CAPTURES_LE) })}</strong>{' '}
+            {t("Les gestes et l'ordre des étapes sont à jour ; certains écrans ne sont plus exactement ceux-là. Une nouvelle passe de captures est prévue.")}
           </p>
         </div>
       )}
 
       {/* Le sélecteur de parcours. Le compteur d'abord : c'est le plus court,
           le plus fréquent, et celui qu'on montre à quelqu'un d'autre. */}
-      <div className="pem-onglets" role="tablist" aria-label="Parcours">
+      <div className="pem-onglets" role="tablist" aria-label={t('Parcours')}>
         {PARCOURS.map((p) => (
           <button
             key={p.cle}
@@ -75,7 +76,7 @@ export default function PriseEnMainPage() {
             className={`pem-onglet${actif === p.cle ? ' pem-onglet-on' : ''}`}
             onClick={() => setActif(p.cle)}
           >
-            {p.nom}
+            {t(p.nom)}
           </button>
         ))}
       </div>
@@ -84,10 +85,10 @@ export default function PriseEnMainPage() {
         <section
           key={p.cle}
           className={`pem-parcours${actif === p.cle ? '' : ' pem-cache'}`}
-          aria-label={`Parcours ${p.nom}`}
+          aria-label={t('Parcours %{nom}', { nom: t(p.nom) })}
         >
-          <h2 className="pem-titre">{p.nom}</h2>
-          <p className="pem-intro">{p.intro}</p>
+          <h2 className="pem-titre">{t(p.nom)}</h2>
+          <p className="pem-intro">{t(p.intro)}</p>
 
           <ol className="pem-etapes">
             {p.etapes.map((e, i) => (
@@ -100,7 +101,7 @@ export default function PriseEnMainPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/prise-en-main/${e.image}.png`}
-                    alt={`Écran de l’application : ${e.titre}`}
+                    alt={t('Écran de l’application : %{titre}', { titre: t(e.titre) })}
                     loading="lazy"
                     width={603}
                     height={1311}
@@ -108,9 +109,9 @@ export default function PriseEnMainPage() {
                   <span className="pem-num" aria-hidden="true">{i + 1}</span>
                 </div>
                 <div className="pem-txt">
-                  <h3>{e.titre}</h3>
-                  <p>{e.texte}</p>
-                  <p className="pem-repere">{e.repere}</p>
+                  <h3>{t(e.titre)}</h3>
+                  <p>{t(e.texte)}</p>
+                  <p className="pem-repere">{t(e.repere)}</p>
                 </div>
               </li>
             ))}
@@ -119,8 +120,7 @@ export default function PriseEnMainPage() {
       ))}
 
       <p className="pem-pied">
-        Ce guide décrit l&apos;application mobile. Le suivi en direct, les écarts et le rapport
-        se lisent sur ce site, plus au large.
+        {t("Ce guide décrit l'application mobile. Le suivi en direct, les écarts et le rapport se lisent sur ce site, plus au large.")}
       </p>
     </AppShell>
   )

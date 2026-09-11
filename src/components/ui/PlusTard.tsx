@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Font, Spacing, type Theme } from '@/constants/ink'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { quitterLeTunnel } from '@/lib/tunnel'
 
 /**
@@ -39,10 +40,10 @@ export function PlusTard({ sessionId, note }: {
   return (
     <View style={styles.bloc}>
       <Pressable onPress={() => quitterLeTunnel(sessionId)} hitSlop={8} style={styles.zone}>
-        <Text style={styles.lien}>Plus tard</Text>
+        <Text style={styles.lien}>{t('Plus tard')}</Text>
       </Pressable>
       <Text style={styles.note}>
-        {note ?? 'L’inventaire est créé. Vous reprendrez la préparation depuis sa fiche.'}
+        {note ?? t('L’inventaire est créé. Vous reprendrez la préparation depuis sa fiche.')}
       </Text>
     </View>
   )

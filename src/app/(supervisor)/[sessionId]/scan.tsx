@@ -17,6 +17,7 @@ import { friendlyInsertCountError } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { AUDIT_COLOR, AUDIT_ON } from '@/constants/colors'
 import { signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 
 export default function SupervisorScanScreen() {
   const { sessionId, mode } = useLocalSearchParams<{ sessionId: string; mode?: string }>()
@@ -70,7 +71,7 @@ export default function SupervisorScanScreen() {
       if (usesZones) await queryClient.invalidateQueries({ queryKey: ['zone-dashboard', sessionId] })
     } catch (e: unknown) {
       console.error('[scan] insertCount', e)
-      signaler.erreur('Enregistrement impossible', friendlyInsertCountError(e))
+      signaler.erreur(t('Enregistrement impossible'), friendlyInsertCountError(e))
     }
   }
 
@@ -82,7 +83,7 @@ export default function SupervisorScanScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: audit ? 'Audit des articles' : 'Comptage des articles', headerStyle: { backgroundColor: modeColor }, headerTintColor: onColor }} />
+      <Stack.Screen options={{ title: audit ? t('Audit des articles') : t('Comptage des articles'), headerStyle: { backgroundColor: modeColor }, headerTintColor: onColor }} />
       <OfflineBanner balises={queue.balises} syncing={queue.syncing} onPress={() => void queue.sync()} />
       <Scanner
         sessionId={sessionId}

@@ -1,0 +1,242 @@
+/**
+ * Les refus du serveur, en anglais (10 septembre 2026).
+ *
+ * Les fonctions SQL répondent en français — `'error', 'Inventaire clôturé'` —
+ * et ces phrases arrivent telles quelles à l'écran. Les traduire côté
+ * serveur aurait voulu dire faire renvoyer des codes par cent cinquante
+ * fonctions `SECURITY DEFINER`, en reposant les droits à chacune (le piège de
+ * `create or replace`). On traduit donc À LA LECTURE : le message français
+ * est la clé, et un message qu'on ne connaît pas s'affiche en français —
+ * jamais un trou.
+ *
+ * ⚠️ Un test (`web/tests/i18n.test.ts`) extrait tous les messages d'erreur des
+ * migrations et exige que chacun figure ici. Une phrase ajoutée en SQL se
+ * signale donc toute seule.
+ *
+ * Les messages construits par concaténation (« Transition impossible depuis
+ * … ») sont reconnus par leur DÉBUT : voir `PREFIXES`.
+ *
+ * Copie exacte de `web/lib/erreursServeur.ts` — un test compare les deux.
+ */
+
+export const ERREURS_SERVEUR: Record<string, string> = {
+  'Abonnement absent': 'No subscription found',
+  'Acces refuse': 'Access denied',
+  'Accès refusé': 'Access denied',
+  "Accès réservé à l'administrateur de l'entreprise.": 'Only the company administrator can do this.',
+  "Administrateur d'entreprise : il supervise tous les magasins. Retirez-lui d'abord ce rôle.": 'This person is a company administrator and supervises every store. Remove that role first.',
+  'Adresse absente': 'Email address missing',
+  'Adresse e-mail invalide.': 'Invalid email address.',
+  'Adresse e-mail trop longue.': 'Email address too long.',
+  'Adresse introuvable.': 'Email address not found.',
+  'Appareils absents': 'Number of devices missing',
+  "Au-delà de 200 appareils, l'offre d'un magasin ne se prolonge plus : répartissez-les sur plusieurs magasins, ou écrivez-nous depuis votre messagerie Quantinvo.": 'A store plan stops at 200 devices. Spread them across several stores, or write to us from your Quantinvo inbox.',
+  'Au-delà de cinquante magasins, écrivez-nous.': 'Above fifty stores, write to us.',
+  'Aucune entreprise associée': 'No company linked to this account',
+  'Aucune invitation ni demande validée pour cet e-mail. Déposez une demande sur le site, ou demandez à votre superviseur de vous ajouter.': 'No invitation or approved request for this email. Apply on the website, or ask your supervisor to add you.',
+  'Aucune invitation pour cet e-mail. Demandez à votre superviseur de vous ajouter.': 'No invitation for this email. Ask your supervisor to add you.',
+  'Balise introuvable': 'Tag not found',
+  'Balise invalide': 'Invalid tag',
+  'Balise non définie': 'Tag not assigned',
+  "C'est son dernier magasin : un superviseur y est toujours rattaché. Affectez-le ailleurs d'abord, ou changez son rôle.": 'This is their last store, and a supervisor always has one. Assign them elsewhere first, or change their role.',
+  'Ce SIREN ne semble pas valide.': 'This SIREN does not look valid.',
+  'Ce compte administrateur est géré par Quantinvo.': 'This administrator account is managed by Quantinvo.',
+  'Ce compte appartient déjà à une entreprise.': 'This account already belongs to a company.',
+  'Ce compte appartient à une autre entreprise.': 'This account belongs to another company.',
+  "Ce compte est administrateur de l'entreprise : son rôle est géré par Quantinvo.": 'This account is a company administrator. Its role is managed by Quantinvo.',
+  "Ce compte est déjà administrateur de l'entreprise.": 'This account is already a company administrator.',
+  "Ce compte n'a pas encore de profil.": 'This account has no profile yet.',
+  "Ce compte n'est pas administrateur d'entreprise.": 'This account is not a company administrator.',
+  'Ce devis a expiré. Demandez-nous une nouvelle proposition.': 'This quote has expired. Ask us for a new one.',
+  "Ce devis n'est plus en attente d'accord.": 'This quote is no longer awaiting approval.',
+  "Ce devis n'est plus en attente de réponse.": 'This quote is no longer awaiting a reply.',
+  'Ce devis n’est plus en attente d’accord.': 'This quote is no longer awaiting approval.',
+  "Ce magasin n'est pas le vôtre.": 'This store is not yours.',
+  "Ce magasin n'existe plus.": 'This store no longer exists.',
+  "Ce nombre d'appareils sort de la grille : écrivez-nous, nous construisons le tarif avec vous.": 'This number of devices is outside our plans. Write to us and we will work out a price with you.',
+  'Ce numéro de téléphone est trop long.': 'This phone number is too long.',
+  'Ces neuf chiffres ne forment pas un SIREN valide.': 'These nine digits are not a valid SIREN.',
+  'Cet accès administrateur est géré par Quantinvo.': 'This administrator access is managed by Quantinvo.',
+  'Cet inventaire est archivé : le détail de ses scans a été effacé douze mois après sa clôture. Son rapport reste consultable, mais il ne se rouvre pas.': 'This inventory is archived: its scan details were deleted twelve months after it was closed. Its report is still available, but it cannot be reopened.',
+  'Cette adresse e-mail est trop longue.': 'This email address is too long.',
+  'Cette adresse est deja rattachee a une entreprise sur Quantinvo. ': 'This email address already belongs to a company on Quantinvo. ',
+  'Cette demande a créé une entreprise : elle en est la trace et ne se supprime pas.': 'This request created a company. It is the record of that, and cannot be deleted.',
+  'Cette demande a déjà été traitée.': 'This request has already been handled.',
+  "Cette demande n'attend plus de paiement.": 'This request is no longer awaiting payment.',
+  "Cette demande n'est pas une suppression.": 'This request is not a removal.',
+  'Cette demande ne crée pas de magasin.': 'This request does not create a store.',
+  'Cette entreprise a un abonnement en cours : le changement se fait dessus.': 'This company has an active subscription. The change is made on it.',
+  "Chaque magasin doit porter un nom d'au plus 80 caractères.": 'Each store needs a name of 80 characters or fewer.',
+  'Choisissez au moins un magasin : un superviseur y est toujours rattaché.': 'Choose at least one store: a supervisor always has one.',
+  'Code entreprise introuvable': 'Company code not found',
+  'Code magasin introuvable': 'Store code not found',
+  "Code magasin introuvable. Demandez-le à l'administrateur de votre entreprise.": 'Store code not found. Ask your company administrator for it.',
+  'Compteur introuvable dans ce magasin.': 'Counter not found in this store.',
+  'Compteur introuvable dans votre entreprise.': 'Counter not found in your company.',
+  'Demande déjà traitée': 'Request already handled',
+  'Demande incomplète.': 'Incomplete request.',
+  'Demande introuvable': 'Request not found',
+  'Demande introuvable ou déjà traitée': 'Request not found or already handled',
+  'Demande introuvable ou déjà traitée.': 'Request not found or already handled.',
+  'Demande introuvable ou pas en attente de paiement': 'Request not found or not awaiting payment',
+  'Demande introuvable.': 'Request not found.',
+  'Déclarez au moins un magasin.': 'Declare at least one store.',
+  'Déjà en comptage (passe 1)': 'Already counting (pass 1)',
+  'Entreprise introuvable': 'Company not found',
+  'Entreprise introuvable.': 'Company not found.',
+  'Genre inconnu': 'Unknown kind',
+  "Impossible de retirer le créateur de l'inventaire.": 'The creator of the inventory cannot be removed.',
+  "Indiquez le nombre d'appareils qui comptent en même temps dans ce magasin.": 'Enter how many devices count at the same time in this store.',
+  "Indiquez le nombre d'appareils qui comptent en même temps.": 'Enter how many devices count at the same time.',
+  'Indiquez le stock théorique du magasin.': 'Enter the expected stock of the store.',
+  'Inventaire clôturé': 'Inventory closed',
+  'Inventaire introuvable': 'Inventory not found',
+  'Inventaire introuvable.': 'Inventory not found.',
+  "Invitation introuvable, ou envoyée par quelqu'un d'autre.": 'Invitation not found, or sent by someone else.',
+  'Invitation introuvable.': 'Invitation not found.',
+  "L'entreprise ne peut etre creee qu'apres encaissement de la facture.": 'The company can only be created once the invoice is paid.',
+  "L'entreprise ne peut être créée qu'après encaissement de la facture.": 'The company can only be created once the invoice is paid.',
+  'La surface doit être positive.': 'The floor area must be positive.',
+  'Le créateur ne peut pas quitter son propre inventaire.': 'The creator cannot leave their own inventory.',
+  "Le magasin ne peut être créé qu'après encaissement de la facture.": 'The store can only be created once the invoice is paid.',
+  "Le nom de l'entreprise est absent ou trop long.": 'The company name is missing or too long.',
+  "Le nom de l'entreprise est requis.": 'The company name is required.',
+  "Le nom de l'entreprise ne peut pas dépasser 80 caractères.": 'The company name cannot exceed 80 characters.',
+  'Le nom du magasin est requis.': 'The store name is required.',
+  'Le nom du magasin est trop long.': 'The store name is too long.',
+  'Le nom ne peut pas être vide.': 'The name cannot be empty.',
+  "Le nombre d'appareils doit être un nombre.": 'The number of devices must be a number.',
+  "Le nombre d'appareils par magasin doit être compris entre 1 et 1 000.": 'The number of devices per store must be between 1 and 1,000.',
+  'Le nombre de magasins doit être compris entre 1 et 500.': 'The number of stores must be between 1 and 500.',
+  'Le prénom et le nom du contact sont requis.': 'The contact’s first and last name are required.',
+  'Le prénom et le nom ne peuvent pas dépasser 80 caractères.': 'First and last name cannot exceed 80 characters.',
+  'Le prénom et le nom sont requis.': 'First and last name are required.',
+  'Le prénom ou le nom est absent ou trop long.': 'The first or last name is missing or too long.',
+  "Le rôle d'une invitation ne se change pas. Annulez-la, puis réinvitez.": 'An invitation’s role cannot be changed. Cancel it, then invite again.',
+  'Le stock et la surface doivent être des nombres.': 'Stock and floor area must be numbers.',
+  'Le tarif ne peut pas être négatif.': 'The price cannot be negative.',
+  'Le téléphone est trop long.': 'The phone number is too long.',
+  'Le volume doit être positif.': 'The volume must be positive.',
+  'Lien invalide.': 'Invalid link.',
+  'Magasin absent de la demande': 'No store on this request',
+  'Magasin introuvable': 'Store not found',
+  'Magasin introuvable dans votre entreprise.': 'Store not found in your company.',
+  'Magasin introuvable.': 'Store not found.',
+  'Magasin invalide': 'Invalid store',
+  'Magasin non affecté': 'Store not assigned',
+  'Mode invalide': 'Invalid mode',
+  'Montant absent.': 'Amount missing.',
+  'Montant invalide': 'Invalid amount',
+  'Nom de zone requis': 'Zone name required',
+  'Nom requis': 'Name required',
+  'Nombre de balises invalide (1 à 2000)': 'Invalid number of tags (1 to 2,000)',
+  'Nombre invalide (1 à 5000)': 'Invalid number (1 to 5,000)',
+  'Non authentifié.': 'Not signed in.',
+  'Offre inconnue.': 'Unknown plan.',
+  'Paramètres absents': 'Missing parameters',
+  'Passe invalide': 'Invalid pass',
+  'Passe maximale atteinte': 'Last pass already reached',
+  'Personne introuvable dans votre entreprise.': 'Person not found in your company.',
+  'Personne requise.': 'A person is required.',
+  'Plage invalide': 'Invalid range',
+  'Plage trop grande (max 2000 balises)': 'Range too large (2,000 tags at most)',
+  'Prénom et nom sont requis.': 'First and last name are required.',
+  'Renseignez tous les champs.': 'Fill in every field.',
+  'Rythme de paiement inconnu.': 'Unknown billing period.',
+  'Réponses illisibles.': 'Unreadable answers.',
+  'Réponses trop longues.': 'Answers too long.',
+  'Réservé aux superviseurs.': 'Supervisors only.',
+  'Rôle inconnu.': 'Unknown role.',
+  'Session absente': 'Inventory missing',
+  'Session absente.': 'Inventory missing.',
+  'Session inconnue': 'Unknown inventory',
+  'Session introuvable': 'Inventory not found',
+  'Session introuvable ou code incorrect': 'Inventory not found or wrong code',
+  "Seul le créateur de cet inventaire, ou l'administrateur de votre entreprise, peut le supprimer.": 'Only the creator of this inventory, or your company administrator, can delete it.',
+  'Seul le créateur peut retirer un membre.': 'Only the creator can remove a member.',
+  'Statut invalide': 'Invalid status',
+  'Stock ou surface hors de portée : vérifiez la saisie.': 'Stock or floor area out of range: check what you entered.',
+  'Superviseur introuvable dans votre entreprise.': 'Supervisor not found in your company.',
+  'Superviseur invalide pour cette entreprise': 'Invalid supervisor for this company',
+  'Surface hors limites.': 'Floor area out of range.',
+  'Transition impossible depuis le statut actuel': 'This change is not possible from the current status',
+  'Trop de tentatives depuis cette adresse. Réessayez dans une heure.': 'Too many attempts from this address. Try again in an hour.',
+  'Trop de tentatives pour cette adresse. Reessayez dans une heure.': 'Too many attempts for this address. Try again in an hour.',
+  'Trop de tentatives. Réessayez dans une heure.': 'Too many attempts. Try again in an hour.',
+  "Un administrateur d'entreprise est affecté à tous les magasins.": 'A company administrator is assigned to every store.',
+  'Un autre de vos magasins porte déjà ce nom.': 'Another of your stores already has this name.',
+  'Un autre magasin de cette entreprise porte déjà ce nom.': 'Another store in this company already has this name.',
+  "Un changement d'offre est déjà en cours pour ce magasin.": 'A plan change is already in progress for this store.',
+  "Un changement d'offre se règle en ligne, il ne se devise pas.": 'A plan change is paid online; it is not quoted.',
+  'Un compte existe déjà pour cette adresse.': 'An account already exists for this email address.',
+  'Un compte existe déjà pour cette adresse. Connectez-vous ou utilisez « mot de passe oublié ».': 'An account already exists for this email address. Sign in, or use “forgotten password”.',
+  "Un des magasins n'appartient pas à votre entreprise.": 'One of the stores does not belong to your company.',
+  'Un magasin porte déjà ce nom dans votre entreprise.': 'A store in your company already has this name.',
+  'Un paiement est en cours ou reçu sur cette demande : terminez le parcours avant de la supprimer.': 'A payment is in progress or received on this request. Finish it before deleting.',
+  'Un superviseur a toujours au moins un magasin. Affectez-en un à cette personne avant de la promouvoir.': 'A supervisor always has at least one store. Assign one to this person before promoting them.',
+  'Un superviseur garde au moins un magasin. Pour lui retirer tout accès, retirez-lui le rôle.': 'A supervisor keeps at least one store. To remove all access, remove the role.',
+  'Une demande de suppression est déjà en cours pour ce magasin.': 'A removal request is already in progress for this store.',
+  'Une demande de suppression ne se devise pas.': 'A removal request is not quoted.',
+  'Une demande est déjà en cours pour ce magasin.': 'A request is already in progress for this store.',
+  'Une demande est déjà en cours pour cette adresse.': 'A request is already in progress for this email address.',
+  'Une demande est déjà en cours pour cette adresse. Notre équipe vous recontacte.': 'A request is already in progress for this email address. Our team will get back to you.',
+  'Une invitation est deja en attente pour cette adresse. ': 'An invitation is already pending for this email address. ',
+  'Une invitation est déjà en cours pour cette adresse.': 'An invitation is already pending for this email address.',
+  'Une invitation existe déjà pour une autre entreprise.': 'An invitation already exists for another company.',
+  "Une invitation ne change pas d'entreprise. Annulez-la, puis réinvitez.": 'An invitation cannot change company. Cancel it, then invite again.',
+  'Une souscription existe deja pour cette adresse. ': 'A subscription already exists for this email address. ',
+  'Utilisateur requis': 'User required',
+  'Volume de stock hors limites.': 'Stock volume out of range.',
+  'Votre inscription est déjà déposée.': 'Your sign-up has already been submitted.',
+  "Votre message dépasse 2 000 caractères. Dites-nous l'essentiel, nous vous rappelons.": 'Your message is over 2,000 characters. Tell us the essentials and we will call you back.',
+  'Vous ne pouvez pas changer votre propre rôle.': 'You cannot change your own role.',
+  'Vous ne pouvez pas retirer vos propres accès.': 'You cannot remove your own access.',
+  'Vous ne pouvez pas supprimer votre propre compte.': 'You cannot delete your own account.',
+  'Vous ne pouvez pas vous retirer vous-même.': 'You cannot remove yourself.',
+  'Vous êtes déjà rattaché à une autre entreprise': 'You already belong to another company',
+  'Étape inconnue.': 'Unknown step.',
+  'authentification requise': 'sign-in required',
+  'cible inconnue': 'unknown target',
+  // Codes techniques, rendus lisibles quand aucun écran ne les a déjà traduits.
+  forbidden: 'Access denied',
+  not_found: 'Not found',
+  account_exists: 'An account already exists for this email address.',
+  other_company: 'This person belongs to another company.',
+  invalid_qty: 'Invalid quantity',
+  message_vide: 'The message is empty.',
+  message_trop_long: 'The message is too long.',
+  aucune_entreprise: 'No company linked to this account.',
+  aucun_administrateur: 'Your company has no administrator yet.',
+  aucun_administrateur_quantinvo: 'No Quantinvo administrator is available.',
+  compte_indisponible: 'This account is unavailable.',
+  vous_etes_administrateur: 'You are the administrator.',
+}
+
+/** Messages construits par concaténation : reconnus par leur début. */
+export const PREFIXES: Array<[string, string]> = [
+  ['Transition impossible depuis ', 'This change is not possible from status '],
+  ['Votre forfait couvre déjà ', 'Your plan already covers '],
+  ['Votre offre couvre déjà ', 'Your plan already covers '],
+  ['Le devis porte ', 'The quote covers '],
+  ["Indiquez le nombre d'appareils qui comptent en même temps dans ", 'Enter how many devices count at the same time in '],
+  ["Le formulaire d'ajout de magasin a changé : rechargez la page, puis indiquez le ", 'The add-store form has changed: reload the page, then enter the '],
+]
+
+/**
+ * Le message anglais d'un refus français, ou le message tel quel si on ne le
+ * connaît pas. Le suffixe technique `[code]` posé par `errorMessage` survit.
+ */
+export function traduireErreurServeur(message: string): string {
+  const exact = ERREURS_SERVEUR[message]
+  if (exact) return exact
+  // Sans le `[57014]` de fin, puis avec : le code est un repère, on le garde.
+  const m = /^(.*?)(\s\[[^\]]+\])$/.exec(message)
+  if (m) {
+    const corps = traduireErreurServeur(m[1])
+    return corps === m[1] ? message : corps + m[2]
+  }
+  for (const [debut, en] of PREFIXES) {
+    if (message.startsWith(debut)) return en + message.slice(debut.length)
+  }
+  return message
+}

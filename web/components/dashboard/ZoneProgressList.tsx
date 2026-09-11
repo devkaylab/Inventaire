@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { groupByName, type ZoneDashboardRow, type ZoneGroup } from '@/lib/zones'
 import { nb } from '@/lib/format'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { t } from '@/lib/i18n'
 
 function pct(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 100) : 0
@@ -23,8 +24,8 @@ export function ZoneProgressList({ zones, onOpenZone }: {
   if (zones.length === 0) {
     return (
       <EmptyState
-        title="Aucune balise affectée"
-        hint="Affectez une plage de balises à un emplacement depuis l'onglet « Set up » pour suivre l'avancement zone par zone."
+        title={t('Aucune balise affectée')}
+        hint={t("Affectez une plage de balises à un emplacement depuis l'onglet « Set up » pour suivre l'avancement zone par zone.")}
       />
     )
   }
@@ -40,7 +41,7 @@ export function ZoneProgressList({ zones, onOpenZone }: {
             key={g.name}
             className="zone-progress"
             onClick={() => onOpenZone(g)}
-            title={`Voir le détail des balises de « ${g.name} »`}
+            title={t('Voir le détail des balises de « %{nom} »', { nom: g.name })}
           >
             <div className="zone-progress-head">
               <span className="zone-name">{g.name}</span>
@@ -50,7 +51,7 @@ export function ZoneProgressList({ zones, onOpenZone }: {
             <div className="zone-progress-bars">
               <div className="zone-progress-bar">
                 <div className="dash-bar-legend">
-                  <span>Comptées</span>
+                  <span>{t('Comptées')}</span>
                   <strong className="num">{nb(g.counted)}/{nb(g.total)} · {countPct} %</strong>
                 </div>
                 <div className="dash-bar">
@@ -59,7 +60,7 @@ export function ZoneProgressList({ zones, onOpenZone }: {
               </div>
               <div className="zone-progress-bar">
                 <div className="dash-bar-legend">
-                  <span>Auditées</span>
+                  <span>{t('Auditées')}</span>
                   <strong className="num">{nb(g.audited)}/{nb(g.total)} · {auditPct} %</strong>
                 </div>
                 <div className="dash-bar">

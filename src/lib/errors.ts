@@ -12,8 +12,23 @@
  * même correction ; l'objet brut reste tracé par le `console.error` de
  * l'appelant, il n'a rien à faire à l'écran.
  */
+import { langue, t } from '@/lib/i18n'
+import { traduireErreurServeur } from '@/lib/erreursServeur'
+
+/**
+ * Un refus venu de la base parle français. En anglais, on le traduit à la
+ * lecture (`erreursServeur.ts`) ; ce qu'on ne reconnaît pas reste tel quel.
+ */
+function traduit(msg: string): string {
+  return langue() === 'en' ? traduireErreurServeur(msg) : msg
+}
+
 export function errorMessage(e: unknown): string {
-  if (!e) return 'Erreur inconnue'
+  return traduit(messageBrut(e))
+}
+
+function messageBrut(e: unknown): string {
+  if (!e) return t('Erreur inconnue')
 
   // Standard Error or subclass (PostgrestError extends Error in newer versions)
   if (e instanceof Error) return e.message
@@ -24,14 +39,14 @@ export function errorMessage(e: unknown): string {
     const parts: string[] = []
     if (typeof obj.message === 'string' && obj.message) parts.push(obj.message)
     if (typeof obj.details === 'string' && obj.details) parts.push(`(${obj.details})`)
-    if (typeof obj.hint === 'string' && obj.hint) parts.push(`Conseil: ${obj.hint}`)
+    if (typeof obj.hint === 'string' && obj.hint) parts.push(`${t('Conseil')}: ${obj.hint}`)
     if (typeof obj.code === 'string' && obj.code) parts.push(`[${obj.code}]`)
     if (parts.length) return parts.join(' ')
     // On garde le code technique quand il existe — il retrouve l'incident
     // dans les journaux — et rien d'autre.
     return typeof obj.code === 'string' && obj.code
-      ? `Erreur inconnue [${obj.code}]`
-      : 'Erreur inconnue'
+      ? `${t('Erreur inconnue')} [${obj.code}]`
+      : t('Erreur inconnue')
   }
 
   if (typeof e === 'string') return e
@@ -46,17 +61,17 @@ export function errorMessage(e: unknown): string {
 export function friendlyInsertCountError(e: unknown): string {
   const msg = errorMessage(e)
   if (/row-level security|42501|permission denied/i.test(msg)) {
-    return "Enregistrement refusé. Vous n'êtes peut-être plus inscrit à cet inventaire, ou il vient d'être clôturé. Rejoignez-le à nouveau (numéro + code) ou contactez le superviseur."
+    return t("Enregistrement refusé. Vous n'êtes peut-être plus inscrit à cet inventaire, ou il vient d'être clôturé. Rejoignez-le à nouveau (numéro + code) ou contactez le superviseur.")
   }
   // Le délai serveur dépassé n'est ni un refus ni une panne de réseau :
   // l'opération est partie et a été interrompue en route.
   if (/57014|statement timeout|canceling statement/i.test(msg)) {
-    return 'Le serveur a mis trop de temps à répondre et a interrompu l’opération. Réessayez dans un instant.'
+    return t('Le serveur a mis trop de temps à répondre et a interrompu l’opération. Réessayez dans un instant.')
   }
   if (/network|fetch|timeout|Failed to fetch/i.test(msg)) {
-    return 'Connexion perdue. Vérifiez votre réseau : le comptage sera enregistrable dès le retour de la connexion.'
+    return t('Connexion perdue. Vérifiez votre réseau : le comptage sera enregistrable dès le retour de la connexion.')
   }
-  return `Impossible d'enregistrer le comptage : ${msg}`
+  return t("Impossible d'enregistrer le comptage : %{msg}", { msg })
 }
 
 /**
@@ -78,21 +93,21 @@ export function friendlySignInError(e: unknown): string {
     err?.name === 'AuthRetryableFetchError' ||
     /network request failed|fetch failed|failed to fetch|timeout|timed out/.test(msg)
   if (reseau) {
-    return 'Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.'
+    return t('Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.')
   }
 
   if (err?.status === 429 || /rate limit|too many requests/.test(msg)) {
-    return 'Trop de tentatives. Patientez une minute avant de réessayer.'
+    return t('Trop de tentatives. Patientez une minute avant de réessayer.')
   }
 
   if (/email not confirmed|not confirmed/.test(msg)) {
-    return "Votre compte n'est pas encore activé. Ouvrez le lien reçu par e-mail pour choisir votre mot de passe."
+    return t("Votre compte n'est pas encore activé. Ouvrez le lien reçu par e-mail pour choisir votre mot de passe.")
   }
 
   // Identifiants refusés. C'est le seul cas où ce texte est juste — et il
   // couvre volontairement « compte inconnu » (constat M3).
   if (/invalid login credentials|invalid credentials|user not found|invalid grant/.test(msg)) {
-    return 'Adresse e-mail ou mot de passe incorrect.'
+    return t('Adresse e-mail ou mot de passe incorrect.')
   }
 
   // ⚠️ Tout le reste ne doit PAS retomber sur « mot de passe incorrect ».
@@ -100,5 +115,5 @@ export function friendlySignInError(e: unknown): string {
   // serveur s'affichait comme une faute de saisie, et on cherchait au mauvais
   // endroit (constaté le 23 août 2026, Julien ne pouvant plus se connecter).
   if (__DEV__) console.warn('[signIn] erreur non reconnue :', err?.status, err?.name, err?.message)
-  return 'Connexion impossible pour le moment. Réessayez dans un instant.'
+  return t('Connexion impossible pour le moment. Réessayez dans un instant.')
 }

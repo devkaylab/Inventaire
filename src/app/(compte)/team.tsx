@@ -22,6 +22,7 @@ import { useTheme } from '@/lib/theme'
 import { CroixIcon } from '@/components/ui/Icones'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { t, tn } from '@/lib/i18n'
 import { nb } from '@/lib/nombres'
 
 /**
@@ -67,11 +68,11 @@ export default function TeamScreen() {
    * retire.
    */
   const handleRemoveCounter = useCallback((counter: TeamCounter, store: TeamStore) => {
-    const nom = counter.full_name || counter.email || 'ce compteur'
+    const nom = counter.full_name || counter.email || t('ce compteur')
     void demander({
-      titre: `Retirer ${nom} ?`,
-      texte: `${nom} n'aura plus accès aux inventaires de ${store.name}. Ses comptages déjà enregistrés sont conservés.`,
-      action: 'Retirer',
+      titre: t('Retirer %{nom} ?', { nom }),
+      texte: t("%{nom} n'aura plus accès aux inventaires de %{magasin}. Ses comptages déjà enregistrés sont conservés.", { nom, magasin: store.name }),
+      action: t('Retirer'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
@@ -79,7 +80,7 @@ export default function TeamScreen() {
         await removeCounterFromStore(counter.id, store.id)
         await queryClient.invalidateQueries({ queryKey: ['my-team'] })
       } catch (e) {
-        signaler.erreur('Retrait impossible', errorMessage(e))
+        signaler.erreur(t('Retrait impossible'), errorMessage(e))
       }
     })
   }, [queryClient])
@@ -91,10 +92,10 @@ export default function TeamScreen() {
 
   function handleCancelInvite(inv: TeamInvite) {
     void demander({
-      titre: 'Annuler l’invitation ?',
-      texte: `${nomInvite(inv) || inv.email} ne pourra plus créer son compte.`,
-      action: 'Annuler l’invitation',
-      annuler: 'Retour',
+      titre: t('Annuler l’invitation ?'),
+      texte: t('%{nom} ne pourra plus créer son compte.', { nom: nomInvite(inv) || inv.email }),
+      action: t('Annuler l’invitation'),
+      annuler: t('Retour'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
@@ -102,7 +103,7 @@ export default function TeamScreen() {
         await cancelMyInvitation(inv.id)
         await queryClient.invalidateQueries({ queryKey: ['my-team'] })
       } catch (e) {
-        signaler.erreur('Erreur', errorMessage(e))
+        signaler.erreur(t('Erreur'), errorMessage(e))
       }
     })
   }
@@ -127,8 +128,7 @@ export default function TeamScreen() {
         ) : isError ? (
           // Même règle que les magasins : un échec n'est pas une équipe vide.
           <Text style={styles.empty}>
-            Votre équipe n&apos;a pas pu être chargée. Vérifiez votre connexion, puis tirez vers le
-            bas pour réessayer.
+            {t("Votre équipe n'a pas pu être chargée. Vérifiez votre connexion, puis tirez vers le bas pour réessayer.")}
           </Text>
         ) : (
           <>
@@ -140,9 +140,9 @@ export default function TeamScreen() {
                     comprendre pourquoi. */}
                 {sansMagasin
                   ? profile?.is_company_admin
-                    ? 'Votre entreprise n’a encore aucun magasin, et une équipe se lit magasin par magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.'
-                    : 'Aucun magasin ne vous est affecté. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'
-                  : 'Personne dans votre équipe pour l’instant. Ajoutez un compteur : il recevra une invitation par e-mail.'}
+                    ? t('Votre entreprise n’a encore aucun magasin, et une équipe se lit magasin par magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.')
+                    : t('Aucun magasin ne vous est affecté. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.')
+                  : t('Personne dans votre équipe pour l’instant. Ajoutez un compteur : il recevra une invitation par e-mail.')}
               </Text>
             )}
 
@@ -150,7 +150,7 @@ export default function TeamScreen() {
               <View key={store.id} style={styles.block}>
                 <SectionLabel>{store.name}</SectionLabel>
                 {store.counters.length === 0 ? (
-                  <Text style={styles.empty}>Aucun compteur pour ce magasin.</Text>
+                  <Text style={styles.empty}>{t('Aucun compteur pour ce magasin.')}</Text>
                 ) : (
                   store.counters.map((c) => (
                     <CounterRow
@@ -166,7 +166,7 @@ export default function TeamScreen() {
 
             {invitations.length > 0 && (
               <View style={styles.block}>
-                <SectionLabel>Invitations en attente</SectionLabel>
+                <SectionLabel>{t('Invitations en attente')}</SectionLabel>
                 {invitations.map((inv) => (
                   <View key={inv.id} style={[styles.row, styles.rowPending]}>
                     <View style={[styles.avatar, styles.avatarPending]}>
@@ -179,7 +179,7 @@ export default function TeamScreen() {
                       <Text style={styles.meta}>{inv.email}</Text>
                     </View>
                     <View style={styles.pendingBadge}>
-                      <Text style={styles.pendingBadgeText}>En attente</Text>
+                      <Text style={styles.pendingBadgeText}>{t('En attente')}</Text>
                     </View>
                     <Pressable style={styles.cancelBtn} onPress={() => handleCancelInvite(inv)} hitSlop={6}>
                       <CroixIcon color={theme.danger} />
@@ -191,7 +191,7 @@ export default function TeamScreen() {
 
             {!sansMagasin && (
               <Pressable style={styles.addBtn} onPress={() => router.push('/(compte)/new-member')}>
-                <Text style={styles.addBtnText}>Ajouter un membre</Text>
+                <Text style={styles.addBtnText}>{t('Ajouter un membre')}</Text>
               </Pressable>
             )}
           </>
@@ -216,17 +216,17 @@ function CounterRow({
         <Text style={styles.avatarText}>{initials(counter.full_name || counter.email || '?')}</Text>
       </View>
       <View style={styles.rowText}>
-        <Text style={styles.name}>{counter.full_name || counter.email || 'Sans nom'}</Text>
+        <Text style={styles.name}>{counter.full_name || counter.email || t('Sans nom')}</Text>
         {/* Tant que la personne n'a pas ouvert l'application, c'est son
             adresse qui compte : c'est là qu'est parti le lien, et c'est ce
             qu'on veut relire pour vérifier qu'on ne s'est pas trompé. Une
             fois qu'elle compte, son activité est plus utile. */}
         <Text style={styles.meta} numberOfLines={1}>
           {!counter.is_active
-            ? counter.email ?? 'Invitation envoyée'
+            ? counter.email ?? t('Invitation envoyée')
             : counter.sessions_counted > 0
-              ? `${nb(counter.sessions_counted)} inventaire${counter.sessions_counted > 1 ? 's' : ''} compté${counter.sessions_counted > 1 ? 's' : ''}`
-              : 'Compteur'}
+              ? tn('%{count} inventaire compté', '%{count} inventaires comptés', counter.sessions_counted)
+              : t('Compteur')}
         </Text>
         {/* ⚠️ **`is_active` veut dire « s'est déjà connecté »**, rien d'autre :
             une personne retirée n'a plus de ligne du tout, elle disparaît de
@@ -238,7 +238,7 @@ function CounterRow({
             deux lignes et tronquait l'adresse. */}
         {!counter.is_active && (
           <View style={[styles.pendingBadge, styles.pendingBadgeSous]}>
-            <Text style={styles.pendingBadgeText}>Mot de passe à créer</Text>
+            <Text style={styles.pendingBadgeText}>{t('Mot de passe à créer')}</Text>
           </View>
         )}
       </View>
@@ -246,7 +246,7 @@ function CounterRow({
           distinction que sur la fiche d'un inventaire — l'étiquette est une
           pastille, l'action est du texte rouge. */}
       <Pressable style={styles.removeBtn} onPress={onRemove} hitSlop={8}>
-        <Text style={styles.removeBtnText}>Retirer</Text>
+        <Text style={styles.removeBtnText}>{t('Retirer')}</Text>
       </Pressable>
     </View>
   )

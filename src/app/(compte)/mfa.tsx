@@ -25,6 +25,7 @@ import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { demander, signaler } from '@/lib/dialogue'
+import { t } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 /**
@@ -70,7 +71,7 @@ export default function MfaScreen() {
     try {
       setEnroll(await startEnrollTotp())
     } catch (e) {
-      signaler.erreur('Activation impossible', errorMessage(e))
+      signaler.erreur(t('Activation impossible'), errorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -89,8 +90,8 @@ export default function MfaScreen() {
       await Linking.openURL(uri)
     } catch {
       signaler.erreur(
-        'Aucune application d’authentification',
-        'Installez-en une (Google Authenticator, Aegis, 1Password…), puis recopiez-y la clé affichée en dessous.',
+        t('Aucune application d’authentification'),
+        t('Installez-en une (Google Authenticator, Aegis, 1Password…), puis recopiez-y la clé affichée en dessous.'),
       )
     }
   }
@@ -102,8 +103,8 @@ export default function MfaScreen() {
       const r = await challengeAndVerify(enroll.factorId, code)
       if (!r.success) {
         signaler.erreur(
-          'Code refusé',
-          'Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.',
+          t('Code refusé'),
+          t('Code incorrect ou expiré. Vérifiez le code affiché par votre application — il change toutes les trente secondes.'),
         )
         return
       }
@@ -111,8 +112,8 @@ export default function MfaScreen() {
       setCode('')
       await relire()
       signaler.succes(
-          'Double authentification activée',
-          'Votre code vous sera demandé à chaque connexion, sur le téléphone comme sur le site.',
+          t('Double authentification activée'),
+          t('Votre code vous sera demandé à chaque connexion, sur le téléphone comme sur le site.'),
         )
         router.back()
     } finally {
@@ -123,15 +124,15 @@ export default function MfaScreen() {
   function confirmerRetrait() {
     if (!factorId) return
     void demander({
-      titre: 'Désactiver la double authentification ?',
-      texte: 'Votre mot de passe redeviendra seul à protéger votre compte.',
-      action: 'Désactiver',
+      titre: t('Désactiver la double authentification ?'),
+      texte: t('Votre mot de passe redeviendra seul à protéger votre compte.'),
+      action: t('Désactiver'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
       const r = await unenrollTotp(factorId)
       if (!r.success) {
-        signaler.erreur('Désactivation impossible', r.error ?? undefined)
+        signaler.erreur(t('Désactivation impossible'), r.error ? errorMessage(r.error) : undefined)
         return
       }
       await relire()
@@ -155,72 +156,67 @@ export default function MfaScreen() {
             <View style={styles.card}>
               <View style={styles.onBadge}>
                 <View style={styles.onDot} />
-                <Text style={styles.onText}>Activée</Text>
+                <Text style={styles.onText}>{t('Activée')}</Text>
               </View>
-              <Text style={styles.title}>Votre compte demande un code</Text>
+              <Text style={styles.title}>{t('Votre compte demande un code')}</Text>
               <Text style={styles.text}>
-                À chaque connexion, après votre mot de passe, votre application
-                d&apos;authentification affiche un code à six chiffres à saisir.
+                {t("À chaque connexion, après votre mot de passe, votre application d'authentification affiche un code à six chiffres à saisir.")}
               </Text>
               <Pressable style={styles.dangerBtn} onPress={confirmerRetrait}>
-                <Text style={styles.dangerBtnText}>Désactiver</Text>
+                <Text style={styles.dangerBtnText}>{t('Désactiver')}</Text>
               </Pressable>
             </View>
           ) : !enroll ? (
             <>
               <View style={styles.card}>
-                <Text style={styles.title}>Ajouter une application d&apos;authentification</Text>
+                <Text style={styles.title}>{t("Ajouter une application d'authentification")}</Text>
                 <Text style={styles.text}>
-                  Google Authenticator, Aegis, 1Password… À chaque connexion, elle affichera un
-                  code à six chiffres qui change toutes les trente secondes. Sans ce code, un mot
-                  de passe volé ne suffit plus à entrer.
+                  {t('Google Authenticator, Aegis, 1Password… À chaque connexion, elle affichera un code à six chiffres qui change toutes les trente secondes. Sans ce code, un mot de passe volé ne suffit plus à entrer.')}
                 </Text>
                 <Pressable style={[styles.btn, busy && styles.btnOff]} onPress={commencer} disabled={busy}>
                   {busy ? (
                     <ActivityIndicator color={theme.onAccent} />
                   ) : (
-                    <Text style={styles.btnText}>Commencer</Text>
+                    <Text style={styles.btnText}>{t('Commencer')}</Text>
                   )}
                 </Pressable>
               </View>
               <View style={styles.warnCard}>
                 <Text style={styles.warnText}>
-                  Il n&apos;y a pas de codes de secours. Si vous perdez le téléphone qui porte
-                  votre application d&apos;authentification, seul l&apos;administrateur Quantinvo
-                  pourra vous rendre l&apos;accès.
+                  {t("Il n'y a pas de codes de secours. Si vous perdez le téléphone qui porte votre application d'authentification, seul l'administrateur Quantinvo pourra vous rendre l'accès.")}
                 </Text>
               </View>
             </>
           ) : (
             <View style={styles.card}>
-              <Text style={styles.title}>Inscrivez Quantinvo dans votre application</Text>
+              <Text style={styles.title}>{t('Inscrivez Quantinvo dans votre application')}</Text>
 
               <Pressable style={styles.softBtn} onPress={() => ouvrirApplication(enroll.uri)}>
-                <Text style={styles.softBtnText}>Ouvrir mon application d&apos;authentification</Text>
+                <Text style={styles.softBtnText}>{t("Ouvrir mon application d'authentification")}</Text>
               </Pressable>
 
               <View style={styles.sep}>
                 <View style={styles.sepLine} />
-                <Text style={styles.sepText}>ou</Text>
+                <Text style={styles.sepText}>{t('ou')}</Text>
                 <View style={styles.sepLine} />
               </View>
 
-              <Text style={styles.fieldLabel}>Clé à recopier</Text>
+              <Text style={styles.fieldLabel}>{t('Clé à recopier')}</Text>
               <View style={styles.secretBox}>
                 <Text style={[styles.secret, tabular]} selectable>
                   {formatSecret(enroll.secret)}
                 </Text>
               </View>
-              <Text style={styles.hint}>Appuyez longuement sur la clé pour la copier.</Text>
+              <Text style={styles.hint}>{t('Appuyez longuement sur la clé pour la copier.')}</Text>
 
               <View style={styles.qrBlock}>
                 <QrCode value={enroll.uri} size={168} />
                 <Text style={styles.qrCap}>
-                  À scanner depuis un autre appareil, si vous préférez
+                  {t('À scanner depuis un autre appareil, si vous préférez')}
                 </Text>
               </View>
 
-              <Text style={styles.fieldLabel}>Code affiché par l&apos;application</Text>
+              <Text style={styles.fieldLabel}>{t("Code affiché par l'application")}</Text>
               <TextInput
                 style={[styles.input, tabular]}
                 value={code}
@@ -241,7 +237,7 @@ export default function MfaScreen() {
                 {busy ? (
                   <ActivityIndicator color={theme.onAccent} />
                 ) : (
-                  <Text style={styles.btnText}>Vérifier et activer</Text>
+                  <Text style={styles.btnText}>{t('Vérifier et activer')}</Text>
                 )}
               </Pressable>
             </View>

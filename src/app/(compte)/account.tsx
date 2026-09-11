@@ -11,6 +11,7 @@ import { useTheme } from '@/lib/theme'
 import { SITE_URL } from '@/constants/links'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { demander } from '@/lib/dialogue'
+import { NOM_LANGUE, t, useLangue } from '@/lib/i18n'
 
 /**
  * Mon compte — la personne, puis ce qu'elle ouvre.
@@ -42,6 +43,7 @@ export default function AccountScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
   const suppression = useAccountDeletion()
+  const langueCourante = useLangue()
 
   const { data: company } = useQuery({ queryKey: ['my-company'], queryFn: getMyCompany })
 
@@ -49,16 +51,16 @@ export default function AccountScreen() {
   const email = session?.user.email ?? '—'
   const superviseur = profile?.role === 'supervisor'
   const role = profile?.is_company_admin
-    ? 'Administrateur'
-    : superviseur ? 'Superviseur' : 'Compteur'
+    ? t('Administrateur')
+    : superviseur ? t('Superviseur') : t('Compteur')
 
   /** Remet à zéro les repères de ce compte sur cet appareil. */
 
   async function confirmerReperes() {
     const ok = await demander({
-      titre: 'Revoir les repères ?',
-      texte: 'L’écran de bienvenue et les explications du premier scan réapparaîtront une fois, sur ce téléphone.',
-      action: 'Revoir',
+      titre: t('Revoir les repères ?'),
+      texte: t('L’écran de bienvenue et les explications du premier scan réapparaîtront une fois, sur ce téléphone.'),
+      action: t('Revoir'),
     })
     if (ok && profile?.id) void oublierReperes(profile.id)
   }
@@ -66,9 +68,9 @@ export default function AccountScreen() {
 
   async function confirmSignOut() {
     const ok = await demander({
-      titre: 'Se déconnecter ?',
-      texte: 'Vous devrez ressaisir votre mot de passe.',
-      action: 'Se déconnecter',
+      titre: t('Se déconnecter ?'),
+      texte: t('Vous devrez ressaisir votre mot de passe.'),
+      action: t('Se déconnecter'),
       ton: 'danger',
     })
     if (ok) void signOut()
@@ -81,7 +83,7 @@ export default function AccountScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials(profile?.full_name ?? '?')}</Text>
           </View>
-          <Text style={styles.name}>{profile?.full_name || 'Superviseur'}</Text>
+          <Text style={styles.name}>{profile?.full_name || t('Superviseur')}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>{role}</Text>
           </View>
@@ -97,26 +99,29 @@ export default function AccountScreen() {
 
         {superviseur && (
           <>
-            <SectionLabel>Mon travail</SectionLabel>
+            <SectionLabel>{t('Mon travail')}</SectionLabel>
             <MenuCard>
-              <MenuRow icon="magasin" label="Mes magasins" onPress={() => router.push('/(compte)/stores')} />
-              <MenuRow icon="equipe" label="Mon équipe" onPress={() => router.push('/(compte)/team')} />
-              <MenuRow icon="outils" label="Boîte à outils" onPress={() => router.push('/(compte)/tools')} last />
+              <MenuRow icon="magasin" label={t('Mes magasins')} onPress={() => router.push('/(compte)/stores')} />
+              <MenuRow icon="equipe" label={t('Mon équipe')} onPress={() => router.push('/(compte)/team')} />
+              <MenuRow icon="outils" label={t('Boîte à outils')} onPress={() => router.push('/(compte)/tools')} last />
             </MenuCard>
           </>
         )}
 
-        <SectionLabel>Mon compte</SectionLabel>
+        <SectionLabel>{t('Mon compte')}</SectionLabel>
         <MenuCard>
           {/* Le nom, le mot de passe, la double authentification et la
               suppression vivent derrière cette ligne. Ce qui reste ici est
               sans conséquence. */}
-          <MenuRow icon="profil" label="Mon profil" onPress={() => router.push('/(compte)/profile')} />
-          <MenuRow icon="donnees" label="Télécharger mes données" onPress={() => router.push('/(compte)/my-data')} />
+          <MenuRow icon="profil" label={t('Mon profil')} onPress={() => router.push('/(compte)/profile')} />
+          <MenuRow icon="donnees" label={t('Télécharger mes données')} onPress={() => router.push('/(compte)/my-data')} />
           {/* Les repères d'onboarding ne se montrent qu'une fois. Ils doivent
               rester retrouvables (règle Apple HIG, Things 3) — sans quoi une
               personne qui a touché « Plus tard » n'a plus aucun moyen d'y revenir. */}
-          <MenuRow icon="reperes" label="Revoir les repères" onPress={confirmerReperes} />
+          <MenuRow icon="reperes" label={t('Revoir les repères')} onPress={confirmerReperes} />
+          {/* La langue de l'appareil, nommée dans sa propre langue : c'est
+              ainsi qu'on la retrouve quand on ne lit pas celle affichée. */}
+          <MenuRow icon="langue" label={t('Langue')} value={NOM_LANGUE[langueCourante]} onPress={() => router.push('/(compte)/langue')} />
           {/* ⚠️ En rouge, et c'est nouveau : elle est désormais la SEULE ligne
               colorée de l'écran. Tant que « Supprimer mon compte » était juste
               en dessous, deux rouges voisins n'auraient rien distingué — c'est
@@ -125,7 +130,7 @@ export default function AccountScreen() {
               place, elle n'ouvre rien. */}
           <MenuRow
             icon="sortie"
-            label="Se déconnecter"
+            label={t('Se déconnecter')}
             onPress={confirmSignOut}
             danger
             sansChevron

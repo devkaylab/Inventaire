@@ -35,6 +35,7 @@
 // diverger sur les libellés ou les unités.
 
 import { TVA_APPLICABLE, euros, nomOffre, prixCents } from '@/lib/offres'
+import { t } from '@/lib/i18n'
 
 export type SaisieMagasin = { nom: string; appareils: string }
 
@@ -77,8 +78,8 @@ export function MagasinSaisie({
         <input
           value={valeur.nom}
           onChange={(e) => onChange('nom', e.target.value)}
-          placeholder="Nom du magasin — Lyon Part-Dieu"
-          aria-label={numero === undefined ? 'Nom du magasin' : `Nom du magasin ${numero}`}
+          placeholder={t('Nom du magasin — Lyon Part-Dieu')}
+          aria-label={numero === undefined ? t('Nom du magasin') : t('Nom du magasin %{n}', { n: numero })}
           maxLength={80}
         />
         {onRetirer && (
@@ -86,7 +87,7 @@ export function MagasinSaisie({
             type="button"
             className="magasin-kill"
             onClick={onRetirer}
-            aria-label={`Retirer le magasin ${numero ?? ''}`.trim()}
+            aria-label={t('Retirer le magasin %{n}', { n: numero ?? '' }).trim()}
           >
             ×
           </button>
@@ -94,7 +95,7 @@ export function MagasinSaisie({
       </div>
 
       <div className="field">
-        <label htmlFor={`${idPrefix}-appareils`}>Appareils qui comptent en même temps</label>
+        <label htmlFor={`${idPrefix}-appareils`}>{t('Appareils qui comptent en même temps')}</label>
         <input
           id={`${idPrefix}-appareils`}
           type="number"
@@ -110,16 +111,16 @@ export function MagasinSaisie({
             rallonge ». Une aide sous un champ se lit d'un coup d'œil ou ne se
             lit pas ; ce qu'on ajoute pour lever un doute finit par en créer. */}
         <p className="field-hint">
-          Téléphones ou tablettes qui scannent en même temps.
+          {t('Téléphones ou tablettes qui scannent en même temps.')}
         </p>
         {/* L'offre se lit à la frappe : les trois prix sont publics, et c'est
             ce que le devis reprendra. Rien n'est promis pour autant — un devis
             se négocie, et le montant qui part est celui que Quantinvo établit. */}
         {offre && mois !== null && an !== null && (
           <p className="magasin-offre">
-            <strong>{offre}</strong> — <span className="prix">{euros(mois / 100)} / mois</span>
-            {' ou '}
-            <span className="prix">{euros(an / 100)} / an</span>{TVA_APPLICABLE ? ' HT' : ''} par magasin
+            <strong>{offre}</strong> — <span className="prix">{euros(mois / 100)} / {t('mois')}</span>
+            {` ${t('ou')} `}
+            <span className="prix">{euros(an / 100)} / {t('an')}</span>{TVA_APPLICABLE ? ` ${t('HT')}` : ''} {t('par magasin')}
           </p>
         )}
       </div>

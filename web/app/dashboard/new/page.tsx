@@ -11,6 +11,7 @@ import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonRows } from '@/components/ui/Skeleton'
+import { useTraduction } from '@/lib/i18n'
 
 /** Code d'accès communiqué aux compteurs — court, sans caractères ambigus. */
 function generateCode(): string {
@@ -26,6 +27,7 @@ export default function NewSessionPage() {
   const router = useRouter()
   const toast = useToast()
   const guard = useAuthGuard('supervisor')
+  const { t } = useTraduction()
 
   const [stores, setStores] = useState<Store[]>([])
   const [loadingStores, setLoadingStores] = useState(true)
@@ -60,19 +62,19 @@ export default function NewSessionPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) { setError("Donnez un nom à l'inventaire."); return }
-    if (!storeId) { setError('Choisissez le magasin concerné.'); return }
-    if (code.trim().length < 4) { setError('Le code d’accès doit comporter au moins 4 caractères.'); return }
+    if (!name.trim()) { setError(t("Donnez un nom à l'inventaire.")); return }
+    if (!storeId) { setError(t('Choisissez le magasin concerné.')); return }
+    if (code.trim().length < 4) { setError(t('Le code d’accès doit comporter au moins 4 caractères.')); return }
     setError(null)
     setBusy(true)
 
     try {
       const r = await createSession(name.trim(), storeId, code.trim().toUpperCase(), usesZones)
       if (!r.success || !r.session_id) {
-        setError(r.error ?? "L'inventaire n'a pas pu être créé.")
+        setError(r.error ?? t("L'inventaire n'a pas pu être créé."))
         return
       }
-      toast.success(`Inventaire ${r.inventory_number} créé. Code d’accès : ${r.security_code ?? code}`)
+      toast.success(t('Inventaire %{numero} créé. Code d’accès : %{code}', { numero: r.inventory_number ?? '', code: r.security_code ?? code }))
       // Toute la préparation — balises et fichiers — se fait dans Set up.
       router.replace(`/dashboard/${r.session_id}?tab=setup`)
     } catch (err) {
@@ -89,43 +91,42 @@ export default function NewSessionPage() {
   return (
     <AppShell profile={guard.profile} companyName={companyName}>
       <div style={{ maxWidth: 720 }}>
-        <h1 className="page-title">Nouvel inventaire</h1>
+        <h1 className="page-title">{t('Nouvel inventaire')}</h1>
         <p className="muted" style={{ marginBottom: 24 }}>
-          Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les
-          fichiers, puis suivre le comptage.
+          {t('Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les fichiers, puis suivre le comptage.')}
         </p>
 
         {loadingStores ? (
           <SkeletonRows rows={2} />
         ) : stores.length === 0 ? (
           <EmptyState
-            title="Aucun magasin ne vous est affecté"
-            hint="Un inventaire est toujours rattaché à un magasin. Demandez à votre administrateur de vous affecter au magasin concerné."
-            action={<Link href="/account" className="btn btn-ghost">Mon compte</Link>}
+            title={t('Aucun magasin ne vous est affecté')}
+            hint={t('Un inventaire est toujours rattaché à un magasin. Demandez à votre administrateur de vous affecter au magasin concerné.')}
+            action={<Link href="/account" className="btn btn-ghost">{t('Mon compte')}</Link>}
           />
         ) : (
           <form className="panel" onSubmit={onSubmit} style={{ marginTop: 0 }}>
             {error && <div className="error" role="alert">{error}</div>}
 
             <div className="field">
-              <label htmlFor="inv-name">Nom de l’inventaire</label>
+              <label htmlFor="inv-name">{t('Nom de l’inventaire')}</label>
               <input
                 id="inv-name" value={name} onChange={e => setName(e.target.value)}
-                placeholder="Inventaire annuel 2026" autoComplete="off"
+                placeholder={t('Inventaire annuel 2026')} autoComplete="off"
               />
-              <p className="field-hint">Sert à le reconnaître dans la liste. Le numéro est généré automatiquement.</p>
+              <p className="field-hint">{t('Sert à le reconnaître dans la liste. Le numéro est généré automatiquement.')}</p>
             </div>
 
             <div className="field">
-              <label htmlFor="inv-store">Magasin</label>
+              <label htmlFor="inv-store">{t('Magasin')}</label>
               <select id="inv-store" value={storeId} onChange={e => setStoreId(e.target.value)}>
-                <option value="">Choisir un magasin…</option>
+                <option value="">{t('Choisir un magasin…')}</option>
                 {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 
             <div className="field">
-              <label htmlFor="inv-code">Code d’accès</label>
+              <label htmlFor="inv-code">{t('Code d’accès')}</label>
               <div style={{ display: 'flex', gap: 10 }}>
                 <input
                   id="inv-code" value={code}
@@ -134,34 +135,33 @@ export default function NewSessionPage() {
                   style={{ letterSpacing: 2, fontWeight: 700 }}
                 />
                 <button type="button" className="btn btn-ghost" onClick={() => setCode(generateCode())}>
-                  Générer
+                  {t('Générer')}
                 </button>
               </div>
               <p className="field-hint">
-                Les compteurs saisissent le numéro d’inventaire et ce code pour rejoindre la session.
-                4 caractères minimum.
+                {t('Les compteurs saisissent le numéro d’inventaire et ce code pour rejoindre la session. 4 caractères minimum.')}
               </p>
             </div>
 
             <div className="field">
-              <label htmlFor="inv-zones">Organisation du comptage</label>
+              <label htmlFor="inv-zones">{t('Organisation du comptage')}</label>
               <select
                 id="inv-zones"
                 value={usesZones ? 'zones' : 'classic'}
                 onChange={e => setUsesZones(e.target.value === 'zones')}
               >
-                <option value="zones">Zones et balises — recommandé</option>
-                <option value="classic">Classique — sans balise</option>
+                <option value="zones">{t('Zones et balises — recommandé')}</option>
+                <option value="classic">{t('Classique — sans balise')}</option>
               </select>
               <p className="field-hint">
                 {usesZones
-                  ? 'Chaque emplacement reçoit une plage de balises QR (étiquettes à imprimer et coller — vous les créerez à l’étape suivante, dans Set up). Vous suivez l’avancement balise par balise et l’audit se compare zone par zone.'
-                  : 'Les compteurs scannent sans délimiter d’emplacement. Plus simple à lancer, mais pas de suivi par zone ni de comparaison d’audit par balise.'}
+                  ? t('Chaque emplacement reçoit une plage de balises QR (étiquettes à imprimer et coller — vous les créerez à l’étape suivante, dans Set up). Vous suivez l’avancement balise par balise et l’audit se compare zone par zone.')
+                  : t('Les compteurs scannent sans délimiter d’emplacement. Plus simple à lancer, mais pas de suivi par zone ni de comparaison d’audit par balise.')}
               </p>
             </div>
 
             <button className="btn btn-primary btn-block" disabled={busy} type="submit">
-              {busy ? 'Création…' : 'Créer l’inventaire'}
+              {busy ? t('Création…') : t('Créer l’inventaire')}
             </button>
           </form>
         )}

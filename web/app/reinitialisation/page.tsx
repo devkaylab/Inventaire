@@ -9,6 +9,8 @@ import { getMySpacePath } from '@/lib/auth'
 import { PasswordRules } from '@/components/PasswordRules'
 import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib/password'
 import { Chargement } from '@/components/Chargement'
+import { LangueToggle } from '@/components/LangueToggle'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Choix d'un nouveau mot de passe, à l'arrivée du lien « mot de passe oublié ».
@@ -20,6 +22,7 @@ import { Chargement } from '@/components/Chargement'
  */
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const { t } = useTraduction()
   const [ready, setReady] = useState(false)
   const [hasSession, setHasSession] = useState(false)
   const [password, setPassword] = useState('')
@@ -52,18 +55,18 @@ export default function ResetPasswordPage() {
     // Mêmes règles que /bienvenue et que le serveur (voir `lib/password.ts`).
     const pwdError = passwordError(password)
     if (pwdError) {
-      setError(pwdError)
+      setError(t(pwdError))
       return
     }
     if (password !== confirm) {
-      setError('Les deux mots de passe ne correspondent pas.')
+      setError(t('Les deux mots de passe ne correspondent pas.'))
       return
     }
     setBusy(true)
     const { error: authError } = await supabase.auth.updateUser({ password })
     setBusy(false)
     if (authError) {
-      setError(friendlyPasswordError(authError.message))
+      setError(t(friendlyPasswordError(authError.message)))
       return
     }
     setDone(true)
@@ -84,16 +87,16 @@ export default function ResetPasswordPage() {
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>Lien expiré</h1>
+            <h1>{t('Lien expiré')}</h1>
             <p className="sub">
-              Ce lien de réinitialisation n&apos;est plus valable ou a déjà été utilisé.
-              Demandez-en un nouveau depuis la page « Mot de passe oublié ».
+              {t("Ce lien de réinitialisation n'est plus valable ou a déjà été utilisé. Demandez-en un nouveau depuis la page « Mot de passe oublié ».")}
             </p>
           </div>
           <Link href="/mot-de-passe-oublie" className="btn btn-primary btn-block">
-            Demander un nouveau lien
+            {t('Demander un nouveau lien')}
           </Link>
         </div>
+        <LangueToggle />
       </div>
     )
   }
@@ -104,16 +107,16 @@ export default function ResetPasswordPage() {
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>Mot de passe modifié</h1>
+            <h1>{t('Mot de passe modifié')}</h1>
             <p className="sub">
-              Votre nouveau mot de passe est enregistré : c&apos;est lui qu&apos;il faudra
-              utiliser à la prochaine connexion.
+              {t("Votre nouveau mot de passe est enregistré : c'est lui qu'il faudra utiliser à la prochaine connexion.")}
             </p>
           </div>
           <button className="btn btn-primary btn-block" onClick={() => void goToSpace()}>
-            Accéder à mon espace
+            {t('Accéder à mon espace')}
           </button>
         </div>
+        <LangueToggle />
       </div>
     )
   }
@@ -123,34 +126,35 @@ export default function ResetPasswordPage() {
       <div className="auth-card">
         <div className="head">
           <Link href="/"><Logo size={56} /></Link>
-          <h1>Nouveau mot de passe</h1>
-          <p className="sub">Choisissez le mot de passe de votre compte.</p>
+          <h1>{t('Nouveau mot de passe')}</h1>
+          <p className="sub">{t('Choisissez le mot de passe de votre compte.')}</p>
         </div>
 
         {error && <div className="error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="password">Nouveau mot de passe</label>
+            <label htmlFor="password">{t('Nouveau mot de passe')}</label>
             <input
               id="password" type="password" autoComplete="new-password"
               value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder={`${MIN_PASSWORD_LENGTH} caractères minimum`}
+              placeholder={t('%{n} caractères minimum', { n: MIN_PASSWORD_LENGTH })}
             />
             <PasswordRules password={password} />
           </div>
           <div className="field">
-            <label htmlFor="confirm">Confirmer le mot de passe</label>
+            <label htmlFor="confirm">{t('Confirmer le mot de passe')}</label>
             <input
               id="confirm" type="password" autoComplete="new-password"
               value={confirm} onChange={(e) => setConfirm(e.target.value)}
             />
           </div>
           <button className="btn btn-primary btn-block" disabled={busy}>
-            {busy ? 'Enregistrement…' : 'Enregistrer'}
+            {busy ? t('Enregistrement…') : t('Enregistrer')}
           </button>
         </form>
       </div>
+      <LangueToggle />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { importCatalogFile, importStockFile, pickFile, type ImportProgress } fro
 import { errorMessage } from '@/lib/errors'
 import { nb } from '@/lib/nombres'
 import { useTheme } from '@/lib/theme'
+import { t, tn } from '@/lib/i18n'
 import { PlusTard } from '@/components/ui/PlusTard'
 import { Astuce, Fort } from '@/components/Astuce'
 import { useRepere } from '@/lib/reperes'
@@ -124,7 +125,7 @@ export default function ImportScreen() {
 
         {state.phase === 'parsing' && (
           <View style={styles.statusRow}>
-            <Text style={styles.statusText}>Lecture du fichier…</Text>
+            <Text style={styles.statusText}>{t('Lecture du fichier…')}</Text>
           </View>
         )}
 
@@ -136,7 +137,7 @@ export default function ImportScreen() {
           <View style={styles.successBanner}>
             <CocheIcon color={theme.success} size={15} />
             <Text style={styles.successText}>
-              {nb(state.uploaded)} lignes importées
+              {tn('%{count} ligne importée', '%{count} lignes importées', state.uploaded)}
             </Text>
           </View>
         )}
@@ -166,7 +167,7 @@ export default function ImportScreen() {
           disabled={busy}
         >
           <Text style={styles.buttonText}>
-            {busy ? '…' : state.phase === 'done' ? 'Réimporter' : 'Choisir un fichier'}
+            {busy ? '…' : state.phase === 'done' ? t('Réimporter') : t('Choisir un fichier')}
           </Text>
         </Pressable>
       </View>
@@ -178,16 +179,14 @@ export default function ImportScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         {repereFichiers.aVoir && (
           <View style={styles.astuceEncart}>
-            <Astuce titre="Deux fichiers, deux rôles" onCompris={repereFichiers.marquerVu}>
-              Le <Fort>référencement</Fort> nomme les articles&nbsp;: sans lui, tout ce qui est
-              scanné ressort en « article inconnu ». Le <Fort>stock théorique</Fort> donne les
-              quantités attendues — c&apos;est lui, et lui seul, qui fait apparaître les écarts.
+            <Astuce titre={t('Deux fichiers, deux rôles')} onCompris={repereFichiers.marquerVu}>
+              {t('Le ')}<Fort>{t('référencement')}</Fort>{t(' nomme les articles\u00a0: sans lui, tout ce qui est scanné ressort en « article inconnu ». Le ')}<Fort>{t('stock théorique')}</Fort>{t(" donne les quantités attendues — c'est lui, et lui seul, qui fait apparaître les écarts.")}
             </Astuce>
           </View>
         )}
 
         <Text style={styles.info}>
-          CSV ou Excel (.xlsx) acceptés. Les fichiers volumineux peuvent prendre quelques secondes.
+          {t('CSV ou Excel (.xlsx) acceptés. Les fichiers volumineux peuvent prendre quelques secondes.')}
         </Text>
 
         {/* ⚠️ Le geste principal est ICI : le téléphone sait choisir un fichier
@@ -201,14 +200,14 @@ export default function ImportScreen() {
             L'adresse est écrite pour être retapée sur le poste, pas touchée
             ici. */}
         <Text style={styles.info}>
-          Vos fichiers sont sur l&apos;ordinateur ? Les mêmes imports se font sur{' '}
-          <Text style={styles.infoAdresse}>{SITE_ADRESSE}</Text>, depuis un poste.
+          {t("Vos fichiers sont sur l'ordinateur ? Les mêmes imports se font sur ")}
+          <Text style={styles.infoAdresse}>{SITE_ADRESSE}</Text>{t(', depuis un poste.')}
         </Text>
 
         <View style={styles.warningBanner}>
           <AlerteIcon color={theme.warning} size={16} />
           <Text style={styles.warningText}>
-            Chaque SKU doit être unique dans chaque fichier.
+            {t('Chaque SKU doit être unique dans chaque fichier.')}
           </Text>
         </View>
 
@@ -216,26 +215,26 @@ export default function ImportScreen() {
           <View style={styles.infoBannerHead}>
             <AstuceIcon color={theme.accent} size={16} />
             <Text style={styles.infoBannerText}>
-              Le scan reconnaît vos articles dans tous les cas, même si un code commence par un zéro.
+              {t('Le scan reconnaît vos articles dans tous les cas, même si un code commence par un zéro.')}
             </Text>
           </View>
           <Text style={styles.infoBannerSub}>
-            {"Astuce : pour que ces codes apparaissent à l'identique dans le rapport, gardez le format « Texte » sur les colonnes des codes."}
+            {t("Astuce : pour que ces codes apparaissent à l'identique dans le rapport, gardez le format « Texte » sur les colonnes des codes.")}
           </Text>
         </View>
 
         {renderStep(
           'catalog',
           catalog,
-          '1. Référentiel articles',
-          'Colonnes obligatoires (variantes acceptées) :\n• SKU — ou Code article, Référence, Réf\n• EAN — ou Code-barres, GTIN, Gencod\n• Marque — ou Fournisseur\n• Libellé — ou Désignation, Description, Nom\nColonne optionnelle : Prix d’achat — ou PA, Coût, Cost, COGS. Sans elle, l’écart en valeur sera de 0.',
+          t('1. Référentiel articles'),
+          t('Colonnes obligatoires (variantes acceptées) :\n• SKU — ou Code article, Référence, Réf\n• EAN — ou Code-barres, GTIN, Gencod\n• Marque — ou Fournisseur\n• Libellé — ou Désignation, Description, Nom\nColonne optionnelle : Prix d’achat — ou PA, Coût, Cost, COGS. Sans elle, l’écart en valeur sera de 0.'),
         )}
 
         {renderStep(
           'stock',
           stock,
-          '2. Stock théorique',
-          'Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes obligatoires (variantes acceptées) :\n• SKU — ou Code article, Référence, Réf\n• Quantité théorique — ou Quantité, Qté, Stock, Qty\nLe rapprochement se fait par SKU ; les EAN proviennent du référentiel (étape 1).',
+          t('2. Stock théorique'),
+          t('Fichier optionnel — uniquement si comparaison avec le stock théorique nécessaire.\nColonnes obligatoires (variantes acceptées) :\n• SKU — ou Code article, Référence, Réf\n• Quantité théorique — ou Quantité, Qté, Stock, Qty\nLe rapprochement se fait par SKU ; les EAN proviennent du référentiel (étape 1).'),
         )}
 
         {fromNew && (
@@ -247,7 +246,7 @@ export default function ImportScreen() {
               style={styles.startBtn}
               onPress={() => router.push(`/(supervisor)/${sessionId}/invite?from=new`)}
             >
-              <Text style={styles.startBtnText}>Suivant : ajouter des compteurs</Text>
+              <Text style={styles.startBtnText}>{t('Suivant : ajouter des compteurs')}</Text>
             </Pressable>
             <PlusTard sessionId={sessionId} />
           </>

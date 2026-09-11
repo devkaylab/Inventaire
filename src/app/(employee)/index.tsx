@@ -24,8 +24,10 @@ import { signaler } from '@/lib/dialogue'
 import { activerNotifications, etatNotifications, registerForPushNotifications } from '@/lib/push'
 import { useRepere } from '@/lib/reperes'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
+import { t } from '@/lib/i18n'
 
-const STATUS_LABELS: Record<string, string> = { open: 'Ouverte', counting: 'En cours', closed: 'Clôturée' }
+// Une fonction, pas une constante : la langue n'est pas connue au chargement du module.
+const statusLabel = (s: string) => ({ open: t('Ouverte'), counting: t('En cours'), closed: t('Clôturée') } as Record<string, string>)[s] ?? s
 
 export default function EmployeeHomeScreen() {
   const { profile } = useAuth()
@@ -79,19 +81,19 @@ export default function EmployeeHomeScreen() {
     notifsRepondu()
     setNotifsADemander(false)
     const ok = await activerNotifications()
-    if (ok) signaler.succes('Notifications activées', 'Vous serez prévenu dès qu’un inventaire vous est confié.')
+    if (ok) signaler.succes(t('Notifications activées'), t('Vous serez prévenu dès qu’un inventaire vous est confié.'))
   }
 
   async function handleJoin() {
     if (!inventoryNumber.trim() || !securityCode.trim()) {
-      signaler.erreur('Erreur', 'Veuillez remplir le numéro d\'inventaire et le code de sécurité.')
+      signaler.erreur(t('Erreur'), t("Veuillez remplir le numéro d'inventaire et le code de sécurité."))
       return
     }
     setLoading(true)
     try {
       const result = await joinSession(inventoryNumber.trim(), securityCode.trim())
       if (!result.success) {
-        signaler.erreur('Erreur', result.error ?? 'Impossible de rejoindre la session.')
+        signaler.erreur(t('Erreur'), result.error ? errorMessage(result.error) : t('Impossible de rejoindre la session.'))
         return
       }
       setInventoryNumber('')
@@ -100,7 +102,7 @@ export default function EmployeeHomeScreen() {
       router.push(`/(employee)/${result.session_id}`)
     } catch (e: unknown) {
       console.error('[employee] joinSession', e)
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -109,7 +111,7 @@ export default function EmployeeHomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.topBar}>
-        <Text style={styles.welcome}>Bonjour, <Text style={styles.welcomeName}>{profile?.full_name}</Text></Text>
+        <Text style={styles.welcome}>{t('Bonjour,')} <Text style={styles.welcomeName}>{profile?.full_name}</Text></Text>
       </View>
 
       <ClavierEvite style={{ flex: 1 }}>
@@ -123,14 +125,14 @@ export default function EmployeeHomeScreen() {
             <ActivityIndicator color={theme.accent} style={{ marginTop: Spacing.xxl }} />
           ) : mySessions.length > 0 ? (
             <>
-              <Text style={styles.sectionLabel}>Mes inventaires</Text>
+              <Text style={styles.sectionLabel}>{t('Mes inventaires')}</Text>
               {mySessions.map(s => (
                 <Pressable key={s.id} style={styles.sessionCard} onPress={() => router.push(`/(employee)/${s.id}`)}>
                   <View style={styles.sessionHeader}>
                     <Text style={styles.sessionName} numberOfLines={1}>{s.name || s.store_name}</Text>
                     <View style={styles.badge}>
                       <View style={styles.badgeDot} />
-                      <Text style={styles.badgeText}>{STATUS_LABELS[s.status] ?? s.status}</Text>
+                      <Text style={styles.badgeText}>{statusLabel(s.status)}</Text>
                     </View>
                   </View>
                   <Text style={styles.sessionStore}>{s.store_name}</Text>
@@ -151,19 +153,18 @@ export default function EmployeeHomeScreen() {
                     <Path d="M8 8h8M8 12h8M8 16h5" />
                   </Svg>
                 </View>
-                <Text style={styles.videTitre}>Aucun inventaire pour l&apos;instant</Text>
+                <Text style={styles.videTitre}>{t("Aucun inventaire pour l'instant")}</Text>
                 <Text style={styles.videTexte}>
-                  Votre superviseur vous ajoutera à un inventaire. Il apparaîtra ici,
-                  et vous serez prévenu.
+                  {t('Votre superviseur vous ajoutera à un inventaire. Il apparaîtra ici, et vous serez prévenu.')}
                 </Text>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>En attendant, comment ça se passe</Text>
+                <Text style={styles.cardTitle}>{t('En attendant, comment ça se passe')}</Text>
                 {[
-                  'Scannez la balise du rayon',
-                  'Scannez les articles',
-                  'Terminez la balise, passez à la suivante',
+                  t('Scannez la balise du rayon'),
+                  t('Scannez les articles'),
+                  t('Terminez la balise, passez à la suivante'),
                 ].map((texte, i) => (
                   <View key={texte} style={[styles.pasRang, i > 0 && styles.pasRangSep]}>
                     <View style={styles.pasNum}><Text style={styles.pasNumText}>{i + 1}</Text></View>
@@ -176,19 +177,19 @@ export default function EmployeeHomeScreen() {
 
           {montrerNotifs && (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Être prévenu des prochains inventaires</Text>
+              <Text style={styles.cardTitle}>{t('Être prévenu des prochains inventaires')}</Text>
               <Text style={styles.cardDesc}>
-                Une notification quand votre superviseur vous ajoute à un inventaire. Rien d&apos;autre.
+                {t("Une notification quand votre superviseur vous ajoute à un inventaire. Rien d'autre.")}
               </Text>
               <View style={styles.notifsRangee}>
                 {/* « Plus tard » d'abord, en retrait : le bouton plein est
                     celui qui ouvre la boîte système, il doit être le plus
                     loin d'un pouce qui balaie la liste. */}
                 <Pressable style={styles.notifsPlusTard} onPress={() => { notifsRepondu(); setNotifsADemander(false) }}>
-                  <Text style={styles.notifsPlusTardText}>Plus tard</Text>
+                  <Text style={styles.notifsPlusTardText}>{t('Plus tard')}</Text>
                 </Pressable>
                 <Pressable style={styles.notifsActiver} onPress={() => { void activerLesNotifications() }}>
-                  <Text style={styles.notifsActiverText}>Activer</Text>
+                  <Text style={styles.notifsActiverText}>{t('Activer')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -196,13 +197,13 @@ export default function EmployeeHomeScreen() {
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
-              {mySessions.length > 0 ? 'Rejoindre un autre inventaire' : 'Rejoindre un inventaire'}
+              {mySessions.length > 0 ? t('Rejoindre un autre inventaire') : t('Rejoindre un inventaire')}
             </Text>
             <Text style={styles.cardDesc}>
-              {"Avec le numéro d'inventaire et le code fournis par votre superviseur."}
+              {t("Avec le numéro d'inventaire et le code fournis par votre superviseur.")}
             </Text>
 
-            <Text style={styles.label}>{"N° d'inventaire"}</Text>
+            <Text style={styles.label}>{t("N° d'inventaire")}</Text>
             <TextInput
               style={styles.input}
               value={inventoryNumber}
@@ -212,7 +213,7 @@ export default function EmployeeHomeScreen() {
               placeholderTextColor={theme.textMuted}
             />
 
-            <Text style={styles.label}>Code inventaire</Text>
+            <Text style={styles.label}>{t('Code inventaire')}</Text>
             <TextInput
               style={styles.input}
               value={securityCode}
@@ -223,7 +224,7 @@ export default function EmployeeHomeScreen() {
             />
 
             <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleJoin} disabled={loading}>
-              {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>Rejoindre</Text>}
+              {loading ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.buttonText}>{t('Rejoindre')}</Text>}
             </Pressable>
           </View>
 

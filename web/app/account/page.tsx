@@ -19,9 +19,11 @@ import { friendlyPasswordError, passwordError, passwordSatisfies } from '@/lib/p
 import { getMyCompany, type Company } from '@/lib/account'
 import { verifyCurrentPassword } from '@/lib/reauth'
 import { Chargement } from '@/components/Chargement'
+import { LANGUES, NOM_LANGUE, changerLangue, useTraduction } from '@/lib/i18n'
 
 export default function AccountPage() {
   const guard = useAuthGuard('auth')
+  const { t, langue } = useTraduction()
   const [email, setEmail] = useState('')
   const [company, setCompany] = useState<Company | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -46,7 +48,7 @@ export default function AccountPage() {
     const { data, error } = await supabase.rpc('export_my_data')
     setExporting(false)
     if (error || !data) {
-      alert('Export impossible pour le moment. Réessayez dans un instant.')
+      alert(t('Export impossible pour le moment. Réessayez dans un instant.'))
       return
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -59,15 +61,15 @@ export default function AccountPage() {
   }
 
   async function demanderSuppression() {
-    if (!confirm('Demander la suppression de votre compte ?\n\nVos comptages seront anonymisés et conservés pour les inventaires auxquels vous avez participé ; votre compte sera supprimé.')) return
+    if (!confirm(t('Demander la suppression de votre compte ?\n\nVos comptages seront anonymisés et conservés pour les inventaires auxquels vous avez participé ; votre compte sera supprimé.'))) return
     const { data, error } = await supabase.rpc('request_account_deletion')
     if (error || !data?.success) {
-      alert('Demande impossible pour le moment. Réessayez dans un instant.')
+      alert(t('Demande impossible pour le moment. Réessayez dans un instant.'))
       return
     }
     alert(data.already
-      ? 'Votre demande est déjà enregistrée.'
-      : 'Demande enregistrée. Nous la traitons sous quelques jours.')
+      ? t('Votre demande est déjà enregistrée.')
+      : t('Demande enregistrée. Nous la traitons sous quelques jours.'))
   }
 
   if (guard.status !== 'ready') {
@@ -76,24 +78,24 @@ export default function AccountPage() {
 
   const profile = guard.profile
   const role = profile.is_admin
-    ? 'Administrateur Quantinvo'
+    ? t('Administrateur Quantinvo')
     : profile.is_company_admin
-      ? 'Administrateur d’entreprise'
-      : profile.role === 'supervisor' ? 'Superviseur' : 'Compteur'
+      ? t('Administrateur d’entreprise')
+      : profile.role === 'supervisor' ? t('Superviseur') : t('Compteur')
 
   return (
     <AppShell profile={profile} companyName={company?.name}>
       <div className="app-head">
-        <h1 className="page-title">Mon compte</h1>
+        <h1 className="page-title">{t('Mon compte')}</h1>
       </div>
 
       <div className="panel" style={{ marginTop: 0 }}>
-        <h3>Mes informations</h3>
+        <h3>{t('Mes informations')}</h3>
         <div style={{ marginTop: 12 }}>
-          <div className="acc-kv"><span>Nom</span><strong>{profile.full_name || '—'}</strong></div>
-          <div className="acc-kv"><span>Adresse e-mail</span><strong>{email || '—'}</strong></div>
+          <div className="acc-kv"><span>{t('Nom complet')}</span><strong>{profile.full_name || '—'}</strong></div>
+          <div className="acc-kv"><span>{t('Adresse e-mail')}</span><strong>{email || '—'}</strong></div>
           <div className="acc-kv">
-            <span>Rôle</span>
+            <span>{t('Rôle')}</span>
             <strong>{role}{company?.name ? ` — ${company.name}` : ''}</strong>
           </div>
         </div>
@@ -103,11 +105,34 @@ export default function AccountPage() {
         <ModifierMonNom profile={profile} onSaved={charger} />
       </div>
 
+      {/* La langue de l'interface (10 septembre 2026). Le choix vaut pour ce
+          navigateur, comme le thème : la langue d'un poste n'est pas celle du
+          téléphone, et chaque appareil garde la sienne. */}
       <div className="panel">
-        <h3>Mot de passe</h3>
+        <h3>{t('Langue')}</h3>
         <p className="muted small">
-          Il fallait jusqu&apos;ici se déconnecter et passer par «&nbsp;mot de passe
-          oublié&nbsp;». Vous pouvez le changer ici, en restant connecté.
+          {t('Le choix vaut pour ce navigateur. Les rapports et les e-mails restent en français.')}
+        </p>
+        <div className="langue-choix" role="radiogroup" aria-label={t('Langue')}>
+          {LANGUES.map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={l === langue}
+              className={`btn btn-sm ${l === langue ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => changerLangue(l)}
+            >
+              {NOM_LANGUE[l]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel">
+        <h3>{t('Mot de passe')}</h3>
+        <p className="muted small">
+          {t("Il fallait jusqu'ici se déconnecter et passer par « mot de passe oublié ». Vous pouvez le changer ici, en restant connecté.")}
         </p>
         <ChangerMotDePasse email={email} />
       </div>
@@ -115,18 +140,16 @@ export default function AccountPage() {
       <MfaPanel />
 
       <div className="panel">
-        <h3>Mes données</h3>
+        <h3>{t('Mes données')}</h3>
         <p className="muted small">
-          Téléchargez une copie des données associées à votre compte — profil, inventaires,
-          invitations, demandes — dans un format lisible et réutilisable
-          (articles 15 et 20 du RGPD).
+          {t('Téléchargez une copie des données associées à votre compte — profil, inventaires, invitations, demandes — dans un format lisible et réutilisable (articles 15 et 20 du RGPD).')}
         </p>
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
           <button className="btn btn-ghost" onClick={downloadMyData} disabled={exporting}>
-            {exporting ? 'Préparation…' : 'Télécharger mes données'}
+            {exporting ? t('Préparation…') : t('Télécharger mes données')}
           </button>
           <button className="btn btn-danger" onClick={demanderSuppression}>
-            Supprimer mon compte
+            {t('Supprimer mon compte')}
           </button>
         </div>
       </div>
@@ -142,6 +165,7 @@ export default function AccountPage() {
  * une requête forgée ne peut toucher qu'au nom.
  */
 function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+  const { t } = useTraduction()
   const [ouvert, setOuvert] = useState(false)
   const [nom, setNom] = useState(profile.full_name ?? '')
   const [busy, setBusy] = useState(false)
@@ -149,7 +173,7 @@ function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () =>
   if (!ouvert) {
     return (
       <button className="btn btn-ghost btn-sm" style={{ marginTop: 14 }} onClick={() => { setNom(profile.full_name ?? ''); setOuvert(true) }}>
-        Modifier mon nom
+        {t('Modifier mon nom')}
       </button>
     )
   }
@@ -157,7 +181,7 @@ function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () =>
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault()
     const propre = nom.trim().replace(/\s+/g, ' ')
-    if (propre.length < 2) { alert('Indiquez au moins deux caractères.'); return }
+    if (propre.length < 2) { alert(t('Indiquez au moins deux caractères.')); return }
     const morceaux = propre.split(' ')
     setBusy(true)
     const { error } = await supabase
@@ -169,18 +193,18 @@ function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () =>
       })
       .eq('id', profile.id)
     setBusy(false)
-    if (error) { alert('Modification impossible pour le moment.'); return }
+    if (error) { alert(t('Modification impossible pour le moment.')); return }
     setOuvert(false)
     onSaved()
   }
 
   return (
     <form onSubmit={enregistrer} className="inline-form" style={{ marginTop: 14, flexWrap: 'wrap' }}>
-      <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Prénom et nom" style={{ minWidth: 220 }} autoFocus />
+      <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder={t('Prénom et nom')} style={{ minWidth: 220 }} autoFocus />
       <button className="btn btn-primary btn-sm" disabled={busy || nom.trim() === (profile.full_name ?? '')}>
-        {busy ? 'Enregistrement…' : 'Enregistrer'}
+        {busy ? t('Enregistrement…') : t('Enregistrer')}
       </button>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOuvert(false)}>Annuler</button>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOuvert(false)}>{t('Annuler')}</button>
     </form>
   )
 }
@@ -202,6 +226,7 @@ function ModifierMonNom({ profile, onSaved }: { profile: Profile; onSaved: () =>
  * oublié », qui vérifie l'identité par l'e-mail.
  */
 function ChangerMotDePasse({ email }: { email: string }) {
+  const { t } = useTraduction()
   const [ouvert, setOuvert] = useState(false)
   const [actuel, setActuel] = useState('')
   const [mdp, setMdp] = useState('')
@@ -214,9 +239,9 @@ function ChangerMotDePasse({ email }: { email: string }) {
     return (
       <div style={{ marginTop: 14 }}>
         <button className="btn btn-ghost btn-sm" onClick={() => { setFait(false); setOuvert(true) }}>
-          Changer mon mot de passe
+          {t('Changer mon mot de passe')}
         </button>
-        {fait && <p className="balise-done" role="status" style={{ marginTop: 10 }}>Mot de passe modifié.</p>}
+        {fait && <p className="balise-done" role="status" style={{ marginTop: 10 }}>{t('Mot de passe modifié.')}</p>}
       </div>
     )
   }
@@ -224,17 +249,17 @@ function ChangerMotDePasse({ email }: { email: string }) {
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault()
     const probleme = passwordError(mdp)
-    if (probleme) { setErreur(probleme); return }
-    if (mdp !== confirmation) { setErreur('Les deux saisies ne correspondent pas.'); return }
+    if (probleme) { setErreur(t(probleme)); return }
+    if (mdp !== confirmation) { setErreur(t('Les deux saisies ne correspondent pas.')); return }
     setBusy(true)
     if (!(await verifyCurrentPassword(email, actuel))) {
       setBusy(false)
-      setErreur('Mot de passe actuel incorrect. Si vous ne vous en souvenez plus, passez par « mot de passe oublié ».')
+      setErreur(t('Mot de passe actuel incorrect. Si vous ne vous en souvenez plus, passez par « mot de passe oublié ».'))
       return
     }
     const { error } = await supabase.auth.updateUser({ password: mdp })
     setBusy(false)
-    if (error) { setErreur(friendlyPasswordError(error.message)); return }
+    if (error) { setErreur(t(friendlyPasswordError(error.message))); return }
     setActuel(''); setMdp(''); setConfirmation(''); setErreur(null)
     setOuvert(false); setFait(true)
   }
@@ -243,17 +268,17 @@ function ChangerMotDePasse({ email }: { email: string }) {
     <form onSubmit={enregistrer} style={{ marginTop: 14 }}>
       {erreur && <div className="error" role="alert">{erreur}</div>}
       <div className="field">
-        <label htmlFor="mdp-actuel">Mot de passe actuel</label>
+        <label htmlFor="mdp-actuel">{t('Mot de passe actuel')}</label>
         <input
           id="mdp-actuel" type="password" autoComplete="current-password" value={actuel}
           onChange={(e) => { setActuel(e.target.value); setErreur(null) }} autoFocus
         />
         <p className="muted small" style={{ marginTop: 6 }}>
-          <Link href="/mot-de-passe-oublie">Mot de passe oublié&nbsp;?</Link>
+          <Link href="/mot-de-passe-oublie">{t('Mot de passe oublié ?')}</Link>
         </p>
       </div>
       <div className="field">
-        <label htmlFor="mdp-nouveau">Nouveau mot de passe</label>
+        <label htmlFor="mdp-nouveau">{t('Nouveau mot de passe')}</label>
         <input
           id="mdp-nouveau" type="password" autoComplete="new-password" value={mdp}
           onChange={(e) => { setMdp(e.target.value); setErreur(null) }}
@@ -261,7 +286,7 @@ function ChangerMotDePasse({ email }: { email: string }) {
         <PasswordRules password={mdp} />
       </div>
       <div className="field">
-        <label htmlFor="mdp-confirmation">Confirmer</label>
+        <label htmlFor="mdp-confirmation">{t('Confirmer')}</label>
         <input
           id="mdp-confirmation" type="password" autoComplete="new-password" value={confirmation}
           onChange={(e) => { setConfirmation(e.target.value); setErreur(null) }}
@@ -269,10 +294,10 @@ function ChangerMotDePasse({ email }: { email: string }) {
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button className="btn btn-primary btn-sm" disabled={busy || !actuel || !passwordSatisfies(mdp) || mdp !== confirmation}>
-          {busy ? 'Enregistrement…' : 'Enregistrer'}
+          {busy ? t('Enregistrement…') : t('Enregistrer')}
         </button>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setOuvert(false); setErreur(null); setActuel(''); setMdp(''); setConfirmation('') }}>
-          Annuler
+          {t('Annuler')}
         </button>
       </div>
     </form>

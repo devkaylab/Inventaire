@@ -21,6 +21,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
 import { getMyCompany, type Company } from '@/lib/account'
 import { Chargement } from '@/components/Chargement'
+import { locale, t, tn, useTraduction } from '@/lib/i18n'
 
 type Store = { id: string; name: string }
 type Member = {
@@ -56,20 +57,21 @@ type TeamSup = { stores: StoreTeam[]; invitations: Invitation[] }
 
 /** Date courte, comme sur la maquette : « 14/08 ». */
 function jourCourt(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+  return new Date(iso).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' })
 }
 
 /** Pastille « le compte existe mais n'a pas encore servi ». */
 function BadgeEnAttente() {
   return (
     <span className="dash-badge dash-badge-counting" style={{ marginLeft: 8 }}>
-      <span className="dash-dot" />Mot de passe à créer
+      <span className="dash-dot" />{t('Mot de passe à créer')}
     </span>
   )
 }
 
 export default function EquipePage() {
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const confirm = useConfirm()
   const [company, setCompany] = useState<Company | null>(null)
   const [ca, setCa] = useState<TeamCA | null>(null)
@@ -115,11 +117,11 @@ export default function EquipePage() {
     })
     setBusy(false)
     if (error || !data?.success) {
-      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
+      alert(t('Erreur : %{detail}', { detail: data?.error ?? error?.message ?? t('inconnue') }))
       await rafraichir()
       return false
     }
-    alert(`Invitation envoyée. ${data.email} reçoit un e-mail pour créer son mot de passe.`)
+    alert(t('Invitation envoyée. %{email} reçoit un e-mail pour créer son mot de passe.', { email: data.email }))
     await rafraichir()
     return true
   }
@@ -140,15 +142,15 @@ export default function EquipePage() {
     })
     setBusy(false)
     if (error || !data?.success) {
-      alert('Erreur : ' + (data?.error ?? error?.message ?? 'inconnue'))
+      alert(t('Erreur : %{detail}', { detail: data?.error ?? error?.message ?? t('inconnue') }))
       return false
     }
     alert(
       data.emailSent
-        ? `Invitation envoyée. ${firstName} ${lastName} reçoit un e-mail pour créer son mot de passe.`
+        ? t('Invitation envoyée. %{nom} reçoit un e-mail pour créer son mot de passe.', { nom: `${firstName} ${lastName}` })
         : data.alreadyInvited
-          ? `${firstName} ${lastName} avait déjà été invité : le lien reçu précédemment reste valable.`
-          : `${firstName} ${lastName} a été ajouté, mais l’e-mail n’a pas pu partir (${data.emailError ?? 'raison inconnue'}).`,
+          ? t('%{nom} avait déjà été invité : le lien reçu précédemment reste valable.', { nom: `${firstName} ${lastName}` })
+          : t('%{nom} a été ajouté, mais l’e-mail n’a pas pu partir (%{raison}).', { nom: `${firstName} ${lastName}`, raison: data.emailError ?? t('raison inconnue') }),
     )
     await rafraichir()
     return true
@@ -157,7 +159,7 @@ export default function EquipePage() {
   async function appliquer(fn: string, args: Record<string, unknown>) {
     const { data, error } = await supabase.rpc(fn, args)
     if (error || !data?.success) {
-      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      alert(t('Erreur : %{detail}', { detail: error?.message ?? data?.error ?? t('inconnue') }))
       return
     }
     rafraichir()
@@ -177,15 +179,15 @@ export default function EquipePage() {
   async function supprimerCompte(p: { id: string; full_name: string | null; email: string | null }) {
     const nom = (p.full_name ?? '').trim()
     const ok = await confirm({
-      title: 'Supprimer définitivement ce compte ?',
-      message: 'Cette suppression est définitive.',
+      title: t('Supprimer définitivement ce compte ?'),
+      message: t('Cette suppression est définitive.'),
       details: [
-        `${nom || 'Sans nom'} — ${p.email ?? 'adresse inconnue'}`,
-        'La personne perd l’accès à Quantinvo immédiatement.',
-        'Ses comptages restent, mais son nom disparaît des rapports déjà faits.',
-        'Ses invitations en cours sont annulées.',
+        `${nom || t('Sans nom')} — ${p.email ?? t('adresse inconnue')}`,
+        t('La personne perd l’accès à Quantinvo immédiatement.'),
+        t('Ses comptages restent, mais son nom disparaît des rapports déjà faits.'),
+        t('Ses invitations en cours sont annulées.'),
       ],
-      confirmLabel: 'Supprimer définitivement',
+      confirmLabel: t('Supprimer définitivement'),
       tone: 'danger',
       requireText: nom || p.email || 'SUPPRIMER',
     })
@@ -207,26 +209,26 @@ export default function EquipePage() {
    * c'est réversible d'un clic, contrairement à la suppression.
    */
   async function changerRole(m: Member, vers: 'supervisor' | 'employee') {
-    const nom = m.full_name || 'Cette personne'
+    const nom = m.full_name || t('Cette personne')
     const magasins = m.store_ids.length
     const details = vers === 'supervisor'
       ? [
           magasins > 0
-            ? `${nom} garde ${magasins === 1 ? 'son magasin' : `ses ${magasins} magasins`}, mais en tant que superviseur.`
-            : `${nom} n’a aucun magasin : affectez-lui-en un d’abord, un superviseur en a toujours au moins un.`,
-          'Elle pourra créer des inventaires, importer les fichiers et gérer les compteurs de ses magasins.',
+            ? tn('%{nom} garde son magasin, mais en tant que superviseur.', '%{nom} garde ses %{count} magasins, mais en tant que superviseur.', magasins, { nom })
+            : t('%{nom} n’a aucun magasin : affectez-lui-en un d’abord, un superviseur en a toujours au moins un.', { nom }),
+          t('Elle pourra créer des inventaires, importer les fichiers et gérer les compteurs de ses magasins.'),
         ]
       : [
           magasins > 0
-            ? `${nom} garde ${magasins === 1 ? 'son magasin' : `ses ${magasins} magasins`}, mais en tant que compteur.`
-            : `${nom} n’a aucun magasin : elle restera sans accès tant qu’on ne lui en affecte pas un.`,
-          'Elle ne pourra plus créer ni clôturer d’inventaire, y compris ceux qu’elle a créés.',
+            ? tn('%{nom} garde son magasin, mais en tant que compteur.', '%{nom} garde ses %{count} magasins, mais en tant que compteur.', magasins, { nom })
+            : t('%{nom} n’a aucun magasin : elle restera sans accès tant qu’on ne lui en affecte pas un.', { nom }),
+          t('Elle ne pourra plus créer ni clôturer d’inventaire, y compris ceux qu’elle a créés.'),
         ]
     const ok = await confirm({
-      title: vers === 'supervisor' ? 'Passer cette personne superviseur ?' : 'Passer cette personne compteur ?',
-      message: `${nom} — ${m.email ?? 'adresse inconnue'}`,
+      title: vers === 'supervisor' ? t('Passer cette personne superviseur ?') : t('Passer cette personne compteur ?'),
+      message: `${nom} — ${m.email ?? t('adresse inconnue')}`,
       details,
-      confirmLabel: vers === 'supervisor' ? 'Passer superviseur' : 'Passer compteur',
+      confirmLabel: vers === 'supervisor' ? t('Passer superviseur') : t('Passer compteur'),
     })
     if (!ok) return
     appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })
@@ -307,38 +309,36 @@ export default function EquipePage() {
     const intouchable = m.is_company_admin || m.id === guard.profile.id
     const actions: ActionRangee[] = intouchable ? [] : [
       {
-        libelle: superviseur ? 'Passer compteur' : 'Passer superviseur',
+        libelle: superviseur ? t('Passer compteur') : t('Passer superviseur'),
         onClick: () => changerRole(m, superviseur ? 'employee' : 'supervisor'),
       },
       ...(superviseur ? [{
-        libelle: 'Retirer les accès',
+        libelle: t('Retirer les accès'),
         onClick: async () => {
           const ok = await confirm({
-            title: 'Retirer tous les accès ?',
-            message: `${m.full_name || 'Cette personne'} garde son compte, mais n’aura plus accès à aucun magasin.`,
-            confirmLabel: 'Retirer les accès',
+            title: t('Retirer tous les accès ?'),
+            message: t('%{nom} garde son compte, mais n’aura plus accès à aucun magasin.', { nom: m.full_name || t('Cette personne') }),
+            confirmLabel: t('Retirer les accès'),
           })
           if (ok) appliquer('ca_remove_supervisor', { p_user: m.id })
         },
       }] : []),
-      // ⚠️ La suppression garde sa recopie du nom : le menu déplace un bouton,
-      // il n'allège aucun garde-fou.
-      { libelle: 'Supprimer le compte', onClick: () => supprimerCompte(m), destructif: true },
+      { libelle: t('Supprimer le compte'), onClick: () => supprimerCompte(m), destructif: true },
     ]
     return (
       <Fragment key={m.id}>
         <div>
           <div className="membres-nom">
-            {m.full_name || 'Sans nom'}
-            {m.id === guard.profile.id && <span className="pill pill-vous">Vous</span>}
+            {m.full_name || t('Sans nom')}
+            {m.id === guard.profile.id && <span className="pill pill-vous">{t('Vous')}</span>}
           </div>
           <div className="membres-mail">{m.email}</div>
         </div>
 
         <div>
           {m.is_company_admin
-            ? <span className="pill">Admin</span>
-            : <span className="pill pill-role">{superviseur ? 'Superviseur' : 'Compteur'}</span>}
+            ? <span className="pill">{t('Admin')}</span>
+            : <span className="pill pill-role">{superviseur ? t('Superviseur') : t('Compteur')}</span>}
         </div>
 
         <div className="membres-cell">
@@ -346,16 +346,16 @@ export default function EquipePage() {
               affectations ne se modifient pas, une croix qui ne marche pas
               est pire que pas de croix. */}
           {m.is_company_admin ? (
-            <>Tous les magasins{m.store_ids.length > 0 ? ` (${m.store_ids.length})` : ''}</>
+            <>{t('Tous les magasins')}{m.store_ids.length > 0 ? ` (${m.store_ids.length})` : ''}</>
           ) : (
             <div className="store-sup">
-              {m.store_ids.length === 0 && <span className="muted small">Aucun magasin</span>}
+              {m.store_ids.length === 0 && <span className="muted small">{t('Aucun magasin')}</span>}
               {m.store_ids.map((sid) => (
                 <span className="chip" key={sid}>
-                  {storeById[sid]?.name || 'Magasin'}
+                  {storeById[sid]?.name || t('Magasin')}
                   <button
                     className="chip-x"
-                    aria-label={`Retirer du magasin ${storeById[sid]?.name || ''}`}
+                    aria-label={t('Retirer du magasin %{nom}', { nom: storeById[sid]?.name || '' })}
                     onClick={() => changerMagasins(m, m.store_ids.filter((x) => x !== sid))}
                   >×</button>
                 </span>
@@ -364,13 +364,13 @@ export default function EquipePage() {
                 <select
                   className="store-sup-select"
                   value=""
-                  aria-label={`Affecter un magasin à ${m.full_name || 'cette personne'}`}
+                  aria-label={t('Affecter un magasin à %{nom}', { nom: m.full_name || t('cette personne') })}
                   onChange={(e) => {
                     if (!e.target.value) return
                     changerMagasins(m, [...m.store_ids, e.target.value])
                   }}
                 >
-                  <option value="">+ Affecter un magasin</option>
+                  <option value="">{t('+ Affecter un magasin')}</option>
                   {(ca?.stores ?? []).filter((s) => !m.store_ids.includes(s.id)).map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
@@ -385,16 +385,16 @@ export default function EquipePage() {
             colonne qui appelle un geste, donc le seul qui porte l'ambre. */}
         <div className={`membres-cell${!m.is_active ? ' attente' : ''}`}>
           {!m.is_active
-            ? 'Mot de passe à créer'
+            ? t('Mot de passe à créer')
             : m.sessions_counted > 0
-              ? `${m.sessions_counted} inventaire${m.sessions_counted > 1 ? 's' : ''}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
-              : 'Pas encore de comptage'}
+              ? `${tn('%{count} inventaire', '%{count} inventaires', m.sessions_counted)}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
+              : t('Pas encore de comptage')}
         </div>
 
         <div className="membres-fin">
           {intouchable
-            ? <span className="muted small">Géré par Quantinvo</span>
-            : <MenuActions libelle={`Actions pour ${m.full_name || 'cette personne'}`} actions={actions} />}
+            ? <span className="muted small">{t('Géré par Quantinvo')}</span>
+            : <MenuActions libelle={t('Actions pour %{nom}', { nom: m.full_name || t('cette personne') })} actions={actions} />}
         </div>
       </Fragment>
     )
@@ -404,11 +404,11 @@ export default function EquipePage() {
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
         <div>
-          <h1 className="page-title">Mon équipe</h1>
+          <h1 className="page-title">{t('Mon équipe')}</h1>
           <p className="page-sub">
             {estAdmin
-              ? 'Qui travaille dans votre entreprise, et sur quels magasins.'
-              : 'Les personnes qui comptent dans vos magasins.'}
+              ? t('Qui travaille dans votre entreprise, et sur quels magasins.')
+              : t('Les personnes qui comptent dans vos magasins.')}
           </p>
         </div>
         {/* Une seule porte pour l'administrateur : le rôle se choisit dans le
@@ -419,7 +419,7 @@ export default function EquipePage() {
             className="btn btn-primary btn-sm"
             onClick={() => setAjoutOuvert((v) => !v)}
           >
-            {ajoutOuvert ? 'Fermer' : '+ Ajouter une personne'}
+            {ajoutOuvert ? t('Fermer') : t('+ Ajouter une personne')}
           </button>
         ) : (
           <AddCounter onAdded={rafraichir} />
@@ -428,8 +428,7 @@ export default function EquipePage() {
 
       {estAdmin && !mfaEnrolled && (
         <div className="banner banner-warn">
-          Vous gérez les accès de l&apos;entreprise&nbsp;: protégez votre compte avec la double
-          authentification, depuis <Link href="/account" style={{ textDecoration: 'underline' }}>Mon compte</Link>.
+          {t("Vous gérez les accès de l'entreprise : protégez votre compte avec la double authentification, depuis ")}<Link href="/account" style={{ textDecoration: 'underline' }}>{t('Mon compte')}</Link>.
         </div>
       )}
 
@@ -453,19 +452,19 @@ export default function EquipePage() {
         <div className="resume-bande">
           <div>
             <strong className="num">{membres.length}</strong>
-            <span>Personne{membres.length > 1 ? 's' : ''}</span>
+            <span>{tn('Personne', 'Personnes', membres.length)}</span>
           </div>
           <div>
             <strong className="num">{membres.filter((m) => m.role === 'supervisor').length}</strong>
-            <span>Superviseurs</span>
+            <span>{t('Superviseurs')}</span>
           </div>
           <div>
             <strong className="num">{membres.filter((m) => m.role === 'employee').length}</strong>
-            <span>Compteurs</span>
+            <span>{t('Compteurs')}</span>
           </div>
           <div className={membres.some((m) => !m.is_active) ? 'attention' : undefined}>
             <strong className="num">{membres.filter((m) => !m.is_active).length}</strong>
-            <span>Mot de passe à créer</span>
+            <span>{t('Mot de passe à créer')}</span>
           </div>
         </div>
       )}
@@ -480,9 +479,9 @@ export default function EquipePage() {
             <section className="admin-section">
               <div className="admin-section-head">
                 <div>
-                  <h2>Invitations en attente</h2>
+                  <h2>{t('Invitations en attente')}</h2>
                   <p className="section-note">
-                    Ces personnes ont reçu un lien et n’ont pas encore créé leur compte.
+                    {t('Ces personnes ont reçu un lien et n’ont pas encore créé leur compte.')}
                   </p>
                 </div>
                 <span className="dash-sub-n">{invitations.length}</span>
@@ -494,17 +493,17 @@ export default function EquipePage() {
                       <div className="req-name">
                         {i.first_name} {i.last_name}
                         <span className="pill pill-role">
-                          {i.role === 'company_admin' ? 'Admin' : i.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
+                          {i.role === 'company_admin' ? t('Admin') : i.role === 'supervisor' ? t('Superviseur') : t('Compteur')}
                         </span>
                       </div>
                       <div className="muted small">
-                        {i.email} · envoyée le {jourCourt(i.created_at)}
-                        {i.store_ids.length > 0 && ` · ${i.store_ids.length} magasin${i.store_ids.length > 1 ? 's' : ''}`}
+                        {i.email} · {t('envoyée le %{date}', { date: jourCourt(i.created_at) })}
+                        {i.store_ids.length > 0 && ` · ${tn('%{count} magasin', '%{count} magasins', i.store_ids.length)}`}
                       </div>
                       {i.store_ids.length > 0 && (
                         <div className="store-sup" style={{ marginTop: 6 }}>
                           {i.store_ids.map((sid) => (
-                            <span className="chip" key={sid}>{storeById[sid]?.name || 'Magasin'}</span>
+                            <span className="chip" key={sid}>{storeById[sid]?.name || t('Magasin')}</span>
                           ))}
                         </div>
                       )}
@@ -514,14 +513,14 @@ export default function EquipePage() {
                         className="link-btn danger-link"
                         onClick={async () => {
                           const ok = await confirm({
-                            title: 'Annuler cette invitation ?',
-                            message: `${i.first_name} ${i.last_name} ne pourra plus créer son compte avec le lien reçu.`,
-                            confirmLabel: 'Annuler l’invitation',
+                            title: t('Annuler cette invitation ?'),
+                            message: t('%{nom} ne pourra plus créer son compte avec le lien reçu.', { nom: `${i.first_name} ${i.last_name}` }),
+                            confirmLabel: t('Annuler l’invitation'),
                             tone: 'danger',
                           })
                           if (ok) appliquer('ca_cancel_invitation', { p_id: i.id })
                         }}
-                      >Annuler l&apos;invitation</button>
+                      >{t("Annuler l'invitation")}</button>
                     </div>
                   </div>
                 ))}
@@ -533,14 +532,13 @@ export default function EquipePage() {
           <section className="admin-section">
             <div className="admin-section-head">
               <div>
-                <h2>Membres</h2>
+                <h2>{t('Membres')}</h2>
                 <p className="section-note">
-                  Le rôle décide de ce que la personne peut faire&nbsp;; les magasins,
-                  de ce qu’elle voit.
+                  {t('Le rôle décide de ce que la personne peut faire ; les magasins, de ce qu’elle voit.')}
                 </p>
               </div>
               <span className="dash-sub-n">
-                {filtreActif ? `${membresFiltres.length} sur ${membres.length}` : membres.length}
+                {filtreActif ? `${membresFiltres.length} ${t('sur')} ${membres.length}` : membres.length}
               </span>
             </div>
 
@@ -548,16 +546,16 @@ export default function EquipePage() {
             <div className="champ-borne">
               <input
                 type="search" value={filtre} onChange={(e) => setFiltre(e.target.value)}
-                placeholder="Rechercher une personne…"
-                aria-label="Rechercher une personne"
+                placeholder={t('Rechercher une personne…')}
+                aria-label={t('Rechercher une personne')}
               />
             </div>
             <select
               value={magasinFiltre}
               onChange={(e) => setMagasinFiltre(e.target.value)}
-              aria-label="Filtrer par magasin"
+              aria-label={t('Filtrer par magasin')}
             >
-              <option value="">Tous les magasins</option>
+              <option value="">{t('Tous les magasins')}</option>
               {(ca?.stores ?? []).map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -565,27 +563,27 @@ export default function EquipePage() {
             <select
               value={profilFiltre}
               onChange={(e) => setProfilFiltre(e.target.value)}
-              aria-label="Filtrer par type de profil"
+              aria-label={t('Filtrer par type de profil')}
             >
-              <option value="">Tous les profils</option>
-              <option value="supervisor">Superviseurs</option>
-              <option value="employee">Compteurs</option>
+              <option value="">{t('Tous les profils')}</option>
+              <option value="supervisor">{t('Superviseurs')}</option>
+              <option value="employee">{t('Compteurs')}</option>
             </select>
             {filtreActif && (
-              <button className="link-btn" onClick={effacerFiltres}>Effacer les filtres</button>
+              <button className="link-btn" onClick={effacerFiltres}>{t('Effacer les filtres')}</button>
             )}
           </div>
 
           {membres.length === 0 ? (
-            <p className="muted">Personne dans votre entreprise pour l&apos;instant.</p>
+            <p className="muted">{t("Personne dans votre entreprise pour l'instant.")}</p>
           ) : membresFiltres.length === 0 ? (
-            <p className="muted small">Personne ne correspond à cette recherche.</p>
+            <p className="muted small">{t('Personne ne correspond à cette recherche.')}</p>
           ) : (
             <div className="membres">
-              <div className="membres-th">Personne</div>
-              <div className="membres-th">Rôle</div>
-              <div className="membres-th">Magasins</div>
-              <div className="membres-th">Activité</div>
+              <div className="membres-th">{t('Personne')}</div>
+              <div className="membres-th">{t('Rôle')}</div>
+              <div className="membres-th">{t('Magasins')}</div>
+              <div className="membres-th">{t('Activité')}</div>
               <div className="membres-th" />
               {membresFiltres.map(rangMembre)}
             </div>
@@ -594,8 +592,8 @@ export default function EquipePage() {
         </>
       ) : (sup?.stores ?? []).length === 0 ? (
         <section className="admin-section">
-          <h2>Compteurs</h2>
-          <p className="muted">Vous n&apos;êtes affecté à aucun magasin.</p>
+          <h2>{t('Compteurs')}</h2>
+          <p className="muted">{t("Vous n'êtes affecté à aucun magasin.")}</p>
         </section>
       ) : (
         // Le superviseur ordinaire garde son rangement MAGASIN PAR MAGASIN
@@ -608,28 +606,28 @@ export default function EquipePage() {
               <div>
                 <h2>{s.name}</h2>
                 <p className="section-note">
-                  Les compteurs de ce magasin. Les retirer d’ici ne touche pas aux autres.
+                  {t('Les compteurs de ce magasin. Les retirer d’ici ne touche pas aux autres.')}
                 </p>
               </div>
               <span className="dash-sub-n">{s.counters.length}</span>
             </div>
             {s.counters.length === 0 ? (
-              <p className="muted small">Aucun compteur sur ce magasin.</p>
+              <p className="muted small">{t('Aucun compteur sur ce magasin.')}</p>
             ) : (
               <div className="req-list">
                 {s.counters.map((c) => (
                   <div className="req-row" key={c.id}>
                     <div>
                       <div className="req-name">
-                        {c.full_name || 'Sans nom'}
+                        {c.full_name || t('Sans nom')}
                         {!c.is_active && <BadgeEnAttente />}
                       </div>
                       <div className="muted small">
                         {c.email}
                         {c.sessions_counted > 0
-                          ? ` · a compté ${c.sessions_counted} inventaire${c.sessions_counted > 1 ? 's' : ''}`
-                          : ' · pas encore de comptage'}
-                        {c.last_count_at && ` · dernier le ${jourCourt(c.last_count_at)}`}
+                          ? ` · ${tn('a compté %{count} inventaire', 'a compté %{count} inventaires', c.sessions_counted)}`
+                          : ` · ${t('pas encore de comptage')}`}
+                        {c.last_count_at && ` · ${t('dernier le %{date}', { date: jourCourt(c.last_count_at) })}`}
                       </div>
                     </div>
                     <div className="req-actions">
@@ -639,13 +637,13 @@ export default function EquipePage() {
                         className="link-btn"
                         onClick={async () => {
                           const ok = await confirm({
-                            title: `Retirer du magasin ${s.name} ?`,
-                            message: `${c.full_name || 'Cette personne'} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.`,
-                            confirmLabel: 'Retirer du magasin',
+                            title: t('Retirer du magasin %{nom} ?', { nom: s.name }),
+                            message: t('%{nom} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.', { nom: c.full_name || t('Cette personne') }),
+                            confirmLabel: t('Retirer du magasin'),
                           })
                           if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
                         }}
-                      >Retirer du magasin</button>
+                      >{t('Retirer du magasin')}</button>
                     </div>
                   </div>
                 ))}
@@ -662,9 +660,9 @@ export default function EquipePage() {
         <section className="admin-section">
           <div className="admin-section-head">
             <div>
-              <h2>Invitations en cours</h2>
+              <h2>{t('Invitations en cours')}</h2>
               <p className="section-note">
-                Ces personnes ont reçu un lien et n’ont pas encore créé leur compte.
+                {t('Ces personnes ont reçu un lien et n’ont pas encore créé leur compte.')}
               </p>
             </div>
             <span className="dash-sub-n">{(sup?.invitations ?? []).length}</span>
@@ -676,7 +674,7 @@ export default function EquipePage() {
                   <div className="req-name">
                     {i.first_name} {i.last_name}{' '}
                     <span className="pill">
-                      {i.role === 'company_admin' ? 'Admin' : i.role === 'supervisor' ? 'Superviseur' : 'Compteur'}
+                      {i.role === 'company_admin' ? t('Admin') : i.role === 'supervisor' ? t('Superviseur') : t('Compteur')}
                     </span>
                   </div>
                   <div className="muted small">{i.email}</div>
@@ -688,14 +686,14 @@ export default function EquipePage() {
                   className="btn btn-ghost btn-sm"
                   onClick={async () => {
                     const ok = await confirm({
-                      title: 'Annuler cette invitation ?',
-                      message: `${i.first_name} ${i.last_name} ne recevra pas d’accès. Vous pourrez l’inviter à nouveau.`,
-                      confirmLabel: 'Annuler l’invitation',
-                      cancelLabel: 'Revenir',
+                      title: t('Annuler cette invitation ?'),
+                      message: t('%{nom} ne recevra pas d’accès. Vous pourrez l’inviter à nouveau.', { nom: `${i.first_name} ${i.last_name}` }),
+                      confirmLabel: t('Annuler l’invitation'),
+                      cancelLabel: t('Revenir'),
                     })
                     if (ok) appliquer('cancel_my_invitation', { p_id: i.id })
                   }}
-                >Annuler</button>
+                >{t('Annuler')}</button>
               </div>
             ))}
           </div>
@@ -728,6 +726,7 @@ function AjouterPersonne({
   onSuperviseur: (firstName: string, lastName: string, email: string, storeIds: string[]) => Promise<boolean>
   onFermer: () => void
 }) {
+  const { t } = useTraduction()
   const [role, setRole] = useState<'employee' | 'supervisor'>('employee')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -794,7 +793,7 @@ function AjouterPersonne({
 
   return (
     <form onSubmit={submit} className="panel">
-      <h3>Ajouter une personne</h3>
+      <h3>{t('Ajouter une personne')}</h3>
 
       <div className="role-choix" style={{ marginTop: 14 }}>
         <button
@@ -805,9 +804,9 @@ function AjouterPersonne({
         >
           <span className="role-radio" />
           <span>
-            <span className="role-nom">Compteur</span>
+            <span className="role-nom">{t('Compteur')}</span>
             <span className="role-quoi" style={{ display: 'block' }}>
-              Scanne sur le terrain, depuis l&apos;application.
+              {t("Scanne sur le terrain, depuis l'application.")}
             </span>
           </span>
         </button>
@@ -819,20 +818,20 @@ function AjouterPersonne({
         >
           <span className="role-radio" />
           <span>
-            <span className="role-nom">Superviseur</span>
+            <span className="role-nom">{t('Superviseur')}</span>
             <span className="role-quoi" style={{ display: 'block' }}>
-              Prépare les inventaires, gère les compteurs de ses magasins.
+              {t('Prépare les inventaires, gère les compteurs de ses magasins.')}
             </span>
           </span>
         </button>
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <div className="champ-label">Identité</div>
+        <div className="champ-label">{t('Identité')}</div>
         <div className="inline-form" style={{ flexWrap: 'wrap' }}>
-          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" style={{ minWidth: 140 }} />
-          <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" style={{ minWidth: 140 }} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" type="email" style={{ minWidth: 220 }} />
+          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t('Prénom')} style={{ minWidth: 140 }} />
+          <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t('Nom')} style={{ minWidth: 140 }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('Adresse e-mail')} type="email" style={{ minWidth: 220 }} />
         </div>
       </div>
 
@@ -843,36 +842,35 @@ function AjouterPersonne({
           pas. ── */}
       {role === 'employee' && (
         <div style={{ marginTop: 18 }}>
-          <div className="champ-label">Superviseur</div>
+          <div className="champ-label">{t('Superviseur')}</div>
           {superviseurs.length === 0 ? (
             <>
               <div className="vide-cadre">
-                Votre entreprise n&apos;a encore aucun superviseur. Un compteur compte toujours
-                pour quelqu&apos;un&nbsp;: commencez par en inviter un.
+                {t("Votre entreprise n'a encore aucun superviseur. Un compteur compte toujours pour quelqu'un : commencez par en inviter un.")}
               </div>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 style={{ marginTop: 10 }}
                 onClick={() => { setRole('supervisor'); setSelected([]); setSuperviseur('') }}
-              >Inviter un superviseur</button>
+              >{t('Inviter un superviseur')}</button>
             </>
           ) : (
             <select
               className="champ-select"
               value={superviseur}
               onChange={(e) => changerSuperviseur(e.target.value)}
-              aria-label="Superviseur de ce compteur"
+              aria-label={t('Superviseur de ce compteur')}
             >
-              <option value="">Choisir le superviseur de ce compteur…</option>
+              <option value="">{t('Choisir le superviseur de ce compteur…')}</option>
               {superviseurs.map((m) => {
                 const n = magasinsDe(m).length
                 return (
                   <option key={m.id} value={m.id}>
-                    {m.full_name || m.email || 'Sans nom'}
-                    {m.id === moi ? ' (vous)' : ''}
+                    {m.full_name || m.email || t('Sans nom')}
+                    {m.id === moi ? ` (${t('vous')})` : ''}
                     {' — '}
-                    {m.is_company_admin ? 'tous les magasins' : `${n} magasin${n > 1 ? 's' : ''}`}
+                    {m.is_company_admin ? t('tous les magasins') : tn('%{count} magasin', '%{count} magasins', n)}
                   </option>
                 )
               })}
@@ -884,11 +882,11 @@ function AjouterPersonne({
       {(role === 'supervisor' || superviseurs.length > 0) && stores.length > 0 && (
         <div style={{ marginTop: 18 }}>
           <div className="champ-label">
-            Magasins <span className="obligatoire">· au moins un</span>
+            {t('Magasins')} <span className="obligatoire">{t('· au moins un')}</span>
           </div>
           {magasinsProposes.length === 0 ? (
             <div className="vide-cadre">
-              Choisissez d&apos;abord un superviseur&nbsp;: les magasins proposés seront les siens.
+              {t("Choisissez d'abord un superviseur : les magasins proposés seront les siens.")}
             </div>
           ) : (
             <>
@@ -909,8 +907,7 @@ function AjouterPersonne({
                   chercher un défaut là où il y a une règle. */}
               {choisi && magasinsProposes.length < stores.length && (
                 <p className="muted small" style={{ marginTop: 8 }}>
-                  Les autres magasins de l&apos;entreprise ne sont pas proposés&nbsp;:
-                  {' '}{choisi.full_name || 'cette personne'} ne les supervise pas.
+                  {t("Les autres magasins de l'entreprise ne sont pas proposés : %{nom} ne les supervise pas.", { nom: choisi.full_name || t('cette personne') })}
                 </p>
               )}
             </>
@@ -920,15 +917,15 @@ function AjouterPersonne({
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 18 }}>
         <button className="btn btn-primary" disabled={busy || incomplet}>
-          Envoyer l&apos;invitation
+          {t("Envoyer l'invitation")}
         </button>
-        <button type="button" className="btn btn-ghost" onClick={onFermer}>Annuler</button>
+        <button type="button" className="btn btn-ghost" onClick={onFermer}>{t('Annuler')}</button>
       </div>
 
       <p className="muted small" style={{ marginTop: 12 }}>
         {role === 'supervisor'
-          ? 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Un superviseur a toujours au moins un magasin.'
-          : 'La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Le superviseur choisi ne sert qu’à trouver le bon magasin : c’est le magasin qui donne l’accès.'}
+          ? t('La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Un superviseur a toujours au moins un magasin.')
+          : t('La personne reçoit un e-mail pour vérifier ses informations et choisir son mot de passe. Le superviseur choisi ne sert qu’à trouver le bon magasin : c’est le magasin qui donne l’accès.')}
       </p>
     </form>
   )

@@ -44,6 +44,7 @@ import { getMyStores, type Store } from '@/lib/inventory'
 import { getMyCompany, type Company } from '@/lib/account'
 import { nb } from '@/lib/format'
 import { Chargement } from '@/components/Chargement'
+import { locale, t, tn, useTraduction } from '@/lib/i18n'
 
 type StoreRequest = {
   id: string
@@ -83,11 +84,11 @@ const STATUT: Record<StoreRequest['status'], string> = {
 
 /** Montant du devis, en euros. */
 const euros = (cents: number) =>
-  (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  (cents / 100).toLocaleString(locale(), { style: 'currency', currency: 'EUR' })
 
 /** Date courte, comme ailleurs dans l'espace connecté : « 22/08 ». */
 function jourCourt(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+  return new Date(iso).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' })
 }
 
 /** Sans accents ni casse : « Élysée » se trouve en tapant « elysee ». */
@@ -97,6 +98,7 @@ function normaliser(s: string) {
 
 export default function MagasinsPage() {
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const [stores, setStores] = useState<Store[]>([])
   const [vue, setVue] = useState<ApercuEntreprise | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
@@ -205,11 +207,11 @@ export default function MagasinsPage() {
           {/* Le compte quitte le titre pour la bande — même geste que
               « Superviseurs · 3 » sur la fiche d'un magasin : un nombre entre
               parenthèses dans un titre n'aide personne à décider. */}
-          <h1 className="page-title">Magasins</h1>
+          <h1 className="page-title">{t('Magasins')}</h1>
           <p className="page-sub">
             {estAdmin
-              ? 'Le patrimoine de votre entreprise. Un magasin, une licence.'
-              : 'Les magasins auxquels vous avez accès, et leur code d’entrée.'}
+              ? t('Le patrimoine de votre entreprise. Un magasin, une licence.')
+              : t('Les magasins auxquels vous avez accès, et leur code d’entrée.')}
           </p>
         </div>
       </div>
@@ -218,28 +220,28 @@ export default function MagasinsPage() {
         <div className="resume-bande">
           <div>
             <strong className="num">{nb(magasins.length)}</strong>
-            <span>Magasin{magasins.length > 1 ? 's' : ''}</span>
+            <span>{tn('Magasin', 'Magasins', magasins.length)}</span>
           </div>
           <div className={enCours > 0 ? 'attention' : undefined}>
             <strong className="num">{nb(enCours)}</strong>
-            <span>Inventaire{enCours > 1 ? 's' : ''} en cours</span>
+            <span>{tn('Inventaire en cours', 'Inventaires en cours', enCours)}</span>
           </div>
           <div>
             <strong className="num">{nb(superviseurs)}</strong>
-            <span>Superviseur{superviseurs > 1 ? 's' : ''}</span>
+            <span>{tn('Superviseur', 'Superviseurs', superviseurs)}</span>
           </div>
         </div>
       )}
 
       {!pret ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t('Chargement…')}</p>
       ) : estAdmin ? (
         <>
           {magasins.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-title">Votre entreprise n’a encore aucun magasin</div>
+              <div className="empty-state-title">{t('Votre entreprise n’a encore aucun magasin')}</div>
               <p className="empty-state-hint">
-                Ajoutez-en un ci-dessous&nbsp;: il est créé dès le paiement.
+                {t('Ajoutez-en un ci-dessous : il est créé dès le paiement.')}
               </p>
             </div>
           ) : (
@@ -247,10 +249,9 @@ export default function MagasinsPage() {
               <section className="admin-section">
                 <div className="admin-section-head">
                   <div>
-                    <h2>Vos magasins</h2>
+                    <h2>{t('Vos magasins')}</h2>
                     <p className="section-note">
-                      Ouvrez-en un pour son code d’entrée, son équipe, ses inventaires
-                      et son offre d’appareils.
+                      {t('Ouvrez-en un pour son code d’entrée, son équipe, ses inventaires et son offre d’appareils.')}
                     </p>
                   </div>
                 </div>
@@ -260,23 +261,23 @@ export default function MagasinsPage() {
                     <div className="champ-borne">
                       <input
                         type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-                        placeholder="Rechercher un magasin par son nom…"
-                        aria-label="Rechercher un magasin"
+                        placeholder={t('Rechercher un magasin par son nom…')}
+                        aria-label={t('Rechercher un magasin')}
                       />
                     </div>
                     {recherche.trim() !== '' && (
                       <>
                         <span className="muted small" aria-live="polite">
-                          {visibles.length} sur {magasins.length}
+                          {visibles.length} {t('sur')} {magasins.length}
                         </span>
-                        <button type="button" className="link-btn" onClick={() => setRecherche('')}>Effacer</button>
+                        <button type="button" className="link-btn" onClick={() => setRecherche('')}>{t('Effacer')}</button>
                       </>
                     )}
                   </div>
                 )}
 
                 {visibles.length === 0 ? (
-                  <p className="muted">Aucun magasin ne correspond à « {recherche} ».</p>
+                  <p className="muted">{t('Aucun magasin ne correspond à « %{q} ».', { q: recherche })}</p>
                 ) : (
                   visibles.map((m) => <VoletMagasin key={m.id} store={m} />)
                 )}
@@ -287,19 +288,18 @@ export default function MagasinsPage() {
         </>
       ) : stores.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-title">Vous n&apos;avez accès à aucun magasin</div>
+          <div className="empty-state-title">{t("Vous n'avez accès à aucun magasin")}</div>
           <p className="empty-state-hint">
-            Contactez l&apos;administrateur de votre entreprise, ou Quantinvo si elle n&apos;en a pas encore.
+            {t("Contactez l'administrateur de votre entreprise, ou Quantinvo si elle n'en a pas encore.")}
           </p>
         </div>
       ) : (
         <section className="admin-section">
           <div className="admin-section-head">
             <div>
-              <h2>Vos codes d’entrée</h2>
+              <h2>{t('Vos codes d’entrée')}</h2>
               <p className="section-note">
-                Le code d’un magasin ouvre l’accès à ses inventaires&nbsp;: transmettez-le
-                à une personne, jamais à un groupe.
+                {t('Le code d’un magasin ouvre l’accès à ses inventaires : transmettez-le à une personne, jamais à un groupe.')}
               </p>
             </div>
           </div>
@@ -312,15 +312,15 @@ export default function MagasinsPage() {
                 </div>
                 {s.join_code && (
                   <button type="button" className="link-btn" onClick={() => copier(s.join_code!)}>
-                    {copie === s.join_code ? 'Copié' : 'Copier le code'}
+                    {copie === s.join_code ? t('Copié') : t('Copier le code')}
                   </button>
                 )}
               </div>
             ))}
           </div>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Un magasin s’ajoute depuis le compte de l’administrateur de votre entreprise.
-            <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>Imprimer des balises</Link>
+            {t('Un magasin s’ajoute depuis le compte de l’administrateur de votre entreprise.')}
+            <Link href="/outils" style={{ color: 'var(--accent)', marginLeft: 6 }}>{t('Imprimer des balises')}</Link>
           </p>
         </section>
       )}
@@ -350,8 +350,8 @@ function VoletMagasin({ store }: { store: StoreBloc }) {
       titre={store.name}
       resume={resumeMagasin(store)}
       etat={alertes.length > 0
-        ? { libelle: `${alertes.length} à surveiller`, ton: 'faire' }
-        : { libelle: etat?.libelle ?? 'Rien à signaler', ton: 'pret' }}
+        ? { libelle: t('%{n} à surveiller', { n: alertes.length }), ton: 'faire' }
+        : { libelle: etat?.libelle ?? t('Rien à signaler'), ton: 'pret' }}
     >
       <CorpsMagasin store={store} />
     </Volet>
@@ -420,15 +420,15 @@ function DemandesMagasin() {
 
   async function annuler(d: StoreRequest) {
     const ok = await confirm({
-      title: 'Annuler cette demande ?',
-      message: `« ${d.store_name} » ne sera pas créé, et rien ne sera prélevé.`,
-      confirmLabel: 'Annuler la demande',
-      cancelLabel: 'Revenir',
+      title: t('Annuler cette demande ?'),
+      message: t('« %{nom} » ne sera pas créé, et rien ne sera prélevé.', { nom: d.store_name }),
+      confirmLabel: t('Annuler la demande'),
+      cancelLabel: t('Revenir'),
     })
     if (!ok) return
     const { data, error } = await supabase.rpc('ca_cancel_store_request', { p_id: d.id })
     if (error || !data?.success) {
-      toast.error(data?.error ?? error?.message ?? 'Annulation impossible.')
+      toast.error(data?.error ?? error?.message ?? t('Annulation impossible.'))
       return
     }
     charger()
@@ -445,10 +445,9 @@ function DemandesMagasin() {
         <section className="admin-section">
           <div className="admin-section-head">
             <div>
-              <h2>Demandes en cours</h2>
+              <h2>{t('Demandes en cours')}</h2>
               <p className="section-note">
-                Ce sur quoi vous pouvez encore agir. Une fois le magasin créé, la ligne
-                quitte l’écran — c’est le magasin apparu au-dessus qui le confirme.
+                {t('Ce sur quoi vous pouvez encore agir. Une fois le magasin créé, la ligne quitte l’écran — c’est le magasin apparu au-dessus qui le confirme.')}
               </p>
             </div>
             <span className="dash-sub-n">{demandes.length}</span>
@@ -460,7 +459,7 @@ function DemandesMagasin() {
                 <div className="req-name">
                   {d.store_name}
                   {d.kind === 'remove' && (
-                    <span className="pill pill-refus" style={{ marginLeft: 8 }}>Suppression</span>
+                    <span className="pill pill-refus" style={{ marginLeft: 8 }}>{t('Suppression')}</span>
                   )}
                   <span className={`pill ${d.status === 'pending' || libreService(d) ? 'pill-attente' : d.status === 'rejected' || d.status === 'declined' ? 'pill-refus' : ''}`} style={{ marginLeft: 8 }}>
                     {/* ⚠️ « Devis accepté » est le libellé de l'AUTRE parcours,
@@ -468,41 +467,37 @@ function DemandesMagasin() {
                         `accepted` parce qu'il n'y a rien à négocier. Ce qui les
                         distingue, c'est le jeton de devis — le libre-service
                         n'en a pas. */}
-                    {libreService(d) ? 'Paiement à finir' : STATUT[d.status]}
+                    {libreService(d) ? t('Paiement à finir') : t(STATUT[d.status])}
                   </span>
                 </div>
                 <div className="muted small">
                   {/* Les demandes d'avant le 2 septembre 2026 portent un volume
                       de stock et pas d'appareils : on affiche ce qu'elles ont. */}
-                  {d.devices !== null && `${nb(d.devices)} appareil${d.devices > 1 ? 's' : ''} · `}
-                  {d.devices === null && d.units !== null && `${nb(d.units)} pièces · `}
-                  demandé le {jourCourt(d.created_at)}
-                  {d.requested_label && ` par ${d.requested_label}`}
-                  {d.status === 'pending' && ' · Quantinvo vous recontacte'}
+                  {d.devices !== null && `${tn('%{count} appareil', '%{count} appareils', d.devices)} · `}
+                  {d.devices === null && d.units !== null && `${t('%{n} pièces', { n: nb(d.units) })} · `}
+                  {t('demandé le %{date}', { date: jourCourt(d.created_at) })}
+                  {d.requested_label && ` ${t('par %{qui}', { qui: d.requested_label })}`}
+                  {d.status === 'pending' && ` · ${t('Quantinvo vous recontacte')}`}
                 </div>
                 {d.status === 'quoted' && d.quote_token && (
                   <div className="muted small">
-                    Devis {d.quote_reference} — {d.quote_amount_cents == null ? '—' : euros(d.quote_amount_cents)}{' '}
-                    · <a href={`/devis/${d.quote_token}`}>voir et accepter</a>
+                    {t('Devis')} {d.quote_reference} — {d.quote_amount_cents == null ? '—' : euros(d.quote_amount_cents)}{' '}
+                    · <a href={`/devis/${d.quote_token}`}>{t('voir et accepter')}</a>
                   </div>
                 )}
                 {libreService(d) && (
                   <div className="muted small">
-                    Votre magasin est créé dès le paiement. Rien n’est prélevé tant que
-                    vous n’avez pas réglé.
+                    {t('Votre magasin est créé dès le paiement. Rien n’est prélevé tant que vous n’avez pas réglé.')}
                   </div>
                 )}
                 {d.status === 'accepted' && d.quote_token && (
-                  // Le paiement passe par Stripe : un client qui a fermé la page
-                  // de paiement doit pouvoir y revenir d'ici, pas seulement
-                  // depuis l'e-mail. La page du devis rouvre la même session.
                   <div className="muted small">
-                    Accord enregistré. Il reste à régler la licence : le magasin est créé dès le paiement.{' '}
-                    · <a href={`/devis/${d.quote_token}`}>Régler en ligne</a>
+                    {t('Accord enregistré. Il reste à régler la licence : le magasin est créé dès le paiement.')}{' '}
+                    · <a href={`/devis/${d.quote_token}`}>{t('Régler en ligne')}</a>
                   </div>
                 )}
                 {d.status === 'paid' && (
-                  <div className="muted small">Paiement reçu. Le magasin est créé dans la minute.</div>
+                  <div className="muted small">{t('Paiement reçu. Le magasin est créé dans la minute.')}</div>
                 )}
                 {d.status === 'rejected' && d.admin_note && (
                   <div className="muted small">« {d.admin_note} »</div>
@@ -514,7 +509,7 @@ function DemandesMagasin() {
                     <ReprendrePaiement requestId={d.id} devices={d.devices} billingPeriod={d.billing_period} />
                   )}
                   <button type="button" className="link-btn danger-link" onClick={() => annuler(d)}>
-                    Annuler la demande
+                    {t('Annuler la demande')}
                   </button>
                 </div>
               )}
@@ -527,15 +522,14 @@ function DemandesMagasin() {
       <section className="admin-section">
         <div className="admin-section-head">
           <div>
-            <h2>Ajouter un magasin</h2>
+            <h2>{t('Ajouter un magasin')}</h2>
             <p className="section-note">
-              Il est créé dès le paiement, avec son code d’entrée. Le prix dépend du
-              nombre d’appareils qui comptent en même temps dans ce magasin.
+              {t('Il est créé dès le paiement, avec son code d’entrée. Le prix dépend du nombre d’appareils qui comptent en même temps dans ce magasin.')}
             </p>
           </div>
           {!ouvert && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setOuvert(true)}>
-              Ajouter un magasin
+              {t('Ajouter un magasin')}
             </button>
           )}
         </div>
@@ -551,18 +545,17 @@ function DemandesMagasin() {
 
           {horsGrille && (
             <p className="offre-refus" role="status">
-              Au-delà de {nb(PLAFOND_LIBRE_SERVICE)} appareils, l&apos;offre d&apos;un magasin ne se
-              prolonge plus&nbsp;: l&apos;abonnement est par magasin, déclarez-les séparément.
+              {t("Au-delà de %{n} appareils, l'offre d'un magasin ne se prolonge plus : l'abonnement est par magasin, déclarez-les séparément.", { n: nb(PLAFOND_LIBRE_SERVICE) })}
               {/* ⚠️ `ecrivezNous` se tait quand l'adresse n'est pas posée : on
                   n'invite jamais à écrire sans dire où. Règle du 22 août 2026. */}
-              {ecrivezNous() && <> Si votre cas ne rentre pas, {ecrivezNous()}.</>}
+              {ecrivezNous() && <> {t('Si votre cas ne rentre pas,')} {ecrivezNous()}.</>}
             </p>
           )}
 
           {offre && nom !== '' && (
             <div style={{ marginTop: 14 }}>
               <div className="muted small">
-                <strong>{offre.nom}</strong> couvre {nb(offre.couvre)} appareils à la fois.
+                <strong>{offre.nom}</strong> {t('couvre %{n} appareils à la fois.', { n: nb(offre.couvre) })}
                 {/* ⚠️ La page Stripe décompose en deux lignes : si notre écran
                     ne le dit pas, le « Qté 4 » s'y découvre sans prévenir. Et
                     une tranche entamée se paie entière — 137 demandés, 140
@@ -575,17 +568,17 @@ function DemandesMagasin() {
               <PayerEnLigne
                 offre={offre}
                 corps={{ action: 'magasin', name: nom, devices: Math.round(appareils ?? 0) }}
-                libelle="Créer le magasin"
+                libelle={t('Créer le magasin')}
               />
             </div>
           )}
 
           <div className="inline-form" style={{ marginTop: 10 }}>
-            <button type="button" className="link-btn" onClick={fermer}>Annuler</button>
+            <button type="button" className="link-btn" onClick={fermer}>{t('Annuler')}</button>
           </div>
           {(!appareils || appareils <= 0) && nom !== '' && (
             <p className="field-hint" style={{ marginTop: 10 }}>
-              Indiquez le nombre d&apos;appareils pour voir le prix.
+              {t("Indiquez le nombre d'appareils pour voir le prix.")}
             </p>
           )}
         </div>

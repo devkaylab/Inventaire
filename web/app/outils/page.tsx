@@ -15,9 +15,11 @@ import { getMyCompany, type Company } from '@/lib/account'
 import { ModelesPanel } from '@/components/ModelesPanel'
 import Link from 'next/link'
 import { Chargement } from '@/components/Chargement'
+import { useTraduction } from '@/lib/i18n'
 
 export default function OutilsPage() {
   const guard = useAuthGuard('supervisor')
+  const { t } = useTraduction()
   const [company, setCompany] = useState<Company | null>(null)
 
   const charger = useCallback(async () => {
@@ -36,7 +38,7 @@ export default function OutilsPage() {
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
       <div className="app-head">
-        <h1 className="page-title">Boîte à outils</h1>
+        <h1 className="page-title">{t('Boîte à outils')}</h1>
       </div>
 
       <BaliseSheetPanel context="account" />
@@ -44,13 +46,12 @@ export default function OutilsPage() {
       <ModelesPanel />
 
       <div className="panel">
-        <h3>Prise en main de l&apos;application</h3>
+        <h3>{t("Prise en main de l'application")}</h3>
         <p>
-          Les deux parcours de l&apos;application mobile, écran par écran — pour le revoir, ou
-          le montrer à une nouvelle recrue.
+          {t("Les deux parcours de l'application mobile, écran par écran — pour le revoir, ou le montrer à une nouvelle recrue.")}
         </p>
         <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Link href="/outils/prise-en-main" className="btn btn-sm">Ouvrir le guide</Link>
+          <Link href="/outils/prise-en-main" className="btn btn-sm">{t('Ouvrir le guide')}</Link>
         </div>
       </div>
     </AppShell>

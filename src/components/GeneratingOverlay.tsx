@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { AppLogo } from './AppLogo'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 
 interface Props {
@@ -34,7 +35,8 @@ interface Props {
  * Il se pose donc **dans** l'élément qu'il couvre, qui doit être en
  * `position: relative` (le défaut) : c'est la carte « Créer des balises ».
  */
-export function GeneratingOverlay({ visible, message = 'Génération en cours…', sub }: Props) {
+export function GeneratingOverlay({ visible, message, sub }: Props) {
+  const texte = message ?? t('Génération en cours…')
   const theme = useTheme()
   const styles = makeStyles(theme)
   const spin = useSharedValue(0)
@@ -69,7 +71,7 @@ export function GeneratingOverlay({ visible, message = 'Génération en cours…
             <AppLogo size={56} animated color={theme.textPrimary} />
           </Animated.View>
         </View>
-        <Animated.Text style={[styles.msg, msgStyle]}>{message}</Animated.Text>
+        <Animated.Text style={[styles.msg, msgStyle]}>{texte}</Animated.Text>
         {sub ? <Text style={styles.sub}>{sub}</Text> : null}
       </View>
     </View>

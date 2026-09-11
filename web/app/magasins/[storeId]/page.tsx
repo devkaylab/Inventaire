@@ -29,6 +29,7 @@ import { compositionOffre, lireAppareils, type AppareilsMagasin } from '@/lib/ap
 import { ChangerOffre, PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
 import type { SessionBloc } from '@/lib/entreprise'
 import { Chargement } from '@/components/Chargement'
+import { locale, t, tn, useTraduction } from '@/lib/i18n'
 
 type Personne = {
   id: string
@@ -69,6 +70,7 @@ type Demande = {
 
 export default function FicheMagasinPage() {
   const guard = useAuthGuard('supervisor')
+  useTraduction()
   const params = useParams<{ storeId: string }>()
   const storeId = params?.storeId
   const [fiche, setFiche] = useState<Fiche | null>(null)
@@ -113,15 +115,15 @@ export default function FicheMagasinPage() {
   async function annulerOffre() {
     if (!offreEnCours) return
     const ok = await confirm({
-      title: 'Annuler ce changement d’offre ?',
-      message: 'Votre offre ne change pas, et rien ne sera prélevé.',
-      confirmLabel: 'Annuler le changement',
-      cancelLabel: 'Revenir',
+      title: t('Annuler ce changement d’offre ?'),
+      message: t('Votre offre ne change pas, et rien ne sera prélevé.'),
+      confirmLabel: t('Annuler le changement'),
+      cancelLabel: t('Revenir'),
     })
     if (!ok) return
     const { data, error } = await supabase.rpc('ca_cancel_store_request', { p_id: offreEnCours.id })
     if (error || !data?.success) {
-      toast.error(data?.error ?? error?.message ?? 'Annulation impossible.')
+      toast.error(data?.error ?? error?.message ?? t('Annulation impossible.'))
       return
     }
     charger()
@@ -145,38 +147,38 @@ export default function FicheMagasinPage() {
    */
   async function demanderSuppression(nom: string) {
     const ok = await confirm({
-      title: 'Demander la suppression de ce magasin ?',
-      message: 'Vous demandez la suppression, c’est Quantinvo qui l’effectue. D’ici là, le magasin continue de fonctionner normalement.',
+      title: t('Demander la suppression de ce magasin ?'),
+      message: t('Vous demandez la suppression, c’est Quantinvo qui l’effectue. D’ici là, le magasin continue de fonctionner normalement.'),
       details: [
         nom,
-        'Sa suppression effacera définitivement ses inventaires et leurs comptages.',
-        'Sa licence cessera d’être facturée.',
-        'Vous pouvez annuler la demande tant que Quantinvo ne l’a pas traitée.',
+        t('Sa suppression effacera définitivement ses inventaires et leurs comptages.'),
+        t('Sa licence cessera d’être facturée.'),
+        t('Vous pouvez annuler la demande tant que Quantinvo ne l’a pas traitée.'),
       ],
-      confirmLabel: 'Demander la suppression',
+      confirmLabel: t('Demander la suppression'),
       tone: 'danger',
     })
     if (!ok) return
     const { data, error } = await supabase.rpc('ca_request_store_removal', { p_store_id: storeId })
     if (error || !data?.success) {
-      toast.error(data?.error ?? error?.message ?? 'Demande impossible pour le moment.')
+      toast.error(data?.error ?? error?.message ?? t('Demande impossible pour le moment.'))
       return
     }
-    toast.success('Demande envoyée. Quantinvo vous recontacte.')
+    toast.success(t('Demande envoyée. Quantinvo vous recontacte.'))
     charger()
   }
 
   async function annulerSuppression(d: Demande) {
     const ok = await confirm({
-      title: 'Annuler cette demande ?',
-      message: `Le magasin « ${d.store_name} » ne sera pas supprimé.`,
-      confirmLabel: 'Annuler la demande',
-      cancelLabel: 'Revenir',
+      title: t('Annuler cette demande ?'),
+      message: t('Le magasin « %{nom} » ne sera pas supprimé.', { nom: d.store_name }),
+      confirmLabel: t('Annuler la demande'),
+      cancelLabel: t('Revenir'),
     })
     if (!ok) return
     const { data, error } = await supabase.rpc('ca_cancel_store_request', { p_id: d.id })
     if (error || !data?.success) {
-      toast.error(data?.error ?? error?.message ?? 'Annulation impossible.')
+      toast.error(data?.error ?? error?.message ?? t('Annulation impossible.'))
       return
     }
     charger()
@@ -189,8 +191,8 @@ export default function FicheMagasinPage() {
   if (erreur) {
     return (
       <AppShell profile={guard.profile} companyName={company?.name}>
-        <p className="muted">Ce magasin n&apos;est pas accessible.</p>
-        <Link href="/magasins" className="btn btn-ghost" style={{ marginTop: 16 }}>← Tous les magasins</Link>
+        <p className="muted">{t("Ce magasin n'est pas accessible.")}</p>
+        <Link href="/magasins" className="btn btn-ghost" style={{ marginTop: 16 }}>{t('← Tous les magasins')}</Link>
       </AppShell>
     )
   }
@@ -209,7 +211,7 @@ export default function FicheMagasinPage() {
   return (
     <AppShell profile={guard.profile} companyName={company?.name}>
       <Link href="/magasins" className="link-btn" style={{ display: 'inline-block', marginBottom: 14 }}>
-        ← Tous les magasins
+        {t('← Tous les magasins')}
       </Link>
 
       <div className="app-head">
@@ -218,13 +220,13 @@ export default function FicheMagasinPage() {
               (redirection plus haut) : pas de garde de rôle à répéter ici. */}
           <Renommer
             nom={fiche.store.name}
-            label="ce magasin"
+            label={t('ce magasin')}
             className="page-title"
             onValider={async (nom) => {
               const { data, error } = await supabase.rpc('ca_rename_store', {
                 p_store_id: storeId, p_name: nom,
               })
-              if (error || !data?.success) return error?.message ?? data?.error ?? 'Renommage impossible.'
+              if (error || !data?.success) return error?.message ?? data?.error ?? t('Renommage impossible.')
               await charger()
               return null
             }}
@@ -235,7 +237,7 @@ export default function FicheMagasinPage() {
               Ici on situe le magasin ; les chiffres, eux, ont leur rangée. */}
           <p className="page-sub">
             {company?.name ? `${company.name} · ` : ''}
-            créé le {new Date(fiche.store.created_at).toLocaleDateString('fr-FR')}
+            {t('créé le %{date}', { date: new Date(fiche.store.created_at).toLocaleDateString(locale()) })}
           </p>
         </div>
         {/* Le rapport consolidé du magasin : tous ses inventaires clôturés
@@ -243,7 +245,7 @@ export default function FicheMagasinPage() {
             Quantinvo — cette page l'est déjà. */}
         <div className="app-head-actions">
           <Link href={`/magasins/${storeId}/rapport`} className="btn btn-ghost">
-            Rapport du magasin
+            {t('Rapport du magasin')}
           </Link>
         </div>
       </div>
@@ -254,34 +256,34 @@ export default function FicheMagasinPage() {
           chargés. Et l'ambre n'y désigne QUE ce qui appelle une décision. */}
       <div className="resume-bande">
         <div>
-          <b>Inventaires</b>
+          <b>{t('Inventaires')}</b>
           <strong>{nb(ouverts.length)}</strong>
-          <span>en cours, sur {nb(fiche.sessions.length)}</span>
+          <span>{t('en cours, sur %{n}', { n: nb(fiche.sessions.length) })}</span>
         </div>
         <div>
-          <b>Équipe</b>
+          <b>{t('Équipe')}</b>
           <strong>{nb(fiche.supervisors.length + fiche.counters.length)}</strong>
           <span>
-            {nb(fiche.supervisors.length)} superviseur{fiche.supervisors.length > 1 ? 's' : ''}
+            {tn('%{count} superviseur', '%{count} superviseurs', fiche.supervisors.length)}
           </span>
         </div>
         {appareils && (
           <div>
-            <b>Offre</b>
+            <b>{t('Offre')}</b>
             <strong>{appareils.plafond == null ? '—' : nb(appareils.plafond)}</strong>
             <span>
-              {verdict.offreActuelle ? `appareils · ${verdict.offreActuelle}` : 'aucune offre définie'}
+              {verdict.offreActuelle ? `${t('appareils')} · ${verdict.offreActuelle}` : t('aucune offre définie')}
             </span>
           </div>
         )}
         {appareils && (
           <div className={verdict.etat === 'depasse' ? 'attention' : undefined}>
-            <b>Refusés · {appareils.jours} j</b>
+            <b>{t('Refusés')} · {appareils.jours} {t('j')}</b>
             <strong>{nb(appareils.refus)}</strong>
             <span>
               {appareils.refus_le
-                ? `dernier ${relativeTime(appareils.refus_le)}`
-                : 'aucun appareil refusé'}
+                ? t('dernier %{quand}', { quand: relativeTime(appareils.refus_le) })
+                : t('aucun appareil refusé')}
             </span>
           </div>
         )}
@@ -302,12 +304,12 @@ export default function FicheMagasinPage() {
         <section className="admin-section" id="appareils">
           <div className="admin-section-head">
             <div>
-              <h2>Appareils</h2>
+              <h2>{t('Appareils')}</h2>
               <p className="section-note">
-                Ce que votre offre couvre, et ce que le magasin a réellement demandé.
+                {t('Ce que votre offre couvre, et ce que le magasin a réellement demandé.')}
               </p>
             </div>
-            <Link href="/tarifs" className="btn btn-ghost btn-sm">Voir les offres</Link>
+            <Link href="/tarifs" className="btn btn-ghost btn-sm">{t('Voir les offres')}</Link>
           </div>
 
           {/* ⚠️ NI « PIC », NI « EN TRAIN DE COMPTER ». Le pic est parti le
@@ -327,19 +329,19 @@ export default function FicheMagasinPage() {
                 ⚠️ Et le commentaire se pose AVANT la balise : entre deux
                 attributs, il n'est pas du JSX valide. Troisième fois. */}
             <Stat
-              label={`Refusés · ${appareils.jours} derniers jours`}
+              label={t('Refusés · %{n} derniers jours', { n: appareils.jours })}
               value={nb(appareils.refus)}
               tone={verdict.etat === 'depasse' ? 'warn' : 'neutral'}
               sub={appareils.refus_le
-                ? `dernier le ${new Date(appareils.refus_le).toLocaleDateString('fr-FR')}`
-                : 'aucun appareil refusé'}
+                ? t('dernier le %{date}', { date: new Date(appareils.refus_le).toLocaleDateString(locale()) })
+                : t('aucun appareil refusé')}
             />
             <Stat
-              label="Votre offre"
+              label={t('Votre offre')}
               value={appareils.plafond == null ? '—' : nb(appareils.plafond)}
               sub={verdict.offreActuelle
-                ? `appareils à la fois · ${verdict.offreActuelle}`
-                : 'aucune offre définie'}
+                ? `${t('appareils à la fois')} · ${verdict.offreActuelle}`
+                : t('aucune offre définie')}
             />
           </div>
 
@@ -350,10 +352,9 @@ export default function FicheMagasinPage() {
           {offreEnCours && (
             <div className="signal signal-alerte">
               <div className="signal-txt">
-                <strong>Un changement d’offre attend son paiement</strong>
+                <strong>{t('Un changement d’offre attend son paiement')}</strong>
                 <div className="muted small">
-                  {nb(offreEnCours.devices ?? 0)} appareils à la fois. L’offre change dès le
-                  paiement ; rien n’est prélevé tant que vous n’avez pas réglé.
+                  {t('%{n} appareils à la fois. L’offre change dès le paiement ; rien n’est prélevé tant que vous n’avez pas réglé.', { n: nb(offreEnCours.devices ?? 0) })}
                 </div>
               </div>
               <div className="req-actions">
@@ -363,7 +364,7 @@ export default function FicheMagasinPage() {
                   billingPeriod={offreEnCours.billing_period}
                 />
                 <button type="button" className="link-btn danger-link" onClick={annulerOffre}>
-                  Annuler
+                  {t('Annuler')}
                 </button>
               </div>
             </div>
@@ -373,8 +374,7 @@ export default function FicheMagasinPage() {
             <div className="signal signal-alerte">
               <div className="signal-txt">
                 <strong>
-                  {nb(appareils.refus)} appareil{appareils.refus > 1 ? 's n’ont' : ' n’a'} pas pu
-                  compter faute de place
+                  {tn('%{count} appareil n’a pas pu compter faute de place', '%{count} appareils n’ont pas pu compter faute de place', appareils.refus)}
                 </strong>
                 <div className="muted small">
                   {/* ⚠️ « JUSQU’À », JAMAIS « AU MOINS ». `besoin` majore — deux
@@ -382,17 +382,16 @@ export default function FicheMagasinPage() {
                       alors qu’ils n’étaient pas simultanés —, donc le vrai
                       besoin est AU PLUS ce chiffre. La première version écrivait
                       l’inverse. */}
-                  Votre offre couvre {nb(appareils.plafond ?? 0)} appareils à la fois&nbsp;;
-                  il en aurait fallu jusqu’à {nb(appareils.besoin)} pour que personne n’attende.
-                  {' '}<strong>{verdict.proposition.nom}</strong> en couvre
+                  {t('Votre offre couvre %{n} appareils à la fois ; il en aurait fallu jusqu’à %{besoin} pour que personne n’attende.', { n: nb(appareils.plafond ?? 0), besoin: nb(appareils.besoin) })}
+                  {' '}<strong>{verdict.proposition.nom}</strong> {t('en couvre')}
                   {' '}{nb(verdict.proposition.couvre)}
                   {/* Le détail de l'addition quand elle dépasse un palier :
                       la page Stripe la décompose, notre écran doit l'annoncer. */}
                   {compositionOffre(verdict.proposition)
                     ? ` (${compositionOffre(verdict.proposition)})`
-                    : ''}, pour
-                  {' '}<span className="prix">{euros(verdict.proposition.mois)} par mois</span> ou
-                  {' '}<span className="prix">{euros(verdict.proposition.an)} par an</span>.
+                    : ''}, {t('pour')}
+                  {' '}<span className="prix">{t('%{prix} par mois', { prix: euros(verdict.proposition.mois) })}</span> {t('ou')}
+                  {' '}<span className="prix">{t('%{prix} par an', { prix: euros(verdict.proposition.an) })}</span>.
                 </div>
               </div>
               {/* ⚠️ LE CHANGEMENT SE FAIT ICI, PLUS SUR /tarifs. Le bouton
@@ -417,16 +416,13 @@ export default function FicheMagasinPage() {
               change. */}
           {verdict.etat === 'sans_forfait' && (
             <p className="muted small">
-              Ce magasin n’a pas d’offre en appareils. Les appareils sont comptés, aucun n’est
-              refusé.
+              {t('Ce magasin n’a pas d’offre en appareils. Les appareils sont comptés, aucun n’est refusé.')}
             </p>
           )}
 
           {verdict.etat === 'dans_le_forfait' && (
             <p className="muted small">
-              Un appareil compte tant que quelqu’un a l’écran de comptage ou d’audit ouvert, et
-              cesse de compter dès qu’il le referme. Le nombre de personnes dans l’équipe n’entre
-              pas en ligne de compte.
+              {t('Un appareil compte tant que quelqu’un a l’écran de comptage ou d’audit ouvert, et cesse de compter dès qu’il le referme. Le nombre de personnes dans l’équipe n’entre pas en ligne de compte.')}
             </p>
           )}
 
@@ -446,9 +442,9 @@ export default function FicheMagasinPage() {
               storeId={storeId as string}
               plafond={appareils.plafond}
               invite={verdict.etat === 'depasse'
-                ? 'Il vous en faut davantage\u00a0?'
-                : 'Besoin de plus d’appareils pour un prochain inventaire\u00a0?'}
-              libelle={verdict.etat === 'depasse' ? 'Choisir une autre offre' : 'Changer d’offre'}
+                ? t('Il vous en faut davantage ?')
+                : t('Besoin de plus d’appareils pour un prochain inventaire ?')}
+              libelle={verdict.etat === 'depasse' ? t('Choisir une autre offre') : t('Changer d’offre')}
               onApplique={charger}
             />
           )}
@@ -458,55 +454,55 @@ export default function FicheMagasinPage() {
       <section className="admin-section">
         <div className="admin-section-head">
           <div>
-            <h2>Équipe</h2>
+            <h2>{t('Équipe')}</h2>
             <p className="section-note">
-              Qui peut compter dans ce magasin. Les accès se gèrent depuis Mon équipe.
+              {t('Qui peut compter dans ce magasin. Les accès se gèrent depuis Mon équipe.')}
             </p>
           </div>
-          <Link href="/equipe" className="btn btn-ghost btn-sm">Gérer l&apos;équipe</Link>
+          <Link href="/equipe" className="btn btn-ghost btn-sm">{t("Gérer l'équipe")}</Link>
         </div>
 
         {/* Le compte vit sur la sous-section, plus dans le titre : c'est là
             qu'il sert à quelque chose. */}
-        <div className="dash-sub">Superviseurs · {nb(fiche.supervisors.length)}</div>
+        <div className="dash-sub">{t('Superviseurs')} · {nb(fiche.supervisors.length)}</div>
         {fiche.supervisors.length === 0 ? (
-          <p className="muted small">Aucun superviseur sur ce magasin.</p>
+          <p className="muted small">{t('Aucun superviseur sur ce magasin.')}</p>
         ) : (
           <div className="req-list">
             {fiche.supervisors.map((p) => (
               <div className="req-row" key={p.id}>
                 <div>
                   <div className="req-name">
-                    {p.full_name || 'Sans nom'}
-                    {p.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>Admin</span>}
+                    {p.full_name || t('Sans nom')}
+                    {p.is_company_admin && <span className="pill" style={{ marginLeft: 8 }}>{t('Admin')}</span>}
                   </div>
                   <div className="muted small">{p.email}</div>
                 </div>
-                {!p.is_active && <span className="dash-badge dash-badge-counting"><span className="dash-dot" />Mot de passe à créer</span>}
+                {!p.is_active && <span className="dash-badge dash-badge-counting"><span className="dash-dot" />{t('Mot de passe à créer')}</span>}
               </div>
             ))}
           </div>
         )}
 
-        <div className="dash-sub">Compteurs · {nb(fiche.counters.length)}</div>
+        <div className="dash-sub">{t('Compteurs')} · {nb(fiche.counters.length)}</div>
         {fiche.counters.length === 0 ? (
-          <p className="muted small">Aucun compteur sur ce magasin.</p>
+          <p className="muted small">{t('Aucun compteur sur ce magasin.')}</p>
         ) : (
           <div className="req-list">
             {fiche.counters.map((p) => (
               <div className="req-row" key={p.id}>
                 <div>
-                  <div className="req-name">{p.full_name || 'Sans nom'}</div>
+                  <div className="req-name">{p.full_name || t('Sans nom')}</div>
                   <div className="muted small">
                     {p.email}
                     {/* L'activité affichée est celle de ce magasin : quelqu'un
                         qui compte beaucoup ailleurs n'y est pas actif ici. */}
                     {p.sessions_counted
-                      ? ` · ${nb(p.sessions_counted)} inventaire${p.sessions_counted > 1 ? 's' : ''} ici · dernier comptage ${relativeTime(p.last_count_at)}`
-                      : ' · n’a pas encore compté ici'}
+                      ? ` · ${tn('%{count} inventaire ici', '%{count} inventaires ici', p.sessions_counted)} · ${t('dernier comptage %{quand}', { quand: relativeTime(p.last_count_at) })}`
+                      : ` · ${t('n’a pas encore compté ici')}`}
                   </div>
                 </div>
-                {!p.is_active && <span className="dash-badge dash-badge-counting"><span className="dash-dot" />Mot de passe à créer</span>}
+                {!p.is_active && <span className="dash-badge dash-badge-counting"><span className="dash-dot" />{t('Mot de passe à créer')}</span>}
               </div>
             ))}
           </div>
@@ -516,22 +512,22 @@ export default function FicheMagasinPage() {
       <section className="admin-section">
         <div className="admin-section-head">
           <div>
-            <h2>Inventaires</h2>
+            <h2>{t('Inventaires')}</h2>
             <p className="section-note">
-              Ceux qui tournent, et ceux qui sont clôturés. Le rapport du magasin les additionne.
+              {t('Ceux qui tournent, et ceux qui sont clôturés. Le rapport du magasin les additionne.')}
             </p>
           </div>
           <Link href={`/magasins/${storeId}/rapport`} className="btn btn-ghost btn-sm">
-            Rapport du magasin
+            {t('Rapport du magasin')}
           </Link>
         </div>
         {fiche.sessions.length === 0 ? (
-          <p className="muted">Aucun inventaire n&apos;a encore été lancé sur ce magasin.</p>
+          <p className="muted">{t("Aucun inventaire n'a encore été lancé sur ce magasin.")}</p>
         ) : (
           <>
             {ouverts.length > 0 && (
               <>
-                <div className="dash-sub">En cours</div>
+                <div className="dash-sub">{t('En cours')}</div>
                 <div className="req-list">
                   {ouverts.map((s) => <LigneInventaire key={s.id} s={s} />)}
                 </div>
@@ -539,7 +535,7 @@ export default function FicheMagasinPage() {
             )}
             {clos.length > 0 && (
               <>
-                <div className="dash-sub">Clôturés</div>
+                <div className="dash-sub">{t('Clôturés')}</div>
                 <div className="req-list">
                   {clos.map((s) => <LigneInventaire key={s.id} s={s} />)}
                 </div>
@@ -560,17 +556,16 @@ export default function FicheMagasinPage() {
       <section className="admin-section">
         <div className="admin-section-head">
           <div>
-            <h2>Code d&apos;accès</h2>
+            <h2>{t("Code d'accès")}</h2>
             <p className="section-note">
-              Il ouvre l&apos;entrée dans le magasin&nbsp;: transmettez-le à une personne, jamais
-              à un groupe.
+              {t("Il ouvre l'entrée dans le magasin : transmettez-le à une personne, jamais à un groupe.")}
             </p>
           </div>
         </div>
         <div className="acc-inv-row">
           <div className="cred-value">{fiche.store.join_code}</div>
           <button type="button" className="link-btn" onClick={() => copier(fiche.store.join_code)}>
-            {copie ? 'Copié' : 'Copier le code'}
+            {copie ? t('Copié') : t('Copier le code')}
           </button>
         </div>
       </section>
@@ -585,23 +580,22 @@ export default function FicheMagasinPage() {
         {suppression ? (
           <div className="signal signal-alerte">
             <div className="signal-txt">
-              <strong>Suppression demandée</strong>
+              <strong>{t('Suppression demandée')}</strong>
               <div className="muted small">
-                Envoyée le {new Date(suppression.created_at).toLocaleDateString('fr-FR')} ·
-                {' '}Quantinvo vous recontacte. Le magasin continue de fonctionner jusqu&apos;à sa suppression.
+                {t('Envoyée le %{date}', { date: new Date(suppression.created_at).toLocaleDateString(locale()) })} ·
+                {' '}{t("Quantinvo vous recontacte. Le magasin continue de fonctionner jusqu'à sa suppression.")}
               </div>
             </div>
             <button type="button" className="link-btn" onClick={() => annulerSuppression(suppression)}>
-              Annuler la demande
+              {t('Annuler la demande')}
             </button>
           </div>
         ) : (
           <>
             <div>
-              <h3>Fermer ce magasin</h3>
+              <h3>{t('Fermer ce magasin')}</h3>
               <p>
-                Ses inventaires et tous leurs comptages seront effacés. Vous ne le supprimez pas
-                vous-même&nbsp;: Quantinvo s&apos;en charge, comme pour la création.
+                {t("Ses inventaires et tous leurs comptages seront effacés. Vous ne le supprimez pas vous-même : Quantinvo s'en charge, comme pour la création.")}
               </p>
             </div>
             <button
@@ -609,7 +603,7 @@ export default function FicheMagasinPage() {
               className="btn btn-danger"
               onClick={() => demanderSuppression(fiche.store.name)}
             >
-              Demander la suppression
+              {t('Demander la suppression')}
             </button>
           </>
         )}

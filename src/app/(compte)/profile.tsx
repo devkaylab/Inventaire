@@ -7,6 +7,7 @@ import { DeletionPendingNote, useAccountDeletion } from '@/components/AccountDel
 import { useAuth } from '@/lib/auth'
 import { verifiedTotpFactor } from '@/lib/mfa'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Spacing, type Theme } from '@/constants/ink'
 
 /**
@@ -53,38 +54,38 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <SectionLabel>Mon identité</SectionLabel>
+        <SectionLabel>{t('Mon identité')}</SectionLabel>
         <MenuCard>
           <MenuRow
             icon="nom"
-            label="Prénom et nom"
+            label={t('Prénom et nom')}
             value={profile?.full_name || undefined}
             onPress={() => router.push('/(compte)/name')}
             last
           />
         </MenuCard>
 
-        <SectionLabel>Mes accès</SectionLabel>
+        <SectionLabel>{t('Mes accès')}</SectionLabel>
         <MenuCard>
-          <MenuRow icon="cle" label="Mot de passe" onPress={() => router.push('/(compte)/password')} />
+          <MenuRow icon="cle" label={t('Mot de passe')} onPress={() => router.push('/(compte)/password')} />
           <MenuRow
             icon="bouclier"
-            label="Double authentification"
-            value={mfaOn === null ? undefined : mfaOn ? 'Activée' : 'Non activée'}
+            label={t('Double authentification')}
+            value={mfaOn === null ? undefined : mfaOn ? t('Activée') : t('Non activée')}
             onPress={() => router.push('/(compte)/mfa')}
             last
           />
         </MenuCard>
 
         {/* Seule sous son titre, et en bas : c'est la distance qui protège. */}
-        <SectionLabel>Zone sensible</SectionLabel>
+        <SectionLabel>{t('Zone sensible')}</SectionLabel>
         {suppression.pending ? (
           <DeletionPendingNote />
         ) : (
           <MenuCard>
             <MenuRow
               icon="corbeille"
-              label="Supprimer mon compte"
+              label={t('Supprimer mon compte')}
               onPress={suppression.confirm}
               danger
               last
@@ -93,8 +94,7 @@ export default function ProfileScreen() {
         )}
 
         <Text style={styles.note}>
-          La suppression efface votre compte et vos informations personnelles. Elle vous sera
-          demandée une seconde fois.
+          {t('La suppression efface votre compte et vos informations personnelles. Elle vous sera demandée une seconde fois.')}
         </Text>
       </ScrollView>
     </SafeAreaView>

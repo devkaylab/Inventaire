@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { t } from '@/lib/i18n'
 
 /**
  * Navigation mobile du tableau de bord : sur petit écran, la barre d'onglets
@@ -38,7 +39,7 @@ export function MobileNav({ tabs, active, onSelect }: {
       <button
         type="button"
         className="mobile-nav-toggle"
-        aria-label="Ouvrir le menu"
+        aria-label={t('Ouvrir le menu')}
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
@@ -49,15 +50,15 @@ export function MobileNav({ tabs, active, onSelect }: {
         <div className="mobile-nav-overlay" onClick={() => setOpen(false)}>
           <nav
             className="mobile-nav"
-            aria-label="Sections de l’inventaire"
+            aria-label={t('Sections de l’inventaire')}
             onClick={e => e.stopPropagation()}
           >
             <div className="mobile-nav-head">
-              <span className="dash-section-label">Sections</span>
+              <span className="dash-section-label">{t('Sections')}</span>
               <button
                 type="button"
                 className="mobile-nav-close"
-                aria-label="Fermer le menu"
+                aria-label={t('Fermer le menu')}
                 onClick={() => setOpen(false)}
               >
                 ✕

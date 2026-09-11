@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import type { Tables, TablesInsert } from '@/types/database.types'
+import { t } from '@/lib/i18n'
 
 /**
  * Comptage hors ligne — stockage local et file d'attente d'envoi.
@@ -846,7 +847,7 @@ export async function flush(
           remaining.push(op)
           continue
         }
-        const reason = (e as { message?: string })?.message ?? 'Refus du serveur'
+        const reason = (e as { message?: string })?.message ?? t('Refus du serveur')
         await AsyncStorage.setItem(
           `${failedPrefix(sessionId)}${op.id}`,
           JSON.stringify({ op, reason, failedAt: Date.now() } satisfies FailedOp),

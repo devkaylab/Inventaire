@@ -26,6 +26,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import { CroixIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 
 export type CleEtape = 'balises' | 'equipe' | 'inventaire' | 'magasins' | 'superviseurs'
@@ -54,9 +55,9 @@ export type FaitsDemarrage = {
  */
 export function etapesDemarrage(faits: FaitsDemarrage): EtapeDemarrage[] {
   return [
-    { cle: 'balises', titre: 'Générer mes balises', faite: faits.balisesImprimees },
-    { cle: 'equipe', titre: 'Constituer mon équipe', faite: faits.equipeConstituee },
-    { cle: 'inventaire', titre: 'Créer mon premier inventaire', faite: faits.inventaireCree },
+    { cle: 'balises', titre: t('Générer mes balises'), faite: faits.balisesImprimees },
+    { cle: 'equipe', titre: t('Constituer mon équipe'), faite: faits.equipeConstituee },
+    { cle: 'inventaire', titre: t('Créer mon premier inventaire'), faite: faits.inventaireCree },
   ]
 }
 
@@ -107,13 +108,13 @@ export type FaitsAdmin = {
 
 export function etapesAdmin(faits: FaitsAdmin): EtapeDemarrage[] {
   return [
-    { cle: 'magasins', titre: 'Vos magasins sont créés', faite: faits.magasins > 0 },
+    { cle: 'magasins', titre: t('Vos magasins sont créés'), faite: faits.magasins > 0 },
     {
       cle: 'superviseurs',
-      titre: 'Un superviseur par magasin',
+      titre: t('Un superviseur par magasin'),
       faite: faits.magasins > 0 && faits.magasinsSansSuperviseur === 0,
     },
-    { cle: 'inventaire', titre: 'Un premier inventaire lancé', faite: faits.inventaireLance },
+    { cle: 'inventaire', titre: t('Un premier inventaire lancé'), faite: faits.inventaireLance },
   ]
 }
 
@@ -183,7 +184,7 @@ export function BandeauDemarrage({
       style={styles.carte}
       onPress={() => onAction(courante.cle)}
       accessibilityRole="button"
-      accessibilityLabel={`Pour démarrer, étape ${rang} sur ${etapes.length} : ${courante.titre}`}
+      accessibilityLabel={t('Pour démarrer, étape %{rang} sur %{total} : %{titre}', { rang, total: etapes.length, titre: courante.titre })}
     >
       <View style={styles.pastille}>
         <IconeEtape cle={courante.cle} color={theme.accent} />
@@ -191,7 +192,7 @@ export function BandeauDemarrage({
 
       <View style={styles.texte}>
         <Text style={styles.surtitre} numberOfLines={1}>
-          POUR DÉMARRER · <Text style={tabular}>{rang} SUR {etapes.length}</Text>
+          {t('POUR DÉMARRER')} · <Text style={tabular}>{rang} {t('SUR')} {etapes.length}</Text>
         </Text>
         <View style={styles.ligne}>
           <Text style={styles.titre} numberOfLines={1}>{courante.titre}</Text>
@@ -206,7 +207,7 @@ export function BandeauDemarrage({
         onPress={onMasquer}
         hitSlop={12}
         accessibilityRole="button"
-        accessibilityLabel="Masquer ce guide"
+        accessibilityLabel={t('Masquer ce guide')}
       >
         <CroixIcon color={theme.textMuted} size={13} />
       </Pressable>

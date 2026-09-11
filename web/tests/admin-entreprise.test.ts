@@ -295,7 +295,7 @@ describe('supprimer un compte de son entreprise', () => {
     // Refonte du 23 août : une seule liste, tirée de `ca_list_team`, qui rend
     // tous les profils de l'entreprise. Le rôle est devenu un filtre.
     expect(pageEquipe).toContain('const membres = estAdmin ? (ca?.members ?? []) : []')
-    expect(pageEquipe).toContain("<option value=\"employee\">Compteurs</option>")
+    expect(pageEquipe).toContain("<option value=\"employee\">{t('Compteurs')}</option>")
     expect(pageEquipe).not.toContain('Compteurs · autres magasins')
     // Et elle répond à « qui fait quoi » : dernier comptage, inventaires comptés.
     expect(pageEquipe).toContain('last_count_at')
@@ -346,7 +346,7 @@ describe('l’administrateur d’entreprise a tous les magasins', () => {
     // Sa cellule « Magasins » dit qu'il les a tous, et ne porte ni chip ni
     // sélecteur : c'est la branche `m.is_company_admin` qui les rend.
     expect(pageEquipe).toContain('Tous les magasins')
-    expect(pageEquipe).toMatch(/m\.is_company_admin \? \(\s*<>Tous les magasins/)
+    expect(pageEquipe).toMatch(/m\.is_company_admin \? \(\s*<>\{t\('Tous les magasins'\)\}/)
   })
 
   it('aucun écran ne lui parle plus d’affectation', () => {
@@ -411,7 +411,7 @@ describe('changer le rôle d’un membre (23 août 2026)', () => {
     // Une seule ligne pour les deux rôles depuis la refonte : le geste bascule
     // avec le rôle plutôt que d'exister en deux exemplaires.
     expect(pageEquipe).toContain("changerRole(m, superviseur ? 'employee' : 'supervisor')")
-    expect(pageEquipe).toContain("libelle: superviseur ? 'Passer compteur' : 'Passer superviseur',")
+    expect(pageEquipe).toContain("libelle: superviseur ? t('Passer compteur') : t('Passer superviseur'),")
     expect(pageEquipe).toContain("appliquer('ca_set_user_role', { p_user: m.id, p_role: vers })")
   })
 
@@ -462,8 +462,8 @@ describe('refonte de « Mon équipe » (23 août 2026)', () => {
   it('une seule liste, le rôle en pastille et en filtre', () => {
     expect(pageEquipe).toContain('const membres = estAdmin ? (ca?.members ?? []) : []')
     expect(pageEquipe).toContain("pill pill-role")
-    expect(pageEquipe).toContain('aria-label="Filtrer par type de profil"')
-    expect(pageEquipe).toContain('aria-label="Filtrer par magasin"')
+    expect(pageEquipe).toContain("aria-label={t('Filtrer par type de profil')}")
+    expect(pageEquipe).toContain("aria-label={t('Filtrer par magasin')}")
   })
 
   it('⚠️ le filtre par magasin ne cache pas les administrateurs', () => {
@@ -473,7 +473,7 @@ describe('refonte de « Mon équipe » (23 août 2026)', () => {
   })
 
   it('le compte dit « x sur y » dès qu’un filtre est actif, et propose d’en sortir', () => {
-    expect(pageEquipe).toContain('${membresFiltres.length} sur ${membres.length}')
+    expect(pageEquipe).toContain("${membresFiltres.length} ${t('sur')} ${membres.length}")
     expect(pageEquipe).toContain('Effacer les filtres')
   })
 
@@ -508,9 +508,9 @@ describe('un compteur compte pour quelqu’un (23 août 2026)', () => {
 
   it('le superviseur se choisit avant les magasins, et seulement pour un compteur', () => {
     expect(panneau).toContain("{role === 'employee' && (")
-    expect(panneau).toContain('aria-label="Superviseur de ce compteur"')
+    expect(panneau).toContain("aria-label={t('Superviseur de ce compteur')}")
     const iSup = panneau.indexOf('Superviseur de ce compteur')
-    const iMag = panneau.indexOf('Magasins <span className="obligatoire">')
+    const iMag = panneau.indexOf("{t('Magasins')} <span className=\"obligatoire\">")
     expect(iSup).toBeGreaterThan(-1)
     expect(iSup).toBeLessThan(iMag)
   })
@@ -535,8 +535,8 @@ describe('un compteur compte pour quelqu’un (23 août 2026)', () => {
   })
 
   it('une entreprise sans superviseur le dit, et propose d’en inviter un', () => {
-    expect(panneau).toContain('Votre entreprise n&apos;a encore aucun superviseur.')
-    expect(panneau).toContain('Inviter un superviseur</button>')
+    expect(panneau).toContain("Votre entreprise n'a encore aucun superviseur.")
+    expect(panneau).toContain("{t('Inviter un superviseur')}</button>")
   })
 
   it('⚠️ le superviseur choisi ne s’enregistre nulle part (option A)', () => {
@@ -601,7 +601,7 @@ describe('renommer un magasin, renommer une entreprise (23 août 2026)', () => {
   it('le geste est le même partout : un lien, puis un champ sur place', () => {
     // Pas de modale : on renomme ce qu'on a sous les yeux, et c'est réversible
     // d'un second renommage.
-    expect(controle).toContain('<button type="button" className="link-btn" onClick={ouvrir}>Renommer</button>')
+    expect(controle).toContain("<button type=\"button\" className=\"link-btn\" onClick={ouvrir}>{t('Renommer')}</button>")
     expect(controle).toContain("if (e.key === 'Escape')")
     // Un refus du serveur reste sous le champ, le temps de corriger.
     expect(controle).toContain('if (message) { setErreur(message); return }')

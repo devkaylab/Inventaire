@@ -6,6 +6,7 @@
 // d'écran (role="status" + aria-live).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { t } from '@/lib/i18n'
 
 export type ToastKind = 'success' | 'error' | 'info'
 
@@ -59,14 +60,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div className="toast-stack" role="status" aria-live="polite">
-        {toasts.map(t => (
-          <div key={t.id} className={`toast toast-${t.kind}`}>
-            <span className="toast-msg">{t.message}</span>
+        {toasts.map(x => (
+          <div key={x.id} className={`toast toast-${x.kind}`}>
+            <span className="toast-msg">{x.message}</span>
             <button
               type="button"
               className="toast-close"
-              onClick={() => dismiss(t.id)}
-              aria-label="Fermer"
+              onClick={() => dismiss(x.id)}
+              aria-label={t('Fermer')}
             >
               ×
             </button>

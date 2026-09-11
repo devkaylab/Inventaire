@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import type { CountEvent } from '@/lib/activity'
 import { fmtQty, relativeTime } from '@/lib/format'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { t } from '@/lib/i18n'
 
 /**
  * Les derniers scans, tels qu'ils sont arrivés.
@@ -26,7 +27,7 @@ export function ActivityFeed({ events, zoneNames, limit = 25 }: {
   const rows = useMemo(() => events.slice(0, limit), [events, limit])
 
   if (rows.length === 0) {
-    return <EmptyState title="Aucun scan pour l'instant" hint="Les comptages apparaîtront ici dès le premier article scanné." />
+    return <EmptyState title={t("Aucun scan pour l'instant")} hint={t('Les comptages apparaîtront ici dès le premier article scanné.')} />
   }
 
   return (

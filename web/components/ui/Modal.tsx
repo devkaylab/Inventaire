@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { t } from '@/lib/i18n'
 
 /** Fenêtre modale générique (invitation, identifiants…). Échap et clic hors
  *  cadre referment ; le focus entre dans la fenêtre à l'ouverture. */
@@ -26,7 +27,7 @@ export function Modal({ title, onClose, children, footer, large = false }: {
       <div className={`modal${large ? ' modal-large' : ''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={boxRef} tabIndex={-1}>
         <div className="modal-head">
           <h2 className="modal-title" id="modal-title">{title}</h2>
-          <button type="button" className="modal-x" onClick={onClose} aria-label="Fermer">×</button>
+          <button type="button" className="modal-x" onClick={onClose} aria-label={t('Fermer')}>×</button>
         </div>
         {children}
         {footer && <div className="modal-actions">{footer}</div>}

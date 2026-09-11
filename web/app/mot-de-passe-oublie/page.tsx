@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
+import { LangueToggle } from '@/components/LangueToggle'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Demande de réinitialisation du mot de passe.
@@ -19,6 +21,7 @@ import { MentionCollecte } from '@/components/MentionCollecte'
  * la console Supabase — voir AGENTS.md).
  */
 export default function ForgotPasswordPage() {
+  const { t } = useTraduction()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -34,7 +37,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError(null)
     if (!email.trim()) {
-      setError('Indiquez votre adresse e-mail.')
+      setError(t('Indiquez votre adresse e-mail.'))
       return
     }
     setBusy(true)
@@ -45,7 +48,7 @@ export default function ForgotPasswordPage() {
     if (resetError) {
       // Un échec ici est un problème d'envoi (réseau, limitation de débit),
       // jamais une information sur l'existence du compte.
-      setError("L'e-mail n'a pas pu être envoyé pour le moment. Réessayez dans quelques instants.")
+      setError(t("L'e-mail n'a pas pu être envoyé pour le moment. Réessayez dans quelques instants."))
       return
     }
     setSent(true)
@@ -57,15 +60,14 @@ export default function ForgotPasswordPage() {
         <div className="auth-card">
           <div className="head">
             <Link href="/"><Logo size={56} /></Link>
-            <h1>E-mail envoyé</h1>
+            <h1>{t('E-mail envoyé')}</h1>
             <p className="sub">
-              Si un compte existe pour <strong>{email.trim()}</strong>, un e-mail de
-              réinitialisation vient de lui être envoyé. Ouvrez le lien qu&apos;il contient
-              pour choisir un nouveau mot de passe. Pensez à vérifier vos indésirables.
+              {t('Si un compte existe pour ')}<strong>{email.trim()}</strong>{t(", un e-mail de réinitialisation vient de lui être envoyé. Ouvrez le lien qu'il contient pour choisir un nouveau mot de passe. Pensez à vérifier vos indésirables.")}
             </p>
           </div>
-          <Link href="/login" className="btn btn-primary btn-block">Retour à la connexion</Link>
+          <Link href="/login" className="btn btn-primary btn-block">{t('Retour à la connexion')}</Link>
         </div>
+        <LangueToggle />
       </div>
     )
   }
@@ -75,10 +77,9 @@ export default function ForgotPasswordPage() {
       <div className="auth-card">
         <div className="head">
           <Link href="/"><Logo size={56} /></Link>
-          <h1>Mot de passe oublié</h1>
+          <h1>{t('Mot de passe oublié')}</h1>
           <p className="sub">
-            Indiquez l&apos;adresse e-mail de votre compte : vous recevrez un lien pour
-            choisir un nouveau mot de passe.
+            {t("Indiquez l'adresse e-mail de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.")}
           </p>
         </div>
 
@@ -86,7 +87,7 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="email">E-mail</label>
+            <label htmlFor="email">{t('E-mail')}</label>
             <input
               id="email"
               type="email"
@@ -97,15 +98,16 @@ export default function ForgotPasswordPage() {
             />
           </div>
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
-            {busy ? 'Envoi…' : 'Envoyer le lien'}
+            {busy ? t('Envoi…') : t('Envoyer le lien')}
           </button>
-          <MentionCollecte finalite="vous envoyer le lien de réinitialisation de votre mot de passe" />
+          <MentionCollecte finalite={t('vous envoyer le lien de réinitialisation de votre mot de passe')} />
         </form>
 
         <div className="center-link">
-          <Link href="/login">← Retour à la connexion</Link>
+          <Link href="/login">{t('← Retour à la connexion')}</Link>
         </div>
       </div>
+      <LangueToggle />
     </div>
   )
 }

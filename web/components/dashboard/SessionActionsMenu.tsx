@@ -5,6 +5,7 @@ import { closeSession, deleteSession, reopenSession, type Session } from '@/lib/
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { t } from '@/lib/i18n'
 
 /**
  * Actions de l'inventaire — clôture, réouverture, suppression.
@@ -66,20 +67,20 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
   async function onClose() {
     setOuvert(false)
     const ok = await confirm({
-      title: 'Clôturer l’inventaire ?',
-      message: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.',
+      title: t('Clôturer l’inventaire ?'),
+      message: t('L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts sur la session.'),
       details: [
-        'Toutes les données sont conservées.',
-        'Le rapport reste consultable et téléchargeable.',
-        'Vous pourrez rouvrir l’inventaire si besoin.',
+        t('Toutes les données sont conservées.'),
+        t('Le rapport reste consultable et téléchargeable.'),
+        t('Vous pourrez rouvrir l’inventaire si besoin.'),
       ],
-      confirmLabel: 'Clôturer',
+      confirmLabel: t('Clôturer'),
     })
     if (!ok) return
     setBusy(true)
     try {
       await closeSession(session.id)
-      toast.success('Inventaire clôturé.')
+      toast.success(t('Inventaire clôturé.'))
       await onChanged()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -91,15 +92,15 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
   async function onReopen() {
     setOuvert(false)
     const ok = await confirm({
-      title: 'Rouvrir l’inventaire ?',
-      message: 'Le comptage pourra reprendre et le rapport évoluera de nouveau.',
-      confirmLabel: 'Rouvrir',
+      title: t('Rouvrir l’inventaire ?'),
+      message: t('Le comptage pourra reprendre et le rapport évoluera de nouveau.'),
+      confirmLabel: t('Rouvrir'),
     })
     if (!ok) return
     setBusy(true)
     try {
       await reopenSession(session.id)
-      toast.success('Inventaire rouvert.')
+      toast.success(t('Inventaire rouvert.'))
       await onChanged()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -111,16 +112,16 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
   async function onDelete() {
     setOuvert(false)
     const ok = await confirm({
-      title: 'Supprimer définitivement cet inventaire ?',
-      message: 'Cette action est irréversible et ne peut pas être annulée.',
+      title: t('Supprimer définitivement cet inventaire ?'),
+      message: t('Cette action est irréversible et ne peut pas être annulée.'),
       details: [
-        'Tous les comptages seront supprimés',
-        'Le stock théorique sera supprimé',
-        'Les audits et arbitrages seront supprimés',
-        'Les membres seront retirés',
-        'Le référentiel articles de cet inventaire sera supprimé',
+        t('Tous les comptages seront supprimés'),
+        t('Le stock théorique sera supprimé'),
+        t('Les audits et arbitrages seront supprimés'),
+        t('Les membres seront retirés'),
+        t('Le référentiel articles de cet inventaire sera supprimé'),
       ],
-      confirmLabel: 'Supprimer définitivement',
+      confirmLabel: t('Supprimer définitivement'),
       tone: 'danger',
       requireText: session.inventory_number,
     })
@@ -128,8 +129,8 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
     setBusy(true)
     try {
       const r = await deleteSession(session.id)
-      if (!r.success) { toast.error(r.error ?? 'Suppression impossible.'); return }
-      toast.success('Inventaire supprimé.')
+      if (!r.success) { toast.error(r.error ?? t('Suppression impossible.')); return }
+      toast.success(t('Inventaire supprimé.'))
       onDeleted()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -145,7 +146,7 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
         className="refresh-btn"
         aria-haspopup="menu"
         aria-expanded={ouvert}
-        aria-label="Actions de l’inventaire"
+        aria-label={t('Actions de l’inventaire')}
         disabled={busy}
         onClick={() => setOuvert(v => !v)}
       >
@@ -165,27 +166,27 @@ export function SessionActionsMenu({ session, isCreator, canReopen, onChanged, o
               accepté une confirmation. */}
           {canReopen && (!closed || !archive) && (
             <button type="button" role="menuitem" className="dash-menu-item" onClick={closed ? onReopen : onClose}>
-              {closed ? 'Rouvrir l’inventaire' : 'Clôturer l’inventaire'}
+              {closed ? t('Rouvrir l’inventaire') : t('Clôturer l’inventaire')}
             </button>
           )}
           {!closed && !canReopen && (
             <div className="dash-menu-note">
-              Seul le créateur de l’inventaire peut le clôturer.
+              {t('Seul le créateur de l’inventaire peut le clôturer.')}
             </div>
           )}
           {closed && archive && (
             <div className="dash-menu-note">
-              Inventaire archivé : le détail de ses scans a été effacé, il ne se rouvre plus.
+              {t('Inventaire archivé : le détail de ses scans a été effacé, il ne se rouvre plus.')}
             </div>
           )}
           {closed && !archive && !canReopen && (
             <div className="dash-menu-note">
-              Cet inventaire a été clôturé par son créateur. Lui seul peut le rouvrir.
+              {t('Cet inventaire a été clôturé par son créateur. Lui seul peut le rouvrir.')}
             </div>
           )}
           {isCreator && (
             <button type="button" role="menuitem" className="dash-menu-item dash-menu-danger" onClick={onDelete}>
-              Supprimer définitivement
+              {t('Supprimer définitivement')}
             </button>
           )}
         </div>

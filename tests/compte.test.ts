@@ -70,7 +70,7 @@ describe('découpage de Mon compte', () => {
     // Un seul mot, toujours le même, se lit plus vite et ne se fait pas
     // tronquer par iOS quand la place manque.
     for (const groupe of ['(compte)', '(supervisor)', '(employee)']) {
-      expect(lire(`app/${groupe}/_layout.tsx`)).toContain("headerBackTitle: 'Retour'")
+      expect(lire(`app/${groupe}/_layout.tsx`)).toContain("headerBackTitle: t('Retour')")
     }
   })
 
@@ -216,7 +216,7 @@ describe('balise hors plage — proposer l’ajout plutôt qu’un « OK » sec'
     // Depuis le 24 août 2026 la question est une carte de l'app, pas une
     // alerte iOS : le bouton se déclare en `action`, et son libellé compte
     // autant qu'avant — c'est lui qui donne au compteur un moyen d'avancer.
-    expect(scanner).toMatch(/action: 'Ajouter'/)
+    expect(scanner).toMatch(/action: t\('Ajouter'\)/)
   })
 
   it('l’ajout repasse par la base avec la création autorisée', () => {
@@ -314,8 +314,10 @@ describe('fiche d’un inventaire', () => {
     // On prépare un inventaire avant d'y mettre des gens — et c'est l'ordre
     // du site, où Set up précède Équipe.
     const feuille = ecran.split('function InfoPanel(')[1] ?? ''
-    expect(feuille.indexOf('SectionLabel>Configuration'))
-      .toBeLessThan(feuille.indexOf('SectionLabel>Membres'))
+    const conf = feuille.indexOf("SectionLabel>{t('Configuration')}")
+    const membres = feuille.indexOf("SectionLabel>{t('Membres')}")
+    expect(conf).toBeGreaterThan(0)
+    expect(conf).toBeLessThan(membres)
   })
 })
 
@@ -343,7 +345,7 @@ describe('supprimer et retirer depuis l’app', () => {
 
   it('la confirmation nomme l’inventaire et signale s’il est en cours', () => {
     // Sur un téléphone, une corbeille se touche vite.
-    expect(liste).toContain('Supprimer « ${nom} » ?')
+    expect(liste).toContain("t('Supprimer « %{nom} » ?', { nom })")
     expect(liste).toContain('n’est pas clôturé')
     // `ton: 'danger'` a remplacé `style: 'destructive'` le 24 août 2026 :
     // c'est lui qui peint le bouton en rouge dans la carte de confirmation.
@@ -389,7 +391,7 @@ describe('sélection multiple sur l’app', () => {
   it('la confirmation nomme les inventaires, huit au plus', () => {
     // Au-delà, la boîte de dialogue devient illisible sur un téléphone.
     expect(liste).toContain('noms.slice(0, 8)')
-    expect(liste).toContain('et ${noms.length - 8} autre')
+    expect(liste).toContain("tn('et %{count} autre', 'et %{count} autres', noms.length - 8)")
     expect(liste).toContain('clôturé')
   })
 
@@ -716,7 +718,7 @@ describe('onboarding (23 août 2026)', () => {
     expect(scanner).toContain('amorceNecessaire')
     expect(scanner).toContain('La caméra lit les balises et les codes-barres')
     // Le bouton n'est pas « Autoriser » : il précède la demande.
-    expect(scanner).toContain('Continuer</Text>')
+    expect(scanner).toContain("{t('Continuer')}</Text>")
   })
 
   it('les repères restent retrouvables', () => {
@@ -772,7 +774,7 @@ describe('une personne invitée apparaît tout de suite', () => {
 
   it('la ligne montre l’adresse tant que la personne n’a pas ouvert l’app', () => {
     // C'est là qu'est parti le lien : c'est ce qu'on veut relire.
-    expect(equipe).toContain("? counter.email ?? 'Invitation envoyée'")
+    expect(equipe).toContain("? counter.email ?? t('Invitation envoyée')")
   })
 })
 
@@ -808,7 +810,7 @@ describe('le bandeau de démarrage', () => {
   })
 
   it('le compteur dit l’étape en cours sur le total', () => {
-    expect(bandeau).toContain('{rang} SUR {etapes.length}')
+    expect(bandeau).toContain("{rang} {t('SUR')} {etapes.length}")
     expect(bandeau).toContain('const rang = etapes.indexOf(courante) + 1')
   })
 
@@ -1087,7 +1089,7 @@ describe('le viseur enseigne, une consigne à la fois', () => {
   })
 
   it('la trace du dernier scan lève le doute, sans voler la place d’un conseil', () => {
-    expect(scanner).toContain("`Dernier scan · ")
+    expect(scanner).toContain("`${t('Dernier scan')} · ")
     // Le CODE, pas le libellé : ce qu'on vérifie d'un coup d'œil, c'est que le
     // bon code-barres est passé (demande de Julien, 29 août 2026).
     expect(scanner).toContain('recentScans[0].article.ean || recentScans[0].article.sku')
@@ -1133,7 +1135,7 @@ describe('les sorties qui manquaient', () => {
   const inventaire = lire('app/(supervisor)/[sessionId]/index.tsx')
 
   it('« Je n’ai pas reçu mon invitation » renvoie au responsable, jamais au support', () => {
-    expect(login).toContain('Je n&apos;ai pas reçu mon invitation')
+    expect(login).toContain(`t("Je n'ai pas reçu mon invitation")`)
     expect(login).toContain('Votre invitation vient de votre responsable')
     // ⚠️ Sur le code seul : le commentaire de l'écran cite « contactez le
     // support » pour dire qu'on ne l'écrit pas. Le lire ferait échouer une
@@ -1246,7 +1248,7 @@ describe('création d’inventaire : le magasin ne bloque plus (23 août 2026)',
 
   it('l’alerte a disparu au profit du libellé', () => {
     expect(ecran).not.toContain("Alert.alert('Erreur', 'Choisissez un magasin.')")
-    expect(ecran).toContain("choixAttendu ? 'Choisissez un magasin' : 'Magasin'")
+    expect(ecran).toContain("choixAttendu ? t('Choisissez un magasin') : t('Magasin')")
   })
 
   it('le bouton reste inactif tant que le choix n’est pas fait', () => {
@@ -1308,8 +1310,8 @@ describe('le parcours du superviseur, vu à l’écran (23 août 2026)', () => {
   // inventaire de quelqu'un qui découvre l'app.
   it('une saisie incomplète ne se titre pas « Erreur »', () => {
     expect(nouveau).not.toContain("signaler.erreur('Erreur', \"Donnez un nom à l'inventaire.\")")
-    expect(nouveau).toContain("signaler.erreur('Nom manquant'")
-    expect(zones).toContain("signaler.erreur('Plage incomplète'")
+    expect(nouveau).toContain("signaler.erreur(t('Nom manquant')")
+    expect(zones).toContain("signaler.erreur(t('Plage incomplète')")
   })
 
   // Amendé le 23 août : le pop-up « Inventaire créé » a été retiré avec le
@@ -1726,7 +1728,7 @@ describe('la porte de bienvenue mène toujours quelque part (24 août 2026)', ()
   it('chaque libellé proposé a sa destination', () => {
     // Quatre libellés, quatre `router.*`. Si l'un s'ajoute sans destination,
     // le compte ne tombe plus juste.
-    const libelles = porte.match(/libelle: '/g) ?? []
+    const libelles = porte.match(/libelle: t\('/g) ?? []
     const routages = porte.match(/aller: \(\) => router\.(push|replace)\(/g) ?? []
     expect(libelles.length).toBeGreaterThanOrEqual(4)
     expect(routages.length).toBe(libelles.length)
@@ -1856,7 +1858,8 @@ describe('rouvrir une balise déjà comptée', () => {
    */
   it('dit ce que devient ce qui est déjà compté, sans dire qui a compté', () => {
     const bloc = scanner.slice(scanner.indexOf('const choix = await demanderChoix'))
-    const carte = bloc.slice(0, bloc.indexOf('})'))
+    const carte = bloc.slice(0, bloc.indexOf("annuler: t('Ne pas ouvrir')"))
+    expect(carte.length).toBeGreaterThan(0)
     expect(carte).toContain('Compléter garde')
     expect(carte).toContain('efface, pour toute l’équipe')
     // L'ancienne promesse ne doit pas revenir : elle laissait doubler le rayon.
@@ -1998,7 +2001,7 @@ describe('les écarts arbitrés se lisent comme une liste', () => {
     // Deux sections d'une même page se présentent de la même façon : un titre
     // `baliseTitle` et une pastille de compte, comme « Balise 1 · Textile
     // femme » juste au-dessus.
-    expect(ecran).toContain('<Text style={styles.baliseTitle}>Écarts arbitrés</Text>')
+    expect(ecran).toContain("<Text style={styles.baliseTitle}>{t('Écarts arbitrés')}</Text>")
     expect(ecran).toContain('styles.arbCard')
     expect(ecran).toContain('styles.arbFilet')
   })
@@ -2009,8 +2012,8 @@ describe('les écarts arbitrés se lisent comme une liste', () => {
     // refus dit « Garder » : deux « Annuler » dans la même carte ne se
     // distingueraient pas l'un de l'autre.
     expect(ecran).toContain('function confirmAnnuler')
-    expect(ecran).toContain("titre: 'Annuler cet arbitrage ?'")
-    expect(ecran).toContain("annuler: 'Garder'")
+    expect(ecran).toContain("titre: t('Annuler cet arbitrage ?')")
+    expect(ecran).toContain("annuler: t('Garder')")
     // Et la mutation ne part que par cette porte.
     expect(ecran.match(/annuler\.mutate/g)?.length).toBe(1)
   })
@@ -2044,9 +2047,9 @@ describe('les écarts arbitrés se lisent comme une liste', () => {
     // Les deux boutons PORTENT le compte du compteur et celui de l'auditeur :
     // les répéter en chiffres au-dessus affichait les mêmes deux nombres à
     // quarante points d'écart. La rangée garde ce qui se lit sans se choisir.
-    expect(ecran).not.toContain('label="Compteur" value={fmt(counted)}')
-    expect(ecran).not.toContain('label="Auditeur" value={fmt(audited)}')
-    expect(ecran).toContain('label="Écart valeur"')
+    expect(ecran).not.toContain("label={t('Compteur')} value={fmt(counted)}")
+    expect(ecran).not.toContain("label={t('Auditeur')} value={fmt(audited)}")
+    expect(ecran).toContain("label={t('Écart valeur')}")
     expect(ecran).not.toContain('minWidth: 72')
     expect(ecran).not.toContain("flexWrap: 'wrap'")
   })
@@ -2111,8 +2114,8 @@ describe('un écart d’audit s’arbitre, il ne se supprime pas', () => {
     // Le site les avait déjà ; l'app obligeait à retaper la quantité.
     expect(ecran).toContain('onPress={() => onRetenir(counted)}')
     expect(ecran).toContain('onPress={() => onRetenir(audited)}')
-    expect(ecran).toContain('Compteur {unites(counted)}')
-    expect(ecran).toContain('Auditeur {unites(audited)}')
+    expect(ecran).toContain("{t('Compteur')} {unites(counted)}")
+    expect(ecran).toContain("{t('Auditeur')} {unites(audited)}")
   })
 
   it('⚠️ et ils se voient comme des boutons', () => {
@@ -2139,14 +2142,15 @@ describe('un écart d’audit s’arbitre, il ne se supprime pas', () => {
 
   it('le nombre dit ce qu’il compte, au singulier comme au pluriel', () => {
     expect(ecran).toContain('function unites')
-    expect(ecran).toContain("unité${v >= 2 ? 's' : ''}")
+    expect(ecran).toContain("t('%{n} unités'")
+    expect(ecran).toContain("t('%{n} unité'")
   })
 
   it('⚠️ « Retenir » ne retient plus l’auditeur en douce', () => {
     // Un champ vide valait la quantité de l'auditeur. Avec un bouton
     // « Auditeur » à côté, cela ferait deux contrôles pour le même geste,
     // dont un invisible.
-    expect(ecran).toContain("signaler.erreur('Quantité manquante'")
+    expect(ecran).toContain("signaler.erreur(t('Quantité manquante')")
     expect(ecran).not.toContain('onResolve(a, audited)')
   })
 
@@ -2261,9 +2265,9 @@ describe('les cibles tactiles atteignent 48 dp', () => {
     // Une icône sans libellé n'existe pas pour un lecteur d'écran. La lampe et
     // le bouton de compte étaient muets.
     const scanner = readFileSync(path.join(here, '..', 'src', 'components', 'scanner.tsx'), 'utf8')
-    expect(scanner).toMatch(/accessibilityLabel=\{torch \? 'Éteindre la lampe' : 'Allumer la lampe'\}/)
+    expect(scanner).toMatch(/accessibilityLabel=\{torch \? t\('Éteindre la lampe'\) : t\('Allumer la lampe'\)\}/)
     const header = readFileSync(path.join(here, '..', 'src', 'components', 'HeaderActions.tsx'), 'utf8')
-    expect(header).toMatch(/accessibilityLabel="Mon compte"/)
+    expect(header).toMatch(/accessibilityLabel=("Mon compte"|\{t\('Mon compte'\)\})/)
   })
 })
 
@@ -2307,7 +2311,7 @@ describe('le tour de l’application, côté compteur', () => {
     // ⚠️ Et il tient en UNE LIGNE : un état permanent se lit à chaque
     // ouverture. Un paragraphe qu'on relit chaque fois cesse d'être lu, et
     // vole la place de l'encart ambre d'en face.
-    expect(progression).toMatch(/<Astuce titre="Aucune balise en attente" ton="succes" \/>/)
+    expect(progression).toMatch(/<Astuce titre=\{t\('Aucune balise en attente'\)\} ton="succes" \/>/)
   })
 
   it('⚠️ « corriger un scan » se déclenche au DEUXIÈME scan du même article', () => {
@@ -2393,7 +2397,7 @@ describe('le tour de l’application, côté superviseur', () => {
     expect(fiche).toMatch(/zoneMissing\.length > 0/)
     expect(fiche).toMatch(/compteront pour zéro dans le rapport/)
     // La confirmation garde sa forme : même `demander`, mêmes champs.
-    expect(fiche).toMatch(/titre: 'Clôturer l’inventaire \?'/)
+    expect(fiche).toMatch(/titre: t\('Clôturer l’inventaire \?'\)/)
   })
 
   it('les deux repères sont posés sur des écrans qui DÉFILENT', () => {
@@ -2452,23 +2456,24 @@ describe('quelqu’un d’autre a compté sur cette balise', () => {
 
   it('et elle ne nomme personne', () => {
     const bloc = scanner.slice(scanner.indexOf('const choix = await demanderChoix'))
-    const carteTexte = bloc.slice(0, bloc.indexOf('})'))
+    const carteTexte = bloc.slice(0, bloc.indexOf("annuler: t('Ne pas ouvrir')"))
+    expect(carteTexte.length).toBeGreaterThan(0)
     for (const mot of ['full_name', 'counted_by', 'par ' + '${']) {
       expect(carteTexte).not.toContain(mot)
     }
   })
 
   it('« Recompter à zéro » n’est jamais le défaut : il est le second bouton', () => {
-    expect(scanner).toMatch(/alternative: compte \? 'Recompter à zéro'/)
+    expect(scanner).toMatch(/alternative: compte \? t\('Recompter à zéro'\)/)
     // Le bouton plein reste le geste qui ne détruit rien.
-    expect(scanner).toMatch(/action: compte \? 'Compléter le comptage'/)
+    expect(scanner).toMatch(/action: compte \? t\('Compléter le comptage'\)/)
   })
 
   it('et il repasse par une confirmation qui nomme ce qu’on perd', () => {
     const bloc = scanner.slice(scanner.indexOf('async function reprendreAZero'))
     const corps = bloc.slice(0, bloc.indexOf('\n  async function openBaliseCode'))
     expect(corps).toContain("ton: 'danger'")
-    expect(corps).toContain('Effacer le ${geste} de la balise')
+    expect(corps).toContain("t('Effacer le comptage de la balise %{code} ?'")
     // ⚠️ Elle dit que l'effacement vaut pour TOUTE L'ÉQUIPE : c'est ce qui
     // sépare ce geste d'« Annuler », qui ne défait que les siens.
     expect(corps).toContain('celles de toute l’équipe')
@@ -2829,19 +2834,23 @@ describe('les nombres portent leur séparateur de milliers', () => {
   })
 
   it('les trois fonctions groupent bien', () => {
-    // Le groupement vient de `toLocaleString('fr-FR')`, la seule chose qui
-    // sache où poser les espaces dans « 1 234 567 ».
+    // Le groupement vient de `toLocaleString(locale())` — `locale()` rend
+    // toujours une locale NOMMÉE (fr-FR ou en-GB, celle de l'interface), la
+    // seule chose qui sache où poser les espaces dans « 1 234 567 ».
     for (const fn of ['qte', 'euros', 'nb']) {
       const corps = nombres.slice(nombres.indexOf(`export function ${fn}(`))
-      expect(corps.slice(0, 400), fn).toContain("toLocaleString('fr-FR'")
+      expect(corps.slice(0, 400), fn).toContain('toLocaleString(locale()')
     }
   })
 
   it('⚠️ la locale est TOUJOURS nommée', () => {
     // `toLocaleString()` nu suit la langue du téléphone : « 1,000 » sur un
     // appareil anglais, au milieu d'une interface en français.
+    // Sur le code seul : le commentaire de `lib/i18n.ts` cite l'appel nu pour
+    // dire qu'on ne l'écrit pas.
     for (const f of fichiersSource()) {
       const code = readFileSync(f, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
       expect(code, f).not.toMatch(/toLocaleString\(\s*\)/)
     }
   })
@@ -3014,7 +3023,7 @@ describe('l’onboarding est clos', () => {
   it('la progression du superviseur porte les balises ET les pièces', () => {
     const ecran = lire('app/(supervisor)/[sessionId]/index.tsx')
     expect(ecran).toContain('% des balises comptées')
-    expect(ecran).toContain('{nb(countedPieces)} pièce')
+    expect(ecran).toContain("tn('%{count} pièce comptée', '%{count} pièces comptées', countedPieces)")
     expect(ecran).toContain('auditée')
   })
 

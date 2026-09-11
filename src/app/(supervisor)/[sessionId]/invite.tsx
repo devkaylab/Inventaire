@@ -51,6 +51,7 @@ import { quitterLeTunnel } from '@/lib/tunnel'
 import { PlusTard } from '@/components/ui/PlusTard'
 import { Font, Radius, Spacing, type Theme } from '@/constants/ink'
 import { signaler } from '@/lib/dialogue'
+import { t, tn } from '@/lib/i18n'
 import { ClavierEvite } from '@/components/ui/ClavierEvite'
 
 export default function InviteToSessionScreen() {
@@ -126,7 +127,7 @@ export default function InviteToSessionScreen() {
 
   async function handleSubmit() {
     if (!selected) {
-      return signaler.erreur('Personne à choisir', 'Choisissez une personne dans la liste des suggestions.')
+      return signaler.erreur(t('Personne à choisir'), t('Choisissez une personne dans la liste des suggestions.'))
     }
     const fullName = selected.full_name || ''
     const mail = selected.email
@@ -136,20 +137,20 @@ export default function InviteToSessionScreen() {
       const res = await inviteToSession({ sessionId, fullName, email: mail, role })
       const added = res.outcome === 'added'
       const who = fullName || mail
-      const roleLabel = role === 'supervisor' ? 'co-superviseur' : 'compteur'
+      const roleLabel = role === 'supervisor' ? t('co-superviseur') : t('compteur')
       await rafraichir()
       // ⚠️ Dans le tunnel, on reste : on ajoute souvent plusieurs personnes à
       // la suite. Hors tunnel, l'écran a été ouvert pour un ajout et se ferme.
       signaler.succes(
-          added ? 'Personne ajoutée' : 'Invitation envoyée',
+          added ? t('Personne ajoutée') : t('Invitation envoyée'),
           added
-            ? `${who} a été ajouté à l'inventaire en tant que ${roleLabel}.`
-            : `${who} recevra un e-mail l'invitant à créer son compte avec l'adresse ${mail}.`,
+            ? t("%{qui} a été ajouté à l'inventaire en tant que %{role}.", { qui: who, role: roleLabel })
+            : t("%{qui} recevra un e-mail l'invitant à créer son compte avec l'adresse %{mail}.", { qui: who, mail }),
         )
         if (!fromNew) router.back()
       clearSelection()
     } catch (e) {
-      signaler.erreur('Erreur', errorMessage(e))
+      signaler.erreur(t('Erreur'), errorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -171,9 +172,9 @@ export default function InviteToSessionScreen() {
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim().toLowerCase()
-    if (!first) return signaler.erreur('Prénom manquant', 'Saisissez le prénom du compteur.')
-    if (!last) return signaler.erreur('Nom manquant', 'Saisissez le nom du compteur.')
-    if (!mail || !mail.includes('@')) return signaler.erreur('Adresse à revoir', 'Saisissez une adresse e-mail valide.')
+    if (!first) return signaler.erreur(t('Prénom manquant'), t('Saisissez le prénom du compteur.'))
+    if (!last) return signaler.erreur(t('Nom manquant'), t('Saisissez le nom du compteur.'))
+    if (!mail || !mail.includes('@')) return signaler.erreur(t('Adresse à revoir'), t('Saisissez une adresse e-mail valide.'))
 
     const who = `${first} ${last}`
     setCreating(true)
@@ -192,25 +193,25 @@ export default function InviteToSessionScreen() {
         await rafraichir()
         setFirstName(''); setLastName(''); setEmail('')
         return signaler.info(
-          'Compte créé, ajout à faire',
-          `Le compte de ${who} est créé, mais son ajout à l'inventaire a échoué : ${errorMessage(e)}\n\nRetrouvez-le par la recherche ci-dessus.`,
+          t('Compte créé, ajout à faire'),
+          t("Le compte de %{qui} est créé, mais son ajout à l'inventaire a échoué : %{erreur}\n\nRetrouvez-le par la recherche ci-dessus.", { qui: who, erreur: errorMessage(e) }),
         )
       }
 
       await rafraichir()
       setFirstName(''); setLastName(''); setEmail('')
       signaler.succes(
-        'Compteur ajouté',
-        `${who} reçoit un e-mail à l'adresse ${mail} pour choisir son mot de passe, et fait déjà partie de cet inventaire.`,
+        t('Compteur ajouté'),
+        t("%{qui} reçoit un e-mail à l'adresse %{mail} pour choisir son mot de passe, et fait déjà partie de cet inventaire.", { qui: who, mail }),
       )
     } catch (e: unknown) {
       const code = (e as { code?: string }).code
       if (code === 'other_company') {
         // Ce n'est pas une faute de saisie : on dit la marche à suivre, et on
         // ne nomme jamais l'autre entreprise.
-        signaler.erreur('Cette personne n’est pas de votre entreprise', errorMessage(e))
+        signaler.erreur(t('Cette personne n’est pas de votre entreprise'), errorMessage(e))
       } else {
-        signaler.erreur('Erreur', errorMessage(e))
+        signaler.erreur(t('Erreur'), errorMessage(e))
       }
     } finally {
       setCreating(false)
@@ -226,7 +227,7 @@ export default function InviteToSessionScreen() {
   async function partager() {
     try {
       await Share.share({
-        message: `Inventaire : ${session?.inventory_number}\nCode inventaire : ${session?.security_code ?? '—'}\nMagasin : ${session?.store_name}`,
+        message: `${t('Inventaire')} : ${session?.inventory_number}\n${t('Code inventaire')} : ${session?.security_code ?? '—'}\n${t('Magasin')} : ${session?.store_name}`,
       })
     } catch { /* geste annulé */ }
   }
@@ -244,7 +245,7 @@ export default function InviteToSessionScreen() {
       {fromNew && (
         <Stack.Screen
           options={{
-            title: 'Ajouter des compteurs',
+            title: t('Ajouter des compteurs'),
           }}
         />
       )}
@@ -253,25 +254,27 @@ export default function InviteToSessionScreen() {
           automaticallyAdjustKeyboardInsets contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
             {equipeVide
-              ? "Qui comptera sur cet inventaire ? Créez le compte de votre premier compteur, ou partagez-lui les identifiants s'il a déjà l'application."
-              : `Qui comptera sur cet inventaire ? Cherchez dans l'équipe${session?.store_name ? ` de ${session.store_name}` : ' du magasin'}, ou partagez les identifiants.`}
+              ? t("Qui comptera sur cet inventaire ? Créez le compte de votre premier compteur, ou partagez-lui les identifiants s'il a déjà l'application.")
+              : session?.store_name
+                ? t("Qui comptera sur cet inventaire ? Cherchez dans l'équipe de %{magasin}, ou partagez les identifiants.", { magasin: session.store_name })
+                : t("Qui comptera sur cet inventaire ? Cherchez dans l'équipe du magasin, ou partagez les identifiants.")}
           </Text>
 
           {dejaAjoutes > 0 && (
             <Text style={styles.compte}>
-              {dejaAjoutes} personne{dejaAjoutes > 1 ? 's' : ''} sur cet inventaire, en plus de vous.
+              {tn('%{count} personne sur cet inventaire, en plus de vous.', '%{count} personnes sur cet inventaire, en plus de vous.', dejaAjoutes)}
             </Text>
           )}
 
           {!equipeVide && (
             <>
-              <Text style={styles.label}>Rechercher dans l’équipe</Text>
+              <Text style={styles.label}>{t('Rechercher dans l’équipe')}</Text>
               <View style={styles.searchRow}>
                 <TextInput
                   style={styles.input}
                   value={query}
                   onChangeText={(v) => { setQuery(v); if (selected) setSelected(null) }}
-                  placeholder="Nom ou adresse e-mail"
+                  placeholder={t('Nom ou adresse e-mail')}
                   placeholderTextColor={theme.textMuted}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -279,7 +282,7 @@ export default function InviteToSessionScreen() {
                 />
                 {selected && (
                   <Pressable style={styles.clearBtn} onPress={clearSelection}>
-                    <Text style={styles.clearBtnText}>Effacer</Text>
+                    <Text style={styles.clearBtnText}>{t('Effacer')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -306,21 +309,21 @@ export default function InviteToSessionScreen() {
 
               {noMatch && (
                 <Text style={styles.noMatch}>
-                  {"Personne de ce nom dans l'équipe de ce magasin. Un compteur qui n'a pas encore de compte se crée plus bas."}
+                  {t("Personne de ce nom dans l'équipe de ce magasin. Un compteur qui n'a pas encore de compte se crée plus bas.")}
                 </Text>
               )}
 
-              <Text style={styles.label}>Rôle sur cet inventaire</Text>
+              <Text style={styles.label}>{t('Rôle sur cet inventaire')}</Text>
               <View style={styles.roleRow}>
-                <RolePill styles={styles} active={role === 'counter'} title="Compteur" desc="Scanne et compte les articles" onPress={() => setRole('counter')} />
-                <RolePill styles={styles} active={role === 'supervisor'} title="Co-superviseur" desc="Mêmes droits que vous" onPress={() => setRole('supervisor')} />
+                <RolePill styles={styles} active={role === 'counter'} title={t('Compteur')} desc={t('Scanne et compte les articles')} onPress={() => setRole('counter')} />
+                <RolePill styles={styles} active={role === 'supervisor'} title={t('Co-superviseur')} desc={t('Mêmes droits que vous')} onPress={() => setRole('supervisor')} />
               </View>
 
               <Pressable style={[styles.button, (!canSend || busy) && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSend || busy}>
                 {loading ? (
                   <ActivityIndicator color={theme.onAccent} />
                 ) : (
-                  <Text style={styles.buttonText}>{"Ajouter à l'inventaire"}</Text>
+                  <Text style={styles.buttonText}>{t("Ajouter à l'inventaire")}</Text>
                 )}
               </Pressable>
             </>
@@ -332,18 +335,16 @@ export default function InviteToSessionScreen() {
           <View style={styles.creerCard}>
             {equipeVide ? (
               <>
-                <Text style={styles.creerTitre}>Vous n’avez pas encore d’équipe</Text>
+                <Text style={styles.creerTitre}>{t('Vous n’avez pas encore d’équipe')}</Text>
                 <Text style={styles.creerTexte}>
-                  Créez le compte de votre premier compteur : il recevra un e-mail pour choisir
-                  son mot de passe, et rejoindra cet inventaire aussitôt.
+                  {t('Créez le compte de votre premier compteur : il recevra un e-mail pour choisir son mot de passe, et rejoindra cet inventaire aussitôt.')}
                 </Text>
               </>
             ) : (
               <>
-                <Text style={styles.creerTitre}>Ajouter un nouveau compteur</Text>
+                <Text style={styles.creerTitre}>{t('Ajouter un nouveau compteur')}</Text>
                 <Text style={styles.creerTexte}>
-                  Cette personne n’a pas encore de compte ? Créez-le ici : elle rejoindra cet
-                  inventaire aussitôt.
+                  {t('Cette personne n’a pas encore de compte ? Créez-le ici : elle rejoindra cet inventaire aussitôt.')}
                 </Text>
               </>
             )}
@@ -352,7 +353,7 @@ export default function InviteToSessionScreen() {
                 style={[styles.input, styles.inputDuo]}
                 value={firstName}
                 onChangeText={setFirstName}
-                placeholder="Prénom"
+                placeholder={t('Prénom')}
                 placeholderTextColor={theme.textMuted}
                 autoCapitalize="words"
               />
@@ -360,7 +361,7 @@ export default function InviteToSessionScreen() {
                 style={[styles.input, styles.inputDuo]}
                 value={lastName}
                 onChangeText={setLastName}
-                placeholder="Nom"
+                placeholder={t('Nom')}
                 placeholderTextColor={theme.textMuted}
                 autoCapitalize="words"
               />
@@ -369,7 +370,7 @@ export default function InviteToSessionScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="Adresse e-mail"
+              placeholder={t('Adresse e-mail')}
               placeholderTextColor={theme.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
@@ -379,7 +380,7 @@ export default function InviteToSessionScreen() {
               {creating ? (
                 <ActivityIndicator color={theme.onAccent} />
               ) : (
-                <Text style={styles.buttonText}>{"Créer et ajouter à l'inventaire"}</Text>
+                <Text style={styles.buttonText}>{t("Créer et ajouter à l'inventaire")}</Text>
               )}
             </Pressable>
           </View>
@@ -389,24 +390,23 @@ export default function InviteToSessionScreen() {
               l'application, et c'est le moment où l'on veut la transmettre —
               c'est ce que le pop-up de création affichait autrefois. */}
           <View style={styles.codeCard}>
-            <Text style={styles.creerTitre}>Ou partagez les identifiants</Text>
+            <Text style={styles.creerTitre}>{t('Ou partagez les identifiants')}</Text>
             <Text style={styles.creerTexte}>
-              Une personne qui a déjà l’application rejoint l’inventaire avec son numéro et
-              son code.
+              {t('Une personne qui a déjà l’application rejoint l’inventaire avec son numéro et son code.')}
             </Text>
             <View style={styles.codeRow}>
               <View style={styles.codeChip}><Text style={styles.codeChipText}>{session?.inventory_number ?? '—'}</Text></View>
               <View style={[styles.codeChip, styles.codeChipFort]}><Text style={[styles.codeChipText, styles.codeChipTextFort]}>{session?.security_code ?? '—'}</Text></View>
             </View>
             <Pressable style={styles.partagerBtn} onPress={partager}>
-              <Text style={styles.partagerBtnText}>Partager les identifiants</Text>
+              <Text style={styles.partagerBtnText}>{t('Partager les identifiants')}</Text>
             </Pressable>
           </View>
 
           {fromNew && (
             <View style={styles.finBloc}>
               <Pressable style={styles.startBtn} onPress={() => quitterLeTunnel(sessionId)}>
-                <Text style={styles.startBtnText}>{"Commencer l'inventaire"}</Text>
+                <Text style={styles.startBtnText}>{t("Commencer l'inventaire")}</Text>
               </Pressable>
               {/* ⚠️ « Vous pouvez commencer sans personne : des compteurs
                   s'ajoutent à tout moment » a été RETIRÉE ici (Julien, sur la
@@ -418,7 +418,7 @@ export default function InviteToSessionScreen() {
                   peut partir SANS démarrer, et c'était le vrai doute. */}
               <PlusTard
                 sessionId={sessionId}
-                note="Sans démarrer le comptage. Vous reprendrez depuis la fiche de l’inventaire."
+                note={t('Sans démarrer le comptage. Vous reprendrez depuis la fiche de l’inventaire.')}
               />
             </View>
           )}

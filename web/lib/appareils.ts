@@ -36,6 +36,7 @@
  */
 
 import { APPAREILS_MAX, OFFRES, PLAFOND_LIBRE_SERVICE, SUPPLEMENT, offrePour, prixCents, type Offre } from '@/lib/offres'
+import { t } from '@/lib/i18n'
 
 /** Ce que rend `appareils_du_magasin`. */
 export type AppareilsMagasin = {
@@ -148,7 +149,7 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
       tranches: 0,
       mois: o.mois,
       an: o.an,
-      action: `Passer à ${o.nom}`,
+      action: t('Passer à %{offre}', { offre: o.nom }),
     }
   }
 
@@ -168,7 +169,7 @@ export function proposer(plafond: number | null, besoin: number): Proposition | 
     // 2026. Ici le palier ne change pas de nom, donc c'est le nombre
     // d'appareils qui suit le verbe : « Ajouter 20 appareils » décrivait un
     // geste différent des autres boutons pour la même chose.
-    action: `Passer à ${couvre} appareils`,
+    action: t('Passer à %{n} appareils', { n: couvre }),
   }
 }
 

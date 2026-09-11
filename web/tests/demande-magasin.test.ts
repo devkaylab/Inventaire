@@ -160,7 +160,7 @@ describe('écrans', () => {
     // l'administrateur parle de son entreprise, celui du superviseur de son
     // affectation. Aucun ne renvoie l'administrateur à lui-même.
     expect(pageMagasins).toContain('Votre entreprise n’a encore aucun magasin')
-    expect(pageMagasins).toContain('Contactez l&apos;administrateur de votre entreprise')
+    expect(pageMagasins).toContain("Contactez l'administrateur de votre entreprise")
     expect(pageMagasins).not.toContain('Affectez-vous un magasin')
   })
 

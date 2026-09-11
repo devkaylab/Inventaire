@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useToast } from '@/components/ui/Toast'
+import { t } from '@/lib/i18n'
 
 /**
  * Ajout d'un compteur à l'équipe, depuis le dashboard web.
@@ -36,8 +37,8 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim().toLowerCase()
-    if (!first || !last) { toast.error('Renseignez le prénom et le nom.'); return }
-    if (!mail.includes('@')) { toast.error('Adresse e-mail invalide.'); return }
+    if (!first || !last) { toast.error(t('Renseignez le prénom et le nom.')); return }
+    if (!mail.includes('@')) { toast.error(t('Adresse e-mail invalide.')); return }
 
     setBusy(true)
     setHorsEntreprise(null)
@@ -51,15 +52,15 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
         setHorsEntreprise(data.error as string)
         return
       }
-      toast.error(data?.error ?? error?.message ?? 'Ajout impossible.')
+      toast.error(data?.error ?? error?.message ?? t('Ajout impossible.'))
       return
     }
     if (data.emailSent) {
-      toast.success(`${first} ${last} reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.`)
+      toast.success(t('%{nom} reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.', { nom: `${first} ${last}` }))
     } else if (data.alreadyInvited) {
-      toast.success(`${first} ${last} avait déjà été invité : le lien reçu précédemment reste valable.`)
+      toast.success(t('%{nom} avait déjà été invité : le lien reçu précédemment reste valable.', { nom: `${first} ${last}` }))
     } else {
-      toast.error(`${first} ${last} a été ajouté, mais l’e-mail n’a pas pu partir : ${data.emailError ?? 'raison inconnue'}.`)
+      toast.error(t('%{nom} a été ajouté, mais l’e-mail n’a pas pu partir : %{raison}.', { nom: `${first} ${last}`, raison: data.emailError ?? t('raison inconnue') }))
     }
     setFirstName(''); setLastName(''); setEmail(''); setOpen(false)
     await onAdded()
@@ -68,7 +69,7 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
   if (!open) {
     return (
       <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
-        Ajouter un compteur
+        {t('Ajouter un compteur')}
       </button>
     )
   }
@@ -77,35 +78,34 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
     <form className="panel" onSubmit={submit} style={{ marginTop: 12 }}>
       {horsEntreprise && (
         <div className="banner banner-warn" role="status">
-          <strong>Cette personne n’est pas de votre entreprise.</strong> {horsEntreprise}
+          <strong>{t('Cette personne n’est pas de votre entreprise.')}</strong> {horsEntreprise}
         </div>
       )}
 
       <div className="field">
-        <label htmlFor="counter-first">Prénom</label>
-        <input id="counter-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Marie" />
+        <label htmlFor="counter-first">{t('Prénom')}</label>
+        <input id="counter-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t('Marie')} />
       </div>
       <div className="field">
-        <label htmlFor="counter-last">Nom</label>
-        <input id="counter-last" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Dupont" />
+        <label htmlFor="counter-last">{t('Nom')}</label>
+        <input id="counter-last" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t('Dupont')} />
       </div>
       <div className="field">
-        <label htmlFor="counter-email">Adresse e-mail</label>
+        <label htmlFor="counter-email">{t('Adresse e-mail')}</label>
         <input
           id="counter-email" type="email" value={email} placeholder="marie.dupont@exemple.fr"
           onChange={(e) => { setEmail(e.target.value); setHorsEntreprise(null) }}
         />
         <p className="field-hint">
-          Elle recevra à cette adresse un lien personnel : elle y vérifiera son prénom et son nom,
-          puis choisira son mot de passe.
+          {t('Elle recevra à cette adresse un lien personnel : elle y vérifiera son prénom et son nom, puis choisira son mot de passe.')}
         </p>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-primary btn-sm" disabled={busy}>
-          {busy ? 'Ajout…' : 'Ajouter à l’équipe'}
+          {busy ? t('Ajout…') : t('Ajouter à l’équipe')}
         </button>
         <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setOpen(false)}>
-          Annuler
+          {t('Annuler')}
         </button>
       </div>
     </form>

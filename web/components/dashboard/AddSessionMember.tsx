@@ -7,6 +7,7 @@ import {
 } from '@/lib/inventory'
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
+import { t } from '@/lib/i18n'
 
 /**
  * Ajouter quelqu'un à un inventaire : on cherche, on ne saisit pas.
@@ -87,12 +88,12 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
         email: choisi.email,
         role,
       })
-      if (!r.success) { toast.error(r.error ?? 'Ajout impossible.'); return }
+      if (!r.success) { toast.error(r.error ?? t('Ajout impossible.')); return }
       const qui = choisi.full_name || choisi.email
       toast.success(
         r.outcome === 'added'
-          ? `${qui} a rejoint l’inventaire.`
-          : `${qui} recevra un e-mail pour rejoindre l’inventaire.`,
+          ? t('%{qui} a rejoint l’inventaire.', { qui })
+          : t('%{qui} recevra un e-mail pour rejoindre l’inventaire.', { qui }),
       )
       setChoisi(null)
       setQuery('')
@@ -110,11 +111,10 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
   return (
     <form onSubmit={ajouter} className="member-search" autoComplete="off">
       <label htmlFor="recherche-membre" className="member-search-title">
-        Ajouter quelqu’un à cet inventaire
+        {t('Ajouter quelqu’un à cet inventaire')}
       </label>
       <p className="member-search-hint">
-        Cherchez une personne de l’équipe du magasin par nom, prénom ou adresse e-mail.
-        Pour créer un compte, passez par <strong>Mon équipe</strong>.
+        {t('Cherchez une personne de l’équipe du magasin par nom, prénom ou adresse e-mail. Pour créer un compte, passez par ')}<strong>{t('Mon équipe')}</strong>.
       </p>
 
       <div className="member-search-row">
@@ -141,7 +141,7 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
             data-lpignore="true"
             data-bwignore="true"
             data-form-type="other"
-            placeholder="Nom, prénom ou e-mail…"
+            placeholder={t('Nom, prénom ou e-mail…')}
             onChange={e => { setQuery(e.target.value); setChoisi(null) }}
           />
           {suggestions.length > 0 && (
@@ -161,14 +161,14 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
         <select
           value={role}
           onChange={e => setRole(e.target.value as SessionRole)}
-          aria-label="Rôle dans l’inventaire"
+          aria-label={t('Rôle dans l’inventaire')}
         >
-          <option value="counter">Compteur</option>
-          <option value="supervisor">Co-superviseur</option>
+          <option value="counter">{t('Compteur')}</option>
+          <option value="supervisor">{t('Co-superviseur')}</option>
         </select>
 
         <button type="submit" className="btn btn-primary btn-sm" disabled={!choisi || busy}>
-          {busy ? 'Ajout…' : 'Ajouter'}
+          {busy ? t('Ajout…') : t('Ajouter')}
         </button>
       </div>
 
@@ -177,16 +177,14 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
           <span className="member-chosen-name">{choisi.full_name || choisi.email}</span>
           <span className="member-chosen-mail">{choisi.email}</span>
           <button type="button" className="link-btn" onClick={() => { setChoisi(null); setQuery('') }}>
-            Changer
+            {t('Changer')}
           </button>
         </div>
       )}
 
       {rienTrouve && (
         <p className="member-search-hint" style={{ marginTop: 10 }}>
-          Personne de l’équipe de ce magasin ne correspond à «&nbsp;{query.trim()}&nbsp;». Si la
-          personne n’a pas encore de compte, créez-le depuis <strong>Mon équipe</strong> ; elle
-          apparaîtra ensuite ici.
+          {t('Personne de l’équipe de ce magasin ne correspond à « %{q} ». Si la personne n’a pas encore de compte, créez-le depuis ', { q: query.trim() })}<strong>{t('Mon équipe')}</strong>{t(' ; elle apparaîtra ensuite ici.')}
         </p>
       )}
     </form>

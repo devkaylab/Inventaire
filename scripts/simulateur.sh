@@ -28,6 +28,29 @@ cd "$RACINE"
 UDID="${1:-booted}"
 APP="ios/build/dd/Build/Products/Debug-iphonesimulator/Inventaire.app"
 
+# ⚠️ Les frameworks PRÉBUILTS (core React, ExpoModulesCore, ExpoCamera…) ont
+# deux variantes — Debug et Release — et UN SEUL dossier chacun. Un script de
+# build les échange selon la configuration, mais seulement s'il croit que la
+# variante en place est l'autre : il lit un repère `.last_build_configuration`.
+# Or `pod install` pose la variante que le cache CocoaPods lui donne (Release,
+# depuis l'archive App Store du 8 septembre) ET écrit un repère qui dit
+# « debug ». Résultat le 11 septembre 2026 : lien cassé (« Undefined symbols …
+# Sealable »), puis, une fois le core forcé en Debug, ExpoModulesCore resté en
+# Release et l'app qui plante au lancement (SIGSEGV dans Props::Props).
+#
+# Donc : après tout `pod install` (Manifest.lock plus récent que notre repère),
+# on déclare TOUS les prébuilts en Release, ce qui force leur ré-extraction en
+# Debug au build suivant. Une extraction, une fois par pod install.
+JALON="ios/build/.prebuilts-verifies"
+if [ ! -f "$JALON" ] || [ ios/Pods/Manifest.lock -nt "$JALON" ]; then
+  echo "→ pod install récent : les frameworks prébuilts seront ré-extraits en Debug"
+  [ -d ios/Pods/React-Core-prebuilt ] && printf 'Release' > ios/Pods/React-Core-prebuilt/.last_build_configuration
+  for a in ios/Pods/*/artifacts; do
+    [ -d "$a" ] && printf 'release' > "$a/.last_build_configuration"
+  done
+  mkdir -p ios/build && touch "$JALON"
+fi
+
 echo "→ Compilation (Debug)…"
 xcodebuild \
   -workspace ios/Inventaire.xcworkspace \

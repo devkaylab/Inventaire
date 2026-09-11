@@ -1,4 +1,7 @@
+'use client'
+
 import { Logo } from './Logo'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * L'attente pleine page.
@@ -18,12 +21,13 @@ import { Logo } from './Logo'
  * `.chargement-note` : l'attente se DIT. Et le `role="status"` la fait dire
  * aussi aux lecteurs d'écran, pour qui une animation ne dit rien du tout.
  */
-export function Chargement({ texte = 'Chargement…' }: { texte?: string }) {
+export function Chargement({ texte }: { texte?: string }) {
+  const { t } = useTraduction()
   return (
     <div className="auth-wrap" role="status" aria-live="polite">
       <div className="chargement-marque">
         <Logo size={44} anime />
-        <p className="muted">{texte}</p>
+        <p className="muted">{texte ?? t('Chargement…')}</p>
       </div>
     </div>
   )

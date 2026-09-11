@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { checkPassword, PASSWORD_RULES } from '@/lib/password'
 import { CocheIcon } from '@/components/ui/Icones'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { Font, Spacing, type Theme } from '@/constants/ink'
 
 /**
@@ -17,7 +18,7 @@ export function PasswordRules({ password }: { password: string }) {
   const c = checkPassword(password)
 
   return (
-    <View style={styles.list} accessibilityLabel="Exigences du mot de passe">
+    <View style={styles.list} accessibilityLabel={t('Exigences du mot de passe')}>
       {PASSWORD_RULES.map((r) => {
         const ok = c[r.key]
         return (
@@ -25,7 +26,7 @@ export function PasswordRules({ password }: { password: string }) {
             <View style={[styles.tick, ok && styles.tickOn]}>
               {ok && <CocheIcon color={theme.onAccent} size={11} />}
             </View>
-            <Text style={[styles.label, ok && styles.labelOn]}>{r.label}</Text>
+            <Text style={[styles.label, ok && styles.labelOn]}>{t(r.label)}</Text>
           </View>
         )
       })}

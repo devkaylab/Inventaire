@@ -24,6 +24,7 @@ import { useTheme } from '@/lib/theme'
 import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import type { Tables } from '@/types/database.types'
 import { demander, signaler } from '@/lib/dialogue'
+import { locale, t, tn } from '@/lib/i18n'
 
 type Session = Tables<'inventory_sessions'>
 
@@ -33,11 +34,9 @@ type Row =
   | { kind: 'header'; label: string; hint?: string }
   | { kind: 'session'; session: Session }
 
-const STATUS_LABELS: Record<string, string> = {
-  open: 'Ouverte',
-  counting: 'En cours',
-  closed: 'Clôturée',
-}
+// Une fonction, pas une constante : la langue n'est pas connue au chargement du module.
+const statusLabel = (s: string) =>
+  ({ open: t('Ouverte'), counting: t('En cours'), closed: t('Clôturée') } as Record<string, string>)[s] ?? s
 
 function statusColors(t: Theme): Record<string, { fg: string; bg: string }> {
   return {
@@ -171,7 +170,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
         <View style={[styles.badge, { backgroundColor: sc.bg }]}>
           <View style={[styles.badgeDot, { backgroundColor: sc.fg }]} />
           <Text style={[styles.badgeText, { color: sc.fg }]}>
-            {STATUS_LABELS[session.status] ?? session.status}
+            {statusLabel(session.status) ?? session.status}
           </Text>
         </View>
         {/* Comme sur le site : la corbeille n'apparaît que sur ce qu'on peut
@@ -185,7 +184,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
       </View>
       <Text style={styles.storeName}>{session.store_name}</Text>
       <Text style={styles.meta}>
-        {session.inventory_number} · {new Date(session.created_at).toLocaleDateString('fr-FR')}
+        {session.inventory_number} · {new Date(session.created_at).toLocaleDateString(locale())}
       </Text>
     </Pressable>
   )
@@ -225,7 +224,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
               onPress={() => { balayage.current?.close(); onClose() }}
             >
               <CadenasIcon color="#fff" />
-              <Text style={styles.balayageTexte}>Clôturer</Text>
+              <Text style={styles.balayageTexte}>{t('Clôturer')}</Text>
             </Pressable>
           )}
           {onDelete && (
@@ -234,7 +233,7 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
               onPress={() => { balayage.current?.close(); onDelete() }}
             >
               <CorbeilleIcon color="#fff" />
-              <Text style={styles.balayageTexte}>Supprimer</Text>
+              <Text style={styles.balayageTexte}>{t('Supprimer')}</Text>
             </Pressable>
           )}
         </View>
@@ -249,11 +248,10 @@ function SessionCard({ session, theme, styles, onDelete, onClose, selection, coc
     {indice && (
       <View style={styles.indiceBulle}>
         <Text style={styles.indiceTexte}>
-          Balayez une carte vers la gauche pour clôturer ou supprimer un inventaire.
-          Chaque geste demande confirmation.
+          {t('Balayez une carte vers la gauche pour clôturer ou supprimer un inventaire. Chaque geste demande confirmation.')}
         </Text>
         <Pressable onPress={onIndiceCompris} hitSlop={10} style={styles.indiceBtn}>
-          <Text style={styles.indiceCompris}>Compris</Text>
+          <Text style={styles.indiceCompris}>{t('Compris')}</Text>
         </Pressable>
       </View>
     )}
@@ -509,10 +507,10 @@ export default function SupervisorHomeScreen() {
     const nom = s.name || s.store_name
     const enCours = s.status !== 'closed'
     void demander({
-      titre: `Supprimer « ${nom} » ?`,
-      texte: 'Ses comptages, son stock théorique, ses audits, ses membres et son référentiel seront supprimés définitivement.',
-      note: enCours ? 'Cet inventaire n’est pas clôturé.' : undefined,
-      action: 'Supprimer',
+      titre: t('Supprimer « %{nom} » ?', { nom }),
+      texte: t('Ses comptages, son stock théorique, ses audits, ses membres et son référentiel seront supprimés définitivement.'),
+      note: enCours ? t('Cet inventaire n’est pas clôturé.') : undefined,
+      action: t('Supprimer'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
@@ -520,7 +518,7 @@ export default function SupervisorHomeScreen() {
         await deleteSessionPermanently(s.id)
         await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       } catch (e) {
-        signaler.erreur('Suppression impossible', errorMessage(e))
+        signaler.erreur(t('Suppression impossible'), errorMessage(e))
       }
     })
   }, [queryClient])
@@ -536,17 +534,17 @@ export default function SupervisorHomeScreen() {
   const confirmerCloture = useCallback((s: Session) => {
     const nom = s.name || s.store_name
     void demander({
-      titre: `Clôturer « ${nom} » ?`,
-      texte: 'L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.',
-      note: 'Le rapport reste disponible et son créateur pourra le rouvrir. Le détail des scans, lui, est effacé douze mois après la clôture.',
-      action: 'Clôturer',
+      titre: t('Clôturer « %{nom} » ?', { nom }),
+      texte: t('L’inventaire passe en lecture seule : plus aucun comptage ne pourra y être enregistré, y compris depuis les téléphones encore ouverts dessus.'),
+      note: t('Le rapport reste disponible et son créateur pourra le rouvrir. Le détail des scans, lui, est effacé douze mois après la clôture.'),
+      action: t('Clôturer'),
     }).then(async (ok) => {
       if (!ok) return
       try {
         await closeSession(s.id)
         await queryClient.invalidateQueries({ queryKey: ['sessions'] })
       } catch (e) {
-        signaler.erreur('Clôture impossible', errorMessage(e))
+        signaler.erreur(t('Clôture impossible'), errorMessage(e))
       }
     })
   }, [queryClient])
@@ -578,18 +576,18 @@ export default function SupervisorHomeScreen() {
     // La confirmation nomme ce qu'on supprime — huit au plus, sinon la boîte
     // de dialogue devient illisible sur un téléphone.
     const liste = noms.slice(0, 8).map(n => `• ${n}`).join('\n')
-    const reste = noms.length > 8 ? `\n• et ${noms.length - 8} autre${noms.length - 8 > 1 ? 's' : ''}` : ''
+    const reste = noms.length > 8 ? '\n• ' + tn('et %{count} autre', 'et %{count} autres', noms.length - 8) : ''
     const enCours = choisis.filter(s => s.status !== 'closed').length
     void demander({
-      titre: choisis.length === 1 ? 'Supprimer cet inventaire ?' : `Supprimer ces ${choisis.length} inventaires ?`,
+      titre: choisis.length === 1 ? t('Supprimer cet inventaire ?') : t('Supprimer ces %{n} inventaires ?', { n: choisis.length }),
       texte: liste + reste,
       note: [
         enCours > 0
-          ? `${enCours} d'entre eux ${enCours > 1 ? 'ne sont pas clôturés' : "n'est pas clôturé"}.`
+          ? tn("%{count} d'entre eux n'est pas clôturé.", '%{count} d’entre eux ne sont pas clôturés.', enCours)
           : null,
-        'Comptages, stock théorique, audits, membres et référentiel seront supprimés définitivement.',
+        t('Comptages, stock théorique, audits, membres et référentiel seront supprimés définitivement.'),
       ].filter(Boolean).join(' '),
-      action: 'Supprimer',
+      action: t('Supprimer'),
       ton: 'danger',
     }).then(async (ok) => {
       if (!ok) return
@@ -606,8 +604,8 @@ export default function SupervisorHomeScreen() {
       // Un échec ne doit pas passer inaperçu derrière un succès global.
       if (echecs.length > 0) {
         signaler.erreur(
-          echecs.length === choisis.length ? 'Suppression impossible' : 'Suppression partielle',
-          `${choisis.length - echecs.length} sur ${choisis.length} supprimé${choisis.length - echecs.length > 1 ? 's' : ''}. ${echecs.join(' ')}`,
+          echecs.length === choisis.length ? t('Suppression impossible') : t('Suppression partielle'),
+          `${tn('%{count} sur %{total} supprimé.', '%{count} sur %{total} supprimés.', choisis.length - echecs.length, { total: choisis.length })} ${echecs.join(' ')}`,
         )
       }
     })
@@ -631,14 +629,14 @@ export default function SupervisorHomeScreen() {
 
     const out: Row[] = []
     if (miens.length > 0) {
-      out.push({ kind: 'header', label: 'Mes inventaires' })
+      out.push({ kind: 'header', label: t('Mes inventaires') })
       for (const s of miens) out.push({ kind: 'session', session: s })
     }
     if (invites.length > 0) {
       out.push({
         kind: 'header',
-        label: 'Inventaires invités',
-        hint: 'Vous y participez sans les avoir créés : vous pouvez compter et consulter le rapport, leur clôture définitive et leur réouverture appartiennent à leur créateur.',
+        label: t('Inventaires invités'),
+        hint: t('Vous y participez sans les avoir créés : vous pouvez compter et consulter le rapport, leur clôture définitive et leur réouverture appartiennent à leur créateur.'),
       })
       for (const s of invites) out.push({ kind: 'session', session: s })
     }
@@ -721,13 +719,13 @@ export default function SupervisorHomeScreen() {
                   masquait l'inventaire qu'on venait de créer : à 76 px, la
                   question ne se pose plus. */}
               {carteGuide}
-              <Text style={styles.greeting}>Bonjour, <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
+              <Text style={styles.greeting}>{t('Bonjour,')} <Text style={styles.greetingName}>{profile?.full_name}</Text></Text>
               {/* Le mode sélection s'ouvre aussi par un appui long sur une
                   carte ; ce bouton le rend découvrable, l'appui long ne
                   s'invente pas. */}
               {selectionnables.length > 0 && !selection && (
                 <Pressable style={styles.selBtn} onPress={() => setSelection(true)} hitSlop={8}>
-                  <Text style={styles.selBtnText}>Sélectionner</Text>
+                  <Text style={styles.selBtnText}>{t('Sélectionner')}</Text>
                 </Pressable>
               )}
             </View>
@@ -737,21 +735,21 @@ export default function SupervisorHomeScreen() {
               <View style={styles.videCard}>
                 <Text style={styles.videTitre}>
                   {profile?.is_company_admin
-                    ? 'Votre entreprise n’a encore aucun magasin'
-                    : 'Aucun magasin ne vous est affecté'}
+                    ? t('Votre entreprise n’a encore aucun magasin')
+                    : t('Aucun magasin ne vous est affecté')}
                 </Text>
                 <Text style={styles.videTexte}>
                   {/* Même piège que sur l'écran Magasins : un administrateur
                       d'entreprise supervise tous les magasins des siens. Lui
                       parler d'affectation le renverrait à lui-même. */}
                   {profile?.is_company_admin
-                    ? 'Un inventaire se rattache à un magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.'
-                    : 'Un inventaire se rattache à un magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.'}
+                    ? t('Un inventaire se rattache à un magasin. Demandez à Quantinvo d’en ajouter un depuis la page Magasins du site.')
+                    : t('Un inventaire se rattache à un magasin. L’administrateur de votre entreprise vous en affecte un depuis la page Mon équipe du site.')}
                 </Text>
               </View>
             ) : (
               <View style={styles.center}>
-                <Text style={styles.emptyText}>Aucun inventaire pour l&apos;instant</Text>
+                <Text style={styles.emptyText}>{t("Aucun inventaire pour l'instant")}</Text>
               </View>
             )
           }
@@ -763,16 +761,16 @@ export default function SupervisorHomeScreen() {
           <View style={styles.barreRangee}>
             <Text style={styles.barreCompte} numberOfLines={1}>
               {coches.length === 0
-                ? 'Rien de sélectionné'
-                : `${coches.length} sélectionné${coches.length > 1 ? 's' : ''}`}
+                ? t('Rien de sélectionné')
+                : tn('%{count} sélectionné', '%{count} sélectionnés', coches.length)}
             </Text>
             <Pressable hitSlop={8} onPress={() => setCoches(toutCoche ? [] : selectionnables)}>
-              <Text style={styles.barreLien}>{toutCoche ? 'Tout décocher' : 'Tout sélectionner'}</Text>
+              <Text style={styles.barreLien}>{toutCoche ? t('Tout décocher') : t('Tout sélectionner')}</Text>
             </Pressable>
           </View>
           <View style={styles.barreRangee}>
             <Pressable hitSlop={8} onPress={quitterSelection} style={{ paddingHorizontal: Spacing.sm }}>
-              <Text style={styles.barreLien}>Annuler</Text>
+              <Text style={styles.barreLien}>{t('Annuler')}</Text>
             </Pressable>
             <Pressable
               style={[styles.barreSuppr, coches.length === 0 && styles.barreSupprOff]}
@@ -780,7 +778,7 @@ export default function SupervisorHomeScreen() {
               onPress={supprimerSelection}
             >
               <Text style={styles.barreSupprText}>
-                Supprimer{coches.length > 0 ? ` (${coches.length})` : ''}
+                {t('Supprimer')}{coches.length > 0 ? ` (${coches.length})` : ''}
               </Text>
             </Pressable>
           </View>
@@ -799,7 +797,7 @@ export default function SupervisorHomeScreen() {
          * 76 px et un bouton d'action ne se confondent pas.
          */
         <Pressable style={styles.fab} onPress={() => router.push('/(supervisor)/new-session')}>
-          <Text style={styles.fabText}>+ Nouvel inventaire</Text>
+          <Text style={styles.fabText}>{t('+ Nouvel inventaire')}</Text>
         </Pressable>
       )}
     </SafeAreaView>

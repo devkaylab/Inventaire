@@ -30,6 +30,7 @@ export type NomIcone =
   | 'cle'
   | 'bouclier'
   | 'corbeille'
+  | 'langue'
 
 export function MenuIcon({ nom, color, size = 21 }: { nom: NomIcone; color: string; size?: number }) {
   const t = { stroke: color, strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
@@ -68,6 +69,13 @@ export function MenuIcon({ nom, color, size = 21 }: { nom: NomIcone; color: stri
           <Path d="M12 3v11" {...t} />
           <Path d="M8 10.5l4 4 4-4" {...t} />
           <Path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17" {...t} />
+        </>
+      )}
+      {nom === 'langue' && (
+        <>
+          <Circle cx={12} cy={12} r={9} {...t} />
+          <Path d="M3 12h18" {...t} />
+          <Path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z" {...t} />
         </>
       )}
       {nom === 'reperes' && (

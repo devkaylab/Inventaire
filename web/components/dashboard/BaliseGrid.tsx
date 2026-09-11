@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { groupByName, type ZoneDashboardRow } from '@/lib/zones'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { t } from '@/lib/i18n'
 
 type Filter = 'all' | 'todo' | 'counting' | 'counted' | 'audited'
 
@@ -43,8 +44,8 @@ export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
   if (zones.length === 0) {
     return (
       <EmptyState
-        title="Aucune balise affectée"
-        hint="Renseignez les emplacements à inventorier depuis l'onglet « Set up » : une plage de balises par emplacement."
+        title={t('Aucune balise affectée')}
+        hint={t("Renseignez les emplacements à inventorier depuis l'onglet « Set up » : une plage de balises par emplacement.")}
       />
     )
   }
@@ -60,18 +61,18 @@ export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
             onClick={() => setFilter(f.key)}
             aria-pressed={filter === f.key}
           >
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
       </div>
 
       {groups.length === 0 ? (
-        <p className="muted small">Aucune balise dans ce filtre.</p>
+        <p className="muted small">{t('Aucune balise dans ce filtre.')}</p>
       ) : groups.map(g => (
         <div key={g.name} style={{ marginBottom: 16 }}>
           {showGroupLabels && (
             <div className="dash-section-label" style={{ marginBottom: 6 }}>
-              {g.name} — {g.counted}/{g.total} comptées · {g.audited}/{g.total} auditées
+              {g.name} — {g.counted}/{g.total} {t('comptées')} · {g.audited}/{g.total} {t('auditées')}
             </div>
           )}
           <div className="balise-grid">
@@ -79,9 +80,9 @@ export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
               const z = byCode.get(code)
               if (!z) return null
               const title =
-                `Balise ${z.code} · ${z.name ?? 'sans emplacement'}\n` +
-                `Comptage : ${STATUS_FR[z.count_status]} (${z.count_lines} réf.)\n` +
-                `Audit : ${STATUS_FR[z.audit_status]} (${z.audit_lines} réf.)`
+                `${t('Balise')} ${z.code} · ${z.name ?? t('sans emplacement')}\n` +
+                `${t('Comptage')} : ${t(STATUS_FR[z.count_status])} (${z.count_lines} ${t('réf.')})\n` +
+                `${t('Audit')} : ${t(STATUS_FR[z.audit_status])} (${z.audit_lines} ${t('réf.')})`
               const content = (
                 <>
                   <span className="num">{z.code}</span>
@@ -104,10 +105,10 @@ export function BaliseGrid({ zones, onSelect, showGroupLabels = true }: {
       ))}
 
       <div className="balise-legend">
-        <span><span className="balise-dot balise-dot-count balise-dot-open" /> en cours (pas encore clôturée)</span>
-        <span><span className="balise-dot balise-dot-count balise-dot-done" /> comptage terminé</span>
-        <span><span className="balise-dot balise-dot-audit balise-dot-done" /> audit terminé</span>
-        <span><span className="balise-dot" /> pas commencé</span>
+        <span><span className="balise-dot balise-dot-count balise-dot-open" /> {t('en cours (pas encore clôturée)')}</span>
+        <span><span className="balise-dot balise-dot-count balise-dot-done" /> {t('comptage terminé')}</span>
+        <span><span className="balise-dot balise-dot-audit balise-dot-done" /> {t('audit terminé')}</span>
+        <span><span className="balise-dot" /> {t('pas commencé')}</span>
       </div>
     </div>
   )

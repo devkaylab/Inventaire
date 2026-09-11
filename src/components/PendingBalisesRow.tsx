@@ -6,6 +6,7 @@ import { Font, Radius, Spacing, tabular, type Theme } from '@/constants/ink'
 import { baliseSummary } from '@/components/OfflineBanner'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import { useTheme } from '@/lib/theme'
+import { t, tn } from '@/lib/i18n'
 
 /**
  * Ligne « balises en attente d'envoi », à poser sous les balises manquantes.
@@ -32,13 +33,13 @@ export function PendingBalisesRow({ sessionId, target }: { sessionId: string; ta
     <Pressable style={styles.row} onPress={() => router.push(target as never)}>
       <View style={{ flex: 1 }}>
         <Text style={styles.count}>
-          {queue.pending} balise{queue.pending > 1 ? 's' : ''} en attente d&apos;envoi
+          {tn("%{count} balise en attente d'envoi", "%{count} balises en attente d'envoi", queue.pending)}
         </Text>
         <Text style={styles.codes}>{baliseSummary(queue.balises)}</Text>
         <Text style={styles.hint}>
           {queue.syncing
-            ? 'Envoi en cours…'
-            : 'Comptée sur ce téléphone, pas encore sur le serveur'}
+            ? t('Envoi en cours…')
+            : t('Comptée sur ce téléphone, pas encore sur le serveur')}
         </Text>
       </View>
       <Svg width={18} height={18} viewBox="0 0 24 24">

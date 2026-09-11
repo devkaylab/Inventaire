@@ -43,6 +43,7 @@ import {
   type TonNouvelle,
 } from '@/lib/dialogue'
 import { useTheme } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 import { AlerteIcon, CocheIcon, AstuceIcon } from '@/components/ui/Icones'
 
 /** Repli pour Android, qui n'a pas `onDismiss` : la durée du fondu, plus une marge. */
@@ -95,7 +96,7 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
 
   const danger = question.ton === 'danger'
   const teinte = danger ? theme.danger : theme.accent
-  const surtitre = question.surtitre ?? (danger ? 'Action définitive' : 'Confirmation')
+  const surtitre = question.surtitre ?? (danger ? t('Action définitive') : t('Confirmation'))
 
   return (
     <Modal
@@ -163,7 +164,7 @@ function CarteQuestion({ question }: { question: QuestionPosee }) {
                 onPress={() => repondre('annuler')}
                 accessibilityRole="button"
               >
-                <Text style={styles.btnContourText}>{question.annuler ?? 'Annuler'}</Text>
+                <Text style={styles.btnContourText}>{question.annuler ?? t('Annuler')}</Text>
               </Pressable>
             )}
           </View>
