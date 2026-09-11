@@ -342,3 +342,51 @@ describe('le héros filmé', () => {
     expect(css.slice(i, i + 400)).toContain('var(--encre)')
   })
 })
+
+describe('le héros va à l’essentiel, et les réglages sont dans la coquille', () => {
+  const chrome = lire('../components/SiteChrome.tsx')
+  const drapeau = lire('../components/Drapeau.tsx')
+
+  it('⚠️ le titre est d’une seule encre, et sans surtitre', () => {
+    // Demande de Julien, 11 septembre 2026. « Outil d'inventaire » répétait ce
+    // que la phrase juste dessous dit mieux, et le dégradé coupait le titre en
+    // deux à l'endroit où il doit se lire d'un trait.
+    // ⚠️ Sans les commentaires : celui du héros explique pourquoi le dégradé
+    // est parti, et « dégradé » contient « grad ». La garde se lisait
+    // elle-même.
+    const code = sansCommentaires(accueil)
+    const hero = code.slice(code.indexOf('hero-plein'), code.indexOf('</section>'))
+    expect(hero).not.toContain('eyebrow')
+    expect(hero).not.toContain('grad')
+  })
+
+  it('⚠️ la langue est dans la BARRE et dans le PIED', () => {
+    // Elle était une pastille flottante dans un coin, où elle se prend pour un
+    // bouton d'aide. Les deux places : on la voit en arrivant, et on la
+    // retrouve en bas quand on ne l'a pas vue en haut.
+    const barre = chrome.slice(chrome.indexOf('<header'), chrome.indexOf('</header>'))
+    const pied = chrome.slice(chrome.indexOf('<footer'))
+    expect(barre).toMatch(/<LangueToggle place="pose"/)
+    expect(pied).toMatch(/<LangueToggle place="pose"/)
+  })
+
+  it('⚠️ le thème est au pied, et le bouton flottant s’efface alors', () => {
+    // Il vit dans le layout RACINE, donc sur toutes les pages — y compris
+    // l'espace connecté et la page de devis, qui n'ont ni barre ni pied où le
+    // poser. On ne le retire pas : on le masque là où il ferait doublon.
+    const pied = chrome.slice(chrome.indexOf('<footer'))
+    expect(pied).toMatch(/<ThemeToggle place="pose"/)
+    expect(lire('../app/layout.tsx')).toContain('<ThemeToggle />')
+    expect(css).toMatch(/body:has\(\.site-footer\) \.theme-toggle \{[^}]*display: none/)
+  })
+
+  it('⚠️ les drapeaux sont DESSINÉS, jamais des émoji', () => {
+    // `🇫🇷` ne s'affiche comme un drapeau que sur Apple et Android : sur
+    // Windows le navigateur rend deux lettres, « FR ». Un visiteur sur PC —
+    // donc la majorité — verrait un code là où on annonce un drapeau.
+    // ⚠️ Sans les commentaires, là encore : celui du fichier CITE les deux
+    // émoji pour dire qu'on ne les emploie pas.
+    expect(drapeau).toContain('<svg')
+    expect(sansCommentaires(drapeau)).not.toMatch(/[\u{1F1E6}-\u{1F1FF}]/u)
+  })
+})

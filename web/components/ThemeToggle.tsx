@@ -40,7 +40,7 @@ function ThemeGlyph({ pref }: { pref: Pref }) {
   )
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ place = 'flottant' }: { place?: 'flottant' | 'pose' }) {
   const [pref, setPref] = useState<Pref>('system')
 
   useEffect(() => {
@@ -65,8 +65,9 @@ export function ThemeToggle() {
   const label = pref === 'system' ? 'Système' : pref === 'light' ? 'Clair' : 'Sombre'
 
   return (
-    <button className="theme-toggle" onClick={cycle} aria-label={`Thème : ${label}`} title={`Thème : ${label} (cliquer pour changer)`}>
+    <button className={place === 'pose' ? 'theme-pose' : 'theme-toggle'} onClick={cycle} aria-label={`Thème : ${label}`} title={`Thème : ${label} (cliquer pour changer)`}>
       <ThemeGlyph pref={pref} />
+      {place === 'pose' && <span>{label}</span>}
     </button>
   )
 }

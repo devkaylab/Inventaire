@@ -96,8 +96,12 @@ export function Accueil({ langue }: { langue: Langue }) {
         <section className="hero hero-plein hero-film-fond">
           <FondVideo src="/vitrine/hero.mp4" poster="/vitrine/hero-poster.jpg" />
           <div className="container" data-hero-exit>
-            <div data-reveal="0"><span className="eyebrow">{t("Outil d'inventaire")}</span></div>
-            <h1 data-reveal="1">{t('La simplicité')}<br /><span className="grad">{t('en main.')}</span></h1>
+            {/* ⚠️ NI SURTITRE NI DÉGRADÉ (demande de Julien, 11 septembre 2026).
+                « Outil d'inventaire » répétait ce que la phrase juste dessous
+                dit mieux, et le dégradé sur « en main. » coupait le titre en
+                deux à l'endroit où il doit se lire d'un trait. Sur la vidéo, un
+                titre d'une seule encre se détache aussi mieux. */}
+            <h1 data-reveal="1">{t('La simplicité')}<br />{t('en main.')}</h1>
             {/*
               Trois prestations plutôt qu'une phrase : elles se lisent en un coup
               d'œil et méritent le poids d'un sous-titre, pas celui d'un

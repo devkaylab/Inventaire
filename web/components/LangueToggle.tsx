@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { NOM_LANGUE, changerLangue, useLangue, useTraduction } from '@/lib/i18n'
 import { cheminDansLangue, langueDuChemin } from '@/lib/vitrine'
+import { Drapeau } from '@/components/Drapeau'
 
 /**
  * Le bouton de langue (10 septembre 2026).
@@ -22,7 +23,7 @@ import { cheminDansLangue, langueDuChemin } from '@/lib/vitrine'
  * Il rend le code en dur (« FR » / « EN ») et non `NOM_LANGUE` : à 44 px de
  * haut, un mot ne tient pas, un code se lit d'un coup d'œil.
  */
-export function LangueToggle() {
+export function LangueToggle({ place = 'flottant' }: { place?: 'flottant' | 'pose' }) {
   const langue = useLangue()
   const { t } = useTraduction()
   const chemin = usePathname()
@@ -38,12 +39,13 @@ export function LangueToggle() {
   return (
     <button
       type="button"
-      className="langue-toggle"
+      className={place === 'pose' ? 'langue-pose' : 'langue-toggle'}
       onClick={basculer}
       aria-label={libelle}
       title={libelle}
     >
-      {langue.toUpperCase()}
+      <Drapeau langue={langue} />
+      <span>{langue.toUpperCase()}</span>
     </button>
   )
 }

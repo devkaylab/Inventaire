@@ -175,7 +175,11 @@ describe('la vitrine a deux adresses par page', () => {
     expect(b).toContain('if (langueDuChemin(chemin)) router.push(cheminDansLangue(')
     expect(b).toContain('changerLangue(autre)')
     // Il est monté sur la coquille publique, donc sur toute la vitrine.
-    expect(lire('components/SiteChrome.tsx')).toContain('<LangueToggle />')
+    // ⚠️ La garde porte sur la PRÉSENCE du bouton, pas sur sa balise écrite
+    // mot pour mot : elle citait `<LangueToggle />` et elle est tombée le
+    // 11 septembre, quand il a quitté sa pastille flottante pour la barre du
+    // haut (`place="pose"`) — sur un changement voulu, sans rien avoir protégé.
+    expect(lire('components/SiteChrome.tsx')).toMatch(/<LangueToggle[\s/>]/)
   })
 
   it('la détection automatique ne renvoie que du français vers l’anglais, et jamais un robot', () => {

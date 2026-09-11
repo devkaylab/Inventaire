@@ -218,6 +218,43 @@ a { color: inherit; text-decoration: none; }
   height: 64px;
 }
 .header-actions { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+
+/* ——————————————————————————————————————————————————————————————
+   Langue et thème POSÉS : dans la barre du haut, et au pied.
+   (Demande de Julien, 11 septembre 2026.)
+   —————————————————————————————————————————————————————————————— */
+.langue-pose, .theme-pose {
+  appearance: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 36px; padding: 0 10px;
+  background: transparent; border: 1px solid transparent; border-radius: var(--r);
+  color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600;
+  letter-spacing: .04em;
+  transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+.langue-pose:hover, .theme-pose:hover { color: var(--text-1); border-color: var(--hairline); }
+.langue-pose:focus-visible, .theme-pose:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.drapeau { width: 18px; height: 12px; display: block; flex: none; border-radius: 1.5px; }
+
+/* Dans la barre, la langue ouvre le groupe de droite : c'est elle qui prend la
+   marge automatique, et les actions la suivent. */
+.site-header .inner > .langue-pose { margin-left: auto; }
+.site-header .inner > .langue-pose + .header-actions { margin-left: 0; }
+
+.pied-reglages { display: flex; align-items: center; gap: 6px; }
+
+/* ⚠️ LE BOUTON FLOTTANT DE THÈME S'EFFACE QUAND LE PIED EN PORTE UN.
+   Il vit dans le layout RACINE, donc sur toutes les pages — y compris
+   l'espace connecté et la page de devis, qui n'ont ni barre ni pied où le
+   poser. On ne le retire donc pas : on le masque là où il ferait doublon. */
+body:has(.site-footer) .theme-toggle { display: none; }
+
+@media (max-width: 900px) {
+  /* La barre est déjà serrée : la langue reste au pied, où elle est entière. */
+  .site-header .inner > .langue-pose { display: none; }
+  .site-header .inner > .langue-pose + .header-actions { margin-left: auto; }
+}
+
 /* Le lien de rang secondaire : il se lit, il n'appelle pas. Le bouton d'à côté
    est le seul objet plein de la barre. */
 .header-lien { color: var(--text-2); font-size: 14px; font-weight: 550; white-space: nowrap; }

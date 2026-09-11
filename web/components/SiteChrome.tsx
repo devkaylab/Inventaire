@@ -9,6 +9,7 @@ import { Parallaxe } from '@/components/Parallaxe'
 import { PRIVACY_URL } from '@/lib/links'
 import { mentionsCompletes } from '@/lib/legal'
 import { LangueToggle } from '@/components/LangueToggle'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { RedirectionLangue } from '@/components/RedirectionLangue'
 import { traduction, type Langue } from '@/lib/traduction'
 
@@ -22,9 +23,6 @@ export function SiteHeader({ langue = 'fr' }: { langue?: Langue }) {
   return (
     <>
     <RevealObserver />
-    {/* ⚠️ Le bouton FR/EN est sur TOUTE la vitrine depuis le 11 septembre 2026
-        (demande de Julien), et la détection automatique avec lui. */}
-    <LangueToggle />
     <RedirectionLangue />
     <Parallaxe />
     <EnTeteAuDefilement />
@@ -48,6 +46,11 @@ export function SiteHeader({ langue = 'fr' }: { langue?: Langue }) {
             <Link href={lien(l.href)} key={l.href}>{t(l.libelle)}</Link>
           ))}
         </nav>
+        {/* ⚠️ LA LANGUE EST DANS LA BARRE, PLUS UNE PASTILLE FLOTTANTE
+            (demande de Julien, 11 septembre 2026, Qonto à l'appui). Une
+            pastille posée dans un coin se prend pour un outil de l'agent ou un
+            bouton d'aide ; dans la barre, elle se lit comme ce qu'elle est. */}
+        <LangueToggle place="pose" />
         <HeaderActions />
         {/* ⚠️ Sous 780 px, `.nav-links` passe en display:none : sans ce burger,
             les quatre liens du site n'ont plus AUCUNE porte sur un téléphone.
@@ -79,6 +82,14 @@ export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
           {/* Une identification à trous ne vaut pas mieux que pas de page : on
               ne l'annonce qu'une fois les mentions requises renseignées. */}
           {mentionsCompletes() && <Link href="/mentions-legales">{t('Mentions légales')}</Link>}
+        </div>
+        {/* Langue et thème vivent AUSSI au pied : c'est là qu'on va les
+            chercher quand on ne les a pas vus en haut, et c'est la seule place
+            possible pour le thème — la barre du haut porte déjà l'action
+            commerciale, elle ne doit pas devenir un tableau de bord. */}
+        <div className="pied-reglages">
+          <LangueToggle place="pose" />
+          <ThemeToggle place="pose" />
         </div>
         <span className="muted">© 2026 Devkaylab · Quantinvo</span>
       </div>
