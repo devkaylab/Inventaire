@@ -21,7 +21,7 @@ const edge = lire('supabase/functions/subscribe-online/index.ts')
 const edgeNu = sansCommentaires(edge)
 const webhook = lire('supabase/functions/stripe-webhook/index.ts')
 const stripe = lire('supabase/functions/_shared/stripe.ts')
-const page = lire('web/app/souscrire/page.tsx')
+const page = lire('web/components/vitrine/PageSouscrire.tsx')
 
 describe('la grille de la fonction edge ne diverge pas du site', () => {
   it('porte les mêmes montants, en centimes', () => {
@@ -212,7 +212,7 @@ describe('le webhook suit le cycle de vie', () => {
 describe('la page de souscription', () => {
   it('reste hors de la coquille', () => {
     expect(page).not.toContain('<AppShell')
-    expect(page).toContain('<SiteHeader />')
+    expect(page).toContain('<SiteHeader langue={langue} />')
   })
 
   it('annonce le bon prix sur son bouton', () => {

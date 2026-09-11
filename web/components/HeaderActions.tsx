@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { venteOuverte } from '@/lib/legal'
 import { getMySpacePath } from '@/lib/auth'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Les actions de la barre publique — et leur HIÉRARCHIE.
@@ -22,6 +23,7 @@ import { getMySpacePath } from '@/lib/auth'
  */
 export function HeaderActions() {
   const [espace, setEspace] = useState<string | null>(null)
+  const { t, lien } = useTraduction()
 
   useEffect(() => {
     let actif = true
@@ -34,7 +36,7 @@ export function HeaderActions() {
   if (espace) {
     return (
       <div className="header-actions">
-        <Link href={espace} className="btn btn-primary btn-sm">Mon espace</Link>
+        <Link href={espace} className="btn btn-primary btn-sm">{t('Mon espace')}</Link>
       </div>
     )
   }
@@ -43,7 +45,7 @@ export function HeaderActions() {
 
   return (
     <div className="header-actions">
-      <Link href="/login" className="header-lien">Se connecter</Link>
+      <Link href="/login" className="header-lien">{t('Se connecter')}</Link>
       {/*
         ⚠️ DEUX LIBELLÉS, UN SEUL AFFICHÉ — voir `.libelle-court` dans
         globals.css. Sur un téléphone, « Inscrire mon entreprise » passait à
@@ -60,9 +62,9 @@ export function HeaderActions() {
         il fait cliquer pour rien. Il mène toujours à `/inscription`, qui
         explique et donne l'adresse — une seule porte, un seul message.
       */}
-      <Link href="/inscription" className="btn btn-primary btn-sm">
-        <span className="libelle-long">{ouverte ? 'Inscrire mon entreprise' : 'Nous écrire'}</span>
-        <span className="libelle-court">{ouverte ? 'Inscription' : 'Écrire'}</span>
+      <Link href={lien('/inscription')} className="btn btn-primary btn-sm">
+        <span className="libelle-long">{ouverte ? t('Inscrire mon entreprise') : t('Nous écrire')}</span>
+        <span className="libelle-court">{ouverte ? t('Inscription') : t('Écrire')}</span>
       </Link>
     </div>
   )

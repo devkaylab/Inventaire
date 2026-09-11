@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 import { OFFRES } from '../lib/offres'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
-const accueil = lire('../app/page.tsx')
+const accueil = lire('../components/vitrine/Accueil.tsx')
 const css = lire('../app/globals.css')
 
 /** Le code seul : un commentaire qui EXPLIQUE une règle en cite les mots. */
@@ -127,15 +127,20 @@ describe('chaque bouton mène là où son libellé le promet', () => {
     // Vu le 5 septembre 2026 en parcourant les liens un par un : les trois
     // boutons pointaient sur `/souscrire` tout court, et cet écran retombe sur
     // son offre par défaut. « Commencer avec Enterprise » ouvrait Essential.
-    expect(accueil).toContain('href={`/souscrire?offre=${o.cle}`}')
+    expect(accueil).toContain('href={lien(`/souscrire?offre=${o.cle}`)}')
     // Et l'écran d'arrivée lit bien ce paramètre — sinon on le passerait dans
     // le vide.
-    expect(lire('../app/souscrire/page.tsx')).toContain("params.get('offre')")
+    expect(lire('../components/vitrine/PageSouscrire.tsx')).toContain("params.get('offre')")
   })
 
   it('les liens internes de l’accueil visent des routes qui existent', () => {
     // Une route renommée laisse un bouton qui mène à un 404, et rien ne le dit.
-    const routes = [...accueil.matchAll(/href="(\/[a-z0-9/-]*)"/g)].map((m) => m[1])
+    // Les liens de la vitrine passent par `lien('…')`, qui préfixe `/en` sur la
+    // version anglaise : on lit l'adresse française qu'il reçoit.
+    const routes = [
+      ...[...accueil.matchAll(/href="(\/[a-z0-9/-]*)"/g)].map((m) => m[1]),
+      ...[...accueil.matchAll(/href=\{lien\('(\/[a-z0-9/-]*)'\)\}/g)].map((m) => m[1]),
+    ]
     expect(routes.length, 'plus aucun lien interne sur l’accueil').toBeGreaterThan(0)
     for (const r of new Set(routes)) {
       const page = path.resolve(__dirname, '../app' + (r === '/' ? '' : r) + '/page.tsx')

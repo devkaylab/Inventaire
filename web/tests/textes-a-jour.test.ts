@@ -40,7 +40,7 @@ const PAGES_PUBLIQUES = (() => {
         if (rel === '' && connecte.has(e.name)) continue
         marcher(path.join(dir, e.name), rel ? `${rel}/${e.name}` : e.name)
       } else if (e.name === 'page.tsx') {
-        out.push(rel ? `app/${rel}/page.tsx` : 'app/page.tsx')
+        out.push(rel ? `app/${rel}/page.tsx` : 'components/vitrine/Accueil.tsx')
       }
     }
   }
@@ -71,7 +71,7 @@ describe('aucune page publique ne contredit le verrou d’appareils', () => {
   it('mais elles disent ce qui reste vrai : personne n’est interrompu', () => {
     // C'est la première borne du verrou, et elle vaut d'être dite — sans elle
     // le refus se lit comme une coupure en plein inventaire.
-    expect(lire('app/tarifs/page.tsx')).toContain('jamais interrompu en plein comptage')
+    expect(lire('components/vitrine/Tarifs.tsx')).toContain('jamais interrompu en plein comptage')
   })
 })
 
@@ -110,7 +110,7 @@ describe('l’engagement annoncé est celui des CGV', () => {
     // d'échec montre alors deux chaînes qui paraissent identiques. Piège déjà
     // payé le 4 septembre sur le séparateur de milliers.
     const sansInsecables = (t: string) => t.replace(/[\u00a0\u202f]/g, ' ')
-    expect(sansInsecables(lire('app/tarifs/page.tsx')))
+    expect(sansInsecables(lire('components/vitrine/Tarifs.tsx')))
       .toContain('Mensuel sans engagement ; annuel dû jusqu’à son terme')
   })
 })
@@ -167,6 +167,7 @@ describe('aucun bouton ne promet une inscription fermée', () => {
   it('et le composant reste la seule porte', () => {
     const c = lire('components/InscriptionLink.tsx')
     expect(c).toContain('venteOuverte()')
-    expect(c).toContain('href="/inscription"')
+    // `lien()` prefixe `/en` sur la vitrine anglaise ; la porte reste /inscription.
+    expect(c).toContain("href={lien('/inscription')}")
   })
 })

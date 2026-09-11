@@ -114,3 +114,93 @@ describe('l’espace connecté en anglais', () => {
     expect(inconnues, inconnues.join('\n')).toEqual([])
   })
 })
+
+// ── La vitrine en anglais, sous /en (11 septembre 2026) ─────────────────────
+import { CHEMINS_VITRINE, cheminDansLangue, langueDuChemin, lienVitrine } from '@/lib/vitrine'
+import { existsSync } from 'node:fs'
+
+describe('la vitrine a deux adresses par page', () => {
+  it('chaque page française de la vitrine a sa jumelle sous /en, et les deux lisent la même entrée de métadonnées', () => {
+    for (const c of CHEMINS_VITRINE) {
+      const fr = path.join(racine, 'app', c === '/' ? '' : c, 'page.tsx')
+      const en = path.join(racine, 'app', 'en', c === '/' ? '' : c, 'page.tsx')
+      expect(existsSync(fr), `${c} n’a pas de page française`).toBe(true)
+      expect(existsSync(en), `${c} n’a pas de jumelle sous /en`).toBe(true)
+      const srcFr = readFileSync(fr, 'utf8')
+      const srcEn = readFileSync(en, 'utf8')
+      // Même composant, même entrée META_VITRINE — seule la langue change.
+      const comp = (s: string) => /import \{ (\w+) \} from '@\/components\/vitrine\//.exec(s)?.[1]
+      const meta = (s: string) => /META_VITRINE\.(\w+)\(/.exec(s)?.[1]
+      expect(comp(srcEn), `${c} : composant`).toBe(comp(srcFr))
+      expect(meta(srcEn), `${c} : métadonnées`).toBe(meta(srcFr))
+      expect(srcFr).toContain("('fr')")
+      expect(srcEn).toContain("('en')")
+    }
+  })
+
+  it('les métadonnées déclarent les deux langues l’une à l’autre (hreflang), x-default sur le français', () => {
+    const m = lire('lib/metaVitrine.ts')
+    expect(m).toContain("languages: { fr: cheminFr, en: cheminEn, 'x-default': cheminFr }")
+    expect(m).toContain("canonical: langue === 'en' ? cheminEn : cheminFr")
+  })
+
+  it('la langue d’une page de la vitrine vient de son adresse, pas du cookie', () => {
+    expect(langueDuChemin('/en')).toBe('en')
+    expect(langueDuChemin('/en/tarifs')).toBe('en')
+    expect(langueDuChemin('/tarifs')).toBe('fr')
+    expect(langueDuChemin('/tarifs#offres')).toBe('fr')
+    // Hors vitrine, personne n'impose rien : c'est le choix de l'appareil.
+    expect(langueDuChemin('/login')).toBeNull()
+    expect(langueDuChemin('/entreprise')).toBeNull()
+    expect(langueDuChemin('/devis/abc')).toBeNull()
+    // `useLangue` applique cette règle.
+    expect(lire('lib/i18n.tsx')).toContain('return imposee ?? choisie')
+  })
+
+  it('un lien de la vitrine change d’adresse en anglais ; un lien de l’espace connecté, jamais', () => {
+    expect(lienVitrine('en', '/')).toBe('/en')
+    expect(lienVitrine('en', '/tarifs')).toBe('/en/tarifs')
+    expect(lienVitrine('en', '/souscrire?offre=advanced')).toBe('/en/souscrire?offre=advanced')
+    expect(lienVitrine('en', '/#fonctionnalites')).toBe('/en#fonctionnalites')
+    expect(lienVitrine('en', '/login')).toBe('/login')
+    expect(lienVitrine('en', 'mailto:x@y.z')).toBe('mailto:x@y.z')
+    expect(lienVitrine('fr', '/tarifs')).toBe('/tarifs')
+    expect(cheminDansLangue('/en/tarifs', 'fr')).toBe('/tarifs')
+    expect(cheminDansLangue('/tarifs', 'en')).toBe('/en/tarifs')
+    expect(cheminDansLangue('/en', 'fr')).toBe('/')
+  })
+
+  it('le bouton FR/EN navigue sur la vitrine, et change sur place ailleurs', () => {
+    const b = lire('components/LangueToggle.tsx')
+    expect(b).toContain('if (langueDuChemin(chemin)) router.push(cheminDansLangue(')
+    expect(b).toContain('changerLangue(autre)')
+    // Il est monté sur la coquille publique, donc sur toute la vitrine.
+    expect(lire('components/SiteChrome.tsx')).toContain('<LangueToggle />')
+  })
+
+  it('la détection automatique ne renvoie que du français vers l’anglais, et jamais un robot', () => {
+    const r = lire('components/RedirectionLangue.tsx')
+    expect(r).toContain("if (langueDuChemin(chemin) !== 'fr') return")
+    expect(r).toContain('navigator.userAgent')
+    expect(r).toContain("if (langueEnregistree() !== 'en') return")
+    expect(r).toContain('router.replace(')
+    expect(r).not.toContain('router.push(')
+  })
+
+  it('les liens écrits dans la vitrine passent par lien() — aucun href de vitrine en dur', () => {
+    const dossier = path.join(racine, 'components', 'vitrine')
+    for (const f of fichiers(dossier)) {
+      const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      const durs = [...src.matchAll(/href="(\/[a-z0-9-]*)"/g)].map((m) => m[1])
+        .filter((h) => (CHEMINS_VITRINE as readonly string[]).includes(h))
+      expect(durs, `${path.basename(f)} écrit en dur : ${durs.join(', ')}`).toEqual([])
+    }
+  })
+
+  it('le plan du site porte les pages /en', () => {
+    const site = lire('lib/site.ts')
+    for (const c of CHEMINS_VITRINE) {
+      expect(site).toContain(`chemin: '${lienVitrine('en', c)}'`)
+    }
+  })
+})

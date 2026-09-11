@@ -118,7 +118,7 @@ describe('Où le repère s’affiche, et comment', () => {
     // Sur un formulaire public, le repère soupçonnerait le prospect avant le
     // devis — et surtout lui indiquerait quel chiffre ajuster pour changer de
     // tranche.
-    const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
+    const page = readFileSync(join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
     expect(page).not.toContain('densiteAttendue')
     expect(page).not.toContain('secteurs')
 
@@ -153,7 +153,7 @@ describe('Où le repère s’affiche, et comment', () => {
     // passe par la fonction edge du parcours d'inscription — c'est elle qui
     // porte `p_ape`. Une garde qui s'arrête au navigateur ne garde que la
     // moitié du chemin (leçon du 2 septembre sur `ca-request-store`).
-    const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
+    const page = readFileSync(join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
     const edge = readFileSync(join(racine, 'supabase/functions/inscription/index.ts'), 'utf8')
     expect(page).toContain('ape')
     expect(edge).toContain('p_ape')

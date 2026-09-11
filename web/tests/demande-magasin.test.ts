@@ -22,7 +22,7 @@ const m4 = lire('../../supabase/migrations/20260822200001_demandes_abouties_et_n
 const m5 = lire('../../supabase/migrations/20260822210001_refus_demande_magasin_email.sql')
 const migration = m1 + '\n' + m2 + '\n' + m4 + '\n' + m5
 const pageMagasins = lire('../app/magasins/page.tsx')
-const pageInscription = lire('../app/inscription/page.tsx')
+const pageInscription = lire('../components/vitrine/PageInscription.tsx')
 const pageAdmin = lire('../app/admin/page.tsx')
 const ficheEntreprise = lire('../app/admin/entreprise/[companyId]/page.tsx')
 

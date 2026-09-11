@@ -73,15 +73,16 @@ describe('la grille tarifaire', () => {
 })
 
 describe('la page tarifs', () => {
-  const page = lire('../app/tarifs/page.tsx')
+  const page = lire('../components/vitrine/Tarifs.tsx')
   const grille = lire('../components/TarifsGrille.tsx')
 
   it('reste hors de la coquille', () => {
     // Elle s'ouvre au téléphone — c'est la première page qu'un prospect
     // regarde, souvent depuis un lien. AppShell la fermerait sous 720 px.
     expect(page).not.toContain('<AppShell')
-    expect(page).toContain('<SiteHeader />')
-    expect(page).toContain('<SiteFooter />')
+    // Depuis le 11 septembre 2026 la page se rend dans la langue de son adresse.
+    expect(page).toContain('<SiteHeader langue={langue} />')
+    expect(page).toContain('<SiteFooter langue={langue} />')
   })
 
   it('n’écrit aucun prix en dur', () => {
@@ -121,7 +122,7 @@ describe('la page tarifs', () => {
     // façon d'être écrite. On vérifie les deux chemins, chacun à sa source.
     const chrome = lire('../components/SiteChrome.tsx')
     const pied = chrome.slice(chrome.indexOf('export function SiteFooter'))
-    expect(pied, 'le pied de page ne mène plus aux tarifs').toContain('href="/tarifs"')
+    expect(pied, 'le pied de page ne mène plus aux tarifs').toContain("href={lien('/tarifs')}")
     expect(LIENS_PUBLICS.map((l) => l.href), 'la barre ne mène plus aux tarifs')
       .toContain('/tarifs')
   })
@@ -176,7 +177,7 @@ describe('le site ne contredit plus la grille', () => {
   it('ne facture plus au volume de stock sur les pages publiques', () => {
     // La grille au volume a cessé d'être l'assiette le 30 août 2026. Une page
     // qui l'annonce encore promet un devis qu'on n'établit plus ainsi.
-    for (const p of ['../app/page.tsx', '../app/pourquoi-nous-choisir/page.tsx', '../app/inscription/page.tsx']) {
+    for (const p of ['../components/vitrine/Accueil.tsx', '../components/vitrine/Pourquoi.tsx', '../components/vitrine/PageInscription.tsx']) {
       expect(lire(p), `${p} annonce encore l’ancienne grille`).not.toContain('au volume de votre stock')
     }
   })
@@ -223,7 +224,7 @@ describe('les libellés de la grille', () => {
     // aboutir. Ce qui est défendu ne bouge pas : quand la boutique est
     // ouverte, on invite à COMMENCER, on ne fait pas trier.
     const grille = lire('../components/TarifsGrille.tsx')
-    expect(grille).toContain('`Commencer avec ${o.nom}`')
+    expect(grille).toContain("t('Commencer avec %{offre}', { offre: o.nom })")
     expect(grille).not.toContain('Choisir ')
   })
 })

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LIENS_PUBLICS } from '@/lib/navigation'
 import { venteOuverte } from '@/lib/legal'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Le menu de la barre publique sur un téléphone.
@@ -31,6 +32,7 @@ import { venteOuverte } from '@/lib/legal'
 export function MenuMobile() {
   const [ouvert, setOuvert] = useState(false)
   const chemin = usePathname()
+  const { t, lien } = useTraduction()
   const panneau = useRef<HTMLDivElement>(null)
   const bouton = useRef<HTMLButtonElement>(null)
 
@@ -69,7 +71,7 @@ export function MenuMobile() {
         ref={bouton}
         type="button"
         className="burger"
-        aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'}
+        aria-label={ouvert ? t('Fermer le menu') : t('Ouvrir le menu')}
         aria-expanded={ouvert}
         aria-controls="menu-mobile"
         onClick={() => setOuvert((v) => !v)}
@@ -83,17 +85,17 @@ export function MenuMobile() {
       <div id="menu-mobile" ref={panneau} className="menu-mobile" hidden={!ouvert}>
         <nav className="menu-mobile-liens">
           {LIENS_PUBLICS.map((l) => (
-            <Link href={l.href} key={l.href}>
-              {l.libelle}
+            <Link href={lien(l.href)} key={l.href}>
+              {t(l.libelle)}
               <span className="menu-chevron" aria-hidden="true" />
             </Link>
           ))}
         </nav>
         <div className="menu-mobile-actions">
-          <Link href="/inscription" className="btn btn-primary btn-block">
-            {venteOuverte() ? 'Inscrire mon entreprise' : 'Nous écrire'}
+          <Link href={lien('/inscription')} className="btn btn-primary btn-block">
+            {venteOuverte() ? t('Inscrire mon entreprise') : t('Nous écrire')}
           </Link>
-          <Link href="/login" className="menu-mobile-connexion">Se connecter</Link>
+          <Link href="/login" className="menu-mobile-connexion">{t('Se connecter')}</Link>
         </div>
       </div>
     </>

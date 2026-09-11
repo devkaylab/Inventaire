@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, PLAFOND_LIBRE_SERVICE, TVA_APPLICABLE, economie, euros } from '@/lib/offres'
 import { venteOuverte } from '@/lib/legal'
+import { useTraduction } from '@/lib/i18n'
 
 /**
  * Les trois offres, avec la bascule mensuel / annuel.
@@ -18,17 +19,18 @@ import { venteOuverte } from '@/lib/legal'
 export function TarifsGrille() {
   const ouverte = venteOuverte()
   const [annuel, setAnnuel] = useState(false)
+  const { t, lien } = useTraduction()
 
   return (
     <>
-      <div className="tarifs-bascule" role="group" aria-label="Rythme de paiement">
+      <div className="tarifs-bascule" role="group" aria-label={t('Rythme de paiement')}>
         <button
           type="button"
           className={annuel ? '' : 'actif'}
           aria-pressed={!annuel}
           onClick={() => setAnnuel(false)}
         >
-          Par mois
+          {t('Par mois')}
         </button>
         <button
           type="button"
@@ -36,7 +38,7 @@ export function TarifsGrille() {
           aria-pressed={annuel}
           onClick={() => setAnnuel(true)}
         >
-          À l’année
+          {t('À l’année')}
         </button>
       </div>
 
@@ -45,8 +47,8 @@ export function TarifsGrille() {
           Le taire sous un titre « sans engagement » serait trompeur. */}
       <p className="tarifs-note-bascule">
         {annuel
-          ? 'Un seul règlement — de 90 à 900 € de moins selon l’offre. L’année est due jusqu’à son terme.'
-          : 'Douze prélèvements, sans engagement : vous arrêtez quand vous voulez.'}
+          ? t('Un seul règlement — de 90 à 900 € de moins selon l’offre. L’année est due jusqu’à son terme.')
+          : t('Douze prélèvements, sans engagement : vous arrêtez quand vous voulez.')}
       </p>
 
       <div className="tarifs-grille">
@@ -54,22 +56,22 @@ export function TarifsGrille() {
           const phare = o.cle === OFFRE_PHARE
           return (
             <div className={phare ? 'tarifs-carte phare' : 'tarifs-carte'} key={o.cle}>
-              {phare && <span className="tarifs-marqueur">Le plus courant</span>}
+              {phare && <span className="tarifs-marqueur">{t('Le plus courant')}</span>}
               <h2>{o.nom}</h2>
-              <p className="tarifs-pour">{o.pour}</p>
+              <p className="tarifs-pour">{t(o.pour)}</p>
 
               <div className="tarifs-prix">
                 <div className="montant">
                   <strong>{euros(annuel ? o.an : o.mois)}</strong>
-                  <span>{annuel ? `${TVA_APPLICABLE ? 'HT ' : ''}/ an` : `${TVA_APPLICABLE ? 'HT ' : ''}/ mois`}</span>
+                  <span>{annuel ? `${TVA_APPLICABLE ? t('HT') + ' ' : ''}/ ${t('an')}` : `${TVA_APPLICABLE ? t('HT') + ' ' : ''}/ ${t('mois')}`}</span>
                 </div>
                 <span className="tarifs-alt">
                   {annuel
-                    ? `pour un magasin, ou ${euros(o.mois)} par mois`
-                    : `pour un magasin, ou ${euros(o.an)} à l’année`}
+                    ? t('pour un magasin, ou %{prix} par mois', { prix: euros(o.mois) })
+                    : t('pour un magasin, ou %{prix} à l’année', { prix: euros(o.an) })}
                 </span>
                 <span className="tarifs-economie">
-                  Vous économisez {euros(economie(o))} à l’année
+                  {t('Vous économisez %{prix} à l’année', { prix: euros(economie(o)) })}
                 </span>
               </div>
 
@@ -78,7 +80,7 @@ export function TarifsGrille() {
                   <rect x="4.5" y="1.5" width="7" height="13" rx="1.6" />
                   <path d="M7 12.6h2" />
                 </svg>
-                <span>{o.plage}</span>
+                <span>{t(o.plage)}</span>
               </div>
 
               <ul className="tarifs-points">
@@ -87,7 +89,7 @@ export function TarifsGrille() {
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M3 8.4 6.2 11.6 13 4.4" />
                     </svg>
-                    <span>{p}</span>
+                    <span>{t(p)}</span>
                   </li>
                 ))}
               </ul>
@@ -102,12 +104,12 @@ export function TarifsGrille() {
                   fait pas cliquer sur « Commencer » pour arriver sur « pas
                   encore ouvert ». */}
               <Link
-                href={ouverte
+                href={lien(ouverte
                   ? `/souscrire?offre=${o.cle}${annuel ? '&rythme=annuel' : ''}`
-                  : '/inscription'}
+                  : '/inscription')}
                 className={phare ? 'btn btn-primary' : 'btn btn-ghost'}
               >
-                {ouverte ? `Commencer avec ${o.nom}` : 'Nous écrire'}
+                {ouverte ? t('Commencer avec %{offre}', { offre: o.nom }) : t('Nous écrire')}
               </Link>
             </div>
           )
@@ -120,11 +122,11 @@ export function TarifsGrille() {
           (décision de Julien du 5 septembre) — le dire ici évite de le
           découvrir au moment de payer. */}
       <p className="tarifs-hors-grille">
-        Plus de {APPAREILS_MAX} appareils dans un même magasin ? L’offre se prolonge
-        par tranches de {SUPPLEMENT.par} appareils, à{' '}
-        {euros(annuel ? SUPPLEMENT.an : SUPPLEMENT.mois)}{' '}
-        {annuel ? 'par an' : 'par mois'} la tranche, jusqu’à {PLAFOND_LIBRE_SERVICE} appareils.
-        Au-delà, un magasin de plus prend sa propre licence.
+        {t('Plus de %{max} appareils dans un même magasin ? L’offre se prolonge par tranches de %{par} appareils, à %{prix} %{rythme} la tranche, jusqu’à %{plafond} appareils. Au-delà, un magasin de plus prend sa propre licence.', {
+          max: APPAREILS_MAX, par: SUPPLEMENT.par,
+          prix: euros(annuel ? SUPPLEMENT.an : SUPPLEMENT.mois),
+          rythme: annuel ? t('par an') : t('par mois'), plafond: PLAFOND_LIBRE_SERVICE,
+        })}
       </p>
     </>
   )

@@ -122,7 +122,7 @@ describe('Kbis', () => {
     // collecter les date et lieu de naissance, la nationalité et l'adresse d'un
     // dirigeant pour vérifier qu'une société existe — et le document est de
     // toute façon téléchargeable par n'importe qui à partir du seul SIREN.
-    const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
+    const page = readFileSync(join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
 
     // Le SIREN est demandé…
     expect(page).toContain('siren')
@@ -139,7 +139,7 @@ describe('une demande d’inscription prévient tout le monde (22 août 2026)', 
   // d'inscription ». Ce n'était pas prévu : /inscription écrivait en base et
   // personne ne le savait — ni Quantinvo, ni le prospect.
   const edge = readFileSync(join(racine, 'supabase/functions/submit-company-request/index.ts'), 'utf8')
-  const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
+  const page = readFileSync(join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
 
   it('l’edge appelle la RPC, puis écrit l’accusé et l’avis interne', () => {
     // ⚠️ La version « detailed », depuis le 28 août 2026 : la surface publique

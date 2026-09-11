@@ -369,7 +369,7 @@ describe('une demande refusée peut être supprimée (23 août 2026)', () => {
 describe('l’assiette est le nombre d’appareils (2 septembre 2026)', () => {
   const migration = fichierDe('ca_request_store')
   const magasins = lire('../app/magasins/page.tsx')
-  const inscription = lire('../app/inscription/page.tsx')
+  const inscription = lire('../components/vitrine/PageInscription.tsx')
   const saisie = lire('../components/MagasinSaisie.tsx')
   const stripe = lire('../../supabase/functions/_shared/stripe.ts')
 

@@ -226,8 +226,8 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
       '../app/bienvenue/page.tsx',
       '../app/reinitialisation/page.tsx',
       '../app/login/page.tsx',
-      '../app/inventaire/page.tsx',
-      '../app/open/page.tsx',
+      '../components/vitrine/Inventaire.tsx',
+      '../components/vitrine/PageOuvrir.tsx',
     ]) {
       expect(lire(page), `${page} doit rester hors de la coquille`).not.toContain('<AppShell')
     }
@@ -621,7 +621,7 @@ describe('les deux passes ont la même couleur dans l’app et sur le site', () 
 
 describe('le héros plein écran et la parallaxe des pages vitrines', () => {
   const css = lire('../app/globals.css')
-  const accueil = lire('../app/page.tsx')
+  const accueil = lire('../components/vitrine/Accueil.tsx')
   const chrome = lire('../components/SiteChrome.tsx')
   const parallaxe = lire('../components/Parallaxe.tsx')
 
@@ -629,8 +629,8 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
     expect(accueil).toContain('className="hero hero-plein"')
     expect(css).toContain('min-height: calc(100vh - 64px)')
     // Les pages intérieures gardent leur bande d'introduction : on vient y lire.
-    expect(lire('../app/pourquoi-nous-choisir/page.tsx')).not.toContain('hero-plein')
-    expect(lire('../app/inventaire/page.tsx')).not.toContain('hero-plein')
+    expect(lire('../components/vitrine/Pourquoi.tsx')).not.toContain('hero-plein')
+    expect(lire('../components/vitrine/Inventaire.tsx')).not.toContain('hero-plein')
   })
 
   it('l’indice de défilement mène à une ancre qui existe vraiment', () => {
@@ -723,7 +723,7 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
 
   it('les couches de décor sont inertes au doigt et invisibles aux lecteurs d’écran', () => {
     expect(css).toContain('.plx { position: absolute; pointer-events: none;')
-    for (const page of ['../app/page.tsx', '../app/pourquoi-nous-choisir/page.tsx', '../app/inventaire/page.tsx']) {
+    for (const page of ['../components/vitrine/Accueil.tsx', '../components/vitrine/Pourquoi.tsx', '../components/vitrine/Inventaire.tsx']) {
       const src = lire(page)
       for (const m of src.matchAll(/className="plx [^"]*"[^>]*/g)) {
         expect(m[0], `${page} : chaque couche porte aria-hidden`).toContain('aria-hidden="true"')

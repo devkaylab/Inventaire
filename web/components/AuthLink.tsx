@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getMySpacePath } from '@/lib/auth'
+import { useTraduction } from '@/lib/i18n'
 
 type Props = {
   className?: string
@@ -15,6 +16,7 @@ type Props = {
 
 /** Lien qui pointe vers /login si déconnecté, ou vers l'espace de l'utilisateur si connecté. */
 export function AuthLink({ className, style, loggedOutLabel, loggedInLabel }: Props) {
+  const { t } = useTraduction()
   const [href, setHref] = useState('/login')
   const [label, setLabel] = useState(loggedOutLabel)
 
@@ -28,5 +30,5 @@ export function AuthLink({ className, style, loggedOutLabel, loggedInLabel }: Pr
     return () => { active = false }
   }, [loggedInLabel])
 
-  return <Link href={href} className={className} style={style}>{label}</Link>
+  return <Link href={href} className={className} style={style}>{t(label)}</Link>
 }

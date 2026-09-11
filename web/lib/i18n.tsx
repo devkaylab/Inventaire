@@ -8,9 +8,10 @@
  * phrase française, l'anglais vient d'un dictionnaire, et une traduction
  * absente laisse le français — jamais un trou.
  *
- * ⚠️ LA VITRINE RESTE EN FRANÇAIS. Seul l'espace connecté (et les portes qui
- * y mènent : connexion, bienvenue, réinitialisation) passe par `useTraduction`.
- * Les pages publiques n'appellent pas ce module, et n'ont pas à le faire.
+ * ⚠️ LA VITRINE A DEUX ADRESSES PAR PAGE (11 septembre 2026) : `/tarifs` en
+ * français, `/en/tarifs` en anglais, toutes deux indexables. Là, c'est
+ * l'ADRESSE qui fixe la langue (`lib/vitrine.ts`), pas le cookie — voir
+ * `useLangue`. Le cookie ne gouverne que l'espace connecté et ses portes.
  *
  * ⚠️ COMMENT ON ÉVITE LE DÉSACCORD D'HYDRATATION. Le serveur rend en français
  * (il ne connaît pas la préférence) ; le navigateur DOIT rendre la même chose
@@ -32,30 +33,16 @@
  * chaque appareil garde la sienne.
  */
 import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react'
-import { en } from '@/i18n/en'
+import { usePathname } from 'next/navigation'
+import {
+  estLangue, localeDe, traduire, traduireN, traduction as lier,
+  type Langue, type Traduction, type Vars,
+} from '@/lib/traduction'
+import { langueDuChemin } from '@/lib/vitrine'
 
-export type Langue = 'fr' | 'en'
-export const LANGUES: readonly Langue[] = ['fr', 'en'] as const
-export const NOM_LANGUE: Record<Langue, string> = { fr: 'Français', en: 'English' }
+export { LANGUES, NOM_LANGUE } from '@/lib/traduction'
+export type { Dictionnaire, Entree, Formes, Langue, Traduction } from '@/lib/traduction'
 
-export type Formes = { one: string; other: string }
-export type Entree = string | Formes
-export type Dictionnaire = Record<string, Entree>
-
-/**
- * Les clés se comparent SANS distinguer les espaces : le français des écrans
- * porte ses insécables (« Quitter ? » s'écrit avec U+202F avant le point
- * d'interrogation, règle du 31 août 2026), le dictionnaire anglais se tape
- * avec des espaces ordinaires. Sans cette tolérance, une clé sur trois
- * manquerait pour un caractère invisible.
- */
-const norm = (s: string) => s.replace(/[\u00a0\u202f]/g, ' ')
-function indexer(d: Dictionnaire): Dictionnaire {
-  const out: Dictionnaire = {}
-  for (const k of Object.keys(d)) out[norm(k)] = d[k]
-  return out
-}
-const DICOS: Record<Langue, Dictionnaire> = { fr: {}, en: indexer(en) }
 const COOKIE = 'qlang'
 
 let courante: Langue = 'fr'
@@ -63,10 +50,6 @@ const abonnes = new Set<() => void>()
 
 export function langue(): Langue {
   return courante
-}
-
-function estLangue(v: unknown): v is Langue {
-  return typeof v === 'string' && (LANGUES as readonly string[]).includes(v)
 }
 
 export function poserLangue(l: Langue) {
@@ -84,71 +67,41 @@ function abonner(f: () => void) {
 /** Le rendu serveur ne connaît que le français : c'est l'instantané d'hydratation. */
 const serveur = (): Langue => 'fr'
 
+/**
+ * La langue d'un composant. ⚠️ SUR LA VITRINE, C'EST L'ADRESSE QUI DÉCIDE
+ * (`/en/tarifs` est en anglais, `/tarifs` en français), et elle est connue du
+ * serveur : les pages `/en` sortent en anglais dès le premier octet, sans
+ * désaccord d'hydratation. Ailleurs — connexion, espace connecté, devis — la
+ * langue est celle de l'appareil, relue après l'hydratation.
+ */
 export function useLangue(): Langue {
-  return useSyncExternalStore(abonner, langue, serveur)
+  const chemin = usePathname()
+  const imposee = langueDuChemin(chemin)
+  const choisie = useSyncExternalStore(abonner, langue, serveur)
+  return imposee ?? choisie
 }
 
 export function locale(): 'fr-FR' | 'en-GB' {
-  return courante === 'en' ? 'en-GB' : 'fr-FR'
-}
-
-function grouperIci(n: number): string {
-  return n.toLocaleString(locale()).replace(/ /g, ' ')
-}
-
-function interpoler(texte: string, vars?: Record<string, string | number>): string {
-  if (!vars) return texte
-  let out = texte
-  for (const [k, v] of Object.entries(vars)) out = out.split(`%{${k}}`).join(String(v))
-  return out
-}
-
-function traduire(l: Langue, cle: string, vars?: Record<string, string | number>): string {
-  const entree = DICOS[l][norm(cle)]
-  return interpoler(typeof entree === 'string' ? entree : cle, vars)
-}
-
-function unSeul(l: Langue, n: number): boolean {
-  return l === 'fr' ? Math.abs(n) <= 1 : n === 1
-}
-
-function traduireN(
-  l: Langue, singulier: string, pluriel: string, n: number, vars?: Record<string, string | number>,
-): string {
-  const entree = DICOS[l][norm(singulier)]
-  let texte: string
-  if (entree && typeof entree === 'object') texte = unSeul(l, n) ? entree.one : entree.other
-  else texte = unSeul('fr', n) ? singulier : pluriel
-  return interpoler(texte, { count: grouperIci(n), ...vars })
+  return localeDe(courante)
 }
 
 /** Hors composant (formatage, messages d'erreur) : la langue du moment. */
-export function t(cle: string, vars?: Record<string, string | number>): string {
+export function t(cle: string, vars?: Vars): string {
   return traduire(courante, cle, vars)
 }
 
-export function tn(singulier: string, pluriel: string, n: number, vars?: Record<string, string | number>): string {
+export function tn(singulier: string, pluriel: string, n: number, vars?: Vars): string {
   return traduireN(courante, singulier, pluriel, n, vars)
 }
 
-export type Traduction = {
-  langue: Langue
-  t: (cle: string, vars?: Record<string, string | number>) => string
-  tn: (singulier: string, pluriel: string, n: number, vars?: Record<string, string | number>) => string
-}
-
 /**
- * Dans un composant : `const { t, tn } = useTraduction()`. Les deux fonctions
+ * Dans un composant : `const { t, tn, lien } = useTraduction()`. Les fonctions
  * sont liées à l'instantané, donc justes pendant l'hydratation, et le
  * composant se rerend au changement de langue.
  */
 export function useTraduction(): Traduction {
   const l = useLangue()
-  return useMemo<Traduction>(() => ({
-    langue: l,
-    t: (cle, vars) => traduire(l, cle, vars),
-    tn: (s, p, n, vars) => traduireN(l, s, p, n, vars),
-  }), [l])
+  return useMemo<Traduction>(() => lier(l), [l])
 }
 
 // ── Persistance ─────────────────────────────────────────────────────────────
@@ -197,9 +150,13 @@ const Ctx = createContext(false)
  * préférence après l'hydratation et prévient les abonnés.
  */
 export function LangueProvider({ children }: { children: ReactNode }) {
+  const chemin = usePathname()
   useEffect(() => {
-    poserLangue(langueEnregistree())
-  }, [])
+    // Sur la vitrine l'adresse impose la langue (les helpers hors composant —
+    // `t`, `locale`, le formatage — doivent la suivre aussi) ; ailleurs, c'est
+    // la préférence de l'appareil.
+    poserLangue(langueDuChemin(chemin) ?? langueEnregistree())
+  }, [chemin])
   return <Ctx.Provider value>{children}</Ctx.Provider>
 }
 

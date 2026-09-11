@@ -45,6 +45,17 @@ export const PAGES_PUBLIQUES: PagePublique[] = [
   { chemin: '/superviseur', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/confidentialite', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/suppression-compte', priorite: 0.3, frequence: 'yearly' },
+  // ⚠️ La vitrine en anglais (11 septembre 2026) : chaque page française a sa
+  // jumelle sous `/en`, indexable, liée par `hreflang` (voir `lib/metaVitrine.ts`).
+  { chemin: '/en', priorite: 0.9, frequence: 'monthly' },
+  { chemin: '/en/inventaire', priorite: 0.8, frequence: 'monthly' },
+  { chemin: '/en/pourquoi-nous-choisir', priorite: 0.8, frequence: 'monthly' },
+  { chemin: '/en/tarifs', priorite: 0.8, frequence: 'monthly' },
+  { chemin: '/en/souscrire', priorite: 0.7, frequence: 'monthly' },
+  { chemin: '/en/inscription', priorite: 0.6, frequence: 'monthly' },
+  { chemin: '/en/open', priorite: 0.4, frequence: 'monthly' },
+  { chemin: '/en/superviseur', priorite: 0.3, frequence: 'yearly' },
+  { chemin: '/en/suppression-compte', priorite: 0.3, frequence: 'yearly' },
 ]
 
 export const url = (chemin: string) => new URL(chemin, SITE_URL).toString()

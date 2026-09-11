@@ -135,7 +135,7 @@ describe('Garde-fous du branchement', () => {
     // Un numéro valide en placeholder invite à le saisir, et le registre
     // renverrait alors la raison sociale d'une vraie entreprise — un nom de
     // personne s'il s'agit d'un entrepreneur individuel.
-    const page = readFileSync(join(racine, 'web/app/inscription/page.tsx'), 'utf8')
+    const page = readFileSync(join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
     expect(page).toContain("const SIREN_EXEMPLE = '123 456 789'")
 
     const luhn = (n: string) =>

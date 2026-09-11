@@ -325,7 +325,7 @@ describe('les trois relances', () => {
 })
 
 describe('l’écran du parcours', () => {
-  const page = readFileSync(path.join(__dirname, '../app/inscription/page.tsx'), 'utf8')
+  const page = readFileSync(path.join(__dirname, '../components/vitrine/PageInscription.tsx'), 'utf8')
   const edge = readFileSync(
     path.join(__dirname, '../../supabase/functions/inscription/index.ts'), 'utf8')
   const sansJsx = (s: string) =>
@@ -429,8 +429,8 @@ describe('la vente est fermée jusqu’à l’immatriculation', () => {
 
   it('les trois écrans lisent ce verdict', () => {
     for (const [nom, p] of [
-      ['la page d’inscription', '../app/inscription/page.tsx'],
-      ['la page de souscription', '../app/souscrire/page.tsx'],
+      ['la page d’inscription', '../components/vitrine/PageInscription.tsx'],
+      ['la page de souscription', '../components/vitrine/PageSouscrire.tsx'],
       ['la barre publique', '../components/HeaderActions.tsx'],
       ['la grille de tarifs', '../components/TarifsGrille.tsx'],
     ] as const) {
@@ -449,7 +449,7 @@ describe('la vente est fermée jusqu’à l’immatriculation', () => {
 
   it('et le bouton ne promet pas une inscription qui ne peut pas aboutir', () => {
     const barre = lireSrc('../components/HeaderActions.tsx')
-    expect(barre).toContain("ouverte ? 'Inscrire mon entreprise' : 'Nous écrire'")
+    expect(barre).toContain("ouverte ? t('Inscrire mon entreprise') : t('Nous écrire')")
   })
 
   it('⚠️ AUCUN écran ne promet l’inscription sans lire le verdict', () => {

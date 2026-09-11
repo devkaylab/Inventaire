@@ -9,8 +9,10 @@
 // jour de la publication.
 
 import { APP_STORE_URL, PLAY_STORE_URL, PUBLIEE } from '@/lib/appStores'
+import { traduction, type Langue } from '@/lib/traduction'
 
-export function StoreBadges() {
+export function StoreBadges({ langue = 'fr' }: { langue?: Langue }) {
+  const { t } = traduction(langue)
   return (
     <div className="boutiques">
       <div className="boutiques-row">
@@ -22,7 +24,7 @@ export function StoreBadges() {
         >
           <AppleIcon />
           <span className="store-badge-txt">
-            <span className="store-badge-sur">Télécharger sur</span>
+            <span className="store-badge-sur">{t('Télécharger sur')}</span>
             <span className="store-badge-nom">l’App Store</span>
           </span>
         </a>
@@ -35,7 +37,7 @@ export function StoreBadges() {
         >
           <PlayIcon />
           <span className="store-badge-txt">
-            <span className="store-badge-sur">Disponible sur</span>
+            <span className="store-badge-sur">{t('Disponible sur')}</span>
             <span className="store-badge-nom">Google Play</span>
           </span>
         </a>
@@ -43,8 +45,7 @@ export function StoreBadges() {
 
       {!PUBLIEE && (
         <p className="boutiques-note">
-          L’application arrive bientôt sur les deux boutiques. En attendant, ces
-          liens ouvrent la recherche.
+          {t('L’application arrive bientôt sur les deux boutiques. En attendant, ces liens ouvrent la recherche.')}
         </p>
       )}
     </div>

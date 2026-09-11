@@ -13296,3 +13296,60 @@ la ré-extraction en Debug au build suivant. Une extraction, une fois par
   première chose à regarder ;
 - **ne pas relancer l'application en boucle pour « voir »** : chaque
   plantage ouvre un rapport sur le Mac de Julien (constat du jour).
+
+## La vitrine aussi, sous `/en` (11 septembre 2026, après-midi)
+
+*« Bouton changement de langue à mettre sur tout le site, pas uniquement après
+la connexion. »* Puis, la méthode tranchée par Julien parmi trois : **des
+adresses `/en` dédiées, indexables** — pas une bascule sur place, qui aurait
+laissé l'anglais invisible de Google.
+
+| | Français | Anglais |
+|---|---|---|
+| Accueil | `/` | `/en` |
+| Les huit autres pages de la vitrine | `/tarifs`, `/inventaire`, … | `/en/tarifs`, `/en/inventaire`, … |
+| Connexion, espace connecté, devis | une seule adresse, langue du **cookie** | |
+
+**⚠️ SUR LA VITRINE, LA LANGUE EST DANS L'ADRESSE — PAS DANS LE COOKIE.**
+`lib/vitrine.ts` porte la règle (`langueDuChemin`, `lienVitrine`,
+`cheminDansLangue`), et `useLangue()` l'applique : sous `/en` le rendu serveur
+sort **déjà en anglais**, sans désaccord d'hydratation, et Google lit deux
+pages liées par `hreflang` (`lib/metaVitrine.ts`, `x-default` sur le
+français). Ailleurs, rien ne change : c'est le choix de l'appareil.
+
+Ce qui porte le chantier :
+
+- **`lib/traduction.ts`** est le cœur SANS React ni `'use client'` : un
+  composant serveur appelle `traduction(langue)` et reçoit `{ t, tn, lien }`.
+  `lib/i18n.tsx` ne garde que l'abonnement et la persistance.
+- **Chaque page de la vitrine est un composant** (`components/vitrine/*.tsx`)
+  rendu par deux enveloppes — `app/x/page.tsx` en `fr`, `app/en/x/page.tsx` en
+  `en` — qui lisent la **même** entrée de `lib/metaVitrineTextes.ts`. Une
+  garde vérifie que les jumelles ne divergent pas.
+- **Les liens s'écrivent en français et passent par `lien()`** : `/tarifs`
+  devient `/en/tarifs` sur la version anglaise, `/login` et un `mailto:` ne
+  bougent pas. Une garde refuse un `href` de vitrine écrit en dur.
+- **Le bouton FR/EN fait deux choses différentes** : sur la vitrine il
+  NAVIGUE vers la jumelle et note le choix dans le cookie (pour que la
+  connexion suive) ; ailleurs il change la langue sur place.
+- **La détection automatique** (`components/RedirectionLangue.tsx`) ne va
+  que **du français vers l'anglais**, seulement si la préférence enregistrée
+  dit « en », **jamais pour un robot** — un moteur qui explore `/tarifs` doit y
+  trouver la page française. `replace`, pas `push`.
+- **`<html lang>`** reste « fr » dans le HTML serveur (le layout racine ne
+  connaît pas l'adresse) : un script en tête le passe à « en » sous `/en`
+  avant le premier affichage, et ce sont les `hreflang` qui font foi pour les
+  moteurs.
+- **La grille, les FAQ, les longs paragraphes** gardent leur français comme
+  clé ; les paragraphes qui portent un mot en gras sont découpés en segments.
+  Le titre de l'accueil passe en `absolute` : le gabarit `%s — Quantinvo`
+  l'aurait doublé.
+
+Vérifié : HTML servi par le serveur en anglais sous `/en` (titre, `h1`,
+navigation préfixée, `hreflang` dans les deux sens), bouton EN → FR qui
+renvoie sur `/` avec le cookie posé, cookie « en » + `/tarifs` → `/en/tarifs`,
+grille des tarifs en anglais dès le rendu, débordement horizontal nul. 1 368
+tests, `next build` avec neuf routes `/en` statiques de plus.
+
+Tests de garde : `web/tests/i18n.test.ts`, bloc « la vitrine a deux adresses
+par page ».

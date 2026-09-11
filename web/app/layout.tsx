@@ -11,6 +11,15 @@ import './globals.css'
 
 // Applique le thème (clair/sombre/système) AVANT le premier affichage,
 // pour éviter tout clignotement.
+/**
+ * ⚠️ `<html lang>` est rendu « fr » par le serveur pour toutes les pages : le
+ * layout racine ne connaît pas l'adresse. Sous `/en`, ce script le corrige
+ * avant le premier affichage — comme le thème juste après. Les moteurs, eux,
+ * lisent les balises `hreflang` de chaque page (voir `lib/metaVitrine.ts`),
+ * qui font foi sur la langue.
+ */
+const LANG_INIT = `(function(){try{var p=location.pathname;if(p==='/en'||p.indexOf('/en/')===0){document.documentElement.lang='en';}}catch(e){}})();`
+
 const THEME_INIT = `(function(){try{var p=localStorage.getItem('quantinvo-theme')||'system';var d=p==='dark'||(p==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){document.documentElement.dataset.theme='dark';}})();`
 
 /**
@@ -79,6 +88,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="fr" className={`${texte.variable} ${titre.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script dangerouslySetInnerHTML={{ __html: LANG_INIT }} />
         <OrganisationJsonLd />
         {/* La langue de l'espace connecté se relit APRÈS l'hydratation (voir
             lib/i18n.tsx) : le serveur rend en français, le navigateur aussi au

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { venteOuverte } from '@/lib/legal'
+import { useTraduction } from '@/lib/i18n'
 
 type Props = {
   className?: string
@@ -25,6 +26,7 @@ type Props = {
  */
 export function InscriptionLink({ className, children, ferme }: Props) {
   const [connecte, setConnecte] = useState(false)
+  const { t, lien } = useTraduction()
 
   useEffect(() => {
     let active = true
@@ -38,6 +40,8 @@ export function InscriptionLink({ className, children, ferme }: Props) {
   // ⚠️ TANT QUE LA VENTE EST FERMÉE, ON NE PROMET PAS UNE INSCRIPTION. La porte
   // reste `/inscription`, qui explique et donne l'adresse — une seule porte, un
   // seul message. Tranché par Julien le 5 septembre 2026.
-  const libelle = venteOuverte() ? children : (ferme ?? 'Nous écrire')
-  return <Link href="/inscription" className={className}>{libelle}</Link>
+  // Un libellé passé en chaîne est une clé de traduction ; du JSX passe tel quel.
+  const enfant = typeof children === 'string' ? t(children) : children
+  const libelle = venteOuverte() ? enfant : (ferme ?? t('Nous écrire'))
+  return <Link href={lien('/inscription')} className={className}>{libelle}</Link>
 }

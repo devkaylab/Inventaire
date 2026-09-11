@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 import { derniereDefinition, dossierMigrations } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
-const superviseur = lire('../app/superviseur/page.tsx')
+const superviseur = lire('../components/vitrine/Superviseur.tsx')
 
 // `derniereDefinition` vit dans ./migrations : stripe.test.ts s'en sert aussi.
 
@@ -147,7 +147,7 @@ describe('le formulaire d’inscription borne ce qu’il accepte', () => {
   // sans compte, et le texte n'avait aucune borne — seuls le stock, la surface
   // et le nombre de magasins en avaient. Migration 20260828130001.
   const { corps } = derniereDefinition('submit_company_request_detailed')
-  const inscription = lire('../app/inscription/page.tsx')
+  const inscription = lire('../components/vitrine/PageInscription.tsx')
 
   it('refuse les cinq champs trop longs', () => {
     expect(corps).toContain('length(btrim(p_company_name)) > 80')

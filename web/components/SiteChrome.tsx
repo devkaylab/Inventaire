@@ -8,21 +8,29 @@ import { EnTeteAuDefilement } from '@/components/EnTeteAuDefilement'
 import { Parallaxe } from '@/components/Parallaxe'
 import { PRIVACY_URL } from '@/lib/links'
 import { mentionsCompletes } from '@/lib/legal'
+import { LangueToggle } from '@/components/LangueToggle'
+import { RedirectionLangue } from '@/components/RedirectionLangue'
+import { traduction, type Langue } from '@/lib/traduction'
 
 /**
  * En-tête et pied de page communs aux pages publiques du site (accueil,
  * Pourquoi Quantinvo, L'inventaire). Un seul endroit à modifier quand la
  * navigation évolue.
  */
-export function SiteHeader() {
+export function SiteHeader({ langue = 'fr' }: { langue?: Langue }) {
+  const { t, lien } = traduction(langue)
   return (
     <>
     <RevealObserver />
+    {/* ⚠️ Le bouton FR/EN est sur TOUTE la vitrine depuis le 11 septembre 2026
+        (demande de Julien), et la détection automatique avec lui. */}
+    <LangueToggle />
+    <RedirectionLangue />
     <Parallaxe />
     <EnTeteAuDefilement />
     <header className="site-header">
       <div className="container inner">
-        <Link href="/" className="brand">
+        <Link href={lien('/')} className="brand">
           <Logo size={38} />
           <span>Quantinvo</span>
         </Link>
@@ -37,7 +45,7 @@ export function SiteHeader() {
             qui, lui, apprend quelque chose. */}
         <nav className="nav-links">
           {LIENS_PUBLICS.map((l) => (
-            <Link href={l.href} key={l.href}>{l.libelle}</Link>
+            <Link href={lien(l.href)} key={l.href}>{t(l.libelle)}</Link>
           ))}
         </nav>
         <HeaderActions />
@@ -56,20 +64,21 @@ export function SiteHeader() {
   )
 }
 
-export function SiteFooter() {
+export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
+  const { t, lien } = traduction(langue)
   return (
     <footer className="site-footer">
       <div className="container inner">
         <div className="brand"><Logo size={24} /><span>Quantinvo</span></div>
         <div className="links">
-          <Link href="/pourquoi-nous-choisir">Pourquoi nous choisir ?</Link>
-          <Link href="/inventaire">L&apos;inventaire</Link>
-          <Link href="/tarifs">Tarifs</Link>
-          <Link href="/login">Se connecter</Link>
-          <a href={PRIVACY_URL} target="_blank" rel="noreferrer">Confidentialité</a>
+          <Link href={lien('/pourquoi-nous-choisir')}>{t('Pourquoi nous choisir ?')}</Link>
+          <Link href={lien('/inventaire')}>{t("L'inventaire")}</Link>
+          <Link href={lien('/tarifs')}>{t('Tarifs')}</Link>
+          <Link href="/login">{t('Se connecter')}</Link>
+          <a href={PRIVACY_URL} target="_blank" rel="noreferrer">{t('Confidentialité')}</a>
           {/* Une identification à trous ne vaut pas mieux que pas de page : on
               ne l'annonce qu'une fois les mentions requises renseignées. */}
-          {mentionsCompletes() && <Link href="/mentions-legales">Mentions légales</Link>}
+          {mentionsCompletes() && <Link href="/mentions-legales">{t('Mentions légales')}</Link>}
         </div>
         <span className="muted">© 2026 Devkaylab · Quantinvo</span>
       </div>

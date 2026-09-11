@@ -1,5 +1,6 @@
 import { OFFRES, TVA_APPLICABLE } from '@/lib/offres'
 import { SITE_URL, url } from '@/lib/site'
+import { traduction, type Langue } from '@/lib/traduction'
 
 /**
  * Les données structurées (JSON-LD) que lisent les moteurs et les assistants.
@@ -58,7 +59,8 @@ export function OrganisationJsonLd() {
  * balisage périmé serait pire, il est lu par des machines qui ne vérifient
  * rien.
  */
-export function LogicielJsonLd() {
+export function LogicielJsonLd({ langue = 'fr' }: { langue?: Langue }) {
+  const { t, lien } = traduction(langue)
   return (
     <Bloc donnees={{
       '@context': 'https://schema.org',
@@ -66,13 +68,13 @@ export function LogicielJsonLd() {
       '@id': `${SITE_URL}/#logiciel`,
       name: 'Quantinvo',
       applicationCategory: 'BusinessApplication',
-      applicationSubCategory: "Inventaire et gestion de stock",
+      applicationSubCategory: t('Inventaire et gestion de stock'),
       operatingSystem: 'iOS 16.4+, Android 7.0+',
-      url: SITE_URL,
+      url: url(lien('/')),
       image: url('/og.png'),
-      inLanguage: 'fr-FR',
+      inLanguage: langue === 'en' ? 'en' : 'fr-FR',
       description:
-        "Outil d'inventaire pour le commerce de détail. Les équipes comptent en rayon avec leur téléphone ou une douchette Bluetooth ; les zones sont découpées par des balises QR imprimées depuis l'outil ; une seconde passe d'audit fiabilise le comptage ; le rapport d'écarts s'exporte en tableur. Fonctionne sans réseau en réserve, les comptages repartent au retour du signal.",
+        t("Outil d'inventaire pour le commerce de détail. Les équipes comptent en rayon avec leur téléphone ou une douchette Bluetooth ; les zones sont découpées par des balises QR imprimées depuis l'outil ; une seconde passe d'audit fiabilise le comptage ; le rapport d'écarts s'exporte en tableur. Fonctionne sans réseau en réserve, les comptages repartent au retour du signal."),
       featureList: [
         'Comptage par scan de code-barres, au téléphone ou à la douchette Bluetooth',
         'Découpage du magasin en zones par balises QR imprimées',
@@ -81,15 +83,15 @@ export function LogicielJsonLd() {
         'Import du référentiel articles et du stock théorique (CSV, Excel)',
         'Suivi de l’avancement en direct depuis le site',
         'Fonctionne hors ligne, synchronisation au retour du réseau',
-      ],
+      ].map((f) => t(f)),
       publisher: { '@id': `${SITE_URL}/#organisation` },
       offers: OFFRES.map(o => ({
         '@type': 'Offer',
         name: o.nom,
-        description: `${o.plage} comptant en même temps, par magasin.`,
+        description: t('%{plage} comptant en même temps, par magasin.', { plage: t(o.plage) }),
         price: o.an,
         priceCurrency: 'EUR',
-        url: url('/tarifs'),
+        url: url(lien('/tarifs')),
         // Le balisage doit dire la même chose que la page, sinon il annonce
         // un prix qui n'est pas celui payé. En franchise en base, le prix
         // affiché EST le prix dû : rien ne s'y ajoute.

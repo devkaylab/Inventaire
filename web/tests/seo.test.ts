@@ -133,7 +133,7 @@ describe('les données structurées disent ce que la page dit', () => {
 })
 
 describe('la suppression de compte a une adresse publique', () => {
-  const page = lire('../app/suppression-compte/page.tsx')
+  const page = lire('../components/vitrine/SuppressionCompte.tsx')
 
   it('la page existe et reste hors de la coquille', () => {
     // ⚠️ Google Play l'exige : un lien web accessible SANS installer
