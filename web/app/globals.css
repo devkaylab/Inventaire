@@ -525,6 +525,57 @@ a { color: inherit; text-decoration: none; }
 }
 .hero-plein .container { position: relative; will-change: transform, opacity; }
 
+/* ——————————————————————————————————————————————————————————————
+   Le héros filmé
+   —————————————————————————————————————————————————————————————— */
+
+/* ⚠️ LA VIDÉO NE CHANGE PAS LA HAUTEUR DE LA SECTION. Elle est posée sur toute
+   la surface et recadrée : c'est elle qui s'ajuste au héros. */
+.hero-film {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0;
+  pointer-events: none;
+}
+
+/* ⚠️ LE VOILE EST CE QUI REND LE TITRE LISIBLE, et il n'est pas décoratif : la
+   vidéo monte à 50 % de luminosité en son milieu. Dégradé plutôt qu'aplat —
+   il est plus dense au centre, là où le texte se trouve, et laisse respirer
+   les bords. */
+.hero-film-fond::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 74% 62% at 50% 44%, rgba(8, 10, 9, .78), rgba(8, 10, 9, .42) 62%, rgba(8, 10, 9, .52)),
+    linear-gradient(rgba(8, 10, 9, .18), rgba(8, 10, 9, .18));
+}
+.hero-film-fond > .container,
+.hero-film-fond > .scroll-cue { position: relative; z-index: 2; }
+
+/* La bande encre, comme la section « Ce qui nous distingue » — dans les DEUX
+   thèmes. Les jetons sont redéfinis sur la section : tout ce qu'elle contient
+   suit, sans qu'aucune règle n'ait à être récrite. */
+.hero-film-fond {
+  background: var(--encre);
+  --text-1: var(--sur-encre);
+  --text: var(--sur-encre);
+  --text-2: var(--sur-encre-2);
+  --text-3: var(--sur-encre-2);
+  --hairline: var(--encre-hairline);
+  color: var(--sur-encre);
+}
+.hero-film-fond h1 { color: var(--sur-encre); }
+.hero-film-fond .eyebrow {
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
+  border-color: color-mix(in srgb, var(--cyan) 30%, transparent);
+}
+.hero-film-fond .btn-ghost { color: var(--sur-encre); border-color: var(--encre-hairline); }
+.hero-film-fond .btn-ghost:hover { border-color: var(--sur-encre-2); }
+
+/* ⚠️ Sans réseau, sans JavaScript, ou en « moins d'animation », la balise reste
+   posée avec sa seule image d'attente : il faut donc qu'elle s'affiche. */
+.hero-film[src=""] { display: none; }
+
+
 .scroll-cue {
   position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 6px;

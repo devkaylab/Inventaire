@@ -626,7 +626,12 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
   const parallaxe = lire('../components/Parallaxe.tsx')
 
   it('le héros de l’accueil occupe le premier écran, et lui seul', () => {
-    expect(accueil).toContain('className="hero hero-plein"')
+    // ⚠️ La garde porte sur les CLASSES, pas sur la liste écrite mot pour mot.
+    // Elle citait `className="hero hero-plein"` : elle est tombée le
+    // 11 septembre 2026 quand le héros a gagné `hero-film-fond` — sur un ajout
+    // voulu, sans rien avoir protégé.
+    const classes = /<section className="([^"]*hero-plein[^"]*)"/.exec(accueil)?.[1] ?? ''
+    expect(classes.split(/\s+/)).toEqual(expect.arrayContaining(['hero', 'hero-plein']))
     expect(css).toContain('min-height: calc(100vh - 64px)')
     // Les pages intérieures gardent leur bande d'introduction : on vient y lire.
     expect(lire('../components/vitrine/Pourquoi.tsx')).not.toContain('hero-plein')

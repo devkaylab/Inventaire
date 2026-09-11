@@ -282,3 +282,63 @@ describe('le produit se voit', () => {
     expect(usages, 'un seul bloc échappe au gabarit de lecture').toBe(1)
   })
 })
+
+describe('le héros filmé', () => {
+  const video = lire('../components/FondVideo.tsx')
+
+  it('⚠️ la vidéo ne change pas la hauteur de la section', () => {
+    // C'est la demande, mot pour mot : « sans qu'on touche à la taille de la
+    // section ». Elle est posée sur toute la surface et recadrée — c'est elle
+    // qui s'ajuste au héros, jamais l'inverse.
+    const bloc = /\.hero-film \{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(bloc).toContain('position: absolute')
+    expect(bloc).toContain('inset: 0')
+    expect(bloc).toContain('object-fit: cover')
+    // Et rien qui pousse : pas de hauteur imposée au héros par la vidéo.
+    expect(bloc).not.toMatch(/min-height|aspect-ratio/)
+  })
+
+  it('⚠️ elle tourne en boucle, muette, sans plein écran forcé', () => {
+    // `muted` n'est pas un confort : c'est la CONDITION de la lecture
+    // automatique dans tous les navigateurs. `playsInline` empêche iOS de
+    // passer en plein écran au démarrage.
+    for (const attr of ['muted', 'loop', 'playsInline']) {
+      expect(video, `la vidéo doit être ${attr}`).toContain(attr)
+    }
+  })
+
+  it('⚠️ elle ne se télécharge PAS quand elle ne doit pas', () => {
+    // Deux mégaoctets imposés à quelqu'un en 4G pour un décor, ce serait le
+    // prendre en otage — et une vidéo qui tourne est exactement ce qu'une
+    // préférence « moins d'animation » vise. La source n'est posée qu'après
+    // ces deux contrôles ; sinon il reste l'image d'attente.
+    expect(video).toContain('prefers-reduced-motion')
+    expect(video).toContain('innerWidth < 900')
+    expect(video).toContain('preload="none"')
+    const garde = video.indexOf('prefers-reduced-motion')
+    const pose = video.indexOf('setSource(src)')
+    expect(garde).toBeGreaterThan(0)
+    expect(pose, 'la source doit être posée APRÈS les gardes').toBeGreaterThan(garde)
+  })
+
+  it('⚠️ le voile existe : sans lui le titre n’est plus lisible', () => {
+    // Mesuré sur six instants de la vidéo : le contraste du titre tombe entre
+    // 4,65 et 5,55 au pixel le plus clair. Sans le voile il passe sous le
+    // seuil. Ce n'est pas une décoration.
+    expect(css).toMatch(/\.hero-film-fond::after \{[^}]*background:/)
+  })
+
+  it('⚠️ le héros est une bande ENCRE dans les deux thèmes', () => {
+    // La vidéo ouvre et ferme sur un fondu au noir (1,5 s et 1,3 s, mesurés) :
+    // sur un fond clair, ces fondus feraient deux éclairs noirs toutes les onze
+    // secondes. La règle vit donc hors de toute requête de thème.
+    const i = css.indexOf('.hero-film-fond {')
+    expect(i).toBeGreaterThan(0)
+    const avant = css.slice(0, i)
+    const ouvertes = (avant.match(/@media[^{]*\{/g) ?? []).length
+    const fermees = (avant.match(/\}/g) ?? []).length
+    // Si la règle était dans un @media, il resterait une accolade ouverte.
+    expect(ouvertes, 'la bande encre ne doit pas dépendre du thème').toBeLessThan(fermees)
+    expect(css.slice(i, i + 400)).toContain('var(--encre)')
+  })
+})

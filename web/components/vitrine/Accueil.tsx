@@ -4,6 +4,7 @@ import { AuthLink } from '@/components/AuthLink'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { DiaporamaProduit } from '@/components/DiaporamaProduit'
+import { FondVideo } from '@/components/FondVideo'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 import { OFFRES, OFFRE_PHARE, euros } from '@/lib/offres'
 import { traduction, type Langue } from '@/lib/traduction'
@@ -83,7 +84,17 @@ export function Accueil({ langue }: { langue: Langue }) {
 
       <main>
         <LogicielJsonLd langue={langue} />
-        <section className="hero hero-plein">
+        {/*
+          ⚠️ LE HÉROS EST UNE BANDE ENCRE, dans les deux thèmes. Ce n'est pas une
+          invention : la charte a déjà sa bande encre, et la vidéo de fond
+          l'impose — elle ouvre et ferme sur un fondu au NOIR (1,5 s à
+          l'ouverture, 1,3 s à la fermeture, mesurés). Sur un fond clair, ces
+          fondus feraient deux éclairs noirs toutes les onze secondes ; sur
+          l'encre, ils sont invisibles : le téléphone apparaît, montre
+          l'inventaire, et se dissout dans le fond.
+        */}
+        <section className="hero hero-plein hero-film-fond">
+          <FondVideo src="/vitrine/hero.mp4" poster="/vitrine/hero-poster.jpg" />
           <div className="container" data-hero-exit>
             <div data-reveal="0"><span className="eyebrow">{t("Outil d'inventaire")}</span></div>
             <h1 data-reveal="1">{t('La simplicité')}<br /><span className="grad">{t('en main.')}</span></h1>
