@@ -3977,8 +3977,32 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 /* ⚠️ `.hero p.lead` pose `margin: 22px auto 34px` — le `auto` recentrerait le
    paragraphe. Il faut donc la même spécificité (0,2,1) et venir après. */
-.hero-accueil p.lead { margin: 0 0 20px; max-width: 34ch; }
+.hero-accueil p.lead { margin: 0 0 20px; max-width: none; }
 .hero-accueil .cta { justify-content: flex-end; }
+
+/* ⚠️ LES DEUX ÉCHELLES SONT ÉCHANGÉES (demande de Julien, 11 septembre 2026 :
+   « fais l'inverse »). Ce que le titre portait, les trois prestations le
+   portent ; ce qu'elles portaient, le titre le porte.
+
+   Ce n'est pas une coquetterie : ce qu'on vend, ce sont les trois prestations —
+   « La simplicité en main. » est la signature qui les conclut. Le gros
+   caractère va donc à ce qui informe, et la signature se pose dessous.
+
+   ⚠️ LE `<h1>` RESTE UN `<h1>`. Seule sa taille change : la hiérarchie du
+   document — celle que lisent un moteur et un lecteur d'écran — n'a pas à
+   suivre la hiérarchie visuelle. Ne pas « corriger » en le passant en `<p>`.
+
+   ⚠️ Et ces deux règles doivent venir APRÈS `.hero h1` et `.hero p.lead-trois`,
+   qu'elles renversent : elles ont la même spécificité, donc c'est l'ordre qui
+   tranche. Même piège que le `margin auto` juste au-dessus. */
+.hero-accueil p.lead-trois {
+  font-size: clamp(38px, 6vw, 64px); font-weight: 800;
+  letter-spacing: -1.5px; line-height: 1.05;
+}
+.hero-accueil h1 {
+  font-size: clamp(18px, 2.4vw, 21px); font-weight: 600;
+  letter-spacing: -0.3px; line-height: 1.35;
+}
 
 /* Sous 900 px il n'y a plus la place de deux colonnes : les boutons passent
    dessous, et restent alignés à gauche comme le texte. */
@@ -3988,6 +4012,18 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
     padding: 0 24px; gap: 28px;
   }
   .hero-accueil .cta { justify-content: flex-start; }
+
+  /* ⚠️ LA TAILLE SE CALE SUR LA LIGNE LA PLUS LONGUE, ET C'EST MESURÉ.
+     Les trois prestations ont une ligne chacune : si l'une déborde, elle se
+     casse en deux et la liste en compte quatre — c'est exactement ce que les
+     `<br />` existent pour éviter. Constaté à 390 px sur « Comptage en
+     équipe. », la plus large des six (français et anglais confondus) : elle
+     demande 9,65 px de largeur par pixel de corps, mesuré au navigateur.
+     La largeur utile vaut `100vw - 48` (les deux marges), d'où la pente
+     10vw — le retrait de 6 px laisse la marge de sécurité, sans quoi un mot
+     plus long ou une police qui bouge referait la coupure.
+     Contrôlé : 33 px à 390, 26 px à 320, plafonné à 64 dès 700. */
+  .hero-accueil p.lead-trois { font-size: clamp(24px, calc(10vw - 6px), 64px); }
 }
 
 /* ── La preuve, avant le premier argument ────────────────────────────────────
@@ -4139,6 +4175,17 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   flex: 0 0 auto; min-width: 116px; text-align: center;
 }
 .diaporama-nav:hover { color: var(--text-1); border-color: var(--text-3); }
+
+/* ⚠️ SUR UN PETIT ÉCRAN, C'EST `flex: 1` QUI TIENT L'ÉGALITÉ. La largeur
+   plancher de 116 px fait déborder la rangée sous ~420 px (mesuré : 13 px de
+   débordement horizontal à 320 px, deux boutons + pastilles + écarts pour
+   272 px utiles). Les deux boutons partagent alors la place restante à parts
+   égales — ils restent de la même taille, ce qui est tout ce qu'on défend, et
+   ils rétrécissent au lieu de pousser la page. */
+@media (max-width: 520px) {
+  .diaporama-barre { gap: 10px; }
+  .diaporama-nav { flex: 1 1 0; min-width: 0; padding: 8px 10px; }
+}
 
 /* Les quatre points passent sur deux rangs, puis sur un seul. */
 @media (max-width: 1000px) {

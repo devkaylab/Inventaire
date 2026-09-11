@@ -128,8 +128,13 @@ export function Accueil({ langue }: { langue: Langue }) {
                   2026). « Outil d'inventaire » répétait ce que la phrase
                   au-dessus dit mieux, et le dégradé sur « en main. » coupait le
                   titre en deux à l'endroit où il doit se lire d'un trait. Sur la
-                  vidéo, un titre d'une seule encre se détache aussi mieux. */}
-              <h1 data-reveal="2">{t('La simplicité')}<br />{t('en main.')}</h1>
+                  vidéo, un titre d'une seule encre se détache aussi mieux.
+
+                  ⚠️ ET PLUS DE COUPURE NON PLUS. Le `<br />` avait été posé pour
+                  un titre de 64 px ; depuis que les deux échelles sont
+                  échangées, la signature en fait 21 et tient sur une ligne —
+                  la couper en deux ne ferait que la hacher. */}
+              <h1 data-reveal="2">{t('La simplicité en main.')}</h1>
             </div>
             {/*
               ⚠️ LE BOUTON DIT LE BÉNÉFICE, PAS LA DÉMARCHE. Personne ne se lève

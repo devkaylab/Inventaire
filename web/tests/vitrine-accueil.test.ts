@@ -261,6 +261,30 @@ describe('le produit se voit', () => {
     expect(css.indexOf('.hero-accueil p.lead')).toBeGreaterThan(css.indexOf('.hero p.lead'))
   })
 
+  it('⚠️ les deux échelles sont ÉCHANGÉES', () => {
+    // Julien, 11 septembre 2026 : « fais l'inverse ». Ce que le titre portait,
+    // les trois prestations le portent — et réciproquement.
+    //
+    // ⚠️ La garde compare les DEUX RÈGLES entre elles, jamais une valeur figée :
+    // changer l'échelle du héros doit rester possible sans faire tomber le test,
+    // c'est l'échange qui est défendu.
+    const taille = (sel: string) => {
+      const bloc = new RegExp(sel.replace(/[.\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}').exec(css)?.[1] ?? ''
+      return /font-size:\s*([^;]+)/.exec(bloc)?.[1].trim() ?? ''
+    }
+    const titreDeBase = taille('.hero h1')
+    const annonceDeBase = taille('.hero p.lead-trois')
+    expect(titreDeBase).not.toBe('')
+    expect(annonceDeBase).not.toBe('')
+    expect(titreDeBase).not.toBe(annonceDeBase)
+    expect(taille('.hero-accueil p.lead-trois')).toBe(titreDeBase)
+    expect(taille('.hero-accueil h1')).toBe(annonceDeBase)
+    // Même piège que le `margin auto` : à spécificité égale, c'est l'ordre qui
+    // renverse — ces deux règles viennent APRÈS celles qu'elles annulent.
+    expect(css.indexOf('.hero-accueil p.lead-trois')).toBeGreaterThan(css.indexOf('.hero p.lead-trois'))
+    expect(css.indexOf('.hero-accueil h1')).toBeGreaterThan(css.indexOf('.hero h1'))
+  })
+
   it('⚠️ les trois prestations passent AVANT le titre', () => {
     // L'ordre vient de l'annotation : « Inventaires / Comptage en équipe /
     // Écarts en direct / La simplicité en main ». Elles annoncent ce qu'on
@@ -300,6 +324,18 @@ describe('le produit se voit', () => {
     // Et elle ne doit pas être annulée par un étirement : un bouton qui grandit
     // pour remplir la rangée reprendrait deux largeurs différentes.
     expect(bloc).toMatch(/flex:\s*0\s+0\s+auto/)
+    // ⚠️ Et sur un petit écran c'est `flex: 1` qui prend le relais : la largeur
+    // plancher ferait déborder la rangée, les deux boutons se partagent alors
+    // la place — toujours à parts égales.
+    // ⚠️ On prend le DERNIER `.diaporama-nav` qui suit une requête « petit
+    // écran », pas le premier venu : la règle de BASE est déclarée entre deux
+    // requêtes 520 px, si bien qu'une regex non gourmande — puis un filtre sur
+    // le mot « flex » — tombaient l'une comme l'autre sur elle.
+    const petit = css.split('@media (max-width: 520px)').slice(1)
+      .map((m) => /\.diaporama-nav\s*\{([^}]*)\}/.exec(m)?.[1] ?? '')
+      .filter((m) => m !== '').at(-1) ?? ''
+    expect(petit).toMatch(/flex:\s*1\s+1\s+0/)
+    expect(petit).toMatch(/min-width:\s*0/)
   })
 
   it('⚠️ montre la capture ENCADRÉE, et ne lui dessine aucun cadre', () => {
