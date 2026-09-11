@@ -31,7 +31,7 @@ function decoder(s: string): string {
 }
 
 function clesDemandees(): Map<string, string> {
-  const motif = /(?<![\w.$])tn?\(\s*(['"])((?:\\.|(?!\1).)*?)\1/gs
+  const motif = /(?<![\w.$])tn?\(\s*(['"])((?:\\[\s\S]|(?!\1)[\s\S])*?)\1/g
   const cles = new Map<string, string>()
   for (const f of [...fichiers(path.join(racine, 'app')), ...fichiers(path.join(racine, 'components')), ...fichiers(path.join(racine, 'lib'))]) {
     if (f.endsWith(`lib${path.sep}i18n.tsx`)) continue
@@ -55,7 +55,7 @@ describe('l’espace connecté en anglais', () => {
     const src = [...fichiers(path.join(racine, 'app')), ...fichiers(path.join(racine, 'components')), ...fichiers(path.join(racine, 'lib'))]
       .map((f) => readFileSync(f, 'utf8')).join('\n')
     const pluriels = new Set<string>()
-    for (const m of src.matchAll(/(?<![\w.$])tn\(\s*(['"])((?:\\.|(?!\1).)*?)\1/gs)) pluriels.add(normaliser(decoder(m[2])))
+    for (const m of src.matchAll(/(?<![\w.$])tn\(\s*(['"])((?:\\[\s\S]|(?!\1)[\s\S])*?)\1/g)) pluriels.add(normaliser(decoder(m[2])))
     const sansPluriel = [...pluriels].filter((k) => typeof dictionnaire.get(k) === 'string')
     expect(sansPluriel, `tn() attend { one, other } pour : ${sansPluriel.join(' · ')}`).toEqual([])
   })

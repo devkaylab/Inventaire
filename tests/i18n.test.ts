@@ -41,7 +41,7 @@ function decoder(s: string): string {
  * français si l'une manque.
  */
 function clesDemandees(): Map<string, string> {
-  const motif = /(?<![\w.$])tn?\(\s*(['"])((?:\\.|(?!\1).)*?)\1/gs
+  const motif = /(?<![\w.$])tn?\(\s*(['"])((?:\\[\s\S]|(?!\1)[\s\S])*?)\1/g
   const cles = new Map<string, string>()
   for (const f of fichiers(path.join(racine, 'src'))) {
     if (f.includes(`${path.sep}i18n${path.sep}`) || f.endsWith(`lib${path.sep}i18n.ts`)) continue
@@ -68,7 +68,7 @@ describe('l’application en anglais', () => {
       .filter((f) => !f.includes(`${path.sep}i18n${path.sep}`))
       .map((f) => readFileSync(f, 'utf8')).join('\n')
     const pluriels = new Set<string>()
-    for (const m of src.matchAll(/(?<![\w.$])tn\(\s*(['"])((?:\\.|(?!\1).)*?)\1/gs)) {
+    for (const m of src.matchAll(/(?<![\w.$])tn\(\s*(['"])((?:\\[\s\S]|(?!\1)[\s\S])*?)\1/g)) {
       pluriels.add(normaliser(decoder(m[2])))
     }
     const sansPluriel = [...pluriels].filter((k) => typeof dictionnaire.get(k) === 'string')
