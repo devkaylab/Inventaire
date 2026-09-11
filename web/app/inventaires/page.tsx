@@ -197,7 +197,7 @@ export default function InventairesPage() {
               {t('Tout sélectionner')}
             </label>
           )}
-          <Link href="/dashboard/new" className="btn btn-primary">{t('Nouvel inventaire')}</Link>
+          <Link href="/dashboard/new" className="btn btn-primary">{t('+ Nouvel inventaire')}</Link>
         </div>
       </div>
 

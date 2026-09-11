@@ -122,7 +122,7 @@ export default function DashboardPage() {
         </div>
         <div className="app-head-actions">
           <RechercheGlobale />
-          <Link href="/dashboard/new" className="btn btn-primary">{t('Nouvel inventaire')}</Link>
+          <Link href="/dashboard/new" className="btn btn-primary">{t('+ Nouvel inventaire')}</Link>
         </div>
       </div>
 

@@ -99,6 +99,7 @@ export const en: Dictionnaire = {
   "(optionnel)": "(optional)",
   "+ Affecter un magasin": "+ Assign a store",
   "+ Ajouter une personne": "+ Add a person",
+  "+ Nouvel inventaire": "+ New inventory",
   ", un e-mail de réinitialisation vient de lui être envoyé. Ouvrez le lien qu'il contient pour choisir un nouveau mot de passe. Pensez à vérifier vos indésirables.": ", a reset email has just been sent to it. Open the link it contains to choose a new password. Remember to check your spam folder.",
   ". Son rapport et ses écarts restent consultables ; le détail des scans a été effacé douze mois après la clôture, comme annoncé dans la politique de confidentialité. La feuille « Détail » de l’export est donc vide, et l’inventaire ne se rouvre plus.": ". Its report and variances remain available; the scan detail was erased twelve months after closing, as stated in the privacy policy. The “Detail” sheet of the export is therefore empty, and the inventory can no longer be reopened.",
   "1. Scannez ce QR code avec votre application d'authentification.": "1. Scan this QR code with your authenticator app.",
