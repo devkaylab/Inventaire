@@ -99,21 +99,38 @@ export function Accueil({ langue }: { langue: Langue }) {
             srcMobile="/vitrine/hero-mobile.mp4"
             poster="/vitrine/hero-poster.jpg"
           />
-          <div className="container" data-hero-exit>
-            {/* ⚠️ NI SURTITRE NI DÉGRADÉ (demande de Julien, 11 septembre 2026).
-                « Outil d'inventaire » répétait ce que la phrase juste dessous
-                dit mieux, et le dégradé sur « en main. » coupait le titre en
-                deux à l'endroit où il doit se lire d'un trait. Sur la vidéo, un
-                titre d'une seule encre se détache aussi mieux. */}
-            <h1 data-reveal="1">{t('La simplicité')}<br />{t('en main.')}</h1>
-            {/*
-              Trois prestations plutôt qu'une phrase : elles se lisent en un coup
-              d'œil et méritent le poids d'un sous-titre, pas celui d'un
-              paragraphe.
-            */}
-            <p className="lead lead-trois" data-reveal="2">
-              {t('Inventaire tournant. Comptage en équipe. Écarts en direct.')}
-            </p>
+          {/*
+            ⚠️ RIEN N'EST CENTRÉ ICI, ET C'EST UNE DEMANDE (Julien, 11 septembre
+            2026, capture annotée à l'appui) : « le texte doit être aligné à
+            gauche ». Le bloc de texte se pose en bas à GAUCHE, les deux boutons
+            en bas à DROITE. Tout centrer par défaut est l'un des tics qu'il a
+            nommés le même jour ; et sur une vidéo, un bloc calé dans un angle
+            laisse voir l'image au lieu de s'asseoir en plein milieu.
+
+            ⚠️ LES TROIS PRESTATIONS PASSENT AU-DESSUS DU TITRE — c'est l'ordre
+            qu'il a écrit dans l'annotation. Elles annoncent ce qu'on fait, le
+            titre conclut ; à l'envers, la conclusion arrivait avant le sujet.
+          */}
+          <div className="container hero-accueil" data-hero-exit>
+            <div className="hero-texte">
+              {/*
+                Trois prestations plutôt qu'une phrase : elles se lisent en un
+                coup d'œil et méritent le poids d'un sous-titre, pas celui d'un
+                paragraphe. ⚠️ Une ligne chacune — la coupure ne se laisse pas
+                au hasard de la largeur, c'est ce qui en fait une liste.
+              */}
+              <p className="lead lead-trois" data-reveal="1">
+                {t('Inventaire tournant.')}<br />
+                {t('Comptage en équipe.')}<br />
+                {t('Écarts en direct.')}
+              </p>
+              {/* ⚠️ NI SURTITRE NI DÉGRADÉ (demande de Julien, 11 septembre
+                  2026). « Outil d'inventaire » répétait ce que la phrase
+                  au-dessus dit mieux, et le dégradé sur « en main. » coupait le
+                  titre en deux à l'endroit où il doit se lire d'un trait. Sur la
+                  vidéo, un titre d'une seule encre se détache aussi mieux. */}
+              <h1 data-reveal="2">{t('La simplicité')}<br />{t('en main.')}</h1>
+            </div>
             {/*
               ⚠️ LE BOUTON DIT LE BÉNÉFICE, PAS LA DÉMARCHE. Personne ne se lève
               le matin pour « inscrire une entreprise ». La barre du haut, elle,

@@ -558,10 +558,13 @@ body:has(.site-footer) .theme-toggle { display: none; }
    repos — comme les apparitions, rien n'est jamais masqué. */
 .plx { position: absolute; pointer-events: none; will-change: transform; }
 
-/* Le héros de l'accueil occupe tout le premier écran (moins l'en-tête). */
+/* Le héros de l'accueil occupe tout le premier écran (moins l'en-tête).
+   ⚠️ SON CONTENU EST CALÉ EN BAS (`justify-content: flex-end`), plus au centre :
+   demande de Julien du 11 septembre 2026, annotation à l'appui. Un bloc posé au
+   milieu d'une vidéo s'assied sur l'image ; en bas, il la laisse voir. */
 .hero-plein {
   min-height: calc(100vh - 64px);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-end;
   padding: 48px 0 96px;
 }
 .hero-plein .container { position: relative; will-change: transform, opacity; }
@@ -3950,6 +3953,43 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   letter-spacing: -0.3px; max-width: 34ch;
 }
 
+/* ── Le héros de l'accueil : à gauche, en bas ─────────────────────────────────
+   Demande de Julien du 11 septembre 2026, capture annotée : « le texte doit
+   être aligné à gauche ». Le texte se pose en bas à gauche, les deux boutons en
+   bas à droite.
+
+   ⚠️ IL PREND LA PLEINE LARGEUR, AVEC LA MARGE DE LA BARRE DES MENUS (40 px).
+   `.container` le bornait à 1080 px et le centrait : le bloc serait retombé au
+   milieu de l'écran au lieu de se caler dans l'angle, et il ne se serait aligné
+   sur rien — surtout pas sur le mot-symbole juste au-dessus. Même constat que
+   le 11 septembre sur le diaporama (« regarde la différence avec la barre des
+   menus »). */
+.hero-accueil {
+  /* ⚠️ `margin: 0`, ET C'EST LA MOITIÉ QUI FAIT LE TRAVAIL. `.container` porte
+     `margin: 0 auto` ; dans une colonne flex, une marge automatique l'emporte
+     sur `align-items: stretch` — le bloc retombait à la largeur de son contenu,
+     centré (mesuré : 772 px au lieu de 1440, texte à 374 px du bord au lieu de
+     40). Même piège que le `margin auto` interdit sur `.app-main`. */
+  max-width: none; margin: 0; padding: 0 40px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end; gap: 24px 48px;
+  text-align: left;
+}
+/* ⚠️ `.hero p.lead` pose `margin: 22px auto 34px` — le `auto` recentrerait le
+   paragraphe. Il faut donc la même spécificité (0,2,1) et venir après. */
+.hero-accueil p.lead { margin: 0 0 20px; max-width: 34ch; }
+.hero-accueil .cta { justify-content: flex-end; }
+
+/* Sous 900 px il n'y a plus la place de deux colonnes : les boutons passent
+   dessous, et restent alignés à gauche comme le texte. */
+@media (max-width: 900px) {
+  .hero-accueil {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 24px; gap: 28px;
+  }
+  .hero-accueil .cta { justify-content: flex-start; }
+}
+
 /* ── La preuve, avant le premier argument ────────────────────────────────────
    Quatre faits mesurés, en pleine largeur, entre deux filets : c'est ce que
    Qonto pose juste sous son héros, et ce que la vitrine n'avait nulle part. */
@@ -3982,6 +4022,8 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 @media (max-width: 520px) {
   .hero .cta, .final .cta { flex-direction: column; align-items: center; }
   .hero .cta .btn, .final .cta .btn { width: 100%; max-width: 320px; text-align: center; }
+  /* Le héros de l'accueil, lui, est aligné à gauche : ses boutons le suivent. */
+  .hero .hero-accueil .cta { align-items: flex-start; }
 }
 
 /* ── Les trois gestes ────────────────────────────────────────────────────── */

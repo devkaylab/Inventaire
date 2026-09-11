@@ -234,6 +234,48 @@ describe('le produit se voit', () => {
     expect(bloc).not.toMatch(/grid-template-columns:[^;]*1fr\s+1fr/)
   })
 
+  it('⚠️ le héros est aligné à gauche, en bas, et ses boutons à droite', () => {
+    // Julien, 11 septembre 2026, capture annotée : « le texte doit être aligné
+    // à gauche ». Le bloc de texte en bas à gauche, les deux boutons en bas à
+    // droite — et rien de centré, ce qui est aussi l'un des tics qu'il a nommés
+    // le même jour.
+    const bloc = /\.hero-accueil\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(bloc).toMatch(/text-align:\s*left/)
+    expect(bloc).toMatch(/grid-template-columns:[^;]*auto/)
+    expect(bloc).toMatch(/align-items:\s*end/)
+    // ⚠️ Et il annule le `margin: 0 auto` de `.container` : sans ça, la marge
+    // automatique l'emporte sur `align-items: stretch` et le bloc se recentre
+    // à la largeur de son contenu — le texte n'est plus au bord.
+    expect(bloc).toMatch(/margin:\s*0[;\s]/)
+    // Le héros plein écran cale son contenu en BAS, plus au milieu.
+    const plein = /\.hero-plein\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(plein).toMatch(/justify-content:\s*flex-end/)
+
+    // ⚠️ `.hero p.lead` pose un `margin: … auto …` qui RECENTRERAIT le
+    // paragraphe. La règle qui l'annule doit donc exister, ne pas réintroduire
+    // le `auto`, et surtout venir APRÈS dans la feuille — à spécificité égale,
+    // c'est l'ordre qui tranche (leçon de `.zone-form-unique`, 7 septembre).
+    const lead = /\.hero-accueil p\.lead\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(lead.length).toBeGreaterThan(0)
+    expect(lead).not.toContain('auto')
+    expect(css.indexOf('.hero-accueil p.lead')).toBeGreaterThan(css.indexOf('.hero p.lead'))
+  })
+
+  it('⚠️ les trois prestations passent AVANT le titre', () => {
+    // L'ordre vient de l'annotation : « Inventaires / Comptage en équipe /
+    // Écarts en direct / La simplicité en main ». Elles annoncent ce qu'on
+    // fait, le titre conclut.
+    const code = sansCommentaires(accueil)
+    const lead = code.indexOf('lead-trois')
+    const titre = code.indexOf('<h1')
+    expect(lead).toBeGreaterThan(-1)
+    expect(titre).toBeGreaterThan(-1)
+    expect(lead).toBeLessThan(titre)
+    // Une ligne chacune : la coupure ne se laisse pas au hasard de la largeur.
+    expect(code).toMatch(/t\('Inventaire tournant\.'\)\}<br \/>/)
+    expect(code).toMatch(/t\('Comptage en équipe\.'\)\}<br \/>/)
+  })
+
   it('⚠️ la barre ne répète pas le titre de la diapositive', () => {
     // Constat de Julien, 11 septembre 2026 : « retire le texte "Du scan dans
     // le rayon" répétitif ». Il s'écrivait DEUX fois sur le même écran — en
