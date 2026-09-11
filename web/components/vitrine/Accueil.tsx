@@ -3,7 +3,7 @@ import { LogicielJsonLd } from '@/components/DonneesStructurees'
 import { AuthLink } from '@/components/AuthLink'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
-import { ApercuTableauDeBord } from '@/components/ApercuTableauDeBord'
+import { DiaporamaProduit } from '@/components/DiaporamaProduit'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 import { OFFRES, OFFRE_PHARE, euros } from '@/lib/offres'
 import { traduction, type Langue } from '@/lib/traduction'
@@ -148,30 +148,41 @@ export function Accueil({ langue }: { langue: Langue }) {
             <div className="section-head" data-reveal="0">
               <h2>{t('Du rayon au tableau de bord')}</h2>
             </div>
-            <div className="duo">
-              <figure className="duo-tel" data-reveal="1">
-                {/*
-                  <img> et non next/image : ce PNG est servi en demi-résolution
-                  et jamais redimensionné côté serveur — même raison que le
-                  guide de prise en main.
-
-                  ⚠️ LA CAPTURE ENCADRÉE, PAS LA BRUTE. Elle vient du même
-                  pipeline (`docs/entreprise/deck/encadrees/`), mais posée dans
-                  le téléphone dessiné, sur fond TRANSPARENT — c'est le corps du
-                  téléphone qui fait le cadre. Un filet ou une ombre en CSS
-                  dessinerait un rectangle autour de lui : `.duo-tel img` n'en
-                  porte donc aucun. Elle vit dans `public/vitrine/` et non dans
-                  `public/prise-en-main/`, qui est le jeu du guide.
-                */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/vitrine/comptage-encadre.png" alt={t('L’écran de comptage de l’application, dans un rayon')} />
-                <figcaption>{t('Du scan dans le rayon')}</figcaption>
-              </figure>
-              <figure className="duo-ecran" data-reveal="2">
-                <ApercuTableauDeBord />
-                <figcaption>{t("Au suivi de l'avancement de l'inventaire zone par zone")}</figcaption>
-              </figure>
-            </div>
+            <DiaporamaProduit
+              precedent={t('Précédent')}
+              suivant={t('Suivant')}
+              diapos={[
+                {
+                  titre: t('Du scan dans le rayon'),
+                  intro: t('Un téléphone, une étiquette, et le comptage commence.'),
+                  image: {
+                    src: '/vitrine/comptage-encadre.png',
+                    alt: t('L’écran de comptage de l’application, dans un rayon'),
+                  },
+                  points: [
+                    { titre: t('La balise ouverte est nommée'), texte: t('Surface de vente, balise 1000 — on sait toujours où l’on compte.') },
+                    { titre: t('Trois façons de scanner'), texte: t('La caméra, la saisie au clavier, ou une douchette Bluetooth.') },
+                    { titre: t('Scan automatique'), texte: t('On vise, ça compte. Pas de bouton à presser entre deux articles.') },
+                    { titre: t('Le réseau peut tomber'), texte: t('Le comptage continue en réserve et repart tout seul au retour.') },
+                  ],
+                },
+                {
+                  titre: t('Au suivi, en direct'),
+                  intro: t('Pendant que l’équipe compte, le superviseur voit l’inventaire avancer.'),
+                  paysage: true,
+                  image: {
+                    src: '/vitrine/suivi.png',
+                    alt: t('Le suivi d’un inventaire : progression, avancement par zone et derniers scans'),
+                  },
+                  points: [
+                    { titre: t('L’avancement balise par balise'), texte: t('Ce qui est compté, ce qui est audité, ce qui reste.') },
+                    { titre: t('Chaque zone et sa progression'), texte: t('La surface de vente et la réserve ne vont jamais au même rythme.') },
+                    { titre: t('Les appareils, jamais les personnes'), texte: t('On voit combien de téléphones comptent, pas qui compte.') },
+                    { titre: t('Les derniers scans défilent'), texte: t('Comptage et audit mêlés, à la seconde près.') },
+                  ],
+                },
+              ]}
+            />
           </div>
         </section>
 

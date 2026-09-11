@@ -3927,6 +3927,67 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   gap: 56px; align-items: center; margin: 0 auto;
 }
 .duo figure { margin: 0; }
+
+/* ——————————————————————————————————————————————————————————————
+   Le diaporama du produit : le rayon, puis le bureau.
+   Les points se révèlent un par un — voir components/DiaporamaProduit.tsx.
+   —————————————————————————————————————————————————————————————— */
+.duo[hidden] { display: none !important; }
+/* La diapositive du tableau de bord montre un visuel PAYSAGE : le texte prend
+   une colonne de lecture, la capture prend le reste. */
+.duo--paysage { grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 56px; }
+
+/* ⚠️ Le tableau de bord est une capture RECTANGULAIRE de l'écran réel : lui
+   porte un filet, contrairement au téléphone dont le cadre est dans l'image. */
+.duo-ecran img {
+  width: 100%; height: auto; display: block;
+  border: 1px solid var(--hairline); border-radius: var(--r);
+}
+.duo-propos h3 { font-size: 22px; font-weight: 700; letter-spacing: -.015em; margin: 0 0 6px; }
+.duo-intro { margin: 0 0 22px; color: var(--text-2); font-size: 15px; max-width: 52ch; }
+.duo-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.duo-points li {
+  display: grid; grid-template-columns: 22px 1fr; gap: 14px; align-items: start;
+  max-width: 56ch;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.duo-points li.vu { opacity: 1; transform: none; }
+.duo-coche {
+  width: 22px; height: 22px; border-radius: 50%; margin-top: 1px;
+  background: var(--accent-soft); display: grid; place-content: center;
+}
+.duo-coche svg {
+  width: 12px; height: 12px; stroke: var(--accent-light, var(--accent));
+  fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+}
+.duo-points strong { display: block; font-size: 15.5px; font-weight: 600; }
+.duo-points span { color: var(--text-2); font-size: 14.5px; }
+
+.diaporama-barre { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 44px; }
+.diaporama-pastilles { display: flex; gap: 10px; }
+.diaporama-pastille {
+  appearance: none; border: 0; padding: 0; cursor: pointer;
+  width: 34px; height: 5px; border-radius: 999px;
+  background: var(--hairline); transition: background .25s ease;
+}
+.diaporama-pastille[aria-current="true"] { background: var(--accent); }
+.diaporama-nav {
+  appearance: none; cursor: pointer; background: transparent;
+  border: 1px solid var(--hairline); border-radius: var(--r-btn, 12px);
+  color: var(--text-2); font: inherit; font-size: 13.5px; font-weight: 500;
+  padding: 8px 14px; min-height: 40px;
+}
+.diaporama-nav:hover { color: var(--text-1); border-color: var(--text-3); }
+.diaporama-legende { text-align: center; color: var(--text-2); font-size: 14px; margin: 14px 0 0; }
+
+@media (max-width: 900px) {
+  .duo--paysage { grid-template-columns: 1fr; gap: 36px; max-width: 460px; margin: 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .duo-points li { opacity: 1; transform: none; transition: none; }
+}
+
 .duo figcaption { color: var(--text-2); font-size: 14px; margin-top: 14px; text-align: center; }
 /* ⚠️ AUCUN FILET, AUCUNE OMBRE, AUCUN RAYON. La capture est encadrée dans le
    téléphone dessiné, sur fond transparent : un `border` ou un `box-shadow`

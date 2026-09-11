@@ -177,12 +177,41 @@ describe('le produit se voit', () => {
   it('la capture citée existe vraiment', () => {
     // Une image absente ne casse pas le build : elle laisse un cadre vide sur
     // la vitrine. Même garde que le guide de prise en main.
-    for (const m of accueil.matchAll(/src="(\/[^"]+\.png)"/g)) {
+    //
+    // ⚠️ Elle ne cherchait que `src="…"`, la forme ATTRIBUT. Le 11 septembre
+    // 2026 les images sont passées en propriétés (`src: '…'`) du diaporama :
+    // la garde n'a plus rien trouvé, donc elle est passée au vert sans rien
+    // vérifier. Les deux formes, et on exige d'en trouver au moins une.
+    const citees = [...accueil.matchAll(/src[:=]\s*["'](\/[^"']+\.png)["']/g)].map((m) => m[1])
+    expect(citees.length, 'aucune capture citée : la garde ne garde plus rien').toBeGreaterThan(0)
+    for (const src of citees) {
       expect(
-        () => readFileSync(path.resolve(__dirname, '../public' + m[1])),
-        `la capture ${m[1]} n’existe pas`,
+        () => readFileSync(path.resolve(__dirname, '../public' + src)),
+        `la capture ${src} n’existe pas`,
       ).not.toThrow()
     }
+  })
+
+  it('⚠️ le tableau de bord est une CAPTURE, plus un dessin', () => {
+    // Le bloc de droite était dessiné en code, avec des chiffres inventés —
+    // 68 % des balises, 4 820 pièces. Décision de Julien, 11 septembre 2026 :
+    // « je préfère une vraie capture ». Le composant dessiné reste dans le
+    // dépôt, mais l'accueil ne l'appelle plus.
+    expect(accueil).not.toContain('ApercuTableauDeBord')
+    expect(accueil).toContain('/vitrine/suivi.png')
+  })
+
+  it('⚠️ les points du diaporama ne restent jamais invisibles', () => {
+    // Ils apparaissent un par un, une seconde entre chacun. Deux façons de se
+    // retrouver avec une liste vide à l'écran, et la garde tient les deux :
+    // une préférence « moins d'animation » doit TOUT montrer d'un coup, et la
+    // révélation ne doit pas dépendre du défilement (un lecteur qui ne fait
+    // pas défiler la section ne verrait rien).
+    const diapo = lire('../components/DiaporamaProduit.tsx')
+    expect(diapo).toContain('prefers-reduced-motion')
+    expect(diapo).toMatch(/setVus\(total\)/)
+    expect(diapo).not.toContain('IntersectionObserver')
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[^}]*\{[^]*?\.duo-points li \{ opacity: 1/)
   })
 
   it('⚠️ la colonne du téléphone reste BORNÉE', () => {
