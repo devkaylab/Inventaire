@@ -249,6 +249,37 @@ describe('le prorata est facturé tout de suite', () => {
   })
 })
 
+describe('un refus de Stripe dit POURQUOI', () => {
+  // ⚠️ Vécu le 11 septembre 2026, sur le premier essai réel du chemin d'API.
+  // La clé Stripe est RESTREINTE (moindre privilège voulu, posé le 22 août
+  // quand le produit ne touchait qu'aux sessions Checkout) : elle n'avait pas
+  // la permission `subscription_read`, ajoutée par le libre-service du
+  // 4 septembre. Tout changement d'offre d'un client abonné échouait donc, et
+  // le message disait « Abonnement introuvable chez Stripe » — c'est-à-dire
+  // qu'on aurait cherché du côté de l'abonnement pendant que le problème
+  // était la clé. Un 403 ne se confond pas avec un 404.
+
+  it('lireAbonnement ne rend pas « rien » sur un refus', () => {
+    const bloc = stripeShared.slice(stripeShared.indexOf('export async function lireAbonnement'))
+    const corps = bloc.slice(0, bloc.indexOf('\n}'))
+    expect(corps).not.toMatch(/if\s*\(!resp\.ok\)\s*return null/)
+    expect(corps).toContain('throw new Error')
+    // Le statut ET le corps de la réponse : c'est le corps qui nomme la
+    // permission manquante.
+    expect(corps).toContain('resp.status')
+    expect(corps).toContain('resp.text()')
+  })
+
+  it('et la fonction edge le fait remonter à l’écran', () => {
+    // ⚠️ On vérifie que l'ancre EXISTE avant de découper : `indexOf` rend -1
+    // sur ce qu'il ne trouve pas, et `slice(-1)` rend le dernier caractère —
+    // la garde passerait alors sur un fichier qui ne contient plus l'appel.
+    const i = edge.indexOf('await lireAbonnement(')
+    expect(i).toBeGreaterThan(0)
+    expect(edge.slice(i, i + 600)).toContain('detail')
+  })
+})
+
 describe('le panneau de paiement', () => {
   const sans = sansCommentaires(payer)
 

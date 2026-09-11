@@ -419,7 +419,15 @@ export async function lireAbonnement(
   const resp = await fetch(`${API}/subscriptions/${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${cle}` },
   })
-  if (!resp.ok) return null
+  // ⚠️ ON DIT POURQUOI, ON NE REND PAS « INTROUVABLE ». Un refus de Stripe a
+  // trois causes qui ne se corrigent pas du tout pareil — l'abonnement
+  // n'existe pas (404), la clé n'a pas le droit de lire les abonnements (403),
+  // la clé est du mauvais mode (401). Les confondre coûte une journée sur le
+  // chemin de l'argent : c'est arrivé le 11 septembre 2026.
+  if (!resp.ok) {
+    const corps = await resp.text().catch(() => '')
+    throw new Error(`GET /subscriptions ${resp.status} — ${corps.slice(0, 300)}`)
+  }
   const data = await resp.json()
   return {
     id: data.id,

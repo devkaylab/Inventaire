@@ -390,7 +390,16 @@ Deno.serve(async (req) => {
     // l'offre laissait `poserArticleAppareils` en CRÉER UN SECOND : le client
     // aurait payé ses tranches deux fois, et rien ne l'aurait signalé.
     if (!itemOffre || (!itemSuppl && tranches > 0)) {
-      const abo = await lireAbonnement(stripeKey, abonnement)
+      let abo
+      try {
+        abo = await lireAbonnement(stripeKey, abonnement)
+      } catch (e) {
+        return json({
+          success: false,
+          error: 'L’abonnement n’a pas pu être lu chez Stripe.',
+          detail: e instanceof Error ? e.message : String(e),
+        }, 502)
+      }
       if (!abo || abo.articles.length === 0) {
         return json({ success: false, error: 'Abonnement introuvable chez Stripe.' }, 502)
       }
