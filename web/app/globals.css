@@ -3921,10 +3921,14 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    à voir — les brider à une largeur de texte les rendait petits (constat de
    Julien, 11 septembre 2026 : « je trouve les captures de la page trop
    petites »). Ne pas généraliser `.container-large` aux blocs de texte. */
-.container-large { max-width: 1320px; }
+.container-large { max-width: 1520px; }
 .duo {
-  display: grid; grid-template-columns: minmax(200px, 340px) minmax(0, 1fr);
-  gap: 56px; align-items: center; margin: 0 auto;
+  display: grid;
+  /* ⚠️ LES DEUX COLONNES SONT BORNÉES, et la grille se centre. Sans plafond sur
+     la colonne de texte, elle s'étirait sur toute la largeur rendue par la
+     section : le texte restait à 56ch et laissait 400 px de vide à sa droite. */
+  grid-template-columns: minmax(200px, 380px) minmax(0, 620px);
+  gap: 56px; align-items: center; justify-content: center; margin: 0 auto;
 }
 .duo figure { margin: 0; }
 
@@ -3935,7 +3939,10 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .duo[hidden] { display: none !important; }
 /* La diapositive du tableau de bord montre un visuel PAYSAGE : le texte prend
    une colonne de lecture, la capture prend le reste. */
-.duo--paysage { grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 56px; }
+/* Le tableau de bord est un paysage : on lui donne le plus de largeur
+   possible, et la colonne de texte descend à une largeur de lecture serrée.
+   Constat de Julien, 11 septembre 2026 : la capture était trop petite. */
+.duo--paysage { grid-template-columns: minmax(280px, 380px) minmax(0, 1060px); gap: 48px; }
 
 /* ⚠️ Le tableau de bord est une capture RECTANGULAIRE de l'écran réel : lui
    porte un filet, contrairement au téléphone dont le cadre est dans l'image. */
@@ -3981,8 +3988,15 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .diaporama-nav:hover { color: var(--text-1); border-color: var(--text-3); }
 .diaporama-legende { text-align: center; color: var(--text-2); font-size: 14px; margin: 14px 0 0; }
 
-@media (max-width: 900px) {
-  .duo--paysage { grid-template-columns: 1fr; gap: 36px; max-width: 460px; margin: 0 auto; }
+/* ⚠️ LE PAYSAGE PASSE EN PLEINE LARGEUR BIEN AVANT LE TÉLÉPHONE. À deux
+   colonnes sur 900 px, la capture du tableau de bord tombait à 425 px et on n'y
+   lisait plus rien. Empilée, elle prend toute la largeur de la section. Le
+   téléphone, lui, reste bien à côté de son texte : il est étroit par nature. */
+@media (max-width: 1100px) {
+  .duo--paysage { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+}
+@media (max-width: 860px) {
+  .duo--paysage { gap: 34px; max-width: 460px; margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .duo-points li { opacity: 1; transform: none; transition: none; }

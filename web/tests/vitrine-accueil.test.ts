@@ -241,6 +241,16 @@ describe('le produit se voit', () => {
     }
   })
 
+  it('⚠️ la capture du tableau de bord passe en pleine largeur avant le téléphone', () => {
+    // À deux colonnes sur un écran de 900 px, elle tombait à 425 px et on n'y
+    // lisait plus rien. Elle s'empile donc bien plus tôt que le téléphone, qui
+    // est étroit par nature et tient à côté de son texte jusqu'au bout.
+    const seuil = /@media \(max-width: (\d+)px\)\s*\{\s*\.duo--paysage \{[^}]*grid-template-columns: minmax\(0, 1fr\)/
+      .exec(css)
+    expect(seuil, 'le paysage ne s’empile nulle part').not.toBeNull()
+    expect(Number(seuil![1])).toBeGreaterThan(900)
+  })
+
   it('⚠️ la section des visuels sort du gabarit de LECTURE, et elle seule', () => {
     // `.container` plafonne à 1080 px parce que c'est une largeur de lecture.
     // Ici il n'y a pas de texte à lire mais deux visuels à voir : les brider à
