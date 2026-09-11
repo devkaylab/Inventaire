@@ -522,7 +522,14 @@ function makeStyles(t: Theme) {
     baliseBadge: { borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
     baliseBadgeText: { fontSize: 11, fontFamily: Font.bold },
     // Une ligne, plus une carte.
-    card: { paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: t.hairline, gap: Spacing.sm },
+    // ⚠️ LE FILET ROUGE EST UNE MARGE, PAS UN BORD DE CONTENU. Sans
+    // `paddingLeft`, les deux aplats de couleur viennent le toucher — deux
+    // couleurs qui se touchent se lisent comme une seule forme, et le filet
+    // cesse de signaler l'écart. Constat de Julien, 11 septembre 2026.
+    card: {
+      paddingVertical: Spacing.md, paddingLeft: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: t.hairline, gap: Spacing.sm,
+    },
     cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
     sku: { fontSize: 15, fontFamily: Font.bold, color: t.textPrimary },
     subSku: { fontSize: 12, fontFamily: Font.mono, color: t.textSecondary, ...tabular },

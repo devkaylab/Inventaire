@@ -105,6 +105,24 @@ Contrôlé après coup, à l'identique de l'avant : 52 balises `pending/pending`
 reste** : une ligne `balise_videe` dans `company_audit_log` — c'est une trace,
 elle ne se défait pas, et c'est normal.
 
+### `audit` reprise le 11 septembre 2026 — un défaut d'écran, pas de capture
+
+Constat de Julien sur la capture encadrée : **les deux aplats de couleur
+touchaient le filet rouge** de la carte d'écart. C'était l'écran, pas la prise
+de vue — `styles.card` d'`audits.tsx` n'avait aucun `paddingLeft`, donc tous
+ses enfants commençaient au bord du `borderLeftWidth`.
+
+Corrigé (12 points d'inset), **mesuré** sur la capture brute avant et après :
+**0 px, puis 36 px**. Reprise sur un build **Debug** de l'iPhone 17 — le
+Release n'est nécessaire que pour `lancement`, à cause du bandeau LogBox —, et
+**sans aucune écriture** : l'écran des écarts se consulte, il n'ouvre rien.
+
+Les quatre decks qui la montrent (`build.js`, `build-court.js`,
+`build-prise-en-main.js`, `build-samaritaine.js`) et la fiche produit ont été
+régénérés. ⚠️ **Le ré-encadrement des vingt et une autres captures rend des
+octets identiques** — `git status` ne montre qu'`audit.png`, ce qui confirme
+que le pipeline est déterministe.
+
 ### ⚠️ Le clavier du simulateur mange les chiffres — sauf en mode Douchette
 
 Piège du jour, et il fait perdre un quart d'heure. Le champ **Manuel** reçoit

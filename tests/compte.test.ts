@@ -1987,6 +1987,21 @@ describe('« Supprimer mon compte » n’est plus voisine de « Se déconnecter 
 describe('les écarts arbitrés se lisent comme une liste', () => {
   const ecran = lire('app/(supervisor)/[sessionId]/audits.tsx')
 
+  it('⚠️ le filet rouge d’un écart est une marge, pas un bord de contenu', () => {
+    // Constat de Julien, 11 septembre 2026, capture à l'appui : les deux
+    // aplats de couleur (Compteur / Auditeur) venaient TOUCHER le filet rouge
+    // de la carte. Deux couleurs qui se touchent se lisent comme une seule
+    // forme, et le filet cesse de signaler l'écart. Mesuré avant/après sur la
+    // capture du simulateur : 0 px, puis 36 px (12 points).
+    //
+    // La carte porte `borderLeftWidth: 4` à l'usage ; sans `paddingLeft`, tous
+    // ses enfants commencent au bord du filet.
+    const i = ecran.indexOf('card: {')
+    expect(i).toBeGreaterThan(0)
+    const bloc = ecran.slice(i, ecran.indexOf('},', i))
+    expect(bloc).toContain('paddingLeft')
+  })
+
   it('⚠️ le volet du gabarit Expo a disparu, avec son fichier', () => {
     // `ui/collapsible.tsx` importait `@/constants/theme` et `@/hooks/use-theme`
     // — le thème du gabarit, pas celui de l'app. D'où le blanc sur fond sombre.
