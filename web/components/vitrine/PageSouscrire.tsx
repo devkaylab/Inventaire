@@ -97,7 +97,6 @@ function Formulaire() {
       </p>
 
       <div className="souscrire-choix">
-        <span className="souscrire-label">{t('Votre offre')}</span>
         <div className="souscrire-offres">
           {OFFRES.map((o) => (
             <button

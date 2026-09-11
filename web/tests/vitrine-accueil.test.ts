@@ -439,4 +439,23 @@ describe('⚠️ la vitrine n’a plus de surtitres', () => {
     // Un style laissé derrière est une invitation à s'en resservir.
     expect(css).not.toContain('.eyebrow')
   })
+
+  it('⚠️ ni sur les deux pages d’achat, où l’idiome portait d’autres noms', () => {
+    // Le 11 septembre 2026, Julien : « même chose sur les pages inscription et
+    // souscrire ». La pastille n'y portait pas la classe `eyebrow`, mais la
+    // même forme — une petite capitale espacée au-dessus d'un groupe :
+    //   · `/souscrire` disait « VOTRE OFFRE » juste au-dessus des offres. Un
+    //     surtitre pur : il annonçait ce que les cartes montrent. Retiré.
+    //   · `/inscription` dit « ÉTAPE 3 SUR 8 ». Celui-là porte une information
+    //     que la jauge au-dessus ne donne pas — combien d'étapes restent. On a
+    //     retiré la FORME, gardé le fait : il est en phrase, plus en capitales.
+    expect(css).not.toContain('.souscrire-label')
+    expect(lire('../components/vitrine/PageSouscrire.tsx')).not.toContain('souscrire-label')
+    const pas = /\.ins-pas \{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(pas.length).toBeGreaterThan(0)
+    expect(pas).not.toContain('uppercase')
+    expect(pas).not.toContain('letter-spacing')
+    // Et l'information, elle, ne se perd pas.
+    expect(lire('../components/vitrine/PageInscription.tsx')).toContain('Étape %{n} sur %{total}')
+  })
 })
