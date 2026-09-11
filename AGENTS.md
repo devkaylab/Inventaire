@@ -13095,16 +13095,21 @@ obligatoires : **App Privacy** (Apple) et **Data Safety** (Google). Ils
 décrivent ce que l'app collecte — la politique de confidentialité du site en
 donne déjà la matière.
 
-## ✅ PREMIER ENVOI À APP STORE CONNECT — 8 septembre 2026
+## ✅ ENVOIS À APP STORE CONNECT — builds 3 et 4
 
-**Version 1.0.0, build 3**, envoyée par Julien depuis Xcode → Organizer →
-Distribute App → App Store Connect. L'envoi est passé.
+**Build 3** envoyé le 8 septembre 2026, **build 4 depuis** (confirmé par Julien
+le 11 septembre) — par Xcode → Organizer → Distribute App → App Store Connect.
 
-⚠️ **RIEN À CHANGER TANT QU'ON N'ENVOIE PAS UN SECOND BUILD.** Le 3 est parti,
-il est valide, il se soumet à la revue tel quel — question de Julien le jour
-même : « faut absolument changer maintenant ? ». Non. **Le numéro se change
-JUSTE AVANT la prochaine archive, jamais après un envoi réussi** : le monter
-sans envoyer ne ferait que créer un trou dans la série.
+⚠️ **LES DEUX SONT PARTIS : LA PROCHAINE ARCHIVE EST DONC LE 5.** Apple refuse
+un numéro déjà utilisé, et le refus arrive **à la fin de l'envoi**. Aujourd'hui
+les trois endroits disent `4` et sont cohérents — c'est l'état d'un numéro
+**consommé**, pas d'un numéro disponible.
+
+⚠️ **Le numéro se monte JUSTE AVANT l'archive, jamais après un envoi réussi**
+(le monter sans envoyer ne ferait que creuser un trou dans la série), et jamais
+non plus « pour être tranquille » : c'est ce qui a fait écrire ici, le
+11 septembre, qu'il fallait « monter le numéro » alors qu'il était déjà monté.
+**Avant d'affirmer où il en est, le lire dans les trois fichiers.**
 
 ⚠️ **ET LE JOUR VENU, IL VIT À TROIS ENDROITS** (la note en annonçait deux ;
 c'est la garde de `tests/compte.test.ts` qui a rattrapé le troisième au passage
