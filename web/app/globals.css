@@ -3970,7 +3970,15 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
      sur `align-items: stretch` — le bloc retombait à la largeur de son contenu,
      centré (mesuré : 772 px au lieu de 1440, texte à 374 px du bord au lieu de
      40). Même piège que le `margin auto` interdit sur `.app-main`. */
-  max-width: none; margin: 0; padding: 0 40px;
+  /* ⚠️ LA MARGE RESPIRE AVEC L'ÉCRAN, ELLE NE COLLE PLUS AUX BORDS. Julien,
+     11 septembre 2026 : « le texte et bouton de la section sont trop sur les
+     bords du site, rapproche-les légèrement du centre ». Elle valait 40 px —
+     celle de la barre des menus — ce qui alignait le texte sur le mot-symbole
+     mais le plaquait au bord sur un grand écran. 5vw donne 72 px à 1440 et
+     96 au-delà, sans jamais descendre sous les 24 px d'un téléphone.
+     ⚠️ L'alignement avec le logo est donc ROMPU, sciemment : c'est le prix de
+     ce qu'il demande, et le héros est la seule bande à s'en écarter. */
+  max-width: none; margin: 0; padding: 0 clamp(24px, 5vw, 96px);
   display: grid; grid-template-columns: minmax(0, 1fr) auto;
   align-items: end; gap: 24px 48px;
   text-align: left;
@@ -4038,16 +4046,17 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
      Les trois prestations ont une ligne chacune : si l'une déborde, elle se
      casse en deux et la liste en compte quatre — c'est exactement ce que les
      `<br />` existent pour éviter. La plus large des six (français et anglais
-     confondus) est « Écarts en direct » : elle demande 7,43 px de largeur par
+     confondus) est « Écarts en direct. » : elle demande 7,68 px de largeur par
      pixel de corps, mesuré au navigateur. La largeur utile vaut `100vw - 48`
-     (les deux marges), d'où la pente 13vw — le retrait de 8 px laisse la marge
-     de sécurité, sans quoi un mot plus long ou une police qui bouge referait la
-     coupure.
-     ⚠️ CETTE PENTE SE REMESURE À CHAQUE CHANGEMENT DE LIBELLÉ : elle valait
-     10vw quand la plus longue était « Comptage en équipe. » (9,65 px/px), que
-     Julien a raccourcie le jour même.
-     Contrôlé : 43 px à 390, 34 px à 320, plafonné à 64 dès 554. */
-  .hero-accueil p.lead-trois { font-size: clamp(24px, calc(13vw - 8px), 64px); }
+     (les deux marges), d'où la pente 12,5vw — le retrait de 8 px laisse la
+     marge de sécurité, sans quoi un mot plus long ou une police qui bouge
+     referait la coupure.
+     ⚠️ CETTE PENTE SE REMESURE À CHAQUE CHANGEMENT DE LIBELLÉ, PONCTUATION
+     COMPRISE : elle valait 10vw quand la plus longue était « Comptage en
+     équipe. » (9,65 px/px), 13 sans les points (7,43), 12,5 avec (7,68) — trois
+     mesures dans la même journée.
+     Contrôlé : 41 px à 390, 32 px à 320, plafonné à 64 dès 576. */
+  .hero-accueil p.lead-trois { font-size: clamp(24px, calc(12.5vw - 8px), 64px); }
 }
 
 /* ── La preuve, avant le premier argument ────────────────────────────────────
