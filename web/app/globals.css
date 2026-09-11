@@ -584,8 +584,19 @@ body:has(.site-footer) .theme-toggle { display: none; }
     radial-gradient(ellipse 74% 62% at 50% 44%, rgba(8, 10, 9, .78), rgba(8, 10, 9, .42) 62%, rgba(8, 10, 9, .52)),
     linear-gradient(rgba(8, 10, 9, .18), rgba(8, 10, 9, .18));
 }
-.hero-film-fond > .container,
-.hero-film-fond > .scroll-cue { position: relative; z-index: 2; }
+.hero-film-fond > .container { position: relative; z-index: 2; }
+
+/* ⚠️ SUR MOBILE, LE VOILE EST PLUS DENSE — et ce n'est pas un réglage à l'œil.
+   Le héros y est portrait, la vidéo paysage : le recadrage zoome fort et
+   remonte sous le texte des zones bien plus claires. Mesuré à 390 px, le
+   contraste du titre tombait à 4,21, sous le seuil AA. */
+@media (max-width: 900px) {
+  .hero-film-fond::after {
+    background:
+      radial-gradient(ellipse 96% 46% at 50% 46%, rgba(8, 10, 9, .86), rgba(8, 10, 9, .58) 66%, rgba(8, 10, 9, .66)),
+      linear-gradient(rgba(8, 10, 9, .26), rgba(8, 10, 9, .26));
+  }
+}
 
 /* La bande encre, comme la section « Ce qui nous distingue » — dans les DEUX
    thèmes. Les jetons sont redéfinis sur la section : tout ce qu'elle contient
@@ -613,22 +624,6 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .hero-film[src=""] { display: none; }
 
 
-.scroll-cue {
-  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  color: var(--text-3); font-size: 12px; font-weight: 600; letter-spacing: 0.6px;
-  text-transform: uppercase; padding: 10px 14px;
-}
-.scroll-cue:hover { color: var(--text-2); }
-.scroll-cue svg { animation: cue 1.8s ease-in-out infinite; }
-@keyframes cue {
-  0%, 100% { transform: translateY(0); opacity: 0.6; }
-  50% { transform: translateY(6px); opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scroll-cue svg { animation: none; }
-}
 
 /* ── Features ───────────────────────────────────────────── */
 .section { position: relative; padding: 72px 0; }

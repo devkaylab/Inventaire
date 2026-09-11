@@ -94,7 +94,11 @@ export function Accueil({ langue }: { langue: Langue }) {
           l'inventaire, et se dissout dans le fond.
         */}
         <section className="hero hero-plein hero-film-fond">
-          <FondVideo src="/vitrine/hero.mp4" poster="/vitrine/hero-poster.jpg" />
+          <FondVideo
+            src="/vitrine/hero.mp4"
+            srcMobile="/vitrine/hero-mobile.mp4"
+            poster="/vitrine/hero-poster.jpg"
+          />
           <div className="container" data-hero-exit>
             {/* ⚠️ NI SURTITRE NI DÉGRADÉ (demande de Julien, 11 septembre 2026).
                 « Outil d'inventaire » répétait ce que la phrase juste dessous
@@ -121,12 +125,6 @@ export function Accueil({ langue }: { langue: Langue }) {
               <Link href={lien('/tarifs')} className="btn btn-ghost">{t('Voir nos offres')}</Link>
             </div>
           </div>
-          <a className="scroll-cue" href="#en-pratique">
-            <svg width="22" height="34" viewBox="0 0 22 34" fill="none" aria-hidden="true">
-              <rect x="1" y="1" width="20" height="32" rx="10" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="11" cy="10" r="2.5" fill="currentColor" />
-            </svg>
-          </a>
         </section>
 
         {/* La preuve, tout de suite : quatre faits, avant le premier argument. */}

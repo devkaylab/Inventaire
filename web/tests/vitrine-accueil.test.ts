@@ -5,7 +5,7 @@
 // on aurait dit une page brouillon faite par un débutant ». Mesuré : nos huit
 // sections vivaient sur une seule couleur, sans surtitre, sans preuve, sans
 // image du produit et sans prix. Ces gardes figent le remède.
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { OFFRES } from '../lib/offres'
@@ -307,18 +307,40 @@ describe('le héros filmé', () => {
     }
   })
 
-  it('⚠️ elle ne se télécharge PAS quand elle ne doit pas', () => {
-    // Deux mégaoctets imposés à quelqu'un en 4G pour un décor, ce serait le
-    // prendre en otage — et une vidéo qui tourne est exactement ce qu'une
-    // préférence « moins d'animation » vise. La source n'est posée qu'après
-    // ces deux contrôles ; sinon il reste l'image d'attente.
-    expect(video).toContain('prefers-reduced-motion')
-    expect(video).toContain('innerWidth < 900')
+  it('⚠️ « moins d’animation » l’empêche de partir, et la largeur choisit le fichier', () => {
+    // Deux règles distinctes, et il ne faut pas les confondre :
+    //   · « moins d'animation » est une préférence d'ACCESSIBILITÉ — une vidéo
+    //     qui tourne est exactement ce qu'elle vise. Rien ne se télécharge, il
+    //     reste l'image d'attente ;
+    //   · la largeur, elle, ne bloque plus rien depuis le 11 septembre 2026
+    //     (demande de Julien : la vidéo joue aussi sur mobile). Elle CHOISIT
+    //     entre deux fichiers — un téléphone de 390 px n'a rien à faire d'une
+    //     source en 1920.
     expect(video).toContain('preload="none"')
+    expect(video).toMatch(/prefers-reduced-motion[^\n]*\)\.matches\) return/)
+    expect(video).toMatch(/innerWidth < 900 \? srcMobile : src/)
     const garde = video.indexOf('prefers-reduced-motion')
-    const pose = video.indexOf('setSource(src)')
+    const pose = video.indexOf('setSource(')
     expect(garde).toBeGreaterThan(0)
-    expect(pose, 'la source doit être posée APRÈS les gardes').toBeGreaterThan(garde)
+    expect(pose, 'la source doit être posée APRÈS la garde').toBeGreaterThan(garde)
+  })
+
+  it('⚠️ et le fichier mobile est RÉELLEMENT plus léger', () => {
+    // Une garde sur le nom du fichier ne dirait rien : ce qui compte est qu'il
+    // pèse moins. Sans cela, pointer les deux sources vers le même fichier
+    // passerait sans bruit.
+    const grand = statSync(path.resolve(__dirname, '../public/vitrine/hero.mp4')).size
+    const petit = statSync(path.resolve(__dirname, '../public/vitrine/hero-mobile.mp4')).size
+    expect(petit).toBeLessThan(grand / 1.8)
+    expect(grand).toBeLessThan(2.6 * 1024 * 1024)
+  })
+
+  it('⚠️ le voile est PLUS DENSE sur mobile', () => {
+    // Le héros y est portrait et la vidéo paysage : le recadrage zoome fort et
+    // remonte sous le texte des zones bien plus claires. Mesuré à 390 px, le
+    // contraste du titre tombait à 4,21 — sous le seuil AA — avec le voile du
+    // bureau ; il remonte à 6,27 avec celui-ci.
+    expect(css).toMatch(/@media \(max-width: 900px\) \{\s*\.hero-film-fond::after \{[^}]*background:/)
   })
 
   it('⚠️ le voile existe : sans lui le titre n’est plus lisible', () => {

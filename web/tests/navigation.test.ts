@@ -638,19 +638,17 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
     expect(lire('../components/vitrine/Inventaire.tsx')).not.toContain('hero-plein')
   })
 
-  it('l’indice de défilement mène à une ancre qui existe vraiment', () => {
-    // Un héros plein écran sans indice laisse croire que la page s'arrête là.
+  it('⚠️ l’indice de défilement a été RETIRÉ, et ne revient pas', () => {
+    // La petite souris animée en bas du héros. Demande de Julien, 11 septembre
+    // 2026 : « retire le logo de la souris ». Le héros porte désormais une
+    // vidéo — il ne laisse plus croire que la page s'arrête là, et un repère
+    // qui clignote par-dessus un film ajoute du mouvement à du mouvement.
     //
-    // ⚠️ LA GARDE DÉDUIT LA CIBLE, ELLE NE LA NOMME PAS. Elle citait
-    // « #rythmes » en dur : le 5 septembre 2026, la refonte de la vitrine a
-    // glissé cette section en cinquième position et l'indice a dû viser la
-    // première — la garde est tombée alors que rien n'était cassé. Nommer une
-    // ancre, c'est protéger l'ancre d'hier ; ce qu'il faut protéger, c'est
-    // qu'un indice de défilement ATTERRISSE quelque part.
-    const cible = /className="scroll-cue" href="#([\w-]+)"/.exec(accueil)?.[1]
-    expect(cible, 'l’indice de défilement a disparu du héros').toBeTruthy()
-    expect(accueil, `l’indice vise #${cible}, qu’aucune section ne porte`)
-      .toContain(`id="${cible}"`)
+    // La garde fige l'absence plutôt que de disparaître avec la fonction :
+    // c'est ce qui évite qu'on la « complète » un jour en croyant qu'il manque.
+    expect(accueil).not.toContain('scroll-cue')
+    expect(css).not.toContain('.scroll-cue')
+    expect(css).not.toContain('@keyframes cue')
   })
 
   it('la parallaxe est montée par l’en-tête commun, comme les apparitions', () => {
@@ -659,9 +657,12 @@ describe('le héros plein écran et la parallaxe des pages vitrines', () => {
   })
 
   it('elle respecte la préférence de réduction des animations', () => {
+    // ⚠️ La garde citait `.scroll-cue svg { animation: none; }` : elle est
+    // tombée quand l'indice a été retiré. Elle vise maintenant ce qui bouge
+    // ENCORE sur la vitrine — la parallaxe, et la vidéo du héros, qui est le
+    // mouvement le plus appuyé de la page.
     expect(parallaxe).toContain('prefers-reduced-motion')
-    // Et l'animation CSS du décor s'éteint avec elle.
-    expect(css).toContain('.scroll-cue svg { animation: none; }')
+    expect(lire('../components/FondVideo.tsx')).toContain('prefers-reduced-motion')
   })
 
   it('⚠️ le héros n’a plus ni décor ni lueur', () => {
