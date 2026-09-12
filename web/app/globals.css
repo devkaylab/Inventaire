@@ -545,10 +545,15 @@ body:has(.site-footer) .theme-toggle { display: none; }
   text-align: center;
 }
 .hero h1 { font-size: clamp(38px, 6vw, 64px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; }
-.grad {
-  background: linear-gradient(120deg, var(--accent-light), var(--cyan));
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-}
+/* ⚠️ PAS DE DÉGRADÉ SUR UN TITRE DE PAGE. Demande de Julien, 12 septembre
+   2026 : « retire le dégradé de couleur du titre de chaque page, garde du noir
+   pour light et blanc pour dark ». Un titre peint par `background-clip: text`
+   se lit moins bien qu'un aplat, et le dégradé sur un demi-titre est l'un des
+   tics de gabarit qu'il a nommés le 11 septembre. Le `h1` hérite donc de
+   `--text` : #14181a en clair, #ecefec en sombre — rien à déclarer ici, et
+   c'est ce qui fait qu'il n'y a plus de règle. L'accueil l'avait déjà perdu.
+   Le seul dégradé qui reste est celui d'une BARRE de progression, où il dit
+   encore quelque chose. */
 .hero p.lead { max-width: 620px; margin: 22px auto 34px; font-size: 19px; color: var(--text-2); }
 .hero .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
@@ -660,76 +665,100 @@ body:has(.site-footer) .theme-toggle { display: none; }
 /* Numéro des six raisons, dans le titre de chaque carte. */
 .raison-numero { color: var(--accent-light); font-variant-numeric: tabular-nums; }
 
-/* ── Les six raisons, chacune avec son écran ─────────────────────────────────
-   Constat : six paragraphes empilés se lisaient comme un mur. Une capture par
-   raison donne un point d'appui au regard, et prouve ce que la phrase affirme.
+/* ── Une carte, sa capture à côté ────────────────────────────────────────────
+   Constat sur « Pourquoi nous choisir » : six paragraphes empilés se lisaient
+   comme un mur. Une capture par bloc donne un point d'appui au regard, et
+   prouve ce que la phrase affirme.
 
-   ⚠️ LA CAPTURE ET LE TEXTE ALTERNENT DE CÔTÉ, et c'est la grille qui le fait :
-   le DOM garde partout l'ordre capture-puis-texte, donc l'ordre de lecture ne
-   dépend pas de la parité du rang. */
-.raisons { display: flex; flex-direction: column; gap: 24px; }
-.raison {
+   ⚠️ UNE SEULE DÉFINITION POUR TOUTE LA VITRINE. « Pourquoi nous choisir » et
+   « L'inventaire » posent le même objet ; deux copies divergeraient au premier
+   ajustement. Ce qui les distingue est un MODIFICATEUR, pas une seconde
+   grille — voir `--alterne` plus bas. */
+.blocs-illustres { display: flex; flex-direction: column; gap: 24px; }
+.bloc-illustre {
   display: grid; align-items: center; gap: 44px;
   grid-template-columns: 230px minmax(0, 1fr);
   padding: 34px 38px;
 }
-.raison > .raison-vue { grid-column: 1; grid-row: 1; }
-.raison > .raison-dire { grid-column: 2; grid-row: 1; }
-.raison:nth-child(even) { grid-template-columns: minmax(0, 1fr) 230px; }
-.raison:nth-child(even) > .raison-vue { grid-column: 2; }
-.raison:nth-child(even) > .raison-dire { grid-column: 1; }
+.bloc-illustre > .bloc-vue { grid-column: 1; grid-row: 1; }
+.bloc-illustre > .bloc-dire { grid-column: 2; grid-row: 1; }
+
+/* ⚠️ L'ALTERNANCE EST UN CHOIX DE PAGE, PAS UNE PROPRIÉTÉ DU BLOC. Une liste
+   d'arguments de même rang y gagne un rythme (« Pourquoi nous choisir ») ; un
+   article dont seuls certains paragraphes sont illustrés, non — les blocs sans
+   capture y casseraient la parité, et une rangée sur deux sauterait de côté
+   sans raison lisible. D'où le modificateur sur le CONTENEUR.
+   ⚠️ Et c'est la GRILLE qui alterne, jamais l'ordre du DOM : la lecture reste
+   partout capture-puis-texte, y compris pour un lecteur d'écran. */
+.blocs-illustres--alterne > .bloc-illustre:nth-child(even) {
+  grid-template-columns: minmax(0, 1fr) 230px;
+}
+.blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-vue { grid-column: 2; }
+.blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-dire { grid-column: 1; }
 
 /* ⚠️ LE TABLEAU DE BORD PREND TOUTE LA LARGEUR, ET LE TEXTE PASSE DESSOUS.
    Mesuré : dans une colonne à côté du texte il tombait à 492 px, soit quatre
    fois moins que sa résolution — les chiffres et les libellés du tableau de
    bord y devenaient illisibles, donc la capture ne prouvait plus rien. C'est
-   la seule rangée qui déroge à l'alternance, et c'est parce que c'est la seule
-   capture qui n'est pas un téléphone. */
-.raison--large, .raison--large:nth-child(even) {
+   la seule rangée qui déroge, et c'est parce que c'est la seule capture qui
+   n'est pas un téléphone. */
+.bloc-illustre--large,
+.blocs-illustres--alterne > .bloc-illustre--large:nth-child(even) {
   grid-template-columns: minmax(0, 1fr); gap: 26px;
 }
-.raison--large > .raison-vue,
-.raison--large:nth-child(even) > .raison-vue { grid-column: 1; grid-row: 1; }
-.raison--large > .raison-dire,
-.raison--large:nth-child(even) > .raison-dire { grid-column: 1; grid-row: 2; }
+.bloc-illustre--large > .bloc-vue,
+.blocs-illustres--alterne > .bloc-illustre--large:nth-child(even) > .bloc-vue {
+  grid-column: 1; grid-row: 1;
+}
+.bloc-illustre--large > .bloc-dire,
+.blocs-illustres--alterne > .bloc-illustre--large:nth-child(even) > .bloc-dire {
+  grid-column: 1; grid-row: 2;
+}
 
 /* ⚠️ NI FILET, NI OMBRE, NI RAYON sur un téléphone : son corps est DANS le PNG,
    sur fond transparent. Un cadre CSS par-dessus en dessinerait un second.
    Le tableau de bord, lui, est une capture RECTANGULAIRE du site : celui-là
    porte un filet — même partage que `.duo-tel img` / `.duo-ecran img`. */
-.raison-vue { margin: 0; }
-.raison-vue img { display: block; width: 100%; height: auto; }
-.raison--large .raison-vue img {
+.bloc-vue { margin: 0; }
+.bloc-vue img { display: block; width: 100%; height: auto; }
+.bloc-illustre--large .bloc-vue img {
   border: 1px solid var(--hairline); border-radius: var(--r);
 }
 
-.raison-dire h2 { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; }
+.bloc-dire h2 { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; }
 /* ⚠️ Une largeur de LECTURE, pas la largeur disponible : à côté d'une colonne
    de 230 px la ligne montait à 95 caractères, bien au-delà des 65 qui se
    lisent sans perdre le début de la ligne suivante. */
-.raison-dire p { margin: 12px 0 0; color: var(--text-2); font-size: 15.5px; max-width: 62ch; }
+.bloc-dire p { margin: 12px 0 0; color: var(--text-2); font-size: 15.5px; max-width: 62ch; }
 
 /* ⚠️ SOUS 900 px LA CAPTURE PASSE AU-DESSUS DU TEXTE, et elle se borne à
    230 px : étirée sur la largeur d'un téléphone, elle ferait 700 px de haut et
-   il faudrait la faire défiler pour atteindre la raison qu'elle illustre. */
+   il faudrait la faire défiler pour atteindre le bloc qu'elle illustre. */
 @media (max-width: 900px) {
-  .raison, .raison:nth-child(even),
-  .raison--large, .raison--large:nth-child(even) {
+  .bloc-illustre,
+  .blocs-illustres--alterne > .bloc-illustre:nth-child(even),
+  .bloc-illustre--large {
     grid-template-columns: minmax(0, 1fr); gap: 26px;
   }
-  .raison > .raison-vue, .raison:nth-child(even) > .raison-vue { grid-column: 1; grid-row: 1; }
-  .raison > .raison-dire, .raison:nth-child(even) > .raison-dire { grid-column: 1; grid-row: 2; }
-  .raison-vue img { max-width: 230px; }
+  .bloc-illustre > .bloc-vue,
+  .blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-vue {
+    grid-column: 1; grid-row: 1;
+  }
+  .bloc-illustre > .bloc-dire,
+  .blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-dire {
+    grid-column: 1; grid-row: 2;
+  }
+  .bloc-vue img { max-width: 230px; }
   /* ⚠️ Le tableau de bord prend ce qu'il peut : sur un téléphone il dit « il y
      a un tableau de bord », il ne se lit pas. C'est une limite du support, pas
      un réglage — le texte à côté, lui, dit ce qu'on y voit. */
-  .raison--large .raison-vue img { max-width: none; }
+  .bloc-illustre--large .bloc-vue img { max-width: none; }
 }
 
 /* Sur un téléphone, 38 px de marge intérieure de chaque côté mangent un
    cinquième de la largeur utile. */
 @media (max-width: 520px) {
-  .raison { padding: 24px 20px; }
+  .bloc-illustre { padding: 24px 20px; }
 }
 
 /* ── CTA band ───────────────────────────────────────────── */

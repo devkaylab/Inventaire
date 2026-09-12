@@ -57,7 +57,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
         <section className="hero" style={{ paddingBottom: 24 }}>
           <div className="container">
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
-              {t('Découvrez l’offre')} <span className="grad">Quantinvo.</span>
+              {t('Découvrez l’offre')} Quantinvo.
             </h1>
             <p className="lead" data-reveal="2">
             {/* ⚠️ « résiliable à tout moment » était FAUX pour l'annuel :

@@ -17,7 +17,7 @@ import { traduction, type Langue } from '@/lib/traduction'
  * sujet ne prouve rien et se remarque.
  *
  * ⚠️ Les captures de téléphone sont ENCADRÉES, sur fond transparent : le corps
- * du téléphone est dans le PNG. `.raison-vue img` ne porte donc aucun cadre.
+ * du téléphone est dans le PNG. `.bloc-vue img` ne porte donc aucun cadre.
  * Seule exception, `large: true` — le tableau de bord est une capture
  * RECTANGULAIRE du site, et celle-là porte un filet, comme dans le diaporama
  * de l'accueil.
@@ -126,7 +126,7 @@ export function Pourquoi({ langue }: { langue: Langue }) {
         <section className="hero" style={{ paddingBottom: 40 }}>
           <div className="container">
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
-              {t('Six raisons de compter')}<br /><span className="grad">{t('avec Quantinvo.')}</span>
+              {t('Six raisons de compter')}<br />{t('avec Quantinvo.')}
             </h1>
             <p className="lead" data-reveal="2">
               {t('L’accueil vous a donné l’essentiel. Voici le détail — ce que l’outil fait vraiment, et pourquoi ces choix comptent sur le terrain.')}
@@ -141,18 +141,18 @@ export function Pourquoi({ langue }: { langue: Langue }) {
           lecteur d'écran, ce qui est précisément ce qu'on veut.
         */}
         <section className="section" style={{ paddingTop: 8 }}>
-          <div className="container raisons">
+          <div className="container blocs-illustres blocs-illustres--alterne">
             {RAISONS.map((r, i) => (
               <div
-                className={'card raison' + (r.image.large ? ' raison--large' : '')}
+                className={'card bloc-illustre' + (r.image.large ? ' bloc-illustre--large' : '')}
                 data-reveal="0"
                 key={r.title}
               >
-                <figure className="raison-vue">
+                <figure className="bloc-vue">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={r.image.src} alt={t(r.image.alt)} />
                 </figure>
-                <div className="raison-dire">
+                <div className="bloc-dire">
                   <div className="ico">{r.icon}</div>
                   <h2>
                     <span className="raison-numero">{i + 1}.</span> {t(r.title)}

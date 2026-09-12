@@ -1164,6 +1164,38 @@ describe('la barre publique : parcourir à gauche, agir à droite', () => {
     expect(menu).toContain('/login')
   })
 
+  it('⚠️ aucun titre de page n’est peint par un dégradé', () => {
+    // Demande de Julien, 12 septembre 2026 : « retire le dégradé de couleur du
+    // titre de chaque page, garde du noir pour light et blanc pour dark ». Un
+    // titre peint par `background-clip: text` se lit moins bien qu'un aplat, et
+    // le dégradé sur un demi-titre est l'un des tics de gabarit qu'il a nommés
+    // la veille. Le `h1` hérite de `--text` : c'est exactement noir en clair et
+    // blanc en sombre, donc il n'y a RIEN à déclarer — et c'est pour ça que la
+    // garde porte sur l'absence.
+    //
+    // ⚠️ Elle balaie les pages vitrines, elle n'en nomme aucune : celle qu'on
+    // écrira demain est couverte sans qu'on y pense.
+    const css = lire('../app/globals.css')
+    const sansCommentaires = (src: string) =>
+      src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+    const dossier = path.resolve(__dirname, '../components/vitrine')
+    const pages = readdirSync(dossier).filter((f) => f.endsWith('.tsx'))
+    expect(pages.length).toBeGreaterThan(0)
+    for (const f of pages) {
+      const src = sansCommentaires(readFileSync(path.join(dossier, f), 'utf8'))
+      expect(src, `${f} repeint son titre`).not.toMatch(/className="[^"]*\bgrad\b/)
+      expect(src, `${f} peint du texte par un fond`).not.toContain('background-clip')
+    }
+    // Et la classe elle-même a disparu de la feuille : la laisser vide
+    // inviterait à la reprendre.
+    expect(css, 'la classe .grad est revenue').not.toMatch(/^\.grad\s*\{/m)
+    // ⚠️ Le dégradé qui RESTE est celui d'une barre de progression, où il dit
+    // encore quelque chose. On ne l'a pas supprimé partout, on l'a retiré du
+    // texte.
+    expect(css).toContain('linear-gradient')
+  })
+
   it('⚠️ la barre mène à des PAGES, jamais à une ancre de l’accueil', () => {
     // « Fonctionnalités » a quitté la barre le 12 septembre 2026 (demande de
     // Julien). C'était la seule entrée qui ne menait pas à une page mais à une
