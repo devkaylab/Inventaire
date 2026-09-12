@@ -4149,7 +4149,10 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    d'exister : une diapositive masquée par `hidden` ne prend plus de place, et
    on n'anime pas ce qui n'occupe rien. La hauteur de la scène est celle de la
    plus haute des deux — elles sont accordées à deux pixels près, voir plus bas. */
-.diaporama { display: grid; }
+/* ⚠️ `minmax(0, 1fr)` et non `auto` : la diapositive paysage est plus large
+   que la section, et une colonne dimensionnée par son contenu grandirait avec
+   elle — la page entière déborderait alors par la droite. */
+.diaporama { display: grid; grid-template-columns: minmax(0, 1fr); }
 .diaporama > .diapo { grid-row: 1; grid-column: 1; }
 .diaporama-barre { grid-row: 2; }
 
@@ -4183,28 +4186,54 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    Effet de bord bienvenu : la diapositive fait alors la hauteur de sa capture
    (705 px) au lieu de 901, soit deux pixels de celle du téléphone. */
 .duo--paysage {
-  /* ⚠️ LA COLONNE DE TEXTE SUIT L'ÉCRAN, et c'est ce qui tient la part de
-     capture qui sort du cadre. Ce débord vaut la largeur du texte : à valeur
-     fixe il reste constant pendant que la capture rétrécit, donc il en mange
-     une part croissante — mesuré 29 % à 1568 px mais 36 % à 1280, où l'on
-     perdait la moitié des libellés. Proportionnel, il se tient à 29-30 %
-     partout. */
+  /* ⚠️ LA COLONNE DE TEXTE SUIT L'ÉCRAN. À largeur fixe, la part de capture
+     qui sort du cadre reste constante pendant que la capture rétrécit, donc
+     elle en mange une proportion croissante — mesuré 29 % à 1568 px mais 36 %
+     à 1280, où l'on perdait la moitié des libellés. */
   --paysage-texte: clamp(320px, 27vw, 420px);
-  --paysage-debord: calc(var(--paysage-texte) + 48px);
+
+  /* ⚠️ LA SCÈNE VA JUSQU'AU BORD DE L'ÉCRAN, elle ne s'arrête pas au gabarit
+     de la section. Constat de Julien, 12 septembre 2026 : « resserre à
+     droite ». Mesuré à 1990 px : la section plafonne à 1520 et se centre,
+     donc le texte s'arrêtait à 259 px du bord droit pendant que la capture
+     était coupée de 209 à gauche — alors qu'il y avait 1 942 px utiles et
+     que la capture n'en demande que 1 472. On coupait faute de place dans un
+     gabarit, pas faute de place à l'écran.
+     Le plafond de 1 900 px existe pour les très grands écrans : au-delà, la
+     scène cesse de grandir et le bloc se recentre. */
+  --scene: min(calc(100vw - 48px), 1900px);
+  width: var(--scene);
+  margin-inline: calc((100% - var(--scene)) / 2);
+
   grid-template-columns: minmax(0, 1fr) var(--paysage-texte);
   gap: 48px; max-width: none;
 }
+
+/* ⚠️ LA CAPTURE GARDE SA LARGEUR, ET SON BORD DROIT SE CALE SUR SA COLONNE.
+   C'est ce qui rend le débord AUTOMATIQUE : quand la colonne est plus étroite
+   que la capture, celle-ci dépasse à gauche d'exactement ce qui manque ; quand
+   l'écran est assez large, le dépassement tombe à zéro et la capture se voit
+   en entier, sans qu'aucun seuil n'ait été écrit.
+   ⚠️ Sa largeur ne dépend donc PAS de sa colonne. C'est elle qui accorde les
+   deux diapositives : 1 472 px de large font 705 px de haut, soit deux pixels
+   de la hauteur du téléphone d'en face, à toutes les largeurs d'écran. La
+   laisser suivre sa colonne la ferait grandir avec la scène et désaccorderait
+   les hauteurs — c'est ce qui avait fait dire « ça fait trop bizarre d'avoir
+   deux tailles ». */
+.duo--paysage .duo-ecran {
+  display: flex; justify-content: flex-end;
+}
 .duo--paysage .duo-ecran img {
-  max-width: none;
-  width: calc(100% + var(--paysage-debord));
-  margin-left: calc(-1 * var(--paysage-debord));
+  flex: none; max-width: none;
+  width: min(calc(100vw - 48px), 1472px);
 }
 
 /* Sous 1180 px, le débord mangerait plus du tiers de la capture : elle reprend
    toute la largeur et son texte repasse dessous, en une rangée de points. */
 @media (max-width: 1180px) {
-  .duo--paysage { display: block; }
-  .duo--paysage .duo-ecran img { max-width: 100%; width: 100%; margin-left: 0; }
+  .duo--paysage { display: block; width: auto; margin-inline: 0; }
+  .duo--paysage .duo-ecran { display: block; }
+  .duo--paysage .duo-ecran img { max-width: 100%; width: 100%; }
   .duo--paysage .duo-propos { margin-top: 34px; }
   .duo--paysage .duo-propos h3,
   .duo--paysage .duo-intro { text-align: center; max-width: 60ch; margin-inline: auto; }

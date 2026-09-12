@@ -379,23 +379,47 @@ describe('le produit se voit', () => {
     expect(bloc).toContain('grid-template-columns')
     expect(bloc).not.toContain('display: block')
 
-    // ⚠️ Et la capture ne rentre pas dans sa colonne : elle la dépasse.
-    // Sans ce débord, la grille la rétrécit — c'est précisément ce qui est
-    // refusé.
+    // ⚠️ LA LARGEUR DE LA CAPTURE NE DÉPEND PAS DE SA COLONNE. C'est elle qui
+    // accorde les deux diapositives — 1 472 px de large font 705 px de haut,
+    // soit deux pixels du téléphone d'en face. Un `width: 100%` la ferait
+    // suivre sa colonne, donc grandir avec la scène, et les hauteurs se
+    // désaccorderaient de 200 px.
     const img = sansCommentaires(
       /\.duo--paysage \.duo-ecran img\s*\{([^}]*)\}/.exec(css)?.[1] ?? '',
     )
-    expect(img).toMatch(/width: calc\(100% \+ var\(--paysage-debord\)\)/)
+    expect(img.length).toBeGreaterThan(0)
+    expect(img).toMatch(/width: min\(/)
+    expect(img).not.toMatch(/width: 100%/)
 
-    // ⚠️ LE DÉBORD PART À GAUCHE, JAMAIS À DROITE. Une abscisse négative n'est
-    // pas atteignable au défilement ; un dépassement par la droite, lui,
+    // ⚠️ SON BORD DROIT SE CALE SUR SA COLONNE, et c'est ce qui rend le débord
+    // AUTOMATIQUE : il vaut exactement ce qui manque, et tombe à zéro dès que
+    // l'écran est assez large — mesuré 396 px de capture hors cadre à 1568 px,
+    // et plus rien à 1990. Aucun seuil n'est écrit pour ça.
+    const fig = sansCommentaires(
+      /\.duo--paysage \.duo-ecran\s*\{([^}]*)\}/.exec(css)?.[1] ?? '',
+    )
+    expect(fig).toMatch(/justify-content: flex-end/)
+
+    // ⚠️ LE DÉBORD PART DONC À GAUCHE, JAMAIS À DROITE. Une abscisse négative
+    // n'est pas atteignable au défilement ; un dépassement par la droite, lui,
     // ajouterait une barre horizontale à toute la page.
-    expect(img).toMatch(/margin-left: calc\(-1 \* var\(--paysage-debord\)\)/)
     expect(img).not.toContain('margin-right')
 
-    // ⚠️ ET IL SUIT L'ÉCRAN. À valeur fixe, le débord reste constant pendant
-    // que la capture rétrécit : mesuré 29 % de capture perdue à 1568 px, mais
-    // 36 % à 1280. La borne haute vaut la colonne de texte.
+    // ⚠️ LA SCÈNE VA JUSQU'AU BORD DE L'ÉCRAN, elle ne s'arrête pas au gabarit
+    // de la section. Sans ça, sur un écran large le texte s'arrêtait à 259 px
+    // du bord droit pendant qu'on coupait la capture de 209 à gauche — faute
+    // de place dans un gabarit, pas faute de place à l'écran.
+    expect(bloc).toMatch(/--scene: min\(calc\(100vw/)
+    expect(bloc).toMatch(/width: var\(--scene\)/)
+
+    // ⚠️ Et la colonne de la scène est bornée : dimensionnée par son contenu,
+    // elle grandirait avec une diapositive plus large que la section, et la
+    // page entière déborderait par la droite.
+    expect(css).toMatch(/\.diaporama \{[^}]*grid-template-columns: minmax\(0, 1fr\)/)
+
+    // ⚠️ La colonne de texte suit l'écran. À valeur fixe, la part de capture
+    // hors cadre reste constante pendant que la capture rétrécit : mesuré 29 %
+    // à 1568 px mais 36 % à 1280.
     expect(bloc).toMatch(/--paysage-texte: clamp\([^)]*vw[^)]*\)/)
 
     // Sous 1180 px le débord mangerait plus du tiers : la capture reprend toute
