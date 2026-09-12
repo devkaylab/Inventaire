@@ -457,13 +457,13 @@ describe('le produit se voit', () => {
     // quatre garde-fous répond à un défaut précis, et chacun doit suffire à
     // lui seul à bloquer l'avance.
     const nominal = {
-      arrete: false, actif: true, enPause: false, mouvementReduit: false,
+      pauseDemandee: false, actif: true, survol: false, mouvementReduit: false,
     }
     expect(avanceAutorisee(nominal)).toBe(true)
     for (const [quoi, etat] of [
-      ['le lecteur a choisi une diapositive', { ...nominal, arrete: true }],
+      ['le lecteur a demandé la pause', { ...nominal, pauseDemandee: true }],
       ['la section n’est pas à l’écran', { ...nominal, actif: false }],
-      ['on la survole ou on la parcourt au clavier', { ...nominal, enPause: true }],
+      ['on survole la barre ou on parcourt au clavier', { ...nominal, survol: true }],
       ['« moins d’animation » est demandé au système', { ...nominal, mouvementReduit: true }],
     ] as const) {
       expect(avanceAutorisee(etat), `doit s’arrêter quand ${quoi}`).toBe(false)
@@ -488,12 +488,12 @@ describe('le produit se voit', () => {
     // suspendu dans un onglet masqué — donc invérifiable au volet. Ce qui reste
     // à garder, c'est le branchement.
     const diapo = sansCommentaires(lire('../components/DiaporamaProduit.tsx'))
-    expect(diapo).toMatch(/avanceAutorisee\(\{ arrete, actif, enPause, mouvementReduit \}\)/)
+    expect(diapo).toMatch(/avanceAutorisee\(\{ pauseDemandee, actif, survol, mouvementReduit \}\)/)
 
     // ⚠️ L'arrêt est posé DANS `aller`, pas dans les gestionnaires de clic :
     // toute navigation volontaire passe par là, donc une commande ajoutée plus
     // tard ne pourra pas oublier de le faire.
-    expect(diapo).toMatch(/const aller = useCallback\([^}]*setArrete\(true\)/)
+    expect(diapo).toMatch(/const aller = useCallback\([^}]*setPauseDemandee\(true\)/)
 
     // Ne tourner que quand on est regardé : à l'écran ET dans un onglet au
     // premier plan.
@@ -527,8 +527,39 @@ describe('le produit se voit', () => {
       expect(scene, `la scène doit porter ${attr}`).toContain(attr)
     }
 
-    // La préférence système est lue au moment de décider.
+    // La préférence système est lue, et suivie si elle change en cours de route.
     expect(diapo).toMatch(/matchMedia\('\(prefers-reduced-motion: reduce\)'\)/)
+    expect(diapo).toMatch(/addEventListener\('change'/)
+  })
+
+  it('⚠️ un bouton met en pause, et il sait se rallumer', () => {
+    // Demande de Julien, 12 septembre 2026, en descendant à 5 s : « avec un
+    // bouton pause si jamais on veut lire ». C'est lui qui rend le rythme court
+    // acceptable — et c'est aussi le mécanisme de pause qu'un contenu en
+    // mouvement automatique doit offrir.
+    const diapo = sansCommentaires(lire('../components/DiaporamaProduit.tsx'))
+    expect(diapo).toContain('diaporama-pause')
+
+    // ⚠️ IL BASCULE, il n'arrête pas. Avant lui, toucher une flèche
+    // confisquait l'avance pour de bon ; depuis qu'un bouton affiche l'état, il
+    // doit pouvoir le défaire — sinon il montre « Lecture » sans rien relancer.
+    expect(diapo).toMatch(/setPauseDemandee\(\(p\) => !p\)/)
+
+    // ⚠️ ET IL DISPARAÎT QUAND RIEN NE BOUGE : « moins d'animation » coupe
+    // l'avance, donc « Pause » n'aurait rien à suspendre.
+    expect(diapo).toMatch(/!mouvementReduit && \(/)
+
+    // Son libellé dit l'effet, et change avec l'état.
+    expect(diapo).toMatch(/aria-label=\{pauseDemandee \? lecture : pause\}/)
+
+    // ⚠️ Les deux libellés sont TRADUITS par la page, comme ses voisins : ce
+    // composant est client, la langue de la vitrine vient de l'adresse.
+    const accueilBrut = lire('../components/vitrine/Accueil.tsx')
+    expect(accueilBrut).toMatch(/pause=\{t\('Mettre le diaporama en pause'\)\}/)
+    expect(accueilBrut).toMatch(/lecture=\{t\('Reprendre le diaporama'\)\}/)
+
+    // Et la durée est celle qu'on a demandée, avec de quoi lire après les points.
+    expect(AUTO_MS).toBe(5000)
   })
 
   it('⚠️ les deux diapositives GLISSENT, et celle qu’on ne voit pas est inerte', () => {

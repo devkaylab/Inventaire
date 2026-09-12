@@ -20,10 +20,13 @@ export const PREMIER_MS = 150
 
 /**
  * ⚠️ ELLE DOIT LAISSER LES POINTS ARRIVER, PUIS SE LIRE. Sur une diapositive à
- * quatre points, le dernier apparaît à 3,2 s : en dessous, on changerait de
+ * quatre points, le dernier apparaît à 1,95 s : en dessous, on changerait de
  * diapositive avant de l'avoir montré. Le reste est le temps de lecture.
+ * Ramenée à 5 s le 12 septembre 2026 (Julien) — ce qui ne laisse que 3 s pour
+ * lire, d'où le bouton de pause qui accompagne ce changement : c'est lui qui
+ * rend le rythme court acceptable.
  */
-export const AUTO_MS = 8000
+export const AUTO_MS = 5000
 
 /** Quand le dernier point d'une diapositive a fini d'apparaître. */
 export function apparitionFinie(nbPoints: number): number {
@@ -31,12 +34,17 @@ export function apparitionFinie(nbPoints: number): number {
 }
 
 export type EtatAvance = {
-  /** Un geste du lecteur : il a choisi, on ne reprend plus la main. */
-  arrete: boolean
+  /**
+   * Le lecteur a demandé la pause — par le bouton, ou en naviguant lui-même.
+   * ⚠️ RÉVERSIBLE, contrairement à l'arrêt définitif d'avant : depuis qu'un
+   * bouton affiche l'état, il doit pouvoir le défaire. Un contrôle qui montre
+   * « Lecture » sans pouvoir relancer serait un bouton qui ment.
+   */
+  pauseDemandee: boolean
   /** À l'écran, dans un onglet au premier plan. */
   actif: boolean
-  /** Survolé, ou parcouru au clavier. */
-  enPause: boolean
+  /** La barre de commandes est survolée, ou la section parcourue au clavier. */
+  survol: boolean
   /** « Moins d'animation » demandé au système. */
   mouvementReduit: boolean
 }
@@ -48,7 +56,7 @@ export type EtatAvance = {
  * qui la parcourt, et ignorer une préférence d'accessibilité.
  */
 export function avanceAutorisee(e: EtatAvance): boolean {
-  return !e.arrete && e.actif && !e.enPause && !e.mouvementReduit
+  return !e.pauseDemandee && e.actif && !e.survol && !e.mouvementReduit
 }
 
 /** La suivante, en boucle. Un diaporama vide ne bouge pas. */

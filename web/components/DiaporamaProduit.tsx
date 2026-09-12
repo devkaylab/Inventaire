@@ -45,28 +45,48 @@ export function DiaporamaProduit({
   diapos,
   precedent,
   suivant,
+  pause,
+  lecture,
 }: {
   diapos: Diapo[]
   precedent: string
   suivant: string
+  pause: string
+  lecture: string
 }) {
   const [courante, setCourante] = useState(0)
   const [vus, setVus] = useState(0)
   const minuteries = useRef<ReturnType<typeof setTimeout>[]>([])
 
-  /** Un geste du lecteur arrête l'avance — définitivement. */
-  const [arrete, setArrete] = useState(false)
+  /** Le lecteur a demandé la pause — bouton, ou navigation à la main. */
+  const [pauseDemandee, setPauseDemandee] = useState(false)
   /** La section est-elle à l'écran, dans un onglet au premier plan ? */
   const [actif, setActif] = useState(false)
-  /** Survol ou focus clavier : on suspend le temps qu'on regarde. */
-  const [enPause, setEnPause] = useState(false)
+  /** Survol de la barre ou focus clavier : on suspend le temps qu'on regarde. */
+  const [survol, setSurvol] = useState(false)
+  /**
+   * ⚠️ TENU EN ÉTAT plutôt que lu au moment de décider, parce que le BOUTON en
+   * dépend : sans mouvement automatique, il n'y a rien à mettre en pause, et un
+   * bouton qui ne fait rien vaut moins que pas de bouton.
+   */
+  const [mouvementReduit, setMouvementReduit] = useState(false)
   const scene = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const maj = () => setMouvementReduit(mq.matches)
+    maj()
+    mq.addEventListener('change', maj)
+    return () => mq.removeEventListener('change', maj)
+  }, [])
+
   const aller = useCallback((i: number) => {
-    // ⚠️ C'est ICI que l'avance s'arrête, et pas dans les gestionnaires de
+    // ⚠️ C'est ICI que l'avance se suspend, et pas dans les gestionnaires de
     // clic : toute navigation volontaire passe par cette fonction, donc aucune
-    // commande ajoutée plus tard ne pourra oublier de le faire.
-    setArrete(true)
+    // commande ajoutée plus tard ne pourra oublier de le faire. Le bouton, lui,
+    // permet de la relancer — on ne confisque plus l'avance à qui a touché une
+    // flèche.
+    setPauseDemandee(true)
     setCourante(((i % diapos.length) + diapos.length) % diapos.length)
   }, [diapos.length])
 
@@ -88,17 +108,13 @@ export function DiaporamaProduit({
   // L'avance elle-même. `courante` est en dépendance : chaque changement
   // réarme le compte à rebours, d'où qu'il vienne.
   useEffect(() => {
-    // ⚠️ La préférence système est lue ICI plutôt que gardée en état : elle se
-    // lit au moment où l'on en a besoin, et ça évite d'écrire un état dans un
-    // effet. Le reste de la décision vit dans `lib/diaporama`, où elle se teste.
-    const mouvementReduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!avanceAutorisee({ arrete, actif, enPause, mouvementReduit })) return
+    if (!avanceAutorisee({ pauseDemandee, actif, survol, mouvementReduit })) return
     const t = setTimeout(
       () => setCourante((c) => suivante(c, diapos.length)),
       AUTO_MS,
     )
     return () => clearTimeout(t)
-  }, [arrete, actif, enPause, courante, diapos.length])
+  }, [pauseDemandee, actif, survol, mouvementReduit, courante, diapos.length])
 
   useEffect(() => {
     // ⚠️ On nettoie AVANT de reprogrammer : sans ça, changer vite de
@@ -138,8 +154,8 @@ export function DiaporamaProduit({
          qu'on survole quand on s'apprête à cliquer.
          Le clavier, lui, met toujours en pause : on ne fait pas défiler la
          section sous les doigts de qui la parcourt à la tabulation. */
-      onFocusCapture={() => setEnPause(true)}
-      onBlurCapture={() => setEnPause(false)}
+      onFocusCapture={() => setSurvol(true)}
+      onBlurCapture={() => setSurvol(false)}
     >
       {/*
         ⚠️ LES DEUX DIAPOSITIVES SONT EMPILÉES, PAS AFFICHÉES TOUR À TOUR.
@@ -173,13 +189,34 @@ export function DiaporamaProduit({
 
       <div
         className="diaporama-barre"
-        onMouseEnter={() => setEnPause(true)}
-        onMouseLeave={() => setEnPause(false)}
+        onMouseEnter={() => setSurvol(true)}
+        onMouseLeave={() => setSurvol(false)}
       >
         <button type="button" className="diaporama-nav" onClick={() => aller(courante - 1)}>
           {precedent}
         </button>
-        <div className="diaporama-pastilles">
+        <div className="diaporama-centre">
+          {/*
+            ⚠️ PAS DE BOUTON QUAND RIEN NE BOUGE. « Moins d'animation » coupe
+            l'avance : proposer « Pause » n'aurait rien à suspendre, et
+            « Lecture » ne relancerait rien.
+          */}
+          {!mouvementReduit && (
+            <button
+              type="button"
+              className="diaporama-pause"
+              onClick={() => setPauseDemandee((p) => !p)}
+              aria-label={pauseDemandee ? lecture : pause}
+              title={pauseDemandee ? lecture : pause}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                {pauseDemandee
+                  ? <path d="M8 5v14l11-7z" />
+                  : <><rect x="7" y="5" width="3.4" height="14" rx="1" /><rect x="13.6" y="5" width="3.4" height="14" rx="1" /></>}
+              </svg>
+            </button>
+          )}
+          <div className="diaporama-pastilles">
           {diapos.map((d, n) => (
             <button
               type="button"
@@ -190,6 +227,7 @@ export function DiaporamaProduit({
               onClick={() => aller(n)}
             />
           ))}
+          </div>
         </div>
         <button type="button" className="diaporama-nav" onClick={() => aller(courante + 1)}>
           {suivant}

@@ -1530,4 +1530,6 @@ export const en: Dictionnaire = {
   "On voit combien de téléphones comptent, pas qui compte.": "You see how many phones are counting, not who is counting.",
   "Les derniers scans défilent": "The latest scans stream in",
   "Comptage et audit mêlés, à la seconde près.": "Count and audit together, to the second.",
+  "Mettre le diaporama en pause": "Pause the slideshow",
+  "Reprendre le diaporama": "Resume the slideshow",
 }

@@ -190,6 +190,8 @@ export function Accueil({ langue }: { langue: Langue }) {
             <DiaporamaProduit
               precedent={t('Précédent')}
               suivant={t('Suivant')}
+              pause={t('Mettre le diaporama en pause')}
+              lecture={t('Reprendre le diaporama')}
               diapos={[
                 {
                   titre: t('Du scan dans le rayon'),

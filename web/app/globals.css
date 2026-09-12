@@ -4287,6 +4287,24 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   background: var(--hairline); transition: background .25s ease;
 }
 .diaporama-pastille[aria-current="true"] { background: var(--accent); }
+
+/* Le bouton de pause et les pastilles forment le groupe central : c'est ce qui
+   garde la rangée équilibrée entre « Précédent » et « Suivant ». */
+.diaporama-centre { display: flex; align-items: center; gap: 14px; }
+/* ⚠️ IL EMPRUNTE LE DESSIN DES DEUX BOUTONS DE NAVIGATION — même filet, même
+   encre, même rayon — parce qu'il fait partie de la même rangée de commandes.
+   Un troisième dessin dans une barre qui en compte déjà deux se lirait comme
+   un objet d'une autre nature. */
+.diaporama-pause {
+  appearance: none; cursor: pointer; background: transparent;
+  border: 1px solid var(--hairline); border-radius: var(--r-bouton);
+  color: var(--text-2);
+  width: 40px; height: 40px; flex: 0 0 auto;
+  display: grid; place-content: center;
+  transition: color .2s ease, border-color .2s ease;
+}
+.diaporama-pause:hover { color: var(--text-1); border-color: var(--text-3); }
+.diaporama-pause svg { width: 15px; height: 15px; fill: currentColor; display: block; }
 .diaporama-nav {
   appearance: none; cursor: pointer; background: transparent;
   border: 1px solid var(--hairline); border-radius: var(--r-bouton);
