@@ -226,8 +226,14 @@ describe('la marque', () => {
   })
 
   it('⚠️ la géométrie est la MÊME que celle du site, au dixième près', () => {
-    // Trois fichiers la portent — le composant du site, celui de
-    // l'application, et le script des icônes. Si l'un bouge, les trois bougent.
+    // QUATRE fichiers la portent — le composant du site, celui de
+    // l'application, le script des icônes et le favicon du site. Si l'un
+    // bouge, les quatre bougent.
+    //
+    // ⚠️ Le favicon a vécu en dehors de cette garde jusqu'au 12 septembre
+    // 2026 : il redessinait les mêmes quatre rectangles sans que rien ne le
+    // compare aux autres. C'est précisément la copie muette que ce test existe
+    // pour empêcher.
     const web = readFileSync(path.join(racine, 'web/components/Logo.tsx'), 'utf8')
     // ⚠️ On ne retient que les rectangles DE LA MARQUE. Le script des icônes
     // en dessine d'autres — le fond plein cadre, la tuile arrondie — et les
@@ -242,6 +248,8 @@ describe('la marque', () => {
     expect(attendu.length, 'la marque du site n’a plus de rectangles').toBe(4)
     expect(rects(logo), 'la marque de l’application a divergé du site').toEqual(attendu)
     expect(rects(icones), 'les icônes ont divergé du site').toEqual(attendu)
+    const favicon = readFileSync(path.join(racine, 'web/public/favicon.svg'), 'utf8')
+    expect(rects(favicon), 'le favicon du site a divergé de la marque').toEqual(attendu)
   })
 
   it('⚠️ l’icône du projet iOS suit la source, à l’octet près', () => {

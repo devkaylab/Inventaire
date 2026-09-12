@@ -63,7 +63,30 @@ export const metadata: Metadata = {
     "Comptez vos stocks en magasin avec le téléphone de vos équipes : balises QR imprimées, scan des codes-barres, seconde passe d'audit et rapport d'écarts exportable. Fonctionne sans réseau en réserve.",
   applicationName: 'Quantinvo',
   alternates: { canonical: '/' },
-  icons: { icon: '/favicon.svg' },
+  /*
+   * ⚠️ TROIS FICHIERS, ET CHACUN A SON DESTINATAIRE. Constat de Julien,
+   * 12 septembre 2026 : « sur safari j'ai toujours l'ancien logo dans l'onglet
+   * alors que chrome non » — et il s'agissait bien de l'icône d'AVANT Ardoise,
+   * retirée le 6 septembre. Le site servait déjà la bonne, c'est Safari qui
+   * gardait la sienne en cache ; mais il n'avait rien de frais à aller
+   * chercher, et c'est ça qui rend un cache collant :
+   *   · le SVG, net à toute taille, est ce que lisent Chrome et Firefox. Il
+   *     porte désormais son `type` — sans lui, le navigateur doit deviner ;
+   *   · `/favicon.ico` répondait 404. Safari le demande, les robots et les
+   *     lecteurs de flux aussi : une adresse qui n'existe pas ne remplace
+   *     jamais un cache périmé ;
+   *   · `apple-touch-icon.png` manquait : un raccourci posé sur l'écran
+   *     d'accueil d'un iPhone prenait une capture de la page à la place.
+   * Les deux fichiers binaires sont RASTÉRISÉS depuis `public/favicon.svg` par
+   * `scripts/dessiner-favicons.mjs` — jamais redessinés.
+   */
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '48x48' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
