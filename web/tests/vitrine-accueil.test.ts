@@ -365,16 +365,81 @@ describe('le produit se voit', () => {
     }
   })
 
-  it('⚠️ la capture du tableau de bord prend TOUTE la largeur', () => {
-    // C'est la seule façon qu'elle atteigne la hauteur du téléphone d'en face :
-    // deux fois plus large que haute, il lui faudrait 1 500 px de large pour
-    // l'égaler — plus que la section entière. Elle n'est donc pas une colonne
-    // d'une grille à deux, et son texte passe dessous.
-    const bloc = /\.duo--paysage\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
-    expect(bloc).toContain('display: block')
-    expect(bloc).not.toContain('grid-template-columns')
-    // Les quatre points forment une rangée sous la capture.
-    expect(css).toMatch(/\.duo--paysage \.duo-points \{[^}]*flex-direction: row/)
+  it('⚠️ la capture du tableau de bord garde sa taille et DÉBORDE À GAUCHE', () => {
+    // Demande de Julien, 12 septembre 2026 : « Dashboard text à droite de la
+    // capture pas en dessous […] ne rétrécis pas le dashboard, bouge-le un peu
+    // à gauche ». La capture fait 1 472 px à 1568 px d'écran et le texte en
+    // réclame 420 de plus : la ranger entière à côté de son texte reviendrait à
+    // la réduire de moitié, ce qui avait fait dire « ça fait trop bizarre
+    // d'avoir deux tailles ». Elle sort donc du cadre par la gauche.
+    const bloc = sansCommentaires(/\.duo--paysage\s*\{([^}]*)\}/.exec(css)?.[1] ?? '')
+    expect(bloc.length).toBeGreaterThan(0)
+
+    // Le texte est une COLONNE à droite, pas une rangée dessous.
+    expect(bloc).toContain('grid-template-columns')
+    expect(bloc).not.toContain('display: block')
+
+    // ⚠️ Et la capture ne rentre pas dans sa colonne : elle la dépasse.
+    // Sans ce débord, la grille la rétrécit — c'est précisément ce qui est
+    // refusé.
+    const img = sansCommentaires(
+      /\.duo--paysage \.duo-ecran img\s*\{([^}]*)\}/.exec(css)?.[1] ?? '',
+    )
+    expect(img).toMatch(/width: calc\(100% \+ var\(--paysage-debord\)\)/)
+
+    // ⚠️ LE DÉBORD PART À GAUCHE, JAMAIS À DROITE. Une abscisse négative n'est
+    // pas atteignable au défilement ; un dépassement par la droite, lui,
+    // ajouterait une barre horizontale à toute la page.
+    expect(img).toMatch(/margin-left: calc\(-1 \* var\(--paysage-debord\)\)/)
+    expect(img).not.toContain('margin-right')
+
+    // ⚠️ ET IL SUIT L'ÉCRAN. À valeur fixe, le débord reste constant pendant
+    // que la capture rétrécit : mesuré 29 % de capture perdue à 1568 px, mais
+    // 36 % à 1280. La borne haute vaut la colonne de texte.
+    expect(bloc).toMatch(/--paysage-texte: clamp\([^)]*vw[^)]*\)/)
+
+    // Sous 1180 px le débord mangerait plus du tiers : la capture reprend toute
+    // la largeur et son texte repasse dessous, en une rangée de points.
+    const petit = css.slice(css.indexOf('@media (max-width: 1180px)'))
+    expect(petit).toMatch(/\.duo--paysage \{[^}]*display: block/)
+    expect(petit).toMatch(/\.duo--paysage \.duo-points \{[^}]*flex-direction: row/)
+  })
+
+  it('⚠️ les deux diapositives GLISSENT, et celle qu’on ne voit pas est inerte', () => {
+    // Demande de Julien, 12 septembre 2026 : « add slide effect btw phone and
+    // dashboard ». Elles sont donc empilées dans la même cellule : une
+    // diapositive masquée par `hidden` prend `display: none`, et on n'anime
+    // pas ce qui n'occupe plus de place.
+    const diapo = sansCommentaires(lire('../components/DiaporamaProduit.tsx'))
+    // ⚠️ `\s` avant le mot : sans lui, le motif attrape `aria-hidden={…}`,
+    // qui est justement ce qu'on EXIGE deux lignes plus bas.
+    expect(diapo).not.toMatch(/\shidden=\{/)
+    expect(diapo).toMatch(/diapo-active/)
+    expect(diapo).toMatch(/diapo-avant/)
+    expect(diapo).toMatch(/diapo-apres/)
+
+    // ⚠️ Ce que `hidden` faisait gratuitement et qu'il faut désormais écrire :
+    // sans ça, la tabulation traverse des liens invisibles et un lecteur
+    // d'écran annonce les deux diapositives à la suite.
+    expect(diapo).toMatch(/inert=\{n !== courante\}/)
+    expect(diapo).toMatch(/aria-hidden=\{n !== courante\}/)
+
+    // La scène empile les diapositives et laisse la barre en dessous.
+    expect(css).toMatch(/\.diaporama > \.diapo \{[^}]*grid-row: 1;[^}]*grid-column: 1/)
+
+    // ⚠️ `visibility` est dans la transition : sans elle, la diapositive
+    // sortante reste cliquable pendant toute l'animation.
+    // ⚠️ Ancré en début de ligne : sinon le motif attrape `.diaporama > .diapo`.
+    const bloc = sansCommentaires(/^\.diapo \{([^}]*)\}/m.exec(css)?.[1] ?? '')
+    expect(bloc).toContain('visibility')
+    for (const etat of ['avant', 'apres']) {
+      expect(css).toMatch(new RegExp(`\\.diapo-${etat} \\{[^}]*visibility: hidden`))
+    }
+
+    // Et le mouvement se coupe quand la personne l'a demandé au système.
+    const doux = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)', css.indexOf('.duo figcaption')))
+    expect(doux).toMatch(/\.diapo \{ transition: none/)
+    expect(doux).toMatch(/\.diapo-avant, \.diapo-apres \{ transform: none/)
   })
 
   it('⚠️ l’en-tête et le pied tiennent les DEUX BORDS de l’écran', () => {

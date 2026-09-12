@@ -4144,21 +4144,75 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    Le diaporama du produit : le rayon, puis le bureau.
    Les points se révèlent un par un — voir components/DiaporamaProduit.tsx.
    —————————————————————————————————————————————————————————————— */
-.duo[hidden] { display: none !important; }
-/* La diapositive du tableau de bord montre un visuel PAYSAGE : le texte prend
-   une colonne de lecture, la capture prend le reste. */
-/* ⚠️ LA DIAPOSITIVE PAYSAGE N'EST PLUS UNE GRILLE À DEUX COLONNES. La capture
-   prend toute la largeur de la section — c'est la seule façon qu'elle atteigne
-   la hauteur du téléphone d'en face — et son texte passe dessous, en une
-   rangée de points. */
-.duo--paysage { display: block; max-width: none; }
-.duo--paysage .duo-propos { margin-top: 34px; }
-.duo--paysage .duo-propos h3,
-.duo--paysage .duo-intro { text-align: center; max-width: 60ch; margin-inline: auto; }
-.duo--paysage .duo-points {
-  flex-direction: row; gap: 32px; margin-top: 26px; align-items: start;
+/* ⚠️ LES DEUX DIAPOSITIVES SE SUPERPOSENT DANS LA MÊME CELLULE, et la barre
+   de navigation occupe la rangée du dessous. C'est ce qui permet au glissement
+   d'exister : une diapositive masquée par `hidden` ne prend plus de place, et
+   on n'anime pas ce qui n'occupe rien. La hauteur de la scène est celle de la
+   plus haute des deux — elles sont accordées à deux pixels près, voir plus bas. */
+.diaporama { display: grid; }
+.diaporama > .diapo { grid-row: 1; grid-column: 1; }
+.diaporama-barre { grid-row: 2; }
+
+/* Le glissement d'une diapositive à l'autre (demande de Julien, 12 septembre
+   2026). La courbe est celle du menu mobile : une décélération franche, mesurée
+   image par image sur une référence du marché.
+   ⚠️ `visibility` est dans la transition, et ce n'est pas décoratif : sans elle
+   la diapositive sortante reste cliquable et lisible par un lecteur d'écran
+   pendant toute l'animation. Une propriété discrète comme celle-ci bascule à la
+   FIN quand on va vers `hidden`, et tout de suite quand on revient. */
+.diapo {
+  transition: opacity .42s ease, transform .42s cubic-bezier(.33, 1, .68, 1),
+              visibility .42s;
 }
-.duo--paysage .duo-points li { flex: 1 1 0; max-width: none; }
+.diapo-active { opacity: 1; transform: none; visibility: visible; }
+.diapo-avant { opacity: 0; transform: translateX(-56px); visibility: hidden; }
+.diapo-apres { opacity: 0; transform: translateX(56px); visibility: hidden; }
+
+/* ⚠️ LA CAPTURE DU TABLEAU DE BORD GARDE SA TAILLE ET DÉBORDE À GAUCHE.
+   Demande de Julien, 12 septembre 2026 : « Dashboard text à droite de la
+   capture pas en dessous […] ne rétrécis pas le dashboard, bouge-le un peu à
+   gauche ». La géométrie ne laisse pas d'autre chemin : la capture fait
+   1 472 px de large à 1568 px d'écran, et une colonne de texte lisible en
+   réclame 420 de plus. La faire tenir entière à côté de son texte reviendrait
+   à la réduire de moitié — c'est exactement ce qui avait fait dire « ça fait
+   trop bizarre d'avoir deux tailles ». Elle glisse donc hors du cadre par la
+   gauche.
+   ⚠️ CE DÉBORD N'AJOUTE AUCUNE BARRE DE DÉFILEMENT : dans un document écrit de
+   gauche à droite, une abscisse négative n'est pas atteignable au défilement —
+   contrairement à un débord par la droite. Mesuré à quatre largeurs.
+   Effet de bord bienvenu : la diapositive fait alors la hauteur de sa capture
+   (705 px) au lieu de 901, soit deux pixels de celle du téléphone. */
+.duo--paysage {
+  /* ⚠️ LA COLONNE DE TEXTE SUIT L'ÉCRAN, et c'est ce qui tient la part de
+     capture qui sort du cadre. Ce débord vaut la largeur du texte : à valeur
+     fixe il reste constant pendant que la capture rétrécit, donc il en mange
+     une part croissante — mesuré 29 % à 1568 px mais 36 % à 1280, où l'on
+     perdait la moitié des libellés. Proportionnel, il se tient à 29-30 %
+     partout. */
+  --paysage-texte: clamp(320px, 27vw, 420px);
+  --paysage-debord: calc(var(--paysage-texte) + 48px);
+  grid-template-columns: minmax(0, 1fr) var(--paysage-texte);
+  gap: 48px; max-width: none;
+}
+.duo--paysage .duo-ecran img {
+  max-width: none;
+  width: calc(100% + var(--paysage-debord));
+  margin-left: calc(-1 * var(--paysage-debord));
+}
+
+/* Sous 1180 px, le débord mangerait plus du tiers de la capture : elle reprend
+   toute la largeur et son texte repasse dessous, en une rangée de points. */
+@media (max-width: 1180px) {
+  .duo--paysage { display: block; }
+  .duo--paysage .duo-ecran img { max-width: 100%; width: 100%; margin-left: 0; }
+  .duo--paysage .duo-propos { margin-top: 34px; }
+  .duo--paysage .duo-propos h3,
+  .duo--paysage .duo-intro { text-align: center; max-width: 60ch; margin-inline: auto; }
+  .duo--paysage .duo-points {
+    flex-direction: row; gap: 32px; margin-top: 26px; align-items: start;
+  }
+  .duo--paysage .duo-points li { flex: 1 1 0; max-width: none; }
+}
 
 /* ⚠️ Le tableau de bord est une capture RECTANGULAIRE de l'écran réel : lui
    porte un filet, contrairement au téléphone dont le cadre est dans l'image. */
@@ -4231,6 +4285,11 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 @media (prefers-reduced-motion: reduce) {
   .duo-points li { opacity: 1; transform: none; transition: none; }
+  /* ⚠️ La diapositive change encore, elle ne GLISSE plus : le décalage tombe,
+     la transition aussi. Ce que cette préférence vise, c'est le mouvement —
+     pas le fait de passer d'une vue à l'autre. */
+  .diapo { transition: none; }
+  .diapo-avant, .diapo-apres { transform: none; }
 }
 
 .duo figcaption { color: var(--text-2); font-size: 14px; margin-top: 14px; text-align: center; }

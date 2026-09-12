@@ -76,33 +76,33 @@ export function DiaporamaProduit({
 
   return (
     <div className="diaporama">
+      {/*
+        ⚠️ LES DEUX DIAPOSITIVES SONT EMPILÉES, PAS AFFICHÉES TOUR À TOUR.
+        Elles occupent la même cellule de grille et glissent l'une vers
+        l'autre — c'est ce qui permet la transition demandée par Julien le
+        12 septembre 2026. Une bascule par l'attribut `hidden` poserait
+        `display: none`, et il n'y a rien à animer sur un élément qui
+        n'occupe plus de place.
+
+        ⚠️ CELLE QU'ON NE VOIT PAS EST RETIRÉE DU CLAVIER ET DES LECTEURS
+        D'ÉCRAN (`inert` + `aria-hidden`). Sans ça, la tabulation traverse des
+        liens invisibles et une voix de synthèse lit les deux diapositives à
+        la suite. C'est ce que `hidden` faisait gratuitement.
+      */}
       {diapos.map((d, n) => (
         <div
-          className={`duo${d.paysage ? ' duo--paysage' : ''}`}
+          className={[
+            'duo',
+            d.paysage ? 'duo--paysage' : '',
+            'diapo',
+            n === courante ? 'diapo-active' : n < courante ? 'diapo-avant' : 'diapo-apres',
+          ].filter(Boolean).join(' ')}
           key={d.titre}
-          hidden={n !== courante}
+          aria-hidden={n !== courante}
+          inert={n !== courante}
         >
-          {/*
-            ⚠️ LE PAYSAGE PREND TOUTE LA LARGEUR, ET SON TEXTE PASSE DESSOUS.
-            Les deux visuels ne peuvent pas avoir la même hauteur en restant
-            côte à côte avec leur texte : le téléphone fait 718 px de haut, et
-            la capture, deux fois plus large que haute, demanderait 1 500 px de
-            large pour l'égaler — plus que la section entière. À pleine largeur
-            elle fait 703 px : les deux diapositives ont enfin la même taille.
-            Constat de Julien, 11 septembre 2026 : « ça fait trop bizarre
-            d'avoir deux tailles ».
-          */}
-          {d.paysage ? (
-            <>
-              <Visuel diapo={d} />
-              <Propos diapo={d} vus={vus} />
-            </>
-          ) : (
-            <>
-              <Visuel diapo={d} />
-              <Propos diapo={d} vus={vus} />
-            </>
-          )}
+          <Visuel diapo={d} />
+          <Propos diapo={d} vus={vus} />
         </div>
       ))}
 
