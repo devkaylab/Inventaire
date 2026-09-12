@@ -4105,8 +4105,24 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 
 /* ── Les trois gestes ────────────────────────────────────────────────────── */
-.etapes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
-.etape { position: relative; padding-left: 54px; }
+/* ⚠️ UN SEUL RAIL À GAUCHE : la capture, la pastille du numéro et le texte
+   partent tous de x = 0 dans leur colonne. Centrer la capture au-dessus d'un
+   texte aligné à gauche donnerait trois axes différents par colonne. */
+.etapes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 44px 32px;
+}
+.etape { position: relative; }
+/* ⚠️ NI FILET, NI OMBRE, NI RAYON : le corps du téléphone est DANS le PNG, sur
+   fond transparent (même règle que `.duo-tel img` du diaporama). Un cadre CSS
+   par-dessus ferait un second téléphone autour du premier.
+   ⚠️ La largeur est BORNÉE à 220 px : le PNG fait 637 px de large et n'existe
+   pas au-delà — une colonne de 344 px l'étirerait à 1,6 fois sa résolution. */
+.etape-vue {
+  display: block; width: 100%; max-width: 220px; height: auto;
+  margin: 0 0 22px;
+}
+.etape-dire { position: relative; padding-left: 54px; }
 .etape-no {
   position: absolute; left: 0; top: 0; width: 38px; height: 38px; border-radius: var(--r);
   background: var(--accent-soft); color: var(--accent-light);

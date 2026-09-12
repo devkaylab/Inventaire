@@ -19,6 +19,14 @@ const css = lire('../app/globals.css')
 const sansCommentaires = (src: string) =>
   src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
+/**
+ * Les captures que la page pose réellement, dans l'ordre — déduites du CODE
+ * seul : un commentaire qui explique pourquoi telle capture a déménagé en cite
+ * forcément le nom.
+ */
+const capturesDeLaPage = () =>
+  [...sansCommentaires(accueil).matchAll(/'(\/vitrine\/[^']+\.png)'/g)].map((m) => m[1])
+
 describe('la vitrine alterne ses fonds', () => {
   it('les quatre bandes existent, et chacune porte un fond', () => {
     // Une section n'est pas une marge : sans fond, huit blocs empilés se lisent
@@ -374,16 +382,75 @@ describe('le produit se voit', () => {
     expect(petit).toMatch(/min-width:\s*0/)
   })
 
-  it('⚠️ montre la capture ENCADRÉE, et ne lui dessine aucun cadre', () => {
+  it('⚠️ montre des captures ENCADRÉES, et ne leur dessine aucun cadre', () => {
     // Constat de Julien, 11 septembre 2026 : « je veux celle avec l'encadré ».
-    // La capture encadrée porte le téléphone dessiné sur fond TRANSPARENT —
+    // Une capture encadrée porte le téléphone dessiné sur fond TRANSPARENT —
     // un `border`, un `box-shadow` ou un `border-radius` en CSS tracerait donc
     // un rectangle autour de lui, ou lui rognerait les coins.
-    expect(accueil).toContain('/vitrine/comptage-encadre.png')
-    const bloc = /\.duo-tel img\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
-    expect(bloc.length).toBeGreaterThan(0)
-    for (const interdit of ['border', 'box-shadow', 'radius']) {
-      expect(bloc, `.duo-tel img ne doit pas porter ${interdit}`).not.toContain(interdit)
+    //
+    // ⚠️ LA GARDE DÉDUIT LES CAPTURES, elle n'en nomme aucune : nommer celle
+    // du jour, c'est protéger celle d'hier. Elle est passée au vert le
+    // 12 septembre alors que la capture qu'elle citait avait changé de
+    // section — elle ne défendait donc plus ce pour quoi elle avait été
+    // écrite.
+    // ⚠️ LA SEULE EXCEPTION EST LE PAYSAGE, et elle se déduit : le tableau de
+    // bord est une capture RECTANGULAIRE de l'écran réel, qui porte un filet
+    // (`.duo-ecran img`) précisément parce qu'aucun cadre n'est dans son PNG.
+    const paysages = [...sansCommentaires(accueil).matchAll(
+      /paysage:\s*true[\s\S]{0,400}?'(\/vitrine\/[^']+\.png)'/g,
+    )].map((m) => m[1])
+    const telephones = capturesDeLaPage().filter((src) => !paysages.includes(src))
+    // Quatre au moins : les trois gestes, et le téléphone du diaporama.
+    expect(telephones.length).toBeGreaterThanOrEqual(4)
+    for (const src of telephones) {
+      expect(src, `${src} n’est pas une capture encadrée`).toMatch(/-encadre\.png$/)
+    }
+    // Les deux endroits qui les portent : le téléphone du diaporama, et les
+    // trois gestes.
+    for (const selecteur of ['\\.duo-tel img', '\\.etape-vue']) {
+      const bloc = sansCommentaires(
+        new RegExp(`${selecteur}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '',
+      )
+      expect(bloc.length, `${selecteur} n’a plus de règle`).toBeGreaterThan(0)
+      for (const interdit of ['border', 'box-shadow', 'radius']) {
+        expect(bloc, `${selecteur} ne doit pas porter ${interdit}`).not.toContain(interdit)
+      }
+    }
+  })
+
+  it('⚠️ les trois gestes portent chacun leur capture', () => {
+    // Demande de Julien, 12 septembre 2026 : « mets des captures encadrées
+    // section Trois gestes ». Un geste sans image redevient une ligne de texte
+    // au milieu de deux illustrations — c'est le rang dépareillé qui se
+    // remarque, pas l'absence.
+    const code = sansCommentaires(accueil)
+    const etapes = /const ETAPES = \[([\s\S]*?)\n\]/.exec(code)?.[1] ?? ''
+    expect(etapes.length).toBeGreaterThan(0)
+    expect(etapes.match(/title:/g) ?? []).toHaveLength(3)
+    // Autant d'images que de gestes, et chacune avec son texte de remplacement.
+    expect(etapes.match(/src: '\/vitrine\//g) ?? []).toHaveLength(3)
+    expect(etapes.match(/alt: '/g) ?? []).toHaveLength(3)
+    // Et le rendu les affiche, sous le même texte de remplacement traduit.
+    expect(code).toMatch(/className="etape-vue" src=\{e\.image\.src\}/)
+    expect(code).toContain('alt={t(e.image.alt)}')
+  })
+
+  it('⚠️ aucune capture ne sert DEUX FOIS sur la page', () => {
+    // C'est la raison pour laquelle le diaporama montre la fiche du superviseur
+    // et non l'écran de comptage (Julien, 12 septembre 2026 : « pour éviter des
+    // doublons de capture »). Deux fois la même image sur une page donne
+    // l'impression qu'on n'a qu'un écran à montrer.
+    const captures = capturesDeLaPage()
+    expect(new Set(captures).size, `capture en double : ${captures.join(', ')}`)
+      .toBe(captures.length)
+  })
+
+  it('et chacune de ces captures EXISTE', () => {
+    // Une image manquante ne casse pas le build : elle laisse un trou dans la
+    // vitrine. Même garde que le guide de prise en main.
+    for (const src of capturesDeLaPage()) {
+      const fichier = path.resolve(__dirname, '../public' + src)
+      expect(statSync(fichier).isFile(), `${src} est absent de public/`).toBe(true)
     }
   })
 

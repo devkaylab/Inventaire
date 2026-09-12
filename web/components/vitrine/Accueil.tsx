@@ -70,10 +70,44 @@ const PREUVES = [
  * jamais « Vous préparez » ni « L'équipe compte ». Une vitrine dit ce qu'on
  * gagne, jamais ce qu'on évite.
  */
+/*
+ * ⚠️ LES TROIS CAPTURES SONT DÉJÀ ENCADRÉES, sur fond TRANSPARENT : le corps du
+ * téléphone est DANS l'image (`docs/entreprise/deck/encadrees/`, dessiné par
+ * `cadrer()` de la charte). `.etape-vue img` ne porte donc ni filet, ni ombre,
+ * ni rayon — même règle que le téléphone du diaporama. Les redessiner en CSS
+ * ferait deux géométries du même téléphone, qui divergeraient au premier
+ * ajustement.
+ *
+ * ⚠️ AUCUNE CAPTURE NE SERT DEUX FOIS SUR LA PAGE. C'est pour ça que le
+ * diaporama montre la fiche du superviseur et non l'écran de comptage : ce
+ * dernier illustre « Comptez » ici. Avant d'en poser une nouvelle, vérifier
+ * qu'elle n'est pas déjà quelque part — un test le refuse.
+ */
 const ETAPES = [
-  { title: 'Préparez', desc: 'Un fichier de stock, des étiquettes imprimées.' },
-  { title: 'Comptez', desc: 'Chacun scanne avec son téléphone, chacun dans son rayon.' },
-  { title: 'Arbitrez', desc: 'Comptage et audit se comparent. Vous tranchez sur le bon compte, puis vous exportez.' },
+  {
+    title: 'Préparez',
+    desc: 'Un fichier de stock, des étiquettes imprimées.',
+    image: {
+      src: '/vitrine/nouvel-inventaire-encadre.png',
+      alt: 'La création d’un inventaire dans l’application : nom, magasin, code, mode balises',
+    },
+  },
+  {
+    title: 'Comptez',
+    desc: 'Chacun scanne avec son téléphone, chacun dans son rayon.',
+    image: {
+      src: '/vitrine/comptage-encadre.png',
+      alt: 'L’écran de comptage de l’application, dans un rayon',
+    },
+  },
+  {
+    title: 'Arbitrez',
+    desc: 'Comptage et audit se comparent. Vous tranchez sur le bon compte, puis vous exportez.',
+    image: {
+      src: '/vitrine/audit-encadre.png',
+      alt: 'Les écarts d’audit : le compte du compteur, celui de l’auditeur, et la quantité retenue',
+    },
+  },
 ]
 
 export function Accueil({ langue }: { langue: Langue }) {
@@ -172,9 +206,13 @@ export function Accueil({ langue }: { langue: Langue }) {
             <div className="etapes">
               {ETAPES.map((e, i) => (
                 <div className="etape" data-reveal={i + 1} key={e.title}>
-                  <span className="etape-no">{i + 1}</span>
-                  <h3>{t(e.title)}</h3>
-                  <p>{t(e.desc)}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="etape-vue" src={e.image.src} alt={t(e.image.alt)} />
+                  <div className="etape-dire">
+                    <span className="etape-no">{i + 1}</span>
+                    <h3>{t(e.title)}</h3>
+                    <p>{t(e.desc)}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -194,17 +232,26 @@ export function Accueil({ langue }: { langue: Langue }) {
               lecture={t('Reprendre le diaporama')}
               diapos={[
                 {
-                  titre: t('Du scan dans le rayon'),
-                  intro: t('Un téléphone, une étiquette, et le comptage commence.'),
+                  /*
+                    ⚠️ LE TEXTE SUIT LA CAPTURE, et la capture a changé le
+                    12 septembre 2026 : l'écran de comptage illustre désormais
+                    « Comptez » plus haut, et aucune capture ne sert deux fois
+                    sur la page. Ces quatre points décrivaient le viseur ; ils
+                    décrivent maintenant ce que la fiche montre RÉELLEMENT —
+                    une légende qui ne correspond plus à son image se remarque
+                    avant le reste.
+                  */
+                  titre: t('L’inventaire dans la poche'),
+                  intro: t('Le superviseur suit son inventaire depuis le rayon, sans remonter au bureau.'),
                   image: {
-                    src: '/vitrine/comptage-encadre.png',
-                    alt: t('L’écran de comptage de l’application, dans un rayon'),
+                    src: '/vitrine/inventaire-superviseur-encadre.png',
+                    alt: t('La fiche d’un inventaire dans l’application : progression, balises restantes et actions'),
                   },
                   points: [
-                    { titre: t('La balise ouverte est nommée'), texte: t('Surface de vente, balise 1000 — on sait toujours où l’on compte.') },
-                    { titre: t('Trois façons de scanner'), texte: t('La caméra, la saisie au clavier, ou une douchette Bluetooth.') },
-                    { titre: t('Scan automatique'), texte: t('On vise, ça compte. Pas de bouton à presser entre deux articles.') },
-                    { titre: t('Le réseau peut tomber'), texte: t('Le comptage continue en réserve et repart tout seul au retour.') },
+                    { titre: t('L’avancement en un chiffre'), texte: t('Les balises comptées, celles auditées, et les pièces derrière.') },
+                    { titre: t('Ce qui reste est nommé'), texte: t('52 balises pas encore comptées — et les emplacements concernés.') },
+                    { titre: t('Le superviseur compte aussi'), texte: t('Compter ou auditer se lance depuis le même écran que le suivi.') },
+                    { titre: t('Tout est à portée'), texte: t('Inviter quelqu’un, lire les écarts, sortir le rapport, clôturer.') },
                   ],
                 },
                 {
