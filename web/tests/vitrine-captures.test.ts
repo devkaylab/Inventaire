@@ -26,10 +26,32 @@ const PAGES_ILLUSTREES = readdirSync(DOSSIER)
   .map((f) => [f, sansCommentaires(readFileSync(path.join(DOSSIER, f), 'utf8'))] as const)
   .filter(([, code]) => code.includes('bloc-illustre'))
 
-/** Les captures qu'une page pose réellement, dans l'ordre. */
-const capturesDe = (code: string) =>
-  [...code.matchAll(/'(\/vitrine\/[^']+\.(?:png|jpg))'/g)].map((m) => m[1])
-    .concat([...code.matchAll(/src="(\/vitrine\/[^"]+\.(?:png|jpg))"/g)].map((m) => m[1]))
+/**
+ * Les images qu'une page pose, dans l'ordre — la source PRINCIPALE de chaque
+ * `<img>`, pas les variantes d'un `srcset` : celles-ci répètent le même
+ * fichier par construction, et les compter ferait crier au doublon.
+ *
+ * ⚠️ Le `.webp` est dans la liste depuis le 12 septembre 2026. Il n'y était
+ * pas, et les trois photographies posées ce jour-là sont passées SOUS TOUTES
+ * LES GARDES sans en déclencher une seule — ni le doublon, ni l'existence du
+ * fichier. Une garde qui énumère des extensions ne voit que celles d'hier.
+ */
+const imagesDe = (code: string) =>
+  [...code.matchAll(/(?:src=|src: )["'](\/vitrine\/[^"']+)["']/g)].map((m) => m[1])
+
+/** Tout ce qui est référencé, variantes de `srcset` comprises. */
+const fichiersDe = (code: string) =>
+  [...code.matchAll(/\/vitrine\/[\w/-]+\.(?:png|jpg|jpeg|webp|avif)/g)].map((m) => m[0])
+
+/**
+ * ⚠️ LA NATURE D'UNE IMAGE SE LIT DANS SON CHEMIN, pas dans une liste tenue à
+ * la main : une PHOTOGRAPHIE vit sous `/vitrine/photos/`, une capture d'écran
+ * ailleurs. C'est ce qui permet aux deux de coexister sur une page sans qu'une
+ * garde écrite pour l'une refuse l'autre.
+ */
+const estPhoto = (src: string) => src.startsWith('/vitrine/photos/')
+const capturesDe = (code: string) => imagesDe(code).filter((s) => !estPhoto(s))
+const photosDe = (code: string) => imagesDe(code).filter(estPhoto)
 
 /**
  * Les CORPS des requêtes média d'une largeur donnée — bornés par accolades,
@@ -88,9 +110,9 @@ describe('les pages illustrées', () => {
     // bord sert sur l'accueil ET sur « Pourquoi nous choisir », parce que
     // c'est le seul écran qui montre ce que ces deux passages affirment.
     for (const [f, code] of PAGES_ILLUSTREES) {
-      const captures = capturesDe(code)
-      expect(new Set(captures).size, `${f} : capture en double — ${captures.join(', ')}`)
-        .toBe(captures.length)
+      const images = imagesDe(code)
+      expect(new Set(images).size, `${f} : image en double — ${images.join(', ')}`)
+        .toBe(images.length)
     }
   })
 
@@ -98,7 +120,9 @@ describe('les pages illustrées', () => {
     // Une image manquante ne casse pas le build : elle laisse un trou dans la
     // page. Même garde que le guide de prise en main.
     for (const [f, code] of PAGES_ILLUSTREES) {
-      for (const src of capturesDe(code)) {
+      // ⚠️ Les variantes du `srcset` aussi : c'est justement celle qu'on ne
+      // regarde jamais, la petite, qui manquerait sans qu'on s'en aperçoive.
+      for (const src of fichiersDe(code)) {
         const fichier = path.resolve(__dirname, '../public' + src)
         expect(statSync(fichier).isFile(), `${f} : ${src} est absent de public/`).toBe(true)
       }
@@ -132,6 +156,70 @@ describe('le cadre est dans l’image, jamais dans la feuille', () => {
         expect(code, `${f} : ${nues[0]} n’est pas déclarée large`).toMatch(/large/)
       }
     }
+  })
+})
+
+describe('les photographies', () => {
+  const AVEC_PHOTOS = PAGES_ILLUSTREES.filter(([, code]) => photosDe(code).length > 0)
+
+  it('⚠️ elles sont servies en WebP, et en DEUX largeurs', () => {
+    // Les originaux sont des JPEG de 100 à 180 ko. Une seule largeur,
+    // dimensionnée pour un écran d'ordinateur, part en entier sur un téléphone
+    // qui l'affiche trois fois plus petite.
+    for (const [f, code] of AVEC_PHOTOS) {
+      for (const src of photosDe(code)) {
+        expect(src, `${f} : ${src} n’est pas en WebP`).toMatch(/\.webp$/)
+      }
+      const balises = code.match(/<img[\s\S]*?\/>/g) ?? []
+      for (const balise of balises.filter((b) => /\/vitrine\/photos\//.test(b))) {
+        expect(balise, `${f} : une photo sans srcset`).toContain('srcSet=')
+        // ⚠️ Sans `sizes`, le navigateur suppose que l'image occupe toute la
+        // fenêtre et prend la plus grande variante : le srcset ne sert alors
+        // à rien.
+        expect(balise, `${f} : un srcset sans sizes`).toContain('sizes=')
+        expect(balise.match(/\d+w/g)?.length ?? 0, `${f} : une seule largeur au srcset`)
+          .toBeGreaterThanOrEqual(2)
+      }
+    }
+  })
+
+  it('⚠️ et elles réservent leur place', () => {
+    // `width` et `height` sur la balise donnent le rapport au navigateur avant
+    // le téléchargement : sans eux le texte saute quand la photo arrive.
+    for (const [f, code] of AVEC_PHOTOS) {
+      const balises = (code.match(/<img[\s\S]*?\/>/g) ?? [])
+        .filter((b) => /\/vitrine\/photos\//.test(b))
+      expect(balises.length, `${f} : aucune balise de photo`).toBeGreaterThan(0)
+      for (const balise of balises) {
+        expect(balise, `${f} : une photo sans width`).toMatch(/width=\{\d+\}/)
+        expect(balise, `${f} : une photo sans height`).toMatch(/height=\{\d+\}/)
+      }
+    }
+  })
+
+  it('⚠️ une photo n’est PAS mise au gabarit d’un téléphone', () => {
+    // Le corps du téléphone tient dans sa colonne parce qu'il est deux fois
+    // plus haut que large ; une photo au même gabarit ferait 230 × 153, une
+    // vignette. Les deux colonnes doivent donc différer — et c'est ça qu'on
+    // vérifie, pas une valeur : le jour où 380 devient 420, la garde tient.
+    const colonne = (selecteur: string) =>
+      /grid-template-columns:\s*([^;]+);/.exec(regle(selecteur))?.[1]?.trim()
+    const telephone = colonne('\\.bloc-illustre')
+    const photo = colonne('\\.bloc-illustre--photo')
+    expect(telephone, 'le bloc illustré n’a plus de colonnes').toBeTruthy()
+    expect(photo, 'les photos ont perdu leur propre largeur').toBeTruthy()
+    expect(photo, 'une photo est mise au gabarit d’un téléphone').not.toBe(telephone)
+  })
+
+  it('⚠️ le script les prépare, on ne sert jamais l’original', () => {
+    // Les originaux vivent hors du site et n'ont aucune raison d'y entrer :
+    // ce sont les fichiers les plus lourds du dépôt.
+    const script = readFileSync(path.resolve(__dirname, '../scripts/preparer-photos.mjs'), 'utf8')
+    expect(sansCommentaires(script)).toContain('.webp(')
+    // ⚠️ Et il refuse d'agrandir : au-dessus de la source, on n'invente que
+    // des pixels, et une photo agrandie se voit plus qu'une photo un peu
+    // petite.
+    expect(sansCommentaires(script)).toMatch(/largeur > width/)
   })
 })
 

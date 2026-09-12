@@ -725,6 +725,29 @@ body:has(.site-footer) .theme-toggle { display: none; }
   border: 1px solid var(--hairline); border-radius: var(--r);
 }
 
+/* ⚠️ UNE PHOTOGRAPHIE N'A PAS LA PLACE D'UN TÉLÉPHONE. Le corps du téléphone
+   tient dans 230 px de large parce qu'il est deux fois plus haut que large ;
+   une photo au même gabarit ferait 230 × 153 — une vignette. Elle prend donc
+   380 px, et c'est aussi ce qui la distingue au premier coup d'œil d'une
+   capture d'écran.
+   ⚠️ Et elle porte SON arrondi : contrairement au téléphone, dont le cadre est
+   dans le PNG, une photo rectangulaire posée nue sur une carte lui ferait un
+   angle vif contre des angles adoucis. */
+.bloc-illustre--photo { grid-template-columns: 380px minmax(0, 1fr); }
+.blocs-illustres--alterne > .bloc-illustre--photo:nth-child(even) {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.bloc-illustre--photo .bloc-vue img { border-radius: var(--r); }
+
+/* Le bandeau qui ouvre un article : la photo prend la largeur de lecture, sans
+   cadre ni ombre — elle n'est pas un objet posé sur la page, elle EST la page à
+   cet endroit. */
+.photo-bandeau { margin: 0 0 40px; }
+.photo-bandeau img {
+  display: block; width: 100%; height: auto;
+  border-radius: var(--radius);
+}
+
 .bloc-dire h2 { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; }
 /* ⚠️ Une largeur de LECTURE, pas la largeur disponible : à côté d'une colonne
    de 230 px la ligne montait à 95 caractères, bien au-delà des 65 qui se
@@ -748,11 +771,18 @@ body:has(.site-footer) .theme-toggle { display: none; }
   .blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-dire {
     grid-column: 1; grid-row: 2;
   }
+  .bloc-illustre--photo,
+  .blocs-illustres--alterne > .bloc-illustre--photo:nth-child(even) {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .bloc-vue img { max-width: 230px; }
   /* ⚠️ Le tableau de bord prend ce qu'il peut : sur un téléphone il dit « il y
      a un tableau de bord », il ne se lit pas. C'est une limite du support, pas
-     un réglage — le texte à côté, lui, dit ce qu'on y voit. */
-  .bloc-illustre--large .bloc-vue img { max-width: none; }
+     un réglage — le texte à côté, lui, dit ce qu'on y voit.
+     ⚠️ Une photographie non plus ne se borne pas à 230 px : une photo réduite
+     de moitié au milieu d'un article ne montre plus rien. */
+  .bloc-illustre--large .bloc-vue img,
+  .bloc-illustre--photo .bloc-vue img { max-width: none; }
 }
 
 /* Sur un téléphone, 38 px de marge intérieure de chaque côté mangent un

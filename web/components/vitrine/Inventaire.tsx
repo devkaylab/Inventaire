@@ -37,19 +37,58 @@ export function Inventaire({ langue }: { langue: Langue }) {
         </section>
 
         {/*
+          ⚠️ LE BANDEAU N'EST PAS UNE ILLUSTRATION, C'EST LE SUJET. Une étiquette
+          imprimée collée sur une glissière, et un téléphone qui la vise : c'est
+          exactement ce que le produit fait faire, et ça se comprend avant
+          d'avoir lu une ligne. Il ouvre l'article parce qu'aucun paragraphe
+          n'en a besoin à lui seul — le poser dans une carte l'aurait rattaché
+          à un argument qu'il ne sert pas.
+
+          ⚠️ DEUX LARGEURS, ET UN `sizes` QUI DIT LA VÉRITÉ. Sans lui, le
+          navigateur suppose que l'image occupe toute la fenêtre et prend la
+          plus grande variante, quelle que soit la place réelle. Les valeurs
+          sont MESURÉES, pas devinées : 1080 px au plus (la largeur du
+          `.container`), et la fenêtre moins ses marges en dessous — 342 px
+          relevés sur un écran de 390.
+        */}
+        <div className="container">
+          <figure className="photo-bandeau" data-reveal="0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/vitrine/photos/etiquette-1264.webp"
+              srcSet="/vitrine/photos/etiquette-640.webp 640w, /vitrine/photos/etiquette-1264.webp 1264w"
+              sizes="(min-width: 1128px) 1080px, calc(100vw - 48px)"
+              width={1264}
+              height={632}
+              alt={t('Une étiquette QR imprimée, collée sur la glissière d’un rayon, et un téléphone qui la vise')}
+            />
+          </figure>
+        </div>
+
+        {/*
           ⚠️ UNE CAPTURE N'APPARAÎT QUE LÀ OÙ UN ÉCRAN MONTRE VRAIMENT CE QUE LE
-          PARAGRAPHE DÉCRIT. Les deux blocs qui expliquent un PHÉNOMÈNE — la
-          démarque inconnue, les anomalies de gestion — n'en portent pas :
-          aucun écran ne montre un vol, une casse ou une erreur de réception,
-          et une capture posée là illustrerait le produit, pas le sujet. Cette
-          page est un article de fond, pas une brochure ; c'est ce qui la fait
-          trouver sur « inventaire magasin », et la remplir de captures
+          PARAGRAPHE DÉCRIT — et une PHOTOGRAPHIE là où le paragraphe décrit
+          un phénomène. Les deux blocs du milieu expliquent ce qui se passe
+          dans un magasin, pas ce que fait le produit : aucun écran ne montre
+          un vol, une casse ou une erreur de réception. Ils sont restés nus
+          jusqu'au 12 septembre 2026 faute de matière ; ils portent maintenant
+          une photo, qui prouve ce qu'une capture n'aurait fait qu'illustrer de
+          loin.
+
+          Cette page est un article de fond, pas une brochure : c'est ce qui la
+          fait trouver sur « inventaire magasin », et la remplir d'images
           décoratives lui ferait perdre les deux.
 
-          ⚠️ D'où l'ABSENCE d'alternance ici, contrairement à « Pourquoi nous
-          choisir » : avec deux blocs sans capture au milieu, une rangée sur
-          deux sauterait de côté sans raison lisible. La capture reste à
-          gauche, comme une marge de figures.
+          ⚠️ UNE PHOTO N'A PAS LA MÊME PLACE QU'UN TÉLÉPHONE. Le corps du
+          téléphone tient dans 230 px ; une photographie y deviendrait une
+          vignette. D'où `--photo`, qui lui donne 380 px et son propre arrondi
+          — un téléphone, lui, porte déjà le sien dans le PNG.
+
+          ⚠️ ET PAS D'ALTERNANCE ICI, contrairement à « Pourquoi nous
+          choisir » : cette page mêle deux formats d'image, et une rangée sur
+          deux qui saute de côté ferait valser le regard entre un téléphone de
+          230 px et une photo de 380. L'image reste à gauche, comme une marge
+          de figures.
         */}
         <section className="section" style={{ paddingTop: 8 }}>
           <div className="container blocs-illustres">
@@ -76,35 +115,61 @@ export function Inventaire({ langue }: { langue: Langue }) {
               </div>
             </div>
 
-            <div className="card" data-reveal="0" style={CARTE}>
-              <h2 style={H2}>{t('La démarque inconnue : ce que le stock théorique cache')}</h2>
-              <div style={CORPS}>
-                <p style={P}>
-                  {t('La')} <strong>{t('démarque inconnue')}</strong>{t(', c’est la marchandise disparue sans explication : elle figure au stock théorique, mais elle n’est plus en rayon. Selon les études du secteur, elle coûte de l’ordre de 1 à 2 % du chiffre d’affaires du commerce de détail — souvent plus que la marge nette du magasin.')}
-                </p>
-                <p style={P}>
-                  {t('Ses causes se répartissent en quatre familles : le')} <strong>{t('vol externe')}</strong>{t(' (à l’étalage), le')} <strong>{t('vol interne')}</strong>{t(', la')} <strong>{t('casse et la perte')}</strong>{t(' (produits abîmés, périmés, jetés sans être enregistrés) et les')}
-                  <strong> {t('erreurs administratives')}</strong>{t(' — réceptions mal saisies, erreurs de caisse, retours fournisseurs non déduits.')}
-                </p>
-                <p style={P}>
-                  {t('Un magasin qui ne compte qu’une fois par an découvre sa démarque douze mois trop tard, en un seul bloc, sans pouvoir dire ni où ni quand elle s’est produite. Compter souvent, c’est transformer une perte annuelle subie en signaux précoces sur lesquels on peut agir : renforcer un rayon, revoir une procédure de réception, sécuriser une réserve.')}
-                </p>
+            <div className="card bloc-illustre bloc-illustre--photo" data-reveal="0" style={CARTE}>
+              <figure className="bloc-vue">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/vitrine/photos/reserve-sombre-760.webp"
+                  srcSet="/vitrine/photos/reserve-sombre-380.webp 380w, /vitrine/photos/reserve-sombre-760.webp 760w"
+                  sizes="(min-width: 900px) 380px, calc(100vw - 116px)"
+                  width={760}
+                  height={510}
+                  alt={t('Deux personnes comptent au téléphone dans une réserve mal éclairée')}
+                />
+              </figure>
+              <div className="bloc-dire">
+                <h2 style={H2}>{t('La démarque inconnue : ce que le stock théorique cache')}</h2>
+                <div style={CORPS}>
+                  <p style={P}>
+                    {t('La')} <strong>{t('démarque inconnue')}</strong>{t(', c’est la marchandise disparue sans explication : elle figure au stock théorique, mais elle n’est plus en rayon. Selon les études du secteur, elle coûte de l’ordre de 1 à 2 % du chiffre d’affaires du commerce de détail — souvent plus que la marge nette du magasin.')}
+                  </p>
+                  <p style={P}>
+                    {t('Ses causes se répartissent en quatre familles : le')} <strong>{t('vol externe')}</strong>{t(' (à l’étalage), le')} <strong>{t('vol interne')}</strong>{t(', la')} <strong>{t('casse et la perte')}</strong>{t(' (produits abîmés, périmés, jetés sans être enregistrés) et les')}
+                    <strong> {t('erreurs administratives')}</strong>{t(' — réceptions mal saisies, erreurs de caisse, retours fournisseurs non déduits.')}
+                  </p>
+                  <p style={P}>
+                    {t('Un magasin qui ne compte qu’une fois par an découvre sa démarque douze mois trop tard, en un seul bloc, sans pouvoir dire ni où ni quand elle s’est produite. Compter souvent, c’est transformer une perte annuelle subie en signaux précoces sur lesquels on peut agir : renforcer un rayon, revoir une procédure de réception, sécuriser une réserve.')}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="card" data-reveal="0" style={CARTE}>
-              <h2 style={H2}>{t('Ce que l’inventaire révèle d’autre')}</h2>
-              <div style={CORPS}>
-                <p style={P}>
-                  {t('L’écart de comptage est un révélateur d’anomalies de gestion que rien d’autre ne montre :')}
-                </p>
-                <p style={P}>
-                  <strong>{t('Les stocks négatifs')}</strong>{t(' — le logiciel affiche −3 sur une référence : impossible physiquement, donc une erreur de saisie ou un code-barres qui encaisse un article pour un autre.')} <strong>{t('Les références fantômes')}</strong>{t(' — jamais vendues, jamais comptées, mais toujours au catalogue, qui gonflent la valeur de stock.')} <strong>{t('Les articles déplacés')}</strong>{t(' — présents mais introuvables, donc réassortis pour rien.')}
-                  <strong> {t('Les codes-barres inconnus')}</strong>{t(' — des produits bien réels que le référentiel ne connaît pas, signe d’une réception passée à côté du système.')}
-                </p>
-                <p style={P}>
-                  {t('Corriger ces anomalies, c’est l’autre moitié de la valeur d’un inventaire : des commandes mieux calibrées, moins de ruptures fictives, une valeur de stock sincère au bilan — et une équipe qui cesse de chercher des produits qui n’existent plus.')}
-                </p>
+            <div className="card bloc-illustre bloc-illustre--photo" data-reveal="0" style={CARTE}>
+              <figure className="bloc-vue">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/vitrine/photos/reserve-760.webp"
+                  srcSet="/vitrine/photos/reserve-380.webp 380w, /vitrine/photos/reserve-760.webp 760w"
+                  sizes="(min-width: 900px) 380px, calc(100vw - 116px)"
+                  width={760}
+                  height={510}
+                  alt={t('Deux personnes relèvent le stock d’une réserve, l’une au téléphone, l’autre sur papier')}
+                />
+              </figure>
+              <div className="bloc-dire">
+                <h2 style={H2}>{t('Ce que l’inventaire révèle d’autre')}</h2>
+                <div style={CORPS}>
+                  <p style={P}>
+                    {t('L’écart de comptage est un révélateur d’anomalies de gestion que rien d’autre ne montre :')}
+                  </p>
+                  <p style={P}>
+                    <strong>{t('Les stocks négatifs')}</strong>{t(' — le logiciel affiche −3 sur une référence : impossible physiquement, donc une erreur de saisie ou un code-barres qui encaisse un article pour un autre.')} <strong>{t('Les références fantômes')}</strong>{t(' — jamais vendues, jamais comptées, mais toujours au catalogue, qui gonflent la valeur de stock.')} <strong>{t('Les articles déplacés')}</strong>{t(' — présents mais introuvables, donc réassortis pour rien.')}
+                    <strong> {t('Les codes-barres inconnus')}</strong>{t(' — des produits bien réels que le référentiel ne connaît pas, signe d’une réception passée à côté du système.')}
+                  </p>
+                  <p style={P}>
+                    {t('Corriger ces anomalies, c’est l’autre moitié de la valeur d’un inventaire : des commandes mieux calibrées, moins de ruptures fictives, une valeur de stock sincère au bilan — et une équipe qui cesse de chercher des produits qui n’existent plus.')}
+                  </p>
+                </div>
               </div>
             </div>
 
