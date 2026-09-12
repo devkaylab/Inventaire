@@ -4209,8 +4209,14 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
      que la capture n'en demande que 1 472. On coupait faute de place dans un
      gabarit, pas faute de place à l'écran.
      Le plafond de 1 900 px existe pour les très grands écrans : au-delà, la
-     scène cesse de grandir et le bloc se recentre. */
-  --scene: min(calc(100vw - 48px), 1900px);
+     scène cesse de grandir et le bloc se recentre.
+     ⚠️ ELLE S'ARRÊTE À 48 px DU BORD, PAS À 24. Constat de Julien, 12 septembre
+     2026 : « le dashboard sort de l'écran ». Mesuré en production à 1700 px :
+     rien ne débordait — `scrollWidth` égal à la fenêtre — mais le texte
+     s'arrêtait à 24 px du bord, donc collé au point qu'on le lit comme une
+     coupure, et une capture d'écran en rogne le dernier caractère. Un
+     paragraphe a besoin de la même marge que le reste du site. */
+  --scene: min(calc(100vw - 96px), 1900px);
   width: var(--scene);
   margin-inline: calc((100% - var(--scene)) / 2);
 

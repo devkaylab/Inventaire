@@ -434,6 +434,14 @@ describe('le produit se voit', () => {
     expect(bloc).toMatch(/--scene: min\(calc\(100vw/)
     expect(bloc).toMatch(/width: var\(--scene\)/)
 
+    // ⚠️ MAIS ELLE S'ARRÊTE À 48 px DU BORD. Poussée à 24, le texte se
+    // retrouvait collé et se lisait comme coupé — « le dashboard sort de
+    // l'écran », alors que rien ne débordait vraiment. Le retrait vaut donc
+    // deux fois la marge voulue.
+    const retrait = /--scene: min\(calc\(100vw - (\d+)px\)/.exec(bloc)?.[1]
+    expect(retrait, 'le retrait de la scène doit être chiffré').toBeDefined()
+    expect(Number(retrait) / 2, 'la scène doit laisser respirer le texte').toBeGreaterThanOrEqual(48)
+
     // ⚠️ Et la colonne de la scène est bornée : dimensionnée par son contenu,
     // elle grandirait avec une diapositive plus large que la section, et la
     // page entière déborderait par la droite.
