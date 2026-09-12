@@ -129,10 +129,15 @@ export function DiaporamaProduit({
     <div
       className="diaporama"
       ref={scene}
-      onMouseEnter={() => setEnPause(true)}
-      onMouseLeave={() => setEnPause(false)}
-      /* Le clavier compte autant que la souris : on ne fait pas défiler la
-         section sous les doigts de quelqu'un qui la parcourt à la tabulation. */
+      /* ⚠️ LE SURVOL DE LA SCÈNE NE MET PAS EN PAUSE, et c'est un correctif :
+         cette section fait la hauteur de l'écran et toute sa largeur, donc le
+         curseur s'y trouve presque toujours après le défilement qui l'amène.
+         La pause y devenait permanente et l'avance n'existait pas — constat de
+         Julien, 12 septembre 2026 : « le slideshow ne défile pas ». Elle est
+         gardée là où elle veut dire quelque chose : sur la barre de commandes,
+         qu'on survole quand on s'apprête à cliquer.
+         Le clavier, lui, met toujours en pause : on ne fait pas défiler la
+         section sous les doigts de qui la parcourt à la tabulation. */
       onFocusCapture={() => setEnPause(true)}
       onBlurCapture={() => setEnPause(false)}
     >
@@ -166,7 +171,11 @@ export function DiaporamaProduit({
         </div>
       ))}
 
-      <div className="diaporama-barre">
+      <div
+        className="diaporama-barre"
+        onMouseEnter={() => setEnPause(true)}
+        onMouseLeave={() => setEnPause(false)}
+      >
         <button type="button" className="diaporama-nav" onClick={() => aller(courante - 1)}>
           {precedent}
         </button>

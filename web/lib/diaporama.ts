@@ -9,9 +9,14 @@
  * navigateur ; le composant ne fait plus que la brancher.
  */
 
-/** Entre deux points qui se révèlent, et avant le premier. */
-export const PAS_MS = 1000
-export const PREMIER_MS = 220
+/**
+ * Entre deux points qui se révèlent, et avant le premier.
+ * ⚠️ Resserrés le 12 septembre 2026 à la demande de Julien : à une seconde
+ * l'un, les quatre points d'une diapositive mettaient 3,2 s à s'installer, et
+ * la moitié du temps de lecture passait à attendre le dernier.
+ */
+export const PAS_MS = 600
+export const PREMIER_MS = 150
 
 /**
  * ⚠️ ELLE DOIT LAISSER LES POINTS ARRIVER, PUIS SE LIRE. Sur une diapositive à

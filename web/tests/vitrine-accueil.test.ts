@@ -502,10 +502,29 @@ describe('le produit se voit', () => {
     expect(diapo).toMatch(/addEventListener\('visibilitychange'/)
     expect(diapo).toMatch(/removeEventListener\('visibilitychange'/)
 
-    // ⚠️ Le clavier compte autant que la souris : sans `onFocusCapture`, la
+    // ⚠️ LE SURVOL NE PORTE PAS SUR LA SCÈNE ENTIÈRE. Elle fait la hauteur de
+    // l'écran et toute sa largeur : le curseur s'y trouve presque toujours
+    // après le défilement qui l'amène, donc la pause y devenait permanente et
+    // l'avance n'existait pas — « le slideshow ne défile pas », 12 septembre
+    // 2026. La pause au survol vit sur la barre de commandes, qu'on survole
+    // quand on s'apprête à cliquer.
+    // ⚠️ On DÉCOUPE sur les attributs de classe : un motif qui court « jusqu'au
+    // premier `>` » s'arrête sur la flèche d'une fonction, et ne voit qu'un
+    // tiers de la balise.
+    const parClasse = diapo.split('className=')
+    const scene = parClasse.find((b) => b.startsWith('"diaporama"')) ?? ''
+    expect(scene.length).toBeGreaterThan(0)
+    expect(scene, 'survoler la scène ne doit pas suspendre l’avance').not.toContain('onMouseEnter')
+    const barre = parClasse.find((b) => b.startsWith('"diaporama-barre"')) ?? ''
+    expect(barre.length).toBeGreaterThan(0)
+    for (const attr of ['onMouseEnter', 'onMouseLeave']) {
+      expect(barre, `la barre doit porter ${attr}`).toContain(attr)
+    }
+
+    // ⚠️ Le clavier, lui, met toujours en pause : sans `onFocusCapture`, la
     // section défile sous les doigts de qui la parcourt à la tabulation.
-    for (const attr of ['onMouseEnter', 'onMouseLeave', 'onFocusCapture', 'onBlurCapture']) {
-      expect(diapo, `le conteneur doit porter ${attr}`).toContain(attr)
+    for (const attr of ['onFocusCapture', 'onBlurCapture']) {
+      expect(scene, `la scène doit porter ${attr}`).toContain(attr)
     }
 
     // La préférence système est lue au moment de décider.
