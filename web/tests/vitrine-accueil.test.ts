@@ -387,13 +387,14 @@ describe('le produit se voit', () => {
     }
   })
 
-  it('⚠️ la capture du tableau de bord garde sa taille et DÉBORDE À GAUCHE', () => {
+  it('⚠️ la capture tient ENTIÈRE, et la section ne bouge pas d’une diapo à l’autre', () => {
     // Demande de Julien, 12 septembre 2026 : « Dashboard text à droite de la
-    // capture pas en dessous […] ne rétrécis pas le dashboard, bouge-le un peu
-    // à gauche ». La capture fait 1 472 px à 1568 px d'écran et le texte en
-    // réclame 420 de plus : la ranger entière à côté de son texte reviendrait à
-    // la réduire de moitié, ce qui avait fait dire « ça fait trop bizarre
-    // d'avoir deux tailles ». Elle sort donc du cadre par la gauche.
+    // capture pas en dessous », puis « le dashboard sort de l'écran ». Ses deux
+    // contraintes ne tenaient pas ensemble — une capture entière À SA TAILLE
+    // plus une colonne de texte réclament 1 940 px quand un écran de 1700 en
+    // offre 1 604 — et c'est la taille qui cède, arbitré par lui : « capture
+    // plus petite mais la section ne doit pas bouger de taille entre les deux
+    // slides, la première slide est la référence ».
     const bloc = sansCommentaires(/\.duo--paysage\s*\{([^}]*)\}/.exec(css)?.[1] ?? '')
     expect(bloc.length).toBeGreaterThan(0)
 
@@ -401,31 +402,26 @@ describe('le produit se voit', () => {
     expect(bloc).toContain('grid-template-columns')
     expect(bloc).not.toContain('display: block')
 
-    // ⚠️ LA LARGEUR DE LA CAPTURE NE DÉPEND PAS DE SA COLONNE. C'est elle qui
-    // accorde les deux diapositives — 1 472 px de large font 705 px de haut,
-    // soit deux pixels du téléphone d'en face. Un `width: 100%` la ferait
-    // suivre sa colonne, donc grandir avec la scène, et les hauteurs se
-    // désaccorderaient de 200 px.
-    const img = sansCommentaires(
-      /\.duo--paysage \.duo-ecran img\s*\{([^}]*)\}/.exec(css)?.[1] ?? '',
-    )
-    expect(img.length).toBeGreaterThan(0)
-    expect(img).toMatch(/width: min\(/)
-    expect(img).not.toMatch(/width: 100%/)
+    // ⚠️ RIEN NE FAIT PLUS DÉBORDER LA CAPTURE. Elle gardait sa taille et
+    // dépassait par la gauche de ce qui manquait — 288 px à 1700, 420 à 1568 —
+    // et on y perdait le rail et le début des libellés. Elle rentre désormais
+    // dans sa colonne, comme n'importe quelle image.
+    const paysage = css.slice(css.indexOf('.duo--paysage {'))
+    const avantMedia = paysage.slice(0, paysage.indexOf('@media'))
+    for (const deborde of ['width: calc(100% +', 'margin-left: calc(-1', 'justify-content: flex-end']) {
+      expect(sansCommentaires(avantMedia), `la capture ne doit plus déborder (${deborde})`)
+        .not.toContain(deborde)
+    }
 
-    // ⚠️ SON BORD DROIT SE CALE SUR SA COLONNE, et c'est ce qui rend le débord
-    // AUTOMATIQUE : il vaut exactement ce qui manque, et tombe à zéro dès que
-    // l'écran est assez large — mesuré 396 px de capture hors cadre à 1568 px,
-    // et plus rien à 1990. Aucun seuil n'est écrit pour ça.
-    const fig = sansCommentaires(
-      /\.duo--paysage \.duo-ecran\s*\{([^}]*)\}/.exec(css)?.[1] ?? '',
-    )
-    expect(fig).toMatch(/justify-content: flex-end/)
-
-    // ⚠️ LE DÉBORD PART DONC À GAUCHE, JAMAIS À DROITE. Une abscisse négative
-    // n'est pas atteignable au défilement ; un dépassement par la droite, lui,
-    // ajouterait une barre horizontale à toute la page.
-    expect(img).not.toContain('margin-right')
+    // ⚠️ ET LA SECTION NE SAUTE PAS D'UNE DIAPOSITIVE À L'AUTRE. C'est la
+    // condition posée avec l'arbitrage : les deux occupent la même cellule de
+    // grille, donc la scène prend la hauteur de la plus haute — le téléphone,
+    // qui sert de référence — et la capture, plus courte, se centre dans le
+    // reste. Une scène qui suivrait la diapositive active la ferait sauter.
+    expect(css).toMatch(/\.diaporama > \.diapo \{[^}]*grid-row: 1;[^}]*grid-column: 1/)
+    const duo = sansCommentaires(/^\.duo \{([^}]*)\}/m.exec(css)?.[1] ?? '')
+    expect(duo, 'la capture se centre dans la hauteur que le téléphone impose')
+      .toContain('align-items: center')
 
     // ⚠️ LA SCÈNE VA JUSQU'AU BORD DE L'ÉCRAN, elle ne s'arrête pas au gabarit
     // de la section. Sans ça, sur un écran large le texte s'arrêtait à 259 px

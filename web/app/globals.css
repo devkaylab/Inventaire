@@ -4224,24 +4224,21 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   gap: 48px; max-width: none;
 }
 
-/* ⚠️ LA CAPTURE GARDE SA LARGEUR, ET SON BORD DROIT SE CALE SUR SA COLONNE.
-   C'est ce qui rend le débord AUTOMATIQUE : quand la colonne est plus étroite
-   que la capture, celle-ci dépasse à gauche d'exactement ce qui manque ; quand
-   l'écran est assez large, le dépassement tombe à zéro et la capture se voit
-   en entier, sans qu'aucun seuil n'ait été écrit.
-   ⚠️ Sa largeur ne dépend donc PAS de sa colonne. C'est elle qui accorde les
-   deux diapositives : 1 472 px de large font 705 px de haut, soit deux pixels
-   de la hauteur du téléphone d'en face, à toutes les largeurs d'écran. La
-   laisser suivre sa colonne la ferait grandir avec la scène et désaccorderait
-   les hauteurs — c'est ce qui avait fait dire « ça fait trop bizarre d'avoir
-   deux tailles ». */
-.duo--paysage .duo-ecran {
-  display: flex; justify-content: flex-end;
-}
-.duo--paysage .duo-ecran img {
-  flex: none; max-width: none;
-  width: min(calc(100vw - 48px), 1472px);
-}
+/* ⚠️ LA CAPTURE TIENT ENTIÈRE DANS SA COLONNE — elle ne déborde plus.
+   Constat de Julien, 12 septembre 2026 : « le dashboard sort de l'écran ».
+   Elle gardait 1 472 px et dépassait par la gauche de ce qui manquait, soit
+   288 px à 1700 et 420 à 1568 : on y perdait le rail et le début des libellés.
+   Deux de ses demandes ne tenaient pas ensemble — une capture entière ET sa
+   taille d'origine réclament 1 940 px alors qu'un écran de 1700 en offre
+   1 604 — et c'est la taille qui cède. Arbitré par lui.
+
+   ⚠️ MAIS LA SECTION, ELLE, NE BOUGE PAS D'UNE DIAPOSITIVE À L'AUTRE, et c'est
+   la condition qu'il a posée : « la première slide est la référence en terme de
+   taille pour la section ». Rien n'est à écrire pour ça — les deux diapositives
+   occupent la même cellule de grille, donc la scène prend la hauteur de la plus
+   haute, c'est-à-dire celle du téléphone. La capture, plus courte, se centre
+   dans le reste. Ne pas « optimiser » ce vide en laissant la scène suivre la
+   diapositive active : la section sauterait à chaque changement. */
 
 /* Sous 1180 px, le débord mangerait plus du tiers de la capture : elle reprend
    toute la largeur et son texte repasse dessous, en une rangée de points. */
