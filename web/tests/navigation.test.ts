@@ -7,6 +7,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { LIENS_PUBLICS } from '../lib/navigation'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const shell = lire('../components/AppShell.tsx')
@@ -1161,6 +1162,22 @@ describe('la barre publique : parcourir à gauche, agir à droite', () => {
 
     // Et « Se connecter » reste joignable : il quitte la barre, il entre au menu.
     expect(menu).toContain('/login')
+  })
+
+  it('⚠️ la barre mène à des PAGES, jamais à une ancre de l’accueil', () => {
+    // « Fonctionnalités » a quitté la barre le 12 septembre 2026 (demande de
+    // Julien). C'était la seule entrée qui ne menait pas à une page mais à une
+    // ancre de l'accueil — donc le seul lien qui, cliqué depuis l'accueil,
+    // renvoyait la personne là où elle était déjà.
+    //
+    // ⚠️ La garde ne nomme aucun libellé : elle refuse la FORME, donc elle
+    // couvre aussi l'entrée qu'on ajouterait demain.
+    for (const l of LIENS_PUBLICS) {
+      expect(l.href, `« ${l.libelle} » vise une ancre, pas une page`).not.toContain('#')
+    }
+    // ⚠️ Et la section visée RESTE sur l'accueil : un lien déjà parti par
+    // e-mail doit continuer de tomber quelque part.
+    expect(lire('../components/vitrine/Accueil.tsx')).toContain('id="fonctionnalites"')
   })
 
   it('les liens du site ont UNE seule définition', () => {

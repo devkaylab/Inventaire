@@ -3,10 +3,46 @@ import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
 import { traduction, type Langue } from '@/lib/traduction'
 
-const RAISONS = [
+/**
+ * ⚠️ CHAQUE RAISON MONTRE L'ÉCRAN DONT ELLE PARLE. Demande de Julien,
+ * 12 septembre 2026 : « habille la page pourquoi nous choisir avec des
+ * captures d'écran ». Six paragraphes empilés se lisaient comme un mur ; une
+ * capture par raison donne un point d'appui au regard — et prouve ce que la
+ * phrase affirme, ce qu'un texte seul ne fait pas.
+ *
+ * ⚠️ Le choix n'est pas décoratif : l'écran cité doit porter ce que les trois
+ * points annoncent. « Vos fichiers, tels quels » montre l'import qui NOMME les
+ * variantes de colonnes ; « Sérieux jusque dans les coulisses » montre le
+ * bouton « Télécharger mes données ». Une capture qui illustre vaguement le
+ * sujet ne prouve rien et se remarque.
+ *
+ * ⚠️ Les captures de téléphone sont ENCADRÉES, sur fond transparent : le corps
+ * du téléphone est dans le PNG. `.raison-vue img` ne porte donc aucun cadre.
+ * Seule exception, `large: true` — le tableau de bord est une capture
+ * RECTANGULAIRE du site, et celle-là porte un filet, comme dans le diaporama
+ * de l'accueil.
+ *
+ * ⚠️ Le tableau de bord sert AUSSI sur l'accueil, et c'est assumé : c'est le
+ * seul écran qui montre à la fois l'avancement par zone et les appareils
+ * comptés sans nommer personne — les deux choses que cette raison affirme.
+ * La règle « aucune capture deux fois » vaut DANS une page, pas entre deux.
+ */
+type Raison = {
+  icon: React.ReactElement
+  title: string
+  /** `large` : capture rectangulaire du site, et non téléphone encadré. */
+  image: { src: string; alt: string; large?: boolean }
+  points: string[]
+}
+
+const RAISONS: Raison[] = [
   {
     icon: <IconScan />,
     title: 'Vos équipes suffisent',
+    image: {
+      src: '/vitrine/bienvenue-compteur-encadre.png',
+      alt: 'La première ouverture de l’application par un compteur : les trois gestes à faire',
+    },
     points: [
       'Le téléphone que chacun a en poche devient la douchette : scan caméra, bouton virtuel, scan automatique. Aucun terminal à acheter, entretenir ou recharger en urgence la veille du comptage.',
       'Un compteur démarre sans formation : il rejoint la session avec un numéro et un code de sécurité, scanne une balise pour ouvrir sa zone, et compte. La première fois ressemble à la centième.',
@@ -16,6 +52,10 @@ const RAISONS = [
   {
     icon: <IconReport />,
     title: 'Vos fichiers, tels quels',
+    image: {
+      src: '/vitrine/importer-encadre.png',
+      alt: 'L’écran d’import : les deux fichiers attendus et les noms de colonnes reconnus',
+    },
     points: [
       'Importez votre référentiel articles et votre stock théorique en CSV ou Excel, sans les retravailler : Quantinvo reconnaît vos noms de colonnes — SKU, Code article, Référence, EAN, Code-barres, Gencod, Qté, Stock…',
       'Majuscules, accents, tirets, underscores : l’import est insensible à la mise en forme. Le fichier qui sort de votre logiciel de caisse entre dans Quantinvo.',
@@ -25,6 +65,10 @@ const RAISONS = [
   {
     icon: <IconAudit />,
     title: 'Un chiffre auquel se fier',
+    image: {
+      src: '/vitrine/rapport-encadre.png',
+      alt: 'Le rapport d’inventaire : stock théorique, stock compté, écart en unités et en valeur',
+    },
     points: [
       'Le comptage s’organise par zones et balises : chaque emplacement est ouvert, compté, clôturé. Rien n’est oublié, rien n’est compté deux fois.',
       'Les zones sensibles passent en double comptage puis en audit : les écarts entre les deux passes sont mis en évidence et arbitrés par le superviseur, article par article.',
@@ -34,6 +78,11 @@ const RAISONS = [
   {
     icon: <IconTeam />,
     title: 'Un pilotage en direct, respectueux',
+    image: {
+      src: '/vitrine/suivi.png',
+      alt: 'Le suivi d’un inventaire sur le site : progression, avancement par zone et derniers scans',
+      large: true,
+    },
     points: [
       'Le tableau de bord suit l’avancement zone par zone pendant que ça compte : vous voyez ce qui est terminé, ce qui est en cours, ce qui reste.',
       'Les écarts se traitent pendant l’inventaire, pas trois jours après : recompter une zone douteuse coûte dix minutes le jour même, une matinée la semaine suivante.',
@@ -43,6 +92,10 @@ const RAISONS = [
   {
     icon: <IconStore />,
     title: 'Libre, toute l’année',
+    image: {
+      src: '/vitrine/accueil-superviseur-encadre.png',
+      alt: 'L’accueil d’un superviseur : ses inventaires, et le bouton pour en lancer un autre',
+    },
     points: [
       'Tournant, ciblé ou complet : vous choisissez la date, le périmètre et la fréquence. Un mardi matin en janvier vaut autant qu’une nuit de décembre.',
       'La licence est par magasin, calée sur le nombre de personnes qui comptent en même temps — et les comptages sont illimités. Compter plus souvent ne coûte pas un euro de plus.',
@@ -52,6 +105,10 @@ const RAISONS = [
   {
     icon: <IconZones />,
     title: 'Sérieux jusque dans les coulisses',
+    image: {
+      src: '/vitrine/mon-compte-encadre.png',
+      alt: 'L’écran « Mon compte » : profil, téléchargement de ses données, déconnexion',
+    },
     points: [
       'Vos données résident dans l’Union européenne, chez des prestataires déclarés dans notre politique de confidentialité. Aucun traceur publicitaire, aucune mesure d’audience.',
       'Les accès sont cloisonnés : rôles séparés superviseur / compteur, codes de session par magasin, double authentification pour les comptes qui administrent.',
@@ -77,17 +134,31 @@ export function Pourquoi({ langue }: { langue: Langue }) {
           </div>
         </section>
 
+        {/*
+          ⚠️ LA CAPTURE ET LE TEXTE ALTERNENT DE CÔTÉ (`:nth-child(even)` dans la
+          feuille), et le rang porte son rang dans le DOM : une rangée sur deux
+          inversée en CSS seul laisserait l'ordre de lecture intact pour un
+          lecteur d'écran, ce qui est précisément ce qu'on veut.
+        */}
         <section className="section" style={{ paddingTop: 8 }}>
-          <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="container raisons">
             {RAISONS.map((r, i) => (
-              <div className="card" data-reveal="0" style={{ padding: '30px 34px' }} key={r.title}>
-                <div className="ico">{r.icon}</div>
-                <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' }}>
-                  <span className="raison-numero">{i + 1}.</span> {t(r.title)}
-                </h2>
-                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div
+                className={'card raison' + (r.image.large ? ' raison--large' : '')}
+                data-reveal="0"
+                key={r.title}
+              >
+                <figure className="raison-vue">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.image.src} alt={t(r.image.alt)} />
+                </figure>
+                <div className="raison-dire">
+                  <div className="ico">{r.icon}</div>
+                  <h2>
+                    <span className="raison-numero">{i + 1}.</span> {t(r.title)}
+                  </h2>
                   {r.points.map((p) => (
-                    <p key={p.slice(0, 24)} style={{ margin: 0, fontSize: 15.5 }}>{t(p)}</p>
+                    <p key={p.slice(0, 24)}>{t(p)}</p>
                   ))}
                 </div>
               </div>

@@ -660,6 +660,78 @@ body:has(.site-footer) .theme-toggle { display: none; }
 /* Numéro des six raisons, dans le titre de chaque carte. */
 .raison-numero { color: var(--accent-light); font-variant-numeric: tabular-nums; }
 
+/* ── Les six raisons, chacune avec son écran ─────────────────────────────────
+   Constat : six paragraphes empilés se lisaient comme un mur. Une capture par
+   raison donne un point d'appui au regard, et prouve ce que la phrase affirme.
+
+   ⚠️ LA CAPTURE ET LE TEXTE ALTERNENT DE CÔTÉ, et c'est la grille qui le fait :
+   le DOM garde partout l'ordre capture-puis-texte, donc l'ordre de lecture ne
+   dépend pas de la parité du rang. */
+.raisons { display: flex; flex-direction: column; gap: 24px; }
+.raison {
+  display: grid; align-items: center; gap: 44px;
+  grid-template-columns: 230px minmax(0, 1fr);
+  padding: 34px 38px;
+}
+.raison > .raison-vue { grid-column: 1; grid-row: 1; }
+.raison > .raison-dire { grid-column: 2; grid-row: 1; }
+.raison:nth-child(even) { grid-template-columns: minmax(0, 1fr) 230px; }
+.raison:nth-child(even) > .raison-vue { grid-column: 2; }
+.raison:nth-child(even) > .raison-dire { grid-column: 1; }
+
+/* ⚠️ LE TABLEAU DE BORD PREND TOUTE LA LARGEUR, ET LE TEXTE PASSE DESSOUS.
+   Mesuré : dans une colonne à côté du texte il tombait à 492 px, soit quatre
+   fois moins que sa résolution — les chiffres et les libellés du tableau de
+   bord y devenaient illisibles, donc la capture ne prouvait plus rien. C'est
+   la seule rangée qui déroge à l'alternance, et c'est parce que c'est la seule
+   capture qui n'est pas un téléphone. */
+.raison--large, .raison--large:nth-child(even) {
+  grid-template-columns: minmax(0, 1fr); gap: 26px;
+}
+.raison--large > .raison-vue,
+.raison--large:nth-child(even) > .raison-vue { grid-column: 1; grid-row: 1; }
+.raison--large > .raison-dire,
+.raison--large:nth-child(even) > .raison-dire { grid-column: 1; grid-row: 2; }
+
+/* ⚠️ NI FILET, NI OMBRE, NI RAYON sur un téléphone : son corps est DANS le PNG,
+   sur fond transparent. Un cadre CSS par-dessus en dessinerait un second.
+   Le tableau de bord, lui, est une capture RECTANGULAIRE du site : celui-là
+   porte un filet — même partage que `.duo-tel img` / `.duo-ecran img`. */
+.raison-vue { margin: 0; }
+.raison-vue img { display: block; width: 100%; height: auto; }
+.raison--large .raison-vue img {
+  border: 1px solid var(--hairline); border-radius: var(--r);
+}
+
+.raison-dire h2 { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; }
+/* ⚠️ Une largeur de LECTURE, pas la largeur disponible : à côté d'une colonne
+   de 230 px la ligne montait à 95 caractères, bien au-delà des 65 qui se
+   lisent sans perdre le début de la ligne suivante. */
+.raison-dire p { margin: 12px 0 0; color: var(--text-2); font-size: 15.5px; max-width: 62ch; }
+
+/* ⚠️ SOUS 900 px LA CAPTURE PASSE AU-DESSUS DU TEXTE, et elle se borne à
+   230 px : étirée sur la largeur d'un téléphone, elle ferait 700 px de haut et
+   il faudrait la faire défiler pour atteindre la raison qu'elle illustre. */
+@media (max-width: 900px) {
+  .raison, .raison:nth-child(even),
+  .raison--large, .raison--large:nth-child(even) {
+    grid-template-columns: minmax(0, 1fr); gap: 26px;
+  }
+  .raison > .raison-vue, .raison:nth-child(even) > .raison-vue { grid-column: 1; grid-row: 1; }
+  .raison > .raison-dire, .raison:nth-child(even) > .raison-dire { grid-column: 1; grid-row: 2; }
+  .raison-vue img { max-width: 230px; }
+  /* ⚠️ Le tableau de bord prend ce qu'il peut : sur un téléphone il dit « il y
+     a un tableau de bord », il ne se lit pas. C'est une limite du support, pas
+     un réglage — le texte à côté, lui, dit ce qu'on y voit. */
+  .raison--large .raison-vue img { max-width: none; }
+}
+
+/* Sur un téléphone, 38 px de marge intérieure de chaque côté mangent un
+   cinquième de la largeur utile. */
+@media (max-width: 520px) {
+  .raison { padding: 24px 20px; }
+}
+
 /* ── CTA band ───────────────────────────────────────────── */
 .cta-band {
   /* position + z-index : la lueur (.band-glow) se glisse en z-index -1,
