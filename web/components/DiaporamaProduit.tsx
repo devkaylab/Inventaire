@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import {
+  AUTO_MS,
+  PAS_MS,
+  PREMIER_MS,
+  avanceAutorisee,
+  suivante,
+} from '../lib/diaporama'
+
 /**
  * Le diaporama de l'accueil : le rayon, puis le bureau.
  *
@@ -9,9 +17,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * un, une seconde entre chacun, parce qu'une liste qui s'affiche d'un bloc se
  * saute et qu'un point à la fois se lit.
  *
- * ⚠️ IL N'AVANCE PAS TOUT SEUL. Une section qui tourne pendant qu'on la lit se
- * referme souvent avant qu'on ait fini son point. C'est le lecteur qui change
- * de diapositive, par les pastilles ou les flèches.
+ * ⚠️ IL AVANCE TOUT SEUL, ET S'ARRÊTE POUR DE BON AU PREMIER GESTE. Demande de
+ * Julien, 12 septembre 2026. Le risque d'une section qui tourne, c'est qu'elle
+ * se referme avant qu'on ait fini de lire : quatre garde-fous l'en empêchent —
+ * elle ne tourne que lorsqu'elle est À L'ÉCRAN, se met en pause au survol et au
+ * clavier, s'arrête définitivement dès qu'on touche une flèche ou une pastille
+ * (reprendre la main sur quelqu'un qui vient de choisir serait pire que tout),
+ * et ne démarre pas si « moins d'animation » est demandé au système.
  *
  * ⚠️ LES TEXTES ARRIVENT DÉJÀ TRADUITS. Ce composant est client, et la langue
  * de la vitrine vient de l'ADRESSE (`/` ou `/en`), pas d'un cookie : c'est donc
@@ -29,9 +41,6 @@ export type Diapo = {
   points: Point[]
 }
 
-const PAS_MS = 1000
-const PREMIER_MS = 220
-
 export function DiaporamaProduit({
   diapos,
   precedent,
@@ -45,9 +54,51 @@ export function DiaporamaProduit({
   const [vus, setVus] = useState(0)
   const minuteries = useRef<ReturnType<typeof setTimeout>[]>([])
 
+  /** Un geste du lecteur arrête l'avance — définitivement. */
+  const [arrete, setArrete] = useState(false)
+  /** La section est-elle à l'écran, dans un onglet au premier plan ? */
+  const [actif, setActif] = useState(false)
+  /** Survol ou focus clavier : on suspend le temps qu'on regarde. */
+  const [enPause, setEnPause] = useState(false)
+  const scene = useRef<HTMLDivElement>(null)
+
   const aller = useCallback((i: number) => {
+    // ⚠️ C'est ICI que l'avance s'arrête, et pas dans les gestionnaires de
+    // clic : toute navigation volontaire passe par cette fonction, donc aucune
+    // commande ajoutée plus tard ne pourra oublier de le faire.
+    setArrete(true)
     setCourante(((i % diapos.length) + diapos.length) % diapos.length)
   }, [diapos.length])
+
+  // ⚠️ NE TOURNER QUE QUAND ON EST REGARDÉ. Sans ça, la section défile pendant
+  // qu'on lit ailleurs sur la page, et on y arrive sur une diapositive prise au
+  // hasard. L'onglet en arrière-plan compte pour la même raison.
+  useEffect(() => {
+    const el = scene.current
+    if (!el) return
+    let visible = false
+    const maj = () => setActif(visible && !document.hidden)
+    const obs = new IntersectionObserver(([e]) => { visible = e.isIntersecting; maj() },
+      { threshold: 0.35 })
+    obs.observe(el)
+    document.addEventListener('visibilitychange', maj)
+    return () => { obs.disconnect(); document.removeEventListener('visibilitychange', maj) }
+  }, [])
+
+  // L'avance elle-même. `courante` est en dépendance : chaque changement
+  // réarme le compte à rebours, d'où qu'il vienne.
+  useEffect(() => {
+    // ⚠️ La préférence système est lue ICI plutôt que gardée en état : elle se
+    // lit au moment où l'on en a besoin, et ça évite d'écrire un état dans un
+    // effet. Le reste de la décision vit dans `lib/diaporama`, où elle se teste.
+    const mouvementReduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!avanceAutorisee({ arrete, actif, enPause, mouvementReduit })) return
+    const t = setTimeout(
+      () => setCourante((c) => suivante(c, diapos.length)),
+      AUTO_MS,
+    )
+    return () => clearTimeout(t)
+  }, [arrete, actif, enPause, courante, diapos.length])
 
   useEffect(() => {
     // ⚠️ On nettoie AVANT de reprogrammer : sans ça, changer vite de
@@ -75,7 +126,16 @@ export function DiaporamaProduit({
   }, [courante, diapos])
 
   return (
-    <div className="diaporama">
+    <div
+      className="diaporama"
+      ref={scene}
+      onMouseEnter={() => setEnPause(true)}
+      onMouseLeave={() => setEnPause(false)}
+      /* Le clavier compte autant que la souris : on ne fait pas défiler la
+         section sous les doigts de quelqu'un qui la parcourt à la tabulation. */
+      onFocusCapture={() => setEnPause(true)}
+      onBlurCapture={() => setEnPause(false)}
+    >
       {/*
         ⚠️ LES DEUX DIAPOSITIVES SONT EMPILÉES, PAS AFFICHÉES TOUR À TOUR.
         Elles occupent la même cellule de grille et glissent l'une vers

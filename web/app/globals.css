@@ -4167,9 +4167,18 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   transition: opacity .42s ease, transform .42s cubic-bezier(.33, 1, .68, 1),
               visibility .42s;
 }
+/* ⚠️ LE DÉCALAGE NE DÉPASSE PAS LA MARGE DISPONIBLE, et ce n'est pas une
+   coquetterie : `visibility: hidden` ne retire pas la diapositive du calcul du
+   débordement. Décalée de 56 px, celle qu'on ne voit pas poussait la page de
+   32 px vers la droite — EN PERMANENCE, pas seulement pendant l'animation — et
+   `overflow-x: clip` sur la racine ne l'arrêtait pas (mesuré : `scrollLeft` à
+   30). La scène s'arrête à 24 px du bord dans tous les cas de figure, c'est
+   donc l'amplitude maximale qui ne peut rien pousser.
+   Le débord vers la GAUCHE, lui, serait sans conséquence — mais un glissement
+   qui part toujours du même côté ne dirait plus dans quel sens on avance. */
 .diapo-active { opacity: 1; transform: none; visibility: visible; }
-.diapo-avant { opacity: 0; transform: translateX(-56px); visibility: hidden; }
-.diapo-apres { opacity: 0; transform: translateX(56px); visibility: hidden; }
+.diapo-avant { opacity: 0; transform: translateX(-24px); visibility: hidden; }
+.diapo-apres { opacity: 0; transform: translateX(24px); visibility: hidden; }
 
 /* ⚠️ LA CAPTURE DU TABLEAU DE BORD GARDE SA TAILLE ET DÉBORDE À GAUCHE.
    Demande de Julien, 12 septembre 2026 : « Dashboard text à droite de la

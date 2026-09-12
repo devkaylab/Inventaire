@@ -9,6 +9,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { OFFRES } from '../lib/offres'
+import { AUTO_MS, apparitionFinie, avanceAutorisee, suivante } from '../lib/diaporama'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const accueil = lire('../components/vitrine/Accueil.tsx')
@@ -210,8 +211,29 @@ describe('le produit se voit', () => {
     const diapo = lire('../components/DiaporamaProduit.tsx')
     expect(diapo).toContain('prefers-reduced-motion')
     expect(diapo).toMatch(/setVus\(total\)/)
-    expect(diapo).not.toContain('IntersectionObserver')
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[^}]*\{[^]*?\.duo-points li \{ opacity: 1/)
+
+    // ⚠️ CETTE GARDE INTERDISAIT `IntersectionObserver` TOUT COURT, et ce
+    // raccourci a tenu tant qu'aucun autre usage n'existait. Depuis le
+    // 12 septembre 2026 le diaporama avance seul et s'en sert pour savoir s'il
+    // est regardé. Ce qu'il faut défendre n'a pas changé : la RÉVÉLATION des
+    // points ne dépend pas du défilement. On le vérifie donc directement.
+    // ⚠️ On DÉCOUPE sur les effets au lieu de borner une expression : le
+    // rappel de l'observateur délègue à une fonction voisine, et un motif qui
+    // s'arrête à la première virgule ne voit que sa moitié.
+    const effets = diapo.split('useEffect(')
+    const observateur = effets.find((e) => e.includes('IntersectionObserver')) ?? ''
+    expect(observateur.length).toBeGreaterThan(0)
+    expect(observateur).toContain('setActif')
+    expect(observateur, 'l’observateur ne décide pas de ce qui s’affiche').not.toContain('setVus')
+
+    // Et l'effet qui révèle les points ne dépend pas de cet état : un lecteur
+    // qui ne fait pas défiler la section doit quand même voir sa liste.
+    const revelation = effets.find((e) => e.includes('setVus(')) ?? ''
+    expect(revelation.length).toBeGreaterThan(0)
+    const deps = /\}, \[([^\]]*)\]\)/.exec(revelation)?.[1] ?? ''
+    expect(deps.length).toBeGreaterThan(0)
+    expect(deps, 'la révélation ne dépend pas du défilement').not.toContain('actif')
   })
 
   it('⚠️ les deux diapositives ont la MÊME taille', () => {
@@ -429,6 +451,67 @@ describe('le produit se voit', () => {
     expect(petit).toMatch(/\.duo--paysage \.duo-points \{[^}]*flex-direction: row/)
   })
 
+  it('⚠️ le diaporama avance seul, et QUATRE choses l’en empêchent', () => {
+    // Demande de Julien, 12 septembre 2026. Le risque d'une section qui tourne,
+    // c'est qu'elle se referme avant qu'on ait fini de lire : chacun de ces
+    // quatre garde-fous répond à un défaut précis, et chacun doit suffire à
+    // lui seul à bloquer l'avance.
+    const nominal = {
+      arrete: false, actif: true, enPause: false, mouvementReduit: false,
+    }
+    expect(avanceAutorisee(nominal)).toBe(true)
+    for (const [quoi, etat] of [
+      ['le lecteur a choisi une diapositive', { ...nominal, arrete: true }],
+      ['la section n’est pas à l’écran', { ...nominal, actif: false }],
+      ['on la survole ou on la parcourt au clavier', { ...nominal, enPause: true }],
+      ['« moins d’animation » est demandé au système', { ...nominal, mouvementReduit: true }],
+    ] as const) {
+      expect(avanceAutorisee(etat), `doit s’arrêter quand ${quoi}`).toBe(false)
+    }
+
+    // ⚠️ ELLE LAISSE LES POINTS ARRIVER. Sur une diapositive à quatre points,
+    // le dernier apparaît à 3,2 s : changer avant reviendrait à ne jamais le
+    // montrer. La garde compare les deux constantes L'UNE À L'AUTRE — une
+    // valeur recopiée ici se périmerait au premier ajustement du rythme.
+    expect(AUTO_MS).toBeGreaterThan(apparitionFinie(4))
+    // Et il reste de quoi lire une fois le dernier point posé.
+    expect(AUTO_MS - apparitionFinie(4)).toBeGreaterThanOrEqual(3000)
+
+    // Elle boucle, et un diaporama vide ne bouge pas.
+    expect(suivante(0, 2)).toBe(1)
+    expect(suivante(1, 2)).toBe(0)
+    expect(suivante(0, 0)).toBe(0)
+  })
+
+  it('⚠️ et le composant BRANCHE réellement ces quatre garde-fous', () => {
+    // La règle vit dans un module pur parce qu'un `IntersectionObserver` est
+    // suspendu dans un onglet masqué — donc invérifiable au volet. Ce qui reste
+    // à garder, c'est le branchement.
+    const diapo = sansCommentaires(lire('../components/DiaporamaProduit.tsx'))
+    expect(diapo).toMatch(/avanceAutorisee\(\{ arrete, actif, enPause, mouvementReduit \}\)/)
+
+    // ⚠️ L'arrêt est posé DANS `aller`, pas dans les gestionnaires de clic :
+    // toute navigation volontaire passe par là, donc une commande ajoutée plus
+    // tard ne pourra pas oublier de le faire.
+    expect(diapo).toMatch(/const aller = useCallback\([^}]*setArrete\(true\)/)
+
+    // Ne tourner que quand on est regardé : à l'écran ET dans un onglet au
+    // premier plan.
+    expect(diapo).toContain('new IntersectionObserver')
+    expect(diapo).toMatch(/document\.hidden/)
+    expect(diapo).toMatch(/addEventListener\('visibilitychange'/)
+    expect(diapo).toMatch(/removeEventListener\('visibilitychange'/)
+
+    // ⚠️ Le clavier compte autant que la souris : sans `onFocusCapture`, la
+    // section défile sous les doigts de qui la parcourt à la tabulation.
+    for (const attr of ['onMouseEnter', 'onMouseLeave', 'onFocusCapture', 'onBlurCapture']) {
+      expect(diapo, `le conteneur doit porter ${attr}`).toContain(attr)
+    }
+
+    // La préférence système est lue au moment de décider.
+    expect(diapo).toMatch(/matchMedia\('\(prefers-reduced-motion: reduce\)'\)/)
+  })
+
   it('⚠️ les deux diapositives GLISSENT, et celle qu’on ne voit pas est inerte', () => {
     // Demande de Julien, 12 septembre 2026 : « add slide effect btw phone and
     // dashboard ». Elles sont donc empilées dans la même cellule : une
@@ -458,6 +541,20 @@ describe('le produit se voit', () => {
     expect(bloc).toContain('visibility')
     for (const etat of ['avant', 'apres']) {
       expect(css).toMatch(new RegExp(`\\.diapo-${etat} \\{[^}]*visibility: hidden`))
+    }
+
+    // ⚠️ LE DÉCALAGE NE DÉPASSE PAS LA MARGE DE LA SCÈNE. `visibility: hidden`
+    // ne retire pas la diapositive du calcul du débordement : à 56 px, celle
+    // qu'on ne voit pas poussait la page de 32 px vers la droite — en
+    // permanence, pas seulement pendant l'animation — et `overflow-x: clip` sur
+    // la racine ne l'arrêtait pas. La scène s'arrête à 24 px du bord dans tous
+    // les cas de figure : c'est l'amplitude maximale qui ne peut rien pousser.
+    for (const etat of ['avant', 'apres']) {
+      const px = /translateX\((-?\d+)px\)/.exec(
+        new RegExp(`\\.diapo-${etat} \\{([^}]*)\\}`).exec(css)?.[1] ?? '',
+      )?.[1]
+      expect(px, `.diapo-${etat} doit porter un décalage en pixels`).toBeDefined()
+      expect(Math.abs(Number(px)), `.diapo-${etat} pousserait la page`).toBeLessThanOrEqual(24)
     }
 
     // Et le mouvement se coupe quand la personne l'a demandé au système.
