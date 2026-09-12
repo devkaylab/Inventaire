@@ -693,19 +693,41 @@ describe('le héros filmé', () => {
     expect(grand).toBeLessThan(2.6 * 1024 * 1024)
   })
 
-  it('⚠️ le voile est PLUS DENSE sur mobile', () => {
-    // Le héros y est portrait et la vidéo paysage : le recadrage zoome fort et
-    // remonte sous le texte des zones bien plus claires. Mesuré à 390 px, le
-    // contraste du titre tombait à 4,21 — sous le seuil AA — avec le voile du
-    // bureau ; il remonte à 6,27 avec celui-ci.
-    expect(css).toMatch(/@media \(max-width: 900px\) \{\s*\.hero-film-fond::after \{[^}]*background:/)
+  it('⚠️ le voile SUIT LA HAUTEUR, il ne rayonne pas depuis le centre', () => {
+    // Constat de Julien, 12 septembre 2026 : « le voile sur la vidéo est trop
+    // présent ». L'ellipse d'avant était dense à 44 % de la hauteur quand le
+    // texte occupe 52 à 88 % : elle noircissait le ciel — la seule partie qu'on
+    // regarde — et laissait le sous-titre à 4,49, sous le seuil AA.
+    //
+    // ⚠️ La garde porte sur la FORME, pas sur les valeurs : un dégradé vertical
+    // met l'encre là où le texte est, quelle que soit la densité qu'on lui
+    // donne ensuite. Un retour au rayonnement depuis le centre rouvrirait les
+    // deux défauts d'un coup.
+    const voile = /\.hero-film-fond::after \{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(voile.length).toBeGreaterThan(0)
+    expect(voile).toContain('linear-gradient(to bottom')
+    expect(voile, 'un voile radial noircit surtout ce qui n’a pas de texte')
+      .not.toContain('radial-gradient')
+
+    // ⚠️ ET IL LAISSE LE HAUT DE L'IMAGE TRANQUILLE : le premier arrêt est
+    // transparent. C'est ce qui a fait passer la clarté moyenne du haut de 65 à
+    // 129 — le film se voit enfin — sans rien céder sur le texte.
+    expect(voile).toMatch(/rgba\(8, 10, 9, 0\) 0%/)
   })
 
   it('⚠️ le voile existe : sans lui le titre n’est plus lisible', () => {
-    // Mesuré sur six instants de la vidéo : le contraste du titre tombe entre
-    // 4,65 et 5,55 au pixel le plus clair. Sans le voile il passe sous le
-    // seuil. Ce n'est pas une décoration.
+    // Mesuré frame par frame : la vidéo monte à 0,86 de luminance sous le
+    // texte. Sans voile, le titre passe sous le seuil. Ce n'est pas une
+    // décoration.
     expect(css).toMatch(/\.hero-film-fond::after \{[^}]*background:/)
+
+    // ⚠️ UNE SEULE RÈGLE COUVRE LES DEUX ÉCRANS. Le renfort mobile existait
+    // parce qu'un voile centré ne suivait plus le texte quand le héros passe en
+    // portrait ; un dégradé vertical le suit tout seul, et mesuré à 390 px il
+    // tient mieux que l'ancien renfort. Le réintroduire serait un réglage à
+    // l'œil sur un problème qui n'existe plus.
+    expect(css, 'le voile n’a plus besoin d’un renfort mobile')
+      .not.toMatch(/@media \(max-width: 900px\) \{\s*\.hero-film-fond::after/)
   })
 
   it('⚠️ le héros est une bande ENCRE dans les deux thèmes', () => {

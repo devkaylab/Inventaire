@@ -582,28 +582,37 @@ body:has(.site-footer) .theme-toggle { display: none; }
 }
 
 /* ⚠️ LE VOILE EST CE QUI REND LE TITRE LISIBLE, et il n'est pas décoratif : la
-   vidéo monte à 50 % de luminosité en son milieu. Dégradé plutôt qu'aplat —
-   il est plus dense au centre, là où le texte se trouve, et laisse respirer
-   les bords. */
+   vidéo monte à 0,86 de luminance sous le texte — mesuré frame par frame, pas
+   estimé ; le commentaire d'avant disait 50 %, c'était le poster, deux fois
+   moins clair que le pire moment du film.
+
+   ⚠️ IL SUIT LA HAUTEUR, IL NE RAYONNE PLUS DEPUIS LE CENTRE. Constat de
+   Julien, 12 septembre 2026 : « le voile sur la vidéo est trop présent ».
+   L'ellipse d'avant était dense à 44 % de la hauteur alors que le texte occupe
+   52 à 88 % : elle noircissait surtout le ciel, c'est-à-dire la seule partie
+   qu'on regarde, et laissait le texte au bord du seuil. Mesuré sur les frames
+   les plus claires du film, la bascule gagne SUR LES DEUX TABLEAUX :
+
+     · clarté moyenne du haut de l'image   65 → 129 (×2, ×3 sur mobile)
+     · contraste du sous-titre             4,49 → 6,6 (le seuil AA est 4,5)
+     · contraste du titre                  4,89 → 5,7 (seuil 3, grand texte)
+
+   ⚠️ ET UNE SEULE RÈGLE SUFFIT DÉSORMAIS POUR LES DEUX ÉCRANS. Le renfort
+   mobile existait parce qu'un voile centré ne suivait pas le texte quand le
+   héros passait en portrait ; un dégradé vertical le suit tout seul. Mesuré à
+   390 px sur le film mobile : titre 4,28 et sous-titre 5,57 au pire moment,
+   au-dessus des seuils, avec un haut trois fois plus clair qu'avant. */
 .hero-film-fond::after {
   content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    radial-gradient(ellipse 74% 62% at 50% 44%, rgba(8, 10, 9, .78), rgba(8, 10, 9, .42) 62%, rgba(8, 10, 9, .52)),
-    linear-gradient(rgba(8, 10, 9, .18), rgba(8, 10, 9, .18));
+    linear-gradient(to bottom,
+      rgba(8, 10, 9, 0) 0%,
+      rgba(8, 10, 9, .06) 30%,
+      rgba(8, 10, 9, .58) 52%,
+      rgba(8, 10, 9, .66) 100%),
+    linear-gradient(rgba(8, 10, 9, .06), rgba(8, 10, 9, .06));
 }
 .hero-film-fond > .container { position: relative; z-index: 2; }
-
-/* ⚠️ SUR MOBILE, LE VOILE EST PLUS DENSE — et ce n'est pas un réglage à l'œil.
-   Le héros y est portrait, la vidéo paysage : le recadrage zoome fort et
-   remonte sous le texte des zones bien plus claires. Mesuré à 390 px, le
-   contraste du titre tombait à 4,21, sous le seuil AA. */
-@media (max-width: 900px) {
-  .hero-film-fond::after {
-    background:
-      radial-gradient(ellipse 96% 46% at 50% 46%, rgba(8, 10, 9, .86), rgba(8, 10, 9, .58) 66%, rgba(8, 10, 9, .66)),
-      linear-gradient(rgba(8, 10, 9, .26), rgba(8, 10, 9, .26));
-  }
-}
 
 /* La bande encre, comme la section « Ce qui nous distingue » — dans les DEUX
    thèmes. Les jetons sont redéfinis sur la section : tout ce qu'elle contient
