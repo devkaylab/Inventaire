@@ -16,7 +16,7 @@
 // devis est alors enregistré sans partir, et l'écran le dit.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo, envoyerEmail } from '../_shared/email.ts'
-import { type LigneDevis, type Rythme, euros, jour, nombre } from '../_shared/devis.ts'
+import { type LigneDevis, type Rythme, euros, jour, lignesDevis, nombre } from '../_shared/devis.ts'
 import { devisEnPdf, enBase64 } from '../_shared/devisPdf.ts'
 
 const cors = {
@@ -39,7 +39,14 @@ Deno.serve(async (req) => {
     reference?: string
     amountCents?: number
     note?: string
-    lines?: LigneDevis[]
+    /**
+     * ⚠️ `unknown`, PAS `LigneDevis[]` : ce corps de requête est écrit par la
+     * console, et les lignes relues plus tard viennent du JSONB. Annoncer un
+     * type ici, c'est promettre une forme que personne ne vérifie — c'est ce
+     * qui a fait lever `drawText` et disparaître le PDF. `lignesDevis` remet
+     * en forme, et c'est la seule porte.
+     */
+    lines?: unknown
     /** 'company' (inscription) ou 'store' (ajout de magasin). */
     target?: 'company' | 'store'
     /** Le rythme du devis. Décide du PDF, du libellé du montant, et de la
@@ -99,7 +106,9 @@ Deno.serve(async (req) => {
   const expireLe = new Date(q.expires_at ?? Date.now())
   const prenom = (q.contact_first_name ?? '').trim()
   const nomComplet = `${prenom} ${(q.contact_last_name ?? '').trim()}`.trim()
-  const lignes: LigneDevis[] = Array.isArray(q.lines) ? q.lines : []
+  // ⚠️ `lignesDevis`, jamais un cast : ce qui sort de `quote_lines` est du
+  // JSONB, et une clé absente faisait lever `drawText` — donc AUCUN PDF.
+  const lignes: LigneDevis[] = lignesDevis(q.lines)
   const magasins = lignes.length || q.store_count || 0
   const magasin = (q.store_name ?? '').trim()
 

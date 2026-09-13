@@ -183,6 +183,52 @@ export function lignesProposees(
   })
 }
 
+/**
+ * Les lignes telles qu'elles arrivent de la BASE, remises en forme.
+ *
+ * ⚠️ `quote_lines` est du JSONB : son contenu est écrit par cinq chemins SQL
+ * différents — le devis manuel de la console, la souscription en ligne,
+ * l'inscription, le changement d'offre, et les lignes d'avant la bascule aux
+ * appareils du 2 septembre 2026. Rien ne garantit qu'une clé soit là. Les deux
+ * fonctions edge qui produisent le PDF écrivaient pourtant
+ * `const lignes: LigneDevis[] = Array.isArray(data.lines) ? data.lines : []` :
+ * un CAST, pas un contrôle. Le type promettait une forme que personne ne
+ * vérifiait.
+ *
+ * ⚠️ CE QUE ÇA COÛTAIT : une ligne sans `appareils` tombait dans
+ * `nombre(undefined)`, `drawText` levait, et **le PDF ne se dessinait plus du
+ * tout** — ni pour le client qui le télécharge, ni en pièce jointe de
+ * l'e-mail. Un devis muet sur le chemin de l'argent. Trouvé le 7 septembre
+ * 2026 en sondant la production, corrigé le 13.
+ *
+ * ⚠️ ET LE CORRECTIF EST AU BORD, PAS DANS LE DESSIN. Trois champs étaient
+ * fragiles, pas un — `libelle` et `prixCents` levaient de la même façon. Les
+ * rattraper un par un à l'endroit où on les lit laisse le quatrième, celui
+ * qu'on ajoutera demain. On normalise une fois à l'entrée, et le code de
+ * dessin peut continuer à faire confiance à son type : c'est à ça qu'un type
+ * sert.
+ *
+ * Les valeurs de repli sont celles de `lignesProposees` — « Magasin 2 » pour
+ * un libellé absent, `null` pour un nombre qui n'en est pas : le document dit
+ * alors « — » ou « sur devis », ce qui est vrai, au lieu de ne pas exister.
+ */
+export function lignesDevis(brut: unknown): LigneDevis[] {
+  if (!Array.isArray(brut)) return []
+  const nombreOuNull = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
+  return brut.map((ligne, i) => {
+    const o = (ligne ?? {}) as Record<string, unknown>
+    const libelle = typeof o.libelle === 'string' ? o.libelle.trim() : ''
+    return {
+      libelle: libelle || `Magasin ${i + 1}`,
+      appareils: nombreOuNull(o.appareils),
+      offre: typeof o.offre === 'string' ? o.offre : '',
+      prixCents: nombreOuNull(o.prixCents),
+      annuelCents: nombreOuNull(o.annuelCents),
+    }
+  })
+}
+
 /** Somme des lignes chiffrées. Les lignes sur devis ne sont pas comptées à zéro. */
 export function totalProposeCents(lignes: readonly LigneDevis[]): { cents: number; surDevis: number } {
   let cents = 0

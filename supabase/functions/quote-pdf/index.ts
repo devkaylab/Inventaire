@@ -10,7 +10,7 @@
 // `quote_by_token` et le redessine avec le même module que l'envoi. Un PDF
 // téléchargé et un PDF reçu par e-mail sont donc le même document.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { type LigneDevis } from '../_shared/devis.ts'
+import { type LigneDevis, lignesDevis } from '../_shared/devis.ts'
 import { devisEnPdf } from '../_shared/devisPdf.ts'
 
 const cors = {
@@ -35,7 +35,9 @@ Deno.serve(async (req) => {
   if (error) return new Response('Erreur', { status: 500, headers: cors })
   if (!data?.found) return new Response('Devis introuvable', { status: 404, headers: cors })
 
-  const lignes: LigneDevis[] = Array.isArray(data.lines) ? data.lines : []
+  // ⚠️ `lignesDevis`, jamais un cast : ce qui sort de `quote_lines` est du
+  // JSONB, et une clé absente faisait lever `drawText` — donc AUCUN PDF.
+  const lignes: LigneDevis[] = lignesDevis(data.lines)
   // Le même objet que le PDF joint à l'e-mail : les deux doivent être le même
   // document, sinon le client compare et s'inquiète.
   const magasin = (data.store_name ?? '').trim()

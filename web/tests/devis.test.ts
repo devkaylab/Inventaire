@@ -7,12 +7,12 @@
 //     l'encaissement, c'est elle qui rendra la bascule Stripe indolore ;
 //   · la lecture publique par jeton ne rend jamais d'adresse e-mail ;
 //   · la page du devis reste hors de la coquille (elle s'ouvre au téléphone).
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { lignesProposees, referenceProposee, totalProposeCents } from '../lib/devis'
 import { GRILLE_OFFRES_CENTIMES, SUPPLEMENT_CENTIMES, prixCents } from '../lib/offres'
-import { elementsDevis } from '../../supabase/functions/_shared/devis'
+import { elementsDevis, lignesDevis } from '../../supabase/functions/_shared/devis'
 import { derniereDefinition, fichierDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
@@ -155,6 +155,67 @@ describe('la mise en page du devis', () => {
     // L'ancienne phrase annonçait l'inverse : que la facture, elle, ajouterait
     // la TVA.
     expect(textes.some((t) => t.includes('le montant hors taxes fait foi'))).toBe(false)
+  })
+
+  // ⚠️ LE DÉFAUT QUI A FAIT DISPARAÎTRE LE PDF (7 septembre 2026, corrigé le
+  // 13). `quote_lines` est du JSONB, écrit par cinq chemins SQL : rien ne
+  // garantit qu'une clé soit là. Les deux fonctions edge faisaient pourtant un
+  // CAST — `Array.isArray(data.lines) ? data.lines : []` — et une ligne sans
+  // `appareils` tombait dans `nombre(undefined)`, `drawText` levait, et AUCUN
+  // document ne sortait : ni pour le client qui le télécharge, ni en pièce
+  // jointe de l'e-mail.
+  it('⚠️ se dessine quand même sur une ligne mal formée', () => {
+    const abimees = [
+      {},                                   // rien du tout
+      { libelle: 'Lyon' },                  // pas de prix, pas d'appareils
+      { libelle: '   ', appareils: null, prixCents: 31_000 },
+      { appareils: 'douze', prixCents: '31000' },   // des chaînes
+      { appareils: Number.NaN, prixCents: Number.POSITIVE_INFINITY },
+    ]
+    const lignes = lignesDevis(abimees)
+    expect(lignes).toHaveLength(5)
+    expect(() => elementsDevis({ ...devis, lignes })).not.toThrow()
+
+    const textes = elementsDevis({ ...devis, lignes })
+      .filter((e) => e.type === 'texte').map((e) => (e as { texte: string }).texte)
+    // ⚠️ Le document DIT ce qu'il ne sait pas, au lieu de ne pas exister : un
+    // libellé de repli, « — » pour les appareils, « sur devis » pour le prix.
+    expect(textes).toContain('Magasin 1')
+    expect(textes).toContain('Lyon')
+    expect(textes.filter((t) => t === 'sur devis').length).toBeGreaterThanOrEqual(4)
+    // Et le seul prix exploitable de ce lot est bien rendu.
+    expect(textes.map((t) => t.replace(/\s/g, ' ')).some((t) => t.includes('310,00'))).toBe(true)
+  })
+
+  it('⚠️ et ce qui est BIEN formé traverse sans être touché', () => {
+    // Une remise en forme qui abîmerait le cas nominal serait pire que le
+    // défaut qu'elle corrige.
+    const bonnes = lignesProposees([{ name: 'Lyon', devices: 40 }], 1)
+    expect(lignesDevis(bonnes)).toEqual(bonnes)
+    // Et ce qui n'est pas une liste ne fait pas tomber la fonction.
+    expect(lignesDevis(null)).toEqual([])
+    expect(lignesDevis('des lignes')).toEqual([])
+  })
+
+  it('⚠️ toute fonction edge qui produit le PDF passe par `lignesDevis`', () => {
+    // ⚠️ LA GARDE DÉDUIT SES FICHIERS : celui qu'on écrira demain est couvert.
+    // Nommer les deux d'aujourd'hui ne protégerait que ceux-là.
+    const dossier = path.resolve(__dirname, '../../supabase/functions')
+    const producteurs = readdirSync(dossier)
+      .map((d) => [d, path.join(dossier, d, 'index.ts')] as const)
+      .filter(([, f]) => existsSync(f))
+      .map(([d, f]) => [d, readFileSync(f, 'utf8')] as const)
+      .filter(([, src]) => src.includes('devisEnPdf'))
+    expect(producteurs.length, 'plus aucune fonction ne produit le PDF')
+      .toBeGreaterThanOrEqual(2)
+    for (const [nom, src] of producteurs) {
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      expect(code, `${nom} ne remet pas les lignes en forme`).toContain('lignesDevis(')
+      // ⚠️ Le cast est ce qu'on remplace : un `Array.isArray` sur les lignes
+      // promet une forme que personne ne vérifie.
+      expect(code, `${nom} fait encore un cast sur les lignes`)
+        .not.toMatch(/Array\.isArray\((?:data|q)\.lines\)/)
+    }
   })
 
   it('tient sur une page, quel que soit le nombre de magasins', () => {
