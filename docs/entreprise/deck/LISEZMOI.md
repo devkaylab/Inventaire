@@ -1,6 +1,6 @@
 # Les présentations Quantinvo
 
-Six présentations PowerPoint, générées par six scripts qui partagent une même
+Sept présentations PowerPoint, générées par sept scripts qui partagent une même
 charte (`charte.js`). Fond blanc, charte **« Ardoise » v2** (9 septembre 2026) :
 encre pour le texte ET pour les titres, des gris minéraux, et un vert forêt en
 accent qui ne sert qu'à ce qui engage — une pastille numérotée, un grand
@@ -21,15 +21,35 @@ de la même géométrie que `web/components/Logo.tsx`.
 | `build-tarifs.js` | `Quantinvo-tarification.pptx` | Celui qui décide du budget : l'assiette, la grille, le dépassement, la souscription | 11 |
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs, après la signature | 19 |
 | `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 12 |
+| `build-histoire.js` | `Quantinvo-histoire.pptx` | **Nous** : d'où l'on vient, du premier commit à aujourd'hui | 14 |
 
-Les six partagent `charte.js` (la mise en page), `blocs.js` (la grille des
-offres) et `offres.js` (les prix).
+Les sept partagent `charte.js` (la mise en page) ; les cinq commerciaux
+ajoutent `blocs.js` (la grille des offres) et `offres.js` (les prix).
+
+⚠️ **`build-histoire.js` est le seul qui ne se vende à personne.** Demande de
+Julien, le 13 septembre 2026 : « un genre de timeline où on voit tout les
+changements que nous avons fait […] je veux garder ce souvenir ». C'est ce qui
+l'autorise à montrer un écran laid, à nommer une fausse piste et à dater un
+abandon — ce qu'aucun des six autres ne peut faire.
+
+· **Tout ce qu'il montre vient de l'historique git**, jamais d'une
+  reconstitution : les images de `histoire/` ont été extraites par
+  `git show <commit>:<chemin>`, et le commit de chacune est noté en tête du
+  script. Un écran refait pour l'illustration en ferait une histoire racontée
+  au lieu d'une trace.
+· **Ses chiffres se remesurent** (`CHIFFRES` en tête du script) : 627 commits,
+  175 migrations, 1 953 tests au 13 septembre 2026. Les recopier d'une
+  génération à l'autre en ferait une cinquième note périmée.
+· ⚠️ **Il touche à `histoire/`, jamais à `captures/`.** Les deux dossiers se
+  ressemblent et ne servent pas au même : `captures/` porte l'application
+  d'AUJOURD'HUI, régénérée à chaque passe ; `histoire/` porte des états
+  révolus, qui ne doivent plus jamais bouger.
 
 ## Générer
 
 ```
 npm install
-for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js; do
+for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js build-histoire.js; do
   node $f && FONT_MODE=brand node $f
 done
 ```
