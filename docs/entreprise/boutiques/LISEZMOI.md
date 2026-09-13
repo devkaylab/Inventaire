@@ -9,6 +9,37 @@ captures aux dimensions exigées, le bandeau et l'icône de Play.
 | `captures-ipad-13/` | App Store, iPad 13 pouces | 2064 × 2752 |
 | `bandeau-play-1024x500.png` | Google Play, image mise en avant | 1024 × 500 |
 | `icone-512.png` | Google Play, icône de la fiche | 512 × 512 |
+| `../../../web/public/og.png` | l'image de partage du **site** | 1200 × 630 |
+
+⚠️ **`og.png` est le seul fichier que `produire.mjs` écrit hors de ce dossier**,
+et c'est **le plus vu des quatre** : il part à chaque fois qu'un lien du site
+est collé dans LinkedIn, Slack ou un message. Les autres attendent une
+publication ; celui-là est en ligne aujourd'hui. Il vit dans `web/public/`
+parce que c'est le site qui le sert, et une copie dans deux dossiers finirait
+par diverger.
+
+## ⚠️ Identité : Ardoise depuis le 13 septembre 2026
+
+Le bandeau, l'image de partage et l'icône portaient encore l'identité d'AVANT —
+dégradé violet, cube isométrique, filet de scan cyan, Sora — **dix jours après
+que tout le reste du produit en soit sorti** (le site et l'application le
+6 septembre, les e-mails le 7). Personne ne l'avait vu, pour une raison
+simple : ces fichiers vivent dans `docs/`, donc hors de ce que les gardes du
+site et de l'application balaient.
+
+C'est fermé dans les deux sens : les trois visuels sont régénérés, et
+`web/tests/visuels-boutiques.test.ts` refuse désormais toute valeur de
+l'ancienne palette dans les gabarits, le retour du cube, un second usage de
+l'accent, et un contrôle de police qui ne surveillerait plus celles que les
+gabarits demandent réellement.
+
+⚠️ **MAIS LES DOUZE CAPTURES DE LA FICHE, ELLES, MONTRENT ENCORE L'ANCIENNE
+INTERFACE** — bouton indigo, fond bleu nuit, liens violets. Elles datent du
+2 septembre. Ce sont les seules à ne pas se régénérer par script : il faut une
+session dans le simulateur sur le compte de démonstration (voir
+`docs/entreprise/deck/preparer-captures.js`, qui les réduit et masque les
+adresses d'essai). **À refaire avant de déposer la fiche** : l'app porterait le
+plan de magasin, et ses captures le violet.
 
 L'icône de l'App Store n'est pas ici : elle vit **dans le binaire**
 (`ios/Inventaire/Images.xcassets/AppIcon.appiconset`), Apple la lit depuis
@@ -32,10 +63,18 @@ génération suivante.
 là. Un `npm install` ici créerait un troisième arbre de dépendances à tenir, et
 lancé sans manifeste il a déjà élagué celui du deck une fois.
 
-⚠️ **Le script refuse de sortir l'image si Sora n'a pas été résolue.** Une
-police absente ne lève aucune erreur : le navigateur retombe en silence sur une
-fonte système, et le bandeau part chez Google en Helvetica sans que rien ne le
-signale. On mesure donc un mot témoin dans les deux fontes avant d'écrire.
+⚠️ **Le script refuse de sortir l'image si une police n'a pas été résolue.**
+Une police absente ne lève aucune erreur : le navigateur retombe en silence sur
+une fonte système, et le visuel part chez Google en Helvetica sans que rien ne
+le signale. Les deux polices d'Ardoise sont contrôlées — Archivo et Public
+Sans —, en comparant le même texte rendu avec deux familles de secours
+différentes : si la police demandée est résolue, elle gagne dans les deux cas
+et les largeurs sont identiques.
+
+⚠️ **Archivo et Public Sans sont INSTALLÉES sur le Mac de Julien**
+(`~/Library/Fonts`). Couper le lien Google Fonts n'y prouve donc rien : le
+navigateur les résout depuis le système, et la garde a raison de se taire.
+Pour l'éprouver, saboter le nom que le script cherche, pas l'URL du gabarit.
 
 ## Le bandeau : ce qui a été décidé le 2 septembre 2026
 
@@ -43,23 +82,28 @@ Trois pistes présentées, chacune vue en grand **et à 336 px** — la taille o
 Play l'affiche le plus souvent, et donc celle qui décide. Maquette :
 https://claude.ai/code/artifact/73d58469-dc29-458e-9f23-177c372713d8
 
-Retenue par Julien : **le geste**. Le cube déborde du cadre à gauche et la
-ligne de scan le prolonge sur toute la largeur ; le nom et la baseline sont à
-droite, de part et d'autre de la ligne.
+Retenue par Julien : **la phrase**. La baseline occupe la place, la marque
+passe en petit au-dessus. Elle a été retenue parce que **ce n'est plus la
+marque qui parle, c'est ce que fait le produit** : la personne qui voit ce
+bandeau vient de chercher « inventaire » et ne sait pas ce qu'est Quantinvo ;
+le logo, lui, est déjà affiché juste à côté par Play.
 
-⚠️ **La ligne est posée à la hauteur de la barre cyan du cube** (56,25 % de sa
-hauteur), pas au milieu de l'image : c'est ce qui la fait lire comme le
-prolongement du logo plutôt que comme un trait décoratif. Si la taille du cube
-change, cette valeur se recalcule.
+⚠️ **CE PARAGRAPHE A DÉCRIT « LE GESTE » PENDANT ONZE JOURS**, c'est-à-dire la
+piste qui n'a PAS été retenue — cube débordant, ligne de scan en travers, nom à
+droite. La première version du bandeau l'avait produite par erreur, elle a été
+corrigée le 2 septembre dans le gabarit, et personne n'est revenu ici. Une note
+qui décrit une décision doit être corrigée le jour où la décision change, sinon
+elle la contredit en silence.
 
-⚠️ **La barre interne du cube est retirée sur ce bandeau, et seulement là** —
-elle ferait doublon avec la ligne qui la prolonge. Le logo de l'application, du
-site et des e-mails la garde.
+⚠️ **Rien d'important ne touche les bords** — Play recadre le bandeau selon les
+surfaces, et le texte tient dans une marge de 84 px. C'est aussi ce qui a fait
+préférer cette piste : elle ne perd rien au recadrage.
 
-⚠️ **Le risque connu, accepté** : c'est la piste dont le cube déborde, donc
-celle qui perd le plus si Play recadre. Le texte, lui, reste à 104 px du bord.
-La piste « la phrase », écartée, mettait la baseline en grand et ne risquait
-rien au recadrage — c'est la solution de repli si la fiche paraît muette.
+⚠️ **PAS DE DÉCOR À DROITE, et c'est une décision du 13 septembre 2026.** Le
+plan de magasin agrandi y a été essayé, puis retiré le jour même : coupé par le
+bord, il perd son cadre, et il ne reste que des bandes verticales qui se lisent
+comme un défaut de rendu. Le vide de droite n'est pas un manque — c'est la
+zone que Play recadre.
 
 **La baseline est « La fiabilité du stock au quotidien »** (Julien, 2 septembre
 2026), et elle vaut **pour ce qui vient**.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Quantinvo — bandeau Google Play</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Public+Sans:wght@400&display=swap">
 <style>
   /* ⚠️ Ce fichier EST le bandeau, à sa taille exacte : 1024 × 500. Il se rend
      en PNG par `produire.mjs`. Ne pas retoucher l'image produite — elle serait
@@ -12,39 +12,58 @@
 
      ⚠️ **Piste retenue : « la phrase » (B)**, choisie par Julien le 2 septembre
      2026, avec sa baseline. Une première version produisait la piste « le
-     geste » (C) — cube débordant, marque en grand, phrase en sous-titre — avec
-     le texte de la B. C'était le contraire de ce qui avait été choisi, et le
-     défaut n'était pas cosmétique : B a été retenue parce que **ce n'est plus
-     la marque qui parle, c'est ce que fait le produit**. La personne qui voit
-     ce bandeau vient de chercher « inventaire » et ne sait pas ce qu'est
-     Quantinvo ; le logo, lui, est déjà affiché juste à côté par Play.
+     geste » (C) — marque en grand, phrase en sous-titre — avec le texte de la
+     B. C'était le contraire de ce qui avait été choisi, et le défaut n'était
+     pas cosmétique : B a été retenue parce que **ce n'est plus la marque qui
+     parle, c'est ce que fait le produit**. La personne qui voit ce bandeau
+     vient de chercher « inventaire » et ne sait pas ce qu'est Quantinvo ; le
+     logo, lui, est déjà affiché juste à côté par Play.
 
      Donc : la phrase occupe la place, la marque passe en petit au-dessus.
+     Cette composition-là n'a pas bougé au passage à Ardoise.
 
-     ⚠️ **Rien d'important ne touche les bords** — Play recadre le bandeau selon
-     les surfaces. Le texte tient dans une marge de 84 px.
+     ⚠️ **HABILLAGE ARDOISE DEPUIS LE 13 SEPTEMBRE 2026.** Ce bandeau portait
+     encore l'identité d'avant — dégradé violet, cube isométrique, filet de
+     scan cyan, Sora — dix jours après que tout le produit en soit sorti. Ce
+     qui a changé, et qu'il ne faut pas défaire :
+       · le fond est un gris MINÉRAL uni (`--bg`, à peine dégradé vers
+         `--bg-2`), plus un halo coloré. Le bleu nuit se lit « application »,
+         l'ardoise « outil » ;
+       · la marque est le PLAN DE MAGASIN, monochrome, de la couleur du texte.
+         Le cube et son filet cyan ont disparu du produit le 6 septembre ;
+       · les polices sont Archivo (titres, mot-symbole) et Public Sans (texte),
+         celles du site depuis Ardoise ;
+       · **l'accent ne porte QUE la seconde ligne du titre.** Sur une image, la
+         promesse est la seule chose qui engage ; tout le reste est de l'encre.
+         Trois accents sur un visuel, c'est l'ancien monde.
+
+     ⚠️ **PAS DE DÉCOR À DROITE, ET C'EST UNE DÉCISION — le plan de magasin
+     agrandi a été essayé le 13 septembre 2026, puis retiré.** Posé un cran
+     au-dessus du fond et coupé par le bord, il perd son cadre : il ne reste
+     que trois bandes verticales qui ne se lisent plus comme la marque, mais
+     comme un défaut de rendu. Le vide de droite n'est pas un manque — c'est
+     la zone que Play recadre, et Ardoise n'habille pas un fond pour le
+     remplir. Si le sujet revient, la seule forme défendable est le plan
+     ENTIER, non coupé ; à moitié, il ne dit rien.
+
+     ⚠️ **Rien d'important ne touche les bords** — texte dans une marge de 84 px.
 
      ⚠️ **Lisible à 336 px de large**, la taille où Play l'affiche le plus
      souvent : c'est la contrainte qui a fait écarter les compositions où la
      phrase est un sous-titre. À cette échelle, le titre fait encore 24 px.
 
-     Les polices sont celles de la charte (Sora, Inter). `produire.mjs` refuse
-     de sortir l'image si Sora n'a pas été résolue — un bandeau tombé en
-     Helvetica ne se voit pas sur une capture, mais se voit sur la fiche. */
+     `produire.mjs` refuse de sortir l'image si Archivo n'a pas été résolue —
+     un bandeau tombé en Helvetica ne se voit pas sur une capture, mais se voit
+     sur la fiche. */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1024px; height: 500px; overflow: hidden; }
   body {
     position: relative;
-    background: #0B0F19;
-    font-family: Sora, sans-serif;
+    background: linear-gradient(160deg, #171b19 0%, #141716 46%, #0e1110 100%);
+    font-family: Archivo, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  .voile {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(120% 140% at 16% 6%, rgba(116,102,244,.36) 0%, rgba(11,15,25,0) 60%),
-      linear-gradient(140deg, #17123A 0%, #0B0F19 52%, #090C14 100%);
-  }
+
 
   .contenu {
     position: absolute; inset: 0;
@@ -53,45 +72,37 @@
     gap: 26px;
   }
 
-  /* La marque, en petit : elle situe, elle n'annonce pas. */
-  .marque { display: flex; align-items: center; gap: 16px; }
+  /* La marque, en petit : elle situe, elle n'annonce pas. Le rapport entre le
+     signe et le mot est celui de la barre du site — logo 1,33 × le corps. */
+  .marque { display: flex; align-items: center; gap: 14px; color: #ecefec; }
   .marque svg { width: 48px; height: 48px; display: block; }
   .mot {
-    font-weight: 800; font-size: 30px; letter-spacing: -.01em;
-    color: #FFFFFF; line-height: 1;
+    font-weight: 700; font-size: 36px; letter-spacing: -.017em;
+    line-height: 1;
   }
 
   /* Le sujet de l'image. */
   .titre {
     font-weight: 700; font-size: 74px; line-height: 1.08;
-    letter-spacing: -.025em; color: #FFFFFF;
+    letter-spacing: -.025em; color: #ecefec;
+    max-width: 720px;
   }
-  .titre span { color: #38C9FF; }
+  .titre span { color: #8fc9b0; }
 
   .sous {
-    font-family: Inter, sans-serif; font-weight: 400; font-size: 26px;
-    color: #A8B0C2; line-height: 1.3;
+    font-family: 'Public Sans', sans-serif; font-weight: 400; font-size: 26px;
+    color: #9aa39e; line-height: 1.3;
   }
 </style>
 </head>
 <body>
-  <div class="voile"></div>
-
   <div class="contenu">
     <div class="marque">
-      <svg viewBox="0 0 512 512" aria-hidden="true">
-        <defs>
-          <linearGradient id="qbg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7466F4"/>
-            <stop offset=".52" stop-color="#4636B0"/>
-            <stop offset="1" stop-color="#1C153F"/>
-          </linearGradient>
-        </defs>
-        <rect x="6" y="6" width="500" height="500" rx="116" fill="url(#qbg)"/>
-        <polygon points="256,146 352,196 256,246 160,196" fill="#A99CFA"/>
-        <polygon points="160,196 256,246 256,366 160,316" fill="#6E5DEC"/>
-        <polygon points="352,196 352,316 256,366 256,246" fill="#4A3AA8"/>
-        <rect x="92" y="282" width="328" height="12" rx="6" fill="#38C9FF"/>
+      <svg viewBox="0 0 36 36" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke="currentColor" stroke-width="3"/>
+        <rect x="11" y="3" width="3" height="30" fill="currentColor"/>
+        <rect x="22" y="3" width="3" height="30" fill="currentColor"/>
+        <rect x="3" y="3" width="8" height="30" fill="currentColor"/>
       </svg>
       <span class="mot">Quantinvo</span>
     </div>
