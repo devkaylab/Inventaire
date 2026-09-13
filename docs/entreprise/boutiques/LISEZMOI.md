@@ -5,8 +5,8 @@ captures aux dimensions exigées, le bandeau et l'icône de Play.
 
 | Fichier | Pour | Taille |
 |---|---|---|
-| `captures-ios-69/` | App Store, iPhone 6,9 pouces — et Google Play, téléphone | 1320 × 2868 |
-| `captures-ipad-13/` | App Store, iPad 13 pouces | 2064 × 2752 |
+| `captures-app-store/` | App Store, iPhone 6,9 pouces | 1320 × 2868 |
+| `captures-google-play/` | Google Play, téléphone | 1080 × 2160 |
 | `bandeau-play-1024x500.png` | Google Play, image mise en avant | 1024 × 500 |
 | `icone-512.png` | Google Play, icône de la fiche | 512 × 512 |
 | `../../../web/public/og.png` | l'image de partage du **site** | 1200 × 630 |
@@ -33,13 +33,20 @@ l'ancienne palette dans les gabarits, le retour du cube, un second usage de
 l'accent, et un contrôle de police qui ne surveillerait plus celles que les
 gabarits demandent réellement.
 
-⚠️ **MAIS LES DOUZE CAPTURES DE LA FICHE, ELLES, MONTRENT ENCORE L'ANCIENNE
-INTERFACE** — bouton indigo, fond bleu nuit, liens violets. Elles datent du
-2 septembre. Ce sont les seules à ne pas se régénérer par script : il faut une
-session dans le simulateur sur le compte de démonstration (voir
-`docs/entreprise/deck/preparer-captures.js`, qui les réduit et masque les
-adresses d'essai). **À refaire avant de déposer la fiche** : l'app porterait le
-plan de magasin, et ses captures le violet.
+⚠️ **CE PARAGRAPHE A ANNONCÉ DES CAPTURES PÉRIMÉES, ET C'ÉTAIT FAUX.** Il
+disait, le 13 septembre 2026, que les captures de la fiche montraient encore
+l'ancienne interface et qu'elles étaient « à refaire avant de déposer ». Elles
+avaient été refaites **le 8 septembre**, déposées sur App Store Connect et sur
+la Play Console, et elles portent bien Ardoise et Registre. Constat de Julien
+le jour même : « on a déjà des nouvelles captures ».
+
+**Ce qui a trompé, et il faut le savoir** : les captures déposées vivaient
+**hors du dépôt** (`~/Desktop/quantinvo-captures-boutiques/`), pendant que le
+dépôt gardait celles du 2 septembre. Le dossier disait donc l'inverse de la
+réalité. C'est réparé dans les deux sens — les visuels déposés sont ici, les
+anciens sont partis. **Un livrable qui vit hors du dépôt finit toujours par
+faire mentir le dépôt** : ce qui est remis à une boutique, à un client ou à un
+tiers se range ici le jour où il est remis.
 
 L'icône de l'App Store n'est pas ici : elle vit **dans le binaire**
 (`ios/Inventaire/Images.xcassets/AppIcon.appiconset`), Apple la lit depuis
@@ -135,12 +142,32 @@ sur l'appareil que la boutique exige, à sa résolution native — la
 redimensionner la ferait refuser.
 
 Apple ne demande plus que le plus grand appareil de chaque famille et met les
-autres à l'échelle tout seul : d'où un seul jeu iPhone et un seul jeu iPad. Le
-jeu iPhone sert aussi à Google Play.
+autres à l'échelle tout seul : d'où un seul jeu iPhone.
+
+⚠️ **IL N'Y A PLUS DE JEU iPad, et ce n'est pas un oubli.** `supportsTablet`
+est passé à **faux** le 8 septembre 2026 : l'application est en portrait et
+pensée pour un téléphone, Apple ne réclame donc plus de captures iPad. Le
+dossier `captures-ipad-13/` a été retiré le 13 septembre. Le remettre suppose
+d'abord de rouvrir la compatibilité iPad dans `app.json`.
+
+⚠️ **Ce ne sont pas des captures brutes, mais des VISUELS DE FICHE** : une
+accroche en deux lignes, un fond plein, et l'écran posé dans un téléphone en
+perspective. Les cinq racontent le parcours dans l'ordre où on le vit —
+ouvrir un rayon, suivre l'avancement, arbitrer un écart, sortir le rapport,
+compter à la douchette. Une capture brute est honnête mais muette : sur une
+fiche, la personne défile vite et c'est l'accroche qui dit ce que fait l'app.
+
+⚠️ **Les deux jeux ne diffèrent QUE par la taille** (1320 × 2868 pour Apple,
+1080 × 2160 pour Google) — même composition, mêmes accroches. Les refaire, c'est
+les refaire tous les deux, sinon les deux fiches cessent de se ressembler.
 
 ⚠️ **Le viseur est noir sur la capture du comptage** : un simulateur n'a pas de
 caméra. C'est honnête, mais ça ne vend pas — c'est le seul écran dans ce cas, et
 la même capture prise sur un vrai téléphone devant un rayon vaudrait mieux.
 
-La recette de prise de vue (aiguillage temporaire, bascule de compte, écrans à
-état) est dans `../deck/LISEZMOI.md` : c'est la même.
+⚠️ **Aucun script ne les compose** — c'est leur faiblesse, et elle est connue :
+elles ont été faites à la main le 8 septembre, donc une reprise d'identité ne
+les rattrapera pas toute seule, exactement comme le bandeau et l'og l'ont
+montré. L'écran, lui, se reprend au simulateur ; la recette (aiguillage
+temporaire, bascule de compte, écrans à état) est dans `../deck/LISEZMOI.md`,
+c'est la même.

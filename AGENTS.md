@@ -13639,14 +13639,47 @@ geste »** (C) par erreur, le gabarit a été corrigé le jour même — et pers
 n'est revenu dans le LISEZMOI, qui a continué de décrire C. Quatrième fois que
 ce projet paie une note périmée. Corrigé, avec la raison du choix.
 
-## ⚠️ CE QUE JE N'AI PAS PU RÉGÉNÉRER : les douze captures de la fiche
+## ⚠️ J'AI ANNONCÉ DES CAPTURES À REFAIRE. ELLES ÉTAIENT DÉJÀ REFAITES.
 
-`captures-ios-69/` et `captures-ipad-13/` datent du 2 septembre et montrent
-**l'ancienne interface** — bouton indigo, fond bleu nuit, liens violets.
-Elles ne sortent d'aucun script : il faut une session dans le simulateur sur le
-compte de démonstration, que je ne peux pas ouvrir. **À refaire avant de
-déposer la fiche**, sinon l'app portera le plan de magasin et ses captures le
-violet.
+Cette section disait : « les douze captures de la fiche montrent encore
+l'ancienne interface, à refaire avant de déposer ». **C'était faux.** Elles
+avaient été refaites le **8 septembre 2026**, déposées sur App Store Connect et
+sur la Play Console, et elles portent bien Ardoise et Registre — accroche en
+deux lignes, fond plein, téléphone en perspective, cinq écrans par boutique.
+Constat de Julien, le 13 septembre : « on a déjà des nouvelles captures ».
+
+⚠️ **LE DÉPÔT DISAIT L'INVERSE DE LA RÉALITÉ, ET C'EST TOUT LE MÉCANISME** :
+les captures déposées vivaient hors du dépôt
+(`~/Desktop/quantinvo-captures-boutiques/`), pendant que
+`docs/entreprise/boutiques/` gardait celles du 2 septembre. J'ai lu le dossier,
+pas ce qui était en ligne — et j'ai relancé un build de simulateur pour refaire
+un travail déjà fait.
+
+**Trois choses à en retenir, et la première est la plus générale :**
+
+- ⚠️ **Un livrable qui vit hors du dépôt finit toujours par faire mentir le
+  dépôt.** Ce qui est remis à une boutique, à un client ou à un tiers se range
+  dans le dépôt le jour où il est remis. C'est réparé : les dix visuels sont
+  dans `captures-app-store/` et `captures-google-play/`, les anciens sont
+  partis, et `captures-ipad-13/` avec eux — `supportsTablet` vaut **faux**
+  depuis le 8 septembre, Apple ne demande plus de captures iPad.
+- ⚠️ **L'information était DÉJÀ dans le dépôt, et je suis passé dessus.**
+  `docs/entreprise/deck/LISEZMOI.md` écrit noir sur blanc que les captures du
+  Bureau « montrent bien la nouvelle application ». Je l'ai lue le matin même,
+  en cherchant autre chose. Quand deux notes se contredisent, ce n'est pas un
+  détail de rédaction : c'est le signe qu'une des deux décrit un état périmé.
+- ⚠️ **C'est la CINQUIÈME note périmée qui coûte à ce projet**, après la liste
+  d'onboarding du 28 août (deux fausses annonces le 4 septembre), le garde-fou
+  du retour du 29 août, les orphelins de migrations déjà rattrapés, et les deux
+  Price Stripe « à poser » qui l'étaient. À la différence des quatre autres,
+  **celle-ci a été écrite le matin même par la session qui s'est fait avoir
+  l'après-midi** : une note fausse n'a pas besoin de vieillir pour nuire.
+
+**La vérification qui aurait tranché en dix secondes** : regarder la fiche
+déposée, ou la date des fichiers, avant d'annoncer un manque. Un fichier de
+`captures-ios-69/` datait du 2 septembre — mais l'app avait été envoyée à
+Apple en build 3 **le 8**, et personne ne dépose un binaire neuf avec des
+captures qu'on sait périmées.
 
 ## Vérifications
 

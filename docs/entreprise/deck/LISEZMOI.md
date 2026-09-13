@@ -169,11 +169,15 @@ compris.
   s'est connectée depuis ; la ligne porte maintenant « 1 inventaire compté ».
   Un masque laissé là peindrait une fausse adresse par-dessus une phrase juste.
 - ⚠️ **Les captures des boutiques ne remplacent pas cette passe.** Celles de
-  `~/Desktop/quantinvo-captures-boutiques/` (8 septembre) montrent bien la
-  nouvelle application, mais ce sont des **visuels de fiche** : accroche
-  incrustée, fond coloré, téléphone en perspective. Elles n'entrent ni dans le
-  cadre de téléphone des decks ni dans le bandeau de la fiche produit, et ne
-  couvrent que cinq écrans sur vingt-deux.
+  `../boutiques/captures-app-store/` et `../boutiques/captures-google-play/`
+  (8 septembre, déposées sur les deux fiches) montrent bien la nouvelle
+  application, mais ce sont des **visuels de fiche** : accroche incrustée, fond
+  coloré, téléphone en perspective. Elles n'entrent ni dans le cadre de
+  téléphone des decks ni dans le bandeau de la fiche produit, et ne couvrent
+  que cinq écrans sur vingt-deux.
+  ⚠️ **Elles ont vécu cinq jours sur le Bureau plutôt que dans le dépôt**, et
+  cela a suffi à faire annoncer le 13 septembre qu'elles étaient « à refaire » —
+  alors que cette ligne-ci disait déjà le contraire. Elles y sont depuis.
 
 ### Ce que la passe a montré au passage
 
