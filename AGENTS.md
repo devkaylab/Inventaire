@@ -12996,10 +12996,11 @@ avoir accepté une confirmation.
   zéro erreur, `next build` inchangé, dérive dossier/base à zéro, et les
   données intactes (5 inventaires, 175 comptages, 73 zones, 7 membres).
 
-⚠️ **L'APPLICATION DOIT ÊTRE RECONSTRUITE.** La base refuse déjà la clôture par
-un invité, mais un téléphone installé avant ce jour lui montre encore le volet
-« Clôturer » de la liste — il recevra un refus. Le site, lui, prend effet au
-déploiement.
+⚠️ ~~L'application doit être reconstruite~~ — **FAIT, le 13 septembre 2026**
+(Julien : « le build est déjà fait »). La réserve tenait cinq jours : la base
+refusait déjà la clôture par un invité, mais un téléphone d'avant ce build lui
+montrait encore le volet « Clôturer » de la liste et il recevait un refus. Le
+site, lui, avait pris effet au déploiement.
 
 Tests de garde : `web/tests/backend-durcissement.test.ts`, bloc « un inventaire
 clôturé n'appartient plus qu'à son créateur ».
@@ -13461,3 +13462,27 @@ exercé.
 - Les cinq fonctions edge qui embarquent `_shared/stripe.ts` ont été
   redéployées ; `verify_jwt` relevé **sur la base** avant, recontrôlé après,
   inchangé sur les cinq ; les cinq téléchargées et **identiques au dépôt**.
+
+# Le build du 13 septembre 2026
+
+Julien, en réponse à une liste de tâches où j'avais remis « reconstruire
+l'app » en tête : **« le build est déjà fait »**.
+
+Ce que ça lève, et c'est tout ce qui compte : les deux chantiers postérieurs au
+build du 8 septembre vivaient dans le dépôt et nulle part ailleurs —
+**la traduction anglaise de tous les écrans** (11 septembre) et **« un
+inventaire clôturé n'appartient plus qu'à son créateur »** (8 septembre), dont
+le volet « Clôturer » restait offert aux invités sur les téléphones installés.
+
+⚠️ **CE N'EST PAS UN CONSTAT DE MA PART, ET IL FAUT LE DIRE AINSI.** Je n'ai
+rien pu vérifier : `android/` est régénéré à chaque build et gitignoré, le
+dossier d'archive iOS avait été nettoyé, et aucun appareil n'était branché.
+C'est Julien qui construit et qui a répondu — première main, mais pas une
+mesure. Le jour où le doute revient, ce qui tranche est toujours la même
+chose : la date du binaire installé, jamais celle d'`Info.plist`
+(`xcrun simctl get_app_container` puis `stat`, ou `adb shell dumpsys package`).
+
+⚠️ **La plateforme n'est pas notée, parce qu'elle ne m'a pas été dite.** iOS et
+Android sont deux chemins indépendants — `./scripts/simulateur.sh` et Xcode
+d'un côté, `./scripts/pixel.sh` de l'autre — et un build de l'un ne dit rien de
+l'autre. Ne pas supposer les deux.
