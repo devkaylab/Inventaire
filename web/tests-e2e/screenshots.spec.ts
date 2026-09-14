@@ -20,6 +20,13 @@ test.describe('captures', () => {
       test(`${theme} ${size.name}`, async ({ page }) => {
         await mockSupabase(page)
         await page.addInitScript(t => window.localStorage.setItem('quantinvo-theme', t), theme)
+        // ⚠️ Le navigateur de Playwright est en anglais, et le site suit la
+        // langue de l'appareil depuis le 11 septembre 2026 : sans ce cookie,
+        // toutes les captures sortent en anglais. Elles servent aux decks,
+        // qui sont en français.
+        await page.context().addCookies([
+          { name: 'qlang', value: 'fr', url: 'http://127.0.0.1:3100' },
+        ])
         await page.setViewportSize({ width: size.width, height: size.height })
 
         for (const tab of TABS) {
@@ -40,7 +47,9 @@ test.describe('captures', () => {
         await page.screenshot({ path: `screenshots/${theme}-${size.name}-tableau-de-bord.png`, fullPage: true })
 
         await page.goto('/inventaires')
-        await page.waitForSelector('.dash-kpis')
+        // La rangée de tuiles s'appelle `.resume-bande` depuis la refonte des
+        // pages connectées du 5 septembre 2026 ; `.dash-kpis` n'existe plus.
+        await page.waitForSelector('.resume-bande')
         await page.screenshot({ path: `screenshots/${theme}-${size.name}-liste.png`, fullPage: true })
 
         await page.goto('/dashboard/new')

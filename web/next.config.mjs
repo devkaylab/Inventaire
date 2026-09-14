@@ -87,6 +87,16 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ⚠️ Sans cette ligne, le harnais Playwright ne charge plus rien. Il ouvre
+  // les pages sur `http://127.0.0.1:3100` alors que le serveur de
+  // développement se considère servi depuis `localhost` : Next bloque alors
+  // ses propres fichiers de script (« Blocked cross-origin request to Next.js
+  // dev resource »), l'application ne s'hydrate jamais, et chaque test
+  // s'arrête sur « Chargement de l'inventaire… ». Le symptôme désigne le faux
+  // Supabase, la cause est ici. Réglage de DÉVELOPPEMENT seulement : il n'a
+  // aucun effet sur le site déployé.
+  allowedDevOrigins: ['127.0.0.1'],
+
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

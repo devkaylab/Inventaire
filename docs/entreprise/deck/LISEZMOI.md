@@ -1,6 +1,6 @@
 # Les présentations Quantinvo
 
-Sept présentations PowerPoint, générées par sept scripts qui partagent une même
+Huit présentations PowerPoint, générées par huit scripts qui partagent une même
 charte (`charte.js`). Fond blanc, charte **« Ardoise » v2** (9 septembre 2026) :
 encre pour le texte ET pour les titres, des gris minéraux, et un vert forêt en
 accent qui ne sert qu'à ce qui engage — une pastille numérotée, un grand
@@ -22,8 +22,9 @@ de la même géométrie que `web/components/Logo.tsx`.
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs, après la signature | 19 |
 | `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 12 |
 | `build-histoire.js` | `Quantinvo-histoire.pptx` | **Nous** : d'où l'on vient, du premier commit à aujourd'hui | 14 |
+| `build-pourquoi.js` | `Quantinvo-pourquoi.pptx` | Qui veut savoir d'où vient le produit : le constat de terrain, obstacle par obstacle, et ce que Quantinvo en fait | 13 |
 
-Les sept partagent `charte.js` (la mise en page) ; les cinq commerciaux
+Les huit partagent `charte.js` (la mise en page) ; les cinq commerciaux
 ajoutent `blocs.js` (la grille des offres) et `offres.js` (les prix).
 
 ⚠️ **`build-histoire.js` est le seul qui ne se vende à personne.** Demande de
@@ -45,11 +46,27 @@ abandon — ce qu'aucun des six autres ne peut faire.
   d'AUJOURD'HUI, régénérée à chaque passe ; `histoire/` porte des états
   révolus, qui ne doivent plus jamais bouger.
 
+⚠️ **`build-pourquoi.js` met en page un texte de Julien, il ne l'écrit pas.**
+Il l'a rédigé le 14 septembre 2026 en onze points, depuis sa place de contrôleur
+des stocks. Les onze sont tous là, regroupés en cinq obstacles (autonomie,
+cadence, matériel, donnée, zone), et l'écart en direct a sa propre page.
+
+· **Aucun constat qui ne soit pas le sien**, et **aucun chiffre inventé** : les
+  seuls chiffrés sont les deux personnes de son service et le référentiel arrêté
+  en mars. Pas de « 30 % de gain de temps ».
+· ⚠️ **Le nom de son employeur n'est pas écrit.** Il le nomme dans son texte ;
+  un deck circule, et celui-ci reproche des choses à l'outillage d'un magasin.
+  On dit « le magasin où je travaille ». S'il veut le nommer, c'est à un seul
+  endroit — la page « D'où je parle ».
+· **La page « Ce que je ne promets pas » se garde.** C'est celle qu'aucun
+  document de produit n'écrit, et c'est elle qui rend les douze autres
+  crédibles.
+
 ## Générer
 
 ```
 npm install
-for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js build-histoire.js; do
+for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js build-histoire.js build-pourquoi.js; do
   node $f && FONT_MODE=brand node $f
 done
 ```
