@@ -111,10 +111,42 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       environ 190 €, chaque classe supplémentaire environ 40 €.
       Vérifier d'abord la disponibilité sur data.inpi.fr.
       Fait le : ______  Numéro : ______
-- [ ] Passer le compte Apple Developer en compte **Organisation** (il faut un
-      numéro D-U-N-S, gratuit, obtenu depuis le SIREN en une à deux semaines).
-      Le transfert d'app d'un compte individuel vers l'organisation se fait
-      depuis App Store Connect.
+- [ ] **Demander le numéro D-U-N-S** de Devkaylab — gratuit, chez Dun &
+      Bradstreet, par le formulaire d'Apple
+      (`developer.apple.com/enroll/duns-lookup/`). D&B en a peut-être déjà
+      attribué un : le formulaire commence par chercher.
+      Fait le : ______  Numéro : ______
+
+      ⚠️ **Ce n'est PAS un bloquant pour publier.** Apple l'écrit : « If you're
+      enrolling as an individual, you don't need a D-U-N-S Number. » Le compte
+      est Individuel, la 1.0 peut partir sans.
+
+      Délais annoncés par Apple : jusqu'à **5 jours ouvrés** pour recevoir le
+      numéro de D&B (l'accélérer ne sert à rien), puis jusqu'à **2 jours
+      ouvrés** pour qu'Apple le reçoive. Donc le demander tôt ne coûte rien.
+
+      Ce que le formulaire demande : région, **dénomination exacte du RCS**,
+      adresse du siège, adresse postale, et les coordonnées professionnelles de
+      la personne qui demande. Il est protégé par un CAPTCHA, et un
+      représentant D&B peut rappeler : avoir l'extrait RCS sous la main.
+
+      ⚠️ **Le piège de la SASU** : Apple refuse les dossiers que D&B a classés
+      en *sole proprietorship* (« si votre statut est une entreprise
+      individuelle, inscrivez-vous comme individu »). Une SASU **est** une
+      société, pas une entreprise individuelle — mais « à associé unique » peut
+      induire un classement faux. Saisir la dénomination telle qu'elle figure
+      au RCS, et faire corriger le profil D&B si le classement est mauvais.
+
+- [ ] Faire apparaître **Devkaylab** comme éditeur sur l'App Store. Deux
+      routes, toutes deux derrière le D-U-N-S :
+      1. **convertir** le compte Individuel en Organisation — demande au
+         support Apple Developer, non documentée publiquement ;
+      2. **ouvrir un second compte Organisation et transférer l'app** — bien
+         documenté, mais ⚠️ **« The app must have at least one version that was
+         released to the App Store »**. Autrement dit le transfert est
+         impossible avant la publication : la **1.0 sortira sous « Julien
+         Thiong-Kay » dans tous les cas**. Compter aussi une seconde adhésion
+         à 99 €/an le temps du recouvrement.
       Fait le : ______
 - [ ] Google Play : même logique, compte développeur au nom de la société
       (utile pour le build Android en backlog).
