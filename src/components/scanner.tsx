@@ -77,10 +77,27 @@ interface ScannerProps {
 type Mode = 'camera' | 'manual' | 'hardware'
 
 // Symbologies lues par la caméra. Les balises de l'app sont des QR ('qr') ;
-// le reste couvre les codes-barres articles (EAN/UPC/Code128, etc.).
+// le reste couvre les codes-barres articles (EAN/UPC/Code128, Code 39) et les
+// cartons (ITF-14).
+//
+// ⚠️ **ON NE DÉCLARE QUE CE QU'ON RENCONTRE VRAIMENT, ET C'EST UN CORRECTIF.**
+// Constat de Julien le 15 septembre 2026, sur le Pixel : une étiquette de
+// balise à barres portant 98733 était lue « 987FF ». Le même téléphone la
+// lisait juste avec Google Lens, et l'iPhone aussi — donc ni l'étiquette ni
+// notre code, qui prend le texte du décodeur sans y toucher. La cause est la
+// liste : plus on ouvre de symbologies, plus le décodeur a de façons de faire
+// entrer un tracé dans une grille qui n'est pas la sienne, et il rend alors un
+// résultat plausible mais faux. Code 93 est le suspect principal — il partage
+// la structure de Code 39 et accepte les lettres.
+//
+// Les quatre retirées ne se rencontrent pas dans un magasin de mode :
+// Code 93 (industrie), Codabar (bibliothèques, banques du sang), PDF417
+// (permis de conduire, cartes d'embarquement), Aztec (billets de transport).
+// ⚠️ Code 39 RESTE : c'est une symbologie d'étiquette interne, et les balises
+// d'un autre système en sont souvent. La retirer casserait ce qu'on répare.
 const BARCODE_TYPES = [
-  'qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'code93',
-  'itf14', 'codabar', 'datamatrix', 'pdf417', 'aztec',
+  'qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39',
+  'itf14', 'datamatrix',
 ] as const
 
 interface ScanEntry {
