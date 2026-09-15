@@ -42,11 +42,17 @@ qui fait passer la revue.
 ### Nom — 30 caractères maximum
 
 ```
-Quantinvo — Inventaire magasin
+Quantinvo
 ```
 
-30 caractères tout juste. « Inventaire » et « magasin » sont indexés par le
-nom : inutile de les remettre dans le champ de mots-clés.
+⚠️ **La marque seule, décision de Julien le 15 septembre 2026.** Le nom portait
+« Quantinvo — Inventaire magasin » : trente caractères tout juste, qui faisaient
+indexer « inventaire » et « magasin » par le nom lui-même.
+
+**Conséquence à ne pas oublier : ces deux mots doivent maintenant figurer dans
+le champ de mots-clés**, sans quoi ils ne sont plus indexés nulle part et l'app
+devient introuvable pour qui cherche « inventaire magasin ». C'est fait
+ci-dessous ; ne pas les en retirer en croyant qu'ils font doublon avec le nom.
 
 ### Sous-titre — 30 maximum
 
@@ -60,11 +66,17 @@ quatre termes qui décrivent le travail réel.
 ### Mots-clés — 100 maximum, séparés par des virgules SANS espace
 
 ```
-code-barres,douchette,comptage,démarque,réserve,rayon,commerce,retail,EAN,SKU,zone,balise,équipe
+inventaire,magasin,code-barres,douchette,comptage,démarque,réserve,rayon,retail,EAN,SKU,balise
 ```
 
-⚠️ **Aucun mot du nom ni du sous-titre n'y figure** — Apple les indexe déjà, les
-répéter gaspille des caractères. ⚠️ **Pas de pluriel** : Apple indexe les deux
+94 caractères. « inventaire » et « magasin » y sont entrés le 15 septembre 2026
+quand le nom s'est réduit à la marque ; « commerce », « zone » et « équipe » ont
+cédé la place — ce sont les trois que personne ne tape pour chercher un outil
+d'inventaire.
+
+⚠️ **Aucun mot du SOUS-TITRE n'y figure** — Apple indexe le nom et le sous-titre,
+les répéter gaspille des caractères. Le nom, lui, ne porte plus que la marque :
+tout ce qui décrit le métier doit donc vivre dans le sous-titre ou ici. ⚠️ **Pas de pluriel** : Apple indexe les deux
 formes. ⚠️ **Aucun nom de marque concurrente** : c'est un motif de rejet.
 
 ### Texte promotionnel — 170 maximum
