@@ -21,25 +21,32 @@ export type Mention = {
   aide?: string
 }
 
+// Devkaylab est immatriculée depuis le 8 septembre 2026 : SASU au capital de
+// 100 €, 109 680 389 R.C.S. Paris, EUID FR7501.109680389, siège domicilié au
+// 47 rue Vivienne 75002 Paris.
+//
+// ⚠️ LA VENTE RESTE FERMÉE, et ce n'est pas un oubli : trois mentions REQUISES
+// manquent encore — le téléphone de l'éditeur, et l'adresse et le téléphone de
+// l'hébergeur. Tant qu'elles manquent, `mentionsCompletes()` est faux, donc
+// `venteOuverte()` aussi, et les deux fonctions edge restent d'accord avec le
+// site. Voir AGENTS.md, « La vente est fermée jusqu'à l'immatriculation », pour
+// ce qu'il reste à faire AVANT d'ouvrir — les clés Stripe sont encore en test.
 export const EDITEUR: Mention[] = [
   { libelle: 'Éditeur', valeur: 'Devkaylab', requis: true },
   {
     libelle: 'Statut',
-    valeur: null,
+    valeur: 'Société par actions simplifiée à associé unique (SASU)',
     requis: true,
-    aide: "Forme juridique une fois l'activité immatriculée (entreprise individuelle, SASU, SARL…).",
   },
   {
     libelle: 'Responsable de la publication',
-    valeur: null,
+    valeur: 'Julien Thiong-Kay',
     requis: true,
-    aide: 'Nom et prénom de la personne responsable du contenu du site.',
   },
   {
     libelle: 'Adresse',
-    valeur: null,
+    valeur: '47 rue Vivienne, 75002 Paris',
     requis: true,
-    aide: "Adresse du siège, ou domicile pour une entreprise individuelle.",
   },
   { libelle: 'Courrier électronique', valeur: 'contact@quantinvo.com', requis: true },
   {
@@ -50,26 +57,27 @@ export const EDITEUR: Mention[] = [
   },
   {
     libelle: 'Numéro d’identification',
-    valeur: null,
+    valeur: 'SIREN 109 680 389',
     requis: true,
-    aide: 'SIREN ou SIRET, délivré à l’immatriculation.',
   },
   {
     libelle: 'Registre du commerce et des sociétés',
-    valeur: null,
+    valeur: '109 680 389 R.C.S. Paris',
     requis: false,
-    aide: 'Ville d’immatriculation et numéro RCS — pour une société uniquement.',
   },
   {
     libelle: 'Capital social',
-    valeur: null,
+    valeur: '100,00 €',
     requis: false,
-    aide: 'Pour une société uniquement.',
   },
   {
     libelle: 'Numéro de TVA intracommunautaire',
     valeur: null,
     requis: false,
+    // ⚠️ Volontairement vide : Devkaylab est en franchise en base (article
+    // 293 B du CGI, voir `offres.ts`). Un numéro existe bien — il se demande —
+    // mais l'afficher laisserait croire que la TVA est facturée, ce qui est
+    // faux. À remplir le jour où la franchise tombe, avec `TVA_APPLICABLE`.
     aide: 'Si l’activité est assujettie à la TVA.',
   },
 ]
