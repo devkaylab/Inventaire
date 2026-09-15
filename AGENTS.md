@@ -13244,8 +13244,16 @@ chaîne, relevée dans la console :
    par `https://www.quantinvo.com` ;
 2. ce site doit d'abord être **possédé dans la Google Search Console** (« Vous
    devez enregistrer la propriété du site dans la Search Console avant de
-   pouvoir la valider ») — la voie la moins intrusive est un fichier ou une
-   balise de vérification dans `web/public/`, qui part au prochain push ;
+   pouvoir la valider »).
+   ✅ **FAIT le 15 septembre 2026** : le fichier de vérification fourni par
+   Google est dans `web/public/`, donc servi à la racine du site.
+   ⚠️ **IL NE SE SUPPRIME PAS.** Search Console le relit périodiquement ; le
+   retirer perd la propriété **en silence**, et le statut du compte Play peut
+   retomber avec. ⚠️ Et il ne se **commente pas** non plus : Google compare son
+   contenu à la lettre, une ligne d'explication ajoutée dedans casse la
+   validation. L'explication vit dans son test de garde
+   (`web/tests/seo.test.ts`, « la preuve de propriété du site »), qui déduit le
+   jeton du nom du fichier et refuse qu'il y en ait deux ;
 3. « Envoyer une demande de validation » depuis la Play Console ;
 4. « Modifier le type de compte » se débloque alors, et c'est **là** que le
    D-U-N-S `288196187` sert.

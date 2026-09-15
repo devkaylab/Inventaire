@@ -158,3 +158,34 @@ describe('la suppression de compte a une adresse publique', () => {
     expect(site).toContain("chemin: '/suppression-compte'")
   })
 })
+
+describe('la preuve de propriété du site', () => {
+  // ⚠️ CE FICHIER N'EST PAS UN RÉSIDU DE TÉLÉCHARGEMENT. Il prouve à la Google
+  // Search Console que www.quantinvo.com nous appartient, et cette preuve est
+  // ce qui débloque, dans la Play Console, « Modifier le type de compte » —
+  // donc le passage du compte personnel au compte ORGANISATION, donc la sortie
+  // de l'obligation de test fermé (12 testeurs, 14 jours) que Google n'impose
+  // qu'aux comptes personnels. Voir AGENTS.md, « Le tour des consoles ».
+  //
+  // Le supprimer casse la validation en silence : Search Console revérifie le
+  // fichier périodiquement, et une propriété perdue peut faire retomber le
+  // statut du compte. Il reste donc dans `public/`, servi à la racine.
+  const PUBLIC = path.resolve(__dirname, '../public')
+  const fichiers = readdirSync(PUBLIC).filter(f => /^google[0-9a-f]+\.html$/.test(f))
+
+  it('est posée dans public/, et une seule fois', () => {
+    // Une seule : deux jetons veulent dire qu'une ancienne propriété traîne, et
+    // on ne saurait plus laquelle fait foi.
+    expect(fichiers).toHaveLength(1)
+  })
+
+  it('porte EXACTEMENT le jeton que Google attend', () => {
+    // Google compare le contenu à la lettre — une ligne d'explication ajoutée
+    // dans le fichier suffit à faire échouer la validation. L'explication vit
+    // donc ici, jamais dedans. Le nom du fichier EST le jeton : la garde le
+    // déduit plutôt que de le citer.
+    const nom = fichiers[0]
+    expect(readFileSync(path.join(PUBLIC, nom), 'utf8'))
+      .toBe(`google-site-verification: ${nom}`)
+  })
+})
