@@ -173,7 +173,10 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       **D-U-N-S 288196187**, le fait qu'on a l'autorité d'engager la société, le
       message d'erreur reçu, et que l'app n'étant pas publiée le transfert n'est
       pas une option.
-      Fait le : ______
+
+      **Demande de conversion envoyée le 15 septembre 2026** par ce formulaire.
+      Réponse attendue par courriel ; Apple n'annonce aucun délai pour ce cas.
+      Reçue le : ______  Issue : ______
 - [ ] Google Play : même logique, compte développeur au nom de la société
       (utile pour le build Android en backlog).
 - [ ] Nom de domaine quantinvo.com : mettre la société comme titulaire
