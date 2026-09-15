@@ -13254,9 +13254,27 @@ chaîne, relevée dans la console :
    validation. L'explication vit dans son test de garde
    (`web/tests/seo.test.ts`, « la preuve de propriété du site »), qui déduit le
    jeton du nom du fichier et refuse qu'il y en ait deux ;
-3. « Envoyer une demande de validation » depuis la Play Console ;
-4. « Modifier le type de compte » se débloque alors, et c'est **là** que le
-   D-U-N-S `288196187` sert.
+3. « Envoyer une demande de validation » depuis la Play Console. ✅ Fait.
+   ⚠️ **L'APPROBATION NE SE FAIT PAS PAR E-MAIL, malgré ce que tout annonce.**
+   La Play Console dit « une demande de validation a été envoyée au
+   propriétaire », et le courriel reçu côté Play n'est qu'un accusé de
+   réception (« nous vous indiquerons si le propriétaire approuve »). Le geste
+   vit dans **Search Console → Paramètres → Associations → Demandes en
+   attente → RÉSOUDRE LA DEMANDE → APPROUVER**. Personne ne trouve cette page
+   en suivant les instructions ; c'est là qu'il faut aller.
+   ⚠️ **Et elle appartient au PROPRIÉTAIRE, pas au titulaire du compte Play.**
+   Ici la propriété est validée par `jthiongkay@gmail.com` ; `devkaylab@gmail.com`
+   n'y a qu'un « accès total », ce qui ne suffit pas. Search Console **ne
+   permet plus d'ajouter un propriétaire** (le menu n'offre que *Restreint* et
+   *Accès total*) : un propriétaire est quelqu'un qui a validé lui-même. Si les
+   deux bouts doivent être sur le même compte un jour, il faut revalider la
+   propriété depuis l'autre compte — un second fichier `googleXXXX.html` dans
+   `public/`, et la garde passe alors de « un seul » à « au moins un ».
+4. ✅ **« Modifier le type de compte » EST DÉBLOQUÉ** (15 septembre 2026,
+   vérifié dans le DOM : le bouton ne porte plus `disabled`). C'est **là** que
+   le D-U-N-S `288196187` sert, et c'est le geste de Julien : il déclare
+   l'identité légale de la société, et le type de compte ne se défait pas d'un
+   clic.
 
 ⚠️ **CE QUI N'EST PAS PROUVÉ** : que la bascule lève l'obligation **pour cette
 app**, rétroactivement. Le texte de Google borne la règle aux comptes
