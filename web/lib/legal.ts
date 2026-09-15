@@ -51,9 +51,8 @@ export const EDITEUR: Mention[] = [
   { libelle: 'Courrier électronique', valeur: 'contact@quantinvo.com', requis: true },
   {
     libelle: 'Téléphone',
-    valeur: null,
+    valeur: '+33 6 88 59 27 65',
     requis: true,
-    aide: 'La LCEN demande des coordonnées permettant de joindre facilement l’éditeur.',
   },
   {
     libelle: 'Numéro d’identification',
