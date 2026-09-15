@@ -13218,6 +13218,60 @@ production. Le tableau de bord le dit en toutes lettres, et rien n'est commencé
   noms différents pour deux mécaniques d'indexation différentes se défend ; le
   savoir vaut mieux que l'aligner par réflexe.
 
+### ⚠️ ET LES QUATORZE JOURS NE SONT PEUT-ÊTRE PAS UNE FATALITÉ
+
+Question de Julien, le jour même : *« j'ai pas compris, j'ai un duns on ne peut
+pas l'utiliser sur google ? »* Elle était juste, et elle renverse le paragraphe
+ci-dessus.
+
+**L'obligation est explicitement bornée aux comptes PERSONNELS.** L'article de
+Google s'intitule « App testing requirements for new **personal** developer
+accounts », et son texte dit : « Google Play requires **personal developer
+accounts created after November 13, 2023**, to test their apps… ». Un compte
+**organisation** n'y est pas soumis.
+
+**Et la console permet la bascule** — « Modifier le type de compte » existe sous
+*Compte de développeur → Détails du compte*. Elle est grisée, et son infobulle
+dit exactement ce qui la débloque :
+
+> « Pour modifier le type de votre compte, indiquez et validez un site Web pour
+> votre organisation ci-dessous. »
+
+⚠️ **CE N'EST DONC PAS LE D-U-N-S QUI BLOQUE, C'EST LA VALIDATION DU SITE.** La
+chaîne, relevée dans la console :
+
+1. le site déclaré est **périmé** — `https://quantinvo.vercel.app`, à remplacer
+   par `https://www.quantinvo.com` ;
+2. ce site doit d'abord être **possédé dans la Google Search Console** (« Vous
+   devez enregistrer la propriété du site dans la Search Console avant de
+   pouvoir la valider ») — la voie la moins intrusive est un fichier ou une
+   balise de vérification dans `web/public/`, qui part au prochain push ;
+3. « Envoyer une demande de validation » depuis la Play Console ;
+4. « Modifier le type de compte » se débloque alors, et c'est **là** que le
+   D-U-N-S `288196187` sert.
+
+⚠️ **CE QUI N'EST PAS PROUVÉ** : que la bascule lève l'obligation **pour cette
+app**, rétroactivement. Le texte de Google borne la règle aux comptes
+personnels, donc elle devrait tomber avec le statut — mais la seule preuve est
+le tableau de bord de la console après conversion. À vérifier là, pas ici. Et
+tant que ce n'est pas prouvé, **ne pas abandonner le plan des douze testeurs** :
+s'il faut y revenir, les quatorze jours repartent de zéro.
+
+### Le compte personnel publie l'adresse du DOMICILE
+
+Trouvé en passant, et c'est un second argument pour la bascule. Le profil
+développeur porte « Nom légal et adresse : JULIEN SAMUEL THIONG-KAY », suivi de
+l'adresse personnelle de Julien à Saint-Germain-en-Laye — et la console
+prévient :
+
+> « Si vous choisissez de générer des revenus sur Google Play, votre adresse
+> légale complète sera visible publiquement, conformément aux lois sur la
+> protection des consommateurs. »
+
+Aujourd'hui l'app est gratuite et les abonnements se vendent sur le site, donc
+le cas ne se déclenche pas. Un compte organisation y mettrait de toute façon le
+siège — 47 rue Vivienne — au lieu du domicile.
+
 ## ⚠️ STRIPE LIVE N'EST PAS ACTIVÉ — pas « il manque les clés »
 
 Les notes de ce fichier disaient « poser les clés live le jour venu ». C'est
