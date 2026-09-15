@@ -55,9 +55,9 @@ export default function MentionsLegalesPage() {
 
         {manquantes.length > 0 && (
           <p className="legal-avis">
-            Cette page est en cours de constitution : l’activité éditrice n’est pas encore
-            immatriculée. Les informations manquantes sont signalées ci-dessous et seront
-            publiées dès qu’elles seront disponibles.
+            Cette page est incomplète : certaines mentions ne sont pas encore publiées.
+            Elles sont signalées « à compléter » ci-dessous, et le seront dès
+            qu’elles seront disponibles.
           </p>
         )}
 

@@ -394,6 +394,29 @@ describe('les boutons des boutiques d’applications', () => {
     }
   })
 
+  it('pointent vers le VRAI paquet et le VRAI identifiant', () => {
+    // ⚠️ L'adresse Play a porté `com.devkaylab.quantinvo` jusqu'au 15 septembre
+    // 2026 — un paquet qui n'existe ni dans `app.json`, ni dans la Play
+    // Console, ni nulle part ailleurs dans le dépôt. Tant que `PUBLIEE` vaut
+    // faux, rien ne s'en aperçoit : la faute ne se serait vue que le jour de
+    // la publication, sur une fiche introuvable.
+    //
+    // La garde DÉDUIT le paquet d'`app.json` plutôt que de le citer : le jour
+    // où l'identifiant Android change, c'est l'adresse qui devra suivre, et
+    // c'est ce test qui le dira.
+    const appJson = JSON.parse(lire('../../app.json')) as {
+      expo: { android: { package: string } }
+    }
+    expect(stores).toContain(`details?id=${appJson.expo.android.package}`)
+
+    // Et l'identifiant App Store est celui de la fiche (App Store Connect →
+    // App Information → Apple ID), jamais un gabarit : `id000000000` menait
+    // sur une erreur.
+    const apple = stores.match(/apps\.apple\.com\/fr\/app\/quantinvo\/id(\d+)/)
+    expect(apple).not.toBeNull()
+    expect(Number(apple![1])).toBeGreaterThan(0)
+  })
+
   it('ne reprennent pas les images de marque d’Apple et de Google', () => {
     // Leurs badges officiels sont soumis à leurs chartes : les nôtres sont
     // dessinés, en SVG. Et jamais d'emoji.

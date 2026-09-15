@@ -25,9 +25,11 @@ export type Mention = {
 // 100 €, 109 680 389 R.C.S. Paris, EUID FR7501.109680389, siège domicilié au
 // 47 rue Vivienne 75002 Paris.
 //
-// ⚠️ LA VENTE RESTE FERMÉE, et ce n'est pas un oubli : trois mentions REQUISES
-// manquent encore — le téléphone de l'éditeur, et l'adresse et le téléphone de
-// l'hébergeur. Tant qu'elles manquent, `mentionsCompletes()` est faux, donc
+// ⚠️ LA VENTE RESTE FERMÉE, et ce n'est pas un oubli : DEUX mentions REQUISES
+// manquent encore — l'adresse et le téléphone de l'hébergeur. (Elles étaient
+// trois jusqu'au 14 septembre 2026 : le téléphone de l'éditeur a été posé
+// depuis. Une note qui compte ce qui manque se recompte quand on en remplit
+// une.) Tant qu'elles manquent, `mentionsCompletes()` est faux, donc
 // `venteOuverte()` aussi, et les deux fonctions edge restent d'accord avec le
 // site. Voir AGENTS.md, « La vente est fermée jusqu'à l'immatriculation », pour
 // ce qu'il reste à faire AVANT d'ouvrir — les clés Stripe sont encore en test.
@@ -81,6 +83,35 @@ export const EDITEUR: Mention[] = [
   },
 ]
 
+// ⚠️ LES DEUX VALEURS MANQUANTES SONT CONNUES DEPUIS LE 15 SEPTEMBRE 2026, ET
+// ELLES NE SONT PAS POSÉES ICI À DESSEIN :
+//
+//   Adresse   : 440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis
+//   Téléphone : +1 415 398 5463
+//
+// Relevées — jamais citées de mémoire — dans deux sources publiées par Vercel
+// elle-même : le « Contact Us » de sa notice de confidentialité
+// (vercel.com/legal/privacy-notice) pour l'adresse, et sa fiche du Data Privacy
+// Framework (dataprivacyframework.gov, rubrique « Questions or Complaints »)
+// pour l'adresse ET le téléphone.
+//
+// ⚠️ **LES POSER OUVRE LA VENTE EN LIGNE**, par construction : ce sont les deux
+// dernières mentions requises, donc `mentionsCompletes()` — donc
+// `venteOuverte()` — bascule à vrai le jour où on les écrit. Et le jumeau
+// `VENTE_OUVERTE = false` des deux fonctions edge fait alors échouer son test :
+// c'est le garde-fou, pas un défaut. Ce qu'il reste à faire AVANT, au
+// 15 septembre 2026 :
+//
+//   1. le compte Stripe **live** n'est pas activé du tout (l'onboarding en est
+//      à « Verify your business », et il propose encore « Entrepreneur
+//      individuel » alors que Devkaylab est une SASU) ;
+//   2. donc ni clés live, ni les huit Price, ni le taux de TVA ;
+//   3. et la permission Subscriptions de la clé live, oubliée sur la clé de
+//      test jusqu'au 11 septembre (voir AGENTS.md, « Le chemin d'API »).
+//
+// Tant que ce n'est pas fait, un prospect irait jusqu'à une page de paiement
+// qui refuserait sa carte. On garde donc la porte fermée, et la page dit
+// simplement « à compléter ».
 export const HEBERGEUR: Mention[] = [
   { libelle: 'Hébergeur', valeur: 'Vercel Inc.', requis: true },
   {

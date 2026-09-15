@@ -57,17 +57,29 @@ ci-dessous ; ne pas les en retirer en croyant qu'ils font doublon avec le nom.
 ### Sous-titre — 30 maximum
 
 ```
-Scan, audit et écarts de stock
+Compte, audit, écarts de stock
 ```
 
 30 tout juste. Il n'ajoute aucun mot déjà présent dans le nom, et porte les
 quatre termes qui décrivent le travail réel.
+
+⚠️ **C'est la valeur RÉELLEMENT en ligne**, relevée dans App Store Connect le
+15 septembre 2026. La fiche annonçait « Scan, audit et écarts de stock » : c'est
+Julien qui a saisi l'autre, et c'est la console qui fait foi. Une fiche qui
+prétend être la source cesse de l'être dès qu'elle décrit autre chose que ce
+qui est posé.
 
 ### Mots-clés — 100 maximum, séparés par des virgules SANS espace
 
 ```
 inventaire,magasin,code-barres,douchette,comptage,démarque,réserve,rayon,retail,EAN,SKU,balise
 ```
+
+✅ **Posés dans App Store Connect le 15 septembre 2026**, et relus après
+rechargement de la page. Ils y étaient restés ceux d'avant le renommage
+(`code-barres,…,commerce,…,zone,balise,équipe`) : pendant une semaine, ni
+« inventaire » ni « magasin » n'étaient indexés — ni par le nom, réduit à la
+marque, ni par le sous-titre, ni par les mots-clés.
 
 94 caractères. « inventaire » et « magasin » y sont entrés le 15 septembre 2026
 quand le nom s'est réduit à la marque ; « commerce », « zone » et « équipe » ont

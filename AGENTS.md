@@ -13172,9 +13172,110 @@ magasin.
 
 ## Le jour de la publication
 
-`web/lib/appStores.ts` : passer `PUBLIEE` à `true` et remplacer les deux
-adresses par les fiches réelles. **Tout est dans ce seul fichier**, et un test
-échoue si un composant se met à écrire une adresse en dur.
+`web/lib/appStores.ts` : **passer `PUBLIEE` à `true`, et rien d'autre.** Les
+deux adresses de fiche y sont désormais les vraies (App Store `id6807966626`,
+Play `com.quantinvo.app`) ; un test échoue si un composant se met à écrire une
+adresse en dur.
+
+⚠️ **L'adresse Play y était FAUSSE jusqu'au 15 septembre 2026** —
+`com.devkaylab.quantinvo`, un paquet qui n'existe ni dans `app.json`, ni dans la
+Play Console, ni nulle part ailleurs dans le dépôt. Tant que `PUBLIEE` vaut
+faux, les boutons ouvrent la recherche des boutiques : la faute ne se serait vue
+que le jour de la publication, sur une fiche introuvable. La garde déduit
+désormais le paquet d'`app.json` plutôt que de le citer.
+
+# Le tour des consoles (15 septembre 2026)
+
+Julien : *« je t'ai mis asc, playstore connect, stripe, vercel et quantinvo sur
+chrome, je te laisse en autonomie »*. Relevé console par console, sur les vraies
+pages — **aucun de ces chiffres ne vient d'une note du dépôt**, et deux notes
+disaient autre chose que la réalité.
+
+## ⚠️ ANDROID EST À 14 JOURS MINIMUM, ET PERSONNE NE LE SAVAIT
+
+C'est le fait le plus lourd de la journée, et il ne se voit que dans la Play
+Console. Le compte développeur **Devkaylab est un compte PERSONNEL**, et Google
+impose depuis 2023 à ces comptes-là un test fermé avant tout accès en
+production. Le tableau de bord le dit en toutes lettres, et rien n'est commencé :
+
+| Étape | État au 15 septembre 2026 |
+|---|---|
+| Publier une version de test fermé | **rien n'a jamais été envoyé** — aucune release, sur aucun canal |
+| Avoir au moins **12 testeurs** inscrits | « 0 testeur actuellement inscrit » |
+| Exécuter le test fermé **au moins 14 jours** | pas commencé |
+| Demander à publier en production | bouton **désactivé** |
+
+- **L'AAB de 86 Mo construit le 8 septembre n'a jamais été téléversé.** Le
+  bundle existe sur la machine, la Play Console n'en a aucune trace.
+- **Le délai est un plancher, pas une estimation** : quatorze jours *après* que
+  douze testeurs soient inscrits et que le test tourne. Recruter les testeurs
+  est donc le premier geste, et c'est un geste de Julien.
+- ⚠️ **Le nom diffère d'une boutique à l'autre** : Play porte encore
+  « Quantinvo — Inventaire magasin » (30 caractères tout juste), l'App Store
+  porte « Quantinvo » depuis le 15 septembre. Ce n'est **pas** forcément à
+  corriger : Play n'a aucun champ de mots-clés, son titre est ce qui indexe —
+  là où l'App Store a un champ dédié, qui porte maintenant les deux mots. Deux
+  noms différents pour deux mécaniques d'indexation différentes se défend ; le
+  savoir vaut mieux que l'aligner par réflexe.
+
+## ⚠️ STRIPE LIVE N'EST PAS ACTIVÉ — pas « il manque les clés »
+
+Les notes de ce fichier disaient « poser les clés live le jour venu ». C'est
+plus gros que ça : le compte live (`acct_1U7Gj…ETFH`) est **à l'étape 1 sur 5
+de son onboarding**, « Verify your business ». Il n'y a donc ni clés, ni les
+huit Price, ni le taux de TVA, ni la permission Subscriptions — et il y a un
+parcours d'identité et de compte bancaire à faire avant.
+
+- **Le formulaire propose encore « Entrepreneur individuel / Micro-entrepreneur »**
+  alors que Devkaylab est une SASU depuis le 8 septembre. À corriger à la
+  première étape, sinon tout le reste est saisi sous le mauvais statut.
+- ⚠️ **Ce parcours appartient à Julien** : il demande des pièces d'identité et
+  un RIB. Un agent n'y touche pas.
+- Le sandbox, lui, est intact et c'est là que tout a été éprouvé jusqu'ici.
+
+## App Store — ce qui est prêt, et les deux choix qui restent
+
+Build **5** est bien attaché à la version 1.0 (« Prepare for Submission »),
+cinq captures iPhone 6,9", App Privacy **publiée**, prix et disponibilité posés
+(175 pays), compte de démonstration et contact de revue remplis, et les deux
+adresses déclarées (`/confidentialite`, `/suppression-compte`) existent bien
+dans `web/app/`.
+
+- **Apple ID : `6807966626`** — c'est lui qui manquait à `appStores.ts`.
+- ⚠️ **La fiche est en FRANÇAIS SEULEMENT**, alors que l'application parle
+  anglais depuis le 11 septembre. Une localisation anglaise se ferait sans
+  nouvelle version ; c'est un choix, pas un oubli, mais il n'a jamais été posé.
+- ⚠️ **La version est réglée sur « publier automatiquement après approbation ».**
+  Elle partirait donc en ligne le jour où Apple approuve — pendant qu'Android
+  est à quinze jours, que la vente est fermée et que le site ne pointe pas
+  encore vers la fiche. « Publier manuellement » rendrait la date à Julien.
+- Le copyright dit « 2026 Julien Thiong-Kay », pas Devkaylab : cohérent tant que
+  le compte Apple est **Individuel**, à revoir avec la conversion en
+  Organisation.
+
+## Vercel — les deux valeurs manquantes sont trouvées, et PAS posées
+
+`vercel.com` était bloqué depuis l'environnement de l'agent ; le Chrome de
+Julien l'ouvre. Adresse relevée dans le « Contact Us » de la notice de
+confidentialité de Vercel, adresse **et** téléphone dans sa fiche du Data
+Privacy Framework — deux sources publiées, jamais la mémoire.
+
+⚠️ **Elles sont écrites en commentaire dans `web/lib/legal.ts`, pas dans les
+`Mention`, et c'est délibéré : les poser OUVRE LA VENTE** — ce sont les deux
+dernières mentions requises, et `venteOuverte()` vaut `mentionsCompletes()`.
+Avec Stripe live non activé, un prospect irait jusqu'à une page de paiement qui
+refuserait sa carte. Le jour venu, c'est un copier-coller.
+
+## Deux notes qui disaient faux, corrigées
+
+- **La page des mentions légales affirmait en production que « l'activité
+  éditrice n'est pas encore immatriculée »** — faux depuis le 8 septembre. Elle
+  dit maintenant ce qui est vrai dans tous les états : certaines mentions ne
+  sont pas encore publiées.
+- **Le commentaire de `legal.ts` comptait « trois mentions requises »** ; le
+  téléphone de l'éditeur a été posé la veille, il en manque deux. *Une note qui
+  compte ce qui manque se recompte quand on en remplit une* — sixième note
+  périmée de ce projet.
 
 # L'application et l'espace connecté parlent anglais (11 septembre 2026)
 
