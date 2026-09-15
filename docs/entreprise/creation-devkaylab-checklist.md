@@ -111,11 +111,12 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       environ 190 €, chaque classe supplémentaire environ 40 €.
       Vérifier d'abord la disponibilité sur data.inpi.fr.
       Fait le : ______  Numéro : ______
-- [ ] **Demander le numéro D-U-N-S** de Devkaylab — gratuit, chez Dun &
-      Bradstreet, par le formulaire d'Apple
-      (`developer.apple.com/enroll/duns-lookup/`). D&B en a peut-être déjà
-      attribué un : le formulaire commence par chercher.
-      Fait le : ______  Numéro : ______
+- [x] **Numéro D-U-N-S de Devkaylab : `288196187`.** Il EXISTAIT DÉJÀ —
+      D&B l'avait attribué sans qu'on demande rien, ce qui est courant pour une
+      société française une fois immatriculée. Trouvé le 15 septembre 2026 par
+      la recherche d'Apple (`developer.apple.com/enroll/duns-lookup/`).
+      ⚠️ **Chercher AVANT de demander** : la demande annonce cinq jours ouvrés,
+      la recherche répond tout de suite.
 
       ⚠️ **Ce n'est PAS un bloquant pour publier.** Apple l'écrit : « If you're
       enrolling as an individual, you don't need a D-U-N-S Number. » Le compte
@@ -143,10 +144,35 @@ restent valables ; les étapes 1, 4 et 5 tombent.
          support Apple Developer, non documentée publiquement ;
       2. **ouvrir un second compte Organisation et transférer l'app** — bien
          documenté, mais ⚠️ **« The app must have at least one version that was
-         released to the App Store »**. Autrement dit le transfert est
-         impossible avant la publication : la **1.0 sortira sous « Julien
-         Thiong-Kay » dans tous les cas**. Compter aussi une seconde adhésion
-         à 99 €/an le temps du recouvrement.
+         released to the App Store »** : le transfert est impossible AVANT la
+         publication. Il faut aussi un **second Apple Account** — le 15
+         septembre 2026, s'inscrire comme société depuis le compte actuel est
+         refusé : « Your Apple Account is already associated with the Account
+         Holder of a membership ». Plus une seconde adhésion à 99 €/an le temps
+         du recouvrement.
+
+      ⚠️ **LA ROUTE 1 N'A PAS LA CONTRAINTE DE LA ROUTE 2**, et une note de ce
+      fichier a dit le contraire pendant une heure le 15 septembre 2026 : « la
+      1.0 sortira sous le nom de Julien quoi qu'il arrive » n'est vrai que du
+      **transfert**. Une conversion ne transfère rien — l'app ne bouge pas de
+      compte, donc elle n'a pas besoin d'avoir été publiée. Si la conversion
+      aboutit avant la soumission, la 1.0 sort directement sous Devkaylab.
+
+      **Et le calendrier le permet** : Android est à quinze jours minimum de sa
+      mise en production (test fermé obligatoire, voir AGENTS.md « Le tour des
+      consoles »). Cette attente est le budget de temps de la conversion.
+
+      **Le chemin exact de la demande** (relevé le 15 septembre 2026) :
+      `developer.apple.com/contact/` → *View topics* → **Membership and
+      Account** → **Program Enrolment** → **Email**. Le formulaire ne demande
+      qu'un message : le nom et l'Apple Account sont pré-remplis. Le téléphone
+      existe aussi, aux heures ouvrées.
+
+      Ce que le message doit porter : dénomination `DEVKAYLAB`, forme SASU,
+      SIREN 109 680 389 (RCS Paris), siège 47 rue Vivienne 75002 Paris,
+      **D-U-N-S 288196187**, le fait qu'on a l'autorité d'engager la société, le
+      message d'erreur reçu, et que l'app n'étant pas publiée le transfert n'est
+      pas une option.
       Fait le : ______
 - [ ] Google Play : même logique, compte développeur au nom de la société
       (utile pour le build Android en backlog).
