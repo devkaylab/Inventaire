@@ -48,9 +48,18 @@ export const VOLUMES: Choix[] = [
 ]
 
 /** Un magasin, tel que l'écran le tient. */
-export type MagasinSaisi = { nom: string; tranche: string; exact: string }
+/**
+ * Un magasin, tel que l'écran le tient.
+ *
+ * ⚠️ `adresse` est facultative dans le TYPE parce qu'un brouillon écrit avant
+ * le 16 septembre 2026 n'en porte pas ; elle est exigée par `refusMagasin`.
+ */
+export type MagasinSaisi = { nom: string; tranche: string; exact: string; adresse?: string }
 
-export const magasinVide = (): MagasinSaisi => ({ nom: '', tranche: '', exact: '' })
+export const magasinVide = (): MagasinSaisi => ({ nom: '', tranche: '', exact: '', adresse: '' })
+
+/** La borne basse d'une adresse, la même qu'`adresse_propre` en base. */
+export const ADRESSE_MIN = 8
 
 /**
  * Le nombre d'appareils que la saisie désigne, ou `null` tant qu'elle est
@@ -69,6 +78,9 @@ export function appareilsDe(m: MagasinSaisi): number | null {
 /** Ce qui empêche encore d'aller plus loin, ou `null`. */
 export function refusMagasin(m: MagasinSaisi): string | null {
   if (m.nom.trim() === '') return 'Donnez un nom à ce magasin.'
+  // ⚠️ L'adresse rend opposable l'article 9.5 des conditions : une licence ne
+  // sert qu'au magasin déclaré (16 septembre 2026).
+  if ((m.adresse ?? '').trim().replace(/\s+/g, ' ').length < ADRESSE_MIN) return 'Indiquez l’adresse complète de ce magasin.'
   if (m.tranche === '') return 'Indiquez combien d’appareils y comptent en même temps.'
   const n = appareilsDe(m)
   if (n == null) return 'Indiquez le nombre exact d’appareils.'

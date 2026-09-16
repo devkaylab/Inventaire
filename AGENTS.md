@@ -14035,12 +14035,31 @@ pertes. La politique de confidentialité ne déclarait pas **Stripe** ni les
 données de paiement et la conservation des factures (dix ans) : corrigé, et la
 garde des prestataires l'exige désormais.
 
-⚠️ **CE QUI BLOQUE AVANT D'OUVRIR LA VENTE, ET N'EST PAS FAIT** :
-- les CGV ne sont **publiées nulle part** et **aucun écran ne les fait
-  accepter** — l'article 3 décrit une acceptation que le produit ne recueille
-  pas encore ;
-- l'article 9.5 se prouve mal tant que le Service ne demande que le NOM d'un
-  magasin, pas son adresse ;
-- toujours pas de relecture juridique.
+~~Ce qui bloquait~~ — **fait le jour même** (« fais 1 et 2 », Julien) :
 
-Tests de garde : `web/tests/offres.test.ts` et `web/tests/confidentialite.test.ts`.
+- **Les conditions sont publiées** sur `/conditions-generales` (plan du site,
+  pied de page). ⚠️ **La page LIT le fichier du dépôt à la construction** et ne
+  garde que le passage entre « ## 1. Identification » et « ## Points à
+  trancher » ; `passagePublie` fait ÉCHOUER le build s'il y reste un crochet,
+  un ⚠️, un chemin ou un backtick. Les crochets ont donc été remplacés par des
+  valeurs par défaut, listées au point 0 des « Points à trancher » — **à faire
+  confirmer par le juriste**. L'annexe 1 (sous-traitance) est écrite en entier.
+- **Elles s'acceptent** par une case (`AccepterConditions`, jamais cochée
+  d'avance) sur l'inscription, la souscription et l'ajout de magasin — pas sur
+  un changement d'offre, qui relève du contrat déjà accepté. ⚠️ **La preuve est
+  en base** : les trois dépôts refusent (`code: 'conditions'`) toute version
+  différente de `version_conditions()`, et consignent `cgv_version` +
+  `cgv_acceptees_le` sur la demande. `VERSION_CONDITIONS` (site) et
+  `version_conditions()` (base) bougent ENSEMBLE — un test les compare.
+  Modifier le texte substantiellement = changer les deux.
+- **L'adresse de chaque magasin est exigée** (8 à 200 caractères,
+  `adresse_propre`) et suit jusqu'à `stores.address` à la création. Les
+  magasins d'avant ce jour n'en ont pas.
+- Migration `20260916120001` (trois dépôts en DROP puis CREATE, droits
+  reposés) ; `inscription`, `subscribe-online` et `libre-service` redéployées,
+  `verify_jwt` inchangé, fichiers identiques au dépôt.
+
+Reste : **la relecture juridique**, et l'adresse n'est affichée nulle part
+encore (ni fiche magasin ni console).
+
+Tests de garde : `web/tests/offres.test.ts`, `web/tests/confidentialite.test.ts` et `web/tests/conditions-generales.test.ts`.

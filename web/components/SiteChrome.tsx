@@ -79,6 +79,7 @@ export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
           <Link href={lien('/tarifs')}>{t('Tarifs')}</Link>
           <Link href="/login">{t('Se connecter')}</Link>
           <a href={PRIVACY_URL} target="_blank" rel="noreferrer">{t('Confidentialité')}</a>
+          <Link href="/conditions-generales">{t('Conditions générales')}</Link>
           {/* Une identification à trous ne vaut pas mieux que pas de page : on
               ne l'annonce qu'une fois les mentions requises renseignées. */}
           {mentionsCompletes() && <Link href="/mentions-legales">{t('Mentions légales')}</Link>}

@@ -44,6 +44,7 @@ export const PAGES_PUBLIQUES: PagePublique[] = [
   { chemin: '/open', priorite: 0.5, frequence: 'monthly' },
   { chemin: '/superviseur', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/confidentialite', priorite: 0.3, frequence: 'yearly' },
+  { chemin: '/conditions-generales', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/suppression-compte', priorite: 0.3, frequence: 'yearly' },
   // ⚠️ La vitrine en anglais (11 septembre 2026) : chaque page française a sa
   // jumelle sous `/en`, indexable, liée par `hreflang` (voir `lib/metaVitrine.ts`).

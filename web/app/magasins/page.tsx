@@ -35,6 +35,7 @@ import { Volet } from '@/components/ui/Volet'
 import { MagasinSaisie, nombreOuNull, type SaisieMagasin } from '@/components/MagasinSaisie'
 import { CorpsMagasin, resumeMagasin } from '@/components/magasin/CorpsMagasin'
 import { PayerEnLigne, ReprendrePaiement } from '@/components/PayerEnLigne'
+import { ADRESSE_MIN } from '@/lib/inscription'
 import { QuiSupervise } from '@/components/QuiSupervise'
 import { compositionOffre, proposer } from '@/lib/appareils'
 import { PLAFOND_LIBRE_SERVICE } from '@/lib/offres'
@@ -382,11 +383,13 @@ function DemandesMagasin() {
   const toast = useToast()
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
   const [ouvert, setOuvert] = useState(false)
-  const [saisie, setSaisie] = useState<SaisieMagasin>({ nom: '', appareils: '' })
+  const [saisie, setSaisie] = useState<SaisieMagasin>({ nom: '', appareils: '', adresse: '' })
   const uid = useId()
 
   const appareils = nombreOuNull(saisie.appareils)
   const nom = saisie.nom.trim()
+  const adresse = saisie.adresse.trim().replace(/\s+/g, ' ')
+  const adresseOk = adresse.length >= ADRESSE_MIN
 
   // L'offre qui couvre ce nombre d'appareils, et ses deux prix. Elle vient de
   // la MÊME fonction que la proposition de la fiche magasin : deux calculs du
@@ -415,7 +418,7 @@ function DemandesMagasin() {
 
   function fermer() {
     setOuvert(false)
-    setSaisie({ nom: '', appareils: '' })
+    setSaisie({ nom: '', appareils: '', adresse: '' })
   }
 
   async function annuler(d: StoreRequest) {
@@ -567,9 +570,16 @@ function DemandesMagasin() {
                   Les deux prix sont juste au-dessus. */}
               <PayerEnLigne
                 offre={offre}
-                corps={{ action: 'magasin', name: nom, devices: Math.round(appareils ?? 0) }}
+                corps={{ action: 'magasin', name: nom, address: adresse, devices: Math.round(appareils ?? 0) }}
                 libelle={t('Créer le magasin')}
+                disabled={!adresseOk}
+                avecConditions
               />
+              {!adresseOk && (
+                <p className="field-hint" style={{ marginTop: 8 }}>
+                  {t('Indiquez l’adresse complète du magasin.')}
+                </p>
+              )}
             </div>
           )}
 

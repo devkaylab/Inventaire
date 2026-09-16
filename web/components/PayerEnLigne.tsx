@@ -19,6 +19,8 @@
  * quand même laisserait quelqu'un persuadé d'avoir souscrit.
  */
 
+import { AccepterConditions } from '@/components/AccepterConditions'
+import { VERSION_CONDITIONS } from '@/lib/conditions'
 import { useId, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { PLAFOND_LIBRE_SERVICE, euros } from '@/lib/offres'
@@ -56,6 +58,12 @@ type Props = {
   disabled?: boolean
   /** Rejoué quand le changement a pris effet sans passer par une page de paiement. */
   onApplique?: () => void
+  /**
+   * ⚠️ Vrai quand le geste ouvre une NOUVELLE licence (l'ajout d'un magasin) :
+   * les conditions générales s'acceptent alors avant de payer, et leur version
+   * part avec la demande. Un changement d'offre relève du contrat déjà accepté.
+   */
+  avecConditions?: boolean
 }
 
 /**
@@ -93,7 +101,8 @@ function ChoixRythme({
   )
 }
 
-export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Props) {
+export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique, avecConditions }: Props) {
+  const [accepte, setAccepte] = useState(false)
   const [rythme, setRythme] = useState<'monthly' | 'yearly'>('monthly')
   const [busy, setBusy] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -103,7 +112,11 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
     setBusy(true)
     setErreur(null)
     const { data, error } = await supabase.functions.invoke('libre-service', {
-      body: { ...corps, billingPeriod: rythme },
+      body: {
+        ...corps,
+        billingPeriod: rythme,
+        ...(avecConditions ? { cgvVersion: VERSION_CONDITIONS } : {}),
+      },
     })
 
     // ⚠️ Sur un refus, `invoke` rend une erreur et JETTE le corps — or c'est
@@ -150,7 +163,10 @@ export function PayerEnLigne({ offre, corps, libelle, disabled, onApplique }: Pr
     <div className="payer-ligne">
       <ChoixRythme offre={offre} valeur={rythme} onChange={setRythme} />
 
-      <button type="button" className="btn btn-primary btn-sm" disabled={busy || disabled} onClick={payer}>
+      {avecConditions && <AccepterConditions accepte={accepte} onChange={setAccepte} />}
+
+      <button type="button" className="btn btn-primary btn-sm"
+              disabled={busy || disabled || (avecConditions && !accepte)} onClick={payer}>
         {busy ? t('Un instant…') : libelle}
       </button>
 

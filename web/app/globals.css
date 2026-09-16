@@ -2680,6 +2680,25 @@ body:has(.site-footer) .theme-toggle { display: none; }
 }
 .legal th { color: var(--text); font-weight: 600; white-space: nowrap; }
 
+.legal p strong { color: var(--text); }
+
+/* La case d'acceptation des conditions générales (16 septembre 2026). Un
+   texte qui engage se lit : `--text-2`, jamais le troisième gris. La case a
+   sa taille propre — la règle générale des champs l'étirerait sur la ligne. */
+.accepter-conditions {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 16px 0 12px; text-align: left;
+}
+.accepter-conditions input[type="checkbox"] {
+  width: 18px; height: 18px; min-height: 0; flex: none;
+  margin: 2px 0 0; padding: 0; accent-color: var(--accent);
+}
+.accepter-conditions label {
+  color: var(--text-2); font-size: 13.5px; line-height: 1.5;
+  font-weight: 400; margin: 0; cursor: pointer;
+}
+.accepter-conditions a { color: var(--accent-light); text-decoration: underline; }
+
 .legal-pied { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--hairline); font-size: 14px; }
 .legal-pied a { color: var(--accent-light); }
 @media (max-width: 560px) {

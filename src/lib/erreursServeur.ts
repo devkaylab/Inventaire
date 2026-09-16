@@ -81,6 +81,8 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Demande introuvable ou pas en attente de paiement': 'Request not found or not awaiting payment',
   'Demande introuvable.': 'Request not found.',
   'Déclarez au moins un magasin.': 'Declare at least one store.',
+  'Acceptez les conditions générales pour continuer.': 'Accept the terms and conditions to continue.',
+  "Indiquez l'adresse complète du magasin.": 'Enter the full address of the store.',
   'Déjà en comptage (passe 1)': 'Already counting (pass 1)',
   'Entreprise introuvable': 'Company not found',
   'Entreprise introuvable.': 'Company not found.',
@@ -218,6 +220,7 @@ export const PREFIXES: Array<[string, string]> = [
   ['Votre forfait couvre déjà ', 'Your plan already covers '],
   ['Votre offre couvre déjà ', 'Your plan already covers '],
   ['Le devis porte ', 'The quote covers '],
+  ["Indiquez l'adresse complète du magasin ", 'Enter the full address of the store '],
   ["Indiquez le nombre d'appareils qui comptent en même temps dans ", 'Enter how many devices count at the same time in '],
   ["Le formulaire d'ajout de magasin a changé : rechargez la page, puis indiquez le ", 'The add-store form has changed: reload the page, then enter the '],
 ]

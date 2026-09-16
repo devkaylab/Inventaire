@@ -37,7 +37,7 @@
 import { TVA_APPLICABLE, euros, nomOffre, prixCents } from '@/lib/offres'
 import { t } from '@/lib/i18n'
 
-export type SaisieMagasin = { nom: string; appareils: string }
+export type SaisieMagasin = { nom: string; appareils: string; adresse: string }
 
 /** Une saisie libre (« 12 », « 1 200 ») ramenée à un nombre. */
 export function nombreOuNull(saisie: string): number | null {
@@ -92,6 +92,20 @@ export function MagasinSaisie({
             ×
           </button>
         )}
+      </div>
+
+      {/* ⚠️ L'adresse rend opposable l'article 9.5 des conditions générales :
+          une licence ne sert qu'au magasin déclaré (16 septembre 2026). */}
+      <div className="field">
+        <label htmlFor={`${idPrefix}-adresse`}>{t('Adresse du magasin')}</label>
+        <input
+          id={`${idPrefix}-adresse`}
+          value={valeur.adresse}
+          onChange={(e) => onChange('adresse', e.target.value)}
+          placeholder={t('Numéro, rue, code postal, ville')}
+          autoComplete="street-address"
+          maxLength={200}
+        />
       </div>
 
       <div className="field">

@@ -12,7 +12,12 @@ toléré, changement d'offre immédiat, usage limité aux magasins déclarés
 développement à partir du fonctionnement réel du produit. **À faire relire par
 un conseil juridique avant toute signature** — et l'article 7.1, qui rend le
 solde de l'année dû sur une licence annuelle résiliée, est le premier point à
-lui soumettre. Les crochets `[…]` marquent les choix qui restent à arrêter.
+lui soumettre. Depuis le 16 septembre 2026, **ce fichier est publié** sur
+`/conditions-generales` : la page lit tout ce qui se trouve entre le
+titre de l'article 1 et la section « Points à trancher », et refuse de se
+construire si ce passage contient encore un crochet, un avertissement ou un
+chemin de fichier. Les valeurs retenues par défaut (préavis, délais, tribunal)
+sont listées dans la section « Points à trancher ».
 
 ---
 
@@ -119,8 +124,7 @@ d'Appareils comptant simultanément dans ce Magasin, selon la grille de
 l'annexe 2. **TVA non applicable, article 293 B du CGI** — l'Éditeur relève de
 la franchise en base ; le prix affiché est le prix dû. Le jour où l'Éditeur
 devient redevable, le prix s'entend hors taxes et la TVA s'ajoute au taux en
-vigueur, ce qui est notifié au Client selon l'article [modification des
-conditions].
+vigueur, ce qui est notifié au Client selon l'article 17.3.
 **Ni le volume de stock, ni le nombre de références, ni le nombre
 d'Utilisateurs, ni le nombre d'Inventaires réalisés dans l'année n'entrent dans
 la détermination du prix.**
@@ -162,14 +166,14 @@ s'ajoute à l'Offre la plus élevée, par tranche entamée de dix Appareils, au
 tarif indiqué à l'annexe 2, jusqu'à deux cents Appareils. Au-delà, les
 conditions sont convenues par écrit entre les parties.
 
-6.6 Retard de paiement : pénalités au taux de [trois fois le taux d'intérêt
-légal], exigibles sans rappel, et indemnité forfaitaire de recouvrement de
+6.6 Retard de paiement : pénalités au taux de trois fois le taux d'intérêt
+légal, exigibles sans rappel, et indemnité forfaitaire de recouvrement de
 40 € par facture (articles L. 441-10 et D. 441-5 du Code de commerce). Aucun
 escompte pour paiement anticipé. Après mise en demeure restée quinze jours sans
 effet, l'Éditeur peut suspendre les accès du magasin concerné.
 
 6.7 Le prix peut être révisé à chaque renouvellement, avec un préavis de
-[deux] mois avant l'échéance ; le Client peut alors refuser le renouvellement.
+deux mois avant l'échéance ; le Client peut alors refuser le renouvellement.
 
 6.8 **Changement d'Offre.** Le passage à une Offre supérieure se fait en ligne
 et **prend effet immédiatement** : la différence de prix est facturée au
@@ -196,22 +200,22 @@ d'avance, la résiliation vaut renonciation au renouvellement et **ne donne lieu
 à aucun remboursement, même au prorata**. Le Client **conserve l'accès complet
 au Service jusqu'au terme des douze mois**.
 
-⚠️ Le prix annuel est inférieur au total de douze mensualités (annexe 2) :
+Le prix annuel est inférieur au total de douze mensualités (annexe 2) :
 c'est la contrepartie de cette durée. Le Client qui souhaite pouvoir
 interrompre à tout moment choisit le paiement mensuel.
 
 7.2 Chaque licence se renouvelle par tacite reconduction — pour un mois ou pour
 douze, selon le rythme — sauf dénonciation par l'une des parties avant
-l'échéance : **immédiatement** pour le rythme mensuel, [un] mois avant
+l'échéance : **immédiatement** pour le rythme mensuel, un mois avant
 l'échéance pour le rythme annuel, par écrit. L'Éditeur rappelle l'échéance
-annuelle au Client au moins [deux] mois à l'avance.
+annuelle au Client au moins deux mois à l'avance.
 
 7.3 Le Client peut passer du rythme mensuel au rythme annuel à tout moment ; le
 passage de l'annuel au mensuel prend effet au terme de la période annuelle en
 cours.
 
 7.4 Chaque partie peut résilier en cas de manquement grave de l'autre non
-réparé [trente] jours après mise en demeure écrite. En cas de résiliation aux
+réparé trente jours après mise en demeure écrite. En cas de résiliation aux
 torts du Client, les sommes versées restent acquises ; **aux torts de
 l'Éditeur, la part de licence non consommée est remboursée au prorata**, y
 compris pour une licence annuelle — l'absence de remboursement prévue à
@@ -230,11 +234,10 @@ s'agit d'une **obligation de moyens**.
 
 8.2 Disponibilité : l'Éditeur s'efforce de maintenir le Service accessible
 24 h/24, hors maintenance planifiée annoncée à l'avance et hors cas de force
-majeure ou de défaillance des prestataires d'hébergement. [Aucun engagement
-chiffré de disponibilité n'est pris à ce stade ; à ajuster si une enseigne
-l'exige.]
+majeure ou de défaillance des prestataires d'hébergement. Aucun engagement
+chiffré de disponibilité n'est pris.
 
-8.3 Assistance : par e-mail à [adresse], les jours ouvrés, [de 9 h à 18 h].
+8.3 Assistance : par e-mail à contact@quantinvo.com, les jours ouvrés, de 9 h à 18 h.
 Les réponses sont apportées dans les meilleurs délais ; pendant un inventaire
 en cours, l'Éditeur fait ses meilleurs efforts pour répondre rapidement.
 
@@ -254,7 +257,7 @@ contrat. En revanche, pour un Inventaire archivé, le détail ligne à ligne de
 l'export et le détail d'une balise ne sont plus disponibles, l'attribution
 d'une lecture à un Utilisateur n'est plus possible, et l'Inventaire ne peut
 plus être rouvert. Les durées de conservation sont publiées dans la politique
-de confidentialité ; toute réduction est notifiée au Client au moins [deux]
+de confidentialité ; toute réduction est notifiée au Client au moins deux
 mois à l'avance.
 
 8.6 **Conservation par le Client.** Le Client est seul responsable de la
@@ -278,7 +281,7 @@ présentes et à la loi.
 9.3 Le Client informe ses salariés du traitement de leurs données (article 13
 du RGPD) et consulte, le cas échéant, ses instances représentatives du
 personnel. L'Éditeur met à disposition une note d'information type
-(`docs/conformite/information-salaries.md`).
+à la demande du Client.
 
 9.4 Le Client s'interdit de revendre, sous-louer ou donner accès au Service à
 des tiers hors de ses Magasins déclarés, de tenter d'en extraire le code, de
@@ -297,7 +300,7 @@ l'Éditeur est en droit de facturer, pour chaque Magasin non déclaré, la licen
 de l'Offre correspondant au nombre d'Appareils constaté, au rythme annuel, à
 compter du premier usage constaté et jusqu'à sa déclaration ou à la cessation
 de l'usage. L'Éditeur en informe préalablement le Client par écrit ; celui-ci
-dispose de [quinze] jours pour déclarer le Magasin depuis son espace ou cesser
+dispose de quinze jours pour déclarer le Magasin depuis son espace ou cesser
 l'usage, faute de quoi la facture est émise. Ces sommes sont dues sans
 préjudice de la résiliation prévue à l'article 7.4.
 
@@ -326,7 +329,7 @@ les utilise que pour fournir le Service et, sous forme **agrégée et anonymisé
 pour améliorer le produit et établir des statistiques d'usage.
 
 10.3 Le Client autorise l'Éditeur à citer son nom et son logo comme référence
-commerciale, sauf refus écrit. [À retirer si gênant.]
+commerciale, sauf refus écrit.
 
 ## 11. Données personnelles
 
@@ -341,9 +344,10 @@ sa politique de confidentialité, accessible sur le site, en décrit les
 finalités, les durées et les droits.
 
 11.3 Les Données d'inventaire sont hébergées dans l'Union européenne. Les
-sous-traitants ultérieurs (hébergement, envoi d'e-mails, notifications,
-paiement) sont listés dans la politique de confidentialité ; l'Éditeur informe
-le Client de tout changement.
+sous-traitants ultérieurs (hébergement, envoi d'e-mails, notifications) sont
+listés à l'annexe 1 et dans la politique de confidentialité ; l'Éditeur
+informe le Client de tout changement. Le prestataire de paiement traite, pour
+le compte de l'Éditeur, les seules données de facturation.
 
 11.4 Le suivi d'activité proposé au superviseur est **agrégé** (compteurs par
 mode) ; l'attribution nominative d'un comptage n'est conservée que pour
@@ -373,15 +377,14 @@ Client (article 8.6).
 
 13.3 La responsabilité de l'Éditeur, toutes causes confondues, est plafonnée
 au **montant de la licence annuelle payée pour le magasin concerné** au titre
-de l'année en cours. [Clause usuelle ; certaines enseignes négocient un
-plafond supérieur — à arbitrer avec l'assureur RC pro.]
+de l'année en cours.
 
 13.4 Rien dans les présentes n'exclut la responsabilité que la loi interdit
 d'exclure (faute lourde, dol, atteinte aux personnes).
 
 ## 14. Réversibilité et fin du contrat
 
-14.1 Pendant le contrat et jusqu'à [trente] jours après son terme, le Client
+14.1 Pendant le contrat et jusqu'à trente jours après son terme, le Client
 peut exporter ses rapports et résultats depuis le Service (formats tableur).
 
 14.2 Passé ce délai, le Client n'a plus accès à ses Données d'inventaire, qui
@@ -391,21 +394,20 @@ désactivés. L'Éditeur conserve les pièces comptables (factures) pendant la
 durée légale de dix ans.
 
 14.3 Sur demande écrite avant le terme, l'Éditeur peut fournir une extraction
-complète des Données d'inventaire du Client [gratuitement / au tarif horaire
-de … € HT].
+complète des Données d'inventaire du Client, gratuitement, une fois.
 
 ## 15. Force majeure
 
 Aucune partie ne répond d'un manquement causé par un événement de force
 majeure au sens de l'article 1218 du Code civil, y compris la défaillance
 généralisée d'un prestataire d'hébergement ou de réseau. Si l'empêchement
-dépasse [deux] mois, chaque partie peut résilier sans indemnité.
+dépasse deux mois, chaque partie peut résilier sans indemnité.
 
 ## 16. Confidentialité
 
 Chaque partie garde confidentielles les informations non publiques de l'autre
 dont elle a connaissance à l'occasion du contrat (tarifs négociés, données de
-stock, éléments techniques), pendant le contrat et [trois] ans après.
+stock, éléments techniques), pendant le contrat et trois ans après.
 
 ## 17. Dispositions diverses
 
@@ -417,24 +419,71 @@ Service, en le notifiant au Client.
 
 17.3 L'Éditeur peut modifier les présentes conditions ; la version applicable
 à un Client est celle en vigueur à la date de son dernier renouvellement, et
-toute nouvelle version lui est communiquée au moins [deux] mois avant
+toute nouvelle version lui est communiquée au moins deux mois avant
 l'échéance.
 
 ## 18. Droit applicable et litiges
 
 Les présentes sont soumises au droit français. Les parties recherchent une
 solution amiable avant toute action. À défaut, compétence exclusive du
-**tribunal de commerce de [ville du siège]**, y compris en référé et en cas
+**tribunal des activités économiques de Paris**, y compris en référé et en cas
 de pluralité de défendeurs.
 
 ---
 
 ## Annexe 1 — Clauses de sous-traitance (article 28 RGPD)
 
-Reprendre ici le contenu de `docs/conformite/sous-traitance-article-28.md`
-(objet et durée, instructions, confidentialité, sécurité, sous-traitants
-ultérieurs, assistance au responsable, notification des violations sans délai,
-sort des données à la fin, audit).
+A1.1 **Objet et durée.** L'Éditeur héberge et fait fonctionner le Service pour
+le compte du Client, pendant la durée du contrat. Les données traitées sont
+celles des Utilisateurs (identité, rattachement, comptages nominatifs) et les
+Données d'inventaire ; les personnes concernées sont les Utilisateurs.
+
+A1.2 **Instructions.** L'Éditeur ne traite ces données que sur instruction
+documentée du Client. L'usage du Service constitue cette instruction ; toute
+demande particulière se formule par écrit. L'Éditeur informe le Client s'il
+estime qu'une instruction enfreint la réglementation.
+
+A1.3 **Confidentialité.** Les personnes autorisées à accéder aux données chez
+l'Éditeur sont soumises à une obligation de confidentialité.
+
+A1.4 **Sécurité.** L'Éditeur met en œuvre notamment : un cloisonnement des
+données par entreprise appliqué par la base de données, des contrôles d'accès
+par rôle, des canaux temps réel privés, le chiffrement des échanges et le
+stockage des mots de passe sous forme d'empreinte.
+
+A1.5 **Sous-traitants ultérieurs.** Le Client autorise le recours aux
+prestataires suivants :
+
+| Sous-traitant | Rôle | Localisation |
+|---|---|---|
+| Supabase | Base de données, authentification, temps réel | Irlande |
+| Vercel | Hébergement du site | États-Unis |
+| Resend | Courriers électroniques de service | États-Unis |
+| Expo | Acheminement des notifications | États-Unis |
+
+Tout ajout ou remplacement est notifié au Client un mois à l'avance ; le
+Client peut s'y opposer pour un motif légitime et, à défaut d'accord, résilier
+sans pénalité.
+
+A1.6 **Transferts.** Les Données d'inventaire sont stockées dans l'Union
+européenne. Les transferts vers les prestataires établis aux États-Unis
+s'appuient sur les clauses contractuelles types de la Commission européenne.
+
+A1.7 **Assistance.** L'Éditeur aide le Client à répondre aux demandes
+d'exercice des droits, à notifier une violation et à conduire une analyse
+d'impact. Une demande reçue directement d'une personne concernée est relayée au
+Client, qui décide.
+
+A1.8 **Violation de données.** L'Éditeur notifie le Client dans les meilleurs
+délais après en avoir pris connaissance, avec les éléments lui permettant de
+notifier l'autorité de contrôle dans les soixante-douze heures.
+
+A1.9 **Fin du contrat.** Le Client exporte ses données dans le délai de
+l'article 14.1 ; à son terme, les données sont supprimées, sous réserve des
+obligations légales de conservation de l'Éditeur.
+
+A1.10 **Audit.** L'Éditeur met à disposition du Client, sur demande écrite, les
+informations nécessaires pour démontrer le respect de l'article 28 du RGPD.
 
 ## Annexe 2 — Grille tarifaire en vigueur
 
@@ -463,6 +512,15 @@ propre Offre, choisie selon le nombre d'Appareils comptant qui lui est propre.
 
 ## Points à trancher avant relecture juridique
 
+0. **Valeurs retenues par défaut le 16 septembre 2026 pour publier**, toutes à
+   confirmer par le juriste : préavis de révision et de modification deux mois
+   (6.7, 7.2, 8.5, 17.3), dénonciation de l'annuel un mois (7.2), manquement
+   grave trente jours (7.4), pénalités trois fois le taux légal (6.6),
+   assistance 9 h–18 h (8.3), régularisation d'un Magasin non déclaré quinze
+   jours (9.5), export trente jours après la fin (14.1), extraction complète
+   gratuite une fois (14.3), force majeure deux mois (15), confidentialité
+   trois ans (16), tribunal des activités économiques de Paris (18),
+   changement de sous-traitant notifié un mois à l'avance (A1.5).
 1. Préavis de non-renouvellement annuel : un ou deux mois. (Le rythme mensuel
    n'en a pas : c'est ce qui fait le « sans engagement ».)
 2. Plafond de responsabilité : une licence annuelle du magasin, ou de

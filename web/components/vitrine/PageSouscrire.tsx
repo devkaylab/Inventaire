@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { MentionCollecte } from '@/components/MentionCollecte'
+import { AccepterConditions } from '@/components/AccepterConditions'
+import { VERSION_CONDITIONS } from '@/lib/conditions'
 import { supabase } from '@/lib/supabaseClient'
 import { MENTION_TVA, OFFRES, TVA_APPLICABLE, economie, euros, ttc, type CleOffre } from '@/lib/offres'
 import { CONTACT_EMAIL, ecrivezNous } from '@/lib/contact'
@@ -37,6 +39,8 @@ function Formulaire() {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [storeName, setStoreName] = useState('')
+  const [storeAddress, setStoreAddress] = useState('')
+  const [accepte, setAccepte] = useState(false)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [saitQuoiFaire, setSaitQuoiFaire] = useState(false)
@@ -69,7 +73,8 @@ function Formulaire() {
     setEnvoi(true)
     const { data, error } = await supabase.functions.invoke('subscribe-online', {
       body: {
-        companyName, firstName, lastName, email, storeName,
+        companyName, firstName, lastName, email, storeName, storeAddress,
+        cgvVersion: VERSION_CONDITIONS,
         plan, billingPeriod: annuel ? 'yearly' : 'monthly',
       },
     })
@@ -157,6 +162,12 @@ function Formulaire() {
           <label htmlFor="storeName">{t('Nom du magasin à équiper')}</label>
           <input id="storeName" required maxLength={80} value={storeName} onChange={(e) => setStoreName(e.target.value)} />
         </div>
+        <div className="field souscrire-large">
+          <label htmlFor="storeAddress">{t('Adresse du magasin')}</label>
+          <input id="storeAddress" required minLength={8} maxLength={200} autoComplete="street-address"
+                 placeholder={t('Numéro, rue, code postal, ville')}
+                 value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} />
+        </div>
         <div className="field">
           <label htmlFor="firstName">{t('Votre prénom')}</label>
           <input id="firstName" required maxLength={80} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -180,7 +191,9 @@ function Formulaire() {
         </p>
       )}
 
-      <button type="submit" className="btn btn-primary btn-block" disabled={envoi}>
+      <AccepterConditions accepte={accepte} onChange={setAccepte} />
+
+      <button type="submit" className="btn btn-primary btn-block" disabled={envoi || !accepte}>
         {envoi
           ? t('Ouverture du paiement…')
           : t('Payer %{prix} et créer mon espace', { prix: `${euros(ttc(annuel ? offre.an : offre.mois))}${TVA_APPLICABLE ? ' TTC' : ''}` })}

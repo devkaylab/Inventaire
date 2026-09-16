@@ -184,6 +184,8 @@ Deno.serve(async (req) => {
     p_billing_period: rythme,
     p_amount_cents: montant,
     p_annual_cents: annuel,
+    p_store_address: texte('storeAddress'),
+    p_cgv_version: texte('cgvVersion') || null,
   })
   if (error) return json({ success: false, error: error.message }, 500)
   if (!depot?.success) return json({ success: false, error: depot?.error ?? 'Refus.' }, 400)

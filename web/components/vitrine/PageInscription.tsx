@@ -24,6 +24,8 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { MentionCollecte } from '@/components/MentionCollecte'
+import { AccepterConditions } from '@/components/AccepterConditions'
+import { VERSION_CONDITIONS } from '@/lib/conditions'
 import { PasswordRules } from '@/components/PasswordRules'
 import { passwordError } from '@/lib/password'
 import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
@@ -77,6 +79,9 @@ export function PageInscription() {
   const [telephone, setTelephone] = useState('')
   const [rythme, setRythme] = useState<Rythme>('monthly')
   const [paye, setPaye] = useState(false)
+  // ⚠️ Jamais cochée d'avance, et jamais enregistrée dans le brouillon : on
+  // accepte au moment de payer, pas à une visite précédente.
+  const [accepte, setAccepte] = useState(false)
 
   const reponses = useMemo(() => ({
     pratique, frequence, volume, magasins, societe, siren, ape, telephone, rythme,
@@ -178,7 +183,12 @@ export function PageInscription() {
       lastName: nom.trim(),
       phone: telephone.trim(),
       billingPeriod: rythme,
-      stores: magasins.map((m) => ({ name: m.nom.trim(), devices: String(appareilsDe(m) ?? '') })),
+      cgvVersion: VERSION_CONDITIONS,
+      stores: magasins.map((m) => ({
+        name: m.nom.trim(),
+        address: (m.adresse ?? '').trim(),
+        devices: String(appareilsDe(m) ?? ''),
+      })),
     })
     setOccupe(false)
     if (!r?.success || !r?.paymentUrl) { setErreur(r?.error ?? t('Le paiement n’a pas pu s’ouvrir.')); return }
@@ -393,6 +403,14 @@ export function PageInscription() {
                                v.map((x, j) => j === i ? { ...x, nom: e.target.value } : x))} />
                     </div>
                     <div className="field">
+                      <label htmlFor={`${uid}-adr${i}`}>{t('Adresse du magasin')}</label>
+                      <input id={`${uid}-adr${i}`} value={m.adresse ?? ''} maxLength={200}
+                             autoComplete="street-address"
+                             placeholder={t('Numéro, rue, code postal, ville')}
+                             onChange={(e) => setMagasins((v) =>
+                               v.map((x, j) => j === i ? { ...x, adresse: e.target.value } : x))} />
+                    </div>
+                    <div className="field">
                       <label htmlFor={`${uid}-app${i}`}>{t('Appareils qui comptent en même temps')}</label>
                       <select id={`${uid}-app${i}`} value={m.tranche}
                               onChange={(e) => setMagasins((v) =>
@@ -503,7 +521,8 @@ export function PageInscription() {
                     {t('À l’année, vous économisez %{prix}.', { prix: euros(totalMois * 12 - totalAn) })}
                   </p>
                 )}
-                <button type="button" className="btn btn-primary btn-block" disabled={occupe || !complet}
+                <AccepterConditions accepte={accepte} onChange={setAccepte} />
+                <button type="button" className="btn btn-primary btn-block" disabled={occupe || !complet || !accepte}
                         onClick={payer}>
                   {occupe ? t('Ouverture…') : t('Commencer à fiabiliser mon stock')}
                 </button>

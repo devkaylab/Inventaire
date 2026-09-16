@@ -297,6 +297,10 @@ Deno.serve(async (req) => {
       p_name: nom,
       p_devices: appareils,
       p_billing_period: rythme,
+      // ⚠️ Un magasin ajouté est une licence de plus : l'adresse et
+      // l'acceptation des conditions sont exigées en base (16 septembre 2026).
+      p_address: texte('address'),
+      p_cgv_version: texte('cgvVersion') || null,
     })
     if (error) return json({ success: false, error: error.message }, 500)
     if (!depot?.success) return json({ success: false, error: depot?.error ?? 'Refus.' }, 400)

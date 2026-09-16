@@ -244,6 +244,9 @@ Deno.serve(async (req) => {
         p_phone: texte('phone'),
         p_stores: corps.stores ?? [],
         p_billing_period: rythme,
+        // ⚠️ La version des conditions acceptées, telle que l'écran l'a montrée.
+        // C'est la base qui décide si elle est la bonne (`version_conditions`).
+        p_cgv_version: texte('cgvVersion') || null,
       })
       if (error) return json({ success: false, error: error.message }, 500)
       if (!data?.success) {

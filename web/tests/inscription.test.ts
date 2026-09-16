@@ -231,7 +231,7 @@ describe('finaliser : le prix vient du serveur', () => {
   it('⚠️ note le COMPTE sur la demande, et naît en accepted', () => {
     // `user_id` est le point de sécurité : le webhook promeut ce compte-là.
     expect(finaliser).toContain("'accepted'")
-    expect(finaliser).toContain("v_uid, 'inscription')")
+    expect(finaliser).toContain("v_uid, 'inscription'")
   })
 
   it('une seule demande par compte', () => {
