@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from 'react'
 import { t } from '@/lib/i18n'
 
 export function Renommer({
-  nom, label, onValider, className,
+  nom, label, onValider, className, action, vide, maxLength = 80, placeholder,
 }: {
   nom: string
   /** Ce qu'on renomme, pour l'aide vocale : « ce magasin », « cette entreprise ». */
@@ -25,6 +25,16 @@ export function Renommer({
   onValider: (nouveau: string) => Promise<string | null>
   /** Classe du nom quand il n'est pas en cours d'édition (`page-title`…). */
   className?: string
+  /**
+   * Le libellé du lien — « Renommer » par défaut. Le même geste sert aussi à
+   * l'adresse d'un magasin (16 septembre 2026) : on édite sur place ce qu'on a
+   * sous les yeux, pour un nom comme pour une adresse.
+   */
+  action?: string
+  /** Ce qui s'affiche quand la valeur est vide. */
+  vide?: string
+  maxLength?: number
+  placeholder?: string
 }) {
   const [ouvert, setOuvert] = useState(false)
   const [valeur, setValeur] = useState(nom)
@@ -55,8 +65,8 @@ export function Renommer({
   if (!ouvert) {
     return (
       <span className="renommer-ligne">
-        <span className={className}>{nom}</span>
-        <button type="button" className="link-btn" onClick={ouvrir}>{t('Renommer')}</button>
+        <span className={className}>{nom || vide}</span>
+        <button type="button" className="link-btn" onClick={ouvrir}>{action ?? t('Renommer')}</button>
       </span>
     )
   }
@@ -66,10 +76,11 @@ export function Renommer({
       <div className="renommer-ligne">
         <input
           ref={champ}
-          className="renommer-champ"
+          className={maxLength > 80 ? 'renommer-champ renommer-champ-large' : 'renommer-champ'}
           value={valeur}
-          maxLength={80}
-          aria-label={t('Nouveau nom de %{quoi}', { quoi: label })}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          aria-label={action ? `${action} — ${label}` : t('Nouveau nom de %{quoi}', { quoi: label })}
           onChange={(e) => { setValeur(e.target.value); setErreur(null) }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); valider() }
@@ -77,7 +88,7 @@ export function Renommer({
           }}
         />
         <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={valider}>
-          Enregistrer
+          {t('Enregistrer')}
         </button>
         <button type="button" className="link-btn" onClick={() => setOuvert(false)}>{t('Annuler')}</button>
       </div>

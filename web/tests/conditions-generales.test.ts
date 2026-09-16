@@ -127,7 +127,17 @@ describe('l’adresse du magasin déclaré', () => {
   it('la fiche du magasin l’affiche, et dit quand elle manque', () => {
     expect(espaces(derniereDefinition('ca_store_detail').corps)).toContain("'address', s.address")
     const fiche = code(lire('web/app/magasins/[storeId]/page.tsx'))
-    expect(fiche).toContain("fiche.store.address ?? t('Adresse non renseignée')")
+    expect(fiche).toContain("vide={t('Adresse non renseignée')}")
+  })
+
+  it('se modifie depuis la fiche, par l’administrateur, et se journalise avec l’adresse d’avant', () => {
+    const c = espaces(derniereDefinition('ca_set_store_address').corps)
+    expect(c).toContain('public.is_company_admin()')
+    // La garde porte sur l'entreprise DU MAGASIN, jamais sur un paramètre.
+    expect(c).toContain('where id = p_store_id and company_id = v_company')
+    expect(c).toContain('public.adresse_propre(p_address)')
+    expect(c).toContain("json_build_object('avant', v_avant")
+    expect(code(lire('web/app/magasins/[storeId]/page.tsx'))).toContain("supabase.rpc('ca_set_store_address'")
   })
 
   it('les trois écrans la font suivre', () => {

@@ -1462,6 +1462,8 @@ body:has(.site-footer) .theme-toggle { display: none; }
   background: var(--surface); border: 1px solid var(--border-strong); color: var(--text);
   outline: none; font-family: inherit; min-width: 260px; max-width: 100%;
 }
+/* Une adresse ne tient pas dans la largeur d'un nom. */
+.renommer-champ-large { width: min(440px, 100%); }
 .renommer-champ:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .renommer-edition .btn-sm, .renommer-edition .link-btn { align-self: center; }
 @media (max-width: 640px) { .role-choix { grid-template-columns: 1fr; } }

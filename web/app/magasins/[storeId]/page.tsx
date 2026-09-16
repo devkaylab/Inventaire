@@ -242,9 +242,24 @@ export default function FicheMagasinPage() {
           {/* L'adresse déclarée (16 septembre 2026) : c'est elle qui désigne le
               magasin dans le contrat — une licence ne sert qu'à celui-là. Les
               magasins déclarés avant ce jour n'en ont pas, et on le dit. */}
-          <p className="page-sub">
-            {fiche.store.address ?? t('Adresse non renseignée')}
-          </p>
+          <div className="page-sub">
+            <Renommer
+              nom={fiche.store.address ?? ''}
+              vide={t('Adresse non renseignée')}
+              label={t('ce magasin')}
+              action={fiche.store.address ? t('Modifier l’adresse') : t('Ajouter l’adresse')}
+              placeholder={t('Numéro, rue, code postal, ville')}
+              maxLength={200}
+              onValider={async (adresse) => {
+                const { data, error } = await supabase.rpc('ca_set_store_address', {
+                  p_store_id: storeId, p_address: adresse,
+                })
+                if (error || !data?.success) return error?.message ?? data?.error ?? t('Modification impossible.')
+                await charger()
+                return null
+              }}
+            />
+          </div>
         </div>
         {/* Le rapport consolidé du magasin : tous ses inventaires clôturés
             additionnés. Réservé à l'administrateur d'entreprise et à

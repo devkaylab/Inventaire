@@ -31,6 +31,7 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
   compteur_magasins_modifies: (c) => t('modifié les magasins de %{c}', { c }),
   magasin_renomme: (c) => t('renommé un magasin en « %{c} »', { c }),
   entreprise_renommee: (c) => t('renommé l’entreprise en « %{c} »', { c }),
+  adresse_magasin_modifiee: (c) => t('modifié l’adresse du magasin « %{c} »', { c }),
   acces_retires: (c) => t('retiré tous les accès de %{c}', { c }),
   // ⚠️ Écrite par `remove_counter_from_store`, pas par une fonction `ca_*` — et
   // c'est pour ça qu'elle a manqué : la garde ne balayait que les `ca_*`. Vue

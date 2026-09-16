@@ -601,7 +601,9 @@ describe('renommer un magasin, renommer une entreprise (23 août 2026)', () => {
   it('le geste est le même partout : un lien, puis un champ sur place', () => {
     // Pas de modale : on renomme ce qu'on a sous les yeux, et c'est réversible
     // d'un second renommage.
-    expect(controle).toContain("<button type=\"button\" className=\"link-btn\" onClick={ouvrir}>{t('Renommer')}</button>")
+    // Le libellé du lien est paramétrable depuis que le même geste sert à
+    // l'adresse d'un magasin (16 septembre 2026) ; « Renommer » reste le défaut.
+    expect(controle).toContain("<button type=\"button\" className=\"link-btn\" onClick={ouvrir}>{action ?? t('Renommer')}</button>")
     expect(controle).toContain("if (e.key === 'Escape')")
     // Un refus du serveur reste sous le champ, le temps de corriger.
     expect(controle).toContain('if (message) { setErreur(message); return }')
