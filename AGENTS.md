@@ -13283,6 +13283,17 @@ le tableau de bord de la console après conversion. À vérifier là, pas ici. E
 tant que ce n'est pas prouvé, **ne pas abandonner le plan des douze testeurs** :
 s'il faut y revenir, les quatorze jours repartent de zéro.
 
+**16 septembre 2026 — la conversion est faite, selon Julien** (« c'est validé »),
+après dépôt de sa pièce d'identité et des documents de Devkaylab. ⚠️ **Non vu
+par moi** : la prochaine session vérifie d'abord que « Type de compte » dit
+*Organisation*, puis que la section Production n'exige plus le test fermé.
+
+⚠️ **Le téléphone repris par Google est le numéro PERSO de Julien** : il vient
+de la fiche Dun & Bradstreet du D-U-N-S, enregistrée avant l'existence d'une
+ligne pro. Décision : valider quand même, puis changer le téléphone dans
+Play Console → Détails du compte (code SMS), et faire corriger la fiche D&B —
+qu'Apple lit aussi pour la conversion en organisation.
+
 ### Le compte personnel publie l'adresse du DOMICILE
 
 Trouvé en passant, et c'est un second argument pour la bascule. Le profil
