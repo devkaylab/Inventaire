@@ -415,7 +415,7 @@ function egalConstant(a: string, b: string): boolean {
 export async function lireAbonnement(
   cle: string,
   id: string,
-): Promise<{ id: string; statut: string; articles: { id: string; price: string }[] } | null> {
+): Promise<{ id: string; statut: string; articles: { id: string; price: string; quantity: number }[] } | null> {
   const resp = await fetch(`${API}/subscriptions/${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${cle}` },
   })
@@ -432,10 +432,45 @@ export async function lireAbonnement(
   return {
     id: data.id,
     statut: data.status,
-    articles: (data.items?.data ?? []).map((a: { id: string; price?: { id: string } }) => ({
+    // ⚠️ La QUANTITÉ compte : une inscription à plusieurs magasins porte une
+    // ligne par offre, de quantité égale au nombre de magasins (16/09/2026).
+    articles: (data.items?.data ?? []).map((a: { id: string; price?: { id: string }; quantity?: number }) => ({
       id: a.id,
       price: a.price?.id ?? '',
+      quantity: Number(a.quantity ?? 1),
     })),
+  }
+}
+
+/**
+ * Applique plusieurs changements de lignes à un abonnement, EN UN SEUL APPEL
+ * (16 septembre 2026) — donc une seule facture de prorata. Les changements
+ * sont calculés par `ecartAbonnement` (`_shared/cumul.ts`).
+ */
+export async function modifierAbonnement(
+  cle: string,
+  p: {
+    subscriptionId: string
+    items: Record<string, unknown>[]
+    idempotence: string
+  },
+): Promise<void> {
+  const corps = formulaire({
+    items: p.items,
+    proration_behavior: 'always_invoice',
+  })
+  const resp = await fetch(`${API}/subscriptions/${encodeURIComponent(p.subscriptionId)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key': p.idempotence,
+    },
+    body: corps,
+  })
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => null)
+    throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
   }
 }
 

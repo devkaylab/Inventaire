@@ -12,6 +12,7 @@ import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
 import { APPAREILS_MAX, OFFRES, PLAFOND_LIBRE_SERVICE, SUPPLEMENT, prixCents } from '@/lib/offres'
 import { PALIERS_APPAREILS, compositionOffre, proposer } from '@/lib/appareils'
+import { ecartAbonnement, rythmeDesArticles } from '../../supabase/functions/_shared/cumul'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -566,18 +567,16 @@ describe('on ne facture pas les tranches deux fois', () => {
   // nul : le paiement enregistre l'abonnement, pas le détail de ses lignes.
   // Le chemin d'API ne cherchait que l'article de l'offre — il aurait CRÉÉ un
   // second article de tranches, et le client aurait payé les siennes deux fois.
-  const sans = sansCommentaires(edge)
-
-  it('retrouve les DEUX articles dans l’abonnement, pas seulement l’offre', () => {
-    expect(sans).toContain('if (!itemOffre || (!itemSuppl && tranches > 0))')
-    expect(sans).toContain("itemSuppl = abo.articles.find((a) => a.price === suppl)?.id ?? ''")
-  })
-
-  it('n’envoie jamais « pas d’article » quand l’abonnement en a un', () => {
-    // Le `null` dit à `poserArticleAppareils` d'en créer un : il ne doit sortir
-    // que d'une recherche qui n'a rien trouvé.
-    expect(sans).toContain('itemId: itemSuppl || null')
-    expect(sans).not.toContain("itemId: String(etat.item_appareils ?? '').trim() || null")
+  // Depuis le 16 septembre 2026, c'est `ecartAbonnement` qui porte cette
+  // règle : il RETROUVE la ligne de tranches existante et en change la
+  // quantité, il n'en crée une que s'il n'y en a aucune.
+  it('met à jour la ligne de tranches existante, n’en crée jamais une seconde', () => {
+    const e = ecartAbonnement(
+      [{ id: 'si_ent', price: 'P_ENT', quantity: 1 }, { id: 'si_sup', price: 'P_SUP', quantity: 4 }],
+      { ancienPrix: 'P_ENT', nouveauPrix: 'P_ENT', prixAppareils: 'P_SUP', anciennesTranches: 4, nouvellesTranches: 5 },
+    )
+    expect(e.refus).toBeNull()
+    expect(e.items).toEqual([{ id: 'si_sup', quantity: 5 }])
   })
 })
 
@@ -681,4 +680,81 @@ describe('la grille s’arrête à 200 appareils', () => {
       expect(sans).toContain('{horsGrille && (')
     },
   )
+})
+
+/**
+ * L'abonnement est un CUMUL (16 septembre 2026).
+ *
+ * ⚠️ Une inscription à plusieurs magasins ouvre UN abonnement : une ligne par
+ * offre (quantité = nombre de magasins) et une ligne de tranches pour tous.
+ * Le chemin d'avant prenait la première ligne venue, forçait sa quantité à 1
+ * et remplaçait les tranches par celles du seul magasin visé : monter un
+ * magasin faisait disparaître les autres de la facture.
+ */
+describe('l’abonnement est un cumul', () => {
+  const abo = [
+    // Trois magasins Advanced : 3 − 1 = 2 se distingue d'une quantité forcée à 1.
+    { id: 'si_adv', price: 'P_ADV', quantity: 3 },
+    { id: 'si_ent', price: 'P_ENT', quantity: 1 },
+    { id: 'si_sup', price: 'P_SUP', quantity: 3 },
+  ]
+
+  it('⚠️ monter UN magasin Advanced laisse les autres sur la facture', () => {
+    const e = ecartAbonnement(abo, {
+      ancienPrix: 'P_ADV', nouveauPrix: 'P_ENT', prixAppareils: 'P_SUP',
+      anciennesTranches: 0, nouvellesTranches: 2,
+    })
+    expect(e.refus).toBeNull()
+    expect(e.items).toEqual([
+      { id: 'si_adv', quantity: 2 },
+      { id: 'si_ent', quantity: 2 },
+      { id: 'si_sup', quantity: 5 },
+    ])
+  })
+
+  it('supprime la ligne de l’ancienne offre quand c’était la dernière, et crée la nouvelle', () => {
+    const e = ecartAbonnement([{ id: 'si_ess', price: 'P_ESS', quantity: 1 }], {
+      ancienPrix: 'P_ESS', nouveauPrix: 'P_ADV', prixAppareils: null,
+      anciennesTranches: 0, nouvellesTranches: 0, taxRateId: 'txr_1',
+    })
+    expect(e.items).toEqual([
+      { id: 'si_ess', deleted: true },
+      { price: 'P_ADV', quantity: 1, tax_rates: ['txr_1'] },
+    ])
+  })
+
+  it('ne touche à rien si l’abonnement ne porte pas l’offre actuelle du magasin', () => {
+    const e = ecartAbonnement(abo, {
+      ancienPrix: 'P_ESS', nouveauPrix: 'P_ADV', prixAppareils: 'P_SUP',
+      anciennesTranches: 0, nouvellesTranches: 0,
+    })
+    expect(e.refus).not.toBeNull()
+    expect(e.items).toEqual([])
+  })
+
+  it('ne retire jamais plus de tranches que la ligne n’en porte', () => {
+    const e = ecartAbonnement(abo, {
+      ancienPrix: 'P_ENT', nouveauPrix: 'P_ENT', prixAppareils: 'P_SUP',
+      anciennesTranches: 9, nouvellesTranches: 1,
+    })
+    expect(e.refus).not.toBeNull()
+    expect(e.items).toEqual([])
+  })
+
+  it('lit le rythme sur l’abonnement, et refuse un mélange', () => {
+    const prix = { monthly: ['P_ADV'], yearly: ['P_ADV_Y'] }
+    expect(rythmeDesArticles([{ id: 'a', price: 'P_ADV', quantity: 1 }], prix)).toBe('monthly')
+    expect(rythmeDesArticles([{ id: 'a', price: 'P_ADV_Y', quantity: 1 }], prix)).toBe('yearly')
+    expect(rythmeDesArticles([{ id: 'a', price: 'X', quantity: 1 }], prix)).toBeNull()
+  })
+
+  it('⚠️ la fonction edge passe par l’écart, en un seul appel, au rythme de l’abonnement', () => {
+    const sans = sansCommentaires(edge)
+    expect(sans).toContain('ecartAbonnement(abo.articles')
+    expect(sans).toContain('modifierAbonnement(stripeKey')
+    expect(sans).toContain('if (rythmeAbo !== rythme)')
+    // Plus jamais la première ligne venue, ni une quantité forcée à 1.
+    expect(sans).not.toContain('changerPrixArticle(')
+    expect(sans).not.toContain('abo.articles[0]')
+  })
 })

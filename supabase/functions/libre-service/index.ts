@@ -32,12 +32,12 @@
 // Advanced ; elle sait seulement quel Price porter.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  changerPrixArticle,
   creerAbonnementCheckout,
   lireAbonnement,
   lireSessionCheckout,
-  poserArticleAppareils,
+  modifierAbonnement,
 } from '../_shared/stripe.ts'
+import { ecartAbonnement, rythmeDesArticles } from '../_shared/cumul.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -383,67 +383,97 @@ Deno.serve(async (req) => {
       }, 400)
     }
 
-    let itemOffre = String(etat.item_offre ?? '').trim()
-    let itemSuppl = String(etat.item_appareils ?? '').trim()
-
-    // ⚠️⚠️ ON RETROUVE LES DEUX ARTICLES DANS L'ABONNEMENT, PAS SEULEMENT
-    // CELUI DE L'OFFRE. Un magasin né d'un Checkout au-delà de cent appareils
-    // porte DÉJÀ une ligne « appareils supplémentaires » chez Stripe, alors que
-    // `stores.stripe_item_appareils` est nul — le paiement enregistre
-    // l'abonnement, pas le détail de ses lignes. Ne chercher que l'article de
-    // l'offre laissait `poserArticleAppareils` en CRÉER UN SECOND : le client
-    // aurait payé ses tranches deux fois, et rien ne l'aurait signalé.
-    if (!itemOffre || (!itemSuppl && tranches > 0)) {
-      let abo
-      try {
-        abo = await lireAbonnement(stripeKey, abonnement)
-      } catch (e) {
-        return json({
-          success: false,
-          error: 'L’abonnement n’a pas pu être lu chez Stripe.',
-          detail: e instanceof Error ? e.message : String(e),
-        }, 502)
-      }
-      if (!abo || abo.articles.length === 0) {
-        return json({ success: false, error: 'Abonnement introuvable chez Stripe.' }, 502)
-      }
-      const suppl = priceAppareils ?? ''
-      if (!itemOffre) {
-        itemOffre = (abo.articles.find((a) => a.price !== suppl) ?? abo.articles[0]).id
-      }
-      if (!itemSuppl && suppl) {
-        itemSuppl = abo.articles.find((a) => a.price === suppl)?.id ?? ''
-      }
-    }
-
-    let itemAppareils: string
+    // ⚠️⚠️ L'ABONNEMENT EST UN CUMUL (16 septembre 2026). Une inscription à
+    // plusieurs magasins ouvre UN abonnement : une ligne par offre, de
+    // quantité égale au nombre de magasins, et une seule ligne de tranches pour
+    // tous. On n'y applique que l'ÉCART de CE magasin — voir `_shared/cumul.ts`.
+    // Le chemin d'avant prenait la première ligne venue et forçait sa quantité
+    // à 1 : un magasin qui montait faisait disparaître l'autre de la facture.
+    let abo
     try {
-      await changerPrixArticle(stripeKey, {
-        itemId: itemOffre,
-        priceId: priceOffre,
-        taxRateId,
-      })
-      itemAppareils = await poserArticleAppareils(stripeKey, {
-        subscriptionId: abonnement,
-        itemId: itemSuppl || null,
-        priceId: priceAppareils ?? '',
-        quantity: tranches,
-        taxRateId,
-      })
+      abo = await lireAbonnement(stripeKey, abonnement)
     } catch (e) {
       return json({
         success: false,
-        error: 'Le changement n’a pas pu être enregistré chez Stripe. Réessayez dans un instant.',
+        error: 'L’abonnement n’a pas pu être lu chez Stripe.',
         detail: e instanceof Error ? e.message : String(e),
       }, 502)
+    }
+    if (!abo || abo.articles.length === 0) {
+      return json({ success: false, error: 'Abonnement introuvable chez Stripe.' }, 502)
+    }
+
+    // ⚠️ LE RYTHME SE LIT SUR L'ABONNEMENT, jamais sur l'écran : Stripe refuse
+    // de mélanger des lignes mensuelles et annuelles, et changer d'échéance
+    // sur un abonnement en cours est une autre opération, jamais exercée.
+    const prixDe = (r: Rythme) => [
+      ...['essential', 'advanced', 'enterprise'].map((pl) => Deno.env.get(clePrice(pl, r)) ?? ''),
+      Deno.env.get(cleSupplement(r)) ?? '',
+    ].filter(Boolean)
+    const rythmeAbo = rythmeDesArticles(abo.articles, { monthly: prixDe('monthly'), yearly: prixDe('yearly') })
+    if (!rythmeAbo) {
+      return json({ success: false, error: 'Le rythme de l’abonnement n’a pas pu être établi. Écrivez-nous.' }, 409)
+    }
+    if (rythmeAbo !== rythme) {
+      return json({
+        success: false,
+        code: 'rythme_abonnement',
+        error: rythmeAbo === 'monthly'
+          ? 'Votre abonnement est réglé au mois : choisissez « Au mois » pour changer d’offre.'
+          : 'Votre abonnement est réglé à l’année : choisissez « À l’année » pour changer d’offre.',
+      }, 400)
+    }
+
+    // L'offre ACTUELLE de ce magasin, lue sur ses appareils — la base en est la
+    // mémoire, pas les lignes Stripe, qui ne disent pas à qui elles sont.
+    const ancienAppareils = Number(etat.appareils ?? 0)
+    if (!Number.isInteger(ancienAppareils) || ancienAppareils < 1) {
+      return json({ success: false, error: 'L’offre actuelle de ce magasin est inconnue. Écrivez-nous.' }, 409)
+    }
+    const { data: ancien, error: eAncien } = await appelant.rpc('prix_offre', {
+      p_devices: ancienAppareils,
+      p_billing_period: rythme,
+    })
+    if (eAncien || !ancien) {
+      return json({ success: false, error: 'L’offre actuelle de ce magasin est inconnue. Écrivez-nous.' }, 409)
+    }
+    const ancienPrix = Deno.env.get(clePrice(String(ancien.plan), rythme)) ?? ''
+    const ecart = ecartAbonnement(abo.articles, {
+      ancienPrix,
+      nouveauPrix: priceOffre,
+      prixAppareils: priceAppareils ?? null,
+      anciennesTranches: Number(ancien.tranches ?? 0),
+      nouvellesTranches: tranches,
+      taxRateId,
+    })
+    if (ecart.refus) {
+      return json({ success: false, error: `${ecart.refus} Écrivez-nous.` }, 409)
+    }
+
+    if (ecart.items.length > 0) {
+      try {
+        await modifierAbonnement(stripeKey, {
+          subscriptionId: abonnement,
+          items: ecart.items,
+          idempotence: `cumul-${abonnement}-${storeId}-${ancienAppareils}-${appareils}`,
+        })
+      } catch (e) {
+        return json({
+          success: false,
+          error: 'Le changement n’a pas pu être enregistré chez Stripe. Réessayez dans un instant.',
+          detail: e instanceof Error ? e.message : String(e),
+        }, 502)
+      }
     }
 
     const { data: applique, error: eApp } = await service.rpc('appliquer_changement_offre', {
       p_store_id: storeId,
       p_devices: appareils,
       p_annuel_cents: annuelCents,
-      p_item: itemOffre,
-      p_item_appareils: itemAppareils,
+      // ⚠️ Plus d'identifiant de ligne par magasin : une ligne appartient au
+      // cumul, jamais à un magasin. `null` laisse les colonnes intactes.
+      p_item: null,
+      p_item_appareils: null,
     })
     if (eApp) return json({ success: false, error: eApp.message }, 500)
     if (!applique?.success) {
