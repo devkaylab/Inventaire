@@ -110,5 +110,6 @@ echo "✓ Bundle prêt : $AAB"
 echo "  Signataire : $SIGNATAIRE"
 ls -lh "$AAB" | awk '{print "  Taille     : " $5}'
 echo
-echo "  À déposer dans la Play Console → Production → Créer une version."
+echo "  À déposer dans la Play Console → Tests → Test fermé → Créer une version"
+echo "  (la production reste fermée tant qu'une version de test fermé n'est pas publiée)."
 echo "  ⚠️ Le versionCode doit augmenter à chaque dépôt : il est dans app.json."
