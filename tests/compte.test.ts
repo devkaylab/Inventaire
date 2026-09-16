@@ -79,6 +79,8 @@ describe('découpage de Mon compte', () => {
     expect(retour.length).toBeGreaterThan(0)
     expect(retour).not.toContain('<Text')
     expect(retour).toContain("accessibilityLabel={t('Retour')}")
+    // Sur Android elle imite la flèche native « ← », pas le chevron d'iOS.
+    expect(compte).toContain("ANDROID ? 'M20 12H4M11 5l-7 7 7 7'")
   })
 
   it('Mon compte porte son propre retour, la pile racine n’en fournissant pas', () => {

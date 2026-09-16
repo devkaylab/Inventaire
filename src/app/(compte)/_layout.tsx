@@ -1,6 +1,6 @@
 import { Redirect, router, Stack } from 'expo-router'
 import { contenuColonne } from '@/constants/layout'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
@@ -42,16 +42,16 @@ function RetourVersApp() {
   return (
     <Pressable
       onPress={() => router.back()}
-      hitSlop={14}
+      hitSlop={12}
       style={styles.retour}
       accessibilityRole="button"
       accessibilityLabel={t('Retour')}
     >
-      <Svg width={20} height={20} viewBox="0 0 24 24">
+      <Svg width={24} height={24} viewBox="0 0 24 24">
         <Path
-          d="M15 6l-6 6 6 6"
+          d={ANDROID ? 'M20 12H4M11 5l-7 7 7 7' : 'M15 6l-6 6 6 6'}
           stroke="#fff"
-          strokeWidth={2.2}
+          strokeWidth={ANDROID ? 2 : 2.2}
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
@@ -61,11 +61,19 @@ function RetourVersApp() {
   )
 }
 
+const ANDROID = Platform.OS === 'android'
+
 const styles = StyleSheet.create({
   // Flèche seule : le libellé « Retour » chevauchait le titre sur le Pixel.
   // Sans texte, le nom passe par `accessibilityLabel`, et le `hitSlop` porte
-  // la cible à 48 dp (20 + 2 × 14).
-  retour: { flexDirection: 'row', alignItems: 'center', marginLeft: -6 },
+  // la cible à 48 dp (24 + 2 × 12).
+  // ⚠️ Elle imite la flèche NATIVE de chaque système, sinon deux écrans voisins
+  // ne portent pas le même retour : sur Android une flèche « ← » suivie d'un
+  // vrai blanc avant le titre (mesuré sur le Pixel, 16/09/2026), sur iOS un
+  // chevron collé au bord.
+  retour: ANDROID
+    ? { flexDirection: 'row', alignItems: 'center', marginRight: 32 }
+    : { flexDirection: 'row', alignItems: 'center', marginLeft: -6 },
 })
 
 export default function CompteLayout() {
