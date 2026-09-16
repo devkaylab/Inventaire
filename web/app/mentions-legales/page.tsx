@@ -69,7 +69,8 @@ export default function MentionsLegalesPage() {
           <p>
             Les données des inventaires sont hébergées par Supabase, dans l’Union européenne
             (région <code>eu-west-1</code>, Irlande). Les courriers électroniques de service
-            (invitations, liens de connexion) sont acheminés par Resend.
+            (invitations, liens de connexion) sont acheminés par Resend. Les paiements sont traités
+            par Stripe ; les données de carte bancaire ne transitent pas par nos serveurs.
           </p>
         </section>
 
@@ -91,7 +92,8 @@ export default function MentionsLegalesPage() {
           </p>
           <p>
             Les données d’inventaire saisies ou importées par une entreprise cliente restent sa
-            propriété ; Quantinvo n’en fait aucun autre usage que la fourniture du service.
+            propriété ; Quantinvo ne les utilise que pour fournir le service et, sous une forme
+            agrégée et anonymisée, pour établir des statistiques d’usage et améliorer le produit.
           </p>
         </section>
 

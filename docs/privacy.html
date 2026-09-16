@@ -71,9 +71,9 @@
     </tr>
     <tr>
       <td>Demandes et invitations</td>
-      <td>Demande d'inscription d'entreprise (nom de l'entreprise, SIREN, contact, téléphone,
-          magasins déclarés avec leur stock et leur surface, message), demande d'accès
-          superviseur, invitations d'équipe et d'inventaire (adresses électroniques).
+      <td>Inscription d'une entreprise (nom de l'entreprise, SIREN, contact, téléphone,
+          magasins déclarés avec leur nombre d'appareils, réponses au questionnaire),
+          invitations d'équipe et d'inventaire (adresses électroniques).
           Nous ne demandons <strong>aucun extrait Kbis</strong> : le SIREN suffit, et il
           nous évite de conserver les date et lieu de naissance et l'adresse personnelle
           d'un dirigeant. Lorsque vous saisissez un SIREN, votre navigateur interroge
@@ -83,6 +83,13 @@
           comme si vous consultiez vous-même l'annuaire des entreprises. Nous ne lui
           transmettons rien d'autre que le numéro que vous venez de saisir, et nous ne
           conservons pas les noms de dirigeants qu'il publie.</td>
+    </tr>
+    <tr>
+      <td>Paiement et facturation</td>
+      <td>Offre souscrite, rythme de paiement, montants, factures, identifiants du client et
+          de l'abonnement chez notre prestataire de paiement. <strong>Les données de carte
+          bancaire sont saisies directement chez Stripe</strong> : elles ne transitent pas par nos
+          serveurs et nous n'y avons pas accès.</td>
     </tr>
     <tr>
       <td>Données d'inventaire</td>
@@ -136,6 +143,8 @@
     <tr><td>Fournir le service, gérer les comptes et les inventaires</td><td>Exécution du contrat</td></tr>
     <tr><td>Sécuriser l'accès, prévenir les usages abusifs</td><td>Intérêt légitime</td></tr>
     <tr><td>Envoyer les courriers de service (invitations, liens de connexion)</td><td>Exécution du contrat</td></tr>
+    <tr><td>Encaisser les abonnements, émettre et conserver les factures</td><td>Exécution du contrat, obligation légale (conservation comptable)</td></tr>
+    <tr><td>Vérifier que chaque licence est utilisée pour le magasin déclaré</td><td>Intérêt légitime (exécution loyale du contrat)</td></tr>
     <tr><td>Notifications sur l'appareil</td><td>Consentement (autorisation système, révocable à tout moment)</td></tr>
     <tr><td>Répondre à une obligation légale ou à une réquisition</td><td>Obligation légale</td></tr>
   </table>
@@ -155,6 +164,7 @@
     <tr><td>Vercel</td><td>Hébergement du site <code>www.quantinvo.com</code></td><td>États-Unis</td></tr>
     <tr><td>Resend</td><td>Acheminement des courriers électroniques de service</td><td>États-Unis</td></tr>
     <tr><td>Expo</td><td>Acheminement des notifications vers votre appareil</td><td>États-Unis</td></tr>
+    <tr><td>Stripe</td><td>Paiement en ligne des abonnements et émission des factures</td><td>Union européenne (Irlande) — société du groupe établi aux États-Unis</td></tr>
     <tr><td>Apple, Google</td><td>Distribution de l'application mobile</td><td>États-Unis</td></tr>
   </table>
   </div>
@@ -162,7 +172,7 @@
   <h2>6. Transferts hors de l'Union européenne</h2>
   <p>
     Les données des inventaires sont stockées en Irlande. En revanche, l'hébergement du site,
-    l'envoi des courriers électroniques et l'acheminement des notifications font intervenir des
+    l'envoi des courriers électroniques, l'acheminement des notifications et le paiement font intervenir des
     prestataires établis aux États-Unis : ces traitements impliquent un transfert hors de
     l'Union européenne. Ces prestataires publient des accords de sous-traitance intégrant les
     clauses contractuelles types de la Commission européenne, sur lesquels ces transferts
@@ -181,6 +191,7 @@
     <li><strong>Inscription commencée et non terminée</strong> : vos réponses sont gardées 30 jours pour que vous puissiez reprendre, puis supprimées. Trois rappels au plus vous sont adressés pendant ce délai.</li>
     <li><strong>Demandes d'ajout ou de suppression de magasin</strong> : supprimées un an après leur traitement.</li>
     <li><strong>Demandes de suppression de compte</strong> : supprimées au bout d'un an.</li>
+    <li><strong>Factures et pièces comptables</strong> : conservées dix ans, comme l'exige le Code de commerce.</li>
     <li><strong>Journaux d'administration</strong> (qui a fait quoi sur les comptes et les magasins) : supprimés au bout d'un an.</li>
   </ul>
   <p>

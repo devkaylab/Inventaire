@@ -164,6 +164,24 @@ describe('le contrat dit la même chose que la page', () => {
     expect(plat, 'l’accès est maintenu jusqu’au terme').toContain("conserve l'accès complet au Service jusqu'au terme")
   })
 
+  it('engage le Client à n’utiliser chaque licence que pour son magasin déclaré (16/09/2026)', () => {
+    // Demande de Julien : un usage hors des magasins déclarés se facture.
+    expect(plat).toContain('Usage limité aux Magasins déclarés')
+    expect(plat).toContain('le Client est facturé en conséquence')
+  })
+
+  it('dit l’archivage, et que les sauvegardes n’en sont pas un', () => {
+    // Même durée que `purge_expired_data` et que la politique de confidentialité.
+    expect(plat).toContain('automatiquement et définitivement effacé douze mois après la clôture')
+    expect(plat).toContain("ni un service d'archivage, ni un service de restauration à la demande")
+  })
+
+  it('dit le verrou d’appareils du produit, plus le dépassement toléré', () => {
+    // Le 4 septembre 2026 le Service s'est mis à refuser l'appareil de trop.
+    expect(plat).toContain('ne peut pas ouvrir de comptage')
+    expect(plat).not.toContain('aucun Appareil n\'est refusé')
+  })
+
   it('ne promet aucun remboursement au Client qui résilie de lui-même', () => {
     // La page dit « sans engagement » en tête : c'est vrai du mensuel, et
     // seulement de lui. Le contrat ne doit pas laisser croire l'inverse.

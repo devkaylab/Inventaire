@@ -14016,3 +14016,31 @@ Tests de garde : `web/tests/visuels-boutiques.test.ts` — il **déduit** les
 gabarits du dossier et les polices de leurs liens Google Fonts, donc un
 troisième visuel ajouté demain est couvert, et le jour où un gabarit change de
 police, la garde exige que le script surveille la nouvelle.
+
+# Les documents légaux alignés sur le produit (16 septembre 2026)
+
+Revue des CGV, de la politique de confidentialité et des mentions légales à la
+demande de Julien (« on doit se back up »). Les CGV dataient du 30 août et
+contredisaient le produit sur six points : devis pour plusieurs magasins,
+« aucun compte sans invitation », **dépassement d'appareils toléré jusqu'au
+renouvellement** (le verrou refuse l'appareil de trop depuis le 4 septembre),
+cycle d'un magasin ajouté, changement d'offre, identité de la société en
+crochets. Tout est récrit dans `docs/entreprise/cgv-quantinvo-brouillon.md`.
+
+Ajouts demandés : **article 9.5, usage limité aux Magasins déclarés** (un lieu
+non déclaré est facturé au Client) ; **articles 8.4 à 8.6, sauvegardes ≠
+archivage**, effacement du détail des comptages à douze mois, conservation et
+suppressions à la charge du Client ; 13.2 exclut la responsabilité pour ces
+pertes. La politique de confidentialité ne déclarait pas **Stripe** ni les
+données de paiement et la conservation des factures (dix ans) : corrigé, et la
+garde des prestataires l'exige désormais.
+
+⚠️ **CE QUI BLOQUE AVANT D'OUVRIR LA VENTE, ET N'EST PAS FAIT** :
+- les CGV ne sont **publiées nulle part** et **aucun écran ne les fait
+  accepter** — l'article 3 décrit une acceptation que le produit ne recueille
+  pas encore ;
+- l'article 9.5 se prouve mal tant que le Service ne demande que le NOM d'un
+  magasin, pas son adresse ;
+- toujours pas de relecture juridique.
+
+Tests de garde : `web/tests/offres.test.ts` et `web/tests/confidentialite.test.ts`.

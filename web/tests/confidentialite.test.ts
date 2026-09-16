@@ -38,7 +38,7 @@ describe('politique de confidentialité', () => {
 
   it('déclare chaque destinataire des données', () => {
     // Omettre un prestataire est précisément ce que l'audit a relevé.
-    for (const prestataire of ['Supabase', 'Vercel', 'Resend', 'Expo']) {
+    for (const prestataire of ['Supabase', 'Vercel', 'Resend', 'Expo', 'Stripe']) {
       expect(politique, `${prestataire} n'est pas déclaré`).toContain(prestataire)
     }
   })

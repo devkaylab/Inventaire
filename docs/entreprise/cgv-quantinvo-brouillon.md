@@ -4,24 +4,28 @@
 nouvelle assiette tarifaire — le prix ne suit plus le volume de stock déclaré
 mais le **nombre d'appareils comptant simultanément** dans un magasin
 (articles 5, 6, 7 et annexe 2 récrits ; décision consignée dans
-`hypotheses-tarifaires.md`, hypothèse 4). Rédigé par l'assistant de
+`hypotheses-tarifaires.md`, hypothèse 4), puis **révisé le 16 septembre 2026**
+pour coller au produit réellement en ligne : identité de la société, inscription
+en ligne sans devis, refus du troisième appareil au lieu d'un dépassement
+toléré, changement d'offre immédiat, usage limité aux magasins déclarés
+(article 9.5), et archivage du détail des comptages (articles 8.4 à 8.6). Rédigé par l'assistant de
 développement à partir du fonctionnement réel du produit. **À faire relire par
 un conseil juridique avant toute signature** — et l'article 7.1, qui rend le
 solde de l'année dû sur une licence annuelle résiliée, est le premier point à
-lui soumettre. Les crochets `[…]` marquent les valeurs à compléter une fois la
-société immatriculée.
+lui soumettre. Les crochets `[…]` marquent les choix qui restent à arrêter.
 
 ---
 
 ## 1. Identification de l'éditeur
 
-Le service Quantinvo est édité par **Devkaylab**, [SASU au capital de … €],
-immatriculée au RCS de [ville] sous le numéro [SIREN], dont le siège est situé
-[adresse], non assujettie à la TVA (franchise en base, article 293 B du CGI),
-représentée par son
-président, [Julien Thiong-kay] (ci-après « l'Éditeur »).
+Le service Quantinvo est édité par **Devkaylab**, société par actions
+simplifiée unipersonnelle (SASU) au capital de 100 €, immatriculée au registre
+du commerce et des sociétés de Paris sous le numéro 109 680 389, dont le siège
+est situé 47 rue Vivienne, 75002 Paris, non assujettie à la TVA (franchise en
+base, article 293 B du CGI), représentée par son président, Julien Thiong-Kay
+(ci-après « l'Éditeur »).
 
-Contact : [adresse e-mail de contact], [téléphone].
+Contact : contact@quantinvo.com, +33 6 88 59 27 65.
 
 ## 2. Définitions
 
@@ -30,9 +34,12 @@ Contact : [adresse e-mail de contact], [téléphone].
   et de traitement qui les font fonctionner.
 - **Client** : la personne morale qui souscrit une licence pour un ou
   plusieurs de ses magasins.
-- **Magasin** : un point de vente ou un entrepôt du Client, identifié dans le
-  Service par un code qui lui est propre. **La licence est attachée au
-  magasin**.
+- **Magasin** : un point de vente, un entrepôt ou un dépôt du Client,
+  identifié dans le Service par un code qui lui est propre. **La licence est
+  attachée au magasin.**
+- **Magasin déclaré** : un Magasin que le Client a déclaré, sous un nom qui le
+  désigne sans ambiguïté, lors de sa souscription ou lors de l'ajout ultérieur
+  de ce Magasin depuis son espace, et pour lequel une licence a été réglée.
 - **Utilisateurs** : les personnes physiques que le Client autorise à utiliser
   le Service — administrateur d'entreprise, superviseurs, compteurs.
 - **Inventaire** : une session de comptage ouverte par un superviseur pour un
@@ -47,13 +54,21 @@ Contact : [adresse e-mail de contact], [téléphone].
   d'Appareils comptant du Magasin. **Une Offre couvre un seul Magasin.**
 - **Données d'inventaire** : l'ensemble des données saisies ou importées par
   le Client et ses Utilisateurs dans le Service.
+- **Détail des comptages** : les lectures élémentaires enregistrées pendant un
+  Inventaire — pour chacune, l'article, la quantité, la zone, l'heure et
+  l'Utilisateur qui l'a faite. Il se distingue du **rapport** (quantités
+  consolidées, écarts, valorisation), qui en est tiré.
 
 ## 3. Objet et acceptation
 
 Les présentes conditions régissent la fourniture du Service par l'Éditeur au
-Client. Elles sont acceptées par la signature du devis ou par le paiement de
-la première facture, et prévalent sur tout document du Client, notamment ses
+Client. Elles sont acceptées **sans réserve au moment de la souscription en
+ligne, avant tout paiement**, ou par la signature d'un devis lorsqu'un devis
+est établi. Le paiement de la première échéance vaut en tout état de cause
+acceptation. Elles prévalent sur tout document du Client, notamment ses
 conditions générales d'achat, sauf accord écrit contraire.
+
+La personne qui souscrit déclare disposer du pouvoir d'engager le Client.
 
 Le Service est réservé aux professionnels. Le Client reconnaît l'utiliser pour
 les besoins de son activité.
@@ -74,21 +89,24 @@ raisonnable.
 
 ## 5. Souscription, ouverture des accès
 
-5.1 Le Client souscrit, pour chaque Magasin, l'Offre correspondant au nombre
-d'Appareils comptant qu'il prévoit d'y mobiliser (annexe 2), et choisit son
-rythme de paiement — mensuel ou annuel (article 6.2). La souscription se fait
-**en ligne** pour les trois Offres. Un devis préalable est établi dans deux
-cas : lorsque le Client équipe plusieurs Magasins, et lorsqu'un Magasin dépasse
-cent Appareils comptant.
+5.1 Le Client déclare chacun des Magasins qu'il entend équiper et souscrit,
+pour chacun, l'Offre correspondant au nombre d'Appareils comptant qu'il prévoit
+d'y mobiliser (annexe 2), puis choisit son rythme de paiement — mensuel ou
+annuel (article 6.2). **La souscription se fait en ligne, sans devis**, pour un
+ou plusieurs Magasins et jusqu'à deux cents Appareils comptant par Magasin. Un
+devis n'est établi qu'au-delà de ce seuil, ou à la demande du Client.
 
-5.2 À l'encaissement du premier terme, l'Éditeur crée l'entreprise du Client
-dans le Service, ses magasins et leurs codes d'accès, et invite la personne
-désignée comme administrateur d'entreprise.
+5.2 La personne qui souscrit crée d'abord son compte en confirmant son adresse
+électronique ; ce compte ne donne accès à aucune donnée tant que la
+souscription n'est pas réglée. À l'encaissement du premier terme, l'Éditeur
+crée l'entreprise du Client dans le Service, ses Magasins déclarés et leurs
+codes d'accès, et confère à ce compte le rôle d'administrateur d'entreprise.
 
 5.3 L'administrateur d'entreprise invite ensuite ses superviseurs ; chaque
-superviseur ajoute ses compteurs. **Aucun compte n'est créé sans invitation.**
-Le Client est responsable de l'identité et des droits des personnes qu'il
-invite.
+superviseur ajoute ses compteurs. **Hormis le compte de la personne qui
+souscrit, aucun compte n'est créé sans invitation.** Le Client est responsable
+de l'identité et des droits des personnes qu'il invite, et du retrait des
+accès des personnes qui le quittent.
 
 5.4 Les codes d'accès (entreprise, magasin) sont confidentiels. Le Client
 veille à ce qu'ils ne soient communiqués qu'aux personnes habilitées et
@@ -124,17 +142,25 @@ l'identité des personnes qui les utilisent. Le Client n'a aucune déclaration �
 fournir, aucun justificatif à produire et aucune régularisation à opérer en
 fin de période.
 
-6.4 **Un dépassement ne suspend jamais un comptage en cours.** Si le nombre
-d'Appareils comptant d'un Magasin dépasse celui de son Offre, le Service
-continue de fonctionner sans restriction : aucun Appareil n'est refusé, aucun
-Inventaire n'est interrompu. L'Éditeur en informe le Client, qui dispose du
-choix de passer à l'Offre supérieure ou de revenir dans les limites de son
-Offre. À défaut, l'Offre supérieure s'applique **au renouvellement suivant**,
-sans effet rétroactif sur la période en cours.
+6.4 **Le nombre d'Appareils comptant simultanément dans un Magasin ne peut pas
+excéder celui que couvre son Offre.** Lorsque ce nombre est atteint, un
+Appareil supplémentaire ne peut pas ouvrir de comptage tant qu'une place ne
+s'est pas libérée. **Un Appareil qui compte déjà n'est jamais interrompu**, et
+la consultation des rapports n'est jamais restreinte. L'Éditeur informe alors
+l'administrateur d'entreprise, qui peut à tout moment passer à une Offre
+supérieure depuis son espace (article 6.8).
+
+Lorsque le Service ne peut pas vérifier le nombre d'Appareils — notamment en
+l'absence de réseau — il laisse compter plutôt que de bloquer un Inventaire.
+**Cette tolérance technique ne confère aucun droit d'usage au-delà de l'Offre
+souscrite** : un usage excédant l'Offre constaté par l'Éditeur peut être
+facturé au tarif de l'Offre correspondante, dans les conditions de
+l'article 9.5.
 
 6.5 Au-delà de cent Appareils comptant sur un même Magasin, un supplément
 s'ajoute à l'Offre la plus élevée, par tranche entamée de dix Appareils, au
-tarif indiqué à l'annexe 2.
+tarif indiqué à l'annexe 2, jusqu'à deux cents Appareils. Au-delà, les
+conditions sont convenues par écrit entre les parties.
 
 6.6 Retard de paiement : pénalités au taux de [trois fois le taux d'intérêt
 légal], exigibles sans rappel, et indemnité forfaitaire de recouvrement de
@@ -144,6 +170,13 @@ effet, l'Éditeur peut suspendre les accès du magasin concerné.
 
 6.7 Le prix peut être révisé à chaque renouvellement, avec un préavis de
 [deux] mois avant l'échéance ; le Client peut alors refuser le renouvellement.
+
+6.8 **Changement d'Offre.** Le passage à une Offre supérieure se fait en ligne
+et **prend effet immédiatement** : la différence de prix est facturée au
+prorata de la période en cours, puis l'Offre supérieure s'applique aux
+échéances suivantes. Le passage à une Offre inférieure se demande par écrit et
+prend effet au renouvellement suivant, sans remboursement de la période en
+cours.
 
 ## 7. Durée, renouvellement, résiliation
 
@@ -184,9 +217,11 @@ l'Éditeur, la part de licence non consommée est remboursée au prorata**, y
 compris pour une licence annuelle — l'absence de remboursement prévue à
 l'article 7.1 ne vaut que pour une résiliation à l'initiative du Client.
 
-7.5 Le Client peut ajouter un Magasin en cours d'année ; la licence du Magasin
-ajouté est facturée au prorata jusqu'à l'échéance commune [ou court douze mois
-de sa propre date — choisir].
+7.5 Le Client peut ajouter un Magasin à tout moment depuis son espace ; ce
+Magasin devient un Magasin déclaré à l'encaissement de sa licence. **La licence
+d'un Magasin ajouté a son propre cycle** : elle court à compter de l'ouverture
+de ses accès, pour un mois ou douze selon le rythme choisi, indépendamment des
+autres Magasins. Les Magasins souscrits ensemble partagent la même échéance.
 
 ## 8. Obligations de l'Éditeur
 
@@ -203,10 +238,33 @@ l'exige.]
 Les réponses sont apportées dans les meilleurs délais ; pendant un inventaire
 en cours, l'Éditeur fait ses meilleurs efforts pour répondre rapidement.
 
-8.4 Sauvegardes : les Données d'inventaire sont hébergées chez un prestataire
-professionnel avec sauvegardes régulières. Le Client conserve la
-responsabilité d'exporter ses rapports et résultats à l'issue de chaque
-inventaire.
+8.4 **Sauvegardes.** Les Données d'inventaire sont hébergées chez un
+prestataire professionnel qui en réalise des sauvegardes régulières. Ces
+sauvegardes servent à la reprise du Service après un incident ; **elles ne
+constituent ni un service d'archivage, ni un service de restauration à la
+demande.** L'Éditeur ne s'engage pas à restaurer des données supprimées par le
+Client ou ses Utilisateurs, ni des données effacées en application de
+l'article 8.5.
+
+8.5 **Archivage.** **Le Détail des comptages d'un Inventaire est
+automatiquement et définitivement effacé douze mois après la clôture de cet
+Inventaire.** Le rapport, les écarts, le catalogue et le stock théorique de
+l'Inventaire restent consultables et exportables pendant toute la durée du
+contrat. En revanche, pour un Inventaire archivé, le détail ligne à ligne de
+l'export et le détail d'une balise ne sont plus disponibles, l'attribution
+d'une lecture à un Utilisateur n'est plus possible, et l'Inventaire ne peut
+plus être rouvert. Les durées de conservation sont publiées dans la politique
+de confidentialité ; toute réduction est notifiée au Client au moins [deux]
+mois à l'avance.
+
+8.6 **Conservation par le Client.** Le Client est seul responsable de la
+conservation de ses rapports et résultats au-delà de ce que le Service
+conserve, notamment pour ses obligations comptables, fiscales et d'audit. Il
+lui appartient de les exporter à l'issue de chaque Inventaire et, en tout état
+de cause, avant l'archivage prévu à l'article 8.5 et avant la fin du contrat.
+**Les suppressions effectuées par le Client ou ses Utilisateurs — d'un
+Inventaire, du contenu d'une balise, d'un compte ou d'un Magasin — sont
+immédiates et définitives.**
 
 ## 9. Obligations du Client
 
@@ -223,9 +281,37 @@ personnel. L'Éditeur met à disposition une note d'information type
 (`docs/conformite/information-salaries.md`).
 
 9.4 Le Client s'interdit de revendre, sous-louer ou donner accès au Service à
-des tiers hors de ses magasins licenciés, de tenter d'en extraire le code, de
+des tiers hors de ses Magasins déclarés, de tenter d'en extraire le code, de
 le décompiler hors des cas prévus par la loi, ou d'en contourner les mesures
-de sécurité.
+de sécurité, notamment la limite d'Appareils de l'article 6.4.
+
+9.5 **Usage limité aux Magasins déclarés.** Le Client s'engage à n'utiliser
+chaque licence **que pour le Magasin déclaré auquel elle est attachée**. Une
+licence ne peut pas servir à inventorier un autre point de vente, entrepôt ou
+dépôt, qu'il soit exploité par le Client ou par une société de son groupe,
+même ponctuellement.
+
+Tout lieu inventorié au moyen du Service sans avoir été déclaré constitue un
+**Magasin non déclaré**. Dans ce cas, **le Client est facturé en conséquence** :
+l'Éditeur est en droit de facturer, pour chaque Magasin non déclaré, la licence
+de l'Offre correspondant au nombre d'Appareils constaté, au rythme annuel, à
+compter du premier usage constaté et jusqu'à sa déclaration ou à la cessation
+de l'usage. L'Éditeur en informe préalablement le Client par écrit ; celui-ci
+dispose de [quinze] jours pour déclarer le Magasin depuis son espace ou cesser
+l'usage, faute de quoi la facture est émise. Ces sommes sont dues sans
+préjudice de la résiliation prévue à l'article 7.4.
+
+Le Client répond, à première demande et dans le même délai, aux questions de
+l'Éditeur sur les lieux où le Service est utilisé.
+
+9.6 **Règles applicables aux Utilisateurs.** Le Client fait respecter par ses
+Utilisateurs les règles d'usage suivantes, qui leur sont opposables : utiliser
+le Service pour les seuls besoins des Inventaires du Client ; garder
+confidentiels leurs identifiants et les codes d'accès ; ne pas utiliser le
+compte d'un autre ; ne saisir aucun contenu illicite ; ne pas tenter
+d'accéder à des données qui ne leur sont pas destinées. L'Éditeur peut
+suspendre l'accès d'un Utilisateur qui y contrevient, en en informant le
+Client.
 
 ## 10. Propriété intellectuelle
 
@@ -254,9 +340,10 @@ sécurité) et la relation commerciale, l'Éditeur est responsable de traitement
 sa politique de confidentialité, accessible sur le site, en décrit les
 finalités, les durées et les droits.
 
-11.3 Les données sont hébergées dans l'Union européenne. Les sous-traitants
-ultérieurs (hébergement, envoi d'e-mails, notifications) sont listés dans la
-politique de confidentialité ; l'Éditeur informe le Client de tout changement.
+11.3 Les Données d'inventaire sont hébergées dans l'Union européenne. Les
+sous-traitants ultérieurs (hébergement, envoi d'e-mails, notifications,
+paiement) sont listés dans la politique de confidentialité ; l'Éditeur informe
+le Client de tout changement.
 
 11.4 Le suivi d'activité proposé au superviseur est **agrégé** (compteurs par
 mode) ; l'attribution nominative d'un comptage n'est conservée que pour
@@ -279,7 +366,10 @@ des conséquences comptables, fiscales ou commerciales qu'il en tire.
 
 13.2 L'Éditeur ne répond pas des dommages indirects : perte d'exploitation,
 de chiffre d'affaires, de clientèle, préjudice d'image, coût d'un recomptage
-décidé par le Client.
+décidé par le Client. Il ne répond pas non plus de la perte de données
+résultant d'une suppression effectuée par le Client ou ses Utilisateurs, de
+l'archivage prévu à l'article 8.5, ou d'un défaut d'export imputable au
+Client (article 8.6).
 
 13.3 La responsabilité de l'Éditeur, toutes causes confondues, est plafonnée
 au **montant de la licence annuelle payée pour le magasin concerné** au titre
@@ -294,9 +384,11 @@ d'exclure (faute lourde, dol, atteinte aux personnes).
 14.1 Pendant le contrat et jusqu'à [trente] jours après son terme, le Client
 peut exporter ses rapports et résultats depuis le Service (formats tableur).
 
-14.2 Passé ce délai, les Données d'inventaire sont supprimées ou anonymisées
-selon les durées de la politique de confidentialité. Les comptes des
-Utilisateurs rattachés au Client sont désactivés.
+14.2 Passé ce délai, le Client n'a plus accès à ses Données d'inventaire, qui
+sont supprimées ou anonymisées selon les durées de la politique de
+confidentialité. Les comptes des Utilisateurs rattachés au Client sont
+désactivés. L'Éditeur conserve les pièces comptables (factures) pendant la
+durée légale de dix ans.
 
 14.3 Sur demande écrite avant le terme, l'Éditeur peut fournir une extraction
 complète des Données d'inventaire du Client [gratuitement / au tarif horaire
@@ -375,8 +467,8 @@ propre Offre, choisie selon le nombre d'Appareils comptant qui lui est propre.
    n'en a pas : c'est ce qui fait le « sans engagement ».)
 2. Plafond de responsabilité : une licence annuelle du magasin, ou de
    l'ensemble des magasins du Client.
-3. Magasin ajouté en cours d'année : prorata à échéance commune, ou cycle
-   propre.
+3. ~~Magasin ajouté en cours d'année~~ — **tranché par le produit** : cycle
+   propre (chaque ajout ouvre son abonnement), article 7.5.
 4. Engagement de disponibilité chiffré : aucun pour l'instant, à prévoir si
    une enseigne le demande (et alors l'assortir de crédits plutôt que de
    pénalités).
@@ -394,7 +486,20 @@ propre Offre, choisie selon le nombre d'Appareils comptant qui lui est propre.
 7. Clause de référence commerciale : à garder ou non.
 8. Conditions d'un essai gratuit ou d'un inventaire pilote, si cette pratique
    commerciale est retenue.
-9. **Le dépassement (article 6.4) n'est assorti d'aucune sanction** : le Client
-   qui dépasse durablement ne paie l'Offre supérieure qu'au renouvellement. À
-   confirmer — c'est un choix commercial assumé (ne jamais bloquer un comptage),
-   pas un oubli, mais il laisse jusqu'à douze mois d'usage non facturé.
+9. ~~Le dépassement toléré jusqu'au renouvellement~~ — **renversé le
+   4 septembre 2026** : le Service refuse l'Appareil de trop (article 6.4), et
+   le passage à l'Offre supérieure est immédiat (article 6.8).
+10. ⚠️ **Rendre l'article 9.5 opposable** : le Service ne demande aujourd'hui
+    que le NOM d'un Magasin. Sans son adresse, « Magasin non déclaré » se
+    prouve mal. Recommandation : demander l'adresse de chaque Magasin à la
+    déclaration.
+11. ⚠️ **L'acceptation de l'article 3 n'existe pas encore dans le produit** :
+    ces conditions ne sont publiées nulle part sur le site, et aucun écran de
+    souscription ne les fait accepter. À faire AVANT d'ouvrir la vente : page
+    publique des conditions, et case à cocher (ou mention explicite) sur
+    `/inscription`, `/souscrire` et l'ajout de magasin.
+12. **Utilisateurs** : l'article 9.6 tient lieu de conditions d'utilisation.
+    Un texte court accepté par chaque Utilisateur à la création de son mot de
+    passe (`/bienvenue`) les rendrait directement opposables — à décider.
+13. Le délai de quinze jours de l'article 9.5 et le rythme annuel retenu pour
+    la facturation d'un Magasin non déclaré.
