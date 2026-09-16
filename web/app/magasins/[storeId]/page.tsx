@@ -42,7 +42,7 @@ type Personne = {
 }
 
 type Fiche = {
-  store: { id: string; name: string; join_code: string; created_at: string }
+  store: { id: string; name: string; join_code: string; created_at: string; address: string | null }
   supervisors: Personne[]
   counters: Personne[]
   sessions: SessionBloc[]
@@ -238,6 +238,12 @@ export default function FicheMagasinPage() {
           <p className="page-sub">
             {company?.name ? `${company.name} · ` : ''}
             {t('créé le %{date}', { date: new Date(fiche.store.created_at).toLocaleDateString(locale()) })}
+          </p>
+          {/* L'adresse déclarée (16 septembre 2026) : c'est elle qui désigne le
+              magasin dans le contrat — une licence ne sert qu'à celui-là. Les
+              magasins déclarés avant ce jour n'en ont pas, et on le dit. */}
+          <p className="page-sub">
+            {fiche.store.address ?? t('Adresse non renseignée')}
           </p>
         </div>
         {/* Le rapport consolidé du magasin : tous ses inventaires clôturés

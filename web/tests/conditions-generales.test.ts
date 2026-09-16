@@ -124,6 +124,12 @@ describe('l’adresse du magasin déclaré', () => {
     expect(f).toContain('v_sub, v_sto.address)')
   })
 
+  it('la fiche du magasin l’affiche, et dit quand elle manque', () => {
+    expect(espaces(derniereDefinition('ca_store_detail').corps)).toContain("'address', s.address")
+    const fiche = code(lire('web/app/magasins/[storeId]/page.tsx'))
+    expect(fiche).toContain("fiche.store.address ?? t('Adresse non renseignée')")
+  })
+
   it('les trois écrans la font suivre', () => {
     expect(code(lire('web/components/vitrine/PageInscription.tsx'))).toContain("address: (m.adresse ?? '').trim()")
     expect(code(lire('web/components/vitrine/PageSouscrire.tsx'))).toContain('storeAddress,')

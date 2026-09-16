@@ -1172,6 +1172,7 @@ export const en: Dictionnaire = {
   "conditions générales de vente et d’utilisation": "terms and conditions of sale and use",
   ", dont l’usage de chaque licence pour le seul magasin déclaré.": ", including the use of each licence for the declared store only.",
   "Adresse du magasin": "Store address",
+  "Adresse non renseignée": "No address on file",
   "Numéro, rue, code postal, ville": "Number, street, postcode, city",
   "Conditions générales": "Terms and conditions",
   "Rien ne correspond à « %{q} ».": "Nothing matches “%{q}”.",
