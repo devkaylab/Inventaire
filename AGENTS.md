@@ -13283,7 +13283,7 @@ le tableau de bord de la console après conversion. À vérifier là, pas ici. E
 tant que ce n'est pas prouvé, **ne pas abandonner le plan des douze testeurs** :
 s'il faut y revenir, les quatorze jours repartent de zéro.
 
-**16 septembre 2026 — la conversion est faite, selon Julien** (« c'est validé »),
+**16 septembre 2026 — le compte est passé en ORGANISATION** (confirmé par Julien : « google play est passé en organisation »). ⚠️ Reste à constater dans le tableau de bord de l'app que la Production n'exige plus le test fermé. Contexte :
 après dépôt de sa pièce d'identité et des documents de Devkaylab. ⚠️ **Non vu
 par moi** : la prochaine session vérifie d'abord que « Type de compte » dit
 *Organisation*, puis que la section Production n'exige plus le test fermé.
