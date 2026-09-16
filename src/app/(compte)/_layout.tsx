@@ -1,6 +1,6 @@
 import { Redirect, router, Stack } from 'expo-router'
 import { contenuColonne } from '@/constants/layout'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
@@ -40,7 +40,13 @@ import { t } from '@/lib/i18n'
 function RetourVersApp() {
   if (!router.canGoBack()) return null
   return (
-    <Pressable onPress={() => router.back()} hitSlop={10} style={styles.retour}>
+    <Pressable
+      onPress={() => router.back()}
+      hitSlop={14}
+      style={styles.retour}
+      accessibilityRole="button"
+      accessibilityLabel={t('Retour')}
+    >
       <Svg width={20} height={20} viewBox="0 0 24 24">
         <Path
           d="M15 6l-6 6 6 6"
@@ -51,14 +57,15 @@ function RetourVersApp() {
           fill="none"
         />
       </Svg>
-      <Text style={styles.retourText}>{t('Retour')}</Text>
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  retour: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: -6 },
-  retourText: { color: '#fff', fontSize: 16 },
+  // Flèche seule : le libellé « Retour » chevauchait le titre sur le Pixel.
+  // Sans texte, le nom passe par `accessibilityLabel`, et le `hitSlop` porte
+  // la cible à 48 dp (20 + 2 × 14).
+  retour: { flexDirection: 'row', alignItems: 'center', marginLeft: -6 },
 })
 
 export default function CompteLayout() {
@@ -84,10 +91,10 @@ export default function CompteLayout() {
     headerTintColor: theme.headerText,
     headerTitleStyle: { fontFamily: Font.bold, color: theme.headerText },
     contentStyle: { backgroundColor: theme.background },
-    // iOS reprend par défaut le titre de l'écran précédent — « Mon compte »,
-    // « Session »… Un seul mot, toujours le même, se lit plus vite qu'un
-    // libellé qui change à chaque écran, et ne risque pas d'être tronqué.
-    headerBackTitle: t('Retour'),
+    // La flèche seule, sans libellé (16/09/2026) : sur le Pixel, « Retour »
+    // chevauchait le titre de l'écran. `minimal` retire aussi le titre de
+    // l'écran précédent qu'iOS affiche par défaut.
+    headerBackButtonDisplayMode: 'minimal' as const,
   }
 
   const actionsRight = () => <HeaderActions />

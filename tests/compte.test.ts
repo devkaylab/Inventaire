@@ -65,13 +65,20 @@ describe('découpage de Mon compte', () => {
     expect(layout).toContain('mfaRequired')
   })
 
-  it('le bouton retour dit « Retour », pas le titre de l’écran précédent', () => {
-    // iOS reprend par défaut le titre précédent — « Mon compte », « Session »…
-    // Un seul mot, toujours le même, se lit plus vite et ne se fait pas
-    // tronquer par iOS quand la place manque.
+  it('le bouton retour est une flèche seule, sans libellé (16/09/2026)', () => {
+    // Sur le Pixel, « Retour » chevauchait le titre de l'écran. Les trois piles
+    // passent en affichage minimal, et le retour maison n'écrit plus de texte —
+    // son nom vit dans l'étiquette d'accessibilité.
     for (const groupe of ['(compte)', '(supervisor)', '(employee)']) {
-      expect(lire(`app/${groupe}/_layout.tsx`)).toContain("headerBackTitle: t('Retour')")
+      const layout = lire(`app/${groupe}/_layout.tsx`)
+      expect(layout).toContain("headerBackButtonDisplayMode: 'minimal'")
+      expect(layout).not.toContain('headerBackTitle')
     }
+    const compte = lire('app/(compte)/_layout.tsx')
+    const retour = compte.slice(compte.indexOf('function RetourVersApp'), compte.indexOf('const styles'))
+    expect(retour.length).toBeGreaterThan(0)
+    expect(retour).not.toContain('<Text')
+    expect(retour).toContain("accessibilityLabel={t('Retour')}")
   })
 
   it('Mon compte porte son propre retour, la pile racine n’en fournissant pas', () => {

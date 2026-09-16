@@ -28,10 +28,10 @@ export default function SupervisorLayout() {
     headerTintColor: theme.headerText,
     headerTitleStyle: { fontFamily: Font.bold, color: theme.headerText },
     contentStyle: { backgroundColor: theme.background },
-    // iOS reprend par défaut le titre de l'écran précédent — « Mon compte »,
-    // « Session »… Un seul mot, toujours le même, se lit plus vite qu'un
-    // libellé qui change à chaque écran, et ne risque pas d'être tronqué.
-    headerBackTitle: t('Retour'),
+    // La flèche seule, sans libellé (16/09/2026) : sur le Pixel, « Retour »
+    // chevauchait le titre de l'écran. `minimal` retire aussi le titre de
+    // l'écran précédent qu'iOS affiche par défaut.
+    headerBackButtonDisplayMode: 'minimal' as const,
   }
 
   const actionsRight = () => <HeaderActions />
