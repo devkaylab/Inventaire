@@ -13322,6 +13322,8 @@ parcours d'identité et de compte bancaire à faire avant.
   première étape, sinon tout le reste est saisi sous le mauvais statut.
 - ⚠️ **Ce parcours appartient à Julien** : il demande des pièces d'identité et
   un RIB. Un agent n'y touche pas.
+- ⚠️ **ORDRE ARRÊTÉ PAR JULIEN LE 16 SEPTEMBRE 2026 : le live Stripe ne se fait
+  qu'APRÈS la publication de l'app sur les DEUX boutiques.** Ne pas le proposer avant.
 - Le sandbox, lui, est intact et c'est là que tout a été éprouvé jusqu'ici.
 
 ## App Store — ce qui est prêt, et les deux choix qui restent
