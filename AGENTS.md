@@ -13283,7 +13283,7 @@ le tableau de bord de la console après conversion. À vérifier là, pas ici. E
 tant que ce n'est pas prouvé, **ne pas abandonner le plan des douze testeurs** :
 s'il faut y revenir, les quatorze jours repartent de zéro.
 
-**16 septembre 2026 — le compte est passé en ORGANISATION** (confirmé par Julien : « google play est passé en organisation »). ⚠️ Reste à constater dans le tableau de bord de l'app que la Production n'exige plus le test fermé. Contexte :
+**16 septembre 2026 — le compte est passé en ORGANISATION** (confirmé par Julien : « google play est passé en organisation »). **Constaté le jour même dans le tableau de bord de l'app** : la Production demande toujours de « publier une version de test fermé », mais les seuils sont tombés à **0 testeur pendant 0 jour**. Il faut donc encore UNE version en test fermé (et répondre aux questions sur ce test à la demande), mais plus de délai de 14 jours ni de recrutement. Contexte :
 après dépôt de sa pièce d'identité et des documents de Devkaylab. ⚠️ **Non vu
 par moi** : la prochaine session vérifie d'abord que « Type de compte » dit
 *Organisation*, puis que la section Production n'exige plus le test fermé.
