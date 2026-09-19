@@ -6,7 +6,8 @@ Chrome de Julien connecté au compte de démo, thème clair, écran de 1710 pt
 
 `brut/<onglet>-<n>.png` : les cinq onglets du tableau de bord, un fichier par
 hauteur d'écran en descendant la page, jusqu'au bas — suivi (2), setup (1,
-sections repliées), ecarts (2), rapport (2), equipe (1). Les écrans en double
+sections repliées), ecarts (2), rapport (2), equipe (1), et `setup-deplie-1..3` avec « Zone de comptage » et « Données
+d'inventaire » ouvertes. Les écrans en double
 du bas de page ont été retirés par comparaison d'image.
 
 ⚠️ Un premier jeu a été jeté : Julien se servait de l'ordinateur pendant la
@@ -18,3 +19,8 @@ Page suivante — l'extension Claude de Chrome n'était pas reliée.
 
 Tiré de ce jeu : `web/public/vitrine/rapport-site.png` (rapport-1 recadré sur
 le Registre, sans le bouton de langue flottant).
+
+⚠️ Les captures prises dans un onglet piloté par l'extension Claude portent
+son liseré orange et son curseur (`#claude-agent-glow-border`,
+`#claude-phantom-cursor`, posés dans la page). Les masquer par une feuille de
+style le temps de la prise, puis la retirer.
