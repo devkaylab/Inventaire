@@ -139,7 +139,7 @@ en base (notification, places et décompte du jour compris).
 | Retour du comptage | la fiche montre la pièce comptée sans rafraîchir |
 | Export Excel | feuille de partage (20 ko), l'app répond après fermeture |
 
-Reste le mode avion, que le simulateur ne sait pas couper : à faire sur un
-iPhone. ⚠️ Metro ne sert pas à tester : le volet navigateur ouvre sa racine,
+Le mode avion, que le simulateur ne sait pas couper, a été éprouvé par Julien sur
+son iPhone (confirmé le 19/09/2026). ⚠️ Metro ne sert pas à tester : le volet navigateur ouvre sa racine,
 Expo tente le rendu web et plante (`window is not defined`). Passer par le
 build Release.
