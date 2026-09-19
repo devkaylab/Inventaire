@@ -770,7 +770,7 @@ export const en: Dictionnaire = {
   "Le parcours le plus court, et le plus fréquent. Une recrue doit pouvoir compter son premier rayon dans les cinq minutes qui suivent son arrivée.": "The shortest walkthrough, and the most common. A new hire should be able to count their first aisle within five minutes of arriving.",
   "Le patrimoine de votre entreprise. Un magasin, une licence.": "Your company’s estate. One store, one license.",
   "Le plus courant": "Most popular",
-  "Le prix affiché est complet. Voici ce que d’autres facturent en supplément et que nous ne facturons pas.": "The displayed price is the full price. Here is what others charge extra for, and we do not.",
+  "Le prix affiché est complet.": "The displayed price is the full price.",
   "Le prix suit le nombre d'appareils qui comptent en même temps. Comptes et inventaires illimités.": "The price follows the number of devices counting at the same time. Unlimited accounts and inventories.",
   "Le périmètre choisi ne porte aucune référence.": "The chosen scope holds no SKU.",
   "Le rapport reste consultable et téléchargeable.": "The report remains available and downloadable.",

@@ -99,7 +99,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
           <div className="container">
             <h2 className="tarifs-titre" data-reveal="0">{t('Ce qui n’est facturé nulle part')}</h2>
             <p className="tarifs-sous-titre" data-reveal="0">
-              {t('Le prix affiché est complet. Voici ce que d’autres facturent en supplément et que nous ne facturons pas.')}
+              {t('Le prix affiché est complet.')}
             </p>
             <div className="tarifs-compris" data-reveal="1">
               {COMPRIS.map((c) => (
