@@ -7,7 +7,7 @@ premier lien de la barre et du pied.
 
 ## La correspondance avec Qonto (relevée dans son Chrome, pas de mémoire)
 
-héros à gauche → mosaïque « Plus qu'une douchette. » → « Adapté à chaque
+héros à gauche → mosaïque « Plus qu'un scanner. » → « Adapté à chaque
 rôle » → bande encre avec cartes qui défilent (du fichier au rapport) → « Votre
 logiciel et Quantinvo, côte à côte » → « Un magasin, puis tout le réseau » →
 « Pour aller plus loin » → questions (titre à gauche) → accent final.

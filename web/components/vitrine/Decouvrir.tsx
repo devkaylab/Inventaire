@@ -16,7 +16,7 @@ import { traduction, type Langue } from '@/lib/traduction'
  * « compte pro des commerçants » le même jour, section par section :
  *
  *   héros à gauche, deux boutons ........ héros
- *   « Plus qu'un compte pro. » (mosaïque) « Plus qu'une douchette. »
+ *   « Plus qu'un compte pro. » (mosaïque) « Plus qu'un scanner. »
  *   « Adapté à votre métier » ........... « Adapté à chaque rôle »
  *   bande noire, cartes qui défilent .... « Du fichier au rapport »
  *   « Votre caisse et votre terminal » .. « Votre logiciel et Quantinvo »
@@ -194,11 +194,11 @@ export function Decouvrir({ langue }: { langue: Langue }) {
         <section className="section dq-section-haut">
           <div className="container">
             <div className="dq-tete" data-reveal="0">
-              <h2>{t('Plus qu’une douchette.')}</h2>
+              <h2>{t('Plus qu’un scanner.')}</h2>
             </div>
             <div className="dq-mosaique">
               <div className="dq-tuile dq-tuile-image dq-t-a" data-reveal="1">
-                <h3>{t('Le téléphone devient la douchette')}</h3>
+                <h3>{t('Le téléphone devient le scanner')}</h3>
                 <p>{t('Caméra, douchette Bluetooth ou clavier : chacun compte avec ce qu’il a.')}</p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={MOSAIQUE_COMPTAGE.src} alt={t(MOSAIQUE_COMPTAGE.alt)} loading="lazy" />
