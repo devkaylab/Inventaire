@@ -1631,7 +1631,7 @@ export const en: Dictionnaire = {
   "Où sont nos données ?": "Where is our data?",
   "Dans l’Union européenne, sans traceur publicitaire. Chacun peut télécharger ses données ou supprimer son compte.": "In the European Union, with no advertising trackers. Everyone can download their data or delete their account.",
   "Combien coûte Quantinvo ?": "How much does Quantinvo cost?",
-  "Voyez Quantinvo sur votre propre stock": "See Quantinvo on your own stock",
+  "Fiabilisez votre stock avec Quantinvo": "Make your stock reliable with Quantinvo",
   "Un administrateur": "An administrator",
   "Des rôles séparés": "Separate roles",
   "Un rapport par inventaire": "A report per stocktake",

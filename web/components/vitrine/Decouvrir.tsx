@@ -370,7 +370,7 @@ export function Decouvrir({ langue }: { langue: Langue }) {
         {/* L'accent ne sert qu'une fois, à la fin. */}
         <section className="section bande-accent final">
           <div className="container" data-reveal="0">
-            <h2>{t('Voyez Quantinvo sur votre propre stock')}</h2>
+            <h2>{t('Fiabilisez votre stock avec Quantinvo')}</h2>
             <p>{t('Inscription en ligne, accès ouvert tout de suite.')}</p>
             <div className="cta">
               <InscriptionLink className="btn btn-clair">Fiabiliser mon stock</InscriptionLink>
