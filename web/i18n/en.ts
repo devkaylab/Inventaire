@@ -1555,8 +1555,6 @@ export const en: Dictionnaire = {
   "Compter ou auditer se lance depuis le même écran que le suivi.": "Counting or auditing starts from the same screen as the progress view.",
   "Tout est à portée": "Everything is within reach",
   "Inviter quelqu’un, lire les écarts, sortir le rapport, clôturer.": "Invite someone, read the variances, pull the report, close the inventory.",
-  "Découvrir": "Discover",
-  "Découvrir Quantinvo": "Discover Quantinvo",
   "Une licence par magasin, à partir de %{prix} par mois. Les comptes et les inventaires sont illimités.": "One license per store, from %{prix} a month. Accounts and stocktakes are unlimited.",
   "L’inventaire de votre magasin, au bout du téléphone.": "Your store’s stocktake, at your fingertips.",
   "Quantinvo fait compter votre stock en équipe, montre l’avancement en direct et rend un chiffre fiable.": "Quantinvo gets your team counting stock together, shows progress live and delivers a figure you can trust.",
@@ -1731,4 +1729,5 @@ export const en: Dictionnaire = {
   "Un double comptage sur les zones sensibles, et les écarts tranchés sur place.": "A double count on sensitive zones, and variances settled on the spot.",
   "Recaler le stock théorique, et traiter les causes.": "Realign book stock, and deal with the causes.",
   "Zones et balises, double comptage, écarts tranchés en direct : l’outil de cette méthode.": "Zones and tags, double counting, variances settled live: the tool for this method.",
+  "Notre outil": "Our tool",
 }

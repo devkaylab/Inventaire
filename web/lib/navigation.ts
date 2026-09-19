@@ -12,9 +12,12 @@
  * elle venait. La section `#fonctionnalites` RESTE sur l'accueil : un lien
  * déjà parti par e-mail doit continuer de tomber quelque part.
  */
+// ⚠️ L'ORDRE D'UNE DÉCOUVERTE (Julien, maquette validée le 19 septembre
+// 2026) : le sujet, puis l'outil, puis pourquoi nous, puis le prix — l'ordre
+// du deck commercial. Le pied de page (SiteChrome) suit le même.
 export const LIENS_PUBLICS = [
-  { href: '/decouvrir', libelle: 'Découvrir' },
-  { href: '/pourquoi-nous-choisir', libelle: 'Pourquoi nous choisir ?' },
   { href: '/inventaire', libelle: 'L’inventaire' },
+  { href: '/decouvrir', libelle: 'Notre outil' },
+  { href: '/pourquoi-nous-choisir', libelle: 'Pourquoi nous choisir ?' },
   { href: '/tarifs', libelle: 'Tarifs' },
 ] as const

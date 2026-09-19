@@ -74,9 +74,10 @@ export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
       <div className="container inner">
         <div className="brand"><Logo size={24} /><span>Quantinvo</span></div>
         <div className="links">
-          <Link href={lien('/decouvrir')}>{t('Découvrir Quantinvo')}</Link>
-          <Link href={lien('/pourquoi-nous-choisir')}>{t('Pourquoi nous choisir ?')}</Link>
+          {/* Même ordre que la barre (lib/navigation.ts). */}
           <Link href={lien('/inventaire')}>{t("L'inventaire")}</Link>
+          <Link href={lien('/decouvrir')}>{t('Notre outil')}</Link>
+          <Link href={lien('/pourquoi-nous-choisir')}>{t('Pourquoi nous choisir ?')}</Link>
           <Link href={lien('/tarifs')}>{t('Tarifs')}</Link>
           <Link href="/login">{t('Se connecter')}</Link>
           <a href={PRIVACY_URL} target="_blank" rel="noreferrer">{t('Confidentialité')}</a>

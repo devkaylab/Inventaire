@@ -256,6 +256,7 @@ export function AppShell({
                 aria-current={actif ? 'page' : undefined}
               >
                 <IconeOnglet href={o.href} />
+                <span className="rail-nom">{t(o.label)}</span>
               </Link>
             )
           })}
@@ -280,6 +281,7 @@ export function AppShell({
             aria-current={pathname.startsWith('/messages') ? 'page' : undefined}
           >
             <IconeOnglet href="/messages" />
+            <span className="rail-nom">{t('Messages')}</span>
           </Link>
           <Notifications />
           <div className="rail-qui" ref={menuRef}>
@@ -293,6 +295,7 @@ export function AppShell({
             onClick={() => setMenuOuvert((v) => !v)}
           >
             <span className="who-avatar">{initiales(profile.full_name)}</span>
+            <span className="rail-nom">{profile.full_name || t('Mon compte')}</span>
           </button>
 
           {menuOuvert && (

@@ -5191,3 +5191,64 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .rythmes-onglets button { flex: 1; padding: 10px 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .annee i { transition: none; } }
+
+/* ── Le rail se déplie au survol (19 septembre 2026) ──────────────────────
+   Demande de Julien, maquette validée : « le rail ouvre le nom du menu
+   quand le curseur de la souris survole le rail ». Il se déplie PAR-DESSUS
+   la page, sans la pousser : `.app-main` garde sa marge de 76 px.
+
+   ⚠️ PAS D'`overflow: hidden` SUR LE RAIL : le menu du compte et le panneau
+   des notifications s'ouvrent À DROITE du rail, hors de sa boîte. Les noms
+   sont donc masqués par leur opacité, pas rognés par le rail.
+
+   ⚠️ `:has(:focus-visible)`, JAMAIS `:focus-within` : après un clic, le lien
+   garde le focus et le rail survit à la navigation — il resterait ouvert sur
+   la page suivante. Le focus VISIBLE, lui, ne vient que du clavier.
+
+   ⚠️ IL RESTE OUVERT tant que le menu du compte ou le panneau des
+   notifications l'est : refermer le rail sous la souris qui va vers le menu
+   déplacerait le menu pendant qu'on le vise.
+
+   Le délai d'ouverture (0,12 s) évite qu'il s'ouvre quand la souris ne fait
+   que traverser vers la page ; la fermeture, elle, est immédiate. */
+.app-rail {
+  align-items: stretch; padding: 16px 16px 18px;
+  transition: width .16s ease, box-shadow .16s ease;
+}
+.app-rail:hover,
+.app-rail:has(:focus-visible),
+.app-rail:has(.who-menu),
+.app-rail:has(.notif-panneau) {
+  width: 232px; box-shadow: var(--shadow-elev);
+  transition-delay: .12s;
+}
+.app-rail .rail-logo { align-self: flex-start; margin-left: 2px; }
+.app-rail .rail-onglet {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 0 11px; white-space: nowrap; text-decoration: none;
+}
+.app-rail .rail-onglet > svg, .rail-icone { flex: none; }
+.rail-icone { position: relative; display: grid; place-items: center; }
+.rail-icone .rail-badge { top: -7px; right: -12px; }
+.app-rail .rail-fin { align-items: stretch; }
+/* Rail déplié, les rangées vont jusqu'à 16 px de son bord : le menu du
+   compte et le panneau des notifications s'ouvrent 12 px APRÈS ce bord. */
+.app-rail .who-menu, .app-rail .notif-panneau { left: calc(100% + 28px); }
+.app-rail .who-btn {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  white-space: nowrap; text-align: left;
+}
+.rail-nom {
+  font-size: 14px; font-weight: 500; color: var(--text-2);
+  opacity: 0; pointer-events: none; transition: opacity .1s ease;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.app-rail:hover .rail-nom,
+.app-rail:has(:focus-visible) .rail-nom,
+.app-rail:has(.who-menu) .rail-nom,
+.app-rail:has(.notif-panneau) .rail-nom { opacity: 1; transition-delay: .18s; }
+.rail-onglet:hover .rail-nom { color: var(--text); }
+.rail-onglet[aria-current="page"] .rail-nom { color: var(--accent-light); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .app-rail, .rail-nom { transition: none; }
+}
