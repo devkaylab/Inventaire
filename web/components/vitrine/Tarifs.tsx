@@ -64,7 +64,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
                 l'article 7 des CGV dit que les douze mois restent dus, payés
                 d'avance. Une promesse qu'un contrat contredit se retourne au
                 premier client qui la lit. */}
-              {t('Sans engagement au mois. Moins cher à l’année. Sans matériel à acheter.')}
+              {t('Un prix par magasin. Sans engagement au mois. Moins cher à l’année. Sans matériel à acheter*.')}
             </p>
           </div>
         </section>
@@ -150,7 +150,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
             {TVA_APPLICABLE ? t('Prix hors taxes, par magasin.') : `${t('Prix par magasin.')} ${t(MENTION_TVA)}.`}
           </span>
           <span>{t('Mensuel sans engagement ; annuel dû jusqu’à son terme.')}</span>
-          <span>{t('Aucun matériel à acheter.')}</span>
+          <span>{t('* Aucun matériel à acheter : il suffit d’un téléphone ou d’une tablette, iPhone ou Android, par personne qui compte.')}</span>
         </p>
       </main>
       <SiteFooter langue={langue} />
