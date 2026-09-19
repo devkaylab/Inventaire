@@ -23,6 +23,10 @@ invente pas (même règle que les preuves de l'accueil).
   pastilles, **pas d'avance automatique**. Dans le volet navigateur (onglet
   « hidden »), le défilement doux ne s'anime pas : la carte ne bouge pas au
   clic, c'est la mesure, pas le code — vérifié avec `behavior: 'instant'`.
+- ⚠️ **Une pastille par POSITION atteignable, pas par carte.** Au bout de la
+  rangée, les dernières cartes partagent la position de fin : une pastille par
+  carte sautait du 2e point au dernier et bloquait le retour (Julien, même
+  jour). Vérifié : 3 positions à 1440 px, 5 à 390, aller et retour.
 - Aucune capture deux fois sur la page. Le rapport et les magasins de la
   tuile « réseau » sont **dessinés**, avec des noms génériques.
 - Les listes à mot en gras sont découpées en `[gras, suite]`, jamais en

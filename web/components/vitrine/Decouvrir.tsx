@@ -283,7 +283,7 @@ export function Decouvrir({ langue }: { langue: Langue }) {
             <Carrousel
               precedent={t('Précédent')}
               suivant={t('Suivant')}
-              aller={t('Aller à la carte %{n}')}
+              aller={t('Aller à la position %{n}')}
               cartes={ETAPES.map((e) => ({
                 titre: t(e.titre),
                 texte: t(e.texte),

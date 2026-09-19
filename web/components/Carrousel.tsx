@@ -35,34 +35,60 @@ export function Carrousel({
   cartes: Carte[]
   precedent: string
   suivant: string
-  /** « Aller à la carte %{n} », déjà traduit, où `%{n}` est remplacé ici. */
+  /** « Aller à la position %{n} », déjà traduit, où `%{n}` est remplacé ici. */
   aller: string
 }) {
   const piste = useRef<HTMLDivElement>(null)
+  /**
+   * ⚠️ LES PASTILLES SONT LES POSITIONS ATTEIGNABLES, PAS LES CARTES. Arrivée
+   * au bout de la rangée, les dernières cartes ne peuvent plus venir se caler
+   * à gauche : elles partagent toutes la même position, celle de la fin. Une
+   * pastille par carte faisait sauter du deuxième point au dernier, puis
+   * bloquait le retour — la flèche visait une carte que le défilement ne peut
+   * pas atteindre, et la position ne bougeait pas (constat de Julien,
+   * 19 septembre 2026). C'est aussi ce que fait Qonto : deux pastilles pour
+   * cinq cartes, quand il n'y a que deux positions.
+   */
+  const [positions, setPositions] = useState<number[]>([0])
   const [courante, setCourante] = useState(0)
 
   useEffect(() => {
     const el = piste.current
     if (!el) return
-    const maj = () => {
-      const pas = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 1
-      const gap = parseFloat(getComputedStyle(el).columnGap) || 0
-      // ⚠️ Arrivé au bout, la dernière carte ne peut pas venir à gauche : on
-      // la désigne quand même, sinon sa pastille ne s'allumerait jamais.
-      const auBout = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4
-      setCourante(auBout ? cartes.length - 1 : Math.round(el.scrollLeft / (pas + gap)))
+    let pos: number[] = [0]
+    const mesurer = () => {
+      const max = el.scrollWidth - el.clientWidth
+      const debut = (el.children[0] as HTMLElement | undefined)?.offsetLeft ?? 0
+      const brutes = [...el.children].map((c) => Math.min((c as HTMLElement).offsetLeft - debut, max))
+      pos = brutes.filter((p, i) => i === 0 || p - brutes[i - 1] > 2)
+      setPositions(pos)
+      suivre()
     }
-    maj()
-    el.addEventListener('scroll', maj, { passive: true })
-    window.addEventListener('resize', maj)
-    return () => { el.removeEventListener('scroll', maj); window.removeEventListener('resize', maj) }
+    const suivre = () => {
+      let proche = 0
+      pos.forEach((p, i) => { if (Math.abs(p - el.scrollLeft) < Math.abs(pos[proche] - el.scrollLeft)) proche = i })
+      setCourante(proche)
+    }
+    mesurer()
+    el.addEventListener('scroll', suivre, { passive: true })
+    // La largeur de la piste change avec la fenêtre, mais aussi quand les
+    // polices arrivent : la fenêtre seule ne suffit pas, l'observateur seul
+    // non plus (il se tait dans un onglet en arrière-plan).
+    const obs = new ResizeObserver(mesurer)
+    obs.observe(el)
+    window.addEventListener('resize', mesurer)
+    return () => { el.removeEventListener('scroll', suivre); obs.disconnect(); window.removeEventListener('resize', mesurer) }
   }, [cartes.length])
 
   const vers = (i: number) => {
     const el = piste.current
-    const cible = el?.children[Math.max(0, Math.min(cartes.length - 1, i))] as HTMLElement | undefined
-    if (!el || !cible) return
-    el.scrollTo({ left: cible.offsetLeft - el.offsetLeft, behavior: 'smooth' })
+    if (!el) return
+    const cible = positions[Math.max(0, Math.min(positions.length - 1, i))]
+    const douce = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollTo({ left: cible, behavior: douce ? 'smooth' : 'auto' })
+    // La pastille suit tout de suite : sans ça, un second clic pendant le
+    // glissement partirait de l'ancienne position.
+    setCourante(Math.max(0, Math.min(positions.length - 1, i)))
   }
 
   return (
@@ -85,15 +111,15 @@ export function Carrousel({
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
         </button>
         <div className="carrousel-points">
-          {cartes.map((c, i) => (
-            <button type="button" key={c.titre} onClick={() => vers(i)}
+          {positions.map((p, i) => (
+            <button type="button" key={p} onClick={() => vers(i)}
               className={i === courante ? 'actif' : undefined}
               aria-label={aller.replace('%{n}', String(i + 1))}
               aria-current={i === courante ? 'true' : undefined} />
           ))}
         </div>
         <button type="button" className="carrousel-fleche" onClick={() => vers(courante + 1)}
-          disabled={courante === cartes.length - 1} aria-label={suivant}>
+          disabled={courante >= positions.length - 1} aria-label={suivant}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
         </button>
       </div>

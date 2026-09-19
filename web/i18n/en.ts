@@ -1589,7 +1589,7 @@ export const en: Dictionnaire = {
   "Il ouvre les magasins, invite les équipes et gère l’abonnement.": "They open stores, invite teams and manage the subscription.",
   "L’écran qui ouvre une zone : on vise l’étiquette du rayon": "The screen that opens a zone: aim at the aisle label",
   "Tout l’inventaire, du fichier au rapport": "The whole stocktake, from file to report",
-  "Aller à la carte %{n}": "Go to card %{n}",
+  "Aller à la position %{n}": "Go to position %{n}",
   "Importez votre stock": "Import your stock",
   "Le fichier de votre logiciel, tel quel, en CSV ou en Excel.": "Your software’s file, as it is, in CSV or Excel.",
   "Imprimez les balises": "Print the tags",
