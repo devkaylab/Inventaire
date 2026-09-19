@@ -7,8 +7,9 @@
 // Demande de Julien, 19 septembre 2026, dans cet ordre :
 //   1. l'inventaire (page 2), puis la loi (page 3) ;
 //   2. les problèmes rencontrés (pages 4 à 6) — la démarque et les anomalies
-//      du site, puis ses constats de terrain (build-pourquoi.js), sans nom
-//      d'employeur ;
+//      du site, puis ses constats de terrain (son texte du 14 septembre
+//      2026, repris de l'ancien build-pourquoi.js, supprimé depuis), sans
+//      nom d'employeur ;
 //   3. les solutions (pages 7 à 12), dans l'ordre du parcours : fichiers,
 //      balises, comptage, suivi, écarts, rapport ;
 //   4. pourquoi nous choisir (page 13), puis les offres (page 14) et la
@@ -245,7 +246,7 @@ async function main() {
     d.entete(s, 'Les problèmes')
     d.titreLarge(s, 'Quand l’inventaire passe par un prestataire', { y: 1.35 })
     // Un seul acteur nommé sur la page : le prestataire. Le texte de Julien
-    // (build-pourquoi.js) dit « le magasin ne lance pas un inventaire, il le
+    // (14 septembre 2026, ancien build-pourquoi.js) dit « le magasin ne lance pas un inventaire, il le
     // demande » — à son service d'inventaire, qu'on ne nomme pas ici.
     d.para(s, 'Faute d’outil, beaucoup de magasins externalisent. Le fondateur de Quantinvo, contrôleur des stocks, en a vu les limites.', {
       x: M, y: 2.1, w: LARGE, h: 0.7, size: 12.5, color: P.SLATE,

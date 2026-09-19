@@ -33,96 +33,35 @@ node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx
   de démo réel), jamais `web/screenshots/` (faux compte de test).
 - **L'écart vaut compté − théorique**, le signe du rapport.
 
-Les six autres scripts plus bas (`build.js`, `build-court.js`,
-`build-tarifs.js`, `build-samaritaine.js`, `build-histoire.js`,
-`build-pourquoi.js`) ne sont plus régénérés : leurs decks ont été retirés.
+Les six anciens scripts (`build.js`, `build-court.js`, `build-tarifs.js`,
+`build-samaritaine.js`, `build-histoire.js`, `build-pourquoi.js`) ont été
+**supprimés le 19 septembre 2026**, à la demande de Julien, avec leurs decks.
+Ils restent dans l'historique git ; le texte de terrain de Julien du
+14 septembre (onze constats, cinq obstacles), qui vivait dans
+`build-pourquoi.js`, est repris dans `build-commercial.js`. Le dossier
+`histoire/` (écrans d'avant, tirés de git) n'est plus lu par aucun script.
 
+## La charte
 
-Huit présentations PowerPoint, générées par huit scripts qui partagent une même
-charte (`charte.js`). Fond blanc, charte **« Ardoise » v2** (9 septembre 2026) :
+Fond blanc, charte **« Ardoise » v2** (9 septembre 2026), dans `charte.js` :
 encre pour le texte ET pour les titres, des gris minéraux, et un vert forêt en
 accent qui ne sert qu'à ce qui engage — une pastille numérotée, un grand
 chiffre, un bouton dessiné. Coins nets, aucune ombre, aucun contour sur un bloc.
-
-⚠️ **Elle remplace « Papier » v1.1**, qui portait l'indigo pour les titres et un
-filet de scan cyan sous l'en-tête. Les trois signes qu'elle emporte — le cube
-isométrique, l'indigo, le faisceau cyan — ont été retirés du produit les 6 et
-7 septembre 2026 ; ils ne reviennent pas. Le filet sous l'en-tête est désormais
-un filet d'encre, et le logo est **la zone** : un plan de magasin monochrome,
-de la même géométrie que `web/components/Logo.tsx`.
-
-| Script | Fichier produit | Pour qui | Pages |
-|---|---|---|---|
-| `build.js` | `Quantinvo-presentation.pptx` | Direction, achats : la présentation longue | 14 |
-| `build-court.js` | `Quantinvo-essentiel.pptx` | Le prospect qui a déjà une solution : dix pages, vingt minutes | 10 |
-| `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, téléchargement, déploiement, mise en place, prise en main, comptes, sécurité, audits, RGPD | 17 |
-| `build-tarifs.js` | `Quantinvo-tarification.pptx` | Celui qui décide du budget : l'assiette, la grille, le dépassement, la souscription | 11 |
-| `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Superviseurs et compteurs, après la signature | 19 |
-| `build-samaritaine.js` | `Quantinvo-Samaritaine.pptx` | La Samaritaine : l'inventaire rendu au floor | 12 |
-| `build-histoire.js` | `Quantinvo-histoire.pptx` | **Nous** : d'où l'on vient, du premier commit à aujourd'hui | 14 |
-| `build-pourquoi.js` | `Quantinvo-pourquoi.pptx` | Qui veut savoir d'où vient le produit : le constat de terrain, obstacle par obstacle, et ce que Quantinvo en fait | 13 |
-
-Les huit partagent `charte.js` (la mise en page) ; les cinq commerciaux
-ajoutent `blocs.js` (la grille des offres) et `offres.js` (les prix).
-
-⚠️ **`build-histoire.js` est le seul qui ne se vende à personne.** Demande de
-Julien, le 13 septembre 2026 : « un genre de timeline où on voit tout les
-changements que nous avons fait […] je veux garder ce souvenir ». C'est ce qui
-l'autorise à montrer un écran laid, à nommer une fausse piste et à dater un
-abandon — ce qu'aucun des six autres ne peut faire.
-
-· **Tout ce qu'il montre vient de l'historique git**, jamais d'une
-  reconstitution : les images de `histoire/` ont été extraites par
-  `git show <commit>:<chemin>`, et le commit de chacune est noté en tête du
-  script. Un écran refait pour l'illustration en ferait une histoire racontée
-  au lieu d'une trace.
-· **Ses chiffres se remesurent** (`CHIFFRES` en tête du script) : 627 commits,
-  175 migrations, 1 953 tests au 13 septembre 2026. Les recopier d'une
-  génération à l'autre en ferait une cinquième note périmée.
-· ⚠️ **Il touche à `histoire/`, jamais à `captures/`.** Les deux dossiers se
-  ressemblent et ne servent pas au même : `captures/` porte l'application
-  d'AUJOURD'HUI, régénérée à chaque passe ; `histoire/` porte des états
-  révolus, qui ne doivent plus jamais bouger.
-
-⚠️ **`build-pourquoi.js` met en page un texte de Julien, il ne l'écrit pas.**
-Il l'a rédigé le 14 septembre 2026 en onze points, depuis sa place de contrôleur
-des stocks. Les onze sont tous là, regroupés en cinq obstacles (autonomie,
-cadence, matériel, donnée, zone), et l'écart en direct a sa propre page.
-
-· **Aucun constat qui ne soit pas le sien**, et **aucun chiffre inventé** : les
-  seuls chiffrés sont les deux personnes de son service et le référentiel arrêté
-  en mars. Pas de « 30 % de gain de temps ».
-· ⚠️ **Le nom de son employeur n'est pas écrit.** Il le nomme dans son texte ;
-  un deck circule, et celui-ci reproche des choses à l'outillage d'un magasin.
-  On dit « le magasin où je travaille ». S'il veut le nommer, c'est à un seul
-  endroit — la page « D'où je parle ».
-· **La page « Ce que je ne promets pas » se garde.** C'est celle qu'aucun
-  document de produit n'écrit, et c'est elle qui rend les douze autres
-  crédibles.
-
-## Générer
-
-```
-npm install
-for f in build.js build-court.js build-dsi.js build-tarifs.js build-prise-en-main.js build-samaritaine.js build-histoire.js build-pourquoi.js; do
-  node $f && FONT_MODE=brand node $f
-done
-```
+Le logo est **la zone** : un plan de magasin monochrome, de la même géométrie
+que `web/components/Logo.tsx`. `build-commercial.js` lit aussi `blocs.js` (la
+grille des offres) et `offres.js` (les prix, depuis `web/lib/offres.ts`).
 
 ⚠️ **`npm install` sans argument, jamais `npm install <paquet>`.** Les
-dépendances sont déclarées dans `package.json` depuis le 2 septembre 2026, et
-c'est ce qui protège d'un accident réel : lancer `npm install docx` dans ce
-dossier quand il n'y avait pas de `package.json` a **élagué `node_modules`** —
-npm a écrit un manifeste ne listant que `docx` et retiré `pptxgenjs` et
-`sharp`. Les six decks ne se généraient plus.
+dépendances sont déclarées dans `package.json` depuis le 2 septembre 2026 :
+lancer `npm install docx` dans ce dossier quand il n'y avait pas de
+`package.json` a **élagué `node_modules`** — pptxgenjs et sharp avaient
+disparu, plus aucun deck ne se générait.
 
-`FONT_MODE=brand node build.js` produit la variante `-marque` (**Archivo** et
-**Public Sans**, les polices du produit depuis le 6 septembre 2026), à présenter
-depuis un poste où elles sont installées. Elles ont été posées dans
-`~/Library/Fonts` le 9 septembre, reprises des TTF de
-`node_modules/@expo-google-fonts/` — quatre fichiers par famille (Regular, Bold
-et leurs italiques), assez pour que PowerPoint compose gras et italique. La version sans suffixe est en Arial : c'est
-celle qu'on envoie, elle s'affiche à l'identique partout.
+`FONT_MODE=brand` produit la variante `-marque` (**Archivo** et **Public
+Sans**, les polices du produit), à présenter depuis un poste où elles sont
+installées (posées dans `~/Library/Fonts` le 9 septembre, Regular et Bold avec
+leurs italiques). La version sans suffixe est en Arial : c'est celle qu'on
+envoie, elle s'affiche à l'identique partout.
 
 Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
 retouche serait écrasée à la prochaine génération. On modifie le script.
@@ -266,51 +205,6 @@ compris.
   `playwright.config.ts` cherche `/opt/pw-browsers/chromium`, absent de cette
   machine — voir `CHROMIUM_PATH`.
 
-## Ce qu'il reste à faire (au 2 septembre 2026)
-
-**1. Les captures de l'application — FAIT le 2 septembre 2026.** Les vingt et
-une captures de `captures/` (et les `encadrees/` qui en découlent) ont été
-reprises le même jour, sur le compte d'essai reconstruit le 1er septembre. Le
-jeu montre donc l'écran de comptage d'après ses trois refontes (cadre du
-viseur, liste des scans derrière un bouton, trace « Dernier scan ») et les
-repères du compteur et du superviseur du 31 août. `CAPTURES_A_REFAIRE` est
-repassé à `false` dans `web/lib/priseEnMain.ts`, `CAPTURES_LE` au 2 septembre,
-et les treize images de `web/public/prise-en-main/` ont suivi.
-
-Trois choses à savoir si la passe est à refaire :
-
-- **`ecarts-audit.png` est devenu `audit.png`**, le nom que les decks
-  emploient, et `rapport.png` est entré dans `ECRANS`. Les trois PNG locaux de
-  `../fiche-produit/` ont été supprimés : la fiche lit désormais `encadrees/`
-  comme tout le monde, l'exception a disparu.
-- **⚠️ Le simulateur ne peut pas servir les appuis MCP et l'écriture de
-  `simctl` dans la même session** — voir la mémoire projet. La passe s'est donc
-  faite **sans un seul appui** : un aiguillage temporaire dans
-  `src/app/index.tsx` (`CAPTURE_CIBLE`) redirige vers la route voulue, un
-  second (`CAPTURE_LOGIN`) bascule de compte par `signInWithPassword`, et les
-  quatre écrans à état (balise ouverte, balise terminée, balise hors plage,
-  modale des balises) s'obtiennent en forçant l'état initial du `useState`
-  concerné. Tout est retiré à la fin, `git status` contrôlé.
-- **⚠️ `mon-equipe` se capture AVANT la première connexion de Nadia**, sinon le
-  badge « Mot de passe à créer » disparaît. Il est là sur le jeu du
-  2 septembre ; `last_sign_in_at` de Nadia est désormais renseigné, une
-  prochaine passe devra le remettre à nul avant de capturer cet écran.
-
-**2. Les captures du site** (`web/screenshots/`). Les trois du tableau de bord
-ont été **reconstituées depuis le `.pptx` précédent** : ce dossier est dans le
-`.gitignore` et le harnais e2e ne démarrait pas dans le conteneur d'alors. Les
-recadrages sont restés identiques, donc le document est fidèle — mais une
-régénération sur un poste qui a les captures est ce qui le rendra vérifiable.
-La fenêtre « détail d'une balise » du 2 septembre n'y figure pas encore.
-
-**3. La pleine résolution des `encadrees/`** — seulement si un usage papier se
-présente. Elles sortent à ~637 px parce que `captures/` est en demi-résolution ;
-il faudrait encadrer les captures **brutes** du simulateur, avant
-`preparer-captures.js`.
-
-Rien d'autre n'est en attente : les six decks se génèrent, les douze pages du
-deck Samaritaine ont été rendues et relues page à page.
-
 ## Ce qui a été décidé en les écrivant (23 août 2026)
 
 Julien : *« les decks ne doivent pas ressembler à une génération IA, pas
@@ -333,132 +227,6 @@ avec une icône dans un rond, titres-slogans. Tout a été repris, et la charte
   réserve sans réseau, le fichier à reformater, le mardi matin avant
   l'ouverture). Les notes du présentateur sont écrites pour être lues par
   Julien, pas pour être projetées.
-
-## Le deck Samaritaine, récrit (1er septembre 2026)
-
-**Deux passes le même jour, et la seconde corrige la première.** Il faut les
-lire dans l'ordre : la première a réglé un problème réel, la seconde a réglé
-celui qu'elle avait laissé.
-
-### Première passe — la répétition, 15 pages à 11
-
-Constat de Julien : *« il y a beaucoup de répétition »*. Elle était
-structurelle : **quatre pages sur quinze racontaient le même avant / après** —
-« Aujourd'hui » (leur journée en quatre étapes), « Le constat » (la même,
-redécoupée en quatre casquettes), « La même journée conduite par le floor »
-(la même, sujet des phrases changé) et « Sans, avec » (la même, en tableau).
-Elles sont devenues deux, et deux autres fusions ont suivi : « Pendant le
-comptage » + « L'audit » en une page mais **avec les deux captures**, et
-« Pourquoi pas Zebra » + « Ce qu'on ne promet pas » en « Pour être clair ».
-
-### Seconde passe — le deck parlait de leur process, pas de Quantinvo
-
-*« Je voulais que tu t'inspires du document de la Samaritaine, pas que tu
-fasses ton ppt autour que de ça »*, et *« n'oublie pas, le sujet c'est
-Quantinvo, pas leur process d'inventaire »*. La première passe avait supprimé
-la répétition **sans toucher au squelette** : une page citait leur procédure
-étape par étape, la suivante la rejouait ligne à ligne en tableau. Deux pages
-sur onze pour décrire le produit du client.
-
-Le deck suit maintenant **trois temps**, dans cet ordre :
-
-1. **Aujourd'hui** — le déroulement d'un inventaire tournant de grand magasin,
-   écrit en général ;
-2. **Ce que ça demande** — les irritants, hiérarchisés ;
-3. **Avec Quantinvo** — les réponses, dans l'ordre des irritants.
-
-Le tableau miroir a disparu. **Deux pages de mise en situation sur douze** :
-le reste est le produit.
-
-⚠️ **Une page de TRANSITION sépare le problème de la réponse** (page 5,
-demande de Julien : « une transition qui annonce un peu la suite sans la
-répétition »). Elle dit la **méthode**, jamais le contenu : le produit retire
-au lieu d'ajouter, et les pages suivantes le montrent dans le même ordre. Y
-reprendre les quatre irritants, ou nommer les quatre réponses, ferait de la
-page 6 une redite — le défaut que tout ce deck a été récrit pour supprimer.
-C'est la seule page qui ne démontre rien : ni capture, ni alinéas, ni encadré.
-Le vide fait le travail.
-
-⚠️ **La colonne « Ce qu'on ne vous promet pas » a été retirée** le même jour
-(décision de Julien). Elle listait l'inventaire fiscal certifié, la connexion
-à l'ERP, l'annuaire d'entreprise et Google Play. Ces limites ne disparaissent
-pas du corpus — `build-dsi.js` les porte pour l'audience qui les demande —
-mais elles ne sont plus dans le deck commercial. Ne pas les y réintroduire.
-
-### ⚠️ Les quatre irritants, et celui qui n'en est pas un
-
-Confirmés un par un par Julien, dans cet ordre — le service mobilisé en tête,
-les trois autres comme ses causes :
-
-1. un service mobilisé du début à la fin ;
-2. une flotte de terminaux à préparer avant chaque session ;
-3. un briefing à chaque équipe, à chaque inventaire ;
-4. un balisage la veille.
-
-⚠️ **Le rapprochement avec le stock théorique N'EN FAIT PAS PARTIE.** Une
-version l'avait mis en tête, comme « le plus long et le plus dur » : c'est
-faux, et Julien l'a donné en exemple de ce qu'il ne faut pas exagérer. Il se
-cite **en demi-phrase, sans rang ni adjectif**, à la fin du premier alinéa, et
-se montre côté Quantinvo comme un gain, platement (« le recoupement n'est plus
-à faire »). Ne pas lui redonner de page, ni d'adjectif.
-
-Même règle partout ailleurs : la page du rapport ne parle plus de « la
-démarque que l'inventaire est censé révéler », la page de l'aléatoire ne dit
-plus « ce qui rend l'aléatoire réellement aléatoire ». **Ce qui ne se ramollit
-pas, en revanche, c'est l'angle** : l'inventaire est rendu au floor, décision
-de Julien du 27 août — la mesure porte sur les promesses, pas sur la thèse.
-
-### Ce qu'il ne faut pas défaire
-
-- **Ne pas réintroduire de citation étape par étape de leur procédure**, ni de
-  tableau qui la rejoue. Deux versions successives l'ont fait.
-- **Ne pas réintroduire de page miroir** : un déroulement raconté deux fois de
-  suite se lit comme du remplissage.
-- **Pas de vocabulaire interne du client.** « Horlogerie et joaillerie », pas
-  leur sigle maison ; « rapport d'inventaire », pas le nom de leur extraction.
-- **Les pages de réponse suivent l'ordre des irritants** : les trois cartes de
-  la page 5 répondent au balisage, au briefing puis à la conduite, la flotte
-  étant réglée par la phrase d'accroche ; la page 6 finit le premier irritant
-  (la surveillance) ; la page 7 le fichier.
-- **Une page à deux colonnes d'alinéas et un encadré ne tient pas.** C'était
-  la forme de « Pour être clair » : au rendu, le quatrième alinéa de droite
-  passait *sous* le bloc gris. La page est passée à une colonne pleine largeur
-  en perdant sa seconde moitié ; si l'envie revient d'y remettre deux
-  colonnes, se souvenir que ça ne rentre pas.
-
-### L'écran d'entrée est l'écran de lancement, et il ne dit rien
-
-Demande de Julien : *« un screen d'entrée avec le logo de Quantinvo sur
-l'écran de l'iPhone »*. La page 1 porte le téléphone **entier** — pas
-débordant comme ailleurs : ici c'est le sujet de la page —, la marque, le
-filet d'encre et, depuis le 9 septembre 2026, la baseline *« La fiabilisation du
-stock au quotidien »* — ajoutée par Julien. **Rien d'autre.** La couverture suit
-en page 2.
-
-⚠️ **Aucune phrase sur cette page, et c'est une décision.** Elle a d'abord
-porté une citation signée sur l'origine du produit, puis sept variantes
-centrées sur l'application : aucune ne tenait. Une page d'entrée n'a rien à
-démontrer. Ne pas y remettre de baseline, de citation ni de signature — ce
-qui n'est pas dit ne peut pas sonner faux.
-
-⚠️ La capture est `captures/lancement.png`, et elle **ne s'obtient qu'en
-Release** (voir plus bas). Ne pas la remplacer par une capture prise sur un
-build de développement : le bandeau LogBox de React Native s'y afficherait
-par-dessus.
-
-### Les captures
-
-Huit captures sur douze pages, contre six sur quinze : `nouvel-inventaire.png`
-a rejoint la page de l'inventaire aléatoire, et l'écran de lancement ouvre le
-deck. Les deux pages de mise en situation et la transition n'en portent
-**aucune**, et c'est voulu : une capture du produit sur la page du problème
-donnerait la réponse avant que la question soit posée.
-
-⚠️ **Les captures de l'application datent du 27 août 2026**, et l'écran de
-comptage a changé depuis (viseur, liste des scans derrière un bouton, trace
-« Dernier scan »). C'est le même vieillissement que celui signalé par
-`CAPTURES_A_REFAIRE` sur `/outils/prise-en-main` : une passe de captures les
-remettra à jour d'un coup, decks et guide du site ensemble.
 
 ## Refaire les captures du site
 
