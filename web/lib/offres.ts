@@ -77,6 +77,10 @@ export const OFFRES: Offre[] = [
     mois: 89,
     an: 950,
     pour: 'Vous comptez seul ou à deux, dans un magasin.',
+    // ⚠️ PLUS AUCUNE PROMESSE DE SERVICE DANS LES POINTS (Julien, 19 septembre
+    // 2026) : « Aide en ligne », « Réponse par e-mail sous un jour ouvré » et
+    // « Engagement de disponibilité » sont retirés. Les deux derniers
+    // promettaient ce que les CGV (8.2, 8.3) écartent expressément.
     points: [
       // ⚠️ « Comptes » était un contresens (relevé par Julien le 4 septembre
       // 2026) : l'assiette est le nombre d'appareils qui comptent EN MÊME
@@ -86,7 +90,6 @@ export const OFFRES: Offre[] = [
       'Comptage et audit en seconde passe',
       'Rapport d’écarts et export Excel',
       'Import CSV et Excel sans reformater',
-      'Aide en ligne',
     ],
   },
   {
@@ -103,7 +106,6 @@ export const OFFRES: Offre[] = [
       'Équipe, rôles et supervision',
       'Balises imprimées et zones de comptage',
       'Suivi de l’avancement en direct',
-      'Réponse par e-mail sous un jour ouvré',
     ],
   },
   {
@@ -119,7 +121,6 @@ export const OFFRES: Offre[] = [
       'Tout ce que contient Advanced',
       'Console d’entreprise et journal des actions',
       'Accompagnement du premier inventaire',
-      'Engagement de disponibilité',
       'Interlocuteur nommé',
     ],
   },

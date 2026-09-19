@@ -47,27 +47,19 @@ const MENTION_TVA = lireConstante(/export const MENTION_TVA = '([^']+)'/, 'MENTI
 const PLAFOND_LIBRE_SERVICE = Number(lireConstante(/export const PLAFOND_LIBRE_SERVICE = (\d+)/, 'PLAFOND_LIBRE_SERVICE'))
 
 /**
- * Les points d'une offre, tels que le contrat permet de les vendre.
+ * Les points d'une offre, lus dans web/lib/offres.ts.
  *
- * ⚠️ Deux points de web/lib/offres.ts promettent plus que les CGV
- * (docs/entreprise/cgv-quantinvo-brouillon.md) :
- *   · 8.2 — « Aucun engagement chiffré de disponibilité n'est pris » : le
- *     point d'Enterprise sur la disponibilité est retiré ;
- *   · 8.3 — l'assistance répond « dans les meilleurs délais », les jours
- *     ouvrés : le délai d'un jour du point d'Advanced n'est pas promis.
- * Le vrai correctif est dans web/lib/offres.ts (il corrige aussi le site) ;
- * c'est à Julien de le décider. Le jour où les deux lignes y changent, ces
- * filtres ne trouvent plus rien et le deck suit la source.
+ * Les promesses de service qui contredisaient les CGV (disponibilité, délai
+ * de réponse) et « Aide en ligne » ont été retirées À LA SOURCE le
+ * 19 septembre 2026 : le deck et le site affichent les mêmes points.
  */
 function pointsVendus(o) {
   return o.points
-    .filter((p) => !/disponibilit/i.test(p))
     // « Un magasin, deux appareils à la fois — comptes illimités » redit la
     // plage de la carte (« Jusqu'à 2 appareils »), sa phrase (« seul ou à
     // deux ») et le chapeau de la page (« Les comptes et les inventaires sont
     // illimités »). Le point est retiré ici seulement : le site le garde.
     .filter((p) => !/^Un magasin\b/.test(p))
-    .map((p) => (/^Réponse par e-mail sous/.test(p) ? 'Assistance par e-mail, les jours ouvrés' : p))
 }
 
 const PIED = 'Quantinvo · septembre 2026'
