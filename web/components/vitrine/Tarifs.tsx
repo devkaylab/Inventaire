@@ -150,7 +150,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
             {TVA_APPLICABLE ? t('Prix hors taxes, par magasin.') : `${t('Prix par magasin.')} ${t(MENTION_TVA)}.`}
           </span>
           <span>{t('Mensuel sans engagement ; annuel dû jusqu’à son terme.')}</span>
-          <span>{t('* Aucun matériel à acheter : il suffit d’un téléphone ou d’une tablette, iPhone ou Android, par personne qui compte.')}</span>
+          <span>{t('* Aucun matériel à acheter : il suffit d’un téléphone ou d’une tablette, iPhone ou Android, par personne qui utilise Quantinvo.')}</span>
         </p>
       </main>
       <SiteFooter langue={langue} />

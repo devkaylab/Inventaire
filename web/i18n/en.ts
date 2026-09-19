@@ -256,7 +256,7 @@ export const en: Dictionnaire = {
   "Aucun magasin ne correspond à « %{q} ».": "No store matches “%{q}”.",
   "Aucun magasin ne vous est affecté": "No store is assigned to you",
   "Aucun matériel à acheter.": "No hardware to buy.",
-  "* Aucun matériel à acheter : il suffit d’un téléphone ou d’une tablette, iPhone ou Android, par personne qui compte.": "* No hardware to buy: all you need is a phone or tablet, iPhone or Android, for each person counting.",
+  "* Aucun matériel à acheter : il suffit d’un téléphone ou d’une tablette, iPhone ou Android, par personne qui utilise Quantinvo.": "* No hardware to buy: all you need is a phone or tablet, iPhone or Android, for each person using Quantinvo.",
   "Aucun membre": "No member",
   "Aucun message": "No message",
   "Aucun résultat": "No results",
