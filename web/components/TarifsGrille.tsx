@@ -48,7 +48,7 @@ export function TarifsGrille() {
       <p className="tarifs-note-bascule">
         {annuel
           ? t('Un seul règlement — de 90 à 900 € de moins selon l’offre. L’année est due jusqu’à son terme.')
-          : t('Douze prélèvements, sans engagement : vous arrêtez quand vous voulez.')}
+          : t('Un prélèvement par mois, sans engagement : vous arrêtez quand vous voulez.')}
       </p>
 
       <div className="tarifs-grille">

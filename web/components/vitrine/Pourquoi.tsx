@@ -169,7 +169,7 @@ export function Pourquoi({ langue }: { langue: Langue }) {
               <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
               <h2>{t('Équipez votre magasin')}</h2>
               <p>
-                {t('Trois offres, un prix par magasin, affiché : à partir de 89 € par mois. Déposez votre demande et nous ouvrons vos accès.')}
+                {t('Trois offres, un prix par magasin, affiché : à partir de 89 € par mois. Inscription en ligne, sans devis.')}
               </p>
               <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
             </div>
