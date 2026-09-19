@@ -227,6 +227,20 @@ export function economie(o: Offre): number {
   return o.mois * 12 - o.an
 }
 
+/**
+ * La plus petite et la plus grande économie à l'année, toutes offres
+ * confondues — ce que la page Tarifs annonce en une phrase.
+ *
+ * ⚠️ CALCULÉE, JAMAIS ÉCRITE. La page disait « de 90 à 900 € » depuis la
+ * grille du 30 août ; la revalorisation du 31 l'a portée à 118 et 1 230 €, et
+ * la phrase est restée trois semaines fausse sans que rien ne le signale
+ * (relevé en construisant les decks, le 19 septembre 2026).
+ */
+export function economiesAnnuelles(): { min: number; max: number } {
+  const e = OFFRES.map(economie)
+  return { min: Math.min(...e), max: Math.max(...e) }
+}
+
 /** Le prix par appareil au plafond du palier — la mesure de la dégressivité. */
 export function parAppareil(o: Offre): number {
   return o.an / o.max

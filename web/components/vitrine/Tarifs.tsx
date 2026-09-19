@@ -3,7 +3,7 @@ import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { TarifsGrille } from '@/components/TarifsGrille'
 import { CONTACT_EMAIL } from '@/lib/contact'
-import { MENTION_TVA, TVA_APPLICABLE } from '@/lib/offres'
+import { MENTION_TVA, TVA_APPLICABLE, economiesAnnuelles, euros } from '@/lib/offres'
 import { traduction, type Langue } from '@/lib/traduction'
 
 /** Ce que le prix comprend, quelle que soit l'offre. */
@@ -44,7 +44,8 @@ const QUESTIONS = [
   },
   {
     q: 'Mensuel ou annuel, qu’est-ce qui change ?',
-    r: 'Le service est le même. Le paiement mensuel étale la dépense sur douze prélèvements ; le paiement à l’année se règle en une fois et coûte moins cher — de 90 à 900 € selon l’offre.',
+    r: 'Le service est le même. Le paiement mensuel étale la dépense sur douze prélèvements ; le paiement à l’année se règle en une fois et coûte moins cher — de %{min} à %{max} selon l’offre.',
+    vars: { min: euros(economiesAnnuelles().min), max: euros(economiesAnnuelles().max) },
   },
 ]
 
@@ -119,7 +120,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
               {QUESTIONS.map((item) => (
                 <details className="collapsible" key={item.q}>
                   <summary>{t(item.q)}</summary>
-                  <p className="collapsible-body">{t(item.r)}</p>
+                  <p className="collapsible-body">{t(item.r, 'vars' in item ? item.vars : undefined)}</p>
                 </details>
               ))}
             </div>

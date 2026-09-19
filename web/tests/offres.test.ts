@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, economie, parAppareil, offrePour, euros } from '../lib/offres'
+import { readFileSync, readdirSync } from 'node:fs'
+import path, { join } from 'node:path'
+import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, economie, economiesAnnuelles, parAppareil, offrePour, euros } from '../lib/offres'
 import { LIENS_PUBLICS } from '../lib/navigation'
 
 const lire = (p: string) => readFileSync(join(__dirname, p), 'utf8')
@@ -244,5 +244,26 @@ describe('les libellés de la grille', () => {
     const grille = lire('../components/TarifsGrille.tsx')
     expect(grille).toContain("t('Commencer avec %{offre}', { offre: o.nom })")
     expect(grille).not.toContain('Choisir ')
+  })
+})
+
+describe('l’économie à l’année se calcule, elle ne s’écrit pas', () => {
+  // ⚠️ « de 90 à 900 € » est resté trois semaines sur /tarifs après la
+  // revalorisation du 31 août 2026 : la grille avait bougé, pas la phrase.
+  // Relevé le 19 septembre en construisant les decks.
+  it('elle vaut 12 mensualités moins l’annuel, de la plus petite offre à la plus grande', () => {
+    const e = OFFRES.map((o) => o.mois * 12 - o.an)
+    expect(economiesAnnuelles()).toEqual({ min: Math.min(...e), max: Math.max(...e) })
+  })
+
+  it('aucun composant n’écrit une économie à l’année en dur', () => {
+    const dossier = path.resolve(__dirname, '../components')
+    const fichiers = (d: string): string[] => readdirSync(d, { withFileTypes: true })
+      .flatMap((x) => x.isDirectory() ? fichiers(path.join(d, x.name)) : x.name.endsWith('.tsx') ? [path.join(d, x.name)] : [])
+    for (const f of fichiers(dossier)) {
+      const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      expect(code, `${path.basename(f)} écrit une économie annuelle en dur`)
+        .not.toMatch(/de \d[\d\s  ]* à \d[\d\s  ]* €( de moins)? selon l’offre/)
+    }
   })
 })

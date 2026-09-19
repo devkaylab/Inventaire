@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, PLAFOND_LIBRE_SERVICE, TVA_APPLICABLE, economie, euros } from '@/lib/offres'
+import { OFFRES, OFFRE_PHARE, SUPPLEMENT, APPAREILS_MAX, PLAFOND_LIBRE_SERVICE, TVA_APPLICABLE, economie, economiesAnnuelles, euros } from '@/lib/offres'
 import { venteOuverte } from '@/lib/legal'
 import { useTraduction } from '@/lib/i18n'
 
@@ -47,7 +47,7 @@ export function TarifsGrille() {
           Le taire sous un titre « sans engagement » serait trompeur. */}
       <p className="tarifs-note-bascule">
         {annuel
-          ? t('Un seul règlement — de 90 à 900 € de moins selon l’offre. L’année est due jusqu’à son terme.')
+          ? t('Un seul règlement — de %{min} à %{max} de moins selon l’offre. L’année est due jusqu’à son terme.', { min: euros(economiesAnnuelles().min), max: euros(economiesAnnuelles().max) })
           : t('Un prélèvement par mois, sans engagement : vous arrêtez quand vous voulez.')}
       </p>
 
