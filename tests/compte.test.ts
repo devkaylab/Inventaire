@@ -2990,12 +2990,10 @@ describe('le catalogue hors ligne ne pèse plus le même poids', () => {
     expect(bascule).toContain('duServeur.length === repere.total')
   })
 
-  it('⚠️ l’ancien chemin reste, pour les téléphones déjà sur le terrain', () => {
-    // Règle du projet : le code se déploie d'abord, l'objet se retire ensuite.
-    // `lister_articles` est encore appelée par le build de production.
-    expect(requetes).toContain('export async function getSessionArticles')
-    expect(migrations).not.toContain('drop function public.lister_articles')
-    // Mais la bascule, elle, ne l'appelle plus.
+  it('l’ancien chemin est retiré, et la bascule ne le cherche plus', () => {
+    // Retiré le 19 septembre 2026, une fois le build du 13 septembre en place.
+    expect(requetes).not.toContain('export async function getSessionArticles')
+    expect(requetes).not.toContain("rpc('lister_articles'")
     expect(bascule).not.toContain('q.getSessionArticles(')
   })
 

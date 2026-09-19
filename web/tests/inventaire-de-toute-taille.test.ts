@@ -207,7 +207,8 @@ describe('les écrans ne balaient plus les tables eux-mêmes', () => {
     expect(q).toContain("supabase.rpc('lister_ecarts'")
     expect(q).toContain("supabase.rpc('mes_balises_comptees'")
     expect(q).toContain("supabase.rpc('scans_de_balise'")
-    expect(q).toContain("supabase.rpc('lister_articles'")
+    // `lister_articles` est retirée (19/09/2026) : le catalogue passe par le delta.
+    expect(q).not.toContain("supabase.rpc('lister_articles'")
     // `getArticleLabels` n'a plus d'appelant : ses deux écrans reçoivent les
     // libellés avec les lignes.
     expect(q).not.toContain('export async function getArticleLabels')

@@ -62,7 +62,6 @@ vi.mock('@/lib/queries', () => ({
     return c
   },
   getMyScanEntries: async () => { if (serveur.panne) coupure(); return [] },
-  getSessionArticles: async () => { if (serveur.panne) coupure(); return serveur.articles },
   catalogueRepere: async () => {
     if (serveur.panne) coupure()
     const dates = serveur.catalogue.map((a) => a.date).sort()

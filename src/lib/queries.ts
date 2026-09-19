@@ -387,22 +387,6 @@ export async function cancelMyInvitation(id: string) {
   if (r && r.success === false) throw new Error(r.error ?? t('Annulation impossible.'))
 }
 
-/**
- * ⚠️ Plus appelée : l'inscription depuis l'app a disparu.
- *
- * Elle servait de garde côté client avant `signUp` — le compteur devait
- * prouver qu'il avait été pré-inscrit. Depuis le passage au lien magique, son
- * compte auth est créé par `invite-teammate` et il ne s'inscrit plus : il
- * vérifie ses informations et choisit son mot de passe sur `/bienvenue`.
- *
- * La RPC reste en base, sans danger (elle ne renvoie qu'un booléen).
- */
-export async function checkInvitation(email: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('check_invitation', { p_email: email.trim().toLowerCase() })
-  if (error) throwSupabase('checkInvitation', error)
-  return data === true
-}
-
 export type SessionInvitation = Tables<'session_invitations'>
 export type SessionRole = 'supervisor' | 'counter'
 
@@ -526,41 +510,6 @@ export async function joinSession(inventoryNumber: string, securityCode: string)
   })
   if (error) throwSupabase('joinSession', error)
   return data as { success: boolean; session_id?: string; store_name?: string; status?: string; current_pass?: number; error?: string }
-}
-
-/**
- * ⚠️ Hors service côté client depuis la migration 20260813000002.
- *
- * `advance_pass` et `revert_pass` viennent du modèle « la passe est un état
- * global de la session ». Ce modèle n'existe plus : chaque participant choisit
- * son mode (Comptage→1, Audit→2) et `current_pass` n'est plus lu nulle part.
- * Aucun écran n'appelle ces deux fonctions.
- *
- * L'exécution a été retirée au rôle `authenticated` : elles sont SECURITY
- * DEFINER et forçaient `status = 'counting'`, ce qui permettait à un simple
- * compteur de rouvrir un inventaire clôturé — contournant la RLS qui réserve
- * cet UPDATE aux superviseurs participants.
- *
- * Les appeler remonte donc désormais un 42501. Si les passes globales
- * reviennent, il faudra rendre le GRANT **et** ajouter la garde
- * `status <> 'closed'` dans les deux fonctions.
- */
-export async function advancePass(sessionId: string) {
-  const { data, error } = await supabase.rpc('advance_pass', { p_session_id: sessionId })
-  if (error) throwSupabase('advancePass', error)
-  return data as { success: boolean; current_pass?: number; error?: string }
-}
-
-// Voir l'avertissement sur advancePass : hors service côté client (42501).
-// Reculait d'une passe (ex. Audit -> Compte) ; deleteCounts effaçait les
-// comptages de la passe quittée.
-export async function revertPass(sessionId: string, deleteCounts: boolean) {
-  const { data, error } = await supabase.rpc('revert_pass', {
-    p_session_id: sessionId,
-    p_delete_counts: deleteCounts,
-  })
-  if (error) throwSupabase('revertPass', error)
-  return data as { success: boolean; current_pass?: number; error?: string }
 }
 
 /**
@@ -1050,27 +999,6 @@ export async function getCatalogue(sessionId: string, depuis?: string | null): P
 export function normaliserEan(ean: string | null | undefined): string | null {
   const stripped = (ean ?? '').replace(/^0+/, '')
   return stripped === '' ? null : stripped
-}
-
-/**
- * ⚠️ ANCIEN CHEMIN, gardé pour les téléphones déjà sur le terrain.
- * Ne plus l'appeler : `getCatalogue` rend la même chose en trois fois moins
- * d'octets. À retirer quand le build de septembre sera partout.
- */
-export async function getSessionArticles(sessionId: string): Promise<Article[]> {
-  const PAGE = 1000
-  const out: Article[] = []
-  let apres: string | null = null
-  for (;;) {
-    const { data, error } = await supabase.rpc('lister_articles', {
-      p_session_id: sessionId, p_apres_sku: apres ?? undefined, p_limite: PAGE,
-    })
-    if (error) throwSupabase('getSessionArticles', error)
-    const page = (data ?? []) as Article[]
-    out.push(...page)
-    if (page.length < PAGE) return out
-    apres = page[page.length - 1].sku
-  }
 }
 
 // ── Zones & balises ────────────────────────────────────────────────────────

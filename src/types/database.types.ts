@@ -402,6 +402,8 @@ export type Database = {
           admin_note: string
           ape: string | null
           billing_period: string | null
+          cgv_acceptees_le: string | null
+          cgv_version: string | null
           company_id: string | null
           company_name: string
           contact_email: string
@@ -438,6 +440,8 @@ export type Database = {
           admin_note?: string
           ape?: string | null
           billing_period?: string | null
+          cgv_acceptees_le?: string | null
+          cgv_version?: string | null
           company_id?: string | null
           company_name: string
           contact_email: string
@@ -474,6 +478,8 @@ export type Database = {
           admin_note?: string
           ape?: string | null
           billing_period?: string | null
+          cgv_acceptees_le?: string | null
+          cgv_version?: string | null
           company_id?: string | null
           company_name?: string
           contact_email?: string
@@ -1011,8 +1017,11 @@ export type Database = {
       store_requests: {
         Row: {
           accepted_at: string | null
+          address: string | null
           admin_note: string
           billing_period: string | null
+          cgv_acceptees_le: string | null
+          cgv_version: string | null
           company_id: string
           created_at: string
           decline_reason: string
@@ -1043,8 +1052,11 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          address?: string | null
           admin_note?: string
           billing_period?: string | null
+          cgv_acceptees_le?: string | null
+          cgv_version?: string | null
           company_id: string
           created_at?: string
           decline_reason?: string
@@ -1075,8 +1087,11 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          address?: string | null
           admin_note?: string
           billing_period?: string | null
+          cgv_acceptees_le?: string | null
+          cgv_version?: string | null
           company_id?: string
           created_at?: string
           decline_reason?: string
@@ -1197,6 +1212,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          address: string | null
           annual_price_cents: number | null
           company_id: string
           created_at: string
@@ -1211,6 +1227,7 @@ export type Database = {
           units: number | null
         }
         Insert: {
+          address?: string | null
           annual_price_cents?: number | null
           company_id: string
           created_at?: string
@@ -1225,6 +1242,7 @@ export type Database = {
           units?: number | null
         }
         Update: {
+          address?: string | null
           annual_price_cents?: number | null
           company_id?: string
           created_at?: string
@@ -1681,7 +1699,7 @@ export type Database = {
         Returns: Json
       }
       admin_usage_overview: { Args: { p_company_id?: string }; Returns: Json }
-      advance_pass: { Args: { p_session_id: string }; Returns: Json }
+      adresse_propre: { Args: { p: string }; Returns: string }
       annuel_du_devis: {
         Args: {
           p_amount_cents: number
@@ -1739,26 +1757,20 @@ export type Database = {
         Args: { p_name: string; p_store_id: string }
         Returns: Json
       }
-      ca_request_store:
-        | {
-            Args: { p_devices?: number; p_message?: string; p_name: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_message: string
-              p_name: string
-              p_sqm: number
-              p_units: number
-            }
-            Returns: Json
-          }
+      ca_request_store: {
+        Args: { p_devices?: number; p_message?: string; p_name: string }
+        Returns: Json
+      }
       ca_request_store_removal: {
         Args: { p_message?: string; p_store_id: string }
         Returns: Json
       }
       ca_set_counter_stores: {
         Args: { p_store_ids: string[]; p_user: string }
+        Returns: Json
+      }
+      ca_set_store_address: {
+        Args: { p_address: string; p_store_id: string }
         Returns: Json
       }
       ca_set_supervisor_stores: {
@@ -1799,7 +1811,6 @@ export type Database = {
         Args: { p_billing_period: string; p_id: string }
         Returns: Json
       }
-      check_invitation: { Args: { p_email: string }; Returns: boolean }
       client_ip: { Args: never; Returns: string }
       cloturer_audit_balise: {
         Args: { p_code: string; p_session_id: string }
@@ -1833,10 +1844,6 @@ export type Database = {
         }
         Returns: Json
       }
-      delete_audit_line: {
-        Args: { p_session_id: string; p_sku: string; p_zone?: string }
-        Returns: Json
-      }
       delete_session: { Args: { p_session_id: string }; Returns: Json }
       delete_zone: {
         Args: { p_name: string; p_session_id: string }
@@ -1845,7 +1852,13 @@ export type Database = {
       demande_a_reprendre: { Args: { p_id: string }; Returns: Json }
       demander_code_email: { Args: { p_email: string }; Returns: Json }
       deposer_ajout_magasin: {
-        Args: { p_billing_period: string; p_devices: number; p_name: string }
+        Args: {
+          p_address: string
+          p_billing_period: string
+          p_cgv_version: string
+          p_devices: number
+          p_name: string
+        }
         Returns: Json
       }
       deposer_changement_offre: {
@@ -1854,14 +1867,6 @@ export type Database = {
           p_devices: number
           p_store_id: string
         }
-        Returns: Json
-      }
-      deposer_message_admin: {
-        Args: { p_message: string; p_sujet: string }
-        Returns: Json
-      }
-      deposer_message_quantinvo: {
-        Args: { p_message: string; p_sujet: string }
         Returns: Json
       }
       deposer_notification_admins: {
@@ -1873,11 +1878,13 @@ export type Database = {
           p_amount_cents: number
           p_annual_cents: number
           p_billing_period: string
+          p_cgv_version: string
           p_company_name: string
           p_email: string
           p_first_name: string
           p_last_name: string
           p_plan: string
+          p_store_address: string
           p_store_name: string
         }
         Returns: Json
@@ -1960,10 +1967,6 @@ export type Database = {
         Args: { p_etape: number; p_reponses: Json }
         Returns: Json
       }
-      ensure_zone: {
-        Args: { p_code: string; p_session_id: string }
-        Returns: Json
-      }
       etat_abonnement_magasin: { Args: { p_store_id: string }; Returns: Json }
       etat_import: {
         Args: { p_session_id: string }
@@ -1979,6 +1982,7 @@ export type Database = {
         Args: {
           p_ape: string
           p_billing_period: string
+          p_cgv_version: string
           p_company_name: string
           p_first: string
           p_last: string
@@ -2010,11 +2014,6 @@ export type Database = {
       }
       gen_company_code: { Args: never; Returns: string }
       gen_store_code: { Args: never; Returns: string }
-      generate_company_balises: { Args: { p_count: number }; Returns: Json }
-      generate_zones: {
-        Args: { p_count: number; p_session_id: string }
-        Returns: Json
-      }
       get_balise_detail: {
         Args: { p_code: string; p_session_id: string }
         Returns: {
@@ -2026,15 +2025,6 @@ export type Database = {
           final_qty: number
           label: string
           sku: string
-        }[]
-      }
-      get_company_directory: {
-        Args: never
-        Returns: {
-          email: string
-          full_name: string
-          role: string
-          user_id: string
         }[]
       }
       get_my_company: { Args: never; Returns: string }
@@ -2171,20 +2161,6 @@ export type Database = {
       }
       join_store: { Args: { p_code: string }; Returns: Json }
       leave_session: { Args: { p_session_id: string }; Returns: Json }
-      lister_articles: {
-        Args: { p_apres_sku?: string; p_limite?: number; p_session_id: string }
-        Returns: {
-          brand: string
-          ean: string
-          ean_norm: string
-          id: string
-          label: string
-          session_id: string
-          sku: string
-          unit_purchase_price: number
-          updated_at: string
-        }[]
-      }
       lister_ecarts: {
         Args: { p_session_id: string }
         Returns: {
@@ -2429,10 +2405,6 @@ export type Database = {
         Args: { p_force?: boolean; p_session_id: string }
         Returns: Json
       }
-      register_balise: {
-        Args: { p_code: string; p_name: string; p_session_id: string }
-        Returns: Json
-      }
       remove_counter_from_store: {
         Args: { p_store_id: string; p_user: string }
         Returns: Json
@@ -2459,10 +2431,6 @@ export type Database = {
         }
         Returns: Json
       }
-      revert_pass: {
-        Args: { p_delete_counts?: boolean; p_session_id: string }
-        Returns: Json
-      }
       scans_de_balise: {
         Args: { p_pass: number; p_session_id: string; p_zone?: string }
         Returns: {
@@ -2487,10 +2455,6 @@ export type Database = {
           p_open: boolean
           p_session_id: string
         }
-        Returns: Json
-      }
-      set_zone_status: {
-        Args: { p_status: string; p_zone_id: string }
         Returns: Json
       }
       siren_valide: { Args: { p_siren: string }; Returns: boolean }
@@ -2541,6 +2505,7 @@ export type Database = {
         Args: { p_code: string; p_email: string }
         Returns: Json
       }
+      version_conditions: { Args: never; Returns: string }
       vider_balise: {
         Args: { p_code: string; p_passe?: string; p_session_id: string }
         Returns: Json
