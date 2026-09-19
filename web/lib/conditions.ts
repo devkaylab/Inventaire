@@ -13,7 +13,7 @@
 // le texte de façon substantielle = changer la date ici ET dans la migration,
 // ensemble. Un test compare les deux.
 
-export const VERSION_CONDITIONS = '2026-09-16'
+export const VERSION_CONDITIONS = '2026-09-19'
 export const CONDITIONS_URL = '/conditions-generales'
 
 const DEBUT = '## 1. Identification'

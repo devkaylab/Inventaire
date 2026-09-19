@@ -274,9 +274,11 @@ immédiates et définitives.**
 9.1 Le Client fournit des fichiers d'articles exacts et à jour ; la qualité
 des écarts calculés dépend de la qualité du fichier importé.
 
-9.2 Le Client s'assure que ses Utilisateurs disposent d'appareils et d'une
-connexion compatibles, et qu'ils utilisent le Service conformément aux
-présentes et à la loi.
+9.2 **Matériel.** Le Client fournit, à ses frais, un téléphone ou une
+tablette compatible (iPhone ou Android) à chaque Utilisateur, ainsi qu'une
+connexion à internet. L'Éditeur ne vend ni ne loue aucun matériel. Le Client
+s'assure que ses Utilisateurs utilisent le Service conformément aux présentes
+et à la loi.
 
 9.3 Le Client informe ses salariés du traitement de leurs données (article 13
 du RGPD) et consulte, le cas échéant, ses instances représentatives du
