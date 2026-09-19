@@ -1,380 +1,714 @@
-// Guide de prise en main Quantinvo, superviseurs et compteurs.
-// node build-prise-en-main.js                 → Quantinvo-prise-en-main.pptx
-// FONT_MODE=brand node build-prise-en-main.js → Quantinvo-prise-en-main-marque.pptx
+// Guide de prise en main Quantinvo — 28 pages, dans l'ordre d'un premier
+// inventaire : l'accès et les magasins, l'équipe, les balises, la préparation,
+// le comptage, le suivi, l'audit, l'arbitrage, le rapport et la clôture.
+//   node build-prise-en-main.js                 → Quantinvo-prise-en-main.pptx        (Arial)
+//   FONT_MODE=brand node build-prise-en-main.js → Quantinvo-prise-en-main-marque.pptx (Archivo/Public Sans)
+// Contrôle : node verifier-typo.js Quantinvo-prise-en-main.pptx Quantinvo-prise-en-main-marque.pptx
 //
-// Les écrans montrés sont de VRAIES captures, prises au simulateur sur un
-// compte d'essai (Maison Oberlin / Oberlin Lyon), rangées dans `captures/`.
-// Recette et liste dans le LISEZMOI. Les libellés cités dans le texte sont
-// ceux du code : si l'un change dans l'application, il change ici.
+// Réécrit le 19 septembre 2026, à la demande de Julien : les anciens decks
+// étaient périmés. Chaque phrase a été vérifiée dans le code (src/, web/,
+// supabase/) ou dans docs/notes/, puis relue par deux relecteurs (faits,
+// style). Trois points relevés par la relecture des faits, qui ne se voient
+// pas à la lecture du produit :
+//   · dans l'APPLICATION, « Commencer l'inventaire » ne change pas le statut :
+//     il fait comme « Plus tard » (src/lib/tunnel.ts). Seul le site passe
+//     l'inventaire en « En cours » (web/lib/inventory.ts, startSession).
+//     C'est un défaut du produit, signalé à Julien. La page 14 le dit en
+//     consigne (« Toujours depuis le site »), pas en aveu ;
+//   · le « Premier numéro » d'une planche de balises repart toujours de sa
+//     valeur par défaut : rien ne retient la dernière balise imprimée ;
+//   · l'e-mail « Bienvenue sur Quantinvo » ne part que pour une entreprise
+//     créée sur devis (stripe-webhook, kind 'company').
+//
+// ⚠️ AUCUN CHIFFRE INVENTÉ, AUCUN CLIENT INVENTÉ, AUCUN PRIX. Les écrans sont
+// ceux du compte de démonstration (Maison Oberlin) : l'application au
+// simulateur (captures/), le site le 19 septembre 2026 (captures-site/).
+// Ne JAMAIS montrer web/screenshots/ : c'est un faux compte de test.
+//
+// ⚠️ L'ACCENT VERT SERT UNE SEULE FOIS : le grand chiffre de la page 26. Les
+// pastilles de la page 3 sont en encre, les lieux des rôles (page 2) en gris.
+//
+// ⚠️ Les applications ne sont pas encore sur les boutiques
+// (web/lib/appStores.ts, PUBLIEE) : le guide dit « installe l'application »,
+// jamais « disponible sur l'App Store ».
 
-const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer } = require('./charte')
+const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, typo } = require('./charte')
+
+const PIED = 'Quantinvo · prise en main · septembre 2026'
+const SITE = '../captures-site/2026-09-19-rayon-textile/brut/'
+const BAS = H - 0.72   // ligne où s'arrêtent les cartes, au-dessus du pied
+const INSEC = '\u00A0'   // espace insécable
+const FINE = '\u202F'    // espace fine insécable
+
+/**
+ * ⚠️ PAS DE MOT SEUL EN DERNIÈRE LIGNE (relecture du 19 septembre 2026 :
+ * « est généré / automatiquement. », « sans / retour. »… seize en Arial).
+ * La dernière espace de chaque paragraphe devient insécable : les deux
+ * derniers mots passent à la ligne ensemble. Un paragraphe finit au bout
+ * d'une chaîne, à un « \n », ou sur un run qui porte `breakLine`.
+ * La typographie de charte.js passe d'abord (elle ne touche qu'aux espaces
+ * ordinaires, elle est donc sans effet la seconde fois).
+ */
+const lierFin = (t) => t.replace(/ (?=[^ ]*$)/, INSEC)
+function lier(t) {
+  if (typeof t === 'string') return t.split('\n').map(lierFin).join('\n')
+  if (!Array.isArray(t)) return t
+  return t.map((r, i) => {
+    if (!r || typeof r.text !== 'string') return r
+    const fin = i === t.length - 1 || (r.options && r.options.breakLine)
+    return fin ? { ...r, text: r.text.split('\n').map(lierFin).join('\n') } : r
+  })
+}
 
 async function main() {
   const d = await preparer({ titre: 'Quantinvo — prise en main' })
   const { pres } = d
-  const PIED = 'Quantinvo · prise en main · septembre 2026'
-
-  // ── Captures du tableau de bord (site), recadrées hors en-tête ──
-  // ⚠️ Recadrages calés sur la mise en page AU RAIL (30 août 2026) : ceux
-  // d'avant visaient la barre du haut et décalaient les trois captures.
-  const capSuivi = await capture('light-desktop-suivi.png', { left: 104, top: 155, width: 1330, height: 505 })
-  const capEcarts = await capture('light-desktop-ecarts.png', { left: 448, top: 375, width: 964, height: 370 })
-  const capRapport = await capture('light-desktop-rapport.png', { left: 448, top: 160, width: 964, height: 660 })
-
-  // ── Captures de l'application, dans un téléphone dessiné ──
-  // ⚠️ Le recadrage se calcule à partir de la place réellement disponible,
-  // jamais d'une fraction fixée d'avance : la hauteur d'une carte dépend du
-  // texte posé au-dessus, et un téléphone taillé pour une autre hauteur
-  // débordait de sa carte et de la diapositive.
-  const F = {
-    accueilSup: 'accueil-superviseur.png', nouvel: 'nouvel-inventaire.png',
-    zones: 'zones.png', importer: 'importer.png', fiche: 'fiche-inventaire.png',
-    inventaireSup: 'inventaire-superviseur.png', equipe: 'mon-equipe.png',
-    outils: 'boite-a-outils.png', balises: 'creer-balises.png',
-    membre: 'ajouter-membre.png', compte: 'mon-compte.png',
-    bienvenue: 'bienvenue-compteur.png', accueilCpt: 'accueil-compteur.png',
-    inventaireCpt: 'inventaire-compteur.png', scanBalise: 'scanner-balise.png',
-    comptage: 'comptage.png', terminee: 'balise-terminee.png', audit: 'audit.png',
-    horsPlage: 'balise-hors-plage.png', detail: 'balises-comptees-detail.png',
-  }
-  const BAS = H - 0.72   // ligne où les cartes s'arrêtent, au-dessus du pied
-  const MARGE = 0.34     // retrait du téléphone dans sa carte
-
-  /**
-   * Trois écrans expliqués côte à côte : titre, une phrase, puis le téléphone
-   * dans une carte qu'il déborde par le bas.
-   */
-  async function troisEcrans(s, cartes, { y = 2.2 } = {}) {
-    const gap = 0.3
-    const cw = (W - 2 * M - gap * (cartes.length - 1)) / cartes.length
-    // Titre (0,42) + deux lignes de texte (0,68) : la carte prend le reste.
-    const hCarte = BAS - (y + 0.42 + 0.68)
-    for (const [i, c] of cartes.entries()) {
-      const tel = await cadrer(F[c.ecran], { w: cw - 2 * MARGE, h: hCarte })
-      d.ecran(s, { x: M + i * (cw + gap), y, w: cw, titre: c.titre, texte: c.texte, tel, fill: c.fill, marge: MARGE, bas: BAS })
+  {
+    const addSlide = pres.addSlide.bind(pres)
+    pres.addSlide = (...a) => {
+      const s = addSlide(...a)
+      const addText = s.addText.bind(s)
+      s.addText = (t, o) => addText(lier(typo(t)), o)
+      return s
     }
   }
 
-  /** Un téléphone à droite dans sa carte, le texte de la page à gauche. */
-  async function grandEcran(s, { titre, texte, ecran, fill, y = 1.5, w = 3.5 }) {
-    const hTexte = 0.42 + (texte ? 0.68 : 0)
-    const tel = await cadrer(F[ecran], { w: w - 2 * MARGE, h: BAS - (y + hTexte) })
-    d.ecran(s, { x: W - M - w, y, w, titre, texte, tel, fill, marge: MARGE, bas: BAS })
+  // ── Gabarits de page ──────────────────────────────────────
+
+  /**
+   * Les alinéas de d.alineas(), avec un alignement vertical au choix : une
+   * colonne courte se centre sur la hauteur du téléphone au lieu de laisser
+   * vide le bas de la page.
+   */
+  function alineasV(s, items, { x, y, w, h, size, gap, valign = 'top' }) {
+    const runs = []
+    items.forEach(([lead, text], i) => {
+      const last = i === items.length - 1
+      if (lead) runs.push({ text: lead + ' ', options: { bold: true, color: P.INK, paraSpaceAfter: gap } })
+      runs.push({ text, options: { color: P.INK2, breakLine: !last, paraSpaceAfter: gap } })
+    })
+    s.addText(runs, { x, y, w, h, fontFace: FONT, fontSize: size, margin: 0, lineSpacingMultiple: 1.18, valign })
   }
 
-  /** Téléphone entier, pour un écran dont l'essentiel est en bas. */
-  async function ecranEntier(s, { ecran, legende, x = W - M - 2.4, y = 1.45, h = 4.9 }) {
-    const tel = await cadrer(F[ecran], { w: 1, h: 99 })   // pas de coupe
-    d.ecranEntier(s, { x, y, h, tel, legende })
+  /**
+   * Capture encadrée dont le FILET s'arrête exactement sur les bords donnés :
+   * d.cadre() trace son filet 0,06 pouce autour de l'image, qui dépassait
+   * donc la marge de droite. `x` et `w` sont ceux du filet.
+   */
+  function cadreJuste(s, cap, { x, y, w, h }) {
+    const g = d.cadre(s, cap, { x: x + 0.06, y, w: w - 0.12, h: h === undefined ? undefined : h })
+    return { w: g.w + 0.12, h: g.h }
   }
 
-  /** Intercalaire de partie : une page qui dit à qui la suite s'adresse. */
-  function partie(s, n, titre, texte, qui) {
-    d.entete(s, qui)
-    s.addText(n, { x: M, y: 2.1, w: 3, h: 1.3, fontFace: FONTD, fontSize: 72, bold: true, color: P.TINT, margin: 0 })
-    s.addText(titre, { x: M, y: 3.3, w: 8.6, h: 0.9, fontFace: FONTD, fontSize: 34, bold: true, color: P.DEEP, margin: 0 })
-    s.addText(texte, { x: M, y: 4.3, w: 8.2, h: 1.5, fontFace: FONT, fontSize: 14, color: P.INK2, margin: 0, lineSpacingMultiple: 1.2 })
+  /**
+   * Téléphone coupé, dans sa carte, à droite de la page. `N` est la ligne de
+   * la capture (en pixels, sur 1311) où le téléphone sort de sa carte : la
+   * hauteur visible s'en déduit, et la carte monte d'autant.
+   */
+  async function telCoupe(s, fichier, N, { w = 3.5, marge = 0.34 } = {}) {
+    const x = W - M - w
+    const tw = w - 2 * marge
+    // Capture de 603 px, bezel de 17 px de chaque côté : 637 px de large.
+    const th = tw * (N + 17) / 637
+    const tel = await cadrer(fichier, { w: tw, h: th })
+    d.ecran(s, { x, y: BAS - th - marge, w, tel, bas: BAS, marge })
   }
+
+  /**
+   * Téléphone entier, sans carte : l'essentiel de l'écran est en bas. Il se
+   * cale sur la marge de droite, et sa légende tient dans sa largeur : celle
+   * de d.ecranEntier() déborde d'un demi-pouce de chaque côté, donc au-delà
+   * de la marge. Les légendes sont coupées À LA MAIN (\n) : laissées à la
+   * composition, elles finissaient sur un mot seul (« rayon. »).
+   */
+  async function telEntier(s, fichier, legende, { y = 1.45, h = 4.9 } = {}) {
+    const tel = await cadrer(fichier, { w: 1, h: 99 })   // pas de coupe
+    const w = h * tel.ratio
+    const x = W - M - w
+    d.ecranEntier(s, { x, y, h, tel })
+    if (legende) {
+      s.addText(legende, {
+        x: x - 0.2, y: y + h + 0.12, w: w + 0.4, h: 0.55, fontFace: FONT, fontSize: 10,
+        italic: true, color: P.SLATE, align: 'center', margin: 0, lineSpacingMultiple: 1.1,
+      })
+    }
+    return { x, w }
+  }
+
+  // Le titre des pages à capture est une ligne large, en haut ; le contenu
+  // commence dessous. ⚠️ Un titre sur deux lignes est coupé À LA MAIN (\n) :
+  // laissé à la composition, il finissait sur un mot seul (« pièce. »,
+  // « paiement. »), en Arial comme en Archivo.
+  const TITRE_Y = 1.45
+  const sousTitre = (lignes) => TITRE_Y + lignes * 0.42 + 0.55
+
+  /** Page « téléphone » : titre et alinéas à gauche, l'écran à droite. */
+  async function pageTel(n, { entete, titre, alineas, ecran, w = 7.3 }) {
+    // ⚠️ Quatre alinéas ou moins : la colonne, calée en haut, s'arrêtait à
+    // mi-page à côté d'un téléphone pleine hauteur (relecture du 19 septembre
+    // 2026, pages 15, 16, 18, 20, 23, 27). Elle passe à 15 pt, sur une mesure
+    // plus courte (6,3 pouces, une soixantaine de signes), et se CENTRE sur
+    // la hauteur disponible.
+    const court = alineas.length <= 4
+    const size = court ? 15 : 13.5
+    const gap = court ? 20 : 12
+    const s = pres.addSlide()
+    d.entete(s, entete)
+    const lignes = titre.split('\n').length
+    d.titre(s, titre, { x: M, y: TITRE_Y, w, size: 24, h: 1.0 })
+    const y = sousTitre(lignes)
+    if (court) alineasV(s, alineas, { x: M, y, w: 6.3, h: BAS - 0.3 - y, size, gap, valign: 'middle' })
+    else d.alineas(s, alineas, { x: M, y, w, h: BAS - y, size, gap })
+    if (ecran.coupe) await telCoupe(s, ecran.fichier, ecran.coupe)
+    else await telEntier(s, ecran.fichier, ecran.legende, ecran.h ? { h: ecran.h } : {})
+    d.pied(s, n, PIED)
+    return s
+  }
+
+  /**
+   * Page « site » : titre sur la largeur, puis les alinéas à gauche et la
+   * capture à droite, alignés en haut. La capture garde son ratio et se cale
+   * sur la marge de droite.
+   */
+  function pageSite(n, { entete, titre, alineas, cap, legende, size = 13, gap = 11, col = COL }) {
+    const s = pres.addSlide()
+    d.entete(s, entete)
+    d.titre(s, titre, { x: M, y: TITRE_Y, w: W - 2 * M, size: 24, h: 0.6 })
+    const y = sousTitre(1)
+    d.alineas(s, alineas, { x: M, y, w: col, h: BAS - y, size, gap })
+    const hMax = BAS - 0.5 - y
+    // Largeur du FILET : il s'arrête sur la marge de droite, comme le filet
+    // d'en-tête et le numéro de page. Une colonne de texte plus étroite
+    // (`col`) laisse la capture s'élargir.
+    const fw = Math.min(W - M - (M + col + 0.5), hMax * cap.ratio + 0.12)
+    const g = cadreJuste(s, cap, { x: W - M - fw, y, w: fw })
+    if (legende) d.legende(s, legende, { x: W - M - fw + 0.06, y: y + g.h + 0.16, w: fw - 0.12 })
+    d.pied(s, n, PIED)
+    return s
+  }
+
+  /**
+   * Page « site » pleine largeur : le titre, la capture sur toute la mesure,
+   * puis les alinéas en colonnes dessous. Pour un volet du site large et
+   * bas : réduit à la colonne de droite, son texte tombait à 5 pt et le bas
+   * de la page restait vide (relecture du 19 septembre 2026, pages 11 et 14).
+   * `colonnes` : [[alinéas de la 1re colonne], [alinéas de la 2e], …].
+   */
+  function pageLarge(n, { entete, titre, colonnes, cap, legende, size = 13, gap = 10 }) {
+    const s = pres.addSlide()
+    d.entete(s, entete)
+    d.titre(s, titre, { x: M, y: TITRE_Y, w: W - 2 * M, size: 24, h: 0.6 })
+    const y = 2.12
+    const g = cadreJuste(s, cap, { x: M, y, w: W - 2 * M })
+    let ya = y + g.h + 0.06 + 0.34
+    if (legende) {
+      d.legende(s, legende, { x: M + 0.06, y: y + g.h + 0.16, w: W - 2 * M - 0.12 })
+      ya += 0.26
+    }
+    const ecart = 0.45
+    const cw = (W - 2 * M - (colonnes.length - 1) * ecart) / colonnes.length
+    colonnes.forEach((items, i) => {
+      d.alineas(s, items, { x: M + i * (cw + ecart), y: ya, w: cw, h: BAS + 0.1 - ya, size, gap })
+    })
+    d.pied(s, n, PIED)
+    return s
+  }
+
+  // ── Captures du site (compte de démonstration, 19 septembre 2026) ──
+  // Recadrages vérifiés à l'image : ni bouton de langue flottant, ni adresse.
+  // ⚠️ Une capture du site se lit à sa LARGEUR : un volet de 2 450 px réduit
+  // à la colonne de droite (6,5 pouces) tombe à 5 pt. D'où des recadrages
+  // serrés sur ce que la page décrit, ou la pleine largeur (pages 11 et 14).
+  // Zone de comptage : de « Une seule balise » à la ligne « Réserve ». On
+  // s'arrête à y = 1430, avant le bouton de langue (x ≥ 3290, y ≥ 1445).
+  const capZones = await capture(SITE + 'setup-deplie-1.png', { left: 906, top: 846, width: 2439, height: 584 })
+  // Données d'inventaire : l'en-tête du volet, les deux compteurs et les
+  // colonnes du référentiel, sans la zone « Déposez un fichier », qui prend
+  // de la hauteur pour rien. Coupée à droite dans le blanc du volet (le
+  // badge « PRÊT » reste hors cadre) : c'est ce qui la rend lisible.
+  const capFichiers = await capture(SITE + 'setup-deplie-2.png', { left: 918, top: 99, width: 1595, height: 906 })
+  const capEquipe = await capture(SITE + 'equipe-1.png', { left: 872, top: 308, width: 2488, height: 1171 })
+  // Set up, inventaire commencé : les trois volets seulement, sans les onglets.
+  const capSetup = await capture(SITE + 'setup-1.png', { left: 882, top: 410, width: 2487, height: 656 })
+  // Suivi : la colonne de droite seule (onglets, compteurs, avancement par
+  // zone, trois derniers scans). Le panneau de gauche (Progression,
+  // Informations) élargissait la capture et rapetissait tout le reste. On
+  // s'arrête à y = 1466, avant le bouton de langue (x ≥ 3285, y ≥ 1545).
+  const capSuivi = await capture(SITE + 'suivi-1.png', { left: 882, top: 291, width: 2487, height: 1175 })
+  const capEcarts = await capture(SITE + 'ecarts-2.png', { left: 872, top: 68, width: 2488, height: 1471 })
+  const capRapport = await capture(SITE + 'rapport-1.png', { left: 872, top: 428, width: 2488, height: 1112 })
+  // Photo de terrain : une étiquette QR sur un rayon, une main, un téléphone.
+  // Ni visage ni enseigne. Ce n'est pas une balise Quantinvo (elle n'a pas de
+  // numéro) : aucune légende ne la présente comme telle, et le titre de la
+  // page ne parle pas de numéro.
+  const photo = await capture('Photos-inventaire/IMG_4746.JPG', { left: 0, top: 0, width: 1264, height: 848 })
 
   // ════ 1. Couverture ════
   {
     const s = pres.addSlide()
     d.couverture(s, {
       sur: 'Guide de prise en main',
-      titre: 'Compter avec Quantinvo. Une demi-heure de lecture, puis on y va.',
-      sousTitre: "Pour les superviseurs, qui préparent et pilotent. Pour les compteurs, qui scannent. Les écrans de ce guide sont ceux de l'application, tels quels.",
-      bas: 'Devkaylab  ·  septembre 2026  ·  contact@quantinvo.com',
+      titre: 'Votre premier inventaire avec Quantinvo, étape par étape.',
+      sousTitre: 'Pour l’administrateur d’entreprise, les superviseurs et les compteurs.\nSur le site et dans l’application.',
+      bas: 'Devkaylab · septembre 2026 · contact@quantinvo.com',
     })
-    s.addNotes("Ce guide se remet au client après la signature, avec le plan de déploiement. La partie compteur tient en cinq pages : c'est voulu, elle peut être imprimée seule.")
   }
 
   // ════ 2. Trois rôles ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Avant de commencer')
-    d.titre(s, 'Trois rôles. Chacun voit ce qui le concerne, et rien d’autre.')
-    d.para(s, "Le rôle est fixé à l'invitation. Un compteur n'a pas accès au site ; un superviseur a les deux.", { x: M, y: 3.8, w: COL, h: 1.0, size: 12, italic: true, color: P.SLATE })
-    let y = 1.5
+    // Coupé à la main : en Archivo, « ce » restait en bout de ligne.
+    d.titre(s, 'Trois rôles. Chacun voit\nce qui le concerne.')
+    d.para(s, 'Le rôle se choisit à l’invitation. L’administrateur peut le changer ensuite.', {
+      x: M, y: 2.95, w: COL - 0.4, h: 1.0, size: 12.5, italic: true, color: P.SLATE,
+    })
     const roles = [
-      ["Administrateur d'entreprise", 'Sur le site', "Il voit tous les magasins, toutes les personnes et tous les inventaires de son entreprise. Il invite les superviseurs, ajoute et retire des comptes, lit le journal. C'est lui qu'on appelle quand quelqu'un arrive ou part."],
-      ['Superviseur', "Sur le site et dans l'application", "Il prépare l'inventaire (balises, fichiers, équipe), le suit pendant qu'il se déroule, arbitre les écarts et clôture. Il peut compter lui-même. Ce guide lui consacre sept pages."],
-      ['Compteur', "Dans l'application seulement", "Il ouvre l'inventaire sur son téléphone, scanne la balise du rayon, puis les articles. Il peut aussi auditer, c'est-à-dire recompter une zone déjà comptée par quelqu'un d'autre. Cinq pages lui suffisent."],
+      ['Administrateur d’entreprise', 'Site et application',
+        'Il ajoute les magasins et invite les superviseurs. Il voit toute l’entreprise : les personnes et les inventaires.'],
+      ['Superviseur', 'Site et application',
+        'Il prépare les inventaires de ses magasins et invite ses compteurs. Il suit le comptage, arbitre les écarts et télécharge le rapport.'],
+      ['Compteur', 'Application',
+        'Il scanne la balise d’un rayon, puis ses articles. Sur le site, il ne trouve que « Mon compte ».'],
     ]
-    for (const [h4, ou, txt] of roles) {
-      s.addText(h4, { x: RX, y, w: 4, h: 0.34, fontFace: FONTD, fontSize: 14, bold: true, color: P.INK, margin: 0 })
-      s.addText(ou, { x: RX + 4, y: y + 0.04, w: RW - 4, h: 0.3, fontFace: FONT, fontSize: 10.5, color: P.ACCENT, align: 'right', margin: 0 })
-      s.addText(txt, { x: RX, y: y + 0.4, w: RW, h: 1.0, fontFace: FONT, fontSize: 12, color: P.INK2, margin: 0, lineSpacingMultiple: 1.15 })
-      y += 1.55
-      d.filet(s, RX, y - 0.18, RW)
-    }
+    let y = 1.55
+    roles.forEach(([nom, lieu, texte], i) => {
+      s.addText(nom, { x: RX, y, w: 4.4, h: 0.34, fontFace: FONTD, fontSize: 14, bold: true, color: P.INK, margin: 0 })
+      s.addText(lieu, { x: RX + 4.4, y: y + 0.04, w: RW - 4.4, h: 0.3, fontFace: FONT, fontSize: 10.5, color: P.SLATE, align: 'right', margin: 0 })
+      s.addText(texte, { x: RX, y: y + 0.46, w: RW, h: 1.0, fontFace: FONT, fontSize: 13.5, color: P.INK2, margin: 0, lineSpacingMultiple: 1.18 })
+      y += 1.75
+      if (i < roles.length - 1) d.filet(s, RX, y - 0.22, RW)
+    })
     d.pied(s, 2, PIED)
-    s.addNotes("Un administrateur d'entreprise est aussi superviseur de tous les magasins. Dans une petite structure, c'est la même personne.")
   }
 
-  // ════ 3. Premier accès ════
+  // ════ 3. Le déroulé ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Avant de commencer')
-    d.titreLarge(s, 'Votre premier accès. Personne ne s’inscrit : on vous invite.')
-    await troisEcrans(s, [
-      { titre: '1 — L’e-mail, puis « Bienvenue »', texte: "Le lien est personnel. Vous vérifiez votre nom, puis choisissez un mot de passe de douze caractères.", ecran: 'bienvenue' },
-      { titre: '2 — L’application se connecte', texte: "Elle arrive par le catalogue de votre entreprise. Adresse e-mail et mot de passe, rien d'autre.", ecran: 'accueilCpt' },
-      { titre: '3 — Si vous le voulez, un second code', texte: "« Mon compte » active la double authentification. Sans code de secours : voyez votre administrateur.", ecran: 'compte' },
-    ])
+    d.titreLarge(s, 'Le déroulé, de l’accès à la clôture.')
+    d.para(s, 'Sauf mention contraire, le superviseur travaille au choix sur le site ou dans l’application.', {
+      x: M, y: 2.2, w: W - 2 * M, h: 0.4, size: 12, color: P.SLATE,
+    })
+    const etapes = [
+      ['Ouvrir l’accès, ajouter les magasins', 'Administrateur · site'],
+      ['Inviter l’équipe', 'Administrateur et superviseurs'],
+      ['Imprimer et coller les balises', 'Superviseur'],
+      ['Créer l’inventaire, affecter les balises', 'Superviseur'],
+      ['Importer les fichiers', 'Superviseur'],
+      ['Faire entrer l’équipe, puis commencer', 'Superviseur · « Commencer l’inventaire » sur le site'],
+      ['Compter', 'Compteurs · application'],
+      ['Suivre en direct', 'Superviseur · site'],
+      ['Auditer, puis arbitrer les écarts', 'Compteurs, puis superviseur'],
+      ['Télécharger le rapport, clôturer', 'Superviseur'],
+    ]
+    const y0 = 2.9, pas = 0.76, cw = (W - 2 * M) / 2 - 0.3
+    etapes.forEach(([etape, qui], i) => {
+      const col = i < 5 ? 0 : 1
+      const x = col ? W / 2 + 0.2 : M
+      const y = y0 + (i % 5) * pas
+      d.numero(s, i + 1, x, y + 0.02, 0.36, P.INK)
+      s.addText(etape, { x: x + 0.56, y, w: cw - 0.56, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: P.INK, margin: 0 })
+      s.addText(qui, { x: x + 0.56, y: y + 0.32, w: cw - 0.56, h: 0.26, fontFace: FONT, fontSize: 10.5, color: P.SLATE, margin: 0 })
+      if (i % 5 < 4) d.filet(s, x, y + pas - 0.1, cw)
+    })
     d.pied(s, 3, PIED)
-    s.addNotes("La règle de mot de passe est celle du serveur : inutile de la contourner, la saisie est refusée. Le dépannage d'un second facteur perdu passe par nous, via l'administrateur.")
   }
 
-  // ════ 4. Partie superviseur ════
+  // ════ 4. L'accès de l'administrateur ════
   {
     const s = pres.addSlide()
-    partie(s, '1', 'Préparer et piloter', "La partie du superviseur. Une fois pour toutes : les balises et l'équipe. Puis, à chaque inventaire : le créer, importer les fichiers, suivre, arbitrer, clôturer.", 'Superviseur')
+    d.entete(s, 'Administrateur d’entreprise · site')
+    d.titre(s, 'L’accès s’ouvre\nau paiement.')
+    d.encadre(s, 'Son espace, sur le site',
+      'Cinq onglets : Tableau de bord, Magasins, Équipe, Inventaires et Journal. Ce dernier garde la trace des invitations de superviseurs, des changements de rôle, des retraits et des suppressions.',
+      { x: M, y: 4.55, w: COL, h: 1.75 })
+    d.alineas(s, [
+      ['Sur devis.', 'L’entreprise et ses magasins sont créés dès le règlement. L’administrateur reçoit l’e-mail « Bienvenue sur Quantinvo ».'],
+      ['Un lien personnel.', 'Il ne sert qu’une fois. L’accès se crée comme pour toute personne invitée.'],
+      ['Protéger le compte.', 'La double authentification s’active dans « Mon compte ». Le site la conseille à l’administrateur.'],
+      ['Pour l’équipe.', 'Personne ne s’inscrit seul : chacun entre sur invitation.'],
+    ], { x: RX, y: 1.55, w: RW, h: 4.9, size: 14, gap: 20 })
     d.pied(s, 4, PIED)
   }
 
-  // ════ 5. Une fois pour toutes ════
+  // ════ 5. Ajouter un magasin ════
   {
     const s = pres.addSlide()
-    d.entete(s, 'Superviseur · une fois pour toutes')
-    d.titreLarge(s, 'Deux choses à faire une seule fois : les balises, l’équipe.')
-    await troisEcrans(s, [
-      { titre: 'La boîte à outils', texte: "Imprimez, collez, indiquez. C'est de là que part la planche d'étiquettes.", ecran: 'outils' },
-      { titre: 'Choisir la série, imprimer', texte: "Numérotation, premier numéro, nombre. Le PDF sort sur planche Avery L7160, 21 par page.", ecran: 'balises' },
-      { titre: 'Constituer son équipe', texte: "Prénom, nom, adresse. L'invitation part tout de suite.", ecran: 'membre' },
-    ])
+    d.entete(s, 'Administrateur d’entreprise · site')
+    d.titre(s, 'Ajouter un magasin, puis nommer qui le supervise.')
+    // L'encadré à gauche sous le titre, comme en page 4 : à droite sous les
+    // alinéas, il laissait vide toute la moitié gauche de la page.
+    d.encadre(s, 'Ce que couvre l’offre',
+      'Les comptes et les inventaires sont illimités. L’offre fixe le nombre d’appareils qui comptent en même temps dans le magasin.',
+      { x: M, y: 4.55, w: COL, h: 1.45 })
+    d.alineas(s, [
+      ['Onglet Magasins.', '« Ajouter un magasin » demande un nom, une adresse et le nombre d’appareils.'],
+      ['Le règlement.', '« Créer le magasin » ouvre le paiement, au mois ou à l’année. Le magasin n’existe qu’une fois réglé.'],
+      ['Un superviseur, tout de suite.', 'Une fenêtre propose d’en nommer un. C’est lui qui préparera les inventaires du magasin.'],
+      ['Changer d’offre.', 'Depuis la fiche du magasin.'],
+    ], { x: RX, y: 1.55, w: RW, h: 4.9, size: 14, gap: 20 })
     d.pied(s, 5, PIED)
-    s.addNotes("La planche se dessine sur l'appareil et part à l'impression : rien n'est enregistré côté serveur. Changer de téléphone n'invalide pas les balises déjà collées, il faut seulement réimprimer si on en veut d'autres.")
   }
 
-  // ════ 6. Coller les balises ════
+  // ════ 6. Inviter l'équipe ════
+  await pageTel(6, {
+    entete: 'Administrateur et superviseur',
+    titre: 'Inviter l’équipe.',
+    alineas: [
+      ['L’administrateur.', 'Dans Équipe, « + Ajouter une personne ». Il choisit compteur ou superviseur, puis les magasins.'],
+      ['Le superviseur.', 'Il ajoute ses compteurs depuis « Mon équipe ».'],
+      ['Le statut « Mot de passe à créer ».', 'La personne a reçu son lien, mais n’a pas encore choisi son mot de passe.'],
+      ['Retirer d’un magasin.', 'Elle perd l’accès aux inventaires de ce magasin, mais garde son compte.'],
+    ],
+    ecran: { fichier: 'ajouter-membre.png', coupe: 960 },
+  })
+
+  // ════ 7. La première connexion ════
+  await pageTel(7, {
+    entete: 'Chaque personne invitée',
+    titre: 'La première connexion part de l’e-mail reçu.',
+    alineas: [
+      ['Le lien.', 'Il ouvre « Finaliser mon compte ». On y vérifie son prénom et son nom.'],
+      ['Le mot de passe.', 'Douze caractères au moins, avec une minuscule, une majuscule, un chiffre et un symbole.'],
+      ['Le superviseur.', 'Il se connecte sur www.quantinvo.com ou dans l’application.'],
+      ['Le compteur.', 'Il installe l’application Quantinvo et s’y connecte avec l’adresse qui a reçu le lien.'],
+      ['Le premier écran.', 'À la première ouverture, l’application salue par le prénom et résume le rôle en trois lignes.'],
+    ],
+    ecran: { fichier: 'bienvenue-compteur.png', coupe: 820 },
+  })
+
+  // ════ 8. Créer les balises ════
+  await pageTel(8, {
+    entete: 'Superviseur · une fois pour toutes',
+    titre: 'Créer et imprimer les balises.',
+    alineas: [
+      ['Une balise.', 'Une étiquette QR numérotée, collée dans le magasin. Le compteur la scanne pour dire où il est.'],
+      ['Où la créer.', 'Dans la Boîte à outils.'],
+      ['Les réglages.', 'La numérotation, le premier numéro et le nombre de balises.'],
+      ['L’impression.', 'Un PDF pour planches Avery L7160, 21 étiquettes par planche. Imprimer à 100 %, sans « Ajuster à la page ».'],
+      ['La suite.', 'Pour d’autres balises, on indique comme premier numéro celui qui suit la dernière imprimée.'],
+    ],
+    ecran: { fichier: 'creer-balises.png', coupe: 990 },
+  })
+
+  // ════ 9. Coller les balises ════
   {
     const s = pres.addSlide()
     d.entete(s, 'Superviseur · une fois pour toutes')
-    d.titre(s, 'Où coller les balises, et combien.')
+    d.titre(s, 'Coller les balises,\nune par rayon.')
     d.alineas(s, [
-      ['Une par rayon,', "à hauteur d'yeux, au début du linéaire. Dans une réserve, une par travée ou par étagère."],
-      ['Dans l’ordre des numéros.', "C'est ce qui rend les plages lisibles : « Textile femme, 1 à 12 », « Réserve, 25 à 36 »."],
-      ['Trop plutôt que pas assez.', "Une zone trop grande se compte mal à deux, et l'audit devient un second inventaire complet. Une balise coûte une étiquette."],
-      ['Elles restent en place.', "Elles ne portent ni date ni inventaire : la même planche sert en janvier et en juin. On ne réimprime que pour agrandir la série."],
-    ], { x: M, y: 2.95, w: 7.9, h: 3.6, size: 12, gap: 11 })
-    const g = d.cadre(s, capSuivi, { x: RX - 0.6, y: 1.5, w: RW + 0.6 })
-    d.legende(s, "Une fois collées et affectées, les balises deviennent l'avancement que le superviseur suit sur le site.", { x: RX - 0.6, y: 1.5 + g.h + 0.15, w: RW + 0.6 })
-    d.pied(s, 6, PIED)
-    s.addNotes("La question qui revient : « combien de balises ? » Réponse de terrain : une par rayon, et on ne regrette jamais d'en avoir mis trop.")
-  }
-
-  // ════ 7. Créer et préparer ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Superviseur · à chaque inventaire')
-    d.titreLarge(s, 'Créer un inventaire prend une minute. Le préparer, dix.')
-    await troisEcrans(s, [
-      { titre: '1 — L’inventaire', texte: "Un nom, un magasin, un code d'accès. « Utiliser des zones » reste activé : c'est ce qui permet les balises.", ecran: 'nouvel' },
-      { titre: '2 — Les zones', texte: "Une plage par emplacement : « Textile femme, 1 à 12 ». Les compteurs verront ce nom en scannant.", ecran: 'zones' },
-      { titre: '3 — Les fichiers', texte: "Référentiel et stock théorique, en CSV ou Excel, tels qu'ils sortent de votre système.", ecran: 'importer' },
-    ])
-    d.pied(s, 7, PIED)
-    s.addNotes("Le code d'accès sert à faire entrer un renfort de dernière minute sans l'inviter nommément. Il s'affiche sur la fiche de l'inventaire, avec un bouton de partage.")
-  }
-
-  // ════ 8. Les fichiers ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Superviseur · à chaque inventaire')
-    d.titre(s, 'Deux fichiers, et ce que chacun change.')
-    d.alineas(s, [
-      ['Le référentiel articles.', "Code, libellé, prix d'achat. Il permet de reconnaître ce qu'on scanne : sans lui, chaque article scanné sort en « inconnu »."],
-      ['Le stock théorique.', "Code et quantité attendue. C'est lui qui permet de calculer les écarts — et de révéler la démarque."],
-      ['Ce que le second change.', "Avec lui, le rapport part de l'attendu : un article jamais scanné apparaît « Non compté », avec son manque. Sans lui, le rapport ne montre que ce qui a été compté."],
-    ], { x: M, y: 2.95, w: 7.9, h: 3.0, size: 12, gap: 11 })
-    d.encadre(s, 'Vos colonnes sont reconnues', "SKU, Code article, Référence · EAN, Code-barres, GTIN, Gencod · Quantité, Qté, Stock. Majuscules, accents et séparateurs n'ont pas d'importance. Si une colonne manque, l'écran le dit avant d'importer.", { x: M, y: 6.05, w: COL + 0.6, h: 0.95, size: 10.5 })
-    const g = d.cadre(s, capRapport, { x: RX, y: 1.5, w: RW, h: 5.0 })
-    d.legende(s, "Le rapport, sur le site : la ligne « Non compté » n'existe que si le stock théorique a été importé.", { x: RX, y: 1.5 + g.h + 0.15, w: RW })
-    d.pied(s, 8, PIED)
-    s.addNotes("Le message clé : on n'a pas à retravailler ses fichiers. Le second : le stock théorique est ce qui fait foi pour le rapport.")
-  }
-
-  // ════ 9. Pendant ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Superviseur · pendant')
-    d.titreLarge(s, 'Pendant l’inventaire, deux écrans et un geste.')
-    await troisEcrans(s, [
-      { titre: 'La progression, en un chiffre', texte: "Comptées, auditées, et ce qui reste. Le bandeau ambre mène aux emplacements concernés.", ecran: 'inventaireSup' },
-      { titre: 'La fiche de l’inventaire', texte: "Numéro, code d'accès et partage, membres. Le bouton « i » l'ouvre de n'importe où.", ecran: 'fiche' },
-      { titre: 'Qui est dans l’équipe', texte: "« Mot de passe à créer » veut dire : invitée, pas encore connectée. C'est un état, pas une erreur.", ecran: 'equipe' },
-    ])
+      ['Dans l’ordre des numéros.', 'Une suite par emplacement. Par exemple, 1000 à 1049 en surface de vente.'],
+      ['Seulement un numéro.', 'Le code QR ne porte ni date ni inventaire. Les balises peuvent donc rester en place.'],
+    ], { x: M, y: 2.95, w: COL - 0.3, h: 3.0, size: 14, gap: 18 })
+    cadreJuste(s, photo, { x: RX, y: 1.5, w: RW, h: 4.9 })
     d.pied(s, 9, PIED)
-    s.addNotes("Le suivi est agrégé par construction. Si un compteur demande « est-ce qu'on me voit ? », la réponse est : on voit qu'un appareil compte, pas lequel.")
   }
 
-  // ════ 10. Les écarts ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Superviseur · pendant et après')
-    d.titreLarge(s, "Auditer, puis arbitrer. L'écart se règle à chaud.")
-    d.para(s, "L'audit est un second comptage d'une zone déjà comptée, par une autre personne. Quand la balise auditée est clôturée, chaque article dont les deux quantités diffèrent apparaît ici. Vous retenez la quantité du compteur, celle de l'auditeur, ou une troisième que vous avez vérifiée vous-même.", { x: M, y: 2.3, w: W - 2 * M, h: 0.85, size: 12.5 })
-    const g = d.cadre(s, capEcarts, { x: M + 1.6, y: 3.25, w: W - 2 * M - 3.2 })
-    d.legende(s, "Onglet Écarts d'audit. Tant qu'un écart n'est pas arbitré, c'est la quantité de l'auditeur qui part au rapport.", { x: M + 1.6, y: 3.25 + g.h + 0.15, w: RW + 2 })
-    d.pied(s, 10, PIED)
-    s.addNotes("La comparaison n'a lieu que dans une balise dont l'audit est clôturé : sinon tout article pas encore repassé ressortirait à tort en écart.")
-  }
+  // ════ 10. Créer l'inventaire ════
+  await pageTel(10, {
+    entete: 'Superviseur · à chaque inventaire',
+    titre: 'Créer l’inventaire et son code d’accès.',
+    alineas: [
+      ['« + Nouvel inventaire ».', 'Sur le tableau de bord du site ou l’accueil de l’application.'],
+      ['Le nom.', 'Il sert à retrouver l’inventaire. Le N° d’inventaire est généré automatiquement.'],
+      // Le site dit « Code d'accès », l'application « Code inventaire » : le
+      // lien se fait ici, une fois pour toutes (pages 13 et 15).
+      ['Le code d’accès.', '« Code inventaire » dans l’application. Quatre caractères au moins. « Générer » en propose un.'],
+      ['Avec ou sans balises.', 'Avec, plusieurs personnes comptent en parallèle. L’avancement se lit par rayon. Sans, on scanne directement les articles.'],
+      ['À la création seulement.', 'Ce choix ne se change plus ensuite.'],
+    ],
+    ecran: { fichier: 'nouvel-inventaire.png', legende: 'Nouvel inventaire,\ndans l’application.' },
+  })
 
-  // ════ 11. Clôturer ════
+  // ════ 11. Affecter les balises ════
+  // Pleine largeur, sans légende : l'alinéa du milieu dit déjà où l'on est.
+  // ⚠️ Sous la capture, les alinéas n'ont qu'un pouce : une légende ou un
+  // alinéa de plus les pousse sur le pied (vu en page 14).
+  pageLarge(11, {
+    entete: 'Superviseur · à chaque inventaire',
+    titre: 'Affecter les balises aux emplacements.',
+    colonnes: [
+      [['Une plage.', 'Elle relie une suite de balises à un emplacement : 1050 à 1069, la réserve.']],
+      [['Onglet Set up, « Zone de comptage ».', 'Une question d’abord : « Avez-vous vos balises ? » Si non, le volet propose d’en imprimer une planche.']],
+      [['Affecter une plage.', 'Un emplacement, une balise de début, une balise de fin. « Une seule balise » rattache une étiquette isolée.']],
+    ],
+    cap: capZones,
+  })
+
+  // ════ 12. Importer les fichiers ════
+  pageSite(12, {
+    entete: 'Superviseur · à chaque inventaire',
+    titre: 'Importer le référentiel articles et le stock théorique.',
+    alineas: [
+      ['Le référentiel articles, requis.', 'Il relie chaque code à un libellé. Sans lui, tout scan ressort en « article inconnu ».'],
+      ['Le stock théorique, optionnel.', 'Il donne les quantités attendues. Lui seul fait apparaître l’écart entre compté et attendu.'],
+      ['CSV ou Excel, sans retouche.', 'Les en-têtes courants sont reconnus : SKU ou Code article, Code-barres ou EAN, Libellé ou Désignation, Quantité ou Qté.'],
+      ['Des modèles.', 'La Boîte à outils du site fournit les deux fichiers, colonnes nommées et codes au format Texte.'],
+    ],
+    cap: capFichiers,
+    legende: 'Onglet Set up, « Données d’inventaire » : les deux fichiers chargés, puis les colonnes du référentiel.',
+  })
+
+  // ════ 13. Faire entrer l'équipe ════
+  pageSite(13, {
+    entete: 'Superviseur · à chaque inventaire',
+    titre: 'Faire entrer l’équipe dans l’inventaire.',
+    alineas: [
+      ['« Ajouter quelqu’un à cet inventaire ».', 'Dans l’onglet Équipe, parmi les personnes du magasin. Elle entre comme compteur ou co-superviseur.'],
+      ['Un e-mail la prévient.', 'Son téléphone aussi, si les notifications sont activées.'],
+      ['Sans l’ajouter.', 'Le N° d’inventaire et le code d’accès suffisent pour rejoindre l’inventaire depuis l’application.'],
+      ['Depuis le téléphone.', 'Fiche de l’inventaire, « Partager les identifiants ».'],
+    ],
+    cap: capEquipe,
+    legende: 'Onglet Équipe : les identifiants à communiquer, puis les membres.',
+  })
+
+  // ════ 14. Commencer l'inventaire ════
+  // ⚠️ Le bouton du même nom, dans l'application, ne change PAS le statut
+  // (src/lib/tunnel.ts : il fait comme « Plus tard »). Défaut du produit
+  // signalé à Julien. La page le dit en CONSIGNE (« Toujours depuis le
+  // site ») : écrit « le bouton de l'application ne change pas le statut »,
+  // un client y lisait l'aveu d'un bouton qui ne sert à rien. Le jour où il
+  // est corrigé, « Toujours » tombe.
+  // Le démarrage emmène sur Suivi (SetupTab.tsx, Demarrage) ; la capture
+  // montre Set up pour qui y revient, d'où « Suivre l'avancement ».
+  pageLarge(14, {
+    entete: 'Superviseur · à chaque inventaire',
+    titre: '« Commencer l’inventaire » termine la préparation.',
+    colonnes: [
+      [
+        ['Toujours depuis le site.', 'Dans l’onglet Set up, le bouton s’active dès que le référentiel articles est chargé.'],
+        ['Ce qu’il signale.', 'L’équipe peut compter. Le statut passe de « Ouverte » à « En cours ».'],
+      ],
+      [
+        ['Ensuite.', 'Le site ouvre l’onglet Suivi. Depuis Set up, « Suivre l’avancement » y ramène.'],
+        ['Rien n’est figé.', 'En cours de comptage, un fichier se remplace et une plage de balises se réaffecte.'],
+      ],
+    ],
+    // Sans légende, comme la page 11 : la capture dit déjà « L'inventaire
+    // est en cours » et « PRÊT », et la légende poussait les alinéas sur le
+    // pied de page.
+    cap: capSetup,
+  })
+
+  // ════ 15. Retrouver son inventaire ════
+  await pageTel(15, {
+    entete: 'Compteur · application',
+    titre: 'Retrouver ou rejoindre son inventaire.',
+    alineas: [
+      ['On l’a ajouté.', 'L’inventaire est dans « Mes inventaires ». Il suffit de le toucher.'],
+      ['On lui a donné les identifiants.', 'Il les saisit sous « Rejoindre un autre inventaire ».'],
+      ['La liste est vide.', 'Il sera prévenu dès que le superviseur l’ajoutera.'],
+      ['Quitter.', 'L’inventaire sort de sa liste. Ce qu’il a compté reste enregistré.'],
+    ],
+    ecran: { fichier: 'accueil-compteur.png', coupe: 1000 },
+  })
+
+  // ════ 16. La balise d'abord ════
+  await pageTel(16, {
+    entete: 'Compteur · application',
+    titre: 'D’abord, la balise du rayon.',
+    alineas: [
+      ['Scanner l’étiquette.', 'Le code QR se lit à la caméra. On peut aussi saisir le numéro, puis toucher « Ouvrir ».'],
+      ['La zone s’ouvre.', 'Un bandeau l’indique, avec l’emplacement et le numéro. Les articles scannés ensuite y sont comptés.'],
+      ['Aucune photo.', 'La caméra lit les codes. Elle n’enregistre aucune image.'],
+      ['Trop sombre ?', 'La lampe s’allume depuis l’écran.'],
+    ],
+    ecran: { fichier: 'scanner-balise.png', coupe: 770 },
+  })
+
+  // ════ 17. Les articles ════
+  await pageTel(17, {
+    entete: 'Compteur · application',
+    titre: 'Puis les articles :\nchaque lecture ajoute une pièce.',
+    alineas: [
+      ['Le mode de scan.', 'La caméra, la saisie manuelle ou une douchette Bluetooth appairée au téléphone.'],
+      ['Le choix, en haut de l’écran.', 'Il reste le même pour tout le comptage. La douchette va bien plus vite sur un gros rayon.'],
+      // Un seul alinéa pour + et − : deux disaient la même chose.
+      ['Corriger une quantité.', 'Dans la liste des articles scannés, + ajoute une pièce, − en retire une. Rien n’est effacé : chaque correction est une ligne de plus.'],
+    ],
+    ecran: { fichier: 'comptage.png', legende: 'L’écran de comptage,\nbalise 1000 ouverte.' },
+  })
+
+  // ════ 18. Clôturer la balise ════
+  await pageTel(18, {
+    entete: 'Compteur · application',
+    titre: 'Le rayon est fini : clôturer la balise.',
+    alineas: [
+      ['Le bouton rouge.', '« Clôturer la balise », sous la liste des articles scannés.'],
+      ['Rien à envoyer.', 'Avec du réseau, le superviseur voit déjà les pièces.'],
+      ['Un bilan, la première fois.', 'Les pièces et les références de la balise s’affichent.'],
+      ['Au rayon suivant.', 'Toucher « Balise suivante », puis scanner son étiquette.'],
+    ],
+    ecran: { fichier: 'balise-terminee.png', legende: 'Première balise terminée :\nle bilan du rayon.' },
+  })
+
+  // ════ 19. Revenir sur une balise ════
   {
     const s = pres.addSlide()
-    d.entete(s, 'Superviseur · après')
-    d.titre(s, 'Le rapport, puis la clôture.')
+    d.entete(s, 'Compteur · application')
+    d.titre(s, 'Revenir sur une balise\ndéjà comptée.')
+    // L'encadré à gauche sous le titre (comme pages 4 et 5), et c'est LUI qui
+    // dit l'effet de « Recompter à zéro » : l'alinéa le répétait.
+    d.encadre(s, 'Annuler ou recompter',
+      '« Annuler le comptage » défait seulement ce qu’a scanné ce téléphone. « Recompter à zéro » vide la balise pour toute l’équipe.',
+      { x: M, y: 4.55, w: COL, h: 1.45 })
     d.alineas(s, [
-      ['Télécharger.', "Un fichier Excel : résultats par article, écarts en pièces et en valeur d'achat, détail par zone. La quantité retenue suit une règle simple — l'arbitrage, sinon l'auditeur, sinon le compteur."],
-      ['Regarder « Non compté » d’abord.', "Ce sont les articles attendus que personne n'a scannés. C'est là que se lit la démarque."],
-      ['Clôturer.', "Plus aucun scan n'est accepté, le rapport ne bouge plus. Tout superviseur de l'inventaire peut clôturer ; seul son créateur, ou l'administrateur d'entreprise, peut le rouvrir ou le supprimer."],
-      ['Supprimer.', "Efface comptages, fichiers, audits et membres. La confirmation nomme l'inventaire ; lisez-la."],
-    ], { x: M, y: 2.95, w: 7.9, h: 3.6, size: 12, gap: 11 })
-    await grandEcran(s, {
-      titre: 'Les gestes de fin',
-      texte: "Écarts, rapport, clôture, suppression : tous sur la même page, dans cet ordre.",
-      ecran: 'inventaireSup',
-    })
-    d.pied(s, 11, PIED)
-    s.addNotes("Tant qu'un écart n'est pas arbitré, le rapport l'annonce en bandeau. Trancher avant d'exporter.")
+      ['Rouvrir.', 'La liste « Revenir sur une balise » reprend les balises terminées. Scanner à nouveau l’étiquette a le même effet.'],
+      ['L’écran fait le point.', 'Il affiche les pièces enregistrées, puis propose deux choix.'],
+      ['Compléter le comptage.', 'Les pièces restent et les nouvelles s’ajoutent. La liste des articles déjà comptés s’ouvre, pour ne rien scanner deux fois.'],
+      ['Recompter à zéro.', 'Une seconde confirmation est demandée.'],
+      // Pas de « peut-être » : la ligne se coupait à son trait d'union, et
+      // Public Sans n'a pas de trait d'union insécable (U+2011).
+      ['Une balise non clôturée.', 'L’écran prévient : quelqu’un pourrait encore être dessus.'],
+    ], { x: RX, y: 1.55, w: RW, h: 4.9, size: 14, gap: 16 })
+    d.pied(s, 19, PIED)
   }
 
-  // ════ 12. Partie compteur ════
-  {
-    const s = pres.addSlide()
-    partie(s, '2', 'Compter', "La partie du compteur. Cinq pages, à imprimer seules si on veut : rejoindre, les trois gestes, l'audit, et quoi faire quand quelque chose ne se passe pas comme prévu.", 'Compteur')
-    d.pied(s, 12, PIED)
-  }
+  // ════ 20. Les imprévus ════
+  await pageTel(20, {
+    entete: 'Compteur · application',
+    titre: 'Ce que l’écran propose en cas d’imprévu.',
+    alineas: [
+      ['« Balise hors plage ».', 'Son numéro n’est dans aucune plage de l’inventaire. « Ajouter » permet de compter aussitôt. Le superviseur lui donnera un emplacement.'],
+      ['« Article inconnu ».', 'Le code n’est pas dans le référentiel articles. On l’ajoute, avec un prix d’achat à 0 €.'],
+      ['Tous les appareils sont pris.', 'Le comptage attend. L’écran se débloque seul dès qu’une place se libère.'],
+    ],
+    // Légende sur deux lignes : le téléphone raccourcit pour lui laisser la place.
+    ecran: { fichier: 'balise-hors-plage.png', h: 4.6, legende: '« Balise hors plage » :\n« Ajouter » pour compter\ntout de suite.' },
+  })
 
-  // ════ 13. Rejoindre ════
+  // ════ 21. Sans réseau ════
+  await pageTel(21, {
+    entete: 'Compteur · application',
+    titre: 'Compter sans réseau.',
+    alineas: [
+      // Le libellé du bandeau, tel qu'à l'écran (OfflineTopBanner.tsx), sans
+      // point. ⚠️ Espaces FINES autour du tiret : en Public Sans, le tiret
+      // est court et large d'approches, et l'espace insécable ordinaire
+      // faisait une incise trouée.
+      ['Un bandeau prévient.', `« Hors ligne${FINE}—${FINE}le comptage continue ». Les scans attendent sur le téléphone.`],
+      ['L’envoi est automatique.', 'Tout part dès que la connexion revient.'],
+      ['« Balises comptées » et « En attente ».', 'La première liste vient du serveur : ce travail est enregistré. La seconde est encore sur le téléphone.'],
+      ['Avant de quitter le magasin.', 'Retrouver du réseau, puis vérifier que « En attente » est vide.'],
+      ['Ce qui demande le réseau.', 'Annuler un comptage et recompter à zéro. Une balise hors plage ne se signale qu’en ligne.'],
+    ],
+    // ⚠️ La capture ne montre que « Balises comptées », pas le bandeau hors
+    // ligne ni « En attente » : le téléphone entier et sa légende disent ce
+    // qu'on voit. Le jour où une capture en mode avion existe, elle la
+    // remplace.
+    ecran: { fichier: 'balises-comptees-detail.png', legende: '« Balises comptées » :\nce qui est déjà sur le serveur.' },
+  })
+
+  // ════ 22. Le suivi ════
+  pageSite(22, {
+    entete: 'Superviseur · pendant le comptage',
+    titre: 'Le suivi en direct, sur le site.',
+    alineas: [
+      ['La progression.', 'La part des balises comptées, puis auditées, et ce qui reste à compter.'],
+      ['L’avancement par zone.', 'Une ligne par emplacement. Un clic montre ses balises, un second leur contenu.'],
+      ['Les derniers scans.', 'Chaque lecture s’affiche aussitôt, marquée comptage ou audit.'],
+      ['Des appareils, pas des personnes.', 'Le suivi affiche le nombre d’appareils connectés. Aucun nom n’apparaît.'],
+      ['Une balise laissée ouverte.', 'Le site permet de la marquer comptée, sans passer par le téléphone.'],
+    ],
+    // Le volet fait toute la largeur de l'écran : la colonne de texte se
+    // resserre pour que la capture gagne un pouce et se lise.
+    col: 3.8,
+    size: 12.5,
+    cap: capSuivi,
+    legende: 'Onglet Suivi : appareils connectés, pièces comptées, avancement par zone, derniers scans.',
+  })
+
+  // ════ 23. L'audit ════
+  await pageTel(23, {
+    entete: 'Compteur · application',
+    titre: 'L’audit : un second comptage, pour vérifier.',
+    alineas: [
+      ['Sur demande.', 'On recompte un rayon déjà compté. Le superviseur dit quand.'],
+      ['« Auditer des articles ».', 'L’en-tête passe au jaune. Puis les mêmes gestes : la balise, les articles, la clôture.'],
+      // Ce que dit BaliseDetail.tsx sur le site (« pas encore vu » / « pas
+      // trouvé »), traduit pour un compteur, qui ne voit pas cet écran.
+      ['Après la clôture de l’audit.', 'L’écart de la balise se calcule à ce moment-là. Avant, un article pas encore audité passerait pour manquant.'],
+    ],
+    ecran: { fichier: 'inventaire-compteur.png', legende: '« Ma progression » :\ncompter ou auditer.' },
+  })
+
+  // ════ 24. Arbitrer ════
+  pageSite(24, {
+    entete: 'Superviseur · après l’audit',
+    titre: 'Arbitrer les écarts entre comptage et audit.',
+    alineas: [
+      ['Onglet Écarts d’audit.', 'Chaque article dont les deux quantités diffèrent, rangé par balise.'],
+      ['Le calcul.', 'Quantité de l’auditeur moins celle du compteur.'],
+      ['Pour chaque ligne.', 'Un clic retient la quantité du compteur ou de l’auditeur. Une autre quantité se saisit, puis « Retenir ».'],
+      ['Une décision qui tient.', 'Un nouveau comptage n’écrase pas un arbitrage. « Annuler l’arbitrage » la remet en écart.'],
+    ],
+    cap: capEcarts,
+    legende: 'Onglet Écarts d’audit : trois écarts à traiter.',
+  })
+
+  // ════ 25. Le rapport ════
+  pageSite(25, {
+    entete: 'Superviseur · pour finir',
+    titre: 'Le rapport, puis le fichier Excel.',
+    alineas: [
+      ['Quatre totaux.', 'Stock théorique, stock compté, écart en unités, écart en valeur d’achat.'],
+      ['Une ligne par article.', 'Théorique, compté, écart, valeur et statut. La recherche prend un libellé, un SKU ou un EAN.'],
+      ['« Non compté ».', 'Un article attendu que personne n’a scanné. Ce statut n’existe qu’avec le stock théorique.'],
+      ['La quantité retenue.', 'L’arbitrage, sinon l’auditeur, sinon le compteur.'],
+      ['« Télécharger ».', 'Un fichier Excel à deux feuilles : « Écarts » et « Détail par zone ». L’application exporte le même fichier.'],
+    ],
+    cap: capRapport,
+    legende: 'Onglet Rapport : les totaux, puis le détail par article.',
+  })
+
+  // ════ 26. Clôturer ════
   {
     const s = pres.addSlide()
-    d.entete(s, 'Compteur')
-    d.titre(s, "Rejoindre un inventaire. La première façon suffit presque toujours.")
+    d.entete(s, 'Superviseur · pour finir')
+    d.titre(s, 'Clôturer : l’inventaire\npasse en lecture seule.')
+    // Le seul usage de l'accent du deck.
+    d.chiffre(s, '12 mois', 'après la clôture, l’inventaire est archivé. Le détail des scans s’efface ; le rapport et les écarts restent.', { x: M, y: 3.55, w: COL - 0.4 })
+    // Quatre alinéas, pas cinq : à 11,5 pt la colonne détonnait, et « Eux
+    // seuls », « Les mêmes » renvoyaient trois lignes plus haut.
     d.alineas(s, [
-      ['On vous a ajouté.', "L'inventaire est dans « Mes inventaires » dès l'ouverture de l'application, et vous avez reçu une notification. Touchez-le."],
-      ['On vous a donné un numéro et un code.', "Le formulaire du bas : le numéro (INV-…), le code. C'est le cas d'un renfort de dernière minute."],
-      ['Ensuite.', "L'écran de l'inventaire propose « Compter des articles », « Auditer des articles », et « Quitter l'inventaire ». Quitter ne supprime rien de ce que vous avez compté."],
-    ], { x: M, y: 2.95, w: 7.9, h: 3.2, size: 12, gap: 11 })
-    await grandEcran(s, {
-      titre: 'Votre accueil',
-      texte: "Les inventaires où vous êtes attendu, et la porte d'entrée pour les autres.",
-      ecran: 'accueilCpt',
-    })
-    d.pied(s, 13, PIED)
-    s.addNotes("Le numéro et le code sont affichés sur la fiche de l'inventaire côté superviseur, avec un bouton « Partager les identifiants ».")
+      ['Qui clôture.', 'Le créateur de l’inventaire ou l’administrateur d’entreprise. Eux seuls le voient ensuite.'],
+      ['Ce qui change.', 'Plus aucun scan n’est accepté, même d’un téléphone resté ouvert.'],
+      ['Avant de confirmer.', 'L’application dit combien de balises n’ont pas été comptées. Elles vaudront zéro dans le rapport.'],
+      ['Rouvrir ou supprimer.', 'Ils peuvent le rouvrir tant qu’il n’est pas archivé. La suppression efface tout, sans retour.'],
+    ], { x: RX - 0.3, y: 1.55, w: 4.4, h: 5.1, size: 12.5, gap: 12 })
+    await telEntier(s, 'inventaire-superviseur.png', 'La fiche de l’inventaire,\ncôté superviseur.')
+    d.pied(s, 26, PIED)
   }
 
-  // ════ 14. Trois gestes ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Compteur')
-    d.titreLarge(s, 'Compter, en trois gestes. Puis la balise suivante.')
-    let y = 2.35
-    const gestes = [
-      ['Scannez la balise du rayon', "Elle ouvre la zone. Tant qu'elle est ouverte, tout ce que vous scannez compte ici. Vous pouvez aussi saisir son numéro au clavier."],
-      ['Scannez les articles', "Le scan est automatique. Un article scanné trois fois compte trois ; pour une pile, scannez une fois et ajustez avec + et −. Pas de code lisible ? L'onglet « Manuel »."],
-      ['Clôturez la balise', "Le bouton rouge, en haut de l'écran ou en bas de la liste. Il dit « j'ai fini ici » : la zone passe en comptée chez le superviseur, et vous passez au rayon suivant."],
-    ]
-    gestes.forEach(([h4, txt], i) => {
-      d.numero(s, i + 1, M, y + 0.02, 0.4)
-      s.addText(h4, { x: M + 0.56, y, w: 6.4, h: 0.36, fontFace: FONTD, fontSize: 15, bold: true, color: P.DEEP, margin: 0 })
-      s.addText(txt, { x: M + 0.56, y: y + 0.4, w: 6.4, h: 0.9, fontFace: FONT, fontSize: 11.5, color: P.INK2, margin: 0, lineSpacingMultiple: 1.15 })
-      y += 1.45
-    })
-    // Un seul écran porte les trois gestes : la balise ouverte en haut, la
-    // liste au milieu, la clôture en bas. Entier, donc, plutôt que débordant.
-    await ecranEntier(s, { ecran: 'comptage', legende: "L'écran de comptage, balise 6 ouverte." })
-    d.pied(s, 14, PIED)
-    s.addNotes("Le geste qu'on oublie le plus : clôturer la balise. Sans lui, la zone reste « en cours » sur le tableau de bord et l'audit ne peut pas se comparer.")
-  }
+  // ════ 27. Mon compte ════
+  // ⚠️ La capture mon-compte.png date du 9 septembre : la ligne « Langue »
+  // (ajoutée le 11) n'y figure pas. Le texte n'en parle donc pas ; le jour où
+  // la capture est reprise, l'alinéa peut revenir.
+  await pageTel(27, {
+    entete: 'Pour tous',
+    titre: 'Ce que contient « Mon compte ».',
+    alineas: [
+      ['Mon profil.', 'Le nom, le mot de passe, la double authentification.'],
+      ['Télécharger mes données.', 'Profil, inventaires, invitations et demandes, dans un fichier lisible.'],
+      ['Revoir les repères.', 'Les explications du premier passage reviennent une fois, sur ce téléphone.'],
+      // La suppression est DANS « Mon profil » (src/app/(compte)/profile.tsx),
+      // pas une entrée de « Mon compte » : la capture en montre quatre.
+      ['Supprimer mon compte.', 'Dans « Mon profil ». Une demande part. Après traitement, le compte est supprimé. Ses comptages restent, anonymisés.'],
+    ],
+    ecran: { fichier: 'mon-compte.png', coupe: 1000 },
+  })
 
-  // ════ 14 bis. La balise est finie ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Compteur')
-    d.titre(s, 'Ce que vous voyez quand une balise est finie.')
-    d.alineas(s, [
-      ['Les chiffres, tout de suite.', "Pièces et références de la balise que vous venez de fermer. C'est la vérification la plus simple : si le compte vous surprend, vous rouvrez la balise et vous revoyez le rayon."],
-      ['« déjà sur le tableau de bord ».', "La phrase est là pour ça : ce que vous venez de compter est parti. Le superviseur n'a rien à demander."],
-      ['Puis la suivante.', "L'écran revient de lui-même sur la lecture de balise. Vous marchez jusqu'au rayon d'après et vous scannez."],
-    ], { x: M, y: 3.0, w: 7.9, h: 3.4, size: 12, gap: 11 })
-    await ecranEntier(s, { ecran: 'terminee', legende: "La feuille de fin de balise." })
-    d.pied(s, 15, PIED)
-    s.addNotes("Cette feuille n'apparaît qu'à la première clôture, par appareil et par personne : c'est un repère, pas une confirmation à chaque fois.")
-  }
-
-  // ════ 15. L'audit ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Compteur')
-    d.titre(s, 'Auditer : les mêmes gestes, en ambre.')
-    d.alineas(s, [
-      ["C'est un second passage.", "Vous recomptez une zone que quelqu'un d'autre a déjà comptée. Le superviseur vous dit laquelle et quand."],
-      ["L'écran change de couleur.", "Ambre au lieu de violet, du bandeau au bouton. C'est le seul repère dont on a besoin pour savoir dans quel passage on est."],
-      ['Vous ne voyez pas le premier comptage.', "Et c'est voulu : un second comptage influencé ne vérifie rien. L'écart se calcule après, sur le tableau de bord."],
-      ['Vous clôturez pareil.', "La balise passe en auditée, et les articles dont les deux comptages diffèrent remontent au superviseur."],
-    ], { x: M, y: 2.95, w: 7.9, h: 3.6, size: 12, gap: 11 })
-    await grandEcran(s, {
-      titre: "L'écran d'audit",
-      texte: "Même disposition, même bouton de clôture — seule la couleur dit le passage.",
-      ecran: 'audit', fill: 'FDF3E0',
-    })
-    d.pied(s, 16, PIED)
-    s.addNotes("Le point à dire à voix haute avant un audit : ne pas montrer le premier comptage à l'auditeur. C'est ce qui fait qu'un écart veut dire quelque chose.")
-  }
-
-  // ════ 16. Vérifier ce qui est parti ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Compteur')
-    d.titreLarge(s, 'Vérifier que tout est bien parti.')
-    await troisEcrans(s, [
-      { titre: 'Vos totaux, en haut', texte: "Pièces comptées et auditées, à jour à chaque retour du scanner. Si le chiffre bouge, c'est arrivé.", ecran: 'inventaireCpt' },
-      { titre: 'Le détail, balise par balise', texte: "Touchez une balise : les articles, leur code, leur quantité, telles qu'elles sont arrivées.", ecran: 'detail' },
-      { titre: 'Hors ligne, rien n’est perdu', texte: "En réserve, les scans attendent sur l'appareil et partent seuls au retour du réseau.", ecran: 'scanBalise' },
-    ])
-    d.pied(s, 17, PIED)
-    s.addNotes("Insister : ne pas désinstaller l'application et ne pas laisser effacer le téléphone tant que le bandeau signale des balises en attente. C'est le seul moyen de perdre du travail.")
-  }
-
-  // ════ 17. Quand ça coince ════
-  {
-    const s = pres.addSlide()
-    d.entete(s, 'Compteur')
-    d.titre(s, 'Quand ça ne se passe pas comme prévu.')
-    let y = 2.9
-    const cas = [
-      ['« Balise hors plage »', "Le numéro n'est dans aucune plage. Si l'étiquette est bien collée dans ce magasin, touchez « Ajouter » : la zone est créée, le superviseur la nommera. Sinon, vérifiez le numéro."],
-      ['« Article inconnu »', "Il n'est pas dans le référentiel. Ajoutez-le avec un libellé : il entrera dans le rapport avec un prix d'achat à zéro, que le superviseur complétera."],
-      ['Plus de réseau', "Continuez à compter. Tout part au retour du réseau. Ne désinstallez pas l'application, et ne laissez pas effacer le téléphone avant que ce soit parti."],
-      ['Vous changez de téléphone', "Reconnectez-vous : ce qui est déjà parti est sur le serveur. Ce qui attendait sur l'ancien partira quand il retrouvera du réseau."],
-    ]
-    for (const [h4, txt] of cas) {
-      s.addText(h4, { x: M, y, w: 7.9, h: 0.4, fontFace: FONTD, fontSize: 13, bold: true, color: P.INK, margin: 0 })
-      s.addText(txt, { x: M, y: y + 0.36, w: 7.9, h: 0.75, fontFace: FONT, fontSize: 11, color: P.INK2, margin: 0, lineSpacingMultiple: 1.12 })
-      y += 1.02
-    }
-    await grandEcran(s, {
-      titre: 'Une balise inconnue se rattrape',
-      texte: "L'alerte ne bloque pas : elle propose d'ajouter la balise et de compter tout de suite.",
-      ecran: 'horsPlage',
-    })
-    d.pied(s, 18, PIED)
-    s.addNotes("Hors ligne, l'ajout d'une balise inconnue n'est pas proposé : l'échec se découvre à la synchronisation. À dire si le magasin travaille en zone sans réseau.")
-  }
-
-  // ════ 18. Le matin de l'inventaire ════
+  // ════ 28. Finale ════
   {
     const s = pres.addSlide()
     d.finale(s, {
-      titre: "Le matin de l'inventaire.",
-      texte: "Les balises sont collées et affectées. Les deux fichiers sont importés. L'équipe est invitée et chacun s'est connecté une fois. Les téléphones sont chargés, le réseau a été essayé en réserve. Le superviseur a le tableau de bord ouvert. On peut compter.",
+      titre: 'À vérifier la veille de l’inventaire.',
+      texte: 'Les balises sont collées et affectées. Les fichiers sont importés. Chaque compteur s’est connecté une fois. Il ne reste qu’à commencer.',
       contact: 'Une question : contact@quantinvo.com',
-      bas: 'Quantinvo, par Devkaylab. L’outil d’inventaire pour le commerce.',
+      bas: 'Les écrans de l’application se revoient sur le site : Boîte à outils, « Prise en main de l’application ».',
     })
-    s.addNotes("La liste à lire à voix haute la veille. Si un point manque, c'est celui-là qui fera perdre une heure le lendemain.")
   }
 
   await ecrire(pres, 'Quantinvo-prise-en-main')

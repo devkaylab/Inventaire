@@ -1,5 +1,43 @@
 # Les présentations Quantinvo
 
+## ⚠️ Les trois decks en service (19 septembre 2026)
+
+Julien a supprimé tous les anciens `.pptx` (« trop anciens ») et demandé trois
+decks neufs, **inspirés des pages du site**, en phrases courtes, sans terme
+inventé ni répétition, et **sans signe ni mot coupé en début de ligne**.
+
+| Script | Fichier produit | Pour qui | Pages |
+|---|---|---|---|
+| `build-commercial.js` | `Quantinvo-commercial.pptx` | Direction, contrôle de gestion, achats : l'inventaire et la loi, les problèmes, les solutions, pourquoi nous, les prix | 15 |
+| `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Administrateur, superviseurs, compteurs : un premier inventaire, geste par geste, site et application | 28 |
+| `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, accès, réseau, appareils, données, sécurité, ce qu'il faut prévoir | 17 |
+
+Générer et contrôler, depuis ce dossier :
+
+```
+for f in build-commercial.js build-prise-en-main.js build-dsi.js; do node $f && FONT_MODE=brand node $f; done
+node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx Quantinvo-prise-en-main.pptx Quantinvo-prise-en-main-marque.pptx Quantinvo-dossier-DSI.pptx Quantinvo-dossier-DSI-marque.pptx
+```
+
+- **`charte.js` pose la typographie française partout** (`typo()`) : espace
+  fine insécable avant `; : ! ? »` et dans les milliers, insécable après un
+  nombre et avant `— % €`, et plus d'espace avant une virgule ou un point.
+- **`verifier-typo.js` contrôle le RENDU**, pas le script : LibreOffice
+  convertit en PDF, chaque ligne est relue ; il signale un signe en début de
+  ligne et un mot coupé (avec ou sans tiret, en recollant la fin d'une ligne au
+  début de la suivante). Il écrit aussi une image par page dans `verif/`
+  (ignoré par git) : l'œil reste nécessaire pour ce qui déborde. PowerPoint
+  compose un peu autrement que LibreOffice : regarder une fois dans PowerPoint
+  avant d'envoyer.
+- **Captures du site** : `../captures-site/2026-09-19-rayon-textile/` (compte
+  de démo réel), jamais `web/screenshots/` (faux compte de test).
+- **L'écart vaut compté − théorique**, le signe du rapport.
+
+Les six autres scripts plus bas (`build.js`, `build-court.js`,
+`build-tarifs.js`, `build-samaritaine.js`, `build-histoire.js`,
+`build-pourquoi.js`) ne sont plus régénérés : leurs decks ont été retirés.
+
+
 Huit présentations PowerPoint, générées par huit scripts qui partagent une même
 charte (`charte.js`). Fond blanc, charte **« Ardoise » v2** (9 septembre 2026) :
 encre pour le texte ET pour les titres, des gris minéraux, et un vert forêt en

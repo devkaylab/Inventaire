@@ -12,7 +12,7 @@ import { traduction, type Langue } from '@/lib/traduction'
  *
  * ⚠️ CHAQUE SECTION A LA FORME DE SON IDÉE, et c'est ce qui la distingue de
  * Découvrir :
- *   · qu'est-ce qu'un inventaire → une SOUSTRACTION (théorique − compté = écart) ;
+ *   · qu'est-ce qu'un inventaire → une SOUSTRACTION (compté − théorique = écart) ;
  *   · la démarque inconnue → UN CHIFFRE, puis ses quatre causes ;
  *   · ce que l'écart révèle → quatre anomalies, chacune avec sa marque ;
  *   · annuel, tournant, ciblé → l'ANNÉE DESSINÉE, semaine par semaine ;
@@ -142,14 +142,18 @@ export function Inventaire({ langue }: { langue: Langue }) {
               <p className="iv-note">{t('Le comptage de ce qui est vraiment en rayon et en réserve, comparé au stock attendu.')}</p>
             </div>
             <div className="iv-calcul" data-reveal="1">
-              <div className="iv-terme">
-                <strong>{t('Stock théorique')}</strong>
-                <span>{t('Ce que votre logiciel croit avoir')}</span>
-              </div>
-              <b className="iv-signe" aria-hidden="true">−</b>
+              {/* ⚠️ COMPTÉ MOINS THÉORIQUE, dans cet ordre : c'est le signe
+                  du rapport (39 attendus, 9 comptés → −30). À l'envers, la
+                  page annonçait +30 là où le produit affiche −30 ; relevé par
+                  la relecture des decks le 19 septembre 2026. */}
               <div className="iv-terme">
                 <strong>{t('Stock compté')}</strong>
                 <span>{t('Ce qui est vraiment là')}</span>
+              </div>
+              <b className="iv-signe" aria-hidden="true">−</b>
+              <div className="iv-terme">
+                <strong>{t('Stock théorique')}</strong>
+                <span>{t('Ce que votre logiciel croit avoir')}</span>
               </div>
               <b className="iv-signe" aria-hidden="true">=</b>
               <div className="iv-terme iv-terme-resultat">

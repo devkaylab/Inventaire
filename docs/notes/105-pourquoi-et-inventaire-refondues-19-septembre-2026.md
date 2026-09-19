@@ -15,7 +15,7 @@ une seule fois (« Fiabilisez votre stock avec Quantinvo »).
   une pratique, jamais à un concurrent.
 - **L'inventaire** : chaque section a la forme de son idée — l'obligation
   légale en tête (Code de commerce, L123-12, demandée par Julien en premier),
-  la définition en soustraction, la démarque en un chiffre, les anomalies,
+  la définition en soustraction (compté − théorique, le signe du rapport), la démarque en un chiffre, les anomalies,
   l'année dessinée en 52 semaines (`components/RythmesAnnee.tsx`), la méthode
   en quatre temps numérotés (une vraie suite).
 

@@ -98,7 +98,13 @@ async function logoPng(px = 640, couleur = '#14181A') {
  * d'origine). Le recadrage retire l'en-tête et le nom du magasin d'essai.
  */
 async function capture(fichier, { left, top, width, height }) {
-  const buf = await sharp(path.join(CAPTURES, fichier)).extract({ left, top, width, height }).png().toBuffer()
+  // Un chemin (avec un séparateur) est résolu depuis ce fichier : c'est ce qui
+  // permet de recadrer les captures RÉELLES du site, prises sur le compte de
+  // démo (`../captures-site/`). ⚠️ `web/screenshots/` vient d'un faux compte
+  // de test (inventaire « Test », marques réelles au référentiel) : ne pas le
+  // montrer à un client.
+  const chemin = fichier.includes('/') ? path.resolve(__dirname, fichier) : path.join(CAPTURES, fichier)
+  const buf = await sharp(chemin).extract({ left, top, width, height }).png().toBuffer()
   return { data: 'image/png;base64,' + buf.toString('base64'), ratio: width / height }
 }
 
@@ -141,14 +147,32 @@ async function cadrer(fichier, { w, h }) {
 }
 
 const FINE = '\u202F'   // espace fine insécable
+const INSEC = '\u00A0'  // espace insécable
 
-/** Applique la typographie française à une chaîne, ou à un tableau de runs. */
+/**
+ * Applique la typographie française à une chaîne, ou à un tableau de runs.
+ *
+ * ⚠️ AUCUN SIGNE NE COMMENCE UNE LIGNE, AUCUN NOMBRE NE SE SÉPARE DE CE QU'IL
+ * COMPTE (demande de Julien, 19 septembre 2026 : « pas de . , : sur le début
+ * d'une deuxième ligne »). Toutes les espaces qui précèdent un signe ou qui
+ * suivent un nombre deviennent insécables, ici, pour tous les decks à la fois :
+ *   · avant `» ; : ! ?` et après `«` — l'espace fine ;
+ *   · dans un nombre (« 100 000 ») — l'espace fine ;
+ *   · après un nombre (« 12 mois », « 89 € », « 1 à 2 % ») — l'insécable ;
+ *   · avant un tiret d'incise ou un `%`, `€` — l'insécable.
+ * Une virgule ou un point précédé d'une espace est une faute de frappe : on
+ * retire l'espace plutôt que de la protéger.
+ */
 function typo(t) {
   if (Array.isArray(t)) return t.map((r) => (r && typeof r.text === 'string' ? { ...r, text: typo(r.text) } : r))
   if (typeof t !== 'string') return t
   return t
+    .replace(/ +([,.])(?=\s|$)/g, '$1')
     .replace(/ ([»;:!?])/g, FINE + '$1')
     .replace(/« /g, '«' + FINE)
+    .replace(/(\d) (?=\d{3}\b)/g, '$1' + FINE)
+    .replace(/(\d) (?=\S)/g, '$1' + INSEC)
+    .replace(/ ([—–%€])/g, INSEC + '$1')
 }
 
 async function preparer({ titre }) {
@@ -423,4 +447,4 @@ async function ecrire(pres, base) {
   console.log('OK', fichier)
 }
 
-module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, logoPng }
+module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, logoPng, typo }

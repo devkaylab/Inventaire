@@ -60,3 +60,4 @@ supabase/.temp/
 # Rapports de la skill threat-modeling : régénérables, et volumineux
 /Risk_Assessment_Report/
 docs/entreprise/comptabilite/*.xlsx
+docs/entreprise/deck/verif/
