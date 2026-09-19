@@ -36,6 +36,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import {
+  catalogueRepere,
+  demarrerInventaire,
   getSession,
   getSessionInvitations,
   getSessionMembers,
@@ -62,10 +64,47 @@ export default function InviteToSessionScreen() {
    */
   const fromNew = from === 'new'
 
+
   const { profile } = useAuth()
   const theme = useTheme()
   const styles = makeStyles(theme)
   const queryClient = useQueryClient()
+
+  /**
+   * « Commencer l'inventaire » DÉMARRE l'inventaire, puis quitte le tunnel.
+   *
+   * ⚠️ Même règle que le site : on ne démarre que si le référentiel articles
+   * est chargé (`SetupTab`, `pret`). Sans lui, chaque scan serait un « article
+   * inconnu » ; l'inventaire reste alors « Ouverte » et se démarrera depuis la
+   * fiche ou le site, une fois le fichier importé.
+   *
+   * ⚠️ UN ÉCHEC NE RETIENT PAS SUR L'ÉCRAN. Sans réseau, le statut reste
+   * « Ouverte » — le comptage fonctionne quand même, la base l'accepte tant
+   * que l'inventaire n'est pas clôturé. Bloquer le superviseur ici pour un
+   * libellé serait pire que le défaut qu'on corrige.
+   */
+  const [demarrage, setDemarrage] = useState(false)
+  async function commencer() {
+    // ⚠️ Pas de `disabled` sur le bouton : une garde exige que rien ne bloque
+    // la sortie du tunnel. Un second appui pendant le démarrage est ignoré ici.
+    if (demarrage) return
+    setDemarrage(true)
+    try {
+      const { total } = await catalogueRepere(sessionId)
+      if (total > 0) {
+        await demarrerInventaire(sessionId)
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['session', sessionId] }),
+          queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+        ])
+      }
+    } catch {
+      // Voir plus haut : on sort quand même.
+    } finally {
+      setDemarrage(false)
+    }
+    quitterLeTunnel(sessionId)
+  }
 
   const { data: session } = useQuery({ queryKey: ['session', sessionId], queryFn: () => getSession(sessionId) })
   const storeId = session?.store_id
@@ -405,8 +444,8 @@ export default function InviteToSessionScreen() {
 
           {fromNew && (
             <View style={styles.finBloc}>
-              <Pressable style={styles.startBtn} onPress={() => quitterLeTunnel(sessionId)}>
-                <Text style={styles.startBtnText}>{t("Commencer l'inventaire")}</Text>
+              <Pressable style={styles.startBtn} onPress={commencer}>
+                <Text style={styles.startBtnText}>{demarrage ? t('Démarrage…') : t("Commencer l'inventaire")}</Text>
               </Pressable>
               {/* ⚠️ « Vous pouvez commencer sans personne : des compteurs
                   s'ajoutent à tout moment » a été RETIRÉE ici (Julien, sur la

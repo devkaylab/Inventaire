@@ -844,4 +844,5 @@ export const en: Dictionnaire = {
   "Être prévenu des prochains inventaires": "Get notified of upcoming inventories",
   "— pièce comptée · — auditée": "— units counted · — audited",
   "← Revenir à la question": "← Back to the question",
+  "Démarrage…": "Starting…",
 }

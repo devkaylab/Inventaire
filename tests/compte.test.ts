@@ -1457,7 +1457,12 @@ describe('« Plus tard » : une sortie à chaque étape', () => {
     // divergeraient, et l'une laisserait le tunnel derrière elle.
     const compteursCode = lire('app/(supervisor)/[sessionId]/invite.tsx')
     expect(compteursCode).toContain("import { quitterLeTunnel } from '@/lib/tunnel'")
-    expect(compteursCode).toContain('onPress={() => quitterLeTunnel(sessionId)}')
+    // ⚠️ Le bouton passe par `commencer()` depuis le 19 septembre 2026 (il
+    // démarre l'inventaire avant de sortir) : la garde vérifie que CETTE
+    // fonction sort par `quitterLeTunnel`, pas le texte exact de l'`onPress`.
+    const commencer = codeSeul(compteursCode).split('async function commencer()')[1]?.split('\n  }\n')[0] ?? ''
+    expect(commencer, '« Commencer l’inventaire » ne passe plus par quitterLeTunnel').toContain('quitterLeTunnel(sessionId)')
+    expect(compteursCode).toContain('onPress={commencer}')
     expect(codeSeul(compteursCode), 'la sortie est recopiée dans l’écran')
       .not.toContain('router.dismissAll()')
   })
@@ -3123,5 +3128,24 @@ describe('une porte s’ouvre des deux côtés', () => {
   // discernement sur toutes les portes.
   it('et ce retour s’efface quand la flèche native existe', () => {
     expect(lire('app/(compte)/_layout.tsx')).toContain('if (!router.canGoBack()) return null')
+  })
+})
+
+describe('« Commencer l’inventaire » démarre l’inventaire, comme sur le site', () => {
+  // Relevé le 19 septembre 2026 : dans l'application, le bouton ne faisait que
+  // quitter le tunnel. Un inventaire préparé au téléphone restait « Ouverte ».
+  const ecran = lire('app/(supervisor)/[sessionId]/invite.tsx')
+  const requetes = lire('lib/queries.ts')
+
+  it('le bouton démarre avant de sortir, et seulement avec un référentiel chargé', () => {
+    const corps = ecran.split('async function commencer()')[1]?.split('\n  }\n')[0] ?? ''
+    expect(corps).toMatch(/catalogueRepere\(sessionId\)[\s\S]*total > 0[\s\S]*demarrerInventaire\(sessionId\)/)
+    expect(corps.indexOf('demarrerInventaire')).toBeLessThan(corps.lastIndexOf('quitterLeTunnel'))
+  })
+
+  it('le démarrage ne touche qu’un inventaire ouvert', () => {
+    const fn = requetes.split('export async function demarrerInventaire')[1]?.split('\n}\n')[0] ?? ''
+    expect(fn).toContain("update({ status: 'counting' })")
+    expect(fn).toContain(".eq('status', 'open')")
   })
 })
