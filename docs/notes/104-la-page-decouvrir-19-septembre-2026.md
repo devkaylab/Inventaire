@@ -30,8 +30,8 @@ invente pas (même règle que les preuves de l'accueil).
 - La tuile « Un rapport qui fait foi » montre une capture RÉELLE du rapport
   (compte de démo), plus un tableau dessiné. Les captures des cinq onglets
   sont gardées dans `docs/entreprise/captures-site/2026-09-19-rayon-textile/`.
-- Aucune capture deux fois sur la page. Le rapport et les magasins de la
-  tuile « réseau » sont **dessinés**, avec des noms génériques.
+- Aucune capture deux fois sur la page. Les magasins de la tuile « réseau »
+  sont **dessinés**, avec des noms génériques.
 - Les listes à mot en gras sont découpées en `[gras, suite]`, jamais en
   fragments du type « Un » / « Des » : l'anglais n'a pas les mêmes articles
   (« Des » n'a pas de traduction, et le test refuse une traduction vide).
