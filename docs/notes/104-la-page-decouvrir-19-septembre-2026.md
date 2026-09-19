@@ -27,6 +27,9 @@ invente pas (même règle que les preuves de l'accueil).
   rangée, les dernières cartes partagent la position de fin : une pastille par
   carte sautait du 2e point au dernier et bloquait le retour (Julien, même
   jour). Vérifié : 3 positions à 1440 px, 5 à 390, aller et retour.
+- La tuile « Un rapport qui fait foi » montre une capture RÉELLE du rapport
+  (compte de démo), plus un tableau dessiné. Les captures des cinq onglets
+  sont gardées dans `docs/entreprise/captures-site/2026-09-19-rayon-textile/`.
 - Aucune capture deux fois sur la page. Le rapport et les magasins de la
   tuile « réseau » sont **dessinés**, avec des noms génériques.
 - Les listes à mot en gras sont découpées en `[gras, suite]`, jamais en

@@ -1574,12 +1574,6 @@ export const en: Dictionnaire = {
   "En réserve, les scans attendent sur le téléphone et partent au retour du réseau.": "In the stockroom, scans wait on the phone and go out when the signal returns.",
   "Un rapport qui fait foi": "A report you can rely on",
   "L’export Excel des écarts, prêt pour votre logiciel de gestion.": "The Excel export of variances, ready for your management software.",
-  "Extrait de rapport d’inventaire": "Stocktake report excerpt",
-  "Attendu": "Expected",
-  "Article A": "Item A",
-  "Article B": "Item B",
-  "Article C": "Item C",
-  "Article D": "Item D",
   "Adapté à chaque rôle": "Built for every role",
   "Le compteur": "The counter",
   "Il rejoint l’inventaire avec un code, et compte sa zone.": "They join the stocktake with a code, and count their zone.",
@@ -1642,4 +1636,5 @@ export const en: Dictionnaire = {
   "Des rôles séparés": "Separate roles",
   "Un rapport par inventaire": "A report per stocktake",
   ", et un rapport consolidé par magasin": ", and a consolidated report per store",
+  "Le rapport d’inventaire sur le site : stock théorique, stock compté, écarts en unités et en valeur, article par article": "The stocktake report on the website: book stock, counted stock, variances in units and in value, item by item",
 }

@@ -4982,25 +4982,14 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   margin: 26px auto -40%;
 }
 .dq-tuile-filet { background: transparent; border: 1px solid var(--border-strong); }
-.dq-t-e {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: 32px; align-items: center;
+/* ⚠️ LE TEXTE AU-DESSUS, LA CAPTURE SUR TOUTE LA LARGEUR : le rapport est un
+   écran d'ordinateur, et dans une demi-colonne ses chiffres deviendraient
+   illisibles — même règle que `.bloc-illustre--large`. */
+.dq-t-e { display: flex; flex-direction: column; gap: 22px; }
+.dq-rapport-vue {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--hairline); border-radius: var(--r);
 }
-
-/* Le rapport dessiné : la typographie du Registre, chiffres en chasse fixe. */
-.dq-rapport {
-  width: 100%; border-collapse: collapse; font-size: 14px;
-  background: var(--bg); border-radius: var(--r); overflow: hidden;
-}
-.dq-rapport th {
-  text-align: left; font-weight: 600; color: var(--text-2); font-size: 12.5px;
-  padding: 10px 14px; border-bottom: 1px solid var(--hairline);
-}
-.dq-rapport td { padding: 9px 14px; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
-.dq-rapport tr:last-child td { border-bottom: 0; }
-.dq-rapport th:not(:first-child), .dq-rapport td:not(:first-child) { text-align: right; }
-.dq-moins { color: var(--danger-text); font-weight: 700; }
-.dq-plus { color: var(--warning-text); font-weight: 700; }
 
 /* Les rôles : trois tuiles, le téléphone monte du bas. */
 .dq-roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
@@ -5125,7 +5114,6 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .dq-heros-grille, .dq-duo, .dq-faq { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .dq-heros { padding: 40px 0 48px; }
   .dq-mosaique { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "a c" "b d" "e e"; }
-  .dq-t-e { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .dq-roles, .dq-liens { grid-template-columns: minmax(0, 1fr); }
   .dq-role { min-height: 0; }
   .dq-duo-inverse > .dq-magasins { order: 2; }

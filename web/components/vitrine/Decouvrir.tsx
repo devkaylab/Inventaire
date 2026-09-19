@@ -100,17 +100,15 @@ const ETAPES = [
 ]
 
 /**
- * ⚠️ UN RAPPORT DESSINÉ, PAS UNE CAPTURE, et il le montre : quatre lignes aux
- * références génériques, dans la typographie du Registre. Une capture du vrai
- * rapport est dans les cartes qui défilent plus bas ; ici, la tuile n'a la place
- * que de quelques lignes, et c'est l'écart qu'on veut faire voir.
+ * ⚠️ LE RAPPORT EST UNE CAPTURE DU VRAI SITE, pas un dessin (demande de
+ * Julien, 19 septembre 2026) : le compte de démo « Rayon textile », onglet
+ * Rapport, pris dans son Chrome. Les captures brutes des cinq onglets sont
+ * gardées dans `docs/entreprise/captures-site/2026-09-19-rayon-textile/`.
  */
-const LIGNES_RAPPORT = [
-  { ref: 'Article A', attendu: 24, compte: 24 },
-  { ref: 'Article B', attendu: 12, compte: 9 },
-  { ref: 'Article C', attendu: 40, compte: 41 },
-  { ref: 'Article D', attendu: 6, compte: 6 },
-]
+const RAPPORT_SITE = {
+  src: '/vitrine/rapport-site.png',
+  alt: 'Le rapport d’inventaire sur le site : stock théorique, stock compté, écarts en unités et en valeur, article par article',
+}
 
 /** Les magasins du dessin « Un magasin, puis tout le réseau » : génériques. */
 const MAGASINS = [
@@ -222,31 +220,9 @@ export function Decouvrir({ langue }: { langue: Langue }) {
                   <h3>{t('Un rapport qui fait foi')}</h3>
                   <p>{t('L’export Excel des écarts, prêt pour votre logiciel de gestion.')}</p>
                 </div>
-                <table className="dq-rapport" aria-label={t('Extrait de rapport d’inventaire')}>
-                  <thead>
-                    <tr>
-                      <th scope="col">{t('Article')}</th>
-                      <th scope="col">{t('Attendu')}</th>
-                      <th scope="col">{t('Compté')}</th>
-                      <th scope="col">{t('Écart')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {LIGNES_RAPPORT.map((l) => {
-                      const ecart = l.compte - l.attendu
-                      return (
-                        <tr key={l.ref}>
-                          <td>{t(l.ref)}</td>
-                          <td className="num">{l.attendu}</td>
-                          <td className="num">{l.compte}</td>
-                          <td className={'num' + (ecart < 0 ? ' dq-moins' : ecart > 0 ? ' dq-plus' : '')}>
-                            {ecart > 0 ? `+${ecart}` : ecart}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="dq-rapport-vue" src={RAPPORT_SITE.src} alt={t(RAPPORT_SITE.alt)}
+                  width={1600} height={724} loading="lazy" />
               </div>
             </div>
           </div>
