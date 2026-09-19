@@ -9,7 +9,7 @@ on a déjà avancé des frais qu'il faudra déclarer. »
 | Fichier | Quoi |
 |---|---|
 | `build-comptabilite.py` | le générateur |
-| `Quantinvo-comptabilite-MODELE.xlsx` | le classeur vide, produit par le script |
+| `Quantinvo-comptabilite-MODELE.xlsx` | le classeur vide, produit par le script — **non versionné** (`.gitignore`) |
 
 ## ⚠️ LE MODÈLE N'EST PAS LE LIVRE
 
@@ -19,6 +19,14 @@ bancaire, et le dépôt n'est pas l'endroit pour ça.
 
 C'est pour cette raison que le fichier produit porte `MODELE` dans son nom :
 régénérer le modèle ne peut jamais écraser des écritures.
+
+## Où vit le livre (19 septembre 2026)
+
+**`iCloud Drive/Desktop/Devkaylab/Comptabilité/Devkaylab - Livre de comptes 2026.xlsx`**,
+à côté des pièces : `Comptabilité/Dépenses/2026/`, une facture par fichier,
+nommée `AAAA-MM-JJ_Fournisseur_Objet_Montant.pdf`. Le n° de pièce du journal
+est le numéro de la facture du fournisseur. Décision de Julien : le classeur
+ne reste pas dans le dépôt, il vit avec les factures.
 
 ## Ce que le classeur fait, et ce qu'il n'est pas
 
