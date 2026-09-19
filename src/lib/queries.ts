@@ -522,6 +522,27 @@ export async function joinSession(inventoryNumber: string, securityCode: string)
  * inventaire clôturé — un compteur resté sur son téléphone ne peut plus fausser
  * un rapport déjà exporté.
  */
+/**
+ * « Commencer l'inventaire » : l'inventaire passe de « Ouverte » à « En cours ».
+ *
+ * ⚠️ LE MÊME GESTE QUE LE SITE (`startSession`, web/lib/inventory.ts) : sans
+ * lui, le bouton de l'application ne faisait que quitter le tunnel, et un
+ * inventaire préparé au téléphone restait « Ouverte » (relevé le 19 septembre
+ * 2026). Le comptage n'en dépendait pas — la base accepte un comptage tant que
+ * l'inventaire n'est pas clôturé —, seul le statut affiché mentait.
+ *
+ * ⚠️ `.eq('status', 'open')` : on ne démarre qu'un inventaire ouvert. Sans ce
+ * filtre, repasser par l'écran ramènerait « En cours » un inventaire clôturé.
+ */
+export async function demarrerInventaire(sessionId: string) {
+  const { error } = await supabase
+    .from('inventory_sessions')
+    .update({ status: 'counting' })
+    .eq('id', sessionId)
+    .eq('status', 'open')
+  if (error) throwSupabase('demarrerInventaire', error)
+}
+
 export async function closeSession(sessionId: string) {
   const { error } = await supabase
     .from('inventory_sessions')
