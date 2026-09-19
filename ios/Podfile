@@ -77,5 +77,20 @@ target 'Inventaire' do
         end
       end
     end
+
+    # ⚠️ Les frameworks PRÉBUILTS (core React, ExpoModulesCore, ExpoCamera…)
+    # existent en Debug et en Release, dans un seul dossier chacun. Au build, un
+    # script les échange s'il lit, dans `.last_build_configuration`, une autre
+    # variante que celle demandée. Or `pod install` pose ce que son cache lui
+    # donne sans que ce repère s'accorde avec le fichier : le 11/09 (Debug
+    # simulateur) puis le 15/09 (Release iPhone), l'app a planté au lancement.
+    # On écrit donc un repère qui ne correspond à AUCUNE variante : le premier
+    # build qui suit ré-extrait la bonne, quelle que soit la configuration.
+    # (Effacer ne suffit pas : sans repère, React suppose Debug et ne fait rien.)
+    pods = installer.sandbox.root.to_s
+    reperes = Dir.glob(File.join(pods, '*', 'artifacts')).map { |d| File.join(d, '.last_build_configuration') }
+    rn = File.join(pods, 'React-Core-prebuilt', '.last_build_configuration')
+    reperes << rn if File.directory?(File.dirname(rn))
+    reperes.each { |f| File.write(f, 'a-verifier') }
   end
 end

@@ -126,3 +126,15 @@ s'attacher. Ne pas en conclure quoi que ce soit.
 ⚠️ **Le déclenchement d'un build appartient à Julien** (règle du 21 août 2026 :
 « stop je run moi même »). Installer et lire depuis le terminal, oui ; cliquer
 Run à sa place, non.
+
+## Réglé le 19 septembre 2026 : le Podfile invalide les repères
+
+Le `post_install` d'`ios/Podfile` écrit `a-verifier` dans tous les
+`.last_build_configuration` (sept artefacts Expo + core React) à chaque
+`pod install`. Aucune variante ne correspond : le premier build qui suit
+ré-extrait la bonne, Debug ou Release, qu'il vienne d'Xcode ou de
+`simulateur.sh`. ⚠️ Effacer ne suffit pas : sans repère, le script de React
+suppose Debug et ne touche à rien. Vérifié : `pod install` pose les repères,
+build Debug → les huit repères passent à debug et le binaire
+d'ExpoModulesCore a l'empreinte de l'archive debug. Le cas Release sur iPhone
+reste à voir au prochain build de Julien.
