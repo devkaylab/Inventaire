@@ -30,9 +30,6 @@ export function Inventaire({ langue }: { langue: Langue }) {
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
               {t('L’inventaire,')}<br />{t('expliqué simplement.')}
             </h1>
-            <p className="lead" data-reveal="2">
-              {t('Ce qu’est un inventaire, ce que révèle l’écart entre le stock que vous croyez avoir et celui que vous avez vraiment — et pourquoi compter plus souvent change la gestion d’un magasin.')}
-            </p>
           </div>
         </section>
 

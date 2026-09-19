@@ -333,7 +333,6 @@ export const en: Dictionnaire = {
   "Ce qui est supprimé": "What is deleted",
   "Ce qui nous distingue": "What sets us apart",
   "Ce qui n’est facturé nulle part": "What is never billed",
-  "Ce qu’est un inventaire, ce que révèle l’écart entre le stock que vous croyez avoir et celui que vous avez vraiment — et pourquoi compter plus souvent change la gestion d’un magasin.": "What a stocktake is, what the gap between the stock you think you have and the stock you really have reveals — and why counting more often changes how a store is run.",
   "Ce rapport n'est pas accessible.": "This report is not accessible.",
   "Ce sur quoi vous pouvez encore agir. Une fois le magasin créé, la ligne quitte l’écran — c’est le magasin apparu au-dessus qui le confirme.": "What you can still act on. Once the store is created, the row leaves the screen — the store that appeared above confirms it.",
   "Ces lignes ont été tranchées : c’est la quantité retenue qui part dans le rapport. Un nouveau comptage ne l’écrase pas.": "These lines have been settled: the kept quantity is what goes into the report. A new count does not overwrite it.",
