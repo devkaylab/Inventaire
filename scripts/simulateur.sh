@@ -5,6 +5,7 @@
 #
 #   ./scripts/simulateur.sh              # simulateur déjà démarré
 #   ./scripts/simulateur.sh <UDID>       # un simulateur précis
+#   CONFIG=Release ./scripts/simulateur.sh   # JS embarqué, sans Metro
 #
 # ⚠️ **C'est le seul chemin à emprunter.** Un `xcodebuild` lancé à la main
 # oublie deux étapes, et les deux se manifestent APRÈS l'installation, quand
@@ -26,36 +27,19 @@ RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RACINE"
 
 UDID="${1:-booted}"
-APP="ios/build/dd/Build/Products/Debug-iphonesimulator/Inventaire.app"
+CONFIG="${CONFIG:-Debug}"
+APP="ios/build/dd/Build/Products/${CONFIG}-iphonesimulator/Inventaire.app"
 
-# ⚠️ Les frameworks PRÉBUILTS (core React, ExpoModulesCore, ExpoCamera…) ont
-# deux variantes — Debug et Release — et UN SEUL dossier chacun. Un script de
-# build les échange selon la configuration, mais seulement s'il croit que la
-# variante en place est l'autre : il lit un repère `.last_build_configuration`.
-# Or `pod install` pose la variante que le cache CocoaPods lui donne (Release,
-# depuis l'archive App Store du 8 septembre) ET écrit un repère qui dit
-# « debug ». Résultat le 11 septembre 2026 : lien cassé (« Undefined symbols …
-# Sealable »), puis, une fois le core forcé en Debug, ExpoModulesCore resté en
-# Release et l'app qui plante au lancement (SIGSEGV dans Props::Props).
-#
-# Donc : après tout `pod install` (Manifest.lock plus récent que notre repère),
-# on déclare TOUS les prébuilts en Release, ce qui force leur ré-extraction en
-# Debug au build suivant. Une extraction, une fois par pod install.
-JALON="ios/build/.prebuilts-verifies"
-if [ ! -f "$JALON" ] || [ ios/Pods/Manifest.lock -nt "$JALON" ]; then
-  echo "→ pod install récent : les frameworks prébuilts seront ré-extraits en Debug"
-  [ -d ios/Pods/React-Core-prebuilt ] && printf 'Release' > ios/Pods/React-Core-prebuilt/.last_build_configuration
-  for a in ios/Pods/*/artifacts; do
-    [ -d "$a" ] && printf 'release' > "$a/.last_build_configuration"
-  done
-  mkdir -p ios/build && touch "$JALON"
-fi
+# Les frameworks prébuilts (Debug / Release) : c'est le `post_install` d'`ios/Podfile`
+# qui invalide leurs repères à chaque `pod install` (19/09/2026). Ce script le
+# faisait avant, mais en les déclarant « release » — ce qui aurait cassé un build
+# Release. Voir docs/notes/097.
 
-echo "→ Compilation (Debug)…"
+echo "→ Compilation ($CONFIG)…"
 xcodebuild \
   -workspace ios/Inventaire.xcworkspace \
   -scheme Inventaire \
-  -configuration Debug \
+  -configuration "$CONFIG" \
   -destination "platform=iOS Simulator,id=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys;d=json.load(sys.stdin)["devices"];print(next(x["udid"] for v in d.values() for x in v))' 2>/dev/null || echo "$UDID")" \
   -derivedDataPath ios/build/dd \
   build > /tmp/quantinvo-build.log 2>&1 \

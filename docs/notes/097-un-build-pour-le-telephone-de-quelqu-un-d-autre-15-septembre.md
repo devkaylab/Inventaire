@@ -137,4 +137,4 @@ ré-extrait la bonne, Debug ou Release, qu'il vienne d'Xcode ou de
 suppose Debug et ne touche à rien. Vérifié : `pod install` pose les repères,
 build Debug → les huit repères passent à debug et le binaire
 d'ExpoModulesCore a l'empreinte de l'archive debug. Le cas Release sur iPhone
-confirmé par Julien le 19/09/2026 : le build sur son iPhone passe sans problème.
+confirmé par Julien le 19/09/2026 : le build sur son iPhone passe sans problème. Et au simulateur en Release (`CONFIG=Release ./scripts/simulateur.sh`) : les huit repères passent seuls à release, l’app se lance.
