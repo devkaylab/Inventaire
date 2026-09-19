@@ -128,9 +128,6 @@ export function Pourquoi({ langue }: { langue: Langue }) {
             <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
               {t('Six raisons de compter')}<br />{t('avec Quantinvo.')}
             </h1>
-            <p className="lead" data-reveal="2">
-              {t('L’accueil vous a donné l’essentiel. Voici le détail — ce que l’outil fait vraiment, et pourquoi ces choix comptent sur le terrain.')}
-            </p>
           </div>
         </section>
 
