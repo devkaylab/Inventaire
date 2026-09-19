@@ -14,7 +14,7 @@ export const PREFIXE_EN = '/en'
 
 /** Les pages françaises qui ont leur jumelle sous `/en`. */
 export const CHEMINS_VITRINE = [
-  '/', '/tarifs', '/inventaire', '/pourquoi-nous-choisir',
+  '/', '/decouvrir', '/tarifs', '/inventaire', '/pourquoi-nous-choisir',
   '/inscription', '/souscrire', '/superviseur', '/open', '/suppression-compte',
 ] as const
 

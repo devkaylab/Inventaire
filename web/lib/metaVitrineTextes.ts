@@ -15,6 +15,13 @@ export const META_VITRINE = {
     title: 'Quantinvo — the stocktaking tool for retail',
     description: 'Count your store stock with your team’s phones: printed QR tags, barcode scanning, a second audit pass and an exportable variance report. Works offline in the stockroom.',
   }),
+  decouvrir: (l: Langue): Metadata => metaVitrine(l, '/decouvrir', {
+    title: 'Qu’est-ce que Quantinvo ?',
+    description: 'Quantinvo est un outil d’inventaire pour le commerce : vos équipes comptent le stock avec leur téléphone, le superviseur suit l’avancement en direct et le rapport d’écarts sort en Excel.',
+  }, {
+    title: 'What is Quantinvo?',
+    description: 'Quantinvo is a stocktaking tool for retail: your teams count stock with their phones, the supervisor follows progress live and the variance report comes out in Excel.',
+  }),
   tarifs: (l: Langue): Metadata => metaVitrine(l, '/tarifs', {
     title: 'Tarifs',
     description: 'Un prix par magasin, calé sur le nombre de personnes qui comptent en même temps. Essential 89 €/mois, Advanced 310 €, Enterprise 890 € — sans engagement au mois, sans déclaration de stock et sans terminal à acheter.',

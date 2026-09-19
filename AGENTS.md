@@ -131,3 +131,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [Les visuels de boutique passent à Ardoise](docs/notes/101-les-visuels-de-boutique-passent-a-ardoise-13-septembre-2026.md)
 - [Les documents légaux alignés sur le produit](docs/notes/102-les-documents-legaux-alignes-sur-le-produit-16-septembre-202.md)
 - [L'abonnement est un cumul](docs/notes/103-l-abonnement-est-un-cumul-16-septembre-2026.md)
+- [La page « Découvrir » : ce qu'est Quantinvo](docs/notes/104-la-page-decouvrir-19-septembre-2026.md)

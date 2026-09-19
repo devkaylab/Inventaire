@@ -36,6 +36,7 @@ export interface PagePublique {
  */
 export const PAGES_PUBLIQUES: PagePublique[] = [
   { chemin: '/', priorite: 1.0, frequence: 'monthly' },
+  { chemin: '/decouvrir', priorite: 0.9, frequence: 'monthly' },
   { chemin: '/inventaire', priorite: 0.9, frequence: 'monthly' },
   { chemin: '/pourquoi-nous-choisir', priorite: 0.9, frequence: 'monthly' },
   { chemin: '/tarifs', priorite: 0.9, frequence: 'monthly' },
@@ -49,6 +50,7 @@ export const PAGES_PUBLIQUES: PagePublique[] = [
   // ⚠️ La vitrine en anglais (11 septembre 2026) : chaque page française a sa
   // jumelle sous `/en`, indexable, liée par `hreflang` (voir `lib/metaVitrine.ts`).
   { chemin: '/en', priorite: 0.9, frequence: 'monthly' },
+  { chemin: '/en/decouvrir', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/en/inventaire', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/en/pourquoi-nous-choisir', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/en/tarifs', priorite: 0.8, frequence: 'monthly' },

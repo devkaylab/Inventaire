@@ -13,6 +13,7 @@
  * déjà parti par e-mail doit continuer de tomber quelque part.
  */
 export const LIENS_PUBLICS = [
+  { href: '/decouvrir', libelle: 'Découvrir' },
   { href: '/pourquoi-nous-choisir', libelle: 'Pourquoi nous choisir ?' },
   { href: '/inventaire', libelle: 'L’inventaire' },
   { href: '/tarifs', libelle: 'Tarifs' },
