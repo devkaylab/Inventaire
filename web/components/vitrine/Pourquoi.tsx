@@ -1,177 +1,169 @@
+import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
-import { IconScan, IconZones, IconStore, IconAudit, IconReport, IconTeam } from '@/components/icons'
+import { OngletsRaisons } from '@/components/OngletsRaisons'
+import { OFFRES, euros } from '@/lib/offres'
 import { traduction, type Langue } from '@/lib/traduction'
 
 /**
- * ⚠️ CHAQUE RAISON MONTRE L'ÉCRAN DONT ELLE PARLE. Demande de Julien,
- * 12 septembre 2026 : « habille la page pourquoi nous choisir avec des
- * captures d'écran ». Six paragraphes empilés se lisaient comme un mur ; une
- * capture par raison donne un point d'appui au regard — et prouve ce que la
- * phrase affirme, ce qu'un texte seul ne fait pas.
+ * « Pourquoi nous choisir », refondue le 19 septembre 2026 (demande de
+ * Julien : « refais la page en t'inspirant de Découvrir, pas en faisant un
+ * copier-coller »).
  *
- * ⚠️ Le choix n'est pas décoratif : l'écran cité doit porter ce que les trois
- * points annoncent. « Vos fichiers, tels quels » montre l'import qui NOMME les
- * variantes de colonnes ; « Sérieux jusque dans les coulisses » montre le
- * bouton « Télécharger mes données ». Une capture qui illustre vaguement le
- * sujet ne prouve rien et se remarque.
+ * ⚠️ CE QUI VIENT DE DÉCOUVRIR : titres à gauche, une phrase par idée, des
+ * fonds qui alternent, l'accent une seule fois à la fin. CE QUI EST PROPRE À
+ * CETTE PAGE : la page affirme six choses, donc elle les montre TOUTES d'un
+ * coup d'œil (six onglets) et ne déplie qu'une raison à la fois, avec l'écran
+ * qui la prouve ; puis un face-à-face « d'habitude / avec Quantinvo », qui
+ * est la question qu'on se pose en comparant.
  *
- * ⚠️ Les captures de téléphone sont ENCADRÉES, sur fond transparent : le corps
- * du téléphone est dans le PNG. `.bloc-vue img` ne porte donc aucun cadre.
- * Seule exception, `large: true` — le tableau de bord est une capture
- * RECTANGULAIRE du site, et celle-là porte un filet, comme dans le diaporama
- * de l'accueil.
- *
- * ⚠️ Le tableau de bord sert AUSSI sur l'accueil, et c'est assumé : c'est le
- * seul écran qui montre à la fois l'avancement par zone et les appareils
- * comptés sans nommer personne — les deux choses que cette raison affirme.
- * La règle « aucune capture deux fois » vaut DANS une page, pas entre deux.
+ * ⚠️ CHAQUE RAISON MONTRE L'ÉCRAN DONT ELLE PARLE (règle du 12 septembre) :
+ * l'import nomme les variantes de colonnes, « Mon compte » porte le bouton
+ * « Télécharger mes données ». Une capture qui illustre vaguement ne prouve
+ * rien.
  */
-type Raison = {
-  icon: React.ReactElement
-  title: string
-  /** `large` : capture rectangulaire du site, et non téléphone encadré. */
-  image: { src: string; alt: string; large?: boolean }
-  points: string[]
-}
-
-const RAISONS: Raison[] = [
+const RAISONS = [
   {
-    icon: <IconScan />,
-    title: 'Vos équipes suffisent',
+    titre: 'Vos équipes suffisent',
     image: {
       src: '/vitrine/bienvenue-compteur-encadre.png',
       alt: 'La première ouverture de l’application par un compteur : les trois gestes à faire',
     },
     points: [
-      'Le téléphone que chacun a en poche devient la douchette : scan caméra, bouton virtuel, scan automatique. Aucun terminal à acheter, entretenir ou recharger en urgence la veille du comptage.',
-      'Un compteur démarre sans formation : il rejoint la session avec un numéro et un code de sécurité, scanne une balise pour ouvrir sa zone, et compte. La première fois ressemble à la centième.',
-      'Plusieurs compteurs travaillent en parallèle, chacun dans sa zone — l’inventaire avance sur tous les fronts à la fois.',
+      'Le téléphone de chacun devient le scanner.',
+      'Un code pour rejoindre l’inventaire, et on compte, sans formation.',
+      'Plusieurs compteurs en même temps, chacun dans sa zone.',
     ],
   },
   {
-    icon: <IconReport />,
-    title: 'Vos fichiers, tels quels',
+    titre: 'Vos fichiers, tels quels',
     image: {
       src: '/vitrine/importer-encadre.png',
       alt: 'L’écran d’import : les deux fichiers attendus et les noms de colonnes reconnus',
     },
     points: [
-      'Importez votre référentiel articles et votre stock théorique en CSV ou Excel, sans les retravailler : Quantinvo reconnaît vos noms de colonnes — SKU, Code article, Référence, EAN, Code-barres, Gencod, Qté, Stock…',
-      'Majuscules, accents, tirets, underscores : l’import est insensible à la mise en forme. Le fichier qui sort de votre logiciel de caisse entre dans Quantinvo.',
-      'À la sortie, même exigence : l’export Excel des résultats, des écarts en valeur et du détail par zone est prêt pour l’analyse et la correction du stock.',
+      'CSV ou Excel, sans retravailler le fichier.',
+      'Vos noms de colonnes sont reconnus : SKU, EAN, Gencod, Qté…',
+      'À la sortie, un export Excel prêt pour l’analyse.',
     ],
   },
   {
-    icon: <IconAudit />,
-    title: 'Un chiffre auquel se fier',
+    titre: 'Un chiffre auquel se fier',
     image: {
       src: '/vitrine/rapport-encadre.png',
       alt: 'Le rapport d’inventaire : stock théorique, stock compté, écart en unités et en valeur',
     },
     points: [
-      'Le comptage s’organise par zones et balises : chaque emplacement est ouvert, compté, clôturé. Rien n’est oublié, rien n’est compté deux fois.',
-      'Les zones sensibles passent en double comptage puis en audit : les écarts entre les deux passes sont mis en évidence et arbitrés par le superviseur, article par article.',
-      'Chaque comptage garde la trace de qui a compté quoi : quand un écart surprend, on peut remonter à la ligne près et trancher sur des faits.',
+      'Chaque zone est ouverte, comptée, puis clôturée.',
+      'Double comptage et arbitrage, article par article.',
+      'Chaque ligne garde la trace de qui l’a comptée.',
     ],
   },
   {
-    icon: <IconTeam />,
-    title: 'Un pilotage en direct, respectueux',
+    titre: 'Un suivi en direct',
     image: {
       src: '/vitrine/suivi.png',
       alt: 'Le suivi d’un inventaire sur le site : progression, avancement par zone et derniers scans',
       large: true,
     },
     points: [
-      'Le tableau de bord suit l’avancement zone par zone pendant que ça compte : vous voyez ce qui est terminé, ce qui est en cours, ce qui reste.',
-      'Les écarts se traitent pendant l’inventaire, pas trois jours après : recompter une zone douteuse coûte dix minutes le jour même, une matinée la semaine suivante.',
-      'Le suivi d’activité est agrégé : on pilote le travail, pas les personnes. Vos équipes comptent sans se sentir surveillées une à une.',
+      'L’avancement zone par zone, pendant le comptage.',
+      'Les écarts se tranchent le jour même.',
+      'On suit le travail, pas les personnes.',
     ],
   },
   {
-    icon: <IconStore />,
-    title: 'Libre, toute l’année',
+    titre: 'Libre, toute l’année',
     image: {
       src: '/vitrine/accueil-superviseur-encadre.png',
       alt: 'L’accueil d’un superviseur : ses inventaires, et le bouton pour en lancer un autre',
     },
     points: [
-      'Tournant, ciblé ou complet : vous choisissez la date, le périmètre et la fréquence. Un mardi matin en janvier vaut autant qu’une nuit de décembre.',
-      'La licence est par magasin, calée sur le nombre de personnes qui comptent en même temps — et les comptages sont illimités. Compter plus souvent ne coûte pas un euro de plus.',
-      'Un réseau équipe ses magasins un à un, au rythme qu’il choisit, et chaque magasin garde ses codes, ses équipes et ses inventaires.',
+      'Tournant, ciblé ou complet : vous choisissez.',
+      'Autant d’inventaires que vous voulez, au même prix.',
+      'Chaque magasin garde ses codes et ses équipes.',
     ],
   },
   {
-    icon: <IconZones />,
-    title: 'Sérieux jusque dans les coulisses',
+    titre: 'Sérieux jusque dans les coulisses',
     image: {
       src: '/vitrine/mon-compte-encadre.png',
       alt: 'L’écran « Mon compte » : profil, téléchargement de ses données, déconnexion',
     },
     points: [
-      'Vos données résident dans l’Union européenne, chez des prestataires déclarés dans notre politique de confidentialité. Aucun traceur publicitaire, aucune mesure d’audience.',
-      'Les accès sont cloisonnés : rôles séparés superviseur / compteur, codes de session par magasin, double authentification pour les comptes qui administrent.',
-      'Conformité RGPD outillée dans le produit : chaque personne peut télécharger ses données ou demander la suppression de son compte, sans formulaire papier ni délai.',
+      'Données hébergées dans l’Union européenne, sans traceur publicitaire.',
+      'Rôles séparés, double authentification pour qui administre.',
+      'Chacun télécharge ses données ou supprime son compte.',
     ],
   },
 ]
 
+/**
+ * ⚠️ « D'HABITUDE », PAS « LES AUTRES ». On compare à une pratique que le
+ * lecteur connaît, jamais à un concurrent qu'on nommerait ou dénigrerait.
+ */
+const FACE_A_FACE = [
+  { sujet: 'Le matériel', avant: 'Des terminaux à acheter ou à louer, qui ne servent qu’aux inventaires', avec: 'Le téléphone de chacun' },
+  { sujet: 'Les fichiers', avant: 'Une ressaisie avant chaque import', avec: 'Le fichier de votre logiciel, tel quel' },
+  { sujet: 'Les écarts', avant: 'Découverts plusieurs jours après', avec: 'Tranchés le jour même' },
+  { sujet: 'Le rythme', avant: 'Un grand comptage par an', avec: 'Autant d’inventaires que vous voulez' },
+]
+
 export function Pourquoi({ langue }: { langue: Langue }) {
-  const { t } = traduction(langue)
+  const { t, lien } = traduction(langue)
+  const prix = euros(Math.min(...OFFRES.map((o) => o.mois)))
   return (
     <>
       <SiteHeader langue={langue} />
       <main>
-        <section className="hero" style={{ paddingBottom: 40 }}>
+        <section className="hero pq-heros">
           <div className="container">
-            <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
-              {t('Six raisons de compter')}<br />{t('avec Quantinvo.')}
-            </h1>
+            <h1 data-reveal="1">{t('Six raisons de compter avec Quantinvo.')}</h1>
           </div>
         </section>
 
-        {/*
-          ⚠️ LA CAPTURE ET LE TEXTE ALTERNENT DE CÔTÉ (`:nth-child(even)` dans la
-          feuille), et le rang porte son rang dans le DOM : une rangée sur deux
-          inversée en CSS seul laisserait l'ordre de lecture intact pour un
-          lecteur d'écran, ce qui est précisément ce qu'on veut.
-        */}
-        <section className="section" style={{ paddingTop: 8 }}>
-          <div className="container blocs-illustres blocs-illustres--alterne">
-            {RAISONS.map((r, i) => (
-              <div
-                className={'card bloc-illustre' + (r.image.large ? ' bloc-illustre--large' : '')}
-                data-reveal="0"
-                key={r.title}
-              >
-                <figure className="bloc-vue">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={r.image.src} alt={t(r.image.alt)} />
-                </figure>
-                <div className="bloc-dire">
-                  <div className="ico">{r.icon}</div>
-                  <h2>
-                    <span className="raison-numero">{i + 1}.</span> {t(r.title)}
-                  </h2>
-                  {r.points.map((p) => (
-                    <p key={p.slice(0, 24)}>{t(p)}</p>
-                  ))}
-                </div>
+        <section className="section pq-section-raisons">
+          <div className="container" data-reveal="0">
+            <OngletsRaisons
+              libelle={t('Les six raisons')}
+              raisons={RAISONS.map((r) => ({
+                titre: t(r.titre),
+                points: r.points.map((p) => t(p)),
+                image: { ...r.image, alt: t(r.image.alt) },
+              }))}
+            />
+          </div>
+        </section>
+
+        <section className="section bande-encre">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('D’habitude, et avec Quantinvo')}</h2>
+            </div>
+            <div className="pq-face" data-reveal="1">
+              <div className="pq-face-tete" aria-hidden="true">
+                <span />
+                <span>{t('D’habitude')}</span>
+                <span>{t('Avec Quantinvo')}</span>
               </div>
-            ))}
+              {FACE_A_FACE.map((f) => (
+                <div className="pq-face-ligne" key={f.sujet}>
+                  <strong>{t(f.sujet)}</strong>
+                  <span className="pq-avant"><em>{t('D’habitude')}</em>{t(f.avant)}</span>
+                  <span className="pq-avec"><em>{t('Avec Quantinvo')}</em>{t(f.avec)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="section">
-          <div className="container">
-            <div className="cta-band" data-reveal="0">
-              <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
-              <h2>{t('Équipez votre magasin')}</h2>
-              <p>
-                {t('Trois offres, un prix par magasin, affiché : à partir de 89 € par mois. Inscription en ligne, sans devis.')}
-              </p>
-              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
+        <section className="section bande-accent final">
+          <div className="container" data-reveal="0">
+            <h2>{t('Fiabilisez votre stock avec Quantinvo')}</h2>
+            <p>{t('Un prix par magasin, à partir de %{prix} par mois. Inscription en ligne, sans devis.', { prix })}</p>
+            <div className="cta">
+              <InscriptionLink className="btn btn-clair">Fiabiliser mon stock</InscriptionLink>
+              <Link href={lien('/tarifs')} className="btn btn-encre">{t('Voir nos offres')}</Link>
             </div>
           </div>
         </section>

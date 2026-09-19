@@ -20,11 +20,25 @@ const css = readFileSync(path.resolve(__dirname, '../app/globals.css'), 'utf8')
 const sansCommentaires = (src: string) =>
   src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
-/** Les pages vitrines qui posent le bloc illustré, avec leur code sans commentaires. */
+/**
+ * Les pages vitrines qui posent des images de `/vitrine/`, avec leur code sans
+ * commentaires.
+ *
+ * ⚠️ ELLES SE RECONNAISSENT À LEURS IMAGES, PLUS AU BLOC ILLUSTRÉ. Le filtre
+ * cherchait `bloc-illustre` ; la refonte du 19 septembre 2026 a fait passer
+ * « Pourquoi nous choisir » et « L'inventaire » aux onglets et aux tuiles, et
+ * plus aucune page ne le pose — la garde serait tombée à zéro page, donc
+ * muette. Ce que protègent les gardes ci-dessous (pas de doublon, pas d'image
+ * absente, un texte de remplacement) vaut pour toute image, quel que soit
+ * l'objet qui la porte.
+ */
 const PAGES_ILLUSTREES = readdirSync(DOSSIER)
   .filter((f) => f.endsWith('.tsx'))
   .map((f) => [f, sansCommentaires(readFileSync(path.join(DOSSIER, f), 'utf8'))] as const)
-  .filter(([, code]) => code.includes('bloc-illustre'))
+  // ⚠️ L'accueil a ses propres gardes (`vitrine-accueil.test.ts`) : il pose
+  // aussi une vidéo et des images décrites autrement, que celles-ci
+  // compteraient de travers.
+  .filter(([f, code]) => f !== 'Accueil.tsx' && /["']\/vitrine\//.test(code))
 
 /**
  * Les images qu'une page pose, dans l'ordre — la source PRINCIPALE de chaque
@@ -80,27 +94,23 @@ const regle = (selecteur: string) =>
   sansCommentaires(new RegExp(`${selecteur}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '')
 
 describe('les pages illustrées', () => {
-  it('il y en a, et chacune pose plusieurs captures', () => {
+  it('il y en a, et chacune pose plusieurs images', () => {
     // Une détection cassée rendrait toutes les gardes qui suivent silencieuses,
     // ce qui est pire que pas de garde.
-    expect(PAGES_ILLUSTREES.length).toBeGreaterThanOrEqual(2)
+    expect(PAGES_ILLUSTREES.length).toBeGreaterThanOrEqual(3)
     for (const [f, code] of PAGES_ILLUSTREES) {
-      expect(capturesDe(code).length, `${f} n’a qu’une capture, ou aucune`).toBeGreaterThan(1)
+      expect(imagesDe(code).length, `${f} n’a qu’une image, ou aucune`).toBeGreaterThan(1)
     }
   })
 
-  it('⚠️ chaque bloc illustré porte une capture ET son texte de remplacement', () => {
-    // Un bloc dont la figure est vide laisse un trou dans la grille ; une
-    // capture sans `alt` n'existe pas pour un lecteur d'écran.
+  it('⚠️ chaque image porte son texte de remplacement', () => {
+    // Une capture sans `alt` n'existe pas pour un lecteur d'écran. Les images
+    // posées en balise portent `alt=` ; celles d'une liste de données portent
+    // `alt: '…'`, qu'un composant passe ensuite à la balise.
     for (const [f, code] of PAGES_ILLUSTREES) {
-      const blocs = code.match(/className=(?:"|\{')?[^"'}]*bloc-illustre/g) ?? []
-      expect(blocs.length, `${f} : aucun bloc illustré`).toBeGreaterThan(0)
-      const vues = code.match(/bloc-vue/g) ?? []
-      expect(vues.length, `${f} : ${blocs.length} blocs pour ${vues.length} captures`)
-        .toBe(blocs.length)
-      // Autant de textes de remplacement que de captures.
-      const alts = (code.match(/alt=\{t\(/g) ?? []).length + (code.match(/^\s+alt: '/gm) ?? []).length
-      expect(alts, `${f} : une capture sans alt`).toBeGreaterThanOrEqual(vues.length)
+      const images = (code.match(/src=["{]/g) ?? []).length + (code.match(/\bsrc: '\/vitrine\//g) ?? []).length
+      const alts = (code.match(/\balt=\{/g) ?? []).length + (code.match(/\balt: '/g) ?? []).length
+      expect(alts, `${f} : ${images} images pour ${alts} textes de remplacement`).toBeGreaterThanOrEqual(images)
     }
   })
 
@@ -125,35 +135,6 @@ describe('les pages illustrées', () => {
       for (const src of fichiersDe(code)) {
         const fichier = path.resolve(__dirname, '../public' + src)
         expect(statSync(fichier).isFile(), `${f} : ${src} est absent de public/`).toBe(true)
-      }
-    }
-  })
-})
-
-describe('le cadre est dans l’image, jamais dans la feuille', () => {
-  it('⚠️ un téléphone ne porte ni filet, ni ombre, ni rayon', () => {
-    // Le corps du téléphone est DANS le PNG, sur fond transparent (voir
-    // `docs/entreprise/deck/encadrer.js`) : un cadre CSS par-dessus en
-    // dessinerait un second autour du premier.
-    const bloc = regle('\\.bloc-vue img')
-    expect(bloc.length).toBeGreaterThan(0)
-    for (const interdit of ['border', 'box-shadow', 'radius']) {
-      expect(bloc, `.bloc-vue img ne doit pas porter ${interdit}`).not.toContain(interdit)
-    }
-  })
-
-  it('⚠️ mais la capture du SITE en porte un, et elle est la seule exception', () => {
-    // Elle est rectangulaire : sans filet elle flotterait sur le fond de la
-    // carte. Même partage que `.duo-tel img` / `.duo-ecran img` de l'accueil.
-    expect(regle('\\.bloc-illustre--large \\.bloc-vue img')).toContain('border')
-    // ⚠️ Ce qui compte se DÉDUIT des captures, pas d'un marqueur : une capture
-    // qui n'est pas encadrée est forcément une capture du site, donc large.
-    for (const [f, code] of PAGES_ILLUSTREES) {
-      const nues = capturesDe(code).filter((src) => !/-encadre\.png$/.test(src))
-      expect(nues.length, `${f} : plus d’une capture large — ${nues.join(', ')}`)
-        .toBeLessThanOrEqual(1)
-      if (nues.length === 1) {
-        expect(code, `${f} : ${nues[0]} n’est pas déclarée large`).toMatch(/large/)
       }
     }
   })
@@ -197,20 +178,6 @@ describe('les photographies', () => {
     }
   })
 
-  it('⚠️ une photo n’est PAS mise au gabarit d’un téléphone', () => {
-    // Le corps du téléphone tient dans sa colonne parce qu'il est deux fois
-    // plus haut que large ; une photo au même gabarit ferait 230 × 153, une
-    // vignette. Les deux colonnes doivent donc différer — et c'est ça qu'on
-    // vérifie, pas une valeur : le jour où 380 devient 420, la garde tient.
-    const colonne = (selecteur: string) =>
-      /grid-template-columns:\s*([^;]+);/.exec(regle(selecteur))?.[1]?.trim()
-    const telephone = colonne('\\.bloc-illustre')
-    const photo = colonne('\\.bloc-illustre--photo')
-    expect(telephone, 'le bloc illustré n’a plus de colonnes').toBeTruthy()
-    expect(photo, 'les photos ont perdu leur propre largeur').toBeTruthy()
-    expect(photo, 'une photo est mise au gabarit d’un téléphone').not.toBe(telephone)
-  })
-
   it('⚠️ le script les prépare, on ne sert jamais l’original', () => {
     // Les originaux vivent hors du site et n'ont aucune raison d'y entrer :
     // ce sont les fichiers les plus lourds du dépôt.
@@ -220,64 +187,5 @@ describe('les photographies', () => {
     // des pixels, et une photo agrandie se voit plus qu'une photo un peu
     // petite.
     expect(sansCommentaires(script)).toMatch(/largeur > width/)
-  })
-})
-
-describe('la mise en page', () => {
-  it('⚠️ UNE SEULE définition pour toute la vitrine', () => {
-    // Deux copies de cette grille divergeraient au premier ajustement, et
-    // c'est la page qu'on regarde le moins qui garderait l'ancienne.
-    expect((css.match(/^\.bloc-illustre\s*\{/gm) ?? []).length).toBe(1)
-    expect((css.match(/^\.bloc-vue\s+img\s*\{/gm) ?? []).length).toBe(1)
-  })
-
-  it('⚠️ l’alternance est un choix de PAGE, et elle vient de la grille', () => {
-    // Une liste d'arguments de même rang y gagne un rythme ; un article dont
-    // seuls certains paragraphes sont illustrés, non — les blocs sans capture
-    // y casseraient la parité. D'où le modificateur sur le conteneur.
-    // ⚠️ La garde porte sur TOUTES les règles de parité, pas sur la présence
-    // d'une seule : vérifier qu'un sélecteur existe laisse passer un second
-    // qui alterne sans le modificateur — sabotage du 12 septembre 2026, qui
-    // est passé au vert la première fois.
-    const parites = [...css.matchAll(/^([^{}\n]*\.bloc-illustre[^{}\n]*nth-child[^{}\n]*)\{/gm)]
-      .map((m) => m[1].trim())
-    expect(parites.length, 'plus aucune règle d’alternance').toBeGreaterThan(0)
-    for (const sel of parites) {
-      expect(sel, `« ${sel} » alterne sans le modificateur de conteneur`)
-        .toContain('blocs-illustres--alterne')
-    }
-    // ⚠️ Et c'est la GRILLE qui alterne, jamais l'ordre du DOM : inverser en
-    // DOM ferait lire un bloc sur deux à l'envers dans un lecteur d'écran.
-    for (const [f, code] of PAGES_ILLUSTREES) {
-      expect(code.indexOf('bloc-vue'), `${f} : le texte précède la capture`)
-        .toBeLessThan(code.indexOf('bloc-dire'))
-      expect(code, `${f} inverse l’ordre au lieu de laisser la grille le faire`)
-        .not.toMatch(/order:\s*[-0-9]/)
-    }
-  })
-
-  it('⚠️ le texte garde une largeur de LECTURE', () => {
-    // Sans plafond, la ligne montait à 95 caractères à côté d'une colonne de
-    // 230 px, et à 130 sur un bloc pleine largeur — bien au-delà des 65 qui se
-    // lisent sans perdre le début de la ligne suivante.
-    expect(regle('\\.bloc-dire p')).toMatch(/max-width:\s*\d+ch/)
-    for (const [f, code] of PAGES_ILLUSTREES) {
-      // Une page qui pose ses paragraphes en style en ligne doit les borner
-      // elle-même : l'attribut l'emporte sur la feuille.
-      const enLigne = /const P = \{([^}]*)\}/.exec(code)
-      if (enLigne) expect(enLigne[1], `${f} : le paragraphe en ligne n’est pas borné`).toContain('maxWidth')
-    }
-  })
-
-  it('⚠️ sous 900 px la capture passe AU-DESSUS du texte', () => {
-    // Deux colonnes sur la largeur d'un téléphone donneraient une colonne de
-    // texte de vingt caractères.
-    const petit = blocsMedia('max-width: 900px').find((m) => m.includes('.bloc-vue')) ?? ''
-    expect(petit.length, 'aucune règle des blocs illustrés sous 900 px').toBeGreaterThan(0)
-    expect(petit).toContain('grid-row: 2')
-    // Et le téléphone reste borné : étiré sur la largeur, il ferait 700 px de
-    // haut et il faudrait le faire défiler pour atteindre le bloc qu'il
-    // illustre.
-    expect(petit).toMatch(/\.bloc-vue img\s*\{[^}]*max-width/)
   })
 })

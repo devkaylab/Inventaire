@@ -1,236 +1,268 @@
 import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
+import { RythmesAnnee } from '@/components/RythmesAnnee'
 import { traduction, type Langue } from '@/lib/traduction'
 
-/* ⚠️ Une largeur de LECTURE, sur les blocs illustrés comme sur les autres :
-   sans plafond, la ligne d'un bloc pleine largeur montait à 130 caractères —
-   le double de ce qui se lit sans perdre le début de la ligne suivante. */
-const P = { margin: 0, fontSize: 15.5, maxWidth: '62ch' } as const
-const H2 = { fontSize: 23, fontWeight: 800, letterSpacing: '-0.5px' } as const
-const CARTE = { padding: '30px 34px' } as const
-const CORPS = { marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 } as const
+/**
+ * « L'inventaire, expliqué simplement », refondue le 19 septembre 2026
+ * (demande de Julien : « refais la page en t'inspirant de Découvrir, pas en
+ * faisant un copier-coller »). Cinq blocs de trois ou quatre paragraphes
+ * deviennent des figures qu'on lit d'un coup d'œil.
+ *
+ * ⚠️ CHAQUE SECTION A LA FORME DE SON IDÉE, et c'est ce qui la distingue de
+ * Découvrir :
+ *   · qu'est-ce qu'un inventaire → une SOUSTRACTION (théorique − compté = écart) ;
+ *   · la démarque inconnue → UN CHIFFRE, puis ses quatre causes ;
+ *   · ce que l'écart révèle → quatre anomalies, chacune avec sa marque ;
+ *   · annuel, tournant, ciblé → l'ANNÉE DESSINÉE, semaine par semaine ;
+ *   · la méthode → QUATRE TEMPS, numérotés parce que c'est une vraie suite.
+ *
+ * ⚠️ PAGE DE RÉFÉRENCEMENT (« inventaire magasin ») : les termes que l'on
+ * cherche — stock théorique, démarque inconnue, inventaire tournant — restent
+ * dans les titres et les tuiles, même si le texte a fondu.
+ */
 
 /**
- * Page de fond : le sujet que tapent vraiment les gérants de magasin.
- * Premier article de la feuille de route référencement de la charte —
- * l'inventaire tournant est le différenciateur de Quantinvo.
- *
- * Les paragraphes qui portent un mot en gras sont découpés en segments : le
- * français de chaque segment reste la clé, le gras reste du balisage.
+ * ⚠️ AU-DELÀ DE L'OBLIGATION : trois raisons qu'un gérant reconnaît. L'article
+ * d'avant les disait en un paragraphe (« le stock est le principal actif d'un
+ * magasin, et toutes les décisions du quotidien reposent sur son exactitude »).
  */
+const RAISONS_INVENTAIRE = [
+  { titre: 'Une valeur de stock sincère', texte: 'Le stock est souvent le premier actif du magasin : au bilan, sa valeur doit être juste.' },
+  { titre: 'Des décisions sur des chiffres justes', texte: 'Commandes, réassort, promotions : tout repose sur le stock affiché.' },
+  { titre: 'Des pertes mises au jour', texte: 'Chaque écart a une cause : vol, casse, erreur de réception.' },
+]
+
+const CAUSES = [
+  { titre: 'Vol externe', texte: 'À l’étalage, dans les rayons.' },
+  { titre: 'Vol interne', texte: 'Dans le magasin lui-même.' },
+  { titre: 'Casse et perte', texte: 'Produits abîmés, périmés, jetés sans être enregistrés.' },
+  { titre: 'Erreurs administratives', texte: 'Réceptions mal saisies, erreurs de caisse, retours non déduits.' },
+]
+
+const ANOMALIES = [
+  { marque: '−3', titre: 'Les stocks négatifs', texte: 'Physiquement impossible : une erreur de saisie ou de code-barres.' },
+  { marque: '0 vente', titre: 'Les références fantômes', texte: 'Toujours au catalogue, elles gonflent la valeur du stock.' },
+  { marque: 'Rayon ?', titre: 'Les articles déplacés', texte: 'Présents mais introuvables, donc réassortis pour rien.' },
+  { marque: 'EAN ?', titre: 'Les codes-barres inconnus', texte: 'Des produits bien réels que votre référentiel ignore.' },
+]
+
+const TOUTES = Array.from({ length: 52 }, (_, i) => i)
+const RYTHMES = [
+  {
+    titre: 'Annuel',
+    texte: 'Le grand comptage complet, souvent à la clôture de l’exercice.',
+    semaines: [50],
+    legende: '1 semaine sur 52',
+  },
+  {
+    titre: 'Tournant',
+    texte: 'Une zone chaque semaine : le magasin ne ferme jamais, chaque rayon est vérifié plusieurs fois par an.',
+    semaines: TOUTES,
+    legende: '52 semaines sur 52',
+  },
+  {
+    titre: 'Ciblé',
+    texte: 'Les rayons sensibles, les meilleures ventes, ou une zone tirée au hasard.',
+    semaines: [3, 9, 15, 22, 30, 37, 44],
+    legende: '7 semaines sur 52',
+  },
+]
+
+const METHODE = [
+  { titre: 'Préparer', texte: 'Un référentiel à jour, et un stock théorique arrêté au moment du comptage.' },
+  { titre: 'Découper', texte: 'Des zones claires, chacune ouverte, comptée, puis clôturée.' },
+  { titre: 'Vérifier', texte: 'Un double comptage sur les zones sensibles, et les écarts tranchés sur place.' },
+  { titre: 'Corriger', texte: 'Recaler le stock théorique, et traiter les causes.' },
+]
+
 export function Inventaire({ langue }: { langue: Langue }) {
   const { t, lien } = traduction(langue)
   return (
     <>
       <SiteHeader langue={langue} />
       <main>
-        <section className="hero" style={{ paddingBottom: 40 }}>
-          <div className="container">
-            <h1 data-reveal="1" style={{ fontSize: 'clamp(32px, 5vw, 52px)' }}>
-              {t('L’inventaire,')}<br />{t('expliqué simplement.')}
-            </h1>
+        <section className="hero dq-heros">
+          <div className="container dq-heros-grille">
+            <div className="dq-heros-texte">
+              <h1 data-reveal="1">{t('L’inventaire')}</h1>
+            </div>
+            <figure className="dq-heros-photo" data-reveal="2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/vitrine/photos/reserve-760.webp"
+                srcSet="/vitrine/photos/reserve-380.webp 380w, /vitrine/photos/reserve-760.webp 760w"
+                sizes="(min-width: 900px) 520px, calc(100vw - 48px)"
+                width={760}
+                height={510}
+                alt={t('Deux personnes relèvent le stock d’une réserve, l’une au téléphone, l’autre sur papier')}
+              />
+            </figure>
           </div>
         </section>
 
         {/*
-          ⚠️ LE BANDEAU N'EST PAS UNE ILLUSTRATION, C'EST LE SUJET. Une étiquette
-          imprimée collée sur une glissière, et un téléphone qui la vise : c'est
-          exactement ce que le produit fait faire, et ça se comprend avant
-          d'avoir lu une ligne. Il ouvre l'article parce qu'aucun paragraphe
-          n'en a besoin à lui seul — le poser dans une carte l'aurait rattaché
-          à un argument qu'il ne sert pas.
-
-          ⚠️ DEUX LARGEURS, ET UN `sizes` QUI DIT LA VÉRITÉ. Sans lui, le
-          navigateur suppose que l'image occupe toute la fenêtre et prend la
-          plus grande variante, quelle que soit la place réelle. Les valeurs
-          sont MESURÉES, pas devinées : 1080 px au plus (la largeur du
-          `.container`), et la fenêtre moins ses marges en dessous — 342 px
-          relevés sur un écran de 390.
+          ── Pourquoi faire un inventaire : on commence par l'obligation ──
+          ⚠️ LA PAGE S'OUVRE SUR L'OBLIGATION (Julien, sur la maquette du
+          19 septembre 2026 : « commence par cette phrase, c'est un point
+          important, et développe pourquoi faire un inventaire »). Un gérant
+          qui arrive ici se demande d'abord s'il DOIT le faire ; la définition
+          vient après.
         */}
-        <div className="container">
-          <figure className="photo-bandeau" data-reveal="0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/vitrine/photos/etiquette-1264.webp"
-              srcSet="/vitrine/photos/etiquette-640.webp 640w, /vitrine/photos/etiquette-1264.webp 1264w"
-              sizes="(min-width: 1128px) 1080px, calc(100vw - 48px)"
-              width={1264}
-              height={632}
-              alt={t('Une étiquette QR imprimée, collée sur la glissière d’un rayon, et un téléphone qui la vise')}
-            />
-          </figure>
-        </div>
-
-        {/*
-          ⚠️ UNE CAPTURE N'APPARAÎT QUE LÀ OÙ UN ÉCRAN MONTRE VRAIMENT CE QUE LE
-          PARAGRAPHE DÉCRIT — et une PHOTOGRAPHIE là où le paragraphe décrit
-          un phénomène. Les deux blocs du milieu expliquent ce qui se passe
-          dans un magasin, pas ce que fait le produit : aucun écran ne montre
-          un vol, une casse ou une erreur de réception. Ils sont restés nus
-          jusqu'au 12 septembre 2026 faute de matière ; ils portent maintenant
-          une photo, qui prouve ce qu'une capture n'aurait fait qu'illustrer de
-          loin.
-
-          Cette page est un article de fond, pas une brochure : c'est ce qui la
-          fait trouver sur « inventaire magasin », et la remplir d'images
-          décoratives lui ferait perdre les deux.
-
-          ⚠️ UNE PHOTO N'A PAS LA MÊME PLACE QU'UN TÉLÉPHONE. Le corps du
-          téléphone tient dans 230 px ; une photographie y deviendrait une
-          vignette. D'où `--photo`, qui lui donne 380 px et son propre arrondi
-          — un téléphone, lui, porte déjà le sien dans le PNG.
-
-          ⚠️ ET PAS D'ALTERNANCE ICI, contrairement à « Pourquoi nous
-          choisir » : cette page mêle deux formats d'image, et une rangée sur
-          deux qui saute de côté ferait valser le regard entre un téléphone de
-          230 px et une photo de 380. L'image reste à gauche, comme une marge
-          de figures.
-        */}
-        <section className="section" style={{ paddingTop: 8 }}>
-          <div className="container blocs-illustres">
-
-            <div className="card bloc-illustre" data-reveal="0" style={CARTE}>
-              <figure className="bloc-vue">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/vitrine/scanner-balise-encadre.png" alt={t('L’écran de comptage de l’application : ouvrir une zone, puis scanner les articles')} />
-              </figure>
-              <div className="bloc-dire">
-                <h2 style={H2}>{t('Qu’est-ce qu’un inventaire ?')}</h2>
-                <div style={CORPS}>
-                  <p style={P}>
-                    {t('Un inventaire, c’est le comptage physique de la marchandise réellement présente en magasin et en réserve, article par article. On le compare ensuite au')}
-                    <strong> {t('stock théorique')}</strong>{t(' — celui que votre logiciel de caisse ou de gestion croit connaître, alimenté par les réceptions et les ventes.')}
-                  </p>
-                  <p style={P}>
-                    {t('L’écart entre les deux est la vraie information : chaque différence a une cause — un vol, une casse non déclarée, une erreur de réception, un retour jamais réintégré. L’inventaire ne sert pas seulement à obtenir un chiffre juste ; il sert à découvrir ce qui, dans le quotidien du magasin, fabrique du faux stock.')}
-                  </p>
-                  <p style={P}>
-                    {t('C’est aussi une obligation : toute entreprise doit inventorier son stock au moins une fois par exercice comptable. Mais s’arrêter à cette obligation, c’est passer à côté de l’essentiel — le stock est le principal actif d’un magasin, et toutes les décisions du quotidien reposent sur son exactitude.')}
-                  </p>
-                </div>
+        <section className="section dq-section-haut">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('Pourquoi faire un inventaire ?')}</h2>
+            </div>
+            <div className="iv-pourquoi">
+              <div className="iv-obligation" data-reveal="1">
+                <span className="iv-obligation-chiffre">{t('1 fois')}<small>{t('tous les 12 mois, au moins')}</small></span>
+                <h3>{t('C’est une obligation')}</h3>
+                <p>{t('Tout commerçant doit contrôler son stock par inventaire au moins une fois tous les douze mois.')}</p>
+                <small className="iv-source">{t('Code de commerce, article L123-12')}</small>
+              </div>
+              <div className="iv-raisons">
+                {RAISONS_INVENTAIRE.map((r, i) => (
+                  <div className="iv-raison" data-reveal={i + 2} key={r.titre}>
+                    <h3>{t(r.titre)}</h3>
+                    <p>{t(r.texte)}</p>
+                  </div>
+                ))}
               </div>
             </div>
+          </div>
+        </section>
 
-            <div className="card bloc-illustre bloc-illustre--photo" data-reveal="0" style={CARTE}>
-              <figure className="bloc-vue">
+        {/* ── Une soustraction, et c'est la définition ── */}
+        <section className="section bande-surface">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('Qu’est-ce qu’un inventaire ?')}</h2>
+              <p className="iv-note">{t('Le comptage de ce qui est vraiment en rayon et en réserve, comparé au stock attendu.')}</p>
+            </div>
+            <div className="iv-calcul" data-reveal="1">
+              <div className="iv-terme">
+                <strong>{t('Stock théorique')}</strong>
+                <span>{t('Ce que votre logiciel croit avoir')}</span>
+              </div>
+              <b className="iv-signe" aria-hidden="true">−</b>
+              <div className="iv-terme">
+                <strong>{t('Stock compté')}</strong>
+                <span>{t('Ce qui est vraiment là')}</span>
+              </div>
+              <b className="iv-signe" aria-hidden="true">=</b>
+              <div className="iv-terme iv-terme-resultat">
+                <strong>{t('L’écart')}</strong>
+                <span>{t('La vraie information : chaque différence a une cause')}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Un chiffre, puis ses causes ── */}
+        <section className="section">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('La démarque inconnue')}</h2>
+              <p className="iv-note">{t('La marchandise qui figure au stock théorique, mais n’est plus en rayon.')}</p>
+            </div>
+            <div className="iv-demarque">
+              <div className="iv-chiffre" data-reveal="1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/vitrine/photos/reserve-sombre-760.webp"
                   srcSet="/vitrine/photos/reserve-sombre-380.webp 380w, /vitrine/photos/reserve-sombre-760.webp 760w"
-                  sizes="(min-width: 900px) 380px, calc(100vw - 116px)"
+                  sizes="(min-width: 900px) 420px, calc(100vw - 48px)"
                   width={760}
                   height={510}
                   alt={t('Deux personnes comptent au téléphone dans une réserve mal éclairée')}
                 />
-              </figure>
-              <div className="bloc-dire">
-                <h2 style={H2}>{t('La démarque inconnue : ce que le stock théorique cache')}</h2>
-                <div style={CORPS}>
-                  <p style={P}>
-                    {t('La')} <strong>{t('démarque inconnue')}</strong>{t(', c’est la marchandise disparue sans explication : elle figure au stock théorique, mais elle n’est plus en rayon. Selon les études du secteur, elle coûte de l’ordre de 1 à 2 % du chiffre d’affaires du commerce de détail — souvent plus que la marge nette du magasin.')}
-                  </p>
-                  <p style={P}>
-                    {t('Ses causes se répartissent en quatre familles : le')} <strong>{t('vol externe')}</strong>{t(' (à l’étalage), le')} <strong>{t('vol interne')}</strong>{t(', la')} <strong>{t('casse et la perte')}</strong>{t(' (produits abîmés, périmés, jetés sans être enregistrés) et les')}
-                    <strong> {t('erreurs administratives')}</strong>{t(' — réceptions mal saisies, erreurs de caisse, retours fournisseurs non déduits.')}
-                  </p>
-                  <p style={P}>
-                    {t('Un magasin qui ne compte qu’une fois par an découvre sa démarque douze mois trop tard, en un seul bloc, sans pouvoir dire ni où ni quand elle s’est produite. Compter souvent, c’est transformer une perte annuelle subie en signaux précoces sur lesquels on peut agir : renforcer un rayon, revoir une procédure de réception, sécuriser une réserve.')}
-                  </p>
+                <div className="iv-chiffre-dire">
+                  <strong>{t('1 à 2 %')}</strong>
+                  <span>{t('du chiffre d’affaires du commerce de détail, selon les études du secteur. Souvent plus que la marge nette.')}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="card bloc-illustre bloc-illustre--photo" data-reveal="0" style={CARTE}>
-              <figure className="bloc-vue">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/vitrine/photos/reserve-760.webp"
-                  srcSet="/vitrine/photos/reserve-380.webp 380w, /vitrine/photos/reserve-760.webp 760w"
-                  sizes="(min-width: 900px) 380px, calc(100vw - 116px)"
-                  width={760}
-                  height={510}
-                  alt={t('Deux personnes relèvent le stock d’une réserve, l’une au téléphone, l’autre sur papier')}
-                />
-              </figure>
-              <div className="bloc-dire">
-                <h2 style={H2}>{t('Ce que l’inventaire révèle d’autre')}</h2>
-                <div style={CORPS}>
-                  <p style={P}>
-                    {t('L’écart de comptage est un révélateur d’anomalies de gestion que rien d’autre ne montre :')}
-                  </p>
-                  <p style={P}>
-                    <strong>{t('Les stocks négatifs')}</strong>{t(' — le logiciel affiche −3 sur une référence : impossible physiquement, donc une erreur de saisie ou un code-barres qui encaisse un article pour un autre.')} <strong>{t('Les références fantômes')}</strong>{t(' — jamais vendues, jamais comptées, mais toujours au catalogue, qui gonflent la valeur de stock.')} <strong>{t('Les articles déplacés')}</strong>{t(' — présents mais introuvables, donc réassortis pour rien.')}
-                    <strong> {t('Les codes-barres inconnus')}</strong>{t(' — des produits bien réels que le référentiel ne connaît pas, signe d’une réception passée à côté du système.')}
-                  </p>
-                  <p style={P}>
-                    {t('Corriger ces anomalies, c’est l’autre moitié de la valeur d’un inventaire : des commandes mieux calibrées, moins de ruptures fictives, une valeur de stock sincère au bilan — et une équipe qui cesse de chercher des produits qui n’existent plus.')}
-                  </p>
-                </div>
+              <div className="iv-causes">
+                {CAUSES.map((c, i) => (
+                  <div className="iv-cause" data-reveal={i + 1} key={c.titre}>
+                    <h3>{t(c.titre)}</h3>
+                    <p>{t(c.texte)}</p>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className="card bloc-illustre" data-reveal="0" style={CARTE}>
-              <figure className="bloc-vue">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/vitrine/zones-encadre.png" alt={t('L’écran des zones : le magasin découpé en emplacements, chacun avec son avancement')} />
-              </figure>
-              <div className="bloc-dire">
-                <h2 style={H2}>{t('Annuel, tournant, ciblé : les trois façons de compter')}</h2>
-                <div style={CORPS}>
-                  <p style={P}>
-                    <strong>{t('L’inventaire annuel')}</strong>{t(' est le grand comptage complet, souvent calé sur la clôture de l’exercice. Nécessaire, mais lourd : il se planifie des mois à l’avance, mobilise tout le monde une soirée ou une nuit, et ne donne qu’une photographie par an.')}
-                  </p>
-                  <p style={P}>
-                    <strong>{t('L’inventaire tournant')}</strong>{t(' découpe le magasin en zones et les compte une à une, au fil des semaines : quelques rayons ce mardi, la réserve la semaine prochaine. Le magasin ne ferme jamais, l’effort se lisse, et chaque zone est vérifiée plusieurs fois par an. C’est la méthode des enseignes qui tiennent leur stock au plus près.')}
-                  </p>
-                  <p style={P}>
-                    <strong>{t('L’inventaire ciblé ou aléatoire')}</strong>{t(' concentre le comptage là où ça bouge : les rayons sensibles au vol, les meilleures ventes, une famille d’articles dont les chiffres étonnent — ou une zone tirée au hasard, pour l’effet de contrôle surprise. C’est le complément naturel du tournant.')}
-                  </p>
-                  <p style={P}>
-                    {t('Les trois se combinent : le tournant et le ciblé toute l’année pour garder un stock juste, l’annuel pour la photographie complète — d’autant plus rapide que le stock est déjà fiable.')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="card bloc-illustre" data-reveal="0" style={CARTE}>
-              <figure className="bloc-vue">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/vitrine/creer-balises-encadre.png" alt={t('La création des étiquettes : numérotation, premier numéro et nombre de balises')} />
-              </figure>
-              <div className="bloc-dire">
-                <h2 style={H2}>{t('Bien compter : la méthode')}</h2>
-                <div style={CORPS}>
-                  <p style={P}>
-                    <strong>{t('Préparer')}</strong>{t(' — un référentiel articles à jour et un stock théorique arrêté au moment du comptage : sans point de comparaison fiable, l’écart ne veut rien dire.')}
-                  </p>
-                  <p style={P}>
-                    <strong>{t('Découper')}</strong>{t(' — des zones claires, chacune ouverte, comptée et clôturée : c’est ce qui garantit que rien n’est oublié ni compté deux fois, même à plusieurs compteurs en parallèle.')}
-                  </p>
-                  <p style={P}>
-                    <strong>{t('Vérifier')}</strong>{t(' — un double comptage sur les zones sensibles, et un arbitrage des écarts pendant que tout le monde est encore sur place : recompter une étagère prend dix minutes le jour même.')}
-                  </p>
-                  <p style={P}>
-                    <strong>{t('Corriger')}</strong>{t(' — le résultat sert à recaler le stock théorique et à traiter les causes. Un inventaire dont le rapport reste dans un tiroir n’a servi qu’à fatiguer l’équipe.')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
+            <p className="iv-rappel" data-reveal="2">
+              {t('Compter une fois par an, c’est la découvrir douze mois trop tard. Compter souvent, c’est agir dès les premiers signaux.')}
+            </p>
           </div>
         </section>
 
+        {/* ── Les anomalies, sur l'encre ── */}
+        <section className="section bande-encre">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('Ce que l’écart révèle d’autre')}</h2>
+            </div>
+            <div className="iv-anomalies">
+              {ANOMALIES.map((a, i) => (
+                <div className="iv-anomalie" data-reveal={i + 1} key={a.titre}>
+                  <span className="iv-marque">{t(a.marque)}</span>
+                  <h3>{t(a.titre)}</h3>
+                  <p>{t(a.texte)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── L'année dessinée ── */}
         <section className="section">
           <div className="container">
-            <div className="cta-band" data-reveal="0">
-              <div className="plx band-glow" data-plx="0.35" aria-hidden="true" />
-              <h2>{t('Comptez quand vous voulez')}</h2>
-              <p>
-                {t('Quantinvo est l’outil de cette méthode : zones et balises, double comptage, écarts arbitrés en direct et rapport prêt pour la correction du stock — autant de fois par an que vous le décidez.')}
-              </p>
-              <Link href={lien('/pourquoi-nous-choisir')} className="btn btn-ghost" style={{ marginRight: 12 }}>{t('Pourquoi nous choisir ?')}</Link>
-              <InscriptionLink className="btn btn-primary">Inscrire mon entreprise</InscriptionLink>
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('Annuel, tournant, ciblé : trois façons de compter')}</h2>
+              <p className="iv-note">{t('Les trois se combinent : le tournant et le ciblé toute l’année, l’annuel pour la photographie complète.')}</p>
+            </div>
+            <div data-reveal="1">
+              <RythmesAnnee
+                libelle={t('Trois façons de compter')}
+                mois={[t('Janvier'), t('Avril'), t('Juillet'), t('Octobre'), t('Décembre')]}
+                rythmes={RYTHMES.map((r) => ({
+                  titre: t(r.titre),
+                  texte: t(r.texte),
+                  semaines: r.semaines,
+                  legende: t(r.legende),
+                }))}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── La méthode : une vraie suite, donc numérotée ── */}
+        <section className="section bande-surface">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('Bien compter, en quatre temps')}</h2>
+            </div>
+            <ol className="iv-methode">
+              {METHODE.map((m, i) => (
+                <li data-reveal={i + 1} key={m.titre}>
+                  <span className="iv-temps" aria-hidden="true">{i + 1}</span>
+                  <h3>{t(m.titre)}</h3>
+                  <p>{t(m.texte)}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="section bande-accent final">
+          <div className="container" data-reveal="0">
+            <h2>{t('Fiabilisez votre stock avec Quantinvo')}</h2>
+            <p>{t('Zones et balises, double comptage, écarts tranchés en direct : l’outil de cette méthode.')}</p>
+            <div className="cta">
+              <InscriptionLink className="btn btn-clair">Fiabiliser mon stock</InscriptionLink>
+              <Link href={lien('/pourquoi-nous-choisir')} className="btn btn-encre">{t('Pourquoi nous choisir ?')}</Link>
             </div>
           </div>
         </section>

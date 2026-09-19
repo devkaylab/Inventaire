@@ -662,135 +662,6 @@ body:has(.site-footer) .theme-toggle { display: none; }
 }
 .card h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
 .card p { margin-top: 8px; color: var(--text-2); font-size: 15px; }
-/* Numéro des six raisons, dans le titre de chaque carte. */
-.raison-numero { color: var(--accent-light); font-variant-numeric: tabular-nums; }
-
-/* ── Une carte, sa capture à côté ────────────────────────────────────────────
-   Constat sur « Pourquoi nous choisir » : six paragraphes empilés se lisaient
-   comme un mur. Une capture par bloc donne un point d'appui au regard, et
-   prouve ce que la phrase affirme.
-
-   ⚠️ UNE SEULE DÉFINITION POUR TOUTE LA VITRINE. « Pourquoi nous choisir » et
-   « L'inventaire » posent le même objet ; deux copies divergeraient au premier
-   ajustement. Ce qui les distingue est un MODIFICATEUR, pas une seconde
-   grille — voir `--alterne` plus bas. */
-.blocs-illustres { display: flex; flex-direction: column; gap: 24px; }
-.bloc-illustre {
-  display: grid; align-items: center; gap: 44px;
-  grid-template-columns: 230px minmax(0, 1fr);
-  padding: 34px 38px;
-}
-.bloc-illustre > .bloc-vue { grid-column: 1; grid-row: 1; }
-.bloc-illustre > .bloc-dire { grid-column: 2; grid-row: 1; }
-
-/* ⚠️ L'ALTERNANCE EST UN CHOIX DE PAGE, PAS UNE PROPRIÉTÉ DU BLOC. Une liste
-   d'arguments de même rang y gagne un rythme (« Pourquoi nous choisir ») ; un
-   article dont seuls certains paragraphes sont illustrés, non — les blocs sans
-   capture y casseraient la parité, et une rangée sur deux sauterait de côté
-   sans raison lisible. D'où le modificateur sur le CONTENEUR.
-   ⚠️ Et c'est la GRILLE qui alterne, jamais l'ordre du DOM : la lecture reste
-   partout capture-puis-texte, y compris pour un lecteur d'écran. */
-.blocs-illustres--alterne > .bloc-illustre:nth-child(even) {
-  grid-template-columns: minmax(0, 1fr) 230px;
-}
-.blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-vue { grid-column: 2; }
-.blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-dire { grid-column: 1; }
-
-/* ⚠️ LE TABLEAU DE BORD PREND TOUTE LA LARGEUR, ET LE TEXTE PASSE DESSOUS.
-   Mesuré : dans une colonne à côté du texte il tombait à 492 px, soit quatre
-   fois moins que sa résolution — les chiffres et les libellés du tableau de
-   bord y devenaient illisibles, donc la capture ne prouvait plus rien. C'est
-   la seule rangée qui déroge, et c'est parce que c'est la seule capture qui
-   n'est pas un téléphone. */
-.bloc-illustre--large,
-.blocs-illustres--alterne > .bloc-illustre--large:nth-child(even) {
-  grid-template-columns: minmax(0, 1fr); gap: 26px;
-}
-.bloc-illustre--large > .bloc-vue,
-.blocs-illustres--alterne > .bloc-illustre--large:nth-child(even) > .bloc-vue {
-  grid-column: 1; grid-row: 1;
-}
-.bloc-illustre--large > .bloc-dire,
-.blocs-illustres--alterne > .bloc-illustre--large:nth-child(even) > .bloc-dire {
-  grid-column: 1; grid-row: 2;
-}
-
-/* ⚠️ NI FILET, NI OMBRE, NI RAYON sur un téléphone : son corps est DANS le PNG,
-   sur fond transparent. Un cadre CSS par-dessus en dessinerait un second.
-   Le tableau de bord, lui, est une capture RECTANGULAIRE du site : celui-là
-   porte un filet — même partage que `.duo-tel img` / `.duo-ecran img`. */
-.bloc-vue { margin: 0; }
-.bloc-vue img { display: block; width: 100%; height: auto; }
-.bloc-illustre--large .bloc-vue img {
-  border: 1px solid var(--hairline); border-radius: var(--r);
-}
-
-/* ⚠️ UNE PHOTOGRAPHIE N'A PAS LA PLACE D'UN TÉLÉPHONE. Le corps du téléphone
-   tient dans 230 px de large parce qu'il est deux fois plus haut que large ;
-   une photo au même gabarit ferait 230 × 153 — une vignette. Elle prend donc
-   380 px, et c'est aussi ce qui la distingue au premier coup d'œil d'une
-   capture d'écran.
-   ⚠️ Et elle porte SON arrondi : contrairement au téléphone, dont le cadre est
-   dans le PNG, une photo rectangulaire posée nue sur une carte lui ferait un
-   angle vif contre des angles adoucis. */
-.bloc-illustre--photo { grid-template-columns: 380px minmax(0, 1fr); }
-.blocs-illustres--alterne > .bloc-illustre--photo:nth-child(even) {
-  grid-template-columns: minmax(0, 1fr) 380px;
-}
-.bloc-illustre--photo .bloc-vue img { border-radius: var(--r); }
-
-/* Le bandeau qui ouvre un article : la photo prend la largeur de lecture, sans
-   cadre ni ombre — elle n'est pas un objet posé sur la page, elle EST la page à
-   cet endroit. */
-.photo-bandeau { margin: 0 0 40px; }
-.photo-bandeau img {
-  display: block; width: 100%; height: auto;
-  border-radius: var(--radius);
-}
-
-.bloc-dire h2 { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; }
-/* ⚠️ Une largeur de LECTURE, pas la largeur disponible : à côté d'une colonne
-   de 230 px la ligne montait à 95 caractères, bien au-delà des 65 qui se
-   lisent sans perdre le début de la ligne suivante. */
-.bloc-dire p { margin: 12px 0 0; color: var(--text-2); font-size: 15.5px; max-width: 62ch; }
-
-/* ⚠️ SOUS 900 px LA CAPTURE PASSE AU-DESSUS DU TEXTE, et elle se borne à
-   230 px : étirée sur la largeur d'un téléphone, elle ferait 700 px de haut et
-   il faudrait la faire défiler pour atteindre le bloc qu'elle illustre. */
-@media (max-width: 900px) {
-  .bloc-illustre,
-  .blocs-illustres--alterne > .bloc-illustre:nth-child(even),
-  .bloc-illustre--large {
-    grid-template-columns: minmax(0, 1fr); gap: 26px;
-  }
-  .bloc-illustre > .bloc-vue,
-  .blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-vue {
-    grid-column: 1; grid-row: 1;
-  }
-  .bloc-illustre > .bloc-dire,
-  .blocs-illustres--alterne > .bloc-illustre:nth-child(even) > .bloc-dire {
-    grid-column: 1; grid-row: 2;
-  }
-  .bloc-illustre--photo,
-  .blocs-illustres--alterne > .bloc-illustre--photo:nth-child(even) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .bloc-vue img { max-width: 230px; }
-  /* ⚠️ Le tableau de bord prend ce qu'il peut : sur un téléphone il dit « il y
-     a un tableau de bord », il ne se lit pas. C'est une limite du support, pas
-     un réglage — le texte à côté, lui, dit ce qu'on y voit.
-     ⚠️ Une photographie non plus ne se borne pas à 230 px : une photo réduite
-     de moitié au milieu d'un article ne montre plus rien. */
-  .bloc-illustre--large .bloc-vue img,
-  .bloc-illustre--photo .bloc-vue img { max-width: none; }
-}
-
-/* Sur un téléphone, 38 px de marge intérieure de chaque côté mangent un
-   cinquième de la largeur utile. */
-@media (max-width: 520px) {
-  .bloc-illustre { padding: 24px 20px; }
-}
-
 /* ── CTA band ───────────────────────────────────────────── */
 .cta-band {
   /* position + z-index : la lueur (.band-glow) se glisse en z-index -1,
@@ -4606,7 +4477,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* ── Le rappel final, sur l'accent ───────────────────────────────────────── */
 .final { text-align: center; }
 .final h2 { font-size: clamp(28px, 4vw, 38px); font-weight: 800; letter-spacing: -0.8px; color: #fff; }
-.final p { color: rgba(255, 255, 255, 0.85); font-size: 17px; margin: 12px auto 0; max-width: 46ch; }
+.final p { color: rgba(255, 255, 255, 0.85); font-size: 17px; margin: 12px auto 0; max-width: none; text-wrap: balance; }
 .final .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
 .final-note { color: rgba(255, 255, 255, 0.72); font-size: 13.5px; margin-top: 18px; }
 .btn-clair { background: #fff; border-color: #fff; color: var(--accent); }
@@ -4984,7 +4855,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .dq-tuile-filet { background: transparent; border: 1px solid var(--border-strong); }
 /* ⚠️ LE TEXTE AU-DESSUS, LA CAPTURE SUR TOUTE LA LARGEUR : le rapport est un
    écran d'ordinateur, et dans une demi-colonne ses chiffres deviendraient
-   illisibles — même règle que `.bloc-illustre--large`. */
+   illisibles. */
 .dq-t-e { display: flex; flex-direction: column; gap: 22px; }
 .dq-rapport-vue {
   display: block; width: 100%; height: auto;
@@ -5064,7 +4935,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   width: 100%; max-width: 320px; background: var(--bg); border-radius: var(--r-grand);
   padding: 14px 18px; display: flex; flex-direction: column; gap: 2px;
 }
-.dq-flux-case span { font-weight: 700; font-size: 15.5px; }
+.dq-flux-case span { font-weight: 600; font-size: 15.5px; }
 .dq-flux-case small { color: var(--text-2); font-size: 13.5px; }
 .dq-flux-centre { background: var(--accent); }
 .dq-flux-centre span, .dq-flux-centre small { color: var(--on-accent); }
@@ -5076,7 +4947,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   content: ''; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px;
   border-radius: var(--r-pastille); background: var(--text);
 }
-.dq-points strong { color: var(--text); }
+.dq-points strong { color: var(--text); font-weight: 600; }
 
 .dq-magasins {
   background: var(--bg); border-radius: var(--radius); padding: 28px;
@@ -5084,7 +4955,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .dq-magasin { background: var(--surface); border-radius: var(--r-grand); padding: 14px 18px; }
 .dq-magasin-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.dq-magasin-ligne span { font-weight: 700; font-size: 15px; }
+.dq-magasin-ligne span { font-weight: 600; font-size: 15px; }
 .dq-magasin-ligne small { color: var(--text-2); font-size: 13px; white-space: nowrap; }
 .dq-jauge { height: 6px; border-radius: var(--r-pastille); background: var(--hairline); margin-top: 10px; overflow: hidden; }
 .dq-jauge i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
@@ -5130,3 +5001,193 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 @media (max-width: 520px) {
   .hero.dq-heros .cta { align-items: flex-start; }
 }
+
+/* ── « Pourquoi nous choisir » (refonte du 19 septembre 2026) ─────────────
+   Six raisons en onglets : la liste à gauche, l'écran et ses trois points à
+   droite. Voir components/OngletsRaisons.tsx. */
+.pq-heros { text-align: left; padding: 72px 0 24px; }
+.pq-heros h1 { font-size: clamp(34px, 4.6vw, 54px); max-width: 16ch; }
+.pq-heros p.lead { margin: 20px 0 0; max-width: 40em; }
+.pq-section-raisons { padding-top: 32px; }
+
+.raisons { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+.raisons-liste { display: flex; flex-direction: column; gap: 6px; }
+.raisons-liste button {
+  text-align: left; cursor: pointer; font: inherit; font-size: 16px; font-weight: 600;
+  color: var(--text-2); background: transparent; border: 0; border-radius: var(--r-grand);
+  padding: 16px 18px; transition: background-color .15s ease, color .15s ease;
+}
+.raisons-liste button:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
+.raisons-liste button.actif { color: var(--text); background: var(--surface); }
+.raisons-panneau {
+  background: var(--surface); border-radius: var(--radius); overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 250px);
+  gap: 32px; padding: 34px 38px; align-items: center;
+}
+.raisons-dire h3 { font-size: clamp(24px, 2.6vw, 30px); font-weight: 800; letter-spacing: -0.6px; line-height: 1.15; }
+.raisons-dire ul { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+.raisons-dire li { position: relative; padding-left: 22px; color: var(--text-2); font-size: 16.5px; max-width: 40ch; }
+.raisons-dire li::before {
+  content: ''; position: absolute; left: 2px; top: .6em; width: 8px; height: 8px;
+  border-radius: var(--r-pastille); background: var(--accent);
+}
+/* ⚠️ LE TÉLÉPHONE EST ENTIER, jamais rogné par le bas (Julien, sur la
+   maquette : « capture coupée »). */
+.raisons-vue img { display: block; width: 100%; max-width: 250px; height: auto; margin: 0 auto; }
+/* ⚠️ Le suivi est une capture d'ORDINATEUR : elle passe sous le texte, sur
+   toute la largeur, avec son filet — jamais serrée dans la colonne du
+   téléphone, où ses chiffres deviendraient illisibles. */
+.raisons-panneau-large { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.raisons-panneau-large .raisons-vue img {
+  max-width: none; margin: 24px 0 0; border: 1px solid var(--hairline); border-radius: var(--r);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .raisons-panneau { animation: raison-entre .25s ease; }
+  @keyframes raison-entre { from { opacity: .4; } to { opacity: 1; } }
+}
+
+/* D'habitude / avec Quantinvo : un tableau de quatre lignes, sur l'encre. */
+.pq-face { display: flex; flex-direction: column; }
+.pq-face-tete, .pq-face-ligne {
+  display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 1fr); gap: 24px;
+}
+.pq-face-tete { padding: 0 0 14px; color: var(--sur-encre-2); font-size: 13.5px; font-weight: 600; }
+.pq-face-ligne { padding: 22px 0; border-top: 1px solid var(--encre-hairline); align-items: baseline; }
+.pq-face-ligne strong { color: var(--sur-encre); font-size: 17px; font-weight: 600; }
+.pq-avant { color: var(--sur-encre-2); font-size: 16px; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--sur-encre-2) 55%, transparent); }
+.pq-avec { color: var(--sur-encre); font-size: 16px; font-weight: 600; }
+.pq-face-ligne em { display: none; font-style: normal; }
+
+@media (max-width: 900px) {
+  .raisons { grid-template-columns: minmax(0, 1fr); }
+  .raisons-liste { flex-direction: row; overflow-x: auto; scrollbar-width: none; gap: 4px; }
+  .raisons-liste::-webkit-scrollbar { display: none; }
+  .raisons-liste button { white-space: nowrap; padding: 12px 16px; font-size: 15px; }
+  .raisons-panneau { grid-template-columns: minmax(0, 1fr); padding: 26px 24px; gap: 24px; }
+  .raisons-vue img { max-width: 220px; }
+  .pq-heros { padding: 40px 0 16px; }
+  .pq-face-tete { display: none; }
+  .pq-face-ligne { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .pq-face-ligne em { display: block; color: var(--sur-encre-2); font-size: 12.5px; font-weight: 600; text-decoration: none; margin-bottom: 2px; }
+  .pq-avant { text-decoration: none; }
+}
+
+/* ── « L'inventaire » (refonte du 19 septembre 2026) ──────────────────────
+   Chaque section a la forme de son idée : une soustraction, un chiffre, des
+   anomalies, une année dessinée, quatre temps. */
+.iv-note { margin-top: 14px; color: var(--text-2); font-size: 17px; max-width: 56ch; }
+.bande-encre .iv-note { color: var(--sur-encre-2); }
+.iv-rappel {
+  margin-top: 22px; color: var(--text-2); font-size: 15px; max-width: 70ch;
+  padding-left: 14px; border-left: 2px solid var(--accent);
+}
+
+.iv-calcul {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1.15fr);
+  gap: 16px; align-items: stretch;
+}
+.iv-terme {
+  background: var(--surface); border-radius: var(--radius); padding: 26px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.iv-terme strong { font-family: var(--police-titre), system-ui, sans-serif; font-size: 22px; letter-spacing: -0.3px; }
+.iv-terme span { color: var(--text-2); font-size: 15px; }
+.iv-terme-resultat { background: var(--accent-soft); }
+.iv-terme-resultat strong { color: var(--accent-light); }
+.iv-signe {
+  align-self: center; font-size: 34px; font-weight: 400; color: var(--text-2);
+  font-family: var(--police-titre), system-ui, sans-serif;
+}
+
+.iv-demarque { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.iv-chiffre {
+  position: relative; border-radius: var(--radius); overflow: hidden; min-height: 340px;
+  display: flex; align-items: flex-end; background: var(--encre);
+}
+.iv-chiffre img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; }
+.iv-chiffre-dire { position: relative; padding: 28px; display: flex; flex-direction: column; gap: 8px; }
+.iv-chiffre-dire strong {
+  font-family: var(--police-titre), system-ui, sans-serif; color: #fff;
+  font-size: clamp(48px, 6vw, 72px); line-height: 1; letter-spacing: -2px;
+}
+.iv-chiffre-dire span { color: rgba(255, 255, 255, .86); font-size: 15.5px; max-width: 36ch; }
+.iv-causes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.iv-cause { background: var(--surface); border-radius: var(--radius); padding: 24px; }
+.bande-surface .iv-terme { background: var(--bg); }
+.bande-surface .iv-terme-resultat { background: var(--accent-soft); }
+
+/* Pourquoi faire un inventaire : l'obligation en grand, trois raisons à côté. */
+.iv-pourquoi { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.iv-obligation {
+  background: var(--accent-soft); border-radius: var(--radius); padding: 32px;
+  display: flex; flex-direction: column;
+}
+.iv-obligation-chiffre {
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 28px;
+  font-family: var(--police-titre), system-ui, sans-serif; color: var(--accent-light);
+  font-size: clamp(44px, 5.4vw, 64px); font-weight: 800; letter-spacing: -1.5px; line-height: 1;
+}
+.iv-obligation-chiffre small { font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.iv-obligation h3 { font-size: clamp(22px, 2.4vw, 28px); font-weight: 800; letter-spacing: -0.5px; }
+.iv-obligation p { margin-top: 10px; font-size: 16.5px; color: var(--text); max-width: 44ch; }
+.iv-source { margin-top: auto; padding-top: 22px; color: var(--text-2); font-size: 13px; }
+.iv-raisons { display: flex; flex-direction: column; gap: 20px; }
+.iv-raison { background: var(--surface); border-radius: var(--radius); padding: 24px; flex: 1; }
+.iv-raison h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+.iv-raison p { margin-top: 6px; color: var(--text-2); font-size: 15px; }
+.iv-cause h3, .iv-anomalie h3, .iv-methode h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+.iv-cause p, .iv-methode p { margin-top: 6px; color: var(--text-2); font-size: 15px; }
+
+.iv-anomalies { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.iv-anomalie { background: var(--encre-2); border-radius: var(--radius); padding: 24px; }
+.iv-anomalie h3 { color: var(--sur-encre); margin-top: 18px; }
+.iv-anomalie p { margin-top: 6px; color: var(--sur-encre-2); font-size: 15px; }
+.iv-marque {
+  /* ⚠️ ARCHIVO, PAS UNE CHASSE FIXE : la mono et le serif ne servent que sur
+     les deux écrans qui font foi (rapport, écarts). Archivo a ses chiffres
+     tabulaires, c'est la police des nombres partout ailleurs. */
+  display: inline-block; font-family: var(--police-titre), system-ui, sans-serif; font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 700; color: var(--danger-text);
+}
+
+.rythmes-onglets {
+  display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--r-grand);
+  background: var(--surface);
+}
+.rythmes-onglets button {
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; border: 0;
+  padding: 10px 20px; border-radius: var(--r); background: transparent; color: var(--text-2);
+}
+.rythmes-onglets button.actif { background: var(--accent); color: var(--on-accent); }
+.rythmes-panneau {
+  margin-top: 18px; background: var(--surface); border-radius: var(--radius); padding: 30px;
+}
+.rythmes-panneau > p { font-size: 17px; max-width: 60ch; }
+.annee { display: grid; grid-template-columns: repeat(52, minmax(0, 1fr)); gap: 3px; margin-top: 26px; }
+.annee i { display: block; height: 44px; border-radius: 3px; background: var(--hairline); transition: background-color .2s ease; }
+.annee i.pleine { background: var(--accent); }
+.annee-mois { display: flex; justify-content: space-between; margin-top: 8px; color: var(--text-2); font-size: 12.5px; }
+.rythmes-panneau small { display: block; margin-top: 14px; color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.iv-methode { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; counter-reset: none; }
+.iv-methode li { background: var(--bg); border-radius: var(--radius); padding: 24px; }
+.iv-temps {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r);
+  background: var(--accent-soft); color: var(--accent-light); font-weight: 700; margin-bottom: 18px;
+  font-family: var(--police-titre), system-ui, sans-serif; font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .iv-calcul { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .iv-signe { justify-self: center; font-size: 28px; line-height: 1; }
+  .iv-demarque, .iv-pourquoi { grid-template-columns: minmax(0, 1fr); }
+  .iv-anomalies, .iv-methode { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .iv-causes, .iv-anomalies, .iv-methode { grid-template-columns: minmax(0, 1fr); }
+  .annee { gap: 2px; }
+  .annee i { height: 30px; border-radius: 2px; }
+  .rythmes-onglets { display: flex; }
+  .rythmes-onglets button { flex: 1; padding: 10px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .annee i { transition: none; } }
