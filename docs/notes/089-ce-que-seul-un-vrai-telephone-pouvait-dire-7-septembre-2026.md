@@ -124,3 +124,22 @@ code sur cette erreur-là.
 - **Zéro résidu contrôlé** après suppression : 0 inventaire `ZZTEST%`, 0 article
   d'essai, et les six compteurs de la base (4 inventaires, 165 comptages,
   142 articles, 72 zones, 62 audits, 135 lignes de stock) à leur valeur d'avant.
+
+## Et sur iOS, au simulateur, le 19 septembre 2026
+
+Build Release (`CONFIG=Release ./scripts/simulateur.sh`), compte superviseur
+de La Samaritaine, inventaire jetable supprimé ensuite, zéro résidu contrôlé
+en base (notification, places et décompte du jour compris).
+
+| | Constaté |
+|---|---|
+| Tunnel | question « Avez-vous vos balises ? », flèche retour qui garde l'état, « Plus tard » vers la fiche |
+| Trousseau | la session survit à la fermeture de l'app |
+| Décompte | place prise, rendue en sortant, 3e appareil refusé sans prix, refus compté une fois, déblocage seul |
+| Retour du comptage | la fiche montre la pièce comptée sans rafraîchir |
+| Export Excel | feuille de partage (20 ko), l'app répond après fermeture |
+
+Reste le mode avion, que le simulateur ne sait pas couper : à faire sur un
+iPhone. ⚠️ Metro ne sert pas à tester : le volet navigateur ouvre sa racine,
+Expo tente le rendu web et plante (`window is not defined`). Passer par le
+build Release.
