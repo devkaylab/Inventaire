@@ -317,3 +317,83 @@ describe('le doublon d’affichage suit celui qui fait foi', () => {
     expect(sansCommentaires(corps)).toContain(`interval '${DELAI_HEURES} hours'`)
   })
 })
+
+describe('le barème d’annulation retombe sur le document', () => {
+  /**
+   * ⚠️ **LES DEUX PARTS NE S'ARRONDISSENT PAS DANS LE MÊME SENS**, et c'est la
+   * règle que cette garde défend : ce que le client paie descend à l'euro
+   * inférieur, ce que l'équipe touche monte à l'euro supérieur. Chaque arrondi
+   * va contre Quantinvo. Le jour où quelqu'un « harmonise » les deux, un des
+   * deux camps y perd des centimes et personne ne s'en aperçoit.
+   */
+  const bareme = () => {
+    const { fichier } = derniereDefinition('frais_annulation')
+    const sql = sansCommentaires(
+      readFileSync(path.join(dossierMigrations, fichier), 'utf8'))
+    const i = sql.indexOf('insert into public.reglages_annulation')
+    expect(i, 'la migration doit poser un barème').toBeGreaterThan(0)
+    const bloc = sql.slice(i, sql.indexOf(';', i))
+    return [...bloc.matchAll(/\(\s*\d+\s*,\s*(\d+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)/g)]
+      .map((m) => ({ heures: Number(m[1]), client: Number(m[2]), equipe: Number(m[3]) }))
+      .sort((a, b) => b.heures - a.heures)
+  }
+
+  /** Le tableau du document, LU dans le document. */
+  const documente = () => {
+    const doc = lire('docs/entreprise/on-demand/06-annulations.md')
+    const lignes: { facture: number; equipe: number }[] = []
+    for (const ligne of doc.split('\n')) {
+      // | De 72 h à 24 h | **284 €** (30 %) | 67 € (10 % …) | 217 € |
+      const m = ligne.match(/^\|([^|]+)\|([^|]*€[^|]*)\|([^|]*€[^|]*)\|([^|]*€[^|]*)\|\s*$/)
+      if (!m || !/h avant|à 24 h|Moins de|sur place/.test(m[1])) continue
+      const euros = (t: string) => Number((t.match(/([\d  ]+)\s*€/) ?? [])[1]?.replace(/\D/g, '') ?? '0') * 100
+      lignes.push({ facture: euros(m[2]), equipe: euros(m[3]) })
+    }
+    return lignes
+  }
+
+  it('le document porte bien les quatre cas', () => {
+    expect(documente().length).toBe(4)
+  })
+
+  it('les trois paliers chiffrés tombent juste, sur l’exemple du document', () => {
+    const r = reglages()
+    const exemple = exemples().find((e) => e.prix === 94900)
+    expect(exemple, 'l’exemple à 949 € doit rester dans le document').toBeTruthy()
+    const c = chaine(exemple!.articles, r)
+    const cas = documente()
+    const paliers = bareme()
+    expect(paliers.length).toBe(3)
+
+    // ⚠️ Déduits du barème et de la chaîne, pas recopiés : c'est ce qui rend
+    // la garde utile le jour où l'un des deux bouge.
+    paliers.forEach((p, i) => {
+      expect(Math.floor((c.prix * p.client) / 100) * 100, `facturé au palier ${p.heures} h`)
+        .toBe(cas[i].facture)
+      expect(Math.ceil((c.equipe * p.equipe) / 100) * 100, `versé à l’équipe au palier ${p.heures} h`)
+        .toBe(cas[i].equipe)
+    })
+
+    // Le quatrième cas n'est pas un palier : l'équipe est sur place, tout est dû.
+    expect(cas[3].facture).toBe(c.prix)
+    expect(cas[3].equipe).toBe(c.equipe)
+  })
+
+  it('l’équipe sur place est payée en entier, et Quantinvo ne gagne rien de plus', () => {
+    const { corps } = derniereDefinition('frais_annulation')
+    const sql = sansCommentaires(corps)
+    expect(sql).toContain('v_client := v_m.prix_cents')
+    expect(sql).toContain('v_equipe := public.remuneration_totale(p_mission)')
+  })
+
+  it('le client paie arrondi vers le BAS, l’équipe touche arrondi vers le HAUT', () => {
+    const sql = sansCommentaires(derniereDefinition('frais_annulation').corps)
+    expect(sql).toMatch(/v_client := floor\(/)
+    expect(sql).toMatch(/v_equipe := ceil\(/)
+  })
+
+  it('ce que touche l’équipe ne sort pas vers un client', () => {
+    const sql = sansCommentaires(derniereDefinition('frais_annulation').corps)
+    expect(sql).toMatch(/'equipe_cents', case when v_admin then/)
+  })
+})
