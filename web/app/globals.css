@@ -4624,11 +4624,12 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    Maquette : Etape1-Visiteur, Etape2-Date, Etape3-Stock, Prix.
    ⚠️ Ni ombre ni bordure sur les blocs : ils se détachent par leur fond, comme
    partout dans Ardoise. Le seul contour de ce tunnel est celui d'un champ. */
-.res-barre { position: sticky; top: 0; z-index: 30; background: var(--bg-2); }
-.res-barre-inner {
-  max-width: 1200px; margin: 0 auto; padding: 0 24px;
-  height: 64px; display: flex; align-items: center; gap: 24px;
-}
+/* ⚠️ LA BARRE DE CE TUNNEL EST `.site-header`, ET RIEN D'AUTRE N'EST REDÉFINI
+   ICI. Elle avait sa propre géométrie — 1200 px centrés, 24 px de marge, un
+   fond plat — et elle se voyait : le site tient les deux bords de l'écran avec
+   40 px de marge, un fond flouté et un filet (règle du 11 septembre 2026,
+   « l'en-tête et le pied ne sont pas bridés à la largeur de lecture »).
+   Ce qui suit n'ajoute QUE les trois objets propres au tunnel. */
 .res-titre { font-family: var(--police-titre), system-ui, sans-serif; font-weight: 600; font-size: 15px; }
 .res-pas { display: flex; align-items: center; gap: 10px; list-style: none; margin: 0 auto; padding: 0; }
 .res-pas li { font-size: 13px; color: var(--text-3); display: flex; align-items: center; gap: 10px; }
@@ -4638,7 +4639,10 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-pas li.fait { color: var(--text-2); }
 .res-barre-actions { display: flex; align-items: center; gap: 18px; }
 
-.res-page { max-width: 1200px; margin: 0 auto; padding: 40px 24px 72px; }
+/* ⚠️ `.container` porte déjà la largeur de lecture (1080 px) et ses 24 px de
+   marge : on n'ajoute que le rythme vertical, en longhand pour ne pas écraser
+   l'horizontal. */
+.res-page { padding-top: 40px; padding-bottom: 72px; }
 .res-colonnes { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; }
 .res-questions h1 {
   font-family: var(--police-titre), system-ui, sans-serif;
@@ -4748,15 +4752,18 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .res-pas { display: none; }
   .res-titre { margin-right: auto; }
 }
-@media (max-width: 560px) {
-  .res-barre-inner { gap: 12px; padding: 0 16px; }
-  .res-page { padding: 28px 16px 56px; }
-  .res-montant { font-size: 42px; }
+@media (max-width: 780px) {
   /* ⚠️ Sur un téléphone, le titre passait sur trois lignes et poussait
-     « Quitter » hors de l'écran. La barre garde la marque et les deux sorties :
-     le titre est déjà dans la page, juste en dessous. */
+     « Quitter » hors de l'écran — la barre du site a une hauteur FIGÉE de
+     64 px, ce qui n'en pousse rien mais en fait sortir. Elle garde la marque
+     et les deux sorties ; le titre est déjà dans la page, juste en dessous.
+     Le seuil est celui du site, pas un seuil à moi. */
   .res-titre { display: none; }
   .res-barre-actions { margin-left: auto; gap: 14px; }
+}
+@media (max-width: 560px) {
+  .res-page { padding-top: 28px; padding-bottom: 56px; }
+  .res-montant { font-size: 42px; }
 }
 .res-note-os { margin-top: 22px; }
 .res-bascule { display: block; margin: -14px 0 22px; font-size: 14px; }

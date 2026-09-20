@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { SiteFooter } from '@/components/SiteChrome'
+import { EnTeteAuDefilement } from '@/components/EnTeteAuDefilement'
 import { venteOuverte } from '@/lib/legal'
 import { supabase } from '@/lib/supabaseClient'
 import { PasswordRules } from '@/components/PasswordRules'
@@ -272,10 +273,21 @@ export function PageReserver() {
 
   return (
     <>
-      <header className="res-barre">
-        <div className="res-barre-inner">
+      {/* ⚠️ C'EST LA BARRE DU SITE, PAS UNE COPIE. Elle en reprend les classes
+          — `.site-header` et `.container inner` — donc sa hauteur de 64 px, son
+          fond flouté, son filet, son logo à 38, et surtout sa LARGEUR : elle
+          tient les deux bords de l'écran, avec 40 px de marge. C'est la règle
+          posée le 11 septembre 2026 (« l'en-tête et le pied ne sont pas bridés
+          à la largeur de lecture »), et une barre de ce tunnel qui flotterait
+          au milieu se verrait au premier coup d'œil à côté du reste du site.
+          `EnTeteAuDefilement` et l'espaceur vont avec : sans eux, la barre ne
+          s'efface pas au défilement et, sous 780 px où elle passe en `fixed`,
+          la première question passerait dessous. */}
+      <EnTeteAuDefilement />
+      <header className="site-header">
+        <div className="container inner">
           <Link href={lien('/')} className="brand" aria-label="Quantinvo">
-            <Logo size={22} /><span>Quantinvo</span>
+            <Logo size={38} /><span>Quantinvo</span>
           </Link>
           <span className="res-titre">Réserver un inventaire</span>
           <ol className="res-pas" aria-label="Progression">
@@ -292,8 +304,9 @@ export function PageReserver() {
           </div>
         </div>
       </header>
+      <div className="site-header-espace" aria-hidden="true" />
 
-      <main className="res-page">
+      <main className="container res-page">
         {etape === 1 && (
           <div className="res-colonnes">
             <section className="res-questions">
