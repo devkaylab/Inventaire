@@ -46,17 +46,21 @@ le plus lourd du modèle.
 
 ### 3) Combien de personnes, et combien de temps
 
-L'équipe se déduit d'une **durée cible** (4 à 5 heures : au-delà, la précision
-chute et les gens partent). Puis :
+L'équipe se déduit d'une **durée cible** (4 h 30 : au-delà, la précision chute
+et les gens partent). Puis :
 
 ```
-durée = heures-personne ÷ inventoristes, arrondie à la demi-heure SUPÉRIEURE
+inventoristes = arrondi SUPÉRIEUR de (heures-personne ÷ durée cible)
+durée         = heures-personne ÷ inventoristes, arrondie à la demi-heure SUPÉRIEURE
 ```
 
 ⚠️ **L'arrondi EST la marge de sécurité, et il n'en faut pas d'autre.** Ajouter
 en plus un pourcentage de sécurité sur la durée, c'est payer deux fois la même
-prudence et sortir du marché. Un responsable est ajouté dès que l'équipe dépasse
-trois personnes.
+prudence et sortir du marché.
+
+**Un responsable est ajouté dès trois inventoristes.** En dessous, personne ne
+contrôlerait les écarts sur place — et c'est Quantinvo qui répond de la qualité,
+pas le magasin.
 
 ### 4) Ce que ça coûte
 
@@ -114,6 +118,21 @@ que ce sont eux qui existeront pour de vrai — et les frais fixes à 46 € fon
 retomber le prix affiché exactement sur 949 €. Si tu préfères garder 660 €,
 c'est le taux horaire qui doit descendre à 19,80 €, et il faudra l'assumer sur
 la fiche de paie.
+
+---
+
+### Les quatre magasins de la maquette, par la même chaîne
+
+| Magasin | Articles retenus | Équipe | Durée | Versé | Coût | Prix |
+|---|---|---|---|---|---|---|
+| Lille Centre | 10 000 | 3 + 1 | 4 h 30 | 396 € | 442 € | **589 €** |
+| Paris Rivoli | 20 000 | 6 + 1 | 4 h 30 | 666 € | 712 € | **949 €** |
+| Lyon Part-Dieu | 20 000 | 6 + 1 | 4 h 30 | 666 € | 712 € | **949 €** |
+| Paris Haussmann | 30 000 | 9 + 1 | 4 h 30 | 936 € | 982 € | **1 309 €** |
+
+La marge ressort à 25,0 % sur les quatre : c'est un réglage, pas une variable.
+Ce qui bouge d'un magasin à l'autre, c'est le volume — donc l'équipe, donc le
+prix. Total des quatre, pour une réservation groupée : **3 796 €**.
 
 ---
 
