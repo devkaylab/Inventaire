@@ -43,11 +43,65 @@ describe('le verrou, en base', () => {
     expect(corps).toContain('if not v_deja and v_plafond is not null then')
   })
 
-  it('borne 3 — sans plafond connu, rien n’est refusé', () => {
+  /**
+   * ⚠️ **CETTE BORNE A CHANGÉ DE SENS LE 20 SEPTEMBRE 2026.** Elle disait
+   * « sans plafond connu, rien n'est refusé » — et c'était un trou, pas une
+   * borne : `companies.plan` vaut `'standard'` par défaut et `stores.devices`
+   * est nul tant que personne ne l'a saisi, ce qui rendait ILLIMITÉ le cas par
+   * défaut de toute entreprise créée à la main.
+   *
+   * La règle est maintenant : `plafond_appareils` garde sa réponse
+   * COMMERCIALE — `null` veut dire « rien n'a été vendu », et c'est ce dont
+   * `deposer_changement_offre` a besoin pour ne pas refuser une vente — et
+   * c'est `plafond_appareils_effectif` qui répond à la question TECHNIQUE,
+   * avec un plancher.
+   */
+  it('borne 3 — sans offre connue, le plancher de la grille s’applique', () => {
     const { corps } = derniereDefinition('prendre_place_appareil')
-    expect(corps).toContain('v_plafond is not null')
-    const { corps: plafond } = derniereDefinition('plafond_appareils')
-    expect(plafond).toContain('return null')
+    // Ce qui décide n'est plus la réponse commerciale.
+    expect(corps).toContain('public.plafond_appareils_effectif(v_store)')
+
+    const { corps: commercial } = derniereDefinition('plafond_appareils')
+    expect(commercial).toContain('return null')
+
+    const { corps: effectif } = derniereDefinition('plafond_appareils_effectif')
+    // Un plancher, et pas de `null` qui sorte de cette fonction-là.
+    expect(sansCommentaires(effectif)).toMatch(/coalesce\(public\.plafond_appareils\(p_store_id\), plancher\)/)
+    expect(sansCommentaires(effectif)).not.toMatch(/return null/)
+
+    // Le plancher est le plus petit palier de la grille, déduit et non cité.
+    const plusPetitPalier = Math.min(...OFFRES.map((o) => o.max))
+    expect(sansCommentaires(effectif)).toContain(`plancher constant integer := ${plusPetitPalier}`)
+  })
+
+  /**
+   * ⚠️ Les appareils de la mission viennent AVEC la mission : ils s'ajoutent
+   * aux places du client, ils ne les mangent pas. Prendre « le plus élevé des
+   * deux » ferait refuser l'entrée au superviseur du client chez lui, un soir
+   * où il paie sa mission.
+   */
+  it('une mission en cours ajoute ses places, elle ne les remplace pas', () => {
+    const { corps } = derniereDefinition('plafond_appareils_effectif')
+    expect(sansCommentaires(corps)).toMatch(/v_abo \+ public\.plafond_mission_en_cours\(p_store_id\)/)
+
+    const { corps: mission } = derniereDefinition('plafond_mission_en_cours')
+    // Elle est bornée par la fenêtre de la mission, lue à chaque appel.
+    expect(sansCommentaires(mission)).toContain('now() < m.acces_expirent_le')
+    expect(sansCommentaires(mission)).toContain('now() >= m.acces_ouverts_le')
+  })
+
+  /**
+   * ⚠️ Le courriel « votre forfait est trop juste » est une RELANCE
+   * COMMERCIALE. L'envoyer parce qu'un appareil de plus a été refusé pendant
+   * une mission à sept dirait au client que son abonnement est trop petit
+   * alors que c'est notre équipe qui a rempli le magasin.
+   */
+  it('la relance commerciale ne part pas pendant une mission', () => {
+    const { corps } = derniereDefinition('prendre_place_appareil')
+    const i = sansCommentaires(corps).indexOf('if v_mission = 0 then')
+    const j = sansCommentaires(corps).indexOf('prevenir_forfait_trop_juste')
+    expect(i).toBeGreaterThan(0)
+    expect(i).toBeLessThan(j)
   })
 
   it('sérialise les demandes concurrentes sur le magasin', () => {

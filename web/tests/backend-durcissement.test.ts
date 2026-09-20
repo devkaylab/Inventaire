@@ -262,8 +262,20 @@ describe('un inventaire clôturé n’appartient plus qu’à son créateur', ()
     const policy = m.slice(i, m.indexOf('\n);', i))
     const [avant, apres] = policy.split('with check')
     expect(apres, 'le WITH CHECK doit porter la règle de clôture').toBeTruthy()
+    // ⚠️ La garde compare un SENS, pas une mise en page. Le 20 septembre 2026
+    // la policy a été réécrite sur trois lignes pour loger un quatrième
+    // détenteur : la règle n'avait pas bougé, la garde est tombée quand même.
+    const aplati = (t: string) => t.replace(/\s+/g, ' ')
     for (const partie of [avant, apres]) {
-      expect(partie).toMatch(/status <> 'closed' or created_by = auth\.uid\(\) or public\.is_company_admin\(company_id\)/)
+      expect(aplati(partie)).toContain(
+        "status <> 'closed' or created_by = auth.uid() or public.is_company_admin(company_id)")
+    }
+    // ⚠️ ET LE QUATRIÈME DÉTENTEUR, DEPUIS ON-DEMAND : le responsable de la
+    // mission. Il n'a pas d'entreprise, donc aucune des trois branches
+    // ci-dessus ne le couvre — et il doit être dans les DEUX moitiés, sinon
+    // « Clôturer l'inventaire » échoue au `with check` sans rien dire.
+    for (const partie of [avant, apres]) {
+      expect(aplati(partie)).toContain("public.a_un_acces_mission(id, 'team_leader')")
     }
   })
 

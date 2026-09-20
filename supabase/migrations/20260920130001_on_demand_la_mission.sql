@@ -155,7 +155,28 @@ create index if not exists missions_session_idx on public.missions (inventory_se
 
 alter table public.missions enable row level security;
 revoke all on table public.missions from public, anon, authenticated;
-grant select on table public.missions to authenticated;
+
+-- ⚠️ LE DROIT DE LECTURE EST DONNÉ COLONNE PAR COLONNE, ET QUATRE MANQUENT :
+-- `cout_cents`, `calcul`, `reglages_version` et `stripe_payment_intent_id`. La
+-- RLS choisit des LIGNES, pas des colonnes : sans ce grant nominatif, le client
+-- qui lit sa mission lirait aussi ce qu'elle nous coûte, ce que touche chaque
+-- inventoriste et quelle marge nous prenons. « Le prix affiché est le prix
+-- payé » est une promesse sur le montant, pas l'ouverture de la comptabilité.
+--
+-- ⚠️ ET L'ADMINISTRATEUR NON PLUS NE LES LIT PAS PAR CETTE PORTE — un grant de
+-- colonne ne sait pas distinguer les rôles. La console passera par une
+-- fonction `admin_*`, qui journalise, comme tout le reste du back-office.
+grant select (
+  id, reference, groupe_id, company_id, store_id, reserve_par,
+  inventory_session_id, client_nom, magasin_nom, adresse, code_postal, ville,
+  acces_sur_place, secteur, surface_vente_m2, surface_reserve_m2,
+  articles_min, articles_max, references_min, references_max, code_barres,
+  engagement_range_le, cgv_version, debut_prevu, moment, duree_prevue_minutes,
+  arrivee_prevue, inventoristes, responsable, articles_retenus, prix_cents,
+  annulation_gratuite_jusqu_au, etat, acces_ouverts_le, acces_expirent_le,
+  created_at, confirmee_le, commencee_le, terminee_le, annulee_le, annulee_par,
+  motif
+) on table public.missions to authenticated;
 
 comment on table public.missions is
   'Un inventaire vendu à la demande. Le prix y est verrouillé ; les copies client_nom / magasin_nom / adresse survivent à la suppression du client et servent aux écrans des inventoristes.';
