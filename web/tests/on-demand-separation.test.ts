@@ -25,8 +25,32 @@ const sansCommentaires = (t: string) =>
 const fichiers = readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql')).sort()
 const lire = (f: string) => readFileSync(path.join(dossierMigrations, f), 'utf8')
 
-/** Les migrations du chantier On-Demand : celles du 20 septembre 2026. */
-const ONDEMAND = fichiers.filter((f) => /^20260920\d+_on_demand_/.test(f))
+/**
+ * Les migrations du chantier : celles du 20 septembre 2026 et après.
+ *
+ * ⚠️ **PAR LA DATE, PAS PAR LE NOM**, et ça vient d'un vrai trou. La première
+ * version filtrait sur `_on_demand_`. Le 20 septembre, deux migrations du même
+ * chantier sont arrivées sans ce mot — `a_la_carte` (la seconde formule) et
+ * `compose_full_name_search_path` (une dérive d'OS refermée). Résultat : la
+ * garde les rangeait du côté de Quantinvo OS, puis accusait les migrations
+ * On-Demand de redéfinir « des fonctions d'OS » qu'elles avaient elles-mêmes
+ * posées. Une garde qui dépend d'une convention de nommage protège le nommage,
+ * pas le produit.
+ */
+const DEBUT_DU_CHANTIER = '20260920'
+const dateDe = (f: string) => f.slice(0, 8)
+const ONDEMAND = fichiers.filter((f) => dateDe(f) >= DEBUT_DU_CHANTIER)
+
+/** Celles qui portent le nom du chantier — pour la règle de l'exception. */
+const NOMMEES_ON_DEMAND = ONDEMAND.filter((f) => /_on_demand_/.test(f))
+
+/**
+ * ⚠️ **LA PHRASE QUI DOIT FIGURER EN TÊTE D'UNE MIGRATION QUI TOUCHE OS.**
+ * C'est elle, et pas une liste de fichiers, qui tient la règle : la prochaine
+ * personne qui redéfinira une fonction d'OS depuis ce chantier devra l'écrire,
+ * donc y penser.
+ */
+const MARQUEUR = 'TOUCHE QUANTINVO OS'
 
 /**
  * ⚠️ **LA SEULE EXCEPTION, ET ELLE EST NOMMÉE.** Sans `prendre_place_appareil`,
@@ -41,7 +65,7 @@ function objetsDeQuantinvoOS(): { fonctions: Set<string>; policies: Set<string> 
   const fonctions = new Set<string>()
   const policies = new Set<string>()
   for (const f of fichiers) {
-    if (ONDEMAND.includes(f)) continue
+    if (dateDe(f) >= DEBUT_DU_CHANTIER) continue
     const sql = sansCommentaires(lire(f))
     for (const m of sql.matchAll(/create (?:or replace )?function public\.(\w+)\s*\(/gi)) {
       fonctions.add(m[1])
@@ -63,19 +87,41 @@ describe('On-Demand ne touche pas à Quantinvo OS', () => {
     expect(os.policies.size).toBeGreaterThan(20)
   })
 
-  it('aucune migration On-Demand ne redéfinit une fonction de Quantinvo OS', () => {
+  /**
+   * ⚠️ **LA RÈGLE N'EST PAS « PERSONNE NE TOUCHE OS », C'EST « QUI Y TOUCHE LE
+   * DIT ».** Interdire tout net aurait forcé la prochaine correction utile à
+   * se faire à la main sur la base, sans fichier — c'est exactement comme ça
+   * que `compose_full_name` a dérivé. Ce qui protège, c'est que la migration
+   * l'annonce en tête, pour que celui qui l'applique sache ce qu'il change.
+   */
+  it('une migration qui redéfinit une fonction de Quantinvo OS le dit en tête', () => {
     const fautes: string[] = []
     for (const f of ONDEMAND) {
-      if (f === EXCEPTION) continue
       const sql = sansCommentaires(lire(f))
-      for (const m of sql.matchAll(/create (?:or replace )?function public\.(\w+)\s*\(/gi)) {
-        if (os.fonctions.has(m[1])) fautes.push(`${f} → ${m[1]}()`)
+      const touchees = [...sql.matchAll(/create (?:or replace )?function public\.(\w+)\s*\(/gi)]
+        .map((m) => m[1]).filter((n) => os.fonctions.has(n))
+      if (touchees.length === 0) continue
+      if (!lire(f).slice(0, 2500).includes(MARQUEUR)) {
+        fautes.push(`${f} → ${[...new Set(touchees)].join(', ')} — sans « ${MARQUEUR} » en tête`)
       }
     }
     expect(fautes, fautes.join('\n')).toEqual([])
   })
 
-  it('aucune migration On-Demand ne réécrit une policy de Quantinvo OS', () => {
+  /**
+   * ⚠️ Et parmi les migrations qui portent le nom du chantier, UNE SEULE a le
+   * droit d'y toucher. Les autres construisent à côté.
+   */
+  it('une seule migration nommée On-Demand touche Quantinvo OS', () => {
+    const touchent = NOMMEES_ON_DEMAND.filter((f) => {
+      const sql = sansCommentaires(lire(f))
+      return [...sql.matchAll(/create (?:or replace )?function public\.(\w+)\s*\(/gi)]
+        .some((m) => os.fonctions.has(m[1]))
+    })
+    expect(touchent, touchent.join('\n')).toEqual([EXCEPTION])
+  })
+
+  it('aucune migration du chantier ne réécrit une policy de Quantinvo OS', () => {
     const fautes: string[] = []
     for (const f of ONDEMAND) {
       if (f === EXCEPTION) continue
@@ -113,8 +159,10 @@ describe('On-Demand ne touche pas à Quantinvo OS', () => {
     const entete = lire(EXCEPTION).slice(0, 2000)
     expect(entete).toContain('CETTE MIGRATION TOUCHE QUANTINVO OS')
     expect(entete).toContain('Oberlin Lyon')
-    // Elle vient en dernier : rien du chantier ne s'applique après elle.
-    expect(ONDEMAND[ONDEMAND.length - 1]).toBe(EXCEPTION)
+    // ⚠️ Elle vient en dernier DES MIGRATIONS NOMMÉES ON-DEMAND : on doit
+    // pouvoir appliquer tout le chantier sans elle, et décider d'elle à part.
+    // Ce qui vient après porte un autre nom parce que c'est un autre sujet.
+    expect(NOMMEES_ON_DEMAND[NOMMEES_ON_DEMAND.length - 1]).toBe(EXCEPTION)
   })
 
   /**

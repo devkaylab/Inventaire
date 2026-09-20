@@ -362,3 +362,97 @@ INVENTORISTE — voit ce que la mission nous coûte     : NON — refusé
 Le refus sur `cout_cents` est le `grant select (colonne, colonne, …)` qui
 fonctionne : l'inventoriste lit la mission, pas notre marge. Après `rollback` :
 0 mission, 0 accès, 0 comptage de test, 0 appareil de test.
+
+---
+
+## « À la demande » veut dire deux choses, pas une (20 septembre 2026, au soir)
+
+⚠️ **LE CONSTAT DE JULIEN** : « si le client n'a pas besoin de compteurs
+quantinvo, on lui propose l'abonnement quantinvo os ce qui n'est pas logique,
+il peut y aller directement par l'offre quantinvo ».
+
+La page « À la demande » envoyait sa colonne de gauche — « vous, avec votre
+équipe » — vers `/decouvrir`, c'est-à-dire vers **douze mois d'engagement**.
+Une page « à la demande » qui propose un abonnement annuel propose l'inverse de
+ce qu'on est venu y chercher.
+
+### Ce qui a été construit
+
+**Une seconde formule de la même réservation**, pas un second produit :
+`missions.formule` vaut `equipe_quantinvo` ou `logiciel_seul`. Faire un objet à
+part aurait dupliqué la réservation, le paiement, les dates, l'annulation, la
+fenêtre d'accès et le plafond d'appareils — six mécanismes déjà écrits et
+éprouvés.
+
+Le détail du prix est dans `docs/entreprise/on-demand/02-le-prix.md`. En bref :
+même dimensionnement, 16 € par appareil, 19 € de frais, et **aucune marge
+cible** — le prix EST la somme, parce qu'il n'y a pas de coût variable à
+couvrir.
+
+| Articles | À la carte | Avec notre équipe |
+|---|---|---|
+| 10 000 | 83 € | 589 € |
+| 20 000 | 131 € | 949 € |
+| 30 000 | 179 € | 1 309 € |
+
+### Trois refus tombent, et c'est le plus intéressant
+
+- **La zone.** Le logiciel se livre à Bordeaux ; l'équipe non.
+- **Le délai de 48 h.** Il existe pour constituer une équipe.
+- **Les coefficients.** Ils décrivent tous la pénibilité du travail humain.
+
+C'est-à-dire que la formule « logiciel seul » **ouvre la France entière et le
+jour même** — deux choses que l'équipe ne saura pas faire avant longtemps.
+
+### La page présente avant de demander
+
+⚠️ Julien : « tu présenteras le concept avant de proposer le choix ». Demander
+« vous ou nous ? » à quelqu'un qui ne sait pas encore ce qu'on vend, c'est lui
+demander d'arbitrer entre deux choses qu'il ne connaît pas. La page dit donc
+d'abord ce qu'est une réservation — on réserve une date, le logiciel est prêt
+le jour J, on repart avec le rapport — **puis** pose la question.
+
+Le menu s'appelle « À la demande », en français comme en anglais, et aucune
+page ne dit plus « On-Demand ».
+
+### Deux défauts trouvés en jouant le tunnel au volet
+
+1. ⚠️ **UNE HEURE DÉJÀ PASSÉE MENAIT À UNE PAGE BLANCHE.** L'étape du prix ne
+   se rend que si le devis tient ; « Continuer » ne vérifiait que la présence
+   d'une date. Le refus existait plus bas dans l'étape 2 — il n'empêchait rien.
+   Invisible tant que le calendrier barrait les 48 premières heures ; immédiat
+   dès que la formule logiciel les ouvre. Corrigé des deux côtés : le bouton
+   refuse, **et** l'étape du prix ne se rend plus muette.
+
+2. ⚠️ **L'ÉTAPE DE LA DATE PARLAIT ENCORE D'ÉQUIPE** à quelqu'un qui n'en
+   achète pas : « nous n'affichons que les créneaux où nous avons une équipe »,
+   « l'équipe arrive quinze minutes avant », et une légende « Équipe disponible
+   / Pas d'équipe ». Toutes réécrites selon la formule.
+
+### Et une garde qui s'est retournée contre elle-même
+
+⚠️ **`on-demand-separation.test.ts` RAISONNAIT SUR LE NOM DES FICHIERS**
+(`_on_demand_`). Deux migrations du même chantier sont arrivées sans ce mot —
+`a_la_carte` et `compose_full_name_search_path`. La garde les a rangées du côté
+de Quantinvo OS, puis a accusé les migrations On-Demand de redéfinir « des
+fonctions d'OS » qu'elles avaient elles-mêmes posées.
+
+Elle raisonne maintenant sur la **date** (`≥ 20260920`), et la règle qu'elle
+tient a changé : ce n'est plus « personne ne touche OS » mais **« qui y touche
+le dit en tête »** (`TOUCHE QUANTINVO OS`). Interdire tout net aurait poussé la
+prochaine correction utile à se faire à la main sur la base, sans fichier —
+c'est exactement comme ça que `compose_full_name` avait dérivé.
+
+⚠️ **UNE GARDE QUI DÉPEND D'UNE CONVENTION DE NOMMAGE PROTÈGE LE NOMMAGE, PAS
+LE PRODUIT.**
+
+### Ce qui reste à faire
+
+⚠️ **`20260920230001_a_la_carte.sql` N'EST PAS APPLIQUÉE.** Le garde-fou de
+l'environnement a refusé l'application ; les onze précédentes sont passées. Le
+site n'en dépend pas pour afficher ses prix — la copie d'affichage TypeScript
+les calcule — mais le devis en base et la réservation l'attendent :
+
+```bash
+supabase db query --linked -f supabase/migrations/20260920230001_a_la_carte.sql
+```

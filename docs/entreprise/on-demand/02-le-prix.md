@@ -194,3 +194,85 @@ promesse du produit qui tombe.
   personnes pour deux heures reste plus chère que ce qu'un petit commerce
   acceptera. La question « à partir de quelle taille sert-on ? » n'est pas
   tranchée.
+
+---
+
+## La seconde formule : le logiciel seul (20 septembre 2026)
+
+⚠️ **ELLE EST NÉE D'UN CONTRESENS**, relevé par Julien : la page « À la
+demande » envoyait « vous, avec votre équipe » vers **l'abonnement annuel**.
+Quelqu'un qui compte une fois par an n'a aucune raison d'acheter douze mois de
+logiciel — et le lui proposer sur la page « à la demande », c'est lui proposer
+l'inverse de ce qu'il est venu chercher. « Il peut y aller directement par
+l'offre quantinvo » s'il veut l'abonnement.
+
+D'où `missions.formule`, qui vaut `equipe_quantinvo` ou `logiciel_seul`. Même
+réservation, même prix ferme, même annulation.
+
+### Le dimensionnement ne change pas
+
+Articles → heures-personne → nombre de personnes → durée : **mot pour mot la
+même chaîne**. C'est ce qui rend les deux prix comparables sur la même page, et
+c'est ce que Julien a demandé — « tarifs sur les mêmes critères on demand mais
+sans les compteurs ».
+
+Ce qui change commence au coût :
+
+```
+appareils = personnes + (un qui encadre, dès trois)
+licence   = appareils × tarif appareil
+prix      = licence + frais fixes logiciel, arrondi à l'euro
+```
+
+### Les deux réglages
+
+| | | pourquoi |
+|---|---|---|
+| Tarif par appareil | **16 €** | Advanced vaut 310 € par mois pour 20 appareils, soit 15,50 € l'appareil. Seize euros, c'est « un mois d'abonnement ramené aux appareils dont votre inventaire a besoin » — une phrase qui se défend devant un client. |
+| Frais fixes logiciel | **19 €** | ⚠️ **PAS LES 46 € DE L'ÉQUIPE.** Ceux-là couvrent la commission Stripe, **les frais de versement Connect** et l'exploitation. Sans équipe, il n'y a personne à payer : pas de Connect, pas de constitution d'équipe, pas de contrôle qualité sur place. |
+
+⚠️ **LE LOGICIEL NE PASSE PAS PAR LA MARGE CIBLE.** Son prix EST la somme de la
+licence et des frais. Le diviser par 0,75 reviendrait à inventer un coût pour
+le majorer — exactement ce que « le prix affiché est le prix payé » interdit de
+faire dans le dos du client.
+
+### Ce que ça donne
+
+| Articles | Appareils | À la carte | Avec notre équipe |
+|---|---|---|---|
+| 2 000 | 1 | **35 €** | 128 € |
+| 5 000 | 2 | **51 €** | 248 € |
+| 10 000 | 4 | **83 €** | 589 € |
+| 20 000 | 7 | **131 €** | 949 € |
+| 30 000 | 10 | **179 €** | 1 309 € |
+| 50 000 | 15 | **259 €** | 1 909 € |
+| 100 000 | 29 | **483 €** | 3 589 € |
+
+Deux inventaires de 20 000 articles dans l'année : **262 €**, contre 3 300 €
+d'abonnement Advanced. C'est assumé — un client qui compte deux fois par an
+n'aurait jamais pris l'abonnement. Celui qui compte toute l'année, lui, le
+prend : dès le troisième inventaire l'abonnement repasse devant, et la page le
+dit.
+
+### Trois refus tombent avec l'équipe, et ils tombent par nécessité
+
+| Refus | Avec équipe | Logiciel seul | Pourquoi |
+|---|---|---|---|
+| Hors zone | `hors_zone` | **accepté** | Nous ne savons pas envoyer six personnes à Bordeaux ; le logiciel y marche. Refuser une licence sur un code postal, c'est refuser de vendre ce qu'on sait livrer. |
+| Moins de 48 h | `trop_tot` | **accepté** | Le délai existe pour constituer une équipe. Sans équipe, il n'empêche que de servir quelqu'un qui compte ce soir. |
+| Coefficients | appliqués | **aucun** | Secteur, horaire, dimanche, code-barres décrivent tous la pénibilité du **travail humain**. Le logiciel coûte la même chose un dimanche à 23 h qu'un mardi à 10 h. |
+
+Une date passée reste refusée dans les deux formules.
+
+### Et la machine d'état le sait
+
+Une mission sans équipe n'a pas d'étape de constitution d'équipe :
+`confirmee → prete` directement, et `terminee → payee` sans
+`paiement_prestataires` — il n'y a personne à proposer, personne à attendre,
+personne à payer. `admin_proposer_mission` **refuse** d'affecter un inventoriste
+à une mission `logiciel_seul` : envoyer six personnes chez quelqu'un qui a
+acheté une licence serait une intrusion, et Quantinvo paierait des gens pour un
+travail que personne n'a commandé.
+
+Mesuré par `scripts/replique/60-a-la-carte.sql`, gardé par
+`web/tests/prix-on-demand.test.ts`.

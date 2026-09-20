@@ -4791,7 +4791,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-aucun-prelevement { font-size: 12.5px; color: var(--text-3); text-align: center; }
 .res-ferme { font-size: 13px; color: var(--warning-text); text-align: center; margin-top: 12px; line-height: 1.5; }
 
-/* ── « Qui fait votre inventaire ? » — les deux offres au même rang ───────
+/* ── « À la demande » — le concept, puis les deux formules au même rang ──
    Maquette : la planche Main. Ni ombre ni bordure sur les cartes : elles se
    détachent par leur fond, comme partout dans Ardoise. */
 .ald-page { padding-top: 64px; padding-bottom: 88px; }
@@ -4808,7 +4808,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   background: var(--surface); border-radius: var(--r-grand);
   padding: 34px 32px; display: flex; flex-direction: column; gap: 20px;
 }
-.ald-carte h2 {
+.ald-carte h3 {
   font-family: var(--police-titre), system-ui, sans-serif;
   font-size: 25px; font-weight: 700; letter-spacing: -0.5px;
 }
@@ -4827,8 +4827,38 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .ald-note { margin-top: 40px; font-size: 14.5px; line-height: 1.6; max-width: 76ch; }
 
+/* La bascule d'une formule à l'autre, sur l'écran du prix. Elle porte un
+   montant : c'est le seul endroit du parcours où les deux sont lisibles
+   ensemble. */
+.res-bascule {
+  margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--hairline);
+  font-size: 14px; line-height: 1.6; text-align: center;
+}
+.res-bascule .link-btn { font-size: 14px; }
+
+/* Le concept, avant le choix (Julien, 20 septembre 2026). Trois colonnes de
+   texte, sans fond : ce n'est pas une offre, c'est une explication — lui
+   donner une carte la mettrait au même rang que les deux formules. */
+.ald-concept {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+  margin-bottom: 56px; padding-bottom: 48px;
+  border-bottom: 1px solid var(--hairline);
+}
+.ald-concept h2 {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 17px; font-weight: 700; letter-spacing: -0.2px; margin-bottom: 9px;
+}
+.ald-concept p { font-size: 14.5px; line-height: 1.6; }
+
+.ald-question {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: clamp(22px, 2.6vw, 28px); font-weight: 700;
+  letter-spacing: -0.6px; margin-bottom: 24px;
+}
+
 @media (max-width: 860px) {
   .ald-choix { grid-template-columns: 1fr; }
+  .ald-concept { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; padding-bottom: 36px; }
   .ald-page { padding-top: 44px; padding-bottom: 64px; }
 }
 

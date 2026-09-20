@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { SiteFooter } from '@/components/SiteChrome'
 import { EnTeteAuDefilement } from '@/components/EnTeteAuDefilement'
 import { venteOuverte } from '@/lib/legal'
@@ -38,7 +39,8 @@ import { nb } from '@/lib/format'
 import {
   DELAI_HEURES, MOMENTS, OU_NOUS_ALLONS, SECTEURS,
   TRANCHES_ARTICLES, TRANCHES_REFERENCES,
-  devis, duree, estDesservi, type Devis, type MomentCle, type Secteur,
+  devis, duree, estDesservi,
+  type Devis, type Formule, type MomentCle, type Secteur,
 } from '@/lib/prixOnDemand'
 
 const ETAPES = ['Établissement', 'Date', 'Stock'] as const
@@ -75,6 +77,25 @@ export function PageReserver() {
   const { lien } = useTraduction()
   const uid = useId()
   const [etape, setEtape] = useState(1)
+
+  /**
+   * ⚠️ **LA FORMULE ARRIVE PAR L'ADRESSE, PAS PAR UNE QUESTION DE PLUS.** La
+   * page « À la demande » l'a déjà posée — « qui tient le téléphone ? » — et
+   * la reposer ici dirait qu'on n'a pas écouté la réponse. Le tunnel reste à
+   * trois questions, c'est la promesse.
+   *
+   * ⚠️ ET ELLE SE CHANGE QUAND MÊME, depuis l'écran du prix : quelqu'un qui
+   * découvre l'écart entre les deux montants doit pouvoir basculer sans
+   * refaire le parcours.
+   */
+  const params = useSearchParams()
+  const [formule, setFormule] = useState<Formule>('equipe_quantinvo')
+  useEffect(() => {
+    const p = params.get('formule')
+    if (p === 'logiciel') setFormule('logiciel_seul')
+    else if (p === 'equipe') setFormule('equipe_quantinvo')
+  }, [params])
+  const logicielSeul = formule === 'logiciel_seul'
 
   // ⚠️ Chaque étape recommence en haut. Sans ça, on arrive au milieu de la
   // question suivante — d'autant plus que les étapes n'ont pas la même hauteur.
@@ -192,6 +213,10 @@ export function PageReserver() {
         if (r.trancheArticles) setTrancheArticles(r.trancheArticles)
         if (r.trancheReferences) setTrancheReferences(r.trancheReferences)
         if (r.codeBarres) setCodeBarres(r.codeBarres as 'tous' | 'partiel')
+        // ⚠️ L'adresse gagne sur le stockage : quelqu'un qui revient par
+        // « Réserver le logiciel » veut le logiciel, pas ce qu'il regardait
+        // hier. L'effet qui lit `?formule=` tourne après celui-ci.
+        if (r.formule) setFormule(r.formule as Formule)
       }
     } catch { /* stockage indisponible : on repart d'une page vierge */ }
     setRepris(true)
@@ -204,11 +229,12 @@ export function PageReserver() {
         adresse, codePostal, ville, magasin,
         jour: jour ? jour.toISOString() : '', moment, heure,
         secteur, surfaceVente, surfaceReserve,
-        trancheArticles, trancheReferences, codeBarres,
+        trancheArticles, trancheReferences, codeBarres, formule,
       }))
     } catch { /* idem : ne rien garder vaut mieux que planter */ }
   }, [repris, adresse, codePostal, ville, magasin, jour, moment, heure,
-      secteur, surfaceVente, surfaceReserve, trancheArticles, trancheReferences, codeBarres])
+      secteur, surfaceVente, surfaceReserve, trancheArticles, trancheReferences,
+      codeBarres, formule])
 
   const debut = useMemo(() => {
     if (!jour) return null
@@ -217,18 +243,36 @@ export function PageReserver() {
   }, [jour, heure])
 
   const resultat: Devis = useMemo(
-    () => devis({ codePostal, secteur, trancheArticles, debut }),
-    [codePostal, secteur, trancheArticles, debut],
+    () => devis({ codePostal, secteur, trancheArticles, debut, formule }),
+    [codePostal, secteur, trancheArticles, debut, formule],
+  )
+
+  /** L'autre formule, au même volume — pour montrer l'écart sans le recopier. */
+  const autreFormule: Devis = useMemo(
+    () => devis({ codePostal, secteur, trancheArticles, debut,
+                  formule: logicielSeul ? 'equipe_quantinvo' : 'logiciel_seul' }),
+    [codePostal, secteur, trancheArticles, debut, logicielSeul],
   )
 
   // ⚠️ La zone se vérifie DÈS L'ÉTAPE 1, avant de faire choisir une date à
   // quelqu'un qu'on ne peut pas servir. Le refus ne propose pas de devis de
   // rattrapage : c'est toute la promesse du produit.
+  // ⚠️ LA ZONE NE VAUT QUE QUAND UNE ÉQUIPE SE DÉPLACE. Le logiciel se livre
+  // partout : refuser un code postal reviendrait à refuser de vendre ce qu'on
+  // sait livrer.
   const zoneConnue = codePostal.replace(/\D/g, '').length >= 2
-  const horsZone = zoneConnue && !estDesservi(codePostal)
+  const horsZone = !logicielSeul && zoneConnue && !estDesservi(codePostal)
 
   const etape1Prete = adresse.trim().length > 4 && zoneConnue && !horsZone
-  const etape2Prete = Boolean(debut)
+  /**
+   * ⚠️ **UN CRÉNEAU QUE LE DEVIS REFUSE NE DOIT PAS LAISSER PASSER.** Sans ça,
+   * on arrive à l'étape du prix avec un devis en échec — et comme cette étape
+   * ne s'affiche que si le devis tient, on arrive sur une PAGE BLANCHE.
+   * Trouvé le 20 septembre 2026 en jouant le tunnel au volet : formule
+   * logiciel, date d'aujourd'hui, heure déjà passée. Le refus existait déjà
+   * plus bas ; il n'empêchait rien.
+   */
+  const etape2Prete = Boolean(debut) && (resultat.ok || resultat.refus !== 'trop_tot')
   const etape3Prete = Boolean(secteur && trancheArticles && codeBarres && engage)
 
   const heures = MOMENTS.find((m) => m.cle === moment)?.heures ?? []
@@ -418,7 +462,9 @@ export function PageReserver() {
                 <p className="res-zone-note">
                   {etablissementChoisi
                     ? 'Nous servons cette adresse. Ce magasin est déjà enregistré dans votre compte.'
-                    : `Nous intervenons à ${OU_NOUS_ALLONS}.`}
+                    : logicielSeul
+                      ? 'Le logiciel fonctionne partout en France — aucune zone à vérifier.'
+                      : `Nous intervenons à ${OU_NOUS_ALLONS}.`}
                   {!etablissementChoisi && connecte && nouvelEtablissement
                     && ' Ce magasin sera enregistré dans votre compte : la prochaine fois, il sera dans la liste.'}
                 </p>
@@ -485,7 +531,10 @@ export function PageReserver() {
               <h1>Quand ?</h1>
               <p className="muted">
                 Avant l’ouverture, en pleine journée ou après la fermeture — comme
-                vous voulez. Nous n’affichons que les créneaux où nous avons une équipe.
+                vous voulez.{' '}
+                {logicielSeul
+                  ? 'Le logiciel s’ouvre à l’heure que vous choisissez, même aujourd’hui.'
+                  : 'Nous n’affichons que les créneaux où nous avons une équipe.'}
               </p>
 
               <div className="res-quand">
@@ -515,7 +564,11 @@ export function PageReserver() {
                       // veille du premier jour réservable disparaissait pour rien.
                       // Le créneau précis, lui, est refusé plus bas.
                       const finDuJour = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59)
-                      const tropTot = finDuJour.getTime() < aujourdhui.getTime() + DELAI_HEURES * 3600_000
+                      // ⚠️ LE DÉLAI EXISTE POUR CONSTITUER UNE ÉQUIPE. Sans
+                      // équipe, il ne protège rien : il barrerait le calendrier
+                      // de quelqu'un qui compte ce soir.
+                      const tropTot = finDuJour.getTime()
+                        < aujourdhui.getTime() + (logicielSeul ? 0 : DELAI_HEURES) * 3600_000
                       const choisi = jour?.toDateString() === d.toDateString()
                       return (
                         <button key={d.toISOString()} type="button" disabled={tropTot}
@@ -527,8 +580,17 @@ export function PageReserver() {
                     })}
                   </div>
                   <p className="res-legende">
-                    <span className="res-pastille dispo" /> Équipe disponible
-                    <span className="res-pastille absente" /> Pas d’équipe
+                    {logicielSeul ? (
+                      <>
+                        <span className="res-pastille dispo" /> Ouvrable
+                        <span className="res-pastille absente" /> Déjà passé
+                      </>
+                    ) : (
+                      <>
+                        <span className="res-pastille dispo" /> Équipe disponible
+                        <span className="res-pastille absente" /> Pas d’équipe
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -555,16 +617,21 @@ export function PageReserver() {
                       ))}
                     </div>
                   </div>
-                  <p className="field-hint">L’équipe arrive quinze minutes avant pour s’installer.</p>
+                  <p className="field-hint">
+                    {logicielSeul
+                      ? 'Vos comptes ont accès à partir de cette heure-là.'
+                      : 'L’équipe arrive quinze minutes avant pour s’installer.'}
+                  </p>
                 </div>
               </div>
 
               {!resultat.ok && resultat.refus === 'trop_tot' && jour && (
                 <div className="res-refus" role="status">
-                  <h2>Ce créneau est trop proche</h2>
+                  <h2>{logicielSeul ? 'Ce créneau est passé' : 'Ce créneau est trop proche'}</h2>
                   <p>
-                    Constituer une équipe demande {DELAI_HEURES} heures. Choisissez
-                    un jour plus loin : le reste ne change pas.
+                    {logicielSeul
+                      ? 'Choisissez une heure à venir : le reste ne change pas.'
+                      : `Constituer une équipe demande ${DELAI_HEURES} heures. Choisissez un jour plus loin : le reste ne change pas.`}
                   </p>
                 </div>
               )}
@@ -663,6 +730,28 @@ export function PageReserver() {
           </div>
         )}
 
+        {/* ⚠️ SI LE DEVIS NE TIENT PAS, ON LE DIT. Une étape qui ne se rend
+            que sous condition rend une page vide quand la condition tombe —
+            et une page vide ne dit à personne ce qu'il faut corriger. */}
+        {etape === 4 && !resultat.ok && (
+          <div className="res-prix-page">
+            <div className="res-refus" role="status">
+              <h2>Il manque une réponse</h2>
+              <p>
+                {resultat.refus === 'trop_tot'
+                  ? 'Le créneau choisi est passé ou trop proche. Revenez à la date.'
+                  : resultat.refus === 'hors_zone'
+                    ? 'Nous n’intervenons pas encore à cette adresse avec une équipe.'
+                    : 'Reprenez les questions : l’une d’elles attend encore une réponse.'}
+              </p>
+              <button type="button" className="btn btn-ghost"
+                      onClick={() => setEtape(resultat.refus === 'trop_tot' ? 2 : 1)}>
+                Revenir
+              </button>
+            </div>
+          </div>
+        )}
+
         {etape === 4 && resultat.ok && (
           <div className="res-prix-page">
             <div className="res-prix-tete">
@@ -675,17 +764,40 @@ export function PageReserver() {
             <div className="res-prix-carte">
               <strong className="res-montant num">{enEuros(resultat.chaine.prixCents)}</strong>
               <p className="muted">TVA non applicable, article 293 B du CGI</p>
-              <ul className="res-compris">
-                <li>
-                  <strong>
-                    {nb(resultat.chaine.inventoristes)} inventoriste{resultat.chaine.inventoristes > 1 ? 's' : ''}
-                    {resultat.chaine.responsable ? ' et un responsable' : ''}
-                  </strong>, sur place à {enHeure(resultat.arrivee)}
-                </li>
-                <li>{duree(resultat.chaine.dureeMinutes)} environ — fin prévue vers {enHeure(resultat.finPrevue)}</li>
-                <li>Écarts contrôlés et recomptés avant la clôture</li>
-                <li>Rapport à la clôture — Excel, CSV, PDF</li>
-              </ul>
+              {/* ⚠️ DEUX LISTES, PAS UNE LISTE AVEC DES `&&` PARTOUT. Ce que
+                  le client achète n'est pas le même objet dans les deux
+                  formules : dans l'une on vend des gens, dans l'autre un
+                  accès. Une liste unique truffée de conditions finit par
+                  promettre un inventoriste à quelqu'un qui n'en a pas. */}
+              {logicielSeul ? (
+                <ul className="res-compris">
+                  <li>
+                    <strong>
+                      Quantinvo ouvert pour {nb(resultat.chaine.appareils)} appareil
+                      {resultat.chaine.appareils > 1 ? 's' : ''}
+                    </strong>, le temps de cet inventaire
+                  </li>
+                  <li>
+                    Prévoyez {nb(resultat.chaine.compteursAttendus)} personne
+                    {resultat.chaine.compteursAttendus > 1 ? 's' : ''} pour {duree(resultat.chaine.dureeMinutes)} environ
+                    {resultat.chaine.compteursAttendus >= 3 ? ', plus qui encadre' : ''}
+                  </li>
+                  <li>Comptage, seconde passe d’audit, écarts recomptés</li>
+                  <li>Rapport à la clôture — Excel, CSV, PDF</li>
+                </ul>
+              ) : (
+                <ul className="res-compris">
+                  <li>
+                    <strong>
+                      {nb(resultat.chaine.inventoristes)} inventoriste{resultat.chaine.inventoristes > 1 ? 's' : ''}
+                      {resultat.chaine.responsable ? ' et un responsable' : ''}
+                    </strong>, sur place à {enHeure(resultat.arrivee)}
+                  </li>
+                  <li>{duree(resultat.chaine.dureeMinutes)} environ — fin prévue vers {enHeure(resultat.finPrevue)}</li>
+                  <li>Écarts contrôlés et recomptés avant la clôture</li>
+                  <li>Rapport à la clôture — Excel, CSV, PDF</li>
+                </ul>
+              )}
               {venteOuverte() ? (
                 <button type="button" className="btn btn-primary btn-block"
                         onClick={() => setEtape(connecte ? 7 : 5)}>
@@ -710,6 +822,26 @@ export function PageReserver() {
                   </button>
                 </>
               )}
+
+              {/* ⚠️ **L'AUTRE FORMULE, AVEC SON PRIX, ET PAS SEULEMENT SON
+                  NOM.** C'est ici que quelqu'un découvre l'écart entre les
+                  deux — et c'est le seul endroit du parcours où il a les deux
+                  chiffres sous les yeux. Un lien qui dirait « voir l'autre
+                  formule » l'obligerait à refaire le tunnel pour savoir. */}
+              {autreFormule.ok && (
+                <p className="res-bascule muted">
+                  {logicielSeul
+                    ? 'Personne pour compter ce jour-là ?'
+                    : 'Vous avez du monde pour compter ?'}{' '}
+                  <button type="button" className="link-btn"
+                          onClick={() => setFormule(logicielSeul ? 'equipe_quantinvo' : 'logiciel_seul')}>
+                    {logicielSeul
+                      ? `Venir compter pour vous — ${enEuros(autreFormule.chaine.prixCents)}`
+                      : `Le logiciel seul — ${enEuros(autreFormule.chaine.prixCents)}`}
+                  </button>
+                </p>
+              )}
+
               <button type="button" className="link-btn" onClick={() => setEtape(1)}>
                 Modifier mes réponses
               </button>

@@ -113,7 +113,7 @@ if [[ -f "$RACINE/90-retirer.sql" ]]; then
   done
 fi
 
-for scenario in "$RACINE"/4*.sql "$RACINE"/5*.sql; do
+for scenario in "$RACINE"/4*.sql "$RACINE"/5*.sql "$RACINE"/6*.sql; do
   [[ -f "$scenario" ]] || continue
   echo
   echo "── ${scenario:t:r} ───────────────────────────────────────────────────"

@@ -13,10 +13,11 @@
 // Changer un taux horaire sans reprendre le document fait tomber la garde —
 // c'est exactement ce qu'on veut, parce que ce jour-là la maquette ment.
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, dossierMigrations } from './migrations'
 import { REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee } from '../lib/prixOnDemand'
+import { devis as devisAffiche } from '../lib/prixOnDemand'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -24,10 +25,55 @@ const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
 const sansCommentaires = (t: string) =>
   t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*(--|\/\/).*$/gm, '')
 
-/** Le fichier de migration qui pose la version de lancement. */
+/** Le SQL débarrassé des corps `$function$ … $function$`. */
+const sansCorpsDeFonction = (t: string) =>
+  t.replace(/\$function\$[\s\S]*?\$function\$/g, ' ').replace(/\$\$[\s\S]*?\$\$/g, ' ')
+
+/** Tout le SQL du dépôt, dans l'ordre des migrations. */
+function migrations(): { fichier: string; sql: string }[] {
+  return readdirSync(dossierMigrations)
+    .filter((f) => f.endsWith('.sql')).sort()
+    .map((fichier) => ({
+      fichier, sql: readFileSync(path.join(dossierMigrations, fichier), 'utf8'),
+    }))
+}
+
+/**
+ * Le fichier de migration qui pose la version de lancement des réglages.
+ *
+ * ⚠️ **CE N'EST PLUS CELUI QUI DÉFINIT `prix_mission`**, et c'est le genre de
+ * lien qui casse sans bruit. La garde remontait à la migration du moteur pour
+ * y lire l'`insert` des réglages — les deux vivaient dans le même fichier. Le
+ * 20 septembre 2026, `20260920230001_a_la_carte` a redéfini le moteur sans
+ * reposer de réglages : la garde a cherché un `insert` là où il n'y en a plus.
+ * Elle cherche donc maintenant l'`insert` lui-même, où qu'il soit.
+ */
 function migrationDuPrix(): string {
-  const { fichier } = derniereDefinition('prix_mission')
-  return readFileSync(path.join(dossierMigrations, fichier), 'utf8')
+  // ⚠️ **HORS CORPS DE FONCTION**, et c'est un piège qui s'est refermé le jour
+  // même : `admin_poser_reglages_prix` contient elle aussi un
+  // `insert into public.reglages_prix`, avec des `coalesce(...)` à la place
+  // des valeurs. La garde l'a trouvé en premier et a lu `NaN` partout.
+  const avec = migrations().filter((m) =>
+    sansCorpsDeFonction(sansCommentaires(m.sql)).includes('insert into public.reglages_prix'))
+  expect(avec.length, 'une migration doit poser les réglages').toBeGreaterThan(0)
+  return sansCorpsDeFonction(avec[avec.length - 1].sql)
+}
+
+/**
+ * Les défauts d'une colonne ajoutée par `alter table`, lus dans le SQL.
+ *
+ * ⚠️ Les réglages du logiciel seul ne sont pas dans l'`insert` de la version 1
+ * — ils sont arrivés après, par `add column … default`. Les recopier ici en
+ * ferait une troisième source de vérité.
+ */
+function defautColonne(colonne: string): number {
+  const motif = new RegExp(
+    `add column if not exists ${colonne}\\s+integer\\s+not null\\s+default\\s+(\\d+)`, 'i')
+  for (const m of [...migrations()].reverse()) {
+    const trouve = sansCommentaires(m.sql).match(motif)
+    if (trouve) return Number(trouve[1])
+  }
+  throw new Error(`Aucune migration ne pose ${colonne}`)
 }
 
 type Reglages = {
@@ -39,6 +85,8 @@ type Reglages = {
   fraisFixes: number
   margeCible: number
   margeMinimum: number
+  tarifAppareil: number
+  fraisFixesLogiciel: number
 }
 
 /** Les réglages, LUS dans l'`insert` de la migration — jamais recopiés ici. */
@@ -70,6 +118,8 @@ function reglages(): Reglages {
     fraisFixes: val('frais_fixes_cents'),
     margeCible: val('marge_cible'),
     margeMinimum: val('marge_minimum'),
+    tarifAppareil: defautColonne('tarif_appareil_cents'),
+    fraisFixesLogiciel: defautColonne('frais_fixes_logiciel_cents'),
   }
 }
 
@@ -395,5 +445,113 @@ describe('le barème d’annulation retombe sur le document', () => {
   it('ce que touche l’équipe ne sort pas vers un client', () => {
     const sql = sansCommentaires(derniereDefinition('frais_annulation').corps)
     expect(sql).toMatch(/'equipe_cents', case when v_admin then/)
+  })
+})
+
+/**
+ * La formule « logiciel seul » — Julien, 20 septembre 2026.
+ *
+ * ⚠️ **CE QUI EST GARDÉ ICI, C'EST CE QUI NE DOIT PAS DÉRIVER** : le
+ * dimensionnement est commun aux deux formules, le prix ne l'est pas, et le
+ * logiciel ne facture aucun travail humain. Les nombres ne sont pas cités :
+ * les réglages viennent de la migration, la chaîne vient du site.
+ */
+describe('la formule logiciel seul', () => {
+  const r = reglages()
+
+  it('les réglages du site sont ceux de la base', () => {
+    expect({
+      tarif: REGLAGES.tarifAppareilCents,
+      frais: REGLAGES.fraisFixesLogicielCents,
+    }).toEqual({ tarif: r.tarifAppareil, frais: r.fraisFixesLogiciel })
+  })
+
+  /**
+   * ⚠️ Le dimensionnement doit rester COMMUN. S'il divergeait, les deux prix
+   * de la page ne seraient plus comparables — et c'est tout l'intérêt de les
+   * mettre côte à côte.
+   */
+  it('le dimensionnement est le même dans les deux formules', () => {
+    for (const articles of [2_000, 10_000, 20_000, 30_000, 50_000, 100_000]) {
+      const equipe = chaineAffichee(articles, 1, 'equipe_quantinvo')
+      const logiciel = chaineAffichee(articles, 1, 'logiciel_seul')
+      expect(logiciel.compteursAttendus, `${articles} — compteurs`)
+        .toBe(equipe.compteursAttendus)
+      expect(logiciel.appareils, `${articles} — appareils`).toBe(equipe.appareils)
+      expect(logiciel.dureeMinutes, `${articles} — durée`).toBe(equipe.dureeMinutes)
+    }
+  })
+
+  it('le prix est la licence plus les frais, et rien d’autre', () => {
+    for (const articles of [2_000, 20_000, 100_000]) {
+      const c = chaineAffichee(articles, 1, 'logiciel_seul')
+      expect(c.licenceCents).toBe(c.appareils * r.tarifAppareil)
+      expect(c.prixCents).toBe(c.licenceCents + r.fraisFixesLogiciel)
+      // ⚠️ L'arrondi à l'euro ne doit rien changer : un tarif et des frais en
+      // euros ronds donnent un prix en euros ronds. Si ce test tombe un jour,
+      // c'est qu'un réglage est passé aux centimes — et le prix affiché ne
+      // serait plus le prix payé.
+      expect(c.prixCents % 100).toBe(0)
+    }
+  })
+
+  it('personne n’est payé, et rien n’est facturé comme du travail', () => {
+    const c = chaineAffichee(20_000, 1, 'logiciel_seul')
+    expect(c.equipeCents).toBe(0)
+    expect(c.inventoristes).toBe(0)
+    expect(c.responsable).toBe(false)
+    expect(c.remunerationInventoristeCents).toBe(0)
+    expect(c.remunerationResponsableCents).toBe(0)
+  })
+
+  it('le logiciel coûte moins cher que l’équipe, à volume égal', () => {
+    for (const articles of [2_000, 10_000, 20_000, 30_000, 50_000, 100_000]) {
+      const equipe = chaineAffichee(articles, 1, 'equipe_quantinvo')
+      const logiciel = chaineAffichee(articles, 1, 'logiciel_seul')
+      expect(logiciel.prixCents, `${articles} articles`).toBeLessThan(equipe.prixCents)
+    }
+  })
+
+  /**
+   * ⚠️ **LA ZONE ET LE DÉLAI NE VALENT QUE POUR L'ÉQUIPE.** Ils existent parce
+   * que six personnes doivent se déplacer et qu'une équipe se constitue. Le
+   * logiciel se livre partout et tout de suite : les appliquer reviendrait à
+   * refuser de vendre ce qu'on sait livrer.
+   */
+  it('ni zone ni délai pour le logiciel, les deux pour l’équipe', () => {
+    const dansUnMois = new Date(Date.now() + 30 * 24 * 3600_000)
+    const dansTroisHeures = new Date(Date.now() + 3 * 3600_000)
+    const base = { secteur: 'textile' as const, trancheArticles: 'd' }
+    // Un département que la liste des desservis ne contient pas — déduit,
+    // jamais cité : le jour où Bordeaux ouvre, ce test doit suivre.
+    const horsZone = ['33', '13', '44', '31', '67']
+      .find((d) => !(DEPARTEMENTS_DESSERVIS as readonly string[]).includes(d))
+    expect(horsZone, 'il faut un département non desservi pour ce test').toBeTruthy()
+
+    const dehors = `${horsZone}000`
+    expect(devisAffiche({ ...base, codePostal: dehors, debut: dansUnMois }).ok).toBe(false)
+    expect(devisAffiche({
+      ...base, codePostal: dehors, debut: dansUnMois, formule: 'logiciel_seul' }).ok).toBe(true)
+
+    const dedans = `${DEPARTEMENTS_DESSERVIS[0]}000`
+    expect(devisAffiche({ ...base, codePostal: dedans, debut: dansTroisHeures }).ok).toBe(false)
+    expect(devisAffiche({
+      ...base, codePostal: dedans, debut: dansTroisHeures, formule: 'logiciel_seul' }).ok).toBe(true)
+  })
+
+  it('une date passée reste refusée, même sans équipe', () => {
+    const hier = new Date(Date.now() - 24 * 3600_000)
+    expect(devisAffiche({
+      codePostal: `${DEPARTEMENTS_DESSERVIS[0]}000`, secteur: 'textile',
+      trancheArticles: 'd', debut: hier, formule: 'logiciel_seul' }).ok).toBe(false)
+  })
+
+  it('personne ne vient : pas d’avance à l’arrivée', () => {
+    const debut = new Date(Date.now() + 30 * 24 * 3600_000)
+    const d = devisAffiche({
+      codePostal: `${DEPARTEMENTS_DESSERVIS[0]}000`, secteur: 'textile',
+      trancheArticles: 'd', debut, formule: 'logiciel_seul' })
+    expect(d.ok).toBe(true)
+    if (d.ok) expect(d.arrivee.getTime()).toBe(debut.getTime())
   })
 })

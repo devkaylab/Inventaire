@@ -34,7 +34,24 @@ export const REGLAGES = {
   arrondiMinutes: 30,
   margeCible: 0.25,
   margeMinimum: 0.22,
+  // ⚠️ Les deux réglages de la formule « logiciel seul ». Ils ne vivent pas
+  // dans le même `insert` que les autres — ils sont arrivés plus tard, par un
+  // `alter table … default` — et la garde les lit là où ils sont.
+  tarifAppareilCents: 1600,
+  fraisFixesLogicielCents: 1900,
 } as const
+
+/**
+ * Les deux formules de la même réservation.
+ *
+ * ⚠️ **`logiciel_seul` EST NÉ D'UN CONTRESENS**, relevé par Julien le
+ * 20 septembre 2026 : la page « À la demande » envoyait « vous, avec votre
+ * équipe » vers un abonnement ANNUEL. Quelqu'un qui compte une fois par an n'a
+ * aucune raison d'acheter douze mois de logiciel — et le lui proposer sur la
+ * page « à la demande », c'est lui proposer l'inverse de ce qu'il est venu
+ * chercher.
+ */
+export type Formule = 'equipe_quantinvo' | 'logiciel_seul'
 
 /** Les départements où une équipe peut être constituée. Copie de `zones_desservies`. */
 export const DEPARTEMENTS_DESSERVIS = [
@@ -95,9 +112,13 @@ export const MOMENTS = [
 export type MomentCle = (typeof MOMENTS)[number]['cle']
 
 export type Chaine = {
+  formule: Formule
   articlesRetenus: number
   heuresPersonne: number
   inventoristes: number
+  compteursAttendus: number
+  appareils: number
+  licenceCents: number
   responsable: boolean
   dureeMinutes: number
   equipeCents: number
@@ -109,29 +130,58 @@ export type Chaine = {
   remunerationResponsableCents: number
 }
 
-/** La chaîne de `prix_mission`, pas à pas. Tout en centimes. */
-export function chaine(articlesRetenus: number, coefficient = 1): Chaine {
+/**
+ * La chaîne de `prix_mission`, pas à pas. Tout en centimes.
+ *
+ * ⚠️ **LE DIMENSIONNEMENT EST LE MÊME POUR LES DEUX FORMULES** — articles,
+ * heures-personne, nombre de personnes, durée. C'est la demande de Julien
+ * (« tarifs sur les mêmes critères on demand mais sans les compteurs ») et
+ * c'est aussi ce qui rend les deux prix comparables sur la même page. Ce qui
+ * change commence à la ligne du coût.
+ */
+export function chaine(
+  articlesRetenus: number,
+  coefficient = 1,
+  formule: Formule = 'equipe_quantinvo',
+): Chaine {
   const r = REGLAGES
+  const logiciel = formule === 'logiciel_seul'
   const heuresPersonne = articlesRetenus / r.productivite
-  const inventoristes = Math.ceil(heuresPersonne / (r.dureeCibleMinutes / 60))
+  const compteursAttendus = Math.ceil(heuresPersonne / (r.dureeCibleMinutes / 60))
   const dureeMinutes =
-    Math.ceil((heuresPersonne / inventoristes) * 60 / r.arrondiMinutes) * r.arrondiMinutes
-  const responsable = inventoristes >= r.responsableDesN
+    Math.ceil((heuresPersonne / compteursAttendus) * 60 / r.arrondiMinutes) * r.arrondiMinutes
+  const responsable = compteursAttendus >= r.responsableDesN
+  const appareils = compteursAttendus + (responsable ? 1 : 0)
   const heuresFacturees = dureeMinutes / 60
-  const equipeCents = Math.round(
-    (inventoristes * r.tauxInventoristeCents
+
+  // ⚠️ AUCUN COEFFICIENT SUR LE LOGICIEL SEUL : secteur, horaire, dimanche et
+  // code-barres décrivent tous la pénibilité du TRAVAIL HUMAIN. Le logiciel
+  // coûte la même chose un dimanche à 23 h qu'un mardi à 10 h.
+  const equipeCents = logiciel ? 0 : Math.round(
+    (compteursAttendus * r.tauxInventoristeCents
       + (responsable ? r.tauxResponsableCents : 0)) * heuresFacturees,
   )
-  const coutCents = equipeCents + r.fraisFixesCents
-  const prixCents = Math.round((coutCents / (1 - r.margeCible)) * coefficient / 100) * 100
+  const licenceCents = logiciel ? appareils * r.tarifAppareilCents : 0
+  const fraisCents = logiciel ? r.fraisFixesLogicielCents : r.fraisFixesCents
+  const coutCents = logiciel ? fraisCents : equipeCents + fraisCents
+  // ⚠️ LE LOGICIEL NE PASSE PAS PAR LA MARGE CIBLE : son prix EST la somme de
+  // la licence et des frais. Le diviser par 0,75 reviendrait à inventer un
+  // coût pour le majorer.
+  const prixCents = logiciel
+    ? Math.round((licenceCents + fraisCents) / 100) * 100
+    : Math.round((coutCents / (1 - r.margeCible)) * coefficient / 100) * 100
   return {
-    articlesRetenus, heuresPersonne, inventoristes, responsable, dureeMinutes,
-    equipeCents, coutCents, prixCents,
+    formule, articlesRetenus, heuresPersonne,
+    inventoristes: logiciel ? 0 : compteursAttendus,
+    compteursAttendus, appareils, licenceCents,
+    responsable: logiciel ? false : responsable,
+    dureeMinutes, equipeCents, coutCents, prixCents,
     margeCents: prixCents - coutCents,
     marge: prixCents === 0 ? 0 : (prixCents - coutCents) / prixCents,
-    remunerationInventoristeCents: Math.round(r.tauxInventoristeCents * heuresFacturees),
+    remunerationInventoristeCents:
+      logiciel ? 0 : Math.round(r.tauxInventoristeCents * heuresFacturees),
     remunerationResponsableCents:
-      responsable ? Math.round(r.tauxResponsableCents * heuresFacturees) : 0,
+      logiciel || !responsable ? 0 : Math.round(r.tauxResponsableCents * heuresFacturees),
   }
 }
 
@@ -142,6 +192,7 @@ export type Reponses = {
   secteur: Secteur | ''
   trancheArticles: string
   debut: Date | null
+  formule?: Formule
 }
 
 export type Devis =
@@ -161,18 +212,25 @@ export function estDesservi(codePostal: string): boolean {
 
 /** Le devis affiché pendant le parcours. La base refait le même calcul. */
 export function devis(r: Reponses, maintenant = new Date()): Devis {
+  const formule = r.formule ?? 'equipe_quantinvo'
+  const logiciel = formule === 'logiciel_seul'
   const tranche = TRANCHES_ARTICLES.find((t) => t.cle === r.trancheArticles)
   if (!r.codePostal || !r.secteur || !tranche || !r.debut) return { ok: false, refus: 'incomplet' }
-  if (!estDesservi(r.codePostal)) return { ok: false, refus: 'hors_zone' }
-  if (r.debut.getTime() < maintenant.getTime() + DELAI_HEURES * 3600_000) {
+  // ⚠️ DEUX REFUS NE VALENT QUE POUR L'ÉQUIPE, et c'est par nécessité : la
+  // zone existe parce que six personnes doivent pouvoir se déplacer, le délai
+  // parce qu'une équipe se constitue. Le logiciel se livre partout, tout de
+  // suite — le refuser serait refuser de vendre ce qu'on sait livrer.
+  if (!logiciel && !estDesservi(r.codePostal)) return { ok: false, refus: 'hors_zone' }
+  const delai = logiciel ? 0 : DELAI_HEURES
+  if (r.debut.getTime() < maintenant.getTime() + delai * 3600_000) {
     return { ok: false, refus: 'trop_tot' }
   }
-  const c = chaine(tranche.max)
+  const c = chaine(tranche.max, 1, formule)
   if (c.marge < REGLAGES.margeMinimum) return { ok: false, refus: 'marge_insuffisante' }
   return {
     ok: true,
     chaine: c,
-    arrivee: new Date(r.debut.getTime() - 15 * 60_000),
+    arrivee: new Date(r.debut.getTime() - (logiciel ? 0 : 15) * 60_000),
     finPrevue: new Date(r.debut.getTime() + c.dureeMinutes * 60_000),
     annulationGratuiteJusquAu: new Date(r.debut.getTime() - 3 * 24 * 3600_000),
   }

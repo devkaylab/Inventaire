@@ -1,3 +1,5 @@
+-- ⚠️⚠️ CETTE MIGRATION TOUCHE QUANTINVO OS — `compose_full_name`. ⚠️⚠️
+--
 -- `compose_full_name` fixe son `search_path` — alignement dépôt/base.
 --
 -- ⚠️ CE N'EST PAS UN CHANGEMENT, C'EST UNE DÉRIVE QU'ON FERME. La base a déjà

@@ -77,6 +77,8 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Cette mission a déjà un responsable.': 'This mission already has a team leader.',
   "Cette mission n'a pas de place de responsable.": 'This mission has no team leader slot.',
   "Cette personne n'est pas inventoriste.": 'This person is not an inventory clerk.',
+  'Cette réservation est une licence : le client compte avec sa propre équipe.':
+    'This booking is a licence: the client counts with their own team.',
   "Cette personne n'est pas sur la mission.": 'This person is not on the mission.',
   "Chaque magasin doit porter un nom d'au plus 80 caractères.": 'Each store needs a name of 80 characters or fewer.',
   'Choisissez au moins un magasin : un superviseur y est toujours rattaché.': 'Choose at least one store: a supervisor always has one.',
