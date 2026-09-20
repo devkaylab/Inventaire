@@ -104,3 +104,71 @@ voulu : une fuite de cette clé permettrait d'envoyer, pas de lire ce qui est
 parti. Passer aux templates Resend obligerait donc à créer une clé plus
 puissante quelque part — c'est une décision de sécurité, pas un simple
 déplacement de fichiers.
+
+---
+
+## Il en restait un dehors : « mot de passe oublié » (20 septembre 2026)
+
+⚠️ **CONSTAT DE JULIEN, EN RECEVANT LE MESSAGE** : « c'est un mail supabase
+qu'on reçoit, pas de quantinvo, il faut changer ça ». L'application était en
+cours de publication.
+
+Ce fichier dit « un seul gabarit pour tous les envois ». C'était faux d'un :
+la réinitialisation partait de `supabase.auth.resetPasswordForEmail()`,
+c'est-à-dire du serveur d'authentification, avec son propre modèle, son propre
+expéditeur et sa propre langue. Hors du dépôt, hors des gardes, hors de la
+charte — et personne ne l'avait vu parce que personne n'oublie son mot de passe
+pendant qu'il développe.
+
+⚠️ **ET CE N'ÉTAIT PAS QU'UNE QUESTION DE CHARTE.** Un message d'un expéditeur
+inconnu, sans logo, en anglais, avec un lien à cliquer et une urgence
+implicite, a exactement la forme d'un hameçonnage. On apprend à nos clients à
+s'en méfier ; il ne faut pas être celui qui leur en envoie.
+
+### Ce qui a été fait
+
+| | |
+|---|---|
+| `demander_reinitialisation()` | En base : valide l'adresse, applique le quota, dit si le compte existe. `service_role` seul. |
+| `mot-de-passe-oublie` | Fonction edge publique : demande le lien à Supabase, le met dans le gabarit maison, l'envoie par Resend. |
+| `/mot-de-passe-oublie` | La page appelle la fonction, et ne retombe sur Supabase que si elle est injoignable. |
+
+⚠️ **LE LIEN VIENT DE `auth.admin.generateLink`, PAS DE NOUS.** Fabriquer un
+jeton de récupération à la main serait fabriquer une seconde porte d'entrée
+dans les comptes. Supabase reste l'autorité : on lui demande le lien qu'il
+aurait mis dans son propre message, et on le met dans le nôtre.
+
+⚠️ **LE QUOTA EST À REFAIRE PARCE QU'ON PERD CELUI DE SUPABASE.** En passant
+par l'API d'administration, sa limitation de débit ne s'applique plus. Une
+fonction publique sans quota, c'est un envoi de courriel gratuit vers
+n'importe quelle adresse, signé Quantinvo. Cinq par heure et par adresse,
+`rate_limit_ok`, **avant** la recherche par adresse — l'ordre fait le contrôle.
+
+⚠️ **LA REDIRECTION EST BORNÉE.** Un `redirectTo` libre ferait de cette
+fonction un envoyeur de liens de récupération vers le domaine de son choix :
+il suffirait de demander une réinitialisation pour une adresse qu'on ne
+possède pas et d'espérer un clic depuis un site qu'on contrôle.
+
+⚠️ **ET LE REPLI EST VOLONTAIRE.** Si la fonction est injoignable, la page
+retombe sur `resetPasswordForEmail` : le message est alors celui de Supabase,
+ce qui est moins bien — mais quelqu'un qui ne peut plus entrer chez lui a
+besoin d'un lien, pas d'une charte.
+
+### Vérifié dans la vraie boîte
+
+Les deux messages, à douze minutes d'écart, dans la même boîte :
+
+```
+19:39  noreply@mail.app.supabase.io   Reset your password
+19:51  invitations@quantinvo.com      Votre lien pour choisir un nouveau mot de passe
+```
+
+Et une adresse inconnue reçoit exactement la même réponse HTTP qu'une adresse
+connue (`{success:true, received:true}`) : pas d'oracle d'énumération.
+
+Gardes : `web/tests/formulaires-publics.test.ts`.
+
+⚠️ **LA FONCTION EST DÉPLOYÉE, LA PAGE QUI L'APPELLE EST SUR `on-demand`.** Tant
+que la branche n'est pas fusionnée, la production continue d'envoyer le message
+de Supabase : c'est le site qui choisit le chemin, et le site en production ne
+connaît pas encore la fonction.

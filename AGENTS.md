@@ -40,7 +40,7 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ L'offre Solo — décidée, PAS ENCORE CONSTRUITE](docs/notes/009-l-offre-solo-decidee-pas-encore-construite-27-aout-2026.md)
 - [Parcours d'inscription](docs/notes/010-parcours-d-inscription.md)
 - [Modélisation de menaces du backend](docs/notes/011-modelisation-de-menaces-du-backend-28-aout-2026.md)
-- [E-mails transactionnels : un seul gabarit](docs/notes/012-e-mails-transactionnels-un-seul-gabarit.md)
+- [E-mails transactionnels : un seul gabarit](docs/notes/012-e-mails-transactionnels-un-seul-gabarit.md) — y compris « mot de passe oublié » depuis le 20/09/2026
 - [Application mobile : « Mon profil » rangé comme le site](docs/notes/013-application-mobile-mon-profil-range-comme-le-site-21-aout-20.md)
 - [Le rapport recense l'attendu, pas seulement le compté](docs/notes/014-le-rapport-recense-l-attendu-pas-seulement-le-compte-22-aout.md)
 - [Supprimer et retirer depuis l'app](docs/notes/015-supprimer-et-retirer-depuis-l-app-22-aout-2026.md)

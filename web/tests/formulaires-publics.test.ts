@@ -8,7 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { derniereDefinition, dossierMigrations } from './migrations'
+import { derniereDefinition, dossierMigrations, fichierDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const superviseur = lire('../components/vitrine/Superviseur.tsx')
@@ -18,6 +18,18 @@ const superviseur = lire('../components/vitrine/Superviseur.tsx')
 /** Le code seul : les commentaires parlent de `outcome`, le code ne doit pas le rendre. */
 const sansCommentaires = (sql: string) =>
   sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n')
+
+/**
+ * Le code TypeScript seul.
+ *
+ * ⚠️ **`sansCommentaires` CI-DESSUS EST FAIT POUR DU SQL** : il ne retire que
+ * les lignes `--`. Appliqué à un fichier `.ts`, il laisse passer les `//` et
+ * les blocs `/** … *\/` — donc les en-têtes, qui CITENT justement ce que la
+ * garde interdit au code. Huitième fois que ce piège se présente sur ce dépôt,
+ * et la première où il touche du TypeScript.
+ */
+const sansCommentairesTs = (ts: string) =>
+  ts.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 /** Le texte de toutes les migrations, pour ce qui n'est pas un corps de fonction. */
 const toutesLesMigrations = readdirSync(dossierMigrations)
@@ -250,5 +262,99 @@ describe('le formulaire d’inscription répond la même chose', () => {
     expect(edge).toContain("rpc('submit_company_request_detailed'")
     expect(edge).toContain("result.outcome === 'request_pending'")
     expect(edge).not.toMatch(/json\(\{[^}]*outcome/)
+  })
+})
+
+/**
+ * « Mot de passe oublié » : c'était le seul courriel hors du gabarit.
+ *
+ * ⚠️ **CONSTAT DE JULIEN, 20 SEPTEMBRE 2026, EN RECEVANT LE MESSAGE** : « c'est
+ * un mail supabase qu'on reçoit, pas de quantinvo, il faut changer ça ».
+ * L'application était en cours de publication. Un message d'un expéditeur
+ * inconnu, sans logo, avec un lien à cliquer et une urgence implicite, a
+ * exactement la forme d'un hameçonnage — on apprend à nos clients à s'en
+ * méfier, il ne faut pas être celui qui leur en envoie.
+ *
+ * ⚠️ Cette garde ne vérifie pas l'apparence du message — `email-template`
+ * s'en charge. Elle tient trois choses qui se défont sans bruit : que la page
+ * appelle la fonction AVANT le repli, que la fonction ne laisse rien filtrer
+ * de l'existence du compte, et que le quota est bien posé côté base.
+ */
+describe('le lien de réinitialisation part de Quantinvo', () => {
+  const page = lire('../app/mot-de-passe-oublie/page.tsx')
+  const edge = lire('../../supabase/functions/mot-de-passe-oublie/index.ts')
+  const rpc = sansCommentaires(derniereDefinition('demander_reinitialisation').corps)
+
+  it('la page appelle la fonction avant de retomber sur Supabase', () => {
+    const sansComm = sansCommentairesTs(page)
+    const appelEdge = sansComm.indexOf("'mot-de-passe-oublie'")
+    const repli = sansComm.indexOf('resetPasswordForEmail')
+    expect(appelEdge, 'la page doit appeler la fonction edge').toBeGreaterThan(0)
+    expect(repli, 'le repli doit exister — un compte verrouillé ne peut pas attendre')
+      .toBeGreaterThan(0)
+    expect(appelEdge, 'la fonction edge doit venir AVANT le repli').toBeLessThan(repli)
+  })
+
+  it('la fonction met le lien dans le gabarit maison', () => {
+    expect(edge).toContain("from '../_shared/email.ts'")
+    expect(edge).toContain('emailQuantinvo(')
+    expect(edge).toContain('envoyerEmail(')
+  })
+
+  /**
+   * ⚠️ **LE LIEN VIENT DE SUPABASE, PAS DE NOUS.** Fabriquer un jeton de
+   * récupération à la main serait fabriquer une seconde porte d'entrée dans
+   * les comptes.
+   */
+  it('le lien de récupération est demandé à Supabase', () => {
+    expect(edge).toContain('generateLink')
+    expect(edge).toContain("type: 'recovery'")
+  })
+
+  /**
+   * ⚠️ **UN `redirectTo` LIBRE FERAIT DE CETTE FONCTION UN ENVOYEUR DE LIENS
+   * DE RÉCUPÉRATION VERS LE DOMAINE DE SON CHOIX** : il suffirait de demander
+   * une réinitialisation pour une adresse qu'on ne possède pas et d'espérer
+   * un clic depuis un site qu'on contrôle.
+   */
+  it('la redirection est bornée', () => {
+    const sansComm = sansCommentairesTs(edge)
+    expect(sansComm).toContain('function redirectionSure')
+    expect(sansComm).toMatch(/quantinvo\.com/)
+    // Elle est APPELÉE, pas seulement écrite.
+    expect(sansComm).toMatch(/redirectionSure\(\s*corps\.redirectTo\s*\)/)
+  })
+
+  it('rien ne filtre de l’existence du compte', () => {
+    const sansComm = sansCommentairesTs(edge)
+    // L'issue est lue, et n'est jamais rendue.
+    expect(sansComm).toContain("issue !== 'a_envoyer'")
+    expect(sansComm).not.toMatch(/json\(\s*\{[^}]*outcome/)
+    expect(sansComm).not.toContain('compte_inconnu')
+    // La réponse unique.
+    expect(sansComm).toContain('received: true')
+  })
+
+  /**
+   * ⚠️ **SUPABASE APPLIQUAIT SON PROPRE QUOTA ; EN PASSANT PAR L'API
+   * D'ADMINISTRATION, ON LE PERD.** Une fonction publique sans quota est un
+   * envoi de courriel gratuit vers n'importe quelle adresse, signé Quantinvo.
+   */
+  it('le quota est en base, et avant la recherche par adresse', () => {
+    expect(rpc).toContain("rate_limit_ok('reinitialisation'")
+    const quota = rpc.indexOf('rate_limit_ok')
+    const recherche = rpc.indexOf('auth.users')
+    expect(recherche, 'la fonction doit chercher le compte').toBeGreaterThan(0)
+    expect(quota, 'le quota doit venir AVANT la recherche par adresse')
+      .toBeLessThan(recherche)
+  })
+
+  it('la fonction de base n’est ouverte qu’au rôle serveur', () => {
+    const fichier = sansCommentaires(
+      fichierDe('demander_reinitialisation'))
+    expect(fichier).toContain(
+      'revoke all on function public.demander_reinitialisation(text) from public, anon, authenticated')
+    expect(fichier).not.toMatch(
+      /grant execute on function public\.demander_reinitialisation\(text\) to [^;]*\b(anon|authenticated)\b/)
   })
 })
