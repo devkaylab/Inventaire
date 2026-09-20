@@ -232,7 +232,88 @@ le monde un choix que presque personne n'a à faire.
 
 ---
 
-## 7. Ce qui reste à écrire
+## 7. Ce que Quantinvo fait déjà — à réutiliser, pas à refaire
+
+Vérifié dans le dépôt et les documents de conformité le 20 septembre 2026.
+
+### Le paiement est déjà branché
+
+- **Un seul webhook**, `supabase/functions/stripe-webhook`, déployé en
+  `verify_jwt: false` : Stripe n'envoie pas de jeton, **c'est la signature qui
+  garde la porte**. Il traite aujourd'hui `checkout.session.completed`,
+  `invoice.paid`, `invoice.payment_failed`,
+  `customer.subscription.deleted`.
+- **L'idempotence existe** : `stripe_events_traites` reçoit l'`event_id` avant
+  tout travail, et `purge_expired_data()` la vide. Les événements On-Demand
+  passent par **la même table** — ne pas en créer une seconde.
+- **Le client Stripe existe déjà** (`companies.stripe_customer_id`). Une
+  mission réutilise ce client ; en ouvrir un second dédoublerait la facturation
+  d'une même entreprise.
+- **Le montant vient de la base**, jamais du navigateur (`prix_offre`,
+  `finaliser_inscription`). Même règle pour le prix d'une mission.
+
+⚠️ **Connect n'est pas une extension du webhook actuel.** Les événements de
+compte connecté (`account.updated`, `capability.updated`, `payout.*`,
+`transfer.*`) arrivent sur un **autre endpoint** et parfois au nom d'un autre
+compte. Deuxième fonction edge, même table d'idempotence, et la clé restreinte
+devra gagner la permission Connect — comme elle doit déjà gagner
+**Subscriptions** avant le passage en live.
+
+### Les données personnelles ont déjà un cadre
+
+- Le registre (`docs/conformite/registre-des-traitements.md`) tient huit
+  traitements et pose la répartition : Devkaylab est **responsable** pour la
+  relation client, **sous-traitant** pour les données d'inventaire, dont
+  l'entreprise cliente est responsable.
+- `export_my_data()` rend à une personne authentifiée tout ce qui est rattaché
+  à son compte, sans aucun code d'accès. `purge_expired_data()` applique les
+  durées de conservation. `admin_audit_log` garde un an les actions
+  d'administration.
+
+⚠️ **Pour un inventoriste, Devkaylab est responsable de traitement, pas
+sous-traitant** : il n'y a pas d'employeur derrière lui. C'est un régime plus
+lourd que celui des données d'inventaire, et il demande **deux entrées neuves
+au registre** — profils d'inventoristes, puis missions et rémunérations — avec
+leurs durées. `export_my_data()` devra rendre aussi le profil, les missions et
+les paiements.
+
+⚠️ **STRIPE N'EST NI DANS LA LISTE DES SOUS-TRAITANTS DU REGISTRE, NI DANS LE
+DOCUMENT DE L'ARTICLE 28** — vérifié ligne à ligne le 20 septembre. Il y manque
+**déjà** : les abonnements passent par lui. Connect aggrave le trou, puisqu'il
+lui confie l'identité et le compte bancaire des inventoristes. À corriger avant
+toute mise en service, On-Demand ou pas.
+
+⚠️ **Un score qui écarte automatiquement quelqu'un d'une mission est une
+décision automatisée** (article 22 du RGPD) : il faut pouvoir l'expliquer et
+permettre une intervention humaine. À traiter dans le document du matching, pas
+après.
+
+### La sécurité a une méthode, et un motif de défaut qui revient
+
+- **La garde se pose sur la ligne visée, jamais sur le rôle de l'appelant.**
+  C'est le constat du 8 septembre (`ensure_zone`, `set_zone_status`) et la
+  quatrième occurrence du même motif sur ce projet. `mission_access` est
+  exactement le genre de droit qu'on aura envie de vérifier « par rôle » : ne
+  pas le faire.
+- **Une fonction qui ouvre trop et que personne n'appelle se retire, elle ne se
+  garde pas.**
+- **Un canal temps réel est `private: true` avec sa policy** — un canal public
+  ne consulte aucune autorisation, la RLS ne rattrape rien. Le suivi live d'une
+  mission en ajoute un.
+- **Pas d'oracle d'énumération** : l'inscription d'un inventoriste doit répondre
+  la même chose pour une adresse connue et une adresse inconnue, et compter les
+  tentatives **avant** de chercher (`submission_attempts`, `codes_email`).
+- **Quatre fonctions seulement sont ouvertes à `anon`**, et c'est mesuré à
+  chaque revue. En ajouter une est une décision, pas un détail.
+- **Toute fonction `admin_*` journalise dans la même transaction** que son
+  action, avec son test de garde. Le back-office On-Demand (affecter un
+  inventoriste, valider une mission, déclencher un payout) en est plein.
+- La double authentification existe déjà (`web/lib/mfa.ts`) : un administrateur
+  qui déclenche des versements devrait l'avoir obligatoire.
+
+---
+
+## 8. Ce qui reste à écrire
 
 - **Le moteur de prix** (points 11, 13, 38) — variables, verrouillage, borne de
   recalcul, paramètres réglables sans toucher au code.
@@ -243,7 +324,17 @@ le monde un choix que presque personne n'a à faire.
   la franchise saute dès les premiers mois.** À trancher avec le comptable
   avant d'écrire une ligne de code de paiement.
 - **Le statut des inventoristes** — décidé le 20 septembre : indépendants payés
-  par Quantinvo, donc Stripe Connect. ⚠️ Une équipe encadrée par un chef
+  par Quantinvo, donc Stripe Connect.
+
+  ⚠️ **QUANTINVO NE STOCKE AUCUNE COORDONNÉE BANCAIRE, ET AUCUN PAPIER
+  D'IDENTITÉ.** Avec Connect, c'est Stripe qui collecte l'IBAN et vérifie
+  l'identité — il y est obligé en tant qu'établissement de paiement. La base
+  garde `stripe_account_id`, et lit l'état que Stripe rend
+  (`payouts_enabled`) ; elle ne le recopie pas et ne le décide pas. Le tableau
+  de vérification côté inventoriste est donc en deux familles : ce que
+  Quantinvo relit (téléphone, e-mail, expérience) et ce que Stripe contrôle
+  (identité, SIRET, compte bancaire). Poser un champ IBAN dans notre base
+  serait un risque gratuit : rien dans le produit n'a besoin de le lire. ⚠️ Une équipe encadrée par un chef
   d'équipe qui attribue les zones et contrôle le travail est la définition du
   lien de subordination : le montage contractuel doit être une prestation de
   résultat, pas une fourniture d'heures. À faire valider juridiquement.
