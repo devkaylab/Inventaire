@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, dossierMigrations } from './migrations'
+import { REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee } from '../lib/prixOnDemand'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -72,22 +73,30 @@ function reglages(): Reglages {
   }
 }
 
-/** La chaîne de `prix_mission`, rejouée pas à pas. Tout en centimes. */
+/**
+ * ⚠️ **LE TEST NE RÉIMPLÉMENTE PAS LA CHAÎNE, IL UTILISE CELLE DU SITE.** Une
+ * troisième copie ici ferait passer la garde pendant que le site affiche autre
+ * chose que la base — exactement ce contre quoi elle existe.
+ */
 function chaine(articles: number, r: Reglages, coefficient = 1) {
-  const heuresPersonne = articles / r.productivite
-  const inventoristes = Math.ceil(heuresPersonne / (r.dureeCibleMin / 60))
-  const minutes = Math.ceil((heuresPersonne / inventoristes) * 60 / 30) * 30
-  const responsable = inventoristes >= 3
-  const heuresFacturees = minutes / 60
-  const equipe = Math.round(
-    (inventoristes * r.tauxInventoriste + (responsable ? r.tauxResponsable : 0)) * heuresFacturees,
-  )
-  const cout = equipe + r.fraisFixes
-  const prix = Math.round((cout / (1 - r.margeCible)) * coefficient / 100) * 100
+  expect(
+    { productivite: r.productivite, duree: r.dureeCibleMin, resp: r.tauxResponsable },
+    'les réglages du site doivent être ceux de la base',
+  ).toEqual({
+    productivite: REGLAGES.productivite,
+    duree: REGLAGES.dureeCibleMinutes,
+    resp: REGLAGES.tauxResponsableCents,
+  })
+  const c = chaineAffichee(articles, coefficient)
   return {
-    inventoristes, responsable, minutes, equipe, cout, prix,
-    marge: (prix - cout) / prix,
-    remunerationInventoriste: Math.round(r.tauxInventoriste * heuresFacturees),
+    inventoristes: c.inventoristes,
+    responsable: c.responsable,
+    minutes: c.dureeMinutes,
+    equipe: c.equipeCents,
+    cout: c.coutCents,
+    prix: c.prixCents,
+    marge: c.marge,
+    remunerationInventoriste: c.remunerationInventoristeCents,
   }
 }
 
@@ -251,5 +260,60 @@ describe('le moteur, en base', () => {
     // mensonge par un autre chemin.
     expect(sql).toContain('inventoristes is distinct from old.inventoristes')
     expect(sql).toContain('raise exception')
+  })
+})
+
+describe('le doublon d’affichage suit celui qui fait foi', () => {
+  /**
+   * ⚠️ `web/lib/prixOnDemand.ts` existe pour montrer un prix au visiteur AVANT
+   * qu'il ait un compte — sans quoi il faudrait une cinquième fonction ouverte
+   * à `anon`, et il y en a quatre. C'est donc le sixième doublon volontaire du
+   * projet, et il suit la règle des cinq autres : les deux copies bougent
+   * ensemble, ou cette garde tombe.
+   */
+  it('les réglages du site sont ceux de la base, un par un', () => {
+    const r = reglages()
+    expect({
+      version: REGLAGES.version,
+      tauxInventoristeCents: REGLAGES.tauxInventoristeCents,
+      tauxResponsableCents: REGLAGES.tauxResponsableCents,
+      productivite: REGLAGES.productivite,
+      dureeCibleMinutes: REGLAGES.dureeCibleMinutes,
+      fraisFixesCents: REGLAGES.fraisFixesCents,
+      margeCible: REGLAGES.margeCible,
+      margeMinimum: REGLAGES.margeMinimum,
+    }).toEqual({
+      version: r.version,
+      tauxInventoristeCents: r.tauxInventoriste,
+      tauxResponsableCents: r.tauxResponsable,
+      productivite: r.productivite,
+      dureeCibleMinutes: r.dureeCibleMin,
+      fraisFixesCents: r.fraisFixes,
+      margeCible: r.margeCible,
+      margeMinimum: r.margeMinimum,
+    })
+  })
+
+  it('les deux autres réglages de la chaîne aussi', () => {
+    // `responsable_des_n` et `arrondi_minutes` ont une valeur par défaut en
+    // base : la garde les lit dans la DÉFINITION de la table, pas dans l'insert.
+    const sql = sansCommentaires(migrationDuPrix())
+    const table = sql.slice(sql.indexOf('create table if not exists public.reglages_prix'))
+    expect(table).toContain(`responsable_des_n       integer not null default ${REGLAGES.responsableDesN}`)
+    expect(table).toContain(`arrondi_minutes         integer not null default ${REGLAGES.arrondiMinutes}`)
+  })
+
+  it('les départements desservis sont les mêmes des deux côtés', () => {
+    const sql = sansCommentaires(migrationDuPrix())
+    const i = sql.indexOf('insert into public.zones_desservies')
+    const bloc = sql.slice(i, sql.indexOf(';', i))
+    const enBase = [...bloc.matchAll(/\('(\d{2})',/g)].map((m) => m[1]).sort()
+    expect([...DEPARTEMENTS_DESSERVIS].sort()).toEqual(enBase)
+  })
+
+  it('le délai de constitution d’équipe est le même des deux côtés', async () => {
+    const { DELAI_HEURES } = await import('../lib/prixOnDemand')
+    const { corps } = derniereDefinition('devis_mission')
+    expect(sansCommentaires(corps)).toContain(`interval '${DELAI_HEURES} hours'`)
   })
 })

@@ -60,6 +60,9 @@ describe('le site est explorable', () => {
       'journal', 'messages', 'admin', 'outils', 'account',
       // Se met elle-même en noindex tant que l'éditeur n'est pas immatriculé.
       'mentions-legales',
+      // Le tunnel On-Demand : `noindex` tant que le produit n'est pas ouvert,
+      // et en français seul — l'indexer ferait venir des gens qu'on décevrait.
+      'reserver',
     ])
     const auPlan = new Set(
       [...site.matchAll(/chemin: '\/([^']*)'/g)].map(m => m[1].split('/')[0]).filter(Boolean),

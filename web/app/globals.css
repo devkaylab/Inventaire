@@ -4620,6 +4620,146 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    cette page-là comme ailleurs. */
 .chargement-marque p { margin: 0; color: var(--text-2); }
 
+/* ── Réserver un inventaire — le tunnel On-Demand (20 septembre 2026) ───────
+   Maquette : Etape1-Visiteur, Etape2-Date, Etape3-Stock, Prix.
+   ⚠️ Ni ombre ni bordure sur les blocs : ils se détachent par leur fond, comme
+   partout dans Ardoise. Le seul contour de ce tunnel est celui d'un champ. */
+.res-barre { position: sticky; top: 0; z-index: 30; background: var(--bg-2); }
+.res-barre-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
+  height: 64px; display: flex; align-items: center; gap: 24px;
+}
+.res-titre { font-family: var(--police-titre), system-ui, sans-serif; font-weight: 600; font-size: 15px; }
+.res-pas { display: flex; align-items: center; gap: 10px; list-style: none; margin: 0 auto; padding: 0; }
+.res-pas li { font-size: 13px; color: var(--text-3); display: flex; align-items: center; gap: 10px; }
+.res-pas li::after { content: ''; width: 16px; height: 1px; background: var(--hairline); }
+.res-pas li:last-child::after { display: none; }
+.res-pas li.ici { color: var(--accent-2); font-weight: 600; }
+.res-pas li.fait { color: var(--text-2); }
+.res-barre-actions { display: flex; align-items: center; gap: 18px; }
+
+.res-page { max-width: 1200px; margin: 0 auto; padding: 40px 24px 72px; }
+.res-colonnes { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; }
+.res-questions h1 {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 30px; font-weight: 700; letter-spacing: -0.7px; margin-bottom: 8px;
+}
+.res-questions > p.muted { margin-bottom: 26px; max-width: 58ch; line-height: 1.55; }
+.res-questions .field { margin-bottom: 18px; }
+
+.res-cote { display: flex; flex-direction: column; gap: 16px; }
+.res-encadre { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
+.res-encadre h2 { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 12px; }
+.res-encadre ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.res-encadre li { font-size: 14.5px; padding-left: 18px; position: relative; }
+.res-encadre li::before {
+  content: ''; position: absolute; left: 0; top: 8px;
+  width: 6px; height: 6px; border-radius: 999px; background: var(--accent);
+}
+.res-encadre p { font-size: 14px; line-height: 1.55; margin-bottom: 14px; }
+
+.res-recap { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
+.res-recap h2 { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 14px; }
+.res-recap dl { display: flex; flex-direction: column; gap: 14px; margin: 0; }
+.res-recap dt { font-size: 12.5px; color: var(--text-3); margin-bottom: 3px; }
+.res-recap dd { margin: 0; font-size: 15px; font-weight: 600; }
+.res-recap .num { font-size: 20px; }
+
+.res-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin-top: 28px; flex-wrap: wrap;
+}
+.res-actions .muted { font-size: 13px; }
+
+.res-zone-note { font-size: 12.5px; color: var(--text-3); margin: -8px 0 22px; }
+
+.res-refus { background: var(--surface); border-radius: var(--r-grand); padding: 22px; margin: 4px 0 20px; }
+.res-refus h2 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.res-refus p { font-size: 14.5px; line-height: 1.6; margin-bottom: 10px; max-width: 60ch; }
+
+/* ── Le calendrier ─────────────────────────────────────────────────────── */
+.res-quand { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
+.res-calendrier { background: var(--surface); border-radius: var(--r-grand); padding: 18px; }
+.res-mois { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.res-mois strong { font-size: 15px; font-weight: 600; }
+.res-mois .link-btn { font-size: 20px; line-height: 1; padding: 2px 10px; }
+.res-jours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.res-jour-nom { text-align: center; font-size: 11.5px; color: var(--text-3); padding-bottom: 6px; }
+.res-jour {
+  aspect-ratio: 1; border: 0; border-radius: var(--r);
+  background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: 14px; cursor: pointer;
+}
+.res-jour:hover:not(:disabled) { background: var(--accent-soft); }
+.res-jour.choisi { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.res-jour.vide { background: transparent; color: var(--text-3); cursor: not-allowed; opacity: .5; }
+.res-legende { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--text-3); }
+.res-pastille { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
+.res-pastille.dispo { background: var(--accent); }
+.res-pastille.absente { background: var(--surface-2); margin-left: 12px; }
+
+.res-heures { display: flex; flex-direction: column; gap: 4px; }
+.res-choix { display: flex; flex-wrap: wrap; gap: 8px; }
+.res-option {
+  border: 1px solid var(--hairline); border-radius: var(--r-bouton);
+  background: transparent; color: var(--text-2);
+  padding: 9px 14px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.res-option:hover { border-color: var(--border-strong); color: var(--text); }
+.res-option.actif { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+
+/* ── L'engagement de l'étape 3 ─────────────────────────────────────────── */
+.res-engagement {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border-radius: var(--r-grand); padding: 16px 18px; cursor: pointer;
+}
+.res-engagement input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.res-engagement span { display: flex; flex-direction: column; gap: 5px; }
+.res-engagement strong { font-size: 14.5px; font-weight: 600; }
+.res-engagement em { font-style: normal; font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+/* ── L'écran du prix ───────────────────────────────────────────────────── */
+.res-prix-page { max-width: 660px; margin: 0 auto; }
+.res-prix-tete { margin-bottom: 22px; }
+.res-prix-tete h1 {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 30px; font-weight: 700; letter-spacing: -0.7px;
+}
+.res-prix-carte { background: var(--surface); border-radius: var(--r-grand); padding: 30px; }
+.res-montant {
+  display: block; font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 54px; font-weight: 700; letter-spacing: -1.6px; line-height: 1;
+}
+.res-prix-carte > p.muted { font-size: 13px; margin-top: 8px; }
+.res-compris { list-style: none; padding: 0; margin: 24px 0 26px; display: flex; flex-direction: column; gap: 12px; }
+.res-compris li { font-size: 14.5px; line-height: 1.5; padding-left: 20px; position: relative; }
+.res-compris li::before {
+  content: ''; position: absolute; left: 0; top: 8px;
+  width: 7px; height: 7px; border-radius: 999px; background: var(--accent);
+}
+.res-prix-carte .link-btn { display: block; margin: 14px auto 0; font-size: 14px; }
+.res-notes { margin-top: 28px; display: flex; flex-direction: column; gap: 20px; }
+.res-notes h2 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.res-notes p { font-size: 14px; color: var(--text-2); line-height: 1.6; }
+
+@media (max-width: 980px) {
+  .res-colonnes { grid-template-columns: 1fr; }
+  .res-quand { grid-template-columns: 1fr; }
+  .res-pas { display: none; }
+  .res-titre { margin-right: auto; }
+}
+@media (max-width: 560px) {
+  .res-barre-inner { gap: 12px; padding: 0 16px; }
+  .res-page { padding: 28px 16px 56px; }
+  .res-montant { font-size: 42px; }
+  /* ⚠️ Sur un téléphone, le titre passait sur trois lignes et poussait
+     « Quitter » hors de l'écran. La barre garde la marque et les deux sorties :
+     le titre est déjà dans la page, juste en dessous. */
+  .res-titre { display: none; }
+  .res-barre-actions { margin-left: auto; gap: 14px; }
+}
+.res-ferme { font-size: 13px; color: var(--warning-text); text-align: center; margin-top: 12px; line-height: 1.5; }
+
 /* ══════════════════════════════════════════════════════════════════════════
    REGISTRE — les trois surfaces qui font foi (6 septembre 2026)
    ----------------------------------------------------------------------------
