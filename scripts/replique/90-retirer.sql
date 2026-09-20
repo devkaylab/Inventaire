@@ -8,6 +8,11 @@
 -- ⚠️ Les policies se retirent une par une AVANT les tables : celles posées sur
 -- `inventory_sessions`, `zones` et `counts` vivent sur des tables d'OS, qui
 -- restent. Un `drop table ... cascade` ne les emporterait pas.
+-- ⚠️ D'ABORD REMETTRE CE QUI APPARTIENT À QUANTINVO OS. `prendre_place_appareil`
+-- a été remplacée par la migration du plafond : la laisser en l'état après
+-- avoir supprimé `a_un_acces_mission` arrête le comptage pour tout le monde.
+\ir 91-restaurer-quantinvo-os.sql
+
 drop policy if exists sessions_acces_mission on public.inventory_sessions;
 drop policy if exists sessions_acces_mission_update on public.inventory_sessions;
 drop policy if exists zones_acces_mission on public.zones;

@@ -32,6 +32,12 @@
 --      l'écran de comptage ne s'ouvre pas. Trouvé en rejouant les migrations
 --      sur une réplique (`scripts/replique/verifier.sh`), pas à la lecture.
 --
+-- ⚠️ **SON ANNULATION EST ÉCRITE, ET ELLE EST OBLIGATOIRE** :
+-- `scripts/replique/91-restaurer-quantinvo-os.sql`. Retirer On-Demand sans la
+-- jouer laisse `prendre_place_appareil` appeler une fonction qui n'existe
+-- plus — le comptage s'arrête pour TOUT LE MONDE. Le contrôle de retrait de
+-- la réplique le vérifie.
+--
 -- ⚠️ SANS ELLE, ON-DEMAND NE COMPTE PAS. Les sept autres migrations peuvent
 -- s'appliquer seules : elles construisent le tunnel, le prix, les missions et
 -- la console. C'est le COMPTAGE SUR PLACE qui attend celle-ci.

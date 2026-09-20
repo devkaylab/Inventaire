@@ -118,6 +118,32 @@ describe('On-Demand ne touche pas à Quantinvo OS', () => {
   })
 
   /**
+   * ⚠️ **LA MIGRATION QUI TOUCHE OS DOIT VENIR AVEC SON ANNULATION.** Elle
+   * remplace `prendre_place_appareil` : la retirer en supprimant
+   * `a_un_acces_mission` sans remettre la fonction d'origine laisse celle-ci
+   * appeler quelque chose qui n'existe plus — **le comptage s'arrête pour
+   * tout le monde**. Trouvé le 20 septembre 2026 par le contrôle de retrait
+   * de la réplique : un retrait qui marchait sur le papier laissait Quantinvo
+   * OS cassé.
+   */
+  it('la migration qui touche Quantinvo OS sait se défaire', () => {
+    const annulation = readFileSync(
+      path.resolve(__dirname, '../../scripts/replique/91-restaurer-quantinvo-os.sql'), 'utf8')
+    // Elle remet la fonction d'OS, elle ne se contente pas de la supprimer.
+    expect(annulation).toMatch(/create or replace function public\.prendre_place_appareil/i)
+    // ⚠️ SANS SES COMMENTAIRES : l'en-tête EXPLIQUE pourquoi il ne faut pas
+    // laisser `a_un_acces_mission` dedans, donc il la cite. Sixième fois que
+    // ce piège se présente sur ce dépôt.
+    expect(sansCommentaires(annulation)).not.toContain('a_un_acces_mission')
+    // Et le retrait général la joue.
+    const retrait = readFileSync(
+      path.resolve(__dirname, '../../scripts/replique/90-retirer.sql'), 'utf8')
+    expect(retrait).toContain('91-restaurer-quantinvo-os.sql')
+    // La migration renvoie à son annulation : sans ça, on l'oublie.
+    expect(lire(EXCEPTION)).toContain('91-restaurer-quantinvo-os.sql')
+  })
+
+  /**
    * ⚠️ Tout doit pouvoir se retirer. Si un objet posé par le chantier n'est pas
    * dans `90-retirer.sql`, le contrôle de retrait de la réplique passerait en
    * laissant quelque chose derrière lui.

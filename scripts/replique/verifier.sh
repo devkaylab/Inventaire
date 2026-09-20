@@ -113,12 +113,13 @@ if [[ -f "$RACINE/90-retirer.sql" ]]; then
   done
 fi
 
-if [[ -f "$RACINE/40-ondemand.sql" ]]; then
+for scenario in "$RACINE"/4*.sql "$RACINE"/5*.sql; do
+  [[ -f "$scenario" ]] || continue
   echo
-  echo "── Ce que la migration apporte ───────────────────────────────────────"
-  psql -h "$SOCKET" -p "$PORT" -d replique -q -f "$RACINE/40-ondemand.sql" 2>&1 \
-    | grep -v '^$' | grep -v '^0000' | grep -v '^SET$'
-fi
+  echo "── ${scenario:t:r} ───────────────────────────────────────────────────"
+  psql -h "$SOCKET" -p "$PORT" -d replique -q -f "$scenario" 2>&1 \
+    | grep -v '^$' | grep -v '^0000' | grep -v '^SET$' | grep -v '^true$'
+done
 
 echo
 echo "La réplique reste debout : psql -h $SOCKET -p $PORT -d replique"

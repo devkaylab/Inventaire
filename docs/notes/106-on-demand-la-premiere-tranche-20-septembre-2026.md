@@ -31,6 +31,13 @@ pour les compléter. Trois conséquences :
 3. tout se retire (`scripts/replique/90-retirer.sql`), et la réplique vérifie
    qu'après retrait, OS revient exactement à son état d'avant.
 
+⚠️ **CE CONTRÔLE DE RETRAIT A LUI-MÊME TROUVÉ UN DÉFAUT** : retirer On-Demand
+après avoir appliqué la neuvième migration laissait `prendre_place_appareil`
+appeler `a_un_acces_mission`, qui n'existait plus — **le comptage s'arrêtait
+pour tout le monde**. La neuvième vient donc avec son annulation écrite
+(`scripts/replique/91-restaurer-quantinvo-os.sql`), et une garde exige qu'elle
+existe.
+
 **La neuvième, `20260920200001_on_demand_le_plafond_d_appareils`, remplace
 `prendre_place_appareil`** — une fonction d'OS. Elle est à part, en dernier, et
 son en-tête dit ce qu'elle change. Sans elle, On-Demand fait tout sauf compter
@@ -146,6 +153,38 @@ passait toutes les règles de comptage — il pouvait écrire dans `counts` — 
 ne se serait pas ouvert, pour un droit qu'il avait par ailleurs. Huit policies
 avaient pourtant été relues ligne à ligne contre `pg_policies`. Corrigé, et une
 garde le tient (`web/tests/decompte-appareils.test.ts`).
+
+### Le cas du client NON ABONNÉ, vérifié de bout en bout
+
+Remarque de Julien, 20 septembre : « un prestataire n'ira pas forcément compter
+chez un client avec un compte Quantinvo OS, et un client demandant un
+inventaire n'aura pas forcément un abonnement ». `scripts/replique/50-sans-abonnement.sql`
+monte exactement ce cas — aucune entreprise, aucun magasin, aucun abonnement
+avant la réservation :
+
+```
+RÉSERVATION — sans compte ni entreprise préexistants     : 94900
+L'entreprise créée a-t-elle un abonnement ?              : plan=standard abonnement=aucun
+A-t-elle le droit Quantinvo OS ?                         : AUCUN — non abonnée
+A-t-elle le droit On-Demand ?                            : actif
+L'inventaire se crée-t-il, sans abonnement ?             : true
+INVENTORISTE — voit l'inventaire du non-abonné           : 1
+INVENTORISTE — prend une place d'appareil                : true
+INVENTORISTE — compte                                    : 1
+CLIENT NON ABONNÉ — voit son inventaire                  : 1
+CLIENT NON ABONNÉ — voit les comptages (son rapport)     : 1
+CLIENT NON ABONNÉ — ne voit PAS ce qu'elle nous coûte    : REFUSÉ
+```
+
+⚠️ **Réutiliser les tables d'inventaire de Quantinvo OS n'est PAS exiger un
+abonnement.** Ce sont deux choses distinctes, et c'est toute la raison d'être
+d'`entitlements` : le LOGICIEL est le même — mêmes zones, mêmes passes, même
+rapport — l'ABONNEMENT ne l'est pas. Une entreprise créée par une réservation
+a `on_demand` actif et rien d'autre.
+
+⚠️ Et c'est la migration du plafond qui rend ce cas possible : un magasin sans
+offre saisie a un plancher de deux appareils, auquel s'ajoutent les places de
+la mission. Sans elle, l'inventoriste se fait refuser sa place.
 
 ### Le seul changement de comportement, mesuré
 
