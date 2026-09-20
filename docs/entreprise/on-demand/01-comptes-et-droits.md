@@ -277,11 +277,23 @@ au registre** — profils d'inventoristes, puis missions et rémunérations — 
 leurs durées. `export_my_data()` devra rendre aussi le profil, les missions et
 les paiements.
 
-⚠️ **STRIPE N'EST NI DANS LA LISTE DES SOUS-TRAITANTS DU REGISTRE, NI DANS LE
-DOCUMENT DE L'ARTICLE 28** — vérifié ligne à ligne le 20 septembre. Il y manque
-**déjà** : les abonnements passent par lui. Connect aggrave le trou, puisqu'il
-lui confie l'identité et le compte bancaire des inventoristes. À corriger avant
-toute mise en service, On-Demand ou pas.
+⚠️ **LES DEUX DOCUMENTS INTERNES DE CONFORMITÉ N'ONT PAS SUIVI LA POLITIQUE
+PUBLIQUE, AU SUJET DE STRIPE.** Vérifié le 20 septembre :
+
+- `docs/privacy.html` — la politique servie au public — **déclare bien
+  Stripe** dans son tableau de sous-traitants, et dit que les coordonnées
+  bancaires sont saisies directement chez lui. Une garde le vérifie
+  (`web/tests/confidentialite.test.ts`, qui exige Supabase, Vercel, Resend,
+  Expo et Stripe) ;
+- `docs/conformite/registre-des-traitements.md` (article 30) et
+  `docs/conformite/sous-traitance-article-28.md` **ne le mentionnent nulle
+  part**.
+
+Le client est donc correctement informé ; ce sont les documents internes qui
+sont en retard sur la réalité. C'est une mise à jour, pas un défaut
+d'information — mais le registre de l'article 30 doit être exact, et Connect
+va lui confier bien davantage : identité et compte bancaire des inventoristes.
+À reprendre en même temps que les deux entrées neuves ci-dessus.
 
 ⚠️ **Un score qui écarte automatiquement quelqu'un d'une mission est une
 décision automatisée** (article 22 du RGPD) : il faut pouvoir l'expliquer et
