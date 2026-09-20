@@ -735,6 +735,12 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .auth-card-large { max-width: 520px; }
 
 .field-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* ⚠️ UN STYLE D'AUTEUR BAT L'ATTRIBUT `hidden`. `display: grid` l'emporte sur
+   la feuille du navigateur : sans cette ligne, `<div className="field-duo"
+   hidden>` reste visible. Relevé par la garde le 20 septembre 2026, sur le
+   tunnel de réservation — la saisie d'adresse restait à l'écran alors qu'un
+   établissement était déjà choisi. */
+.field-duo[hidden] { display: none; }
 @media (max-width: 420px) { .field-duo { grid-template-columns: 1fr; } }
 
 .field-alert { font-size: 12px; color: var(--warning-text); margin-top: 6px; }
@@ -4675,6 +4681,18 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .res-actions .muted { font-size: 13px; }
 
+.res-etabs-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+.res-etabs { display: flex; flex-direction: column; gap: 8px; }
+.res-etab {
+  text-align: left; border: 1px solid var(--hairline); border-radius: var(--r-grand);
+  background: transparent; color: var(--text); font: inherit; cursor: pointer;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 3px;
+}
+.res-etab:hover { border-color: var(--border-strong); }
+.res-etab.actif { background: var(--accent-soft); border-color: var(--accent); }
+.res-etab-nom { font-size: 15px; font-weight: 600; }
+.res-etab-detail { font-size: 13px; color: var(--text-2); }
+
 .res-zone-note { font-size: 12.5px; color: var(--text-3); margin: -8px 0 22px; }
 
 .res-refus { background: var(--surface); border-radius: var(--r-grand); padding: 22px; margin: 4px 0 20px; }
@@ -4772,6 +4790,61 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-suite { display: block; margin: 10px auto 0; font-size: 14px; }
 .res-aucun-prelevement { font-size: 12.5px; color: var(--text-3); text-align: center; }
 .res-ferme { font-size: 13px; color: var(--warning-text); text-align: center; margin-top: 12px; line-height: 1.5; }
+
+/* ── « Qui fait votre inventaire ? » — les deux offres au même rang ───────
+   Maquette : la planche Main. Ni ombre ni bordure sur les cartes : elles se
+   détachent par leur fond, comme partout dans Ardoise. */
+.ald-page { padding-top: 64px; padding-bottom: 88px; }
+.ald-tete { max-width: 700px; margin-bottom: 40px; }
+.ald-tete h1 {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: clamp(32px, 4.4vw, 46px); font-weight: 700;
+  letter-spacing: -1.1px; line-height: 1.08;
+}
+.ald-tete p { margin-top: 14px; font-size: 17px; line-height: 1.55; color: var(--text-2); }
+
+.ald-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: stretch; }
+.ald-carte {
+  background: var(--surface); border-radius: var(--r-grand);
+  padding: 34px 32px; display: flex; flex-direction: column; gap: 20px;
+}
+.ald-carte h2 {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 25px; font-weight: 700; letter-spacing: -0.5px;
+}
+.ald-carte > p { font-size: 15px; line-height: 1.6; }
+.ald-carte ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 11px; flex-grow: 1; }
+.ald-carte li { display: flex; align-items: flex-start; gap: 11px; font-size: 14.5px; line-height: 1.5; }
+.ald-carte li svg { flex: none; margin-top: 2px; }
+.ald-pied { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+.ald-pied p { font-size: 14px; }
+.ald-pied b { color: var(--text); font-weight: 600; }
+.ald-note { margin-top: 40px; font-size: 14.5px; line-height: 1.6; max-width: 76ch; }
+
+@media (max-width: 860px) {
+  .ald-choix { grid-template-columns: 1fr; }
+  .ald-page { padding-top: 44px; padding-bottom: 64px; }
+}
+
+/* ── Mes inventaires à la demande, côté client ────────────────────────── */
+.od-prochain {
+  background: var(--surface); border-radius: var(--r-grand);
+  padding: 20px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.od-prochain > div:first-child { flex-grow: 1; min-width: 0; }
+.od-prochain-nom { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
+.od-prochain p { margin-top: 4px; font-size: 14px; }
+.od-prevoir { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.od-prevoir li { font-size: 14.5px; padding-left: 18px; position: relative; }
+.od-prevoir li::before {
+  content: ''; position: absolute; left: 0; top: 8px;
+  width: 6px; height: 6px; border-radius: 999px; background: var(--accent);
+}
+.od-confirmer {
+  margin-top: 18px; background: var(--surface-2); border-radius: var(--r-grand); padding: 18px 20px;
+}
+.od-confirmer p { font-size: 15px; }
+.od-confirmer .res-actions { margin-top: 14px; justify-content: flex-start; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    REGISTRE — les trois surfaces qui font foi (6 septembre 2026)

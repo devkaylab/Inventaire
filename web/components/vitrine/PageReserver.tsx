@@ -30,6 +30,7 @@ import { PasswordRules } from '@/components/PasswordRules'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { passwordError } from '@/lib/password'
 import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
+import { mesEtablissements, type Etablissement } from '@/lib/onDemandClient'
 import { useTraduction } from '@/lib/i18n'
 import { Logo } from '@/components/Logo'
 import { euros } from '@/lib/offres'
@@ -80,6 +81,46 @@ export function PageReserver() {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [etape])
 
   const [repris, setRepris] = useState(false)
+
+  /**
+   * ⚠️ **UN CLIENT CONNECTÉ NE RETAPE PAS SON ADRESSE.** La maquette a deux
+   * étapes 1 — Etape1-Visiteur et Etape1-Etablissement — et c'est le même
+   * tunnel : ce qui change, c'est qu'on connaît déjà ses magasins. Deux pages
+   * séparées auraient voulu dire deux fois les étapes 2 et 3.
+   */
+  const [connecte, setConnecte] = useState<boolean | null>(null)
+  const [etablissements, setEtablissements] = useState<Etablissement[]>([])
+  const [etablissementChoisi, setEtablissementChoisi] = useState<string | null>(null)
+  const [nouvelEtablissement, setNouvelEtablissement] = useState(false)
+
+  useEffect(() => {
+    let vivant = true
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!vivant) return
+      setConnecte(Boolean(session))
+      if (!session) return
+      try {
+        const liste = await mesEtablissements()
+        if (vivant) setEtablissements(liste)
+      } catch { /* la liste reste vide : on retombe sur la saisie d'adresse */ }
+    })()
+    return () => { vivant = false }
+  }, [])
+
+  const choisirEtablissement = (e: Etablissement) => {
+    setEtablissementChoisi(e.id)
+    setNouvelEtablissement(false)
+    setMagasin(e.name)
+    // `stores.address` porte l'adresse complète : on la redécoupe pour que le
+    // code postal — celui qui décide de la zone — reste une valeur à part.
+    const adr = e.address ?? ''
+    const cp = adr.match(/\b(\d{5})\b/)
+    setAdresse(cp ? adr.slice(0, adr.indexOf(cp[1])).replace(/,\s*$/, '').trim() : adr)
+    setCodePostal(cp ? cp[1] : '')
+    setVille(cp ? adr.slice(adr.indexOf(cp[1]) + 5).trim() : '')
+    if (e.sqm) setSurfaceVente(String(e.sqm))
+  }
 
   // Étape 1 — où
   const [adresse, setAdresse] = useState('')
@@ -312,17 +353,54 @@ export function PageReserver() {
             <section className="res-questions">
               <h1>Où faut-il compter ?</h1>
               <p className="muted">
-                Trois questions et votre prix s’affiche. Vous ne créerez un compte
-                qu’au moment de réserver.
+                {connecte
+                  ? 'Un inventaire, un magasin. Pour en réserver plusieurs, vous recommencerez ici — vos réponses sont gardées.'
+                  : 'Trois questions et votre prix s’affiche. Vous ne créerez un compte qu’au moment de réserver.'}
               </p>
 
-              <div className="field">
+              {etablissements.length > 0 && (
+                <div className="field">
+                  <div className="res-etabs-tete">
+                    <span className="champ-label">Vos établissements</span>
+                    <button type="button" className="link-btn"
+                            onClick={() => {
+                              setNouvelEtablissement(true); setEtablissementChoisi(null)
+                              setAdresse(''); setCodePostal(''); setVille(''); setMagasin('')
+                            }}>
+                      Ajouter un établissement
+                    </button>
+                  </div>
+                  <div className="res-etabs">
+                    {etablissements.map((e) => (
+                      <button key={e.id} type="button"
+                              className={`res-etab${etablissementChoisi === e.id ? ' actif' : ''}`}
+                              onClick={() => choisirEtablissement(e)}>
+                        <span className="res-etab-nom">{e.name}</span>
+                        <span className="res-etab-detail">
+                          {e.address ?? 'adresse non renseignée'}
+                          {e.sqm ? ` — ${e.sqm} m² de vente` : ''}
+                        </span>
+                        <span className="res-etab-detail">
+                          {e.derniere
+                            ? `Dernier inventaire : ${new Date(e.derniere.debut_prevu)
+                                .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+                            : 'Jamais inventorié'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="field"
+                   hidden={etablissements.length > 0 && !nouvelEtablissement}>
                 <label htmlFor={`${uid}-adresse`}>Adresse du magasin</label>
                 <input id={`${uid}-adresse`} value={adresse} autoComplete="street-address"
                        maxLength={160} placeholder="12 rue de Rivoli"
                        onChange={(e) => setAdresse(e.target.value)} />
               </div>
-              <div className="field-duo">
+              <div className="field-duo"
+                   hidden={etablissements.length > 0 && !nouvelEtablissement}>
                 <div className="field">
                   <label htmlFor={`${uid}-cp`}>Code postal</label>
                   <input id={`${uid}-cp`} value={codePostal} inputMode="numeric" maxLength={5}
@@ -336,7 +414,15 @@ export function PageReserver() {
                          onChange={(e) => setVille(e.target.value)} />
                 </div>
               </div>
-              <p className="res-zone-note">Nous intervenons à {OU_NOUS_ALLONS}.</p>
+              {!horsZone && (
+                <p className="res-zone-note">
+                  {etablissementChoisi
+                    ? 'Nous servons cette adresse. Ce magasin est déjà enregistré dans votre compte.'
+                    : `Nous intervenons à ${OU_NOUS_ALLONS}.`}
+                  {!etablissementChoisi && connecte && nouvelEtablissement
+                    && ' Ce magasin sera enregistré dans votre compte : la prochaine fois, il sera dans la liste.'}
+                </p>
+              )}
 
               {horsZone && (
                 <div className="res-refus" role="status">
@@ -354,7 +440,8 @@ export function PageReserver() {
                 </div>
               )}
 
-              <div className="field">
+              <div className="field"
+                   hidden={etablissements.length > 0 && !nouvelEtablissement}>
                 <label htmlFor={`${uid}-magasin`}>Nom du magasin <span className="muted">(facultatif)</span></label>
                 <input id={`${uid}-magasin`} value={magasin} maxLength={80}
                        placeholder="Paris Rivoli"
@@ -380,7 +467,7 @@ export function PageReserver() {
                   <li>Votre prix, ferme, tout de suite</li>
                 </ul>
               </section>
-              <section className="res-encadre">
+              <section className="res-encadre" hidden={connecte === true}>
                 <h2>Vous êtes déjà venu ?</h2>
                 <p className="muted">
                   Connectez-vous : vos établissements, vos coordonnées et votre
@@ -601,7 +688,7 @@ export function PageReserver() {
               </ul>
               {venteOuverte() ? (
                 <button type="button" className="btn btn-primary btn-block"
-                        onClick={() => setEtape(5)}>
+                        onClick={() => setEtape(connecte ? 7 : 5)}>
                   Réserver — {enEuros(resultat.chaine.prixCents)}
                 </button>
               ) : (

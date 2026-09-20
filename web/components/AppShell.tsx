@@ -64,18 +64,26 @@ export function ongletsPour(profile: Profile): Onglet[] {
   // l'entreprise, puis son patrimoine, ses personnes, le travail, la trace.
   // Compter n'est pas son métier — les inventaires sont ceux de ses
   // superviseurs, et « Boîte à outils » reste sous son avatar.
+  // ⚠️ « À la demande » EST DANS LE RAIL DE TOUT LE MONDE, et ce n'est pas une
+  // autorisation. Le droit On-Demand s'ouvre à la création de l'entreprise et
+  // ne coûte rien (point 41) : le cacher demanderait de lire `entitlements`
+  // ici, c'est-à-dire de faire répondre la NAVIGATION à « a-t-elle le droit »
+  // — la question à laquelle l'authentification ne répond justement jamais.
+  // La page, elle, est gardée par la RLS.
   if (profile.is_company_admin) {
     return [
       { href: '/entreprise', label: 'Tableau de bord' },
       { href: '/magasins', label: 'Magasins' },
       { href: '/equipe', label: 'Équipe' },
       { href: '/inventaires', label: 'Inventaires' },
+      { href: '/a-la-demande/mes-inventaires', label: 'À la demande' },
       { href: '/journal', label: 'Journal' },
     ]
   }
   return [
     { href: '/dashboard', label: 'Tableau de bord' },
     { href: '/inventaires', label: 'Inventaires' },
+    { href: '/a-la-demande/mes-inventaires', label: 'À la demande' },
     { href: '/equipe', label: 'Mon équipe' },
     { href: '/magasins', label: 'Magasins' },
     { href: '/outils', label: 'Boîte à outils' },
@@ -160,6 +168,17 @@ function IconeOnglet({ href }: { href: string }) {
         <rect x="3" y="5" width="18" height="14" rx="2" />
         <path d="M7 9l3 3-3 3" />
         <line x1="12" y1="15" x2="16" y2="15" />
+      </>)
+    // ⚠️ Une équipe qui vient chez vous : deux personnes, pas un calendrier.
+    // Un calendrier dirait « une date » — or ce qui distingue On-Demand du
+    // reste du produit, c'est qu'on envoie des gens.
+    case '/admin/missions':
+    case '/a-la-demande/mes-inventaires':
+      return d(<>
+        <circle cx="9" cy="8" r="3.2" />
+        <path d="M3.5 19.5c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" />
+        <path d="M16.5 6.2a3.2 3.2 0 0 1 0 5.6" />
+        <path d="M18.5 14.9c1.3.7 2 1.9 2 3.3" />
       </>)
     default:
       return d(<circle cx="12" cy="12" r="8" />)
