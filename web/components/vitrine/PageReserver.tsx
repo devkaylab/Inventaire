@@ -20,10 +20,15 @@
  * dans `CHEMINS_VITRINE`, comme `/devis`. Le jour où une ville anglophone
  * ouvre, la page se traduit — pas avant.
  */
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { SiteFooter } from '@/components/SiteChrome'
 import { venteOuverte } from '@/lib/legal'
+import { supabase } from '@/lib/supabaseClient'
+import { PasswordRules } from '@/components/PasswordRules'
+import { MentionCollecte } from '@/components/MentionCollecte'
+import { passwordError } from '@/lib/password'
+import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
 import { useTraduction } from '@/lib/i18n'
 import { Logo } from '@/components/Logo'
 import { euros } from '@/lib/offres'
@@ -73,6 +78,8 @@ export function PageReserver() {
   // question suivante — d'autant plus que les étapes n'ont pas la même hauteur.
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [etape])
 
+  const [repris, setRepris] = useState(false)
+
   // Étape 1 — où
   const [adresse, setAdresse] = useState('')
   const [codePostal, setCodePostal] = useState('')
@@ -94,6 +101,72 @@ export function PageReserver() {
   const [trancheReferences, setTrancheReferences] = useState('')
   const [codeBarres, setCodeBarres] = useState<'tous' | 'partiel' | ''>('')
   const [engage, setEngage] = useState(false)
+
+  // Étapes 5 et 6 — qui réserve
+  const [prenom, setPrenom] = useState('')
+  const [nomFamille, setNomFamille] = useState('')
+  const [courriel, setCourriel] = useState('')
+  const [telephone, setTelephone] = useState('')
+  const [motDePasse, setMotDePasse] = useState('')
+  const [siren, setSiren] = useState('')
+  const [societe, setSociete] = useState('')
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [occupe, setOccupe] = useState(false)
+
+  /**
+   * ⚠️ **L'ÉCRAN DE CONNEXION PROMET « vous reprenez où vous en êtes, même en
+   * revenant demain ».** Sans ce qui suit, la promesse serait fausse : un
+   * visiteur qui va chercher son mot de passe dans sa boîte mail et revient
+   * retrouverait un parcours vide. C'est un confort par navigateur, donc
+   * `localStorage` — pas un état partagé, et rien de personnel n'y entre au-delà
+   * de ce que la personne vient de taper sur cette page.
+   *
+   * ⚠️ Lecture et écriture SOUS `try` : en navigation privée, avec les données
+   * de site bloquées, l'accesseur lève — et le parcours doit marcher quand même.
+   *
+   * ⚠️ ET C'EST BIEN UN EFFET, malgré l'avertissement d'ESLint. Lire le
+   * stockage dans l'initialiseur de `useState` le ferait lire AUSSI au rendu
+   * serveur, où il n'existe pas : le serveur rendrait une page vide et le
+   * client une page remplie — une divergence d'hydratation. Les cinquante
+   * autres avertissements du même genre dans ce dépôt ont la même cause.
+   */
+  const REPRISE = 'quantinvo-reserver'
+
+  useEffect(() => {
+    try {
+      const brut = window.localStorage.getItem(REPRISE)
+      if (brut) {
+        const r = JSON.parse(brut) as Record<string, string>
+        if (r.adresse) setAdresse(r.adresse)
+        if (r.codePostal) setCodePostal(r.codePostal)
+        if (r.ville) setVille(r.ville)
+        if (r.magasin) setMagasin(r.magasin)
+        if (r.jour) setJour(new Date(r.jour))
+        if (r.moment) setMoment(r.moment as MomentCle)
+        if (r.heure) setHeure(r.heure)
+        if (r.secteur) setSecteur(r.secteur as Secteur)
+        if (r.surfaceVente) setSurfaceVente(r.surfaceVente)
+        if (r.surfaceReserve) setSurfaceReserve(r.surfaceReserve)
+        if (r.trancheArticles) setTrancheArticles(r.trancheArticles)
+        if (r.trancheReferences) setTrancheReferences(r.trancheReferences)
+        if (r.codeBarres) setCodeBarres(r.codeBarres as 'tous' | 'partiel')
+      }
+    } catch { /* stockage indisponible : on repart d'une page vierge */ }
+    setRepris(true)
+  }, [])
+
+  useEffect(() => {
+    if (!repris) return
+    try {
+      window.localStorage.setItem(REPRISE, JSON.stringify({
+        adresse, codePostal, ville, magasin,
+        jour: jour ? jour.toISOString() : '', moment, heure,
+        secteur, surfaceVente, surfaceReserve,
+        trancheArticles, trancheReferences, codeBarres,
+      }))
+    } catch { /* idem : ne rien garder vaut mieux que planter */ }
+  }, [repris, adresse, codePostal, ville, magasin, jour, moment, heure,
+      secteur, surfaceVente, surfaceReserve, trancheArticles, trancheReferences, codeBarres])
 
   const debut = useMemo(() => {
     if (!jour) return null
@@ -118,6 +191,59 @@ export function PageReserver() {
 
   const heures = MOMENTS.find((m) => m.cle === moment)?.heures ?? []
 
+  /**
+   * ⚠️ MÊME PORTE QUE `/inscription`, ET C'EST VOLONTAIRE. La fonction edge
+   * `inscription` porte déjà la limitation de débit, l'absence d'oracle
+   * d'énumération et le drapeau `VENTE_OUVERTE`. Créer un second chemin
+   * d'inscription, ce serait recopier ces trois protections — et en oublier
+   * une.
+   */
+  const edge = useCallback(async (corps: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data, error } = await supabase.functions.invoke('inscription', {
+      body: corps,
+      headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+    })
+    // ⚠️ `invoke` JETTE le corps d'un refus, or c'est là que vit le message
+    // utile. On le relit sur la réponse portée par l'erreur.
+    if (error) {
+      const r = (error as { context?: Response }).context
+      if (r) { try { return await r.json() } catch { /* corps illisible */ } }
+      return { success: false, error: 'Le service n’a pas répondu. Réessayez dans un instant.' }
+    }
+    return data as { success?: boolean; error?: string } | null
+  }, [])
+
+  const seConnecter = async () => {
+    setErreur(null); setOccupe(true)
+    const { error } = await supabase.auth.signInWithPassword({
+      email: courriel.trim().toLowerCase(), password: motDePasse,
+    })
+    setOccupe(false)
+    if (error) { setErreur('Adresse ou mot de passe incorrect.'); return }
+    setMotDePasse('')
+    setEtape(7)
+  }
+
+  const ouvrirMonCompte = async () => {
+    setErreur(null)
+    const faible = passwordError(motDePasse)
+    if (faible) { setErreur(faible); return }
+    const mauvaisSiren = siren.trim() ? messageSiren(siren) : null
+    if (mauvaisSiren) { setErreur(mauvaisSiren); return }
+    setOccupe(true)
+    const r = await edge({ action: 'code', email: courriel.trim().toLowerCase() })
+    setOccupe(false)
+    if (!r?.success) {
+      setErreur(r?.error ?? 'Envoi impossible.')
+      return
+    }
+    setEtape(7)
+  }
+
+  const compteComplet = prenom.trim() !== '' && nomFamille.trim() !== ''
+    && /.+@.+\..+/.test(courriel.trim()) && motDePasse !== '' && societe.trim() !== ''
+
   const recap = (
     <aside className="res-recap" aria-label="Votre réservation">
       <h2>Votre réservation</h2>
@@ -131,7 +257,7 @@ export function PageReserver() {
           <dd>{debut ? `${enDate(debut)}, ${enHeure(debut)}` : <span className="muted">À choisir</span>}</dd>
         </div>
         <div>
-          <dt>Prix</dt>
+          <dt>{etape >= 5 ? 'À payer' : 'Prix'}</dt>
           <dd>
             {resultat.ok
               ? <strong className="num">{enEuros(resultat.chaine.prixCents)}</strong>
@@ -461,7 +587,8 @@ export function PageReserver() {
                 <li>Rapport à la clôture — Excel, CSV, PDF</li>
               </ul>
               {venteOuverte() ? (
-                <button type="button" className="btn btn-primary btn-block">
+                <button type="button" className="btn btn-primary btn-block"
+                        onClick={() => setEtape(5)}>
                   Réserver — {enEuros(resultat.chaine.prixCents)}
                 </button>
               ) : (
@@ -477,6 +604,10 @@ export function PageReserver() {
                     La réservation n’est pas encore ouverte. Ce prix est bien celui
                     que vous paierez le jour où elle le sera.
                   </p>
+                  <button type="button" className="link-btn res-suite"
+                          onClick={() => setEtape(5)}>
+                    Voir la suite du parcours
+                  </button>
                 </>
               )}
               <button type="button" className="link-btn" onClick={() => setEtape(1)}>
@@ -511,6 +642,182 @@ export function PageReserver() {
                   avant. Au-delà, une part du montant reste due.
                 </p>
               </section>
+            </div>
+          </div>
+        )}
+
+        {etape === 5 && (
+          <div className="res-colonnes">
+            <section className="res-questions">
+              <h1>Votre compte</h1>
+              <p className="muted">
+                Il sert à suivre l’inventaire en direct, à retrouver vos rapports
+                et vos factures.
+              </p>
+              <button type="button" className="link-btn res-bascule"
+                      onClick={() => { setErreur(null); setEtape(6) }}>
+                J’ai déjà un compte
+              </button>
+
+              <div className="field-duo">
+                <div className="field">
+                  <label htmlFor={`${uid}-prenom`}>Prénom</label>
+                  <input id={`${uid}-prenom`} value={prenom} autoComplete="given-name"
+                         maxLength={80} onChange={(e) => setPrenom(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor={`${uid}-nomf`}>Nom</label>
+                  <input id={`${uid}-nomf`} value={nomFamille} autoComplete="family-name"
+                         maxLength={80} onChange={(e) => setNomFamille(e.target.value)} />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor={`${uid}-mail`}>Adresse e-mail</label>
+                <input id={`${uid}-mail`} type="email" autoComplete="email" value={courriel}
+                       placeholder="vous@entreprise.fr"
+                       onChange={(e) => setCourriel(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor={`${uid}-tel`}>Téléphone</label>
+                <input id={`${uid}-tel`} type="tel" autoComplete="tel" value={telephone}
+                       maxLength={30} onChange={(e) => setTelephone(e.target.value)} />
+                <p className="field-hint">
+                  Pour vous joindre le soir de l’inventaire, et pour rien d’autre.
+                </p>
+              </div>
+              <div className="field">
+                <label htmlFor={`${uid}-mdp`}>Mot de passe</label>
+                <input id={`${uid}-mdp`} type="password" autoComplete="new-password"
+                       value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
+                <PasswordRules password={motDePasse} />
+              </div>
+              <div className="field-duo">
+                <div className="field">
+                  <label htmlFor={`${uid}-siren`}>SIREN <span className="muted">(facultatif)</span></label>
+                  <input id={`${uid}-siren`} value={siren} inputMode="numeric"
+                         placeholder="123 456 789"
+                         onChange={(e) => setSiren(formaterSiren(e.target.value))} />
+                </div>
+                <div className="field">
+                  <label htmlFor={`${uid}-societe`}>Raison sociale</label>
+                  <input id={`${uid}-societe`} value={societe} maxLength={80}
+                         autoComplete="organization"
+                         onChange={(e) => setSociete(e.target.value)} />
+                </div>
+              </div>
+
+              {erreur && <p className="field-err">{erreur}</p>}
+
+              <MentionCollecte finalite="créer votre compte, organiser votre inventaire et vous adresser votre facture" />
+
+              <div className="res-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setEtape(4)}>Retour</button>
+                <button type="button" className="btn btn-primary"
+                        disabled={occupe || !compteComplet || !venteOuverte()}
+                        onClick={ouvrirMonCompte}>
+                  {occupe ? 'Un instant…' : 'Continuer vers le paiement'}
+                </button>
+              </div>
+              {!venteOuverte() && (
+                <p className="res-ferme">
+                  La création de compte ouvre en même temps que la réservation.
+                </p>
+              )}
+            </section>
+
+            <div className="res-cote">
+              {recap}
+              <section className="res-encadre">
+                <h2>Ce que le compte garde</h2>
+                <p className="muted">
+                  {(magasin.trim() || adresse.trim())} et ses surfaces y sont
+                  enregistrés. La prochaine réservation partira de là :
+                  l’établissement est déjà connu, il ne reste que la date.
+                </p>
+              </section>
+              <p className="res-aucun-prelevement">Aucun prélèvement à cette étape.</p>
+            </div>
+          </div>
+        )}
+
+        {etape === 6 && (
+          <div className="res-colonnes">
+            <section className="res-questions">
+              <h1>Se connecter</h1>
+              <p className="muted">Le même compte que pour Quantinvo OS, s’il vous en faut un.</p>
+              <button type="button" className="link-btn res-bascule"
+                      onClick={() => { setErreur(null); setEtape(5) }}>
+                Créer un compte
+              </button>
+
+              <div className="field">
+                <label htmlFor={`${uid}-mail2`}>Adresse e-mail</label>
+                <input id={`${uid}-mail2`} type="email" autoComplete="email" value={courriel}
+                       onChange={(e) => setCourriel(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor={`${uid}-mdp2`}>Mot de passe</label>
+                <input id={`${uid}-mdp2`} type="password" autoComplete="current-password"
+                       value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
+                <Link href="/mot-de-passe-oublie" className="field-hint res-oubli">
+                  Mot de passe oublié
+                </Link>
+              </div>
+
+              {erreur && <p className="field-err">{erreur}</p>}
+
+              <section className="res-encadre res-note-os">
+                <h2>Vous êtes déjà abonné à Quantinvo OS ?</h2>
+                <p className="muted">
+                  Connectez-vous : vos magasins, vos coordonnées et votre carte
+                  sont déjà là. Réserver une équipe ne crée pas un second compte.
+                </p>
+              </section>
+
+              <div className="res-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setEtape(4)}>Retour</button>
+                <button type="button" className="btn btn-primary"
+                        disabled={occupe || !courriel.trim() || !motDePasse}
+                        onClick={seConnecter}>
+                  {occupe ? 'Un instant…' : 'Se connecter et continuer'}
+                </button>
+              </div>
+            </section>
+
+            <div className="res-cote">
+              {recap}
+              <section className="res-encadre">
+                <h2>Votre réservation est gardée</h2>
+                <p className="muted">
+                  Vos réponses et ce prix vous attendent. Vous reprenez où vous en
+                  êtes, même en revenant demain.
+                </p>
+              </section>
+              <p className="res-aucun-prelevement">Aucun prélèvement à cette étape.</p>
+            </div>
+          </div>
+        )}
+
+        {etape === 7 && (
+          <div className="res-prix-page">
+            <div className="res-prix-tete">
+              <h1>Le paiement arrive</h1>
+              <p className="muted">
+                {/* ⚠️ Cette page n'existe pas encore, et le dire vaut mieux que
+                    de la dessiner à moitié : l'empreinte bancaire passe par
+                    Stripe, qui n'est pas en live (`docs/notes/047`). */}
+                L’empreinte bancaire n’est pas encore branchée. Votre réservation
+                est enregistrée avec ce prix ; nous vous écrivons dès que le
+                paiement ouvre.
+              </p>
+            </div>
+            <div className="res-prix-carte">
+              <ul className="res-compris">
+                <li>Nous bloquons le montant sur votre carte à la réservation.</li>
+                <li>Le débit a lieu à la fin de l’inventaire, rapport disponible.</li>
+                <li>Annulation gratuite jusqu’à trois jours avant.</li>
+              </ul>
+              <Link href={lien('/')} className="btn btn-ghost btn-block">Revenir à l’accueil</Link>
             </div>
           </div>
         )}

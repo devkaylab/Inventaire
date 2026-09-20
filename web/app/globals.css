@@ -4758,6 +4758,12 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   .res-titre { display: none; }
   .res-barre-actions { margin-left: auto; gap: 14px; }
 }
+.res-note-os { margin-top: 22px; }
+.res-bascule { display: block; margin: -14px 0 22px; font-size: 14px; }
+.res-oubli { display: inline-block; margin-top: 8px; color: var(--text-2); }
+.res-oubli:hover { color: var(--text); }
+.res-suite { display: block; margin: 10px auto 0; font-size: 14px; }
+.res-aucun-prelevement { font-size: 12.5px; color: var(--text-3); text-align: center; }
 .res-ferme { font-size: 13px; color: var(--warning-text); text-align: center; margin-top: 12px; line-height: 1.5; }
 
 /* ══════════════════════════════════════════════════════════════════════════
