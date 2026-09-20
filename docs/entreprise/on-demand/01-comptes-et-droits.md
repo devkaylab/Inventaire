@@ -69,10 +69,33 @@ dont le client n'a aucun abonnement. Deux façons de se tromper :
   appareil.
 
 Ce qu'il faut : **un plafond porté par la mission**, valable pendant sa fenêtre
-et nul en dehors. `plafond_appareils` devient « le plus élevé de : le plafond
-d'abonnement du magasin, et le plafond de la mission en cours sur ce magasin ».
-Et le cas `null` doit cesser d'être permissif — c'est un défaut ouvert
-aujourd'hui, indépendamment d'On-Demand.
+et nul en dehors.
+
+⚠️ **CE PARAGRAPHE DISAIT « `plafond_appareils` devient le plus élevé des
+deux ». C'ÉTAIT FAUX SUR LES DEUX POINTS**, et la migration du 20 septembre
+(`20260920130001_on_demand_la_mission.sql`) fait autrement.
+
+- **Pas dans `plafond_appareils`.** Elle a deux appelants qui posent deux
+  questions différentes : `deposer_changement_offre` demande « qu'est-ce que
+  ce client a acheté ? » pour refuser de lui vendre ce qu'il a déjà, et
+  `prendre_place_appareil` demande « combien d'appareils peuvent se connecter
+  maintenant ? ». Y verser la mission répondrait faux à la première : pendant
+  une mission à sept, un client qui veut acheter sept appareils s'entendrait
+  dire « votre forfait couvre déjà neuf appareils », et la vente serait bloquée
+  par un inventaire qu'il paie. `plafond_appareils` garde donc son sens
+  commercial, et une seconde fonction, `plafond_appareils_effectif`, répond à
+  la question technique.
+- **Pas « le plus élevé » : la somme.** Prendre le maximum ferait manger les
+  places du client par notre équipe — six inventoristes et un responsable
+  rempliraient le magasin, et le superviseur du client qui ouvre son téléphone
+  pour suivre le comptage se verrait refuser l'entrée chez lui, un soir où il
+  paie 949 €. Les appareils de la mission viennent avec la mission.
+
+Et le cas `null` cesse d'être permissif — c'est un défaut ouvert aujourd'hui,
+indépendamment d'On-Demand. ⚠️ **Le plancher retenu est deux**, le plus petit
+palier de la grille : de quoi travailler à deux, pas de quoi mener un
+inventaire d'équipe sans rien avoir acheté. Au 20 septembre 2026, **un magasin
+est concerné** — « Oberlin Lyon », qui passe d'illimité à deux.
 
 ### Mur 3 — le prix ne peut pas venir du client
 
@@ -141,6 +164,12 @@ mission_access(mission_id, user_id, inventory_session_id, role, expire_le)
   role : 'counter' | 'team_leader'
 ```
 
+⚠️ **Pourquoi pas une simple ligne dans `session_members`.** Ce serait plus
+court, et faux : `session_members_supervisor` est `for all`, donc un superviseur
+du client pourrait SUPPRIMER la ligne de l'inventoriste et mettre notre équipe
+dehors au milieu de l'inventaire qu'il paie. Une table à part, sans policy
+d'écriture, n'est pas révocable par le client.
+
 Trois propriétés à ne pas défaire :
 
 1. **Il expire**, et l'expiration est lue à chaque vérification, jamais
@@ -178,6 +207,38 @@ $$;
 l'appelant.** C'est la règle déjà écrite dans `AGENTS.md`, et elle vaut
 doublement ici : `mission_access` est un droit qu'un attaquant aurait intérêt à
 se fabriquer.
+
+### Les huit policies, relevées et réécrites le 20 septembre 2026
+
+Trois testent `session_members` en direct, sans passer par
+`is_session_participant` — il faut donc les réécrire une à une :
+
+| Policy | Ce qu'elle ouvre à l'inventoriste |
+| --- | --- |
+| `sessions_employee_select` | voir l'inventaire dans sa liste |
+| `zones_member_select` | voir les zones, donc la sienne |
+| `counts_insert_member` | compter |
+
+Quatre autres exigent `get_my_role() = 'supervisor'`, et un inventoriste est
+`employee` :
+
+| Policy | Ce qu'elle ouvre au responsable |
+| --- | --- |
+| `sessions_supervisor_select` | l'inventaire complet |
+| `sessions_supervisor_update` | commencer, et clôturer |
+| `zones_supervisor_company` | attribuer et contrôler les zones |
+| `counts_select_supervisor` / `counts_insert_supervisor` | l'écran des écarts, et recompter |
+
+⚠️ **On n'écrit PAS `role = 'supervisor'` dans le profil du responsable**, bien
+que ce soit la solution en une ligne. Ce serait un droit **permanent** posé
+pour un besoin **temporaire**, et il le ferait entrer dans
+`session_members_supervisor` (`for all`) : le droit d'ajouter et de retirer des
+gens de l'inventaire d'un client. Le responsable mène les zones et les
+comptages ; il ne décide pas qui appartient.
+
+⚠️ **Deux policies ne sont donc PAS touchées, et c'est la décision :**
+`session_members_supervisor` (qui appartient) et `sessions_supervisor_insert`
+(créer un inventaire). Un prestataire ne fait ni l'un ni l'autre.
 
 ⚠️ **`invite-to-session` doit continuer de refuser `other_company`.** Le chemin
 inventoriste ne passe pas par une invitation : c'est Quantinvo qui affecte, et
