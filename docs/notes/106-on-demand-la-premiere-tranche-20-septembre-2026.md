@@ -1,10 +1,14 @@
-# On-Demand, construit sur la branche `on-demand` (20 septembre 2026)
+# On-Demand, construit sur `on-demand`, appliqué en base (20 septembre 2026)
 
-⚠️ **RIEN DE TOUT CECI N'EST EN PRODUCTION, ET RIEN N'EST APPLIQUÉ EN BASE.**
-Tout vit sur la branche `on-demand`, publiée sur la préversion Vercel
-(`quantinvo-git-on-demand-devkaylab.vercel.app`, protégée par le compte
-Vercel). Les huit migrations sont **en fichiers** : aucune n'a été jouée.
-Décision de Julien : « à publier uniquement sur le site preview, pas la prod ».
+⚠️ **LES MIGRATIONS SONT APPLIQUÉES EN BASE DEPUIS LE 20 SEPTEMBRE 2026, 20 h 45.**
+Les onze, la neuvième comprise — celle qui touche Quantinvo OS. Décision de
+Julien : « applique les migrations et je veux que tu vérifies que tout
+fonctionne ». Ce qui a été mesuré avant et après est en bas de cette fiche.
+
+⚠️ **LE SITE, LUI, RESTE SUR LA PRÉVERSION.** Tout vit sur la branche
+`on-demand`, publiée sur `quantinvo-git-on-demand-devkaylab.vercel.app`
+(protégée par le compte Vercel). La production ne sert aucune page On-Demand :
+la base porte les objets, le site public ne les montre pas encore.
 
 Conception : `docs/entreprise/on-demand/`. Maquette :
 https://claude.ai/artifact/BSqAQUPZ7tnjAfdswK35MV
@@ -249,3 +253,112 @@ commercial et d'ajouter `plafond_appareils_effectif` pour la question technique.
 Et les quatre points de `07-par-ou-on-commence.md` restent entiers : statut
 juridique des inventoristes, TVA, Stripe Connect, et le lancement de Quantinvo
 OS qui passe d'abord.
+
+---
+
+## L'application en base, le 20 septembre 2026 à 20 h 45
+
+Onze migrations jouées une par une par `supabase db query --file … --linked`,
+sur `heabesqvlinzarqenymj`. Mesuré **avant**, **entre la huitième et la
+neuvième**, et **après**.
+
+### Ce que l'instantané dit
+
+| | avant | après les 8 | après la 9ᵉ |
+|---|---|---|---|
+| policies de Quantinvo OS modifiées ou supprimées | — | **0** | 0 |
+| fonctions de Quantinvo OS modifiées ou supprimées | — | **0** | **1**, `prendre_place_appareil` |
+| policies ajoutées | — | +30 | +30 |
+| fonctions ajoutées | — | +33 | +35 |
+
+La séparation n'est donc pas une intention : les 66 policies et les 190
+fonctions d'avant sont **intactes** après huit migrations, et la neuvième ne
+touche qu'un objet — celui qu'elle annonce dans son nom.
+
+⚠️ **AVANT D'APPLIQUER LA NEUVIÈME, SON ANNULATION A ÉTÉ COMPARÉE À LA BASE.**
+`scripts/replique/91-restaurer-quantinvo-os.sql` a été confronté à
+`pg_get_functiondef(prendre_place_appareil)` de la production : **identiques,
+caractère par caractère, espaces exclus (2 320 caractères)**. Un filet qu'on
+n'a pas vérifié n'est pas un filet.
+
+### Le plafond d'appareils, effet réel
+
+| magasin | `devices` | avant | après |
+|---|---|---|---|
+| La Samaritaine | 2 | 2 | 2 |
+| Oberlin Lyon | *(non saisi)* | **illimité** | **2** |
+
+Un seul magasin change, et c'est celui qu'annonçait l'en-tête de la migration.
+Pic jamais atteint : 2. Refus jamais enregistré : 0. Si les captures en
+demandent plus : `update public.stores set devices = 20 where name = 'Oberlin
+Lyon';` — c'est `devices` qu'on renseigne, pas le plancher qu'on relève.
+
+### Le contrôle de sécurité de Supabase a trouvé ce que personne n'avait vu
+
+⚠️ **TROIS FONCTIONS DU CHANTIER PARTAIENT SANS `search_path`** :
+`transition_mission_permise`, `missions_verifier_transition`,
+`missions_figer_le_prix` — et **aucune autre fonction de la base** n'était dans
+ce cas. Ni la relecture, ni `verifier-migrations.py`, ni le rejeu sur réplique
+ne pouvaient le voir : la migration compile, et elle fait ce qu'on attend.
+
+Ce n'était pas exploitable — aucune des trois ne lit de table sans la
+qualifier. Mais les 190 fonctions d'OS fixent toutes leur `search_path`, et une
+exception non écrite finit par être recopiée.
+
+Corrigé par `20260920195001_on_demand_search_path.sql`, **numérotée 195001 pour
+rester AVANT la migration qui touche OS** — la garde exige que celle-là soit la
+dernière du chantier, et elle avait raison de le refuser.
+
+⚠️ **ET LA GARDE ÉCRITE DANS LA FOULÉE A TROUVÉ UNE DÉRIVE D'OS** :
+`web/tests/search-path.test.ts` a signalé `compose_full_name`, dont la base a
+le `search_path` mais **pas le dépôt** — la correction avait été posée à la
+main, sans fichier. La définition qui fait foi dans le dépôt était donc plus
+faible que celle qui tourne. Fermé par
+`20260920220001_compose_full_name_search_path.sql`, qui ne porte volontairement
+pas le nom `on_demand` : l'hygiène du dépôt n'est pas le chantier.
+
+## Les parcours, joués sur le Pixel 10a
+
+Sur le build **installé le 16 septembre** — celui qui part en publication, pas
+un build neuf. C'est le bon cobaye : la question était « la base casse-t-elle
+l'app qui va sortir ? ».
+
+**Superviseur, de bout en bout, sur le vrai téléphone et la vraie base :**
+session déjà ouverte (l'authentification n'a pas bougé) → nouvel inventaire sur
+La Samaritaine → 10 balises affectées à « Reserve » → **écran de comptage
+ouvert**, donc `prendre_place_appareil` — la fonction remplacée — a rendu
+`accorde: true`, vérifié aussi dans `appareils_actifs` (`refuse = false`) → un
+article compté, retrouvé en base, signé « Compte Test Sup » → balise clôturée
+« 1 pièce comptée » → inventaire **supprimé définitivement**. La base est
+revenue à son état exact d'avant : 1 inventaire, 72 comptages, 70 zones.
+
+**Compteur et étranger, sur la vraie base, en transaction annulée** — faute
+d'avoir le mot de passe du compte compteur sur le téléphone. Impersonation par
+`request.jwt.claim.sub`, comme un vrai PostgREST :
+
+```
+COMPTEUR — avant d'avoir rejoint, voit l'inventaire : 0
+COMPTEUR — rejoint avec le code                     : success
+COMPTEUR — voit l'inventaire dans sa liste          : 1
+COMPTEUR — voit les balises                         : 10
+COMPTEUR — prend une place d'appareil               : true
+COMPTEUR — a compté                                 : 1
+ÉTRANGER — voit l'inventaire                        : 0
+ÉTRANGER — voit les zones                           : 0
+ÉTRANGER — place d'appareil                         : interdit
+```
+
+**Et On-Demand lui-même, sur la production :**
+
+```
+Plafond du magasin pendant la mission               : 9 = 2 d'abonnement + 7 de mission
+INVENTORISTE On-Demand — voit l'inventaire du client : 1
+INVENTORISTE On-Demand — voit les balises            : 10
+INVENTORISTE On-Demand — prend une place d'appareil  : true
+INVENTORISTE On-Demand — a compté                    : 1
+INVENTORISTE — voit ce que la mission nous coûte     : NON — refusé
+```
+
+Le refus sur `cout_cents` est le `grant select (colonne, colonne, …)` qui
+fonctionne : l'inventoriste lit la mission, pas notre marge. Après `rollback` :
+0 mission, 0 accès, 0 comptage de test, 0 appareil de test.
