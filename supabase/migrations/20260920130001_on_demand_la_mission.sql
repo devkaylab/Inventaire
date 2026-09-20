@@ -307,97 +307,48 @@ $function$;
 revoke all on function public.a_un_acces_mission(uuid, text) from public, anon;
 grant execute on function public.a_un_acces_mission(uuid, text) to authenticated, service_role;
 
--- ─── 6. La deuxième source d'appartenance, branchée ────────────────────────
+-- ─── 6. Les règles d'accès de la mission ───────────────────────────────────
 --
--- ⚠️ DÉFINITION RELUE DANS `pg_get_functiondef` LE 20 SEPTEMBRE 2026, puis
--- recopiée à l'identique avec UNE ligne de plus. La branche d'entreprise reste
--- intacte : `s.company_id = public.get_my_company()` rend `null` — donc faux —
--- pour un inventoriste, qui n'a pas d'entreprise. Rien de ce qui marche
--- aujourd'hui ne change.
+-- ⚠️ **ON N'A PAS TOUCHÉ UNE SEULE RÈGLE DE QUANTINVO OS, ET C'EST LE POINT.**
+-- La première version de cette migration réécrivait huit policies d'OS pour
+-- leur ajouter une branche `or`. Elle marchait — le rejeu sur réplique le
+-- montrait — mais elle mettait On-Demand DANS le produit qui tourne : une
+-- faute de frappe dans l'une d'elles cassait le comptage de tout le monde, et
+-- la retirer aurait demandé de restaurer huit définitions à la main.
 --
--- ⚠️ ET SEUL LE RESPONSABLE PASSE PAR ICI. L'inventoriste de base compte, il ne
--- supervise pas : ses droits passent par les trois policies « membre » plus
--- bas. `is_session_participant` ouvre la lecture de tous les comptages et la
--- clôture — c'est le métier du responsable (maquette TeamLeader-Mission), pas
--- celui d'un compteur.
-create or replace function public.is_session_participant(p_session_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path to 'public'
-as $function$
-  select public.is_admin() or exists (
-    select 1 from public.inventory_sessions s
-    where s.id = p_session_id
-      and s.company_id = public.get_my_company()
-      and (
-        s.created_by = auth.uid()
-        or public.is_company_admin(s.company_id)
-        -- ⚠️ La seule branche qui s'éteint à la clôture : celle de l'invité.
-        or (s.status <> 'closed' and exists (
-          select 1 from public.session_members sm
-          where sm.session_id = s.id and sm.user_id = auth.uid()
-        ))
-      )
-  )
-  -- On-Demand : le responsable d'une mission en cours, hors de l'entreprise.
-  or public.a_un_acces_mission(p_session_id, 'team_leader');
-$function$;
-
--- ⚠️ `create or replace` rend EXECUTE à PUBLIC — leçon de `20260819172706`.
-revoke all on function public.is_session_participant(uuid) from public, anon;
-grant execute on function public.is_session_participant(uuid) to authenticated, service_role;
-
--- ─── 7. Les trois portes du compteur ───────────────────────────────────────
+-- ⚠️ **LES POLICIES PERMISSIVES SE COMBINENT EN `OU`.** Il suffit donc d'en
+-- AJOUTER à côté de celles d'OS. Trois conséquences qui valent le détour :
 --
--- Ces trois policies testent `session_members` EN DIRECT, sans passer par
--- `is_session_participant` : les rejoindre demande donc de les réécrire une à
--- une. Chacune est la copie exacte de sa définition réelle, plus un `or`.
+--   1. aucune ligne de Quantinvo OS n'est modifiée — ni policy, ni fonction ;
+--   2. pour quiconque n'a pas de `mission_access`, ces règles rendent FAUX :
+--      la table est vide, donc l'effet sur le produit existant est nul, et ça
+--      se démontre au lieu de se relire ;
+--   3. tout retirer tient en un `drop policy` par ligne ci-dessous.
+--
+-- `is_session_participant` reste donc telle qu'elle est depuis le 8 septembre.
 
--- Voir l'inventaire dans sa liste. `get_my_role() = 'employee'` est vrai pour
--- un inventoriste : `handle_new_user` rend `employee` sans entreprise.
-drop policy if exists sessions_employee_select on public.inventory_sessions;
-create policy sessions_employee_select on public.inventory_sessions
-for select to authenticated
-using (
-  public.get_my_role() = 'employee'
-  and status <> 'closed'
-  and (
-    exists (
-      select 1 from public.session_members sm
-      where sm.session_id = inventory_sessions.id and sm.user_id = auth.uid()
-    )
-    or public.a_un_acces_mission(inventory_sessions.id)
-  )
-);
+-- Voir l'inventaire de sa mission — compteur comme responsable.
+drop policy if exists sessions_acces_mission on public.inventory_sessions;
+create policy sessions_acces_mission on public.inventory_sessions
+  for select to authenticated
+  using (public.a_un_acces_mission(id));
 
 -- Voir les zones, donc la sienne (maquette Prestataire-Zone).
-drop policy if exists zones_member_select on public.zones;
-create policy zones_member_select on public.zones
-for select
-using (
-  exists (
-    select 1 from public.session_members sm
-    where sm.session_id = zones.session_id and sm.user_id = auth.uid()
-  )
-  or public.a_un_acces_mission(zones.session_id)
-);
+drop policy if exists zones_acces_mission on public.zones;
+create policy zones_acces_mission on public.zones
+  for select
+  using (public.a_un_acces_mission(session_id));
 
--- Compter. ⚠️ `counted_by = auth.uid()` reste en tête : on n'écrit que ses
--- propres comptages, mission ou pas.
-drop policy if exists counts_insert_member on public.counts;
-create policy counts_insert_member on public.counts
+-- Compter. ⚠️ Les trois autres conditions sont RECOPIÉES de la règle d'OS —
+-- on n'écrit que ses propres comptages, sur un inventaire non clôturé, dans
+-- une passe connue. Une règle ajoutée qui les oublierait ouvrirait par le
+-- côté ce que la règle d'à côté ferme.
+drop policy if exists counts_acces_mission_insert on public.counts;
+create policy counts_acces_mission_insert on public.counts
 for insert
 with check (
   counted_by = auth.uid()
-  and (
-    exists (
-      select 1 from public.session_members sm
-      where sm.session_id = counts.session_id and sm.user_id = auth.uid()
-    )
-    or public.a_un_acces_mission(counts.session_id)
-  )
+  and public.a_un_acces_mission(counts.session_id)
   and exists (
     select 1 from public.inventory_sessions s
     where s.id = counts.session_id and s.status <> 'closed'
@@ -405,87 +356,53 @@ with check (
   and pass_number >= 1 and pass_number <= 3
 );
 
--- ─── 8. Les quatre portes du responsable ───────────────────────────────────
+-- ─── 7. Ce que le responsable a en plus ────────────────────────────────────
 --
--- Elles exigent toutes `get_my_role() = 'supervisor'`, et un inventoriste est
--- `employee`. Deux façons de s'en sortir : lui écrire `role = 'supervisor'`
--- dans `profiles`, ou ajouter l'alternative ici.
+-- Maquette TeamLeader-Mission : il attribue les zones, contrôle les écarts,
+-- demande un recomptage et clôture.
 --
--- ⚠️ ON AJOUTE L'ALTERNATIVE ICI, ET C'EST VOLONTAIRE. Écrire « superviseur »
--- dans le profil d'un prestataire serait un droit PERMANENT posé pour un
--- besoin TEMPORAIRE — et il le ferait entrer dans `session_members_supervisor`
--- (`for all`), c'est-à-dire lui donner le droit d'ajouter et de retirer des
--- gens de l'inventaire d'un client. Le responsable mène les zones et les
--- comptages ; il ne décide pas qui appartient. Cette ligne-là n'est pas
--- franchie, et c'est pour ça que `session_members_supervisor` et
--- `sessions_supervisor_insert` ne sont PAS touchées par cette migration.
+-- ⚠️ **IL N'EST PAS « SUPERVISEUR » POUR AUTANT.** Lui écrire
+-- `role = 'supervisor'` dans `profiles` serait un droit PERMANENT posé pour un
+-- besoin TEMPORAIRE, et le ferait entrer dans `session_members_supervisor`
+-- (`for all`) : le droit d'ajouter et de retirer des gens de l'inventaire d'un
+-- client. Le responsable mène les zones et les comptages ; il ne décide pas
+-- qui appartient. C'est pour ça qu'il n'y a ci-dessous AUCUNE règle sur
+-- `session_members` ni sur la création d'inventaire.
 
-drop policy if exists sessions_supervisor_select on public.inventory_sessions;
-create policy sessions_supervisor_select on public.inventory_sessions
-for select
-using (
-  (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(id, 'team_leader'))
-  and public.is_session_participant(id)
-);
+-- Lire tous les comptages : c'est ce qui fait l'écran des écarts.
+drop policy if exists counts_acces_mission_select on public.counts;
+create policy counts_acces_mission_select on public.counts
+  for select
+  using (public.a_un_acces_mission(session_id, 'team_leader'));
 
--- Commencer et clôturer l'inventaire (maquette : « Clôturer l'inventaire »).
--- ⚠️ LE `WITH CHECK` AUSSI, sinon la clôture échouerait sans rien dire :
--- `company_id = public.get_my_company()` rend faux pour un responsable, qui
--- n'a pas d'entreprise.
-drop policy if exists sessions_supervisor_update on public.inventory_sessions;
-create policy sessions_supervisor_update on public.inventory_sessions
-for update to authenticated
-using (
-  (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(id, 'team_leader'))
-  and public.is_session_participant(id)
-  and (status <> 'closed' or created_by = auth.uid()
-       or public.is_company_admin(company_id)
-       or public.a_un_acces_mission(id, 'team_leader'))
-)
+-- Recompter soi-même une balise contestée.
+drop policy if exists counts_acces_mission_recompte on public.counts;
+create policy counts_acces_mission_recompte on public.counts
+for insert
 with check (
-  (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(id, 'team_leader'))
-  and (company_id = public.get_my_company() or public.a_un_acces_mission(id, 'team_leader'))
-  and (status <> 'closed' or created_by = auth.uid()
-       or public.is_company_admin(company_id)
-       or public.a_un_acces_mission(id, 'team_leader'))
+  counted_by = auth.uid()
+  and public.a_un_acces_mission(counts.session_id, 'team_leader')
+  and exists (
+    select 1 from public.inventory_sessions s
+    where s.id = counts.session_id and s.status <> 'closed'
+  )
+  and pass_number >= 1 and pass_number <= 3
 );
 
 -- Attribuer une zone, en ouvrir une, la marquer contrôlée.
-drop policy if exists zones_supervisor_company on public.zones;
-create policy zones_supervisor_company on public.zones
+drop policy if exists zones_acces_mission_responsable on public.zones;
+create policy zones_acces_mission_responsable on public.zones
 for all
-using (
-  (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(session_id, 'team_leader'))
-  and public.is_session_participant(session_id)
-)
-with check (
-  (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(session_id, 'team_leader'))
-  and public.is_session_participant(session_id)
-);
+using (public.a_un_acces_mission(session_id, 'team_leader'))
+with check (public.a_un_acces_mission(session_id, 'team_leader'));
 
--- Lire tous les comptages : c'est ce qui fait l'écran des écarts.
-drop policy if exists counts_select_supervisor on public.counts;
-create policy counts_select_supervisor on public.counts
-for select
-using (
-  (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(session_id, 'team_leader'))
-  and public.is_session_participant(session_id)
-);
+-- Commencer et clôturer l'inventaire.
+drop policy if exists sessions_acces_mission_update on public.inventory_sessions;
+create policy sessions_acces_mission_update on public.inventory_sessions
+for update to authenticated
+using (public.a_un_acces_mission(id, 'team_leader'))
+with check (public.a_un_acces_mission(id, 'team_leader'));
 
--- Recompter soi-même une balise contestée.
-drop policy if exists counts_insert_supervisor on public.counts;
-create policy counts_insert_supervisor on public.counts
-for insert
-with check (
-  counted_by = auth.uid()
-  and (public.get_my_role() = 'supervisor' or public.a_un_acces_mission(counts.session_id, 'team_leader'))
-  and public.is_session_participant(counts.session_id)
-  and exists (
-    select 1 from public.inventory_sessions s
-    where s.id = counts.session_id and s.status <> 'closed'
-  )
-  and pass_number >= 1 and pass_number <= 3
-);
 
 -- ─── 9. La machine d'état ──────────────────────────────────────────────────
 --
@@ -674,206 +591,6 @@ drop trigger if exists missions_acces on public.missions;
 create trigger missions_acces
   after update of etat on public.missions
   for each row execute function public.missions_accorder_les_acces();
-
--- ─── 11. Le plafond d'appareils, et le trou qu'il laissait ─────────────────
---
--- ⚠️ `plafond_appareils` N'EST PAS MODIFIÉE, ET C'EST UNE CORRECTION DU
--- DOCUMENT DE CONCEPTION, qui annonçait qu'elle deviendrait « le plus élevé de
--- l'abonnement et de la mission ». En la relisant, elle a DEUX appelants qui
--- posent deux questions différentes :
---
---   • `deposer_changement_offre` demande « qu'est-ce que ce client a acheté ? »
---     pour refuser de lui vendre ce qu'il a déjà (`code = 'deja_couvert'`) ;
---   • `prendre_place_appareil` demande « combien d'appareils peuvent se
---     connecter maintenant ? ».
---
--- Y verser le plafond de la mission répondrait faux à la première : pendant
--- une mission à sept, un client qui veut acheter sept appareils s'entendrait
--- dire « votre forfait couvre déjà neuf appareils », et la vente serait
--- bloquée par un inventaire qu'il paie. Et son `null` — « rien n'est vendu » —
--- est la bonne réponse commerciale, même si c'est une réponse dangereuse
--- côté technique.
---
--- Donc : `plafond_appareils` garde son sens commercial, et c'est la NOUVELLE
--- fonction ci-dessous qui répond à la question technique — plancher compris.
-create or replace function public.plafond_mission_en_cours(p_store_id uuid)
-returns integer
-language sql
-stable
-security definer
-set search_path = public
-as $function$
-  select coalesce(max(m.inventoristes + case when m.responsable then 1 else 0 end), 0)
-    from public.missions m
-   where m.store_id = p_store_id
-     and m.etat in ('prete','en_cours','controle_qualite')
-     and m.acces_ouverts_le is not null
-     and now() >= m.acces_ouverts_le
-     and now() < m.acces_expirent_le;
-$function$;
-
-revoke all on function public.plafond_mission_en_cours(uuid) from public, anon, authenticated;
-grant execute on function public.plafond_mission_en_cours(uuid) to service_role;
-
--- ⚠️ LE PLAFOND DE LA MISSION S'AJOUTE, IL NE REMPLACE PAS. Le prendre « le
--- plus élevé des deux » ferait manger les places du client par notre équipe :
--- six inventoristes et un responsable rempliraient le magasin, et le
--- superviseur du client qui ouvre son téléphone pour suivre le comptage se
--- verrait refuser l'entrée chez lui, un soir où il paie 949 €. Les appareils
--- de la mission viennent avec la mission.
---
--- ⚠️ ET LE CAS `null` CESSE D'ÊTRE PERMISSIF. C'est le vrai défaut :
--- `companies.plan` vaut `'standard'` par défaut, `stores.devices` est nul tant
--- que personne ne l'a renseigné, et ces deux-là réunis donnent `null`, que
--- `prendre_place_appareil` traduit par « ne rien refuser ». Un magasin dont
--- l'offre n'a pas encore été saisie était donc illimité — c'est-à-dire le cas
--- par défaut de toute entreprise créée à la main.
---
--- ⚠️ LE PLANCHER EST DEUX, ET C'EST UN CHOIX DISCUTABLE ASSUMÉ. Zéro
--- fermerait l'application à un client dont le devis n'est pas encore saisi ;
--- l'illimité est le défaut d'aujourd'hui. Deux, c'est le plus petit palier de
--- la grille : de quoi travailler à deux, pas de quoi mener un inventaire
--- d'équipe sans rien avoir acheté. ⚠️ AU 20 SEPTEMBRE 2026, UN MAGASIN EST
--- CONCERNÉ — « Oberlin Lyon », qui passe d'illimité à deux. S'il en faut plus
--- pour les captures, c'est `stores.devices` qu'on renseigne, pas ce plancher
--- qu'on relève.
-create or replace function public.plafond_appareils_effectif(p_store_id uuid)
-returns integer
-language plpgsql
-stable
-security definer
-set search_path = public
-as $function$
-declare
-  plancher constant integer := 2;
-  v_abo integer;
-begin
-  if not exists (select 1 from public.stores where id = p_store_id) then
-    return 0;
-  end if;
-  v_abo := coalesce(public.plafond_appareils(p_store_id), plancher);
-  return v_abo + public.plafond_mission_en_cours(p_store_id);
-end;
-$function$;
-
-revoke all on function public.plafond_appareils_effectif(uuid) from public, anon, authenticated;
-grant execute on function public.plafond_appareils_effectif(uuid) to service_role;
-
--- ── `prendre_place_appareil` : deux lignes changent, le reste est recopié ──
---
--- ⚠️ DÉFINITION RELUE DANS `pg_get_functiondef` LE 20 SEPTEMBRE 2026. Les
--- seules différences : `v_plafond` vient maintenant de
--- `plafond_appareils_effectif`, et le courriel « votre forfait est trop juste »
--- ne part plus pendant une mission.
---
--- ⚠️ CE COURRIEL EST UNE RELANCE COMMERCIALE. L'envoyer parce qu'un huitième
--- appareil a été refusé pendant une mission à sept dirait au client que son
--- abonnement est trop petit alors que c'est NOTRE équipe qui a rempli le
--- magasin. Le refus reste compté — il est réel — mais la relance attend.
-create or replace function public.prendre_place_appareil(p_session_id uuid, p_appareil text)
-returns jsonb
-language plpgsql
-security definer
-set search_path to 'public'
-as $function$
-declare
-  fenetre constant interval := interval '90 seconds';
-  v_store   uuid;
-  v_cle     text;
-  v_plafond integer;
-  v_mission integer;
-  v_deja    boolean;
-  v_refuse  boolean;
-  v_actifs  integer;
-  v_besoin  integer;
-  v_jour    date := (now() at time zone 'Europe/Paris')::date;
-begin
-  -- ⚠️ **`is_session_participant` NE SUFFIT PAS POUR UN COMPTEUR DE MISSION**,
-  -- et ça ne se voit pas en relisant : sa branche On-Demand ne couvre que le
-  -- RESPONSABLE. Un inventoriste ordinaire passait toutes les policies de
-  -- comptage — il pouvait écrire dans `counts` — et se faisait refuser ICI sa
-  -- place d'appareil, donc l'écran de comptage ne s'ouvrait pas. Trouvé en
-  -- rejouant les migrations sur une réplique, pas à la lecture.
-  if not (public.is_session_participant(p_session_id)
-          or public.a_un_acces_mission(p_session_id)) then
-    return jsonb_build_object('accorde', false, 'code', 'interdit');
-  end if;
-
-  v_cle := btrim(coalesce(p_appareil, ''));
-  if v_cle = '' or length(v_cle) > 64 or v_cle !~ '^[A-Za-z0-9._:-]+$' then
-    return jsonb_build_object('accorde', false, 'code', 'cle_invalide');
-  end if;
-
-  select s.store_id into v_store
-    from public.inventory_sessions s
-   where s.id = p_session_id;
-  if v_store is null then
-    return jsonb_build_object('accorde', false, 'code', 'introuvable');
-  end if;
-
-  perform 1 from public.stores where id = v_store for update;
-
-  delete from public.appareils_actifs
-   where store_id = v_store and vu_le < now() - fenetre;
-
-  v_mission := public.plafond_mission_en_cours(v_store);
-  v_plafond := public.plafond_appareils_effectif(v_store);
-
-  select coalesce(bool_or(not refuse), false), coalesce(bool_or(refuse), false)
-    into v_deja, v_refuse
-    from public.appareils_actifs
-   where store_id = v_store and appareil = v_cle;
-
-  if not v_deja and v_plafond is not null then
-    select count(*) into v_actifs
-      from public.appareils_actifs where store_id = v_store and not refuse;
-    if v_actifs >= v_plafond then
-      if not v_refuse then
-        insert into public.appareils_par_jour (store_id, jour, pic, refus)
-          values (v_store, v_jour, 0, 1)
-          on conflict (store_id, jour)
-          do update set refus = appareils_par_jour.refus + 1;
-
-        select a.pic + a.refus into v_besoin
-          from public.appareils_par_jour a
-         where a.store_id = v_store and a.jour = v_jour;
-
-        if v_mission = 0 then
-          begin
-            perform public.prevenir_forfait_trop_juste(v_store, v_plafond, v_besoin);
-          exception when others then
-            null;
-          end;
-        end if;
-      end if;
-      insert into public.appareils_actifs (store_id, appareil, vu_le, refuse)
-        values (v_store, v_cle, now(), true)
-        on conflict (store_id, appareil) do update set vu_le = now(), refuse = true;
-      return jsonb_build_object(
-        'accorde', false, 'code', 'forfait_plein',
-        'plafond', v_plafond, 'appareils', v_actifs);
-    end if;
-  end if;
-
-  insert into public.appareils_actifs (store_id, appareil, vu_le, refuse)
-    values (v_store, v_cle, now(), false)
-    on conflict (store_id, appareil) do update set vu_le = now(), refuse = false;
-
-  select count(*) into v_actifs
-    from public.appareils_actifs where store_id = v_store and not refuse;
-
-  insert into public.appareils_par_jour (store_id, jour, pic, refus)
-    values (v_store, v_jour, v_actifs, 0)
-    on conflict (store_id, jour)
-    do update set pic = greatest(appareils_par_jour.pic, excluded.pic);
-
-  return jsonb_build_object(
-    'accorde', true, 'plafond', v_plafond, 'appareils', v_actifs);
-end;
-$function$;
-
-revoke all on function public.prendre_place_appareil(uuid, text) from public, anon;
-grant execute on function public.prendre_place_appareil(uuid, text) to authenticated, service_role;
 
 -- ─── 12. Ce que le responsable voit de son équipe ──────────────────────────
 --

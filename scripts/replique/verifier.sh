@@ -37,7 +37,12 @@ DEPOT="${RACINE:h:h}"
 SOCKET=/tmp/quantinvo-replique
 DONNEES=/tmp/quantinvo-replique-data
 PORT=55432
-MOTIF="${1:-2026092[0-9]}"
+# Les migrations à rejouer. Par défaut, toutes celles d'On-Demand.
+# `--sans-os` s'arrête avant celle qui touche Quantinvo OS.
+MOTIF="2026092[0-9]"
+SANS_OS=0
+[[ "$1" == "--sans-os" ]] && { SANS_OS=1; shift; }
+[[ -n "$1" ]] && MOTIF="$1"
 
 command -v psql >/dev/null || { echo "psql manque : brew install postgresql@17"; exit 1; }
 
@@ -61,9 +66,16 @@ cat "$SOCKET/avant.txt"
 
 echo
 echo "── Application des migrations ────────────────────────────────────────"
+APPLIQUEES=()
 for f in "$DEPOT"/supabase/migrations/${~MOTIF}*.sql; do
+  # ⚠️ `--sans-os` : la migration du plafond d'appareils REMPLACE une fonction
+  # de Quantinvo OS. C'est la seule, et on doit pouvoir mesurer le reste sans
+  # elle — c'est ce qui prouve que le reste n'y touche pas.
+  if (( SANS_OS )) && [[ "${f:t}" == *plafond_d_appareils* ]]; then
+    echo "  · ${f:t} (écartée : elle touche Quantinvo OS)"; continue
+  fi
   if psql -h "$SOCKET" -p "$PORT" -d replique -v ON_ERROR_STOP=1 -q -f "$f" >/dev/null 2>"$SOCKET/err.txt"; then
-    echo "  ✓ ${f:t}"
+    echo "  ✓ ${f:t}"; APPLIQUEES+=("${f:t}")
   else
     echo "  ✗ ${f:t}"; grep -iE "(ERROR|ERREUR)" "$SOCKET/err.txt" | head -3; exit 1
   fi
@@ -77,6 +89,28 @@ if diff -u "$SOCKET/avant.txt" "$SOCKET/apres.txt" > "$SOCKET/diff.txt"; then
 else
   echo "  ⚠️ DES PARCOURS ONT CHANGÉ :"
   cat "$SOCKET/diff.txt"
+fi
+
+# ── Et si on retirait tout ? ────────────────────────────────────────────
+#
+# ⚠️ C'EST LA QUESTION QUI COMPTE LE JOUR OÙ ÇA VA MAL. On-Demand doit pouvoir
+# se retirer sans laisser de trace dans Quantinvo OS. Si ce contrôle échoue,
+# c'est que quelque chose du chantier s'est installé dans le produit qui
+# tourne.
+if [[ -f "$RACINE/90-retirer.sql" ]]; then
+  echo
+  echo "── Retrait complet d'On-Demand ───────────────────────────────────────"
+  psql -h "$SOCKET" -p "$PORT" -d replique -v ON_ERROR_STOP=1 -q -f "$RACINE/90-retirer.sql" >/dev/null
+  psql -h "$SOCKET" -p "$PORT" -d replique -q -f "$RACINE/20-parcours.sql" 2>&1 | grep -v '^$' > "$SOCKET/retire.txt"
+  if diff -u "$SOCKET/avant.txt" "$SOCKET/retire.txt" > "$SOCKET/diff2.txt"; then
+    echo "  ✓ Quantinvo OS revient EXACTEMENT à son état d'avant"
+  else
+    echo "  ⚠️ IL RESTE QUELQUE CHOSE :"; cat "$SOCKET/diff2.txt"
+  fi
+  # On réapplique pour la démonstration qui suit.
+  for m in "${APPLIQUEES[@]}"; do
+    psql -h "$SOCKET" -p "$PORT" -d replique -v ON_ERROR_STOP=1 -q -f "$DEPOT/supabase/migrations/$m" >/dev/null 2>&1
+  done
 fi
 
 if [[ -f "$RACINE/40-ondemand.sql" ]]; then

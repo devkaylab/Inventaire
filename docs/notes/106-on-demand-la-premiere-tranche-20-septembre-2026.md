@@ -13,18 +13,48 @@ https://claude.ai/artifact/BSqAQUPZ7tnjAfdswK35MV
 
 ## Ce qui est construit
 
-### En base — huit migrations, aucune appliquée
+### ⚠️ LA DISTINCTION : neuf migrations, dont UNE SEULE touche Quantinvo OS
+
+Règle posée par Julien le 20 septembre : « on ne doit pas toucher à Quantinvo
+OS, fais bien la distinction ». L'application est en cours de publication.
+
+**Huit migrations n'AJOUTENT que des objets neufs** — tables, fonctions, et
+policies **posées à côté** de celles d'OS. Les policies permissives de
+PostgreSQL se combinant en `OU`, il n'y a pas besoin de réécrire celles d'OS
+pour les compléter. Trois conséquences :
+
+1. aucune ligne de Quantinvo OS n'est modifiée — ni policy, ni fonction, ni
+   déclencheur ;
+2. pour quiconque n'a pas de `mission_access`, ces règles rendent FAUX : la
+   table est vide, donc l'effet sur le produit existant est nul, et ça se
+   **démontre** au lieu de se relire ;
+3. tout se retire (`scripts/replique/90-retirer.sql`), et la réplique vérifie
+   qu'après retrait, OS revient exactement à son état d'avant.
+
+**La neuvième, `20260920200001_on_demand_le_plafond_d_appareils`, remplace
+`prendre_place_appareil`** — une fonction d'OS. Elle est à part, en dernier, et
+son en-tête dit ce qu'elle change. Sans elle, On-Demand fait tout sauf compter
+sur place.
+
+⚠️ **La première version ne faisait pas cette distinction** : elle réécrivait
+huit policies d'OS pour leur ajouter une branche `or`. Ça marchait — le rejeu
+le montrait — mais ça mettait On-Demand dans le produit qui tourne, et le
+retirer aurait demandé de restaurer huit définitions à la main. Une garde tient
+la règle maintenant (`web/tests/on-demand-separation.test.ts`).
+
+### En base — neuf migrations, aucune appliquée
 
 | Fichier | Ce qu'il pose |
 |---|---|
 | `20260920120001_on_demand_le_socle` | `entitlements`, `provider_profiles`, `provider_availability`, `mon_acces()` |
-| `20260920130001_on_demand_la_mission` | `missions` et sa machine d'état, `mission_assignments`, `mission_access`, huit policies d'OS réécrites, le trou du plafond d'appareils |
+| `20260920130001_on_demand_la_mission` | `missions` et sa machine d'état, `mission_assignments`, `mission_access`, sept policies AJOUTÉES à côté de celles d'OS |
 | `20260920140001_on_demand_le_prix` | `reglages_prix`, `coefficients_prix`, `zones_desservies`, `prix_mission`, `devis_mission` |
 | `20260920150001_on_demand_reserver` | `reserver_ma_mission`, `frais_annulation`, `annuler_ma_mission`, le barème |
 | `20260920160001_on_demand_la_console` | `admin_missions`, `admin_mission`, `admin_candidats_mission`, proposer / retirer / avancer |
 | `20260920170001_on_demand_l_inventoriste` | `mes_propositions`, `repondre_a_une_mission`, `mon_espace_inventoriste`, `ma_zone_de_mission` |
 | `20260920180001_on_demand_prix_et_paiements` | `admin_poser_reglages_prix`, `admin_apercu_prix`, `admin_paiements` |
 | `20260920190001_on_demand_reservation_groupee` | `reserver_un_groupe` |
+| ⚠️ `20260920200001_on_demand_le_plafond_d_appareils` | **la seule qui touche OS** : `prendre_place_appareil`, `plafond_appareils_effectif` |
 
 ### Sur le site
 
@@ -48,7 +78,7 @@ ligne, deux fois les passes, deux fois les balises.
 
 ---
 
-## Les huit décisions qui ne se relisent pas dans le code
+## Les neuf décisions qui ne se relisent pas dans le code
 
 1. **Aucune policy d'écriture sur `provider_profiles`.** Avec un `update`
    ouvert, n'importe qui se poserait `etat = 'actif'` et
@@ -59,7 +89,13 @@ ligne, deux fois les passes, deux fois les balises.
    lui donnerait les droits de cette entreprise sur ses inventaires. Son accès
    passe par `mission_access`, une mission à la fois.
 
-3. **`mission_access` plutôt qu'une ligne dans `session_members`.**
+3. **Pas de déclencheur sur `companies`.** La première version en posait un :
+   une entreprise créée recevait son droit On-Demand automatiquement. C'était
+   commode, et ça mettait du code de ce chantier sur le chemin de création
+   d'entreprise d'OS — celui qu'emprunte un client qui vient de payer. Le droit
+   se pose maintenant dans `reserver_ma_mission`, au moment où On-Demand sert.
+
+9. **`mission_access` plutôt qu'une ligne dans `session_members`.**
    `session_members_supervisor` est `for all` : un superviseur du client
    pourrait mettre notre équipe dehors au milieu de l'inventaire qu'il paie.
 

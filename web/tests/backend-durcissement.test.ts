@@ -270,13 +270,19 @@ describe('un inventaire clôturé n’appartient plus qu’à son créateur', ()
       expect(aplati(partie)).toContain(
         "status <> 'closed' or created_by = auth.uid() or public.is_company_admin(company_id)")
     }
-    // ⚠️ ET LE QUATRIÈME DÉTENTEUR, DEPUIS ON-DEMAND : le responsable de la
-    // mission. Il n'a pas d'entreprise, donc aucune des trois branches
-    // ci-dessus ne le couvre — et il doit être dans les DEUX moitiés, sinon
-    // « Clôturer l'inventaire » échoue au `with check` sans rien dire.
+    // ⚠️ **ET ON-DEMAND N'EST PAS DEDANS, C'EST LE POINT.** Le responsable
+    // d'une mission clôture aussi — il n'a pas d'entreprise, donc aucune des
+    // trois branches ci-dessus ne le couvre. Mais son droit vit dans une
+    // policy À PART (`sessions_acces_mission_update`), parce que les
+    // permissives se combinent en `OU` : cette règle-ci reste celle de
+    // Quantinvo OS, mot pour mot, et se relit sans penser à On-Demand.
+    // Règle posée par Julien le 20 septembre 2026.
     for (const partie of [avant, apres]) {
-      expect(aplati(partie)).toContain("public.a_un_acces_mission(id, 'team_leader')")
+      expect(aplati(partie), 'On-Demand s’est glissé dans une règle d’OS')
+        .not.toContain('a_un_acces_mission')
     }
+    expect(m, 'le responsable de mission doit clôturer, par sa propre policy')
+      .toContain('create policy sessions_acces_mission_update')
   })
 
   it('et les deux écrans ne proposent pas un geste que la base refuse', () => {

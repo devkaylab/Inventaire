@@ -269,6 +269,14 @@ begin
      where id = v_uid;
   end if;
 
+  -- ⚠️ LE DROIT ON-DEMAND SE POSE ICI, pas par un déclencheur sur `companies`.
+  -- Un déclencheur mettrait du code de ce chantier sur le chemin de création
+  -- d'entreprise de Quantinvo OS — celui qu'emprunte un client qui vient de
+  -- payer. On-Demand s'ouvre quand On-Demand sert.
+  insert into public.entitlements (company_id, produit, etat, source)
+    values (v_company, 'on_demand', 'actif', 'libre')
+    on conflict (company_id, produit) do nothing;
+
   -- Un établissement déjà connu se réutilise — c'est ce que promet l'écran du
   -- compte : « la prochaine réservation partira de là ».
   select s.id into v_store

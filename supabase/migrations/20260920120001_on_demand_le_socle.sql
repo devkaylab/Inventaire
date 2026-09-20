@@ -57,31 +57,17 @@ create policy entitlements_lire_la_sienne on public.entitlements
 -- ─── On-Demand s'ouvre avec l'entreprise ───────────────────────────────────
 --
 -- Le compte est gratuit et n'engage à rien : c'est tout le point 41 du plan.
--- Une entreprise qui existe peut réserver un inventaire, qu'elle soit abonnée
--- ou non.
-create or replace function public.ouvrir_on_demand()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $function$
-begin
-  insert into public.entitlements (company_id, produit, etat, source)
-  values (new.id, 'on_demand', 'actif', 'libre')
-  on conflict (company_id, produit) do nothing;
-  return new;
-end;
-$function$;
-
-revoke all on function public.ouvrir_on_demand() from public, anon, authenticated;
-
-drop trigger if exists companies_ouvrir_on_demand on public.companies;
-create trigger companies_ouvrir_on_demand
-  after insert on public.companies
-  for each row execute function public.ouvrir_on_demand();
-
--- Les entreprises qui existent déjà en reçoivent une, sans quoi elles seraient
--- les seules à ne pas pouvoir réserver.
+--
+-- ⚠️ **PAS DE DÉCLENCHEUR SUR `companies`, ET C'EST VOLONTAIRE.** La première
+-- version en posait un : une entreprise créée recevait son droit On-Demand
+-- automatiquement. C'était commode, et ça mettait du code On-Demand sur le
+-- chemin de création d'entreprise de Quantinvo OS — celui qu'emprunte un
+-- client qui vient de payer. Un défaut là-dedans casse un encaissement.
+--
+-- À la place : les entreprises existantes reçoivent leur droit ici, une fois,
+-- et `reserver_ma_mission` le pose pour les suivantes au moment où quelqu'un
+-- réserve. On-Demand s'ouvre donc quand On-Demand sert, et le parcours payant
+-- d'OS ne traverse aucune ligne de ce chantier.
 insert into public.entitlements (company_id, produit, etat, source)
   select c.id, 'on_demand', 'actif', 'libre' from public.companies c
   on conflict (company_id, produit) do nothing;
