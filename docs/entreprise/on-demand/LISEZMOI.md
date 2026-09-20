@@ -1,7 +1,11 @@
 # Quantinvo On-Demand — la conception
 
-**Rien de ce qui est décrit ici n'est construit au 20 septembre 2026.** Ces
-documents et la maquette sont l'état de la réflexion, pas l'état du produit.
+⚠️ **CES DOCUMENTS SONT LA CONCEPTION, PAS L'ÉTAT DU PRODUIT.** Une première
+tranche a été construite le 20 septembre 2026 sur la branche `on-demand` —
+préversion uniquement, huit migrations en fichiers dont aucune n'est appliquée.
+**Ce qui est fait, ce qui ne l'est pas, et les endroits où le code contredit ces
+documents : `docs/notes/106`.** Trois corrections y sont notées, dont les
+coefficients de prix, qui partent à 1,00 et non aux valeurs annoncées ici.
 
 Le principe : une entreprise réserve un inventaire réalisé par une équipe
 Quantinvo, avec **un prix affiché tout de suite et pas de devis**. C'est une

@@ -57,6 +57,12 @@ export default function MesInventairesPage() {
       <div className="app-head">
         <h1 className="page-title">Vos inventaires</h1>
         <div className="app-head-actions">
+          {/* ⚠️ « Plusieurs » n'apparaît qu'à partir de DEUX établissements :
+              proposer une réservation groupée à quelqu'un qui n'a qu'un magasin,
+              c'est lui faire lire un choix qu'il n'a pas. */}
+          {(etablissements?.length ?? 0) > 1 && (
+            <Link href="/a-la-demande/groupe" className="btn btn-ghost">Plusieurs d’un coup</Link>
+          )}
           <Link href="/reserver" className="btn btn-primary">Réserver un inventaire</Link>
         </div>
       </div>
