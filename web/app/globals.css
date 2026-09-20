@@ -4819,6 +4819,12 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .ald-pied { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
 .ald-pied p { font-size: 14px; }
 .ald-pied b { color: var(--text); font-weight: 600; }
+.inv-promesses ul { gap: 11px; }
+.inv-promesses li { color: var(--text); }
+.inv-promesses li::before {
+  content: ''; flex: none; margin-top: 8px;
+  width: 6px; height: 6px; border-radius: 999px; background: var(--accent);
+}
 .ald-note { margin-top: 40px; font-size: 14.5px; line-height: 1.6; max-width: 76ch; }
 
 @media (max-width: 860px) {

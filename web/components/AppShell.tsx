@@ -50,6 +50,8 @@ export function ongletsPour(profile: Profile): Onglet[] {
       // l'usage : c'est une charge d'exploitation quotidienne, pas une
       // consultation.
       { href: '/admin/missions', label: 'Missions' },
+      { href: '/admin/paiements', label: 'Paiements' },
+      { href: '/admin/prix', label: 'Prix' },
       // Ce que les clients font du produit, tout le parc d'un coup. Distinct
       // des entreprises : on n'y entre pas par un client, on y cherche.
       { href: '/admin/usage', label: 'Usage' },
@@ -149,6 +151,19 @@ function IconeOnglet({ href }: { href: string }) {
         <line x1="9" y1="8" x2="15" y2="8" />
         <line x1="9" y1="12" x2="15" y2="12" />
         <line x1="9" y1="16" x2="13" y2="16" />
+      </>)
+    // Un billet : ce qui entre et ce qui sort.
+    case '/admin/paiements':
+      return d(<>
+        <rect x="2.5" y="6" width="19" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2.6" />
+        <path d="M6 10v4M18 10v4" />
+      </>)
+    // Une étiquette de prix.
+    case '/admin/prix':
+      return d(<>
+        <path d="M12.5 3H20a1 1 0 0 1 1 1v7.5a1 1 0 0 1-.3.7l-8.8 8.8a1 1 0 0 1-1.4 0l-7.3-7.3a1 1 0 0 1 0-1.4l8.8-8.8a1 1 0 0 1 .5-.5z" />
+        <circle cx="16.5" cy="7.5" r="1.3" />
       </>)
     case '/admin/usage':
       return d(<>

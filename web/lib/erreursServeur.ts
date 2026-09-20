@@ -40,6 +40,7 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Aucune entreprise associée': 'No company linked to this account',
   'Aucune invitation ni demande validée pour cet e-mail. Déposez une demande sur le site, ou demandez à votre superviseur de vous ajouter.': 'No invitation or approved request for this email. Apply on the website, or ask your supervisor to add you.',
   'Aucune invitation pour cet e-mail. Demandez à votre superviseur de vous ajouter.': 'No invitation for this email. Ask your supervisor to add you.',
+  'Aucune version en vigueur': 'No pricing version in force',
   aucune_entreprise: 'No company linked to this account.',
   'authentification requise': 'sign-in required',
   'Balise introuvable': 'Tag not found',

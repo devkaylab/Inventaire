@@ -102,6 +102,14 @@ export function PageALaDemande() {
           tableau de bord, avec vos magasins et vos coordonnées de facturation —
           sans recréer de compte.
         </p>
+
+        {/* ⚠️ C'est ICI que quelqu'un qui vient de lire « nous venons avec les
+            inventoristes » se demande comment en devenir un. Le mettre au seul
+            pied de page, c'est le mettre là où on ne le cherche pas. */}
+        <p className="ald-note muted">
+          Vous comptez sur le terrain ?{' '}
+          <Link href="/devenir-inventoriste">Réaliser des inventaires pour Quantinvo</Link>.
+        </p>
       </main>
       <SiteFooter langue="fr" />
     </>
