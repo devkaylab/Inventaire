@@ -91,6 +91,27 @@ describe('le verrou, en base', () => {
   })
 
   /**
+   * ⚠️ **UN COMPTEUR DE MISSION DOIT POUVOIR PRENDRE SA PLACE**, et ça ne se
+   * voit pas en relisant : la branche On-Demand de `is_session_participant` ne
+   * couvre que le RESPONSABLE. Un inventoriste ordinaire passait toutes les
+   * policies de comptage — il pouvait écrire dans `counts` — et se faisait
+   * refuser ICI sa place d'appareil. L'écran de comptage ne s'ouvrait donc
+   * pas, pour un droit qu'il avait par ailleurs.
+   *
+   * Trouvé le 20 septembre 2026 en rejouant les migrations sur une réplique
+   * locale, pas à la lecture. Cette garde est là pour que le raccourci ne
+   * revienne pas.
+   */
+  it('un compteur de mission passe la porte, pas seulement le responsable', () => {
+    const { corps } = derniereDefinition('prendre_place_appareil')
+    const sql = sansCommentaires(corps)
+    expect(sql).toContain('public.a_un_acces_mission(p_session_id)')
+    // ⚠️ SANS RÔLE : `a_un_acces_mission(session, 'team_leader')` ici
+    // rejouerait exactement le défaut.
+    expect(sql).not.toMatch(/a_un_acces_mission\(p_session_id,\s*'team_leader'\)/)
+  })
+
+  /**
    * ⚠️ Le courriel « votre forfait est trop juste » est une RELANCE
    * COMMERCIALE. L'envoyer parce qu'un appareil de plus a été refusé pendant
    * une mission à sept dirait au client que son abonnement est trop petit

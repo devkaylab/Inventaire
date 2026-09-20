@@ -93,6 +93,42 @@ ligne, deux fois les passes, deux fois les balises.
 
 ---
 
+## ⚠️ Ce que le rejeu sur réplique a trouvé, et que la relecture n'avait pas vu
+
+`scripts/replique/verifier.sh` (neuf) monte un PostgreSQL local, y pose un
+sous-ensemble fidèle de la base, exerce les parcours d'OS **sous RLS**, applique
+les migrations, et refait les mêmes parcours.
+
+**Résultat : aucune différence sur Quantinvo OS.** Superviseur, compteur,
+compteur non membre, administrateur d'entreprise, prise de place d'appareil,
+vente d'offre — tout se comporte à l'identique, ligne pour ligne.
+
+**Mais un défaut réel est sorti.** Un inventoriste affecté à une mission
+passait toutes les règles de comptage — il pouvait écrire dans `counts` — et
+`prendre_place_appareil` le refusait, parce que la branche On-Demand de
+`is_session_participant` ne couvre que le **responsable**. L'écran de comptage
+ne se serait pas ouvert, pour un droit qu'il avait par ailleurs. Huit policies
+avaient pourtant été relues ligne à ligne contre `pg_policies`. Corrigé, et une
+garde le tient (`web/tests/decompte-appareils.test.ts`).
+
+### Le seul changement de comportement, mesuré
+
+| Magasin | Aujourd'hui | Après | Pic jamais atteint |
+|---|---|---|---|
+| La Samaritaine (`devices = 2`) | 2 | 2 | 2 |
+| Oberlin Lyon (`devices` nul) | **illimité** | **2** | 2 |
+
+Aucun des deux n'a jamais dépassé deux appareils simultanés, et aucun refus n'a
+jamais été enregistré. ⚠️ Mais une démonstration à trois téléphones sur Oberlin
+Lyon serait désormais refusée : `update public.stores set devices = 20 where
+name = 'Oberlin Lyon';` règle le cas.
+
+Et la vente d'offre continue de marcher — Essential à 2 appareils comme
+Advanced à 20 — ce qui vérifie la décision de garder `plafond_appareils`
+commercial et d'ajouter `plafond_appareils_effectif` pour la question technique.
+
+---
+
 ## Ce que les outils du dépôt ont attrapé
 
 - **`scripts/verifier-migrations.py`** (neuf) analyse les migrations avec

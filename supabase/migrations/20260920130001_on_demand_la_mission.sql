@@ -788,7 +788,14 @@ declare
   v_besoin  integer;
   v_jour    date := (now() at time zone 'Europe/Paris')::date;
 begin
-  if not public.is_session_participant(p_session_id) then
+  -- ⚠️ **`is_session_participant` NE SUFFIT PAS POUR UN COMPTEUR DE MISSION**,
+  -- et ça ne se voit pas en relisant : sa branche On-Demand ne couvre que le
+  -- RESPONSABLE. Un inventoriste ordinaire passait toutes les policies de
+  -- comptage — il pouvait écrire dans `counts` — et se faisait refuser ICI sa
+  -- place d'appareil, donc l'écran de comptage ne s'ouvrait pas. Trouvé en
+  -- rejouant les migrations sur une réplique, pas à la lecture.
+  if not (public.is_session_participant(p_session_id)
+          or public.a_un_acces_mission(p_session_id)) then
     return jsonb_build_object('accorde', false, 'code', 'interdit');
   end if;
 
