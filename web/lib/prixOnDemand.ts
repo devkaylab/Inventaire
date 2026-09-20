@@ -3,7 +3,7 @@
  *
  * ⚠️ **AUCUN PRIX N'EST DÉCIDÉ ICI.** Ce module sert à MONTRER un montant
  * pendant que le visiteur répond aux trois questions, avant qu'il ait un
- * compte. Le montant qui engage vient de `prix_mission` / `devis_mission`, en
+ * compte. Le montant qui engage vient de `prix_mission` / `prix_ferme_mission`, en
  * base — même règle que `prixCents` et `prix_offre` pour l'abonnement :
  * « laisser le client porter un montant, c'est le laisser réserver à un
  * centime » (`docs/notes/074`).
@@ -195,11 +195,23 @@ export type Reponses = {
   formule?: Formule
 }
 
-export type Devis =
+/**
+ * ⚠️ **CE N'EST PAS UN DEVIS, ET LE TYPE NE DOIT PAS LE DIRE.** Il s'appelait
+ * `Devis`. « Quel devis ? » — Julien, 20 septembre 2026, et il avait raison :
+ * ce produit tient sur « trois questions, votre prix s'affiche, le prix
+ * affiché est le prix payé ». Il n'y a rien à valider entre ce montant et le
+ * paiement.
+ *
+ * ⚠️ Et le mot est pris, ailleurs, pour son vrai sens : Quantinvo OS a de
+ * vrais devis (`lib/devis.ts`, `/devis/[token]`) — des abonnements négociés
+ * qu'on accepte ou qu'on refuse. Deux choses opposées sous le même mot dans le
+ * même dépôt finissent confondues le jour où il faut aller vite.
+ */
+export type PrixFerme =
   | { ok: true; chaine: Chaine; arrivee: Date; finPrevue: Date; annulationGratuiteJusquAu: Date }
   | { ok: false; refus: Refus }
 
-/** Le délai de constitution d'une équipe. Copie de `devis_mission`. */
+/** Le délai de constitution d'une équipe. Copie de `prix_ferme_mission`. */
 export const DELAI_HEURES = 48
 
 export function departementDe(codePostal: string): string {
@@ -210,8 +222,8 @@ export function estDesservi(codePostal: string): boolean {
   return (DEPARTEMENTS_DESSERVIS as readonly string[]).includes(departementDe(codePostal))
 }
 
-/** Le devis affiché pendant le parcours. La base refait le même calcul. */
-export function devis(r: Reponses, maintenant = new Date()): Devis {
+/** Le prix ferme affiché pendant le parcours. La base refait le même calcul. */
+export function prixFerme(r: Reponses, maintenant = new Date()): PrixFerme {
   const formule = r.formule ?? 'equipe_quantinvo'
   const logiciel = formule === 'logiciel_seul'
   const tranche = TRANCHES_ARTICLES.find((t) => t.cle === r.trancheArticles)

@@ -59,7 +59,7 @@ la règle maintenant (`web/tests/on-demand-separation.test.ts`).
 |---|---|
 | `20260920120001_on_demand_le_socle` | `entitlements`, `provider_profiles`, `provider_availability`, `mon_acces()` |
 | `20260920130001_on_demand_la_mission` | `missions` et sa machine d'état, `mission_assignments`, `mission_access`, sept policies AJOUTÉES à côté de celles d'OS |
-| `20260920140001_on_demand_le_prix` | `reglages_prix`, `coefficients_prix`, `zones_desservies`, `prix_mission`, `devis_mission` |
+| `20260920140001_on_demand_le_prix` | `reglages_prix`, `coefficients_prix`, `zones_desservies`, `prix_mission`, `prix_ferme_mission` |
 | `20260920150001_on_demand_reserver` | `reserver_ma_mission`, `frais_annulation`, `annuler_ma_mission`, le barème |
 | `20260920160001_on_demand_la_console` | `admin_missions`, `admin_mission`, `admin_candidats_mission`, proposer / retirer / avancer |
 | `20260920170001_on_demand_l_inventoriste` | `mes_propositions`, `repondre_a_une_mission`, `mon_espace_inventoriste`, `ma_zone_de_mission` |
@@ -125,7 +125,7 @@ ligne, deux fois les passes, deux fois les balises.
 
 6. **Trois fuites d'argent fermées.** `reglages_prix` dit le taux horaire qu'on
    verse et la marge qu'on prend : policy `is_admin()`. `prix_mission` rend le
-   coût : `service_role` seul, et `devis_mission` recopie en liste blanche.
+   coût : `service_role` seul, et `prix_ferme_mission` recopie en liste blanche.
    `missions` donne son droit de lecture **colonne par colonne**, sans
    `cout_cents` — la RLS choisit des lignes, pas des colonnes.
 

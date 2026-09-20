@@ -10,8 +10,8 @@
  * Trois questions, puis un prix ferme. Pas de devis, jamais : le prix affiché
  * est le prix payé.
  *
- * ⚠️ **AUCUN PRIX N'EST DÉCIDÉ ICI.** `devis()` vient de `lib/prixOnDemand.ts`,
- * la copie d'affichage — le montant qui engage vient de `devis_mission` en
+ * ⚠️ **AUCUN PRIX N'EST DÉCIDÉ ICI.** `prixFerme()` vient de `lib/prixOnDemand.ts`,
+ * la copie d'affichage — le montant qui engage vient de `prix_ferme_mission` en
  * base, à l'étape du compte. Une garde compare les deux copies.
  *
  * ⚠️ **CETTE PAGE EST EN FRANÇAIS SEUL, ET C'EST UNE DÉCISION.** On-Demand ne
@@ -39,8 +39,8 @@ import { nb } from '@/lib/format'
 import {
   DELAI_HEURES, MOMENTS, OU_NOUS_ALLONS, SECTEURS,
   TRANCHES_ARTICLES, TRANCHES_REFERENCES,
-  devis, duree, estDesservi,
-  type Devis, type Formule, type MomentCle, type Secteur,
+  prixFerme, duree, estDesservi,
+  type PrixFerme, type Formule, type MomentCle, type Secteur,
 } from '@/lib/prixOnDemand'
 
 const ETAPES = ['Établissement', 'Date', 'Stock'] as const
@@ -242,14 +242,14 @@ export function PageReserver() {
     return new Date(jour.getFullYear(), jour.getMonth(), jour.getDate(), h, m)
   }, [jour, heure])
 
-  const resultat: Devis = useMemo(
-    () => devis({ codePostal, secteur, trancheArticles, debut, formule }),
+  const resultat: PrixFerme = useMemo(
+    () => prixFerme({ codePostal, secteur, trancheArticles, debut, formule }),
     [codePostal, secteur, trancheArticles, debut, formule],
   )
 
   /** L'autre formule, au même volume — pour montrer l'écart sans le recopier. */
-  const autreFormule: Devis = useMemo(
-    () => devis({ codePostal, secteur, trancheArticles, debut,
+  const autreFormule: PrixFerme = useMemo(
+    () => prixFerme({ codePostal, secteur, trancheArticles, debut,
                   formule: logicielSeul ? 'equipe_quantinvo' : 'logiciel_seul' }),
     [codePostal, secteur, trancheArticles, debut, logicielSeul],
   )
@@ -266,8 +266,8 @@ export function PageReserver() {
   const etape1Prete = adresse.trim().length > 4 && zoneConnue && !horsZone
   /**
    * ⚠️ **UN CRÉNEAU QUE LE DEVIS REFUSE NE DOIT PAS LAISSER PASSER.** Sans ça,
-   * on arrive à l'étape du prix avec un devis en échec — et comme cette étape
-   * ne s'affiche que si le devis tient, on arrive sur une PAGE BLANCHE.
+   * on arrive à l'étape du prix avec un prix en échec — et comme cette étape
+   * ne s'affiche que si le prix tient, on arrive sur une PAGE BLANCHE.
    * Trouvé le 20 septembre 2026 en jouant le tunnel au volet : formule
    * logiciel, date d'aujourd'hui, heure déjà passée. Le refus existait déjà
    * plus bas ; il n'empêchait rien.

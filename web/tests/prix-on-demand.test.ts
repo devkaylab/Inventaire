@@ -17,7 +17,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, dossierMigrations } from './migrations'
 import { REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee } from '../lib/prixOnDemand'
-import { devis as devisAffiche } from '../lib/prixOnDemand'
+import { prixFerme as prixAffiche } from '../lib/prixOnDemand'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -273,7 +273,7 @@ describe('le moteur, en base', () => {
     expect(sansCommentaires(corps)).toContain('v_marge < r.marge_minimum')
   })
 
-  it('refuse franchement hors zone, sans proposer de devis', () => {
+  it('refuse franchement hors zone, sans rien proposer en échange', () => {
     const { corps } = derniereDefinition('prix_mission')
     expect(sansCommentaires(corps)).toContain("'hors_zone'")
   })
@@ -290,10 +290,10 @@ describe('le moteur, en base', () => {
   })
 
   it('la porte du tunnel ne rend ni coût ni marge', () => {
-    const { corps } = derniereDefinition('devis_mission')
+    const { corps } = derniereDefinition('prix_ferme_mission')
     const retour = corps.slice(corps.lastIndexOf('return jsonb_build_object'))
     for (const interdit of ['cout_cents', 'marge_cents', 'equipe_cents', 'remuneration']) {
-      expect(retour, `« ${interdit} » ne sort pas par le devis`).not.toContain(interdit)
+      expect(retour, `« ${interdit} » ne sort pas par le prix ferme`).not.toContain(interdit)
     }
     expect(retour).toContain('prix_cents')
   })
@@ -363,7 +363,7 @@ describe('le doublon d’affichage suit celui qui fait foi', () => {
 
   it('le délai de constitution d’équipe est le même des deux côtés', async () => {
     const { DELAI_HEURES } = await import('../lib/prixOnDemand')
-    const { corps } = derniereDefinition('devis_mission')
+    const { corps } = derniereDefinition('prix_ferme_mission')
     expect(sansCommentaires(corps)).toContain(`interval '${DELAI_HEURES} hours'`)
   })
 })
@@ -529,29 +529,98 @@ describe('la formule logiciel seul', () => {
     expect(horsZone, 'il faut un département non desservi pour ce test').toBeTruthy()
 
     const dehors = `${horsZone}000`
-    expect(devisAffiche({ ...base, codePostal: dehors, debut: dansUnMois }).ok).toBe(false)
-    expect(devisAffiche({
+    expect(prixAffiche({ ...base, codePostal: dehors, debut: dansUnMois }).ok).toBe(false)
+    expect(prixAffiche({
       ...base, codePostal: dehors, debut: dansUnMois, formule: 'logiciel_seul' }).ok).toBe(true)
 
     const dedans = `${DEPARTEMENTS_DESSERVIS[0]}000`
-    expect(devisAffiche({ ...base, codePostal: dedans, debut: dansTroisHeures }).ok).toBe(false)
-    expect(devisAffiche({
+    expect(prixAffiche({ ...base, codePostal: dedans, debut: dansTroisHeures }).ok).toBe(false)
+    expect(prixAffiche({
       ...base, codePostal: dedans, debut: dansTroisHeures, formule: 'logiciel_seul' }).ok).toBe(true)
   })
 
   it('une date passée reste refusée, même sans équipe', () => {
     const hier = new Date(Date.now() - 24 * 3600_000)
-    expect(devisAffiche({
+    expect(prixAffiche({
       codePostal: `${DEPARTEMENTS_DESSERVIS[0]}000`, secteur: 'textile',
       trancheArticles: 'd', debut: hier, formule: 'logiciel_seul' }).ok).toBe(false)
   })
 
   it('personne ne vient : pas d’avance à l’arrivée', () => {
     const debut = new Date(Date.now() + 30 * 24 * 3600_000)
-    const d = devisAffiche({
+    const d = prixAffiche({
       codePostal: `${DEPARTEMENTS_DESSERVIS[0]}000`, secteur: 'textile',
       trancheArticles: 'd', debut, formule: 'logiciel_seul' })
     expect(d.ok).toBe(true)
     if (d.ok) expect(d.arrivee.getTime()).toBe(debut.getTime())
+  })
+})
+
+/**
+ * Le mot « devis » ne désigne plus le prix ferme.
+ *
+ * ⚠️ **CE PRODUIT NE FAIT PAS DE DEVIS, C'EST SA PHRASE FONDATRICE.** La
+ * fonction qui rend le montant du tunnel s'appelait pourtant `devis_mission`.
+ * Relevé par Julien le 20 septembre 2026, en trois mots : « quel devis ? ».
+ *
+ * ⚠️ **ET LE MOT EST PRIS, AILLEURS, POUR SON VRAI SENS** : Quantinvo OS a de
+ * vrais devis — `/devis/[token]`, `quote_by_token` — des abonnements négociés
+ * qu'un client accepte ou refuse. Deux choses opposées sous le même mot dans
+ * la même base finissent confondues le jour où il faut aller vite.
+ *
+ * ⚠️ Cette garde ne dit rien des devis de Quantinvo OS : ils sont légitimes.
+ * Elle tient une seule chose — qu'aucune fonction du chantier À la demande ne
+ * reprenne ce nom.
+ */
+describe('à la demande ne dit pas « devis »', () => {
+  it('la fonction du tunnel s’appelle prix_ferme_mission', () => {
+    // Elle existe, et c'est bien elle que la garde du contenu lit plus haut.
+    expect(() => derniereDefinition('prix_ferme_mission')).not.toThrow()
+  })
+
+  /**
+   * ⚠️ **L'ANCIENNE DOIT ÊTRE SUPPRIMÉE, PAS SEULEMENT DOUBLÉE.** La laisser
+   * en place la garderait appelable par `authenticated` — donc depuis un
+   * navigateur — et le mot continuerait de vivre dans les journaux.
+   */
+  it('devis_mission est supprimée après sa dernière définition', () => {
+    const tous = migrations()
+    const derniereCreation = tous
+      .filter((m) => /create (?:or replace )?function public\.devis_mission\s*\(/i
+        .test(sansCommentaires(m.sql)))
+      .at(-1)
+    expect(derniereCreation, 'devis_mission doit avoir existé').toBeTruthy()
+    const suppression = tous
+      .filter((m) => /drop function if exists public\.devis_mission\s*\(/i
+        .test(sansCommentaires(m.sql)))
+      .at(-1)
+    expect(suppression, 'aucune migration ne supprime devis_mission').toBeTruthy()
+    expect(
+      suppression!.fichier > derniereCreation!.fichier,
+      `${suppression!.fichier} doit venir après ${derniereCreation!.fichier}`,
+    ).toBe(true)
+  })
+
+  /**
+   * ⚠️ **LE CODE LIVRÉ, PAS `tests/`.** Ce fichier-ci nomme `devis_mission`
+   * pour prouver qu'elle a disparu : s'inclure dans son propre balayage le
+   * ferait échouer sur sa propre preuve. Septième fois que ce piège se
+   * présente sur ce dépôt — les six précédentes étaient des commentaires,
+   * celle-ci est du code.
+   */
+  it('plus aucun code livré ne l’appelle', () => {
+    const racines = ['lib', 'components', 'app']
+    const fautes: string[] = []
+    const parcourir = (dossier: string) => {
+      for (const e of readdirSync(path.join(__dirname, '..', dossier), { withFileTypes: true })) {
+        const rel = path.join(dossier, e.name)
+        if (e.isDirectory()) { parcourir(rel); continue }
+        if (!/\.tsx?$/.test(e.name)) continue
+        const texte = sansCommentaires(readFileSync(path.join(__dirname, '..', rel), 'utf8'))
+        if (texte.includes('devis_mission')) fautes.push(rel)
+      }
+    }
+    for (const r of racines) parcourir(r)
+    expect(fautes, fautes.join('\n')).toEqual([])
   })
 })

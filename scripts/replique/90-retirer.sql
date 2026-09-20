@@ -52,7 +52,11 @@ drop function if exists public.pointer_mon_arrivee(uuid) cascade;
 drop function if exists public.creer_la_session_de_mission(uuid) cascade;
 drop function if exists public.prix_mission(integer, text, timestamptz, text, text, integer) cascade;
 drop function if exists public.prix_mission(integer, text, timestamptz, text, text, integer, text) cascade;
+-- ⚠️ LES DEUX NOMS. `devis_mission` a été renommée en `prix_ferme_mission` le
+-- 20 septembre 2026 ; un retrait joué sur une base restée à l'ancien nom doit
+-- la trouver quand même.
 drop function if exists public.devis_mission(jsonb) cascade;
+drop function if exists public.prix_ferme_mission(jsonb) cascade;
 drop function if exists public.remuneration_totale(uuid) cascade;
 drop function if exists public.frais_annulation(uuid) cascade;
 drop function if exists public.reserver_ma_mission(jsonb) cascade;

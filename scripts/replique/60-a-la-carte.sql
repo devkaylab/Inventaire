@@ -42,29 +42,29 @@ select 'Bordeaux (33), logiciel seul',
        coalesce(public.prix_mission(20000,'textile', now() + interval '10 days','tous','33000',null,'logiciel_seul')->>'code','ACCEPTÉ')
 union all
 select 'Ce soir (dans 3 h), avec équipe',
-       coalesce(public.devis_mission(jsonb_build_object(
+       coalesce(public.prix_ferme_mission(jsonb_build_object(
          'articles_max',20000,'secteur','textile','code_postal','75001',
          'debut', now() + interval '3 hours','formule','equipe_quantinvo'))->>'code','ACCEPTÉ')
 union all
 select 'Ce soir (dans 3 h), logiciel seul',
-       coalesce(public.devis_mission(jsonb_build_object(
+       coalesce(public.prix_ferme_mission(jsonb_build_object(
          'articles_max',20000,'secteur','textile','code_postal','75001',
          'debut', now() + interval '3 hours','formule','logiciel_seul'))->>'code','ACCEPTÉ')
 union all
 select 'Hier, logiciel seul',
-       coalesce(public.devis_mission(jsonb_build_object(
+       coalesce(public.prix_ferme_mission(jsonb_build_object(
          'articles_max',20000,'secteur','textile','code_postal','75001',
          'debut', now() - interval '1 day','formule','logiciel_seul'))->>'code','ACCEPTÉ')
 union all
 select 'Formule inventée',
-       coalesce(public.devis_mission(jsonb_build_object(
+       coalesce(public.prix_ferme_mission(jsonb_build_object(
          'articles_max',20000,'secteur','textile','code_postal','75001',
          'debut', now() + interval '10 days','formule','gratuit'))->>'code','ACCEPTÉ');
 
 select '── Ce que le devis laisse voir au client ──' as " ";
 
 select string_agg(k, ', ' order by k) as "clés rendues"
-from jsonb_object_keys(public.devis_mission(jsonb_build_object(
+from jsonb_object_keys(public.prix_ferme_mission(jsonb_build_object(
   'articles_max',20000,'secteur','textile','code_postal','75001',
   'debut', now() + interval '10 days','formule','logiciel_seul'))) k;
 
