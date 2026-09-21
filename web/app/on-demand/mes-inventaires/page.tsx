@@ -61,7 +61,7 @@ export default function MesInventairesPage() {
               proposer une réservation groupée à quelqu'un qui n'a qu'un magasin,
               c'est lui faire lire un choix qu'il n'a pas. */}
           {(etablissements?.length ?? 0) > 1 && (
-            <Link href="/a-la-demande/groupe" className="btn btn-ghost">Plusieurs d’un coup</Link>
+            <Link href="/on-demand/groupe" className="btn btn-ghost">Plusieurs d’un coup</Link>
           )}
           <Link href="/reserver" className="btn btn-primary">Réserver un inventaire</Link>
         </div>
@@ -101,7 +101,7 @@ export default function MesInventairesPage() {
             <span className="dash-badge dash-badge-open">
               <span className="dash-dot" />{etatClient(prochain.etat)}
             </span>
-            <Link href={`/a-la-demande/mes-inventaires/${prochain.id}`} className="btn btn-ghost btn-sm">
+            <Link href={`/on-demand/mes-inventaires/${prochain.id}`} className="btn btn-ghost btn-sm">
               Voir le détail
             </Link>
           </div>
@@ -162,7 +162,7 @@ export default function MesInventairesPage() {
                     <td>{etatClient(m.etat)}</td>
                     <td className="num">{euros(m.prix_cents / 100)}</td>
                     <td className="num">
-                      <Link href={`/a-la-demande/mes-inventaires/${m.id}`}>Ouvrir</Link>
+                      <Link href={`/on-demand/mes-inventaires/${m.id}`}>Ouvrir</Link>
                     </td>
                   </tr>
                 ))}

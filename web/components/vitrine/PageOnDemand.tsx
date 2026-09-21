@@ -5,9 +5,13 @@
  *
  * ⚠️ **LE PRODUIT S'APPELLE ON-DEMAND, MÊME EN FRANÇAIS** (Julien, 21
  * septembre 2026, après que j'eus lu sa consigne à l'envers). « Même en
- * français » voulait dire : le nom ne se traduit pas. L'adresse reste
- * `/a-la-demande` — la changer casserait les liens déjà partagés pour un
- * gain nul, le nom ne se lit pas dans la barre d'adresse.
+ * français » voulait dire : le nom ne se traduit pas.
+ *
+ * ⚠️ **ET L'ADRESSE SUIT LE NOM** : `/on-demand`. J'avais proposé de garder
+ * `/a-la-demande` pour ne pas casser de liens ; Julien a tranché l'inverse, et
+ * il a raison — deux noms pour la même chose, dont un dans la barre d'adresse,
+ * c'est la même incohérence un cran plus bas. Une redirection permanente
+ * couvre les liens de préversion déjà partagés (`web/next.config.mjs`).
  *
  * Maquette : la planche Main.
  *
@@ -50,7 +54,7 @@ function Coche({ accent = false }: { accent?: boolean }) {
   )
 }
 
-export function PageALaDemande() {
+export function PageOnDemand() {
   const { lien } = useTraduction()
 
   // ⚠️ LE PRIX D'APPEL SE DÉDUIT DE LA CHAÎNE, il ne se recopie pas — et la

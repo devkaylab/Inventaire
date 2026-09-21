@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { PageALaDemande } from '@/components/vitrine/PageALaDemande'
+import { PageOnDemand } from '@/components/vitrine/PageOnDemand'
 
 /**
  * ⚠️ PAS DE JUMELLE SOUS `/en`, et donc pas dans `CHEMINS_VITRINE` : l'équipe
@@ -21,5 +21,5 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <PageALaDemande />
+  return <PageOnDemand />
 }

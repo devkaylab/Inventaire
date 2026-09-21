@@ -69,10 +69,10 @@ la règle maintenant (`web/tests/on-demand-separation.test.ts`).
 
 ### Sur le site
 
-`/a-la-demande` (les deux offres au même rang) · `/reserver` (le tunnel, deux
+`/on-demand` (les deux offres au même rang) · `/reserver` (le tunnel, deux
 étapes 1 selon qu'on est connecté) · `/devenir-inventoriste` ·
-`/a-la-demande/mes-inventaires` et son détail avec l'annulation chiffrée ·
-`/a-la-demande/groupe` · `/admin/missions` et son détail avec le matching ·
+`/on-demand/mes-inventaires` et son détail avec l'annulation chiffrée ·
+`/on-demand/groupe` · `/admin/missions` et son détail avec le matching ·
 `/admin/prix` · `/admin/paiements`.
 
 **« À la demande » est en deuxième position dans la barre de menus**, juste
@@ -419,8 +419,12 @@ disait que le nom ne se TRADUIT PAS. J'ai compris l'inverse et renommé en « À
 la demande ». Repris le 21 septembre : traduire un nom de produit n'est pas le
 traduire, c'est en créer un second.
 
-L'adresse reste `/a-la-demande` : la changer casserait les liens déjà partagés
-pour un gain nul, le nom ne se lit pas dans la barre d'adresse.
+⚠️ **ET L'ADRESSE SUIT LE NOM** : `/on-demand`. J'avais proposé de garder
+`/a-la-demande` pour ne casser aucun lien ; Julien a tranché l'inverse, et il a
+raison — deux noms pour la même chose, dont un dans la barre d'adresse, c'est
+la même incohérence un cran plus bas. Une redirection permanente couvre les
+liens de préversion déjà partagés (`web/next.config.mjs`), et elle reste : un
+lien mort vers une offre est pire que pas de lien du tout.
 
 ### Deux défauts trouvés en jouant le tunnel au volet
 

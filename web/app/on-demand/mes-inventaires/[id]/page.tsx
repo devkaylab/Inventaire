@@ -70,7 +70,7 @@ export default function MonInventairePage() {
     if (error) { setErreur(error.message); return }
     const r = data as { success: boolean; error?: string; code?: string }
     if (!r?.success) { setErreur(r?.error ?? 'Annulation impossible.'); return }
-    router.push('/a-la-demande/mes-inventaires')
+    router.push('/on-demand/mes-inventaires')
   }
 
   if (guard.status !== 'ready') return <Chargement />
@@ -257,7 +257,7 @@ export default function MonInventairePage() {
       )}
 
       <p className="muted small">
-        <Link href="/a-la-demande/mes-inventaires">← Tous vos inventaires</Link>
+        <Link href="/on-demand/mes-inventaires">← Tous vos inventaires</Link>
       </p>
     </AppShell>
   )

@@ -100,6 +100,25 @@ const nextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },
+
+  /**
+   * ⚠️ **L'ADRESSE D'ON-DEMAND A CHANGÉ LE 21 SEPTEMBRE 2026**, de
+   * `/a-la-demande` à `/on-demand` : le produit s'appelle On-demand, en
+   * français comme en anglais, et l'adresse suivait l'ancien nom.
+   *
+   * ⚠️ **LA REDIRECTION EST PERMANENTE, ET ELLE RESTE.** Les pages n'étaient
+   * pas indexées (`noindex`) et la branche n'était pas fusionnée, donc il n'y
+   * a presque rien à rattraper — mais « presque » n'est pas « rien » : les
+   * liens de la préversion circulent déjà par message, et un lien mort vers
+   * une offre est pire que pas de lien du tout. Une redirection coûte trois
+   * lignes ; la retirer un jour ne rapportera rien.
+   */
+  async redirects() {
+    return [
+      { source: '/a-la-demande', destination: '/on-demand', permanent: true },
+      { source: '/a-la-demande/:chemin*', destination: '/on-demand/:chemin*', permanent: true },
+    ]
+  },
 }
 
 export default nextConfig

@@ -78,14 +78,14 @@ export function ongletsPour(profile: Profile): Onglet[] {
       { href: '/magasins', label: 'Magasins' },
       { href: '/equipe', label: 'Équipe' },
       { href: '/inventaires', label: 'Inventaires' },
-      { href: '/a-la-demande/mes-inventaires', label: 'On-demand' },
+      { href: '/on-demand/mes-inventaires', label: 'On-demand' },
       { href: '/journal', label: 'Journal' },
     ]
   }
   return [
     { href: '/dashboard', label: 'Tableau de bord' },
     { href: '/inventaires', label: 'Inventaires' },
-    { href: '/a-la-demande/mes-inventaires', label: 'On-demand' },
+    { href: '/on-demand/mes-inventaires', label: 'On-demand' },
     { href: '/equipe', label: 'Mon équipe' },
     { href: '/magasins', label: 'Magasins' },
     { href: '/outils', label: 'Boîte à outils' },
@@ -188,7 +188,7 @@ function IconeOnglet({ href }: { href: string }) {
     // Un calendrier dirait « une date » — or ce qui distingue On-Demand du
     // reste du produit, c'est qu'on envoie des gens.
     case '/admin/missions':
-    case '/a-la-demande/mes-inventaires':
+    case '/on-demand/mes-inventaires':
       return d(<>
         <circle cx="9" cy="8" r="3.2" />
         <path d="M3.5 19.5c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" />

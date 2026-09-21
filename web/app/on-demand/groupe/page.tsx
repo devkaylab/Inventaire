@@ -154,7 +154,7 @@ export default function GroupePage() {
             </>
           )}
           <p style={{ marginTop: 18 }}>
-            <Link href="/a-la-demande/mes-inventaires" className="btn btn-primary">
+            <Link href="/on-demand/mes-inventaires" className="btn btn-primary">
               Voir mes inventaires
             </Link>
           </p>

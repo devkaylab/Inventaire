@@ -32,7 +32,7 @@ export const LIENS_PUBLICS = [
   //
   // ⚠️ Le libellé passe par `t()` : comme il est identique dans les deux
   // langues, il n'a pas d'entrée anglaise, et c'est voulu.
-  { href: '/a-la-demande', libelle: 'On-demand' },
+  { href: '/on-demand', libelle: 'On-demand' },
   { href: '/decouvrir', libelle: 'Notre outil' },
   { href: '/pourquoi-nous-choisir', libelle: 'Pourquoi nous choisir ?' },
   { href: '/tarifs', libelle: 'Tarifs' },
