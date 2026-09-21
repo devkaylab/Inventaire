@@ -260,3 +260,137 @@ de conservation, journal d'administration.
 | RC pro éditeur | 300 à 800 € / an |
 
 Total de lancement réaliste : **600 à 1 000 €** hors honoraires annuels.
+
+
+---
+
+## Étape 5 — La migration du compte Apple (réponse du support, 21 septembre 2026)
+
+Apple a répondu (**dossier n° 102964327628**, Sukkry, Developer Support) :
+la migration Individuel → Organisation peut démarrer **quand on veut**, en
+répondant à son message. Six conditions, dont une seule bloque aujourd'hui.
+
+### ⚠️ CE QUI BLOQUE : le WHOIS du domaine ne dit pas Devkaylab
+
+Apple exige que « le nom de domaine soit associé à votre organisation ».
+Relevé le 21 septembre 2026 sur `quantinvo.com` :
+
+```
+Registrant Organization : Domain Protection Services, Inc.
+Registrant Name         : Redacted For Privacy
+Registrant Country      : US — Denver, Colorado
+Registrar               : Name.com, Inc.
+Creation Date           : 2026-07-31
+```
+
+La protection de confidentialité offerte par Name.com masque le titulaire.
+L'équipe de vérification d'Apple verra une société américaine d'anonymisation,
+pas une SASU parisienne — et c'est une cause classique de dossier bloqué.
+
+- [ ] **Désactiver la protection WHOIS chez Name.com** et saisir Devkaylab
+      comme titulaire (`Registrant Organization`), avec l'adresse du siège.
+      La remettre une fois la migration validée, si on y tient.
+      ⚠️ La propagation au registre prend jusqu'à 24 h : le faire AVANT de
+      répondre à Sukkry, pas le même jour.
+
+### Ce qui est déjà bon
+
+| Condition d'Apple | État |
+|---|---|
+| Site de l'organisation public | ✅ `www.quantinvo.com/mentions-legales` déclare Devkaylab, SASU, SIREN 109 680 389, 47 rue Vivienne — vérifié en ligne |
+| Rapports de ventes perdus (point 5) | sans objet : rien de publié, rien à perdre |
+| Revenus et compte bancaire (point 6) | sans objet : **aucun achat intégré**, aucune dépendance StoreKit. L'abonnement se vend sur le site par Stripe |
+
+### Ce qu'il faut vérifier soi-même (demande une connexion)
+
+- [ ] **Double authentification** active sur l'Apple Account du programme.
+- [ ] **La fiche D&B**, sur `developer.apple.com/enroll/duns-lookup/`, doit
+      coïncider avec l'immatriculation. Relevé public le 21 septembre 2026 :
+
+      | | |
+      |---|---|
+      | Dénomination | **DEVKAYLAB** |
+      | SIREN / SIRET siège | 109 680 389 / 109 680 389 000 11 |
+      | Siège | 47 RUE VIVIENNE 75002 PARIS |
+      | Catégorie juridique | **5710 — société par actions simplifiée** |
+      | Activité | 62.01Z, programmation informatique |
+      | Immatriculée le | 7 septembre 2026 |
+
+      ⚠️ La catégorie **5710 est une société par actions**, pas une entreprise
+      individuelle : c'est ce qui protège du refus décrit à l'étape 4
+      (« Apple refuse les dossiers que D&B a classés en *sole
+      proprietorship* »). Si D&B a classé autrement, le faire corriger AVANT.
+
+      ⚠️ Et le **téléphone** de la fiche D&B : Apple peut appeler pour vérifier.
+      Il doit être joignable et identifier Devkaylab — c'est la ligne déjà
+      ouverte dans la liste des tâches (numéro perso → pro).
+
+### ⚠️ LE CALENDRIER : APRÈS LA PUBLICATION, PAS PENDANT L'EXAMEN
+
+Point 3 d'Apple : « The Certificates, Identifiers & Profiles portal is
+unavailable during the migration process. »
+
+**La 1.0 build 5 est en cours d'examen.** Si Apple rejette et demande une
+correction pendant la migration, on ne peut plus signer de build — le portail
+des certificats et profils est fermé. Bloqué au pire moment, sans recours.
+
+⚠️ **ET IL N'Y A RIEN À GAGNER À SE PRESSER.** Le point 4 dit que la
+dénomination est appliquée à **toutes** les apps distribuées, migration faite :
+le nom du vendeur se corrige donc aussi bien après publication qu'avant. Seul
+le **copyright**, qui est un champ par version, ne se corrige pas
+rétroactivement — d'où la ligne « copyright Devkaylab à la prochaine version ».
+
+**Ordre retenu** : les deux boutiques en ligne → on répond à Sukkry →
+migration → copyright « Devkaylab » au build suivant.
+
+### Les deux réponses à Sukkry, prêtes
+
+**(A) Maintenant — une question qui lève la dernière inconnue.** Rien
+n'oblige à attendre pour poser une question, et la réponse décide du
+calendrier :
+
+> Hello Sukkry,
+>
+> Thank you for the details — case 102964327628.
+>
+> Before we start, one question about timing. We currently have version 1.0
+> (build 5) of our app **in review**, with automatic release once approved.
+>
+> If we begin the migration now and the review comes back with a request for a
+> new build, we would be unable to sign it while the Certificates, Identifiers
+> & Profiles portal is unavailable. Would you recommend waiting until the app
+> has been released before starting the migration, or does the migration not
+> affect an app that is already in review?
+>
+> For reference, our organization is Devkaylab (SASU), registered in Paris,
+> France, D-U-N-S 288196187, and our organization website is
+> https://www.quantinvo.com.
+>
+> Best regards,
+> Julien Thiong-Kay
+
+**(B) Plus tard — le feu vert**, quand les deux applis sont en ligne et que le
+WHOIS affiche Devkaylab :
+
+> Hello Sukkry,
+>
+> We are ready to start the migration of our individual membership to an
+> organization membership — case 102964327628.
+>
+> We have reviewed the six points. To confirm:
+>
+> - Two-factor authentication is enabled on our Apple Account.
+> - Our organization website is https://www.quantinvo.com, publicly available,
+>   and the domain is registered to Devkaylab.
+> - We understand the Certificates, Identifiers & Profiles portal will be
+>   unavailable during the migration. We have no build in review and none
+>   planned until it completes.
+> - Our legal entity name is **Devkaylab**, a French SASU registered in Paris
+>   (SIREN 109 680 389), D-U-N-S 288196187.
+> - We distribute no paid apps and no in-app purchases, so there are no
+>   pending earnings to route.
+>
+> Please proceed at your convenience.
+>
+> Best regards,
+> Julien Thiong-Kay
