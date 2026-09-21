@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
-import { CHEMIN_LOGO, COULEURS, echapper, emailQuantinvo, lienSur } from '../../supabase/functions/_shared/email'
+import { CHEMIN_LOGO, COULEURS, EMPREINTE_LOGO, echapper, emailQuantinvo, lienSur } from '../../supabase/functions/_shared/email'
 
 const exemple = {
   titre: 'Votre accès superviseur',
@@ -81,9 +82,42 @@ describe('Gabarit d’e-mail — charte', () => {
   })
 
   it('le fichier du logo existe bien là où le gabarit va le chercher', () => {
-    const fichier = path.resolve(__dirname, '../public', CHEMIN_LOGO.replace(/^\//, ''))
+    const fichier = path.resolve(
+      __dirname, '../public', CHEMIN_LOGO.replace(/^\//, '').replace(/\?.*$/, ''))
     expect(existsSync(fichier)).toBe(true)
     expect(readFileSync(fichier).subarray(1, 4).toString()).toBe('PNG')
+  })
+
+  /**
+   * ⚠️ **CHANGER LE DESSIN DOIT CHANGER L'ADRESSE, ET ÇA NE SE DÉCIDE PAS.**
+   *
+   * Constat de Julien, 21 septembre 2026, capture à l'appui : un message
+   * envoyé la veille affichait encore **l'ancien cube violet**, celui d'avant
+   * Ardoise. Le fichier du dépôt était le bon ; la production servait le bon,
+   * au caractère près, empreintes comparées. Ce qui n'avait pas changé,
+   * c'était l'ADRESSE — et Gmail ne charge pas l'image, il la proxie et la
+   * garde en cache PAR URL. Toute boîte ayant reçu un message avant le
+   * 7 septembre gardait donc l'ancien dessin : exactement les gens qui nous
+   * connaissent.
+   *
+   * Cette garde rend l'oubli impossible : l'empreinte du fichier est dans son
+   * adresse, et les deux doivent coïncider. Elle ne cite aucune valeur — elle
+   * calcule.
+   */
+  it('⚠️ l’adresse du logo porte l’empreinte du dessin', () => {
+    const fichier = path.resolve(
+      __dirname, '../public', CHEMIN_LOGO.replace(/^\//, '').replace(/\?.*$/, ''))
+    const reel = createHash('sha256').update(readFileSync(fichier)).digest('hex').slice(0, 8)
+    expect(EMPREINTE_LOGO, 'l’empreinte déclarée doit être celle du fichier').toBe(reel)
+    expect(CHEMIN_LOGO, 'l’adresse doit porter l’empreinte').toContain(`?v=${reel}`)
+  })
+
+  /**
+   * ⚠️ Et l'empreinte doit être DANS l'adresse, pas seulement à côté : une
+   * constante exportée que le chemin n'emploie pas ne protège de rien.
+   */
+  it('l’empreinte n’est pas décorative', () => {
+    expect(CHEMIN_LOGO.split('?v=')[1]).toBe(EMPREINTE_LOGO)
   })
 
   it('rend tout le contenu demandé, bouton et lien en clair compris', () => {

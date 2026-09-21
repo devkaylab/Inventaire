@@ -14,8 +14,23 @@ import { useTraduction } from '@/lib/i18n'
  * La réponse est **la même que l'adresse ait un compte ou non** : dire « aucun
  * compte pour cette adresse » ferait de ce formulaire un oracle d'énumération
  * d'e-mails — exactement ce que le correctif M3 a fermé sur les formulaires
- * publics. Côté serveur, Supabase n'envoie l'e-mail qu'aux comptes existants
- * et applique sa propre limitation de débit.
+ * publics.
+ *
+ * ⚠️ **L'E-MAIL PART DE QUANTINVO, PLUS DE SUPABASE** (20 septembre 2026).
+ * Constat de Julien en recevant le message : « c'est un mail supabase qu'on
+ * reçoit, pas de quantinvo, il faut changer ça ». C'était le seul courriel du
+ * produit hors du gabarit maison — et un message d'un expéditeur inconnu, sans
+ * logo, avec un lien à cliquer, a exactement la forme d'un hameçonnage.
+ * L'envoi passe donc par la fonction edge `mot-de-passe-oublie`, qui demande
+ * le lien à Supabase et le met dans NOTRE gabarit.
+ *
+ * ⚠️ **ET IL RESTE UN REPLI, PARCE QU'UN COMPTE VERROUILLÉ NE PEUT PAS
+ * ATTENDRE.** Si la fonction est injoignable, on retombe sur
+ * `resetPasswordForEmail` : le message est alors celui de Supabase, ce qui est
+ * moins bien — mais quelqu'un qui ne peut plus entrer chez lui a besoin d'un
+ * lien, pas d'une charte. Le repli est un dernier recours, pas un chemin
+ * normal : la garde `web/tests/formulaires-publics.test.ts` vérifie que
+ * l'appel à la fonction vient d'abord.
  *
  * Le lien reçu mène à /reinitialisation (à déclarer dans les Redirect URLs de
  * la console Supabase — voir AGENTS.md).
@@ -41,16 +56,32 @@ export default function ForgotPasswordPage() {
       return
     }
     setBusy(true)
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reinitialisation`,
-    })
-    setBusy(false)
-    if (resetError) {
-      // Un échec ici est un problème d'envoi (réseau, limitation de débit),
-      // jamais une information sur l'existence du compte.
-      setError(t("L'e-mail n'a pas pu être envoyé pour le moment. Réessayez dans quelques instants."))
-      return
+    const redirectTo = `${window.location.origin}/reinitialisation`
+    let envoye = false
+    try {
+      const { error: erreurEdge } = await supabase.functions.invoke('mot-de-passe-oublie', {
+        body: { email: email.trim(), redirectTo },
+      })
+      envoye = !erreurEdge
+    } catch {
+      envoye = false
     }
+    if (!envoye) {
+      // ⚠️ REPLI : la fonction est injoignable (pas encore déployée, réseau,
+      // panne). Le message partira de Supabase — moins bien, mais quelqu'un
+      // qui ne peut plus entrer chez lui a besoin d'un lien, pas d'une charte.
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      })
+      if (resetError) {
+        setBusy(false)
+        // Un échec ici est un problème d'envoi (réseau, limitation de débit),
+        // jamais une information sur l'existence du compte.
+        setError(t("L'e-mail n'a pas pu être envoyé pour le moment. Réessayez dans quelques instants."))
+        return
+      }
+    }
+    setBusy(false)
     setSent(true)
   }
 

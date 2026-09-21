@@ -84,10 +84,36 @@ export const POLITIQUE_URL = 'https://www.quantinvo.com/confidentialite'
  * c'est-à-dire `APP_PUBLIC_URL` — le jour du domaine propre, rien à reprendre
  * ici.
  *
+ * ⚠️ **L'ADRESSE PORTE L'EMPREINTE DU DESSIN, ET C'EST TOUT L'INTÉRÊT.**
+ * Constat de Julien, 21 septembre 2026, capture à l'appui : un message envoyé
+ * la veille affichait encore **l'ancien cube violet**, celui d'avant Ardoise.
+ * Le fichier du dépôt était le bon, la production servait le bon — au
+ * caractère près, empreintes comparées. Ce qui n'avait pas changé, c'était
+ * l'ADRESSE.
+ *
+ * ⚠️ **GMAIL NE CHARGE PAS L'IMAGE, IL LA PROXIE — ET IL LA GARDE PAR URL.**
+ * Toute boîte qui avait reçu un message avant le 7 septembre 2026 gardait
+ * l'ancien dessin en cache, attaché à `/email/logo-quantinvo-encre.png`.
+ * Remplacer le fichier sous la même adresse ne change donc rien pour les
+ * destinataires existants : ce sont exactement ceux qui nous connaissent.
+ *
+ * ⚠️ **DONC : CHANGER LE DESSIN CHANGE L'ADRESSE, ET ÇA NE SE DÉCIDE PAS.**
+ * `?v=` porte les huit premiers caractères de l'empreinte SHA-256 du fichier,
+ * et `web/tests/email-template.test.ts` refuse que les deux divergent. On ne
+ * peut plus remplacer l'image en oubliant l'adresse — c'est ce qui vient de
+ * se passer, et ça s'est vu un mois après, dans la boîte d'un client.
+ *
+ * ⚠️ **ET L'ORDRE DE DÉPLOIEMENT COMPTE** : le site d'abord, les fonctions
+ * edge ensuite (règle d'AGENTS.md). Une fonction qui pointe vers une adresse
+ * que le site ne sert pas encore affiche une image cassée — pire que l'ancien
+ * logo. Ici l'adresse reste le même FICHIER, seule la chaîne de requête
+ * change : rien à déployer côté site, la production sert déjà ces octets.
+ *
  * C'est **le cube seul, sur fond transparent** : la tuile de l'icône
  * d'application, posée sur le bandeau encre, faisait vignette rapportée.
  */
-export const CHEMIN_LOGO = '/email/logo-quantinvo-encre.png'
+export const EMPREINTE_LOGO = '5ecb9c9a'
+export const CHEMIN_LOGO = `/email/logo-quantinvo-encre.png?v=${EMPREINTE_LOGO}`
 
 export type BoutonEmail = { libelle: string; lien: string }
 export type DetailEmail = { intitule: string; valeur: string }
