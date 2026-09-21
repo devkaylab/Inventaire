@@ -23,7 +23,16 @@ export const LIENS_PUBLICS = [
   // c'est la SECONDE FAÇON de faire la chose dont parle « L'inventaire ». Sa
   // place est juste après le sujet, avant l'outil — qui ne couvre qu'une des
   // deux façons. La page compare les deux offres au même rang.
-  { href: '/a-la-demande', libelle: 'À la demande' },
+  //
+  // ⚠️ **ET IL S'APPELLE « ON-DEMAND », MÊME EN FRANÇAIS** (Julien, 21
+  // septembre 2026). Sa consigne disait « même en français » : c'était le
+  // signe que le nom devait RESTER On-demand sur la vitrine française, pas
+  // devenir « À la demande » — traduire un nom de produit n'est pas le
+  // traduire, c'est en créer un second.
+  //
+  // ⚠️ Le libellé passe par `t()` : comme il est identique dans les deux
+  // langues, il n'a pas d'entrée anglaise, et c'est voulu.
+  { href: '/a-la-demande', libelle: 'On-demand' },
   { href: '/decouvrir', libelle: 'Notre outil' },
   { href: '/pourquoi-nous-choisir', libelle: 'Pourquoi nous choisir ?' },
   { href: '/tarifs', libelle: 'Tarifs' },

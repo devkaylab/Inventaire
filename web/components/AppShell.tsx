@@ -78,14 +78,14 @@ export function ongletsPour(profile: Profile): Onglet[] {
       { href: '/magasins', label: 'Magasins' },
       { href: '/equipe', label: 'Équipe' },
       { href: '/inventaires', label: 'Inventaires' },
-      { href: '/a-la-demande/mes-inventaires', label: 'À la demande' },
+      { href: '/a-la-demande/mes-inventaires', label: 'On-demand' },
       { href: '/journal', label: 'Journal' },
     ]
   }
   return [
     { href: '/dashboard', label: 'Tableau de bord' },
     { href: '/inventaires', label: 'Inventaires' },
-    { href: '/a-la-demande/mes-inventaires', label: 'À la demande' },
+    { href: '/a-la-demande/mes-inventaires', label: 'On-demand' },
     { href: '/equipe', label: 'Mon équipe' },
     { href: '/magasins', label: 'Magasins' },
     { href: '/outils', label: 'Boîte à outils' },

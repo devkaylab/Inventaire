@@ -14,7 +14,7 @@ import { PageALaDemande } from '@/components/vitrine/PageALaDemande'
  * c'est les décevoir.
  */
 export const metadata: Metadata = {
-  title: 'À la demande',
+  title: 'On-demand',
   description:
     'Un inventaire le jour où vous en avez besoin. Le logiciel seul le temps d’un comptage, ou notre équipe chez vous. Un prix ferme, sans devis.',
   robots: { index: false, follow: false },

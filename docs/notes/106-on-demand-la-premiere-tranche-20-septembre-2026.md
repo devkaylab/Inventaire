@@ -412,8 +412,15 @@ demander d'arbitrer entre deux choses qu'il ne connaît pas. La page dit donc
 d'abord ce qu'est une réservation — on réserve une date, le logiciel est prêt
 le jour J, on repart avec le rapport — **puis** pose la question.
 
-Le menu s'appelle « À la demande », en français comme en anglais, et aucune
-page ne dit plus « On-Demand ».
+⚠️ **LE PRODUIT S'APPELLE « ON-DEMAND », EN FRANÇAIS COMME EN ANGLAIS**, et
+j'avais lu la consigne à l'envers. Julien écrivait : « tu appelleras le menu de
+la page On-demand à A la demande (même en français) » — le « même en français »
+disait que le nom ne se TRADUIT PAS. J'ai compris l'inverse et renommé en « À
+la demande ». Repris le 21 septembre : traduire un nom de produit n'est pas le
+traduire, c'est en créer un second.
+
+L'adresse reste `/a-la-demande` : la changer casserait les liens déjà partagés
+pour un gain nul, le nom ne se lit pas dans la barre d'adresse.
 
 ### Deux défauts trouvés en jouant le tunnel au volet
 

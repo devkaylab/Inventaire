@@ -1,7 +1,13 @@
 'use client'
 
 /**
- * « À la demande » — le concept, puis le choix.
+ * « On-demand » — le concept, puis le choix.
+ *
+ * ⚠️ **LE PRODUIT S'APPELLE ON-DEMAND, MÊME EN FRANÇAIS** (Julien, 21
+ * septembre 2026, après que j'eus lu sa consigne à l'envers). « Même en
+ * français » voulait dire : le nom ne se traduit pas. L'adresse reste
+ * `/a-la-demande` — la changer casserait les liens déjà partagés pour un
+ * gain nul, le nom ne se lit pas dans la barre d'adresse.
  *
  * Maquette : la planche Main.
  *
