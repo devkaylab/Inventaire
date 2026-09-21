@@ -270,34 +270,60 @@ Apple a répondu (**dossier n° 102964327628**, Sukkry, Developer Support) :
 la migration Individuel → Organisation peut démarrer **quand on veut**, en
 répondant à son message. Six conditions, dont une seule bloque aujourd'hui.
 
-### ⚠️ CE QUI BLOQUE : le WHOIS du domaine ne dit pas Devkaylab
+### ✅ RÉGLÉ : le WHOIS du domaine dit Devkaylab (21 septembre 2026)
 
 Apple exige que « le nom de domaine soit associé à votre organisation ».
-Relevé le 21 septembre 2026 sur `quantinvo.com` :
+Relevé d'abord sur `quantinvo.com` :
 
 ```
 Registrant Organization : Domain Protection Services, Inc.
 Registrant Name         : Redacted For Privacy
 Registrant Country      : US — Denver, Colorado
-Registrar               : Name.com, Inc.
-Creation Date           : 2026-07-31
 ```
 
-La protection de confidentialité offerte par Name.com masque le titulaire.
-L'équipe de vérification d'Apple verra une société américaine d'anonymisation,
-pas une SASU parisienne — et c'est une cause classique de dossier bloqué.
+La protection de confidentialité masquait le titulaire : l'équipe de
+vérification d'Apple aurait vu une société américaine d'anonymisation, pas une
+SASU parisienne. Cause classique de dossier bloqué.
 
-- [ ] **Désactiver la protection WHOIS chez Name.com** et saisir Devkaylab
-      comme titulaire (`Registrant Organization`), avec l'adresse du siège.
-      La remettre une fois la migration validée, si on y tient.
-      ⚠️ La propagation au registre prend jusqu'à 24 h : le faire AVANT de
-      répondre à Sukkry, pas le même jour.
+⚠️ **ET LE DOMAINE NE SE GÈRE PAS CHEZ NAME.COM.** Il a été acheté par
+**Vercel**, qui n'est que revendeur ; Name.com est le registraire en coulisses.
+Tout se passe donc dans **Vercel → Domains → `quantinvo.com` → Registrant
+Information**, où vivent le titulaire ET l'interrupteur de confidentialité.
+Aucun compte Name.com n'existe.
+
+⚠️ **CE QUE LA FICHE CONTENAIT, ET QU'IL A FALLU CORRIGER AVANT DE PUBLIER** :
+le champ `Company` disait déjà Devkaylab, mais l'adresse était le **domicile**
+(2a rue Jacques Sébastien Clerambourg, appt 101, Saint-Germain-en-Laye) et le
+téléphone un **portable personnel**. Couper la protection d'abord aurait publié
+les deux. L'ordre compte : corriger, enregistrer, puis couper.
+
+⚠️ **L'E-MAIL DU TITULAIRE N'A PAS ÉTÉ TOUCHÉ, EXPRÈS.** Vercel confirme
+automatiquement quand c'est l'adresse du compte ; avec une autre, il faut
+confirmer un lien, et **sans confirmation le domaine passe en `clientHold`** —
+le site tombe. Pour un domaine de production, ça ne vaut pas le gain cosmétique.
+
+- [x] **Titulaire corrigé et protection coupée**, dans cet ordre. Vérifié au
+      registre dans la minute :
+
+      ```
+      Registrant Organization : Devkaylab
+      Registrant Street       : 47 rue Vivienne
+      Registrant City         : Paris — 75002 — FR
+      Registrant Phone        : +33.688592765
+      Registrant Email        : devkaylab@gmail.com
+      ```
+
+- [ ] **Aligner la fiche D&B sur le même numéro** (`+33 6 88 59 27 65`, la
+      ligne pro) sur `iupdate.dnb.com` — le portail officiel pour consulter et
+      corriger sa propre fiche. Apple compare WHOIS, fiche D&B et site ; les
+      deux premiers sont d'accord, le troisième aussi (mentions légales).
 
 ### Ce qui est déjà bon
 
 | Condition d'Apple | État |
 |---|---|
 | Site de l'organisation public | ✅ `www.quantinvo.com/mentions-legales` déclare Devkaylab, SASU, SIREN 109 680 389, 47 rue Vivienne — vérifié en ligne |
+| Domaine associé à l'organisation | ✅ WHOIS public : `Registrant Organization: Devkaylab`, 47 rue Vivienne, Paris |
 | Rapports de ventes perdus (point 5) | sans objet : rien de publié, rien à perdre |
 | Revenus et compte bancaire (point 6) | sans objet : **aucun achat intégré**, aucune dépendance StoreKit. L'abonnement se vend sur le site par Stripe |
 
