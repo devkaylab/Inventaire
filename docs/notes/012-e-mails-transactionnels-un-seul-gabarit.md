@@ -172,3 +172,58 @@ Gardes : `web/tests/formulaires-publics.test.ts`.
 que la branche n'est pas fusionnée, la production continue d'envoyer le message
 de Supabase : c'est le site qui choisit le chemin, et le site en production ne
 connaît pas encore la fonction.
+
+
+---
+
+## L'ancien logo est revenu, un mois après (21 septembre 2026)
+
+⚠️ **CONSTAT DE JULIEN, CAPTURE À L'APPUI** : « pourquoi le mail porte l'ancien
+logo ? Tu ne devrais même plus pouvoir l'utiliser ». Le message de
+réinitialisation envoyé la veille affichait **le cube violet d'avant Ardoise**,
+celui retiré du produit le 6 septembre.
+
+### Ce n'était ni le fichier, ni la production
+
+| Vérifié | Résultat |
+|---|---|
+| Le PNG du dépôt | le bon — la marque Ardoise |
+| Ce que sert `www.quantinvo.com` | **octet pour octet le même fichier** (empreintes comparées) |
+| Les autres logos du dépôt (favicon, icônes d'app) | tous Ardoise, aucun ancien dessin nulle part |
+
+⚠️ **CE QUI N'AVAIT PAS CHANGÉ, C'ÉTAIT L'ADRESSE.** Gmail ne charge pas
+l'image d'un e-mail depuis le site : il la **proxie** et la garde en cache, et
+son cache est indexé par URL. `/email/logo-quantinvo-encre.png` servait
+l'ancien cube jusqu'au 7 septembre. Toute boîte qui avait reçu un message avant
+cette date gardait donc l'ancien dessin — **c'est-à-dire exactement les gens
+qui nous connaissent déjà**. Les nouveaux destinataires, eux, voyaient le bon :
+c'est pour ça que personne ne l'avait vu.
+
+⚠️ **REMPLACER UN FICHIER SOUS LA MÊME ADRESSE NE LE REMPLACE PAS.** C'est vrai
+de tous les caches d'images de messagerie, pas seulement de Gmail. Le 7
+septembre, changer le PNG semblait suffire ; ça ne suffisait que pour les gens
+qui n'avaient jamais reçu de message.
+
+### La correction : l'adresse porte l'empreinte du dessin
+
+```ts
+export const EMPREINTE_LOGO = '5ecb9c9a'   // les 8 premiers du SHA-256 du fichier
+export const CHEMIN_LOGO = `/email/logo-quantinvo-encre.png?v=${EMPREINTE_LOGO}`
+```
+
+⚠️ **ET CE N'EST PLUS UNE DÉCISION.** `web/tests/email-template.test.ts` calcule
+l'empreinte du fichier et refuse qu'elle diffère de celle de l'adresse. On ne
+peut plus changer le dessin en oubliant l'adresse — c'est exactement ce qui
+vient de se passer, et ça s'est vu un mois plus tard, dans la boîte d'un
+client.
+
+⚠️ **SEULE LA CHAÎNE DE REQUÊTE CHANGE, PAS LE FICHIER.** Un nom de fichier
+neuf aurait imposé de déployer le site AVANT les fonctions edge (règle
+d'AGENTS.md) — et entre les deux, une image cassée, pire que l'ancien logo. Là,
+la production sert déjà ces octets : les seize fonctions qui envoient du
+courrier ont été redéployées seules.
+
+⚠️ **LES SEIZE, PAS UNE.** `CHEMIN_LOGO` est une constante bundlée à la
+compilation, pas une variable lue à l'exécution : une fonction non redéployée
+garde l'ancienne adresse, donc l'ancien cube. Vérifié après coup qu'aucune n'a
+changé de `verify_jwt` au passage.

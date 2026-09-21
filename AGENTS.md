@@ -22,6 +22,7 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - **Gardes** : `web/tests/` et `tests/`. Une garde déduit sa liste, ne la cite pas ; lit le code sans ses commentaires ; passe par `derniereDefinition()` (jamais un nom de migration en dur). Saboter pour vérifier qu'elle mord. Ne jamais filtrer la sortie d'un contrôle qui garde un `&&`.
 - **Lint du site** : `npm run lint` depuis `web/` (`eslint .`).
 - **Identité** : Ardoise (outil) et Registre (ce qui fait foi : rapport, écarts, devis). Pas de design « IA ». Tokens partagés : `src/constants/ink.ts` ↔ `web/app/globals.css`.
+- **Images d'e-mail** : leur ADRESSE porte l'empreinte du fichier (`EMPREINTE_LOGO`, garde `web/tests/email-template.test.ts`). Les messageries proxient et mettent en cache PAR URL : remplacer le fichier sous la même adresse ne change rien pour qui a déjà reçu un message. Changer une image = redéployer les 16 fonctions qui envoient du courrier (la constante est bundlée).
 - **Doublons volontaires** app/site qui bougent ensemble : presence, import, report, password, baliseSeries, erreursServeur, grille tarifaire (5 copies, un test compare).
 - **i18n** : la phrase française est la clé (`t('…')`) ; ajouter l'entrée anglaise dans `src/i18n/en.ts` / `web/i18n/en.ts`.
 - **Vérifier l'effet, pas le code de retour** ; une page à deux états se regarde dans les deux ; un chiffre invraisemblable est d'abord un défaut de mesure ; une note d'état se vérifie avant d'être citée.
