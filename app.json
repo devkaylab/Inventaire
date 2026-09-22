@@ -8,7 +8,7 @@
     "scheme": "quantinvo",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.quantinvo.app",
       "buildNumber": "5",
       "infoPlist": {

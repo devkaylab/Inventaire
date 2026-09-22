@@ -133,3 +133,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [L'abonnement est un cumul](docs/notes/103-l-abonnement-est-un-cumul-16-septembre-2026.md)
 - [La page « Découvrir » : ce qu'est Quantinvo](docs/notes/104-la-page-decouvrir-19-septembre-2026.md)
 - [« Pourquoi nous choisir » et « L'inventaire », refondues](docs/notes/105-pourquoi-et-inventaire-refondues-19-septembre-2026.md)
+- [⚠️ Apple refuse le build 5 : plantage au lancement sur iPad](docs/notes/106-apple-refuse-le-build-5-plantage-au-lancement-sur-ipad-22-se.md)
