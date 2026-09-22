@@ -368,34 +368,36 @@ describe('Registre, sur les deux écrans qui font foi', () => {
 })
 
 /**
- * L'application se déclare compatible iPad (22 septembre 2026).
+ * L'application est un outil de TÉLÉPHONE (8 septembre 2026).
  *
- * ⚠️ **C'EST UNE MARCHE ARRIÈRE, ET LE MOTIF COMPTE.** Le drapeau était passé
- * à faux le 8 septembre pour s'épargner les captures iPad. Apple a refusé la
- * version 1.0 (build 5) le 22 septembre — `Guideline 2.1(a)`, revue faite sur
- * un **iPad Air 11" (M3), iPadOS 27.0** : l'application s'est fermée au
- * lancement. Un `supportsTablet` à faux ne met pas l'iPad hors de portée, il
- * y fait seulement tourner l'app dans une fenêtre de téléphone — Apple la
- * teste quand même, et le message de refus le dit en toutes lettres.
+ * Décision de Julien, à la revue d'avant publication : `supportsTablet` était
+ * vrai, donc Apple aurait exigé des captures iPad — pour une application en
+ * portrait, pensée pour une main et un rayon. Décision reconduite le
+ * 22 septembre 2026, après le refus d'Apple.
  *
- * Décision de Julien : ouvrir l'iPad pour de bon plutôt que de le subir.
- * `COLONNE_MAX` (720 points, voir `src/constants/layout.ts`) attendait déjà
- * ce jour.
+ * ⚠️ **ET CE DRAPEAU NE MET PAS L'APPLICATION HORS DE PORTÉE DES iPAD.** Il a
+ * été cru tel pendant deux semaines, et ça a coûté une revue. Sur l'App Store,
+ * une application iPhone s'installe sur un iPad et y tourne dans une fenêtre
+ * de téléphone ; rien dans App Store Connect ne permet de l'en empêcher, la
+ * liste des appareils étant déduite du binaire. Ce que ce drapeau décide,
+ * c'est si l'application **s'adapte** à l'iPad — pas si elle y **tourne**.
+ * Apple a refusé la version 1.0 (build 5) le 22 septembre 2026,
+ * `Guideline 2.1(a)`, pour un plantage au lancement constaté sur un
+ * **iPad Air 11" (M3)** sous iPadOS 27.0, et son message le dit :
+ * « apps that may be downloaded onto iPad devices should function as expected
+ * for iPad users ». Donc : pas de captures iPad à fournir, mais l'application
+ * doit démarrer sur un iPad. `./scripts/simulateur.sh ipad` sert à le voir.
  *
  * ⚠️ **LA CLÉ VIT À DEUX ENDROITS, ET LE SECOND EST VERSIONNÉ.** `app.json`
  * ne gouverne que ce qu'`expo prebuild` régénère ; `ios/` ne se régénère
  * jamais. C'est le piège exact du 6 septembre avec `UIUserInterfaceStyle` :
  * changer `app.json` ne suffisait pas, il fallait toucher le projet Xcode à la
  * main. Les deux doivent dire la même chose.
- *
- * ⚠️ **Et la conséquence de boutique revient avec** : App Store Connect
- * réclame de nouveau un jeu de captures iPad. Voir
- * `docs/entreprise/boutiques/LISEZMOI.md`.
  */
-describe('l’application se déclare compatible iPad', () => {
+describe('l’application ne se déclare pas compatible iPad', () => {
   it('app.json et le projet Xcode disent la même chose', () => {
     const app = JSON.parse(lire('app.json'))
-    expect(app.expo.ios.supportsTablet).toBe(true)
+    expect(app.expo.ios.supportsTablet).toBe(false)
 
     const projet = lire('ios/Inventaire.xcodeproj/project.pbxproj')
     // 1 = iPhone, 2 = iPad. Les deux configurations (Debug et Release) sont
@@ -407,21 +409,6 @@ describe('l’application se déclare compatible iPad', () => {
     const familles = [...projet.matchAll(/TARGETED_DEVICE_FAMILY = "?([^";]*)"?;/g)]
       .map((m) => m[1])
     expect(familles.length).toBeGreaterThan(0)
-    for (const f of familles) expect(f).toBe('1,2')
-  })
-
-  it('⚠️ l’iPad tourne, donc le plist lui ouvre les quatre orientations', () => {
-    // `orientation: "portrait"` dans app.json ne vaut que pour le téléphone :
-    // un iPad qu'on ne peut pas tourner est précisément ce qu'Apple reproche à
-    // une application de téléphone agrandie. La clé `~ipad` d'Info.plist est
-    // la seule qui décide — et elle n'est pas régénérée.
-    const plist = lire('ios/Inventaire/Info.plist')
-    const bloc = plist.match(
-      /<key>UISupportedInterfaceOrientations~ipad<\/key>\s*<array>([\s\S]*?)<\/array>/,
-    )?.[1]
-    expect(bloc, 'Info.plist n’ouvre aucune orientation à l’iPad').toBeTruthy()
-    for (const o of ['Portrait', 'PortraitUpsideDown', 'LandscapeLeft', 'LandscapeRight']) {
-      expect(bloc, `l’iPad n’accepte pas ${o}`).toContain(`UIInterfaceOrientation${o}`)
-    }
+    for (const f of familles) expect(f).toBe('1')
   })
 })
