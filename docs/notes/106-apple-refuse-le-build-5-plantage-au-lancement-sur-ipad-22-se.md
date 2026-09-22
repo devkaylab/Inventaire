@@ -114,8 +114,166 @@ fiche 094 ne change pas : monter à 6 **juste avant l'archive**, dans
 `app.json`, `ios/Inventaire/Info.plist` et `project.pbxproj` (×2), puis
 `npx vitest run` — la garde compare les trois.
 
+---
+
+# La cause, MESURÉE sur l'archive livrée (22 septembre 2026, au soir)
+
+⚠️ **`app.config` ÉTAIT ABSENT DU BUILD 5.** Ouvert l'archive réellement
+envoyée à Apple (`Inventaire 15-09-2026, 19.06.xcarchive`) :
+
+```
+Inventaire.app/EXConstants.bundle/
+  Info.plist          ← lui seul
+```
+
+Plus d'hypothèse : le fichier n'y est pas. Et la chaîne se lit dans le code
+installé, pas dans une intuition :
+
+| | |
+|---|---|
+| `Constants.expoConfig` | nul, faute de manifeste |
+| `expo-linking` `resolveScheme()` | **lève**, sans condition, en app autonome — `hasConstantsManifest()` rend faux |
+| `expo-router` `getInitialURL()` | appelle `getRootURL()` → `Linking.createURL('/')` **au démarrage**, dès que l'app est ouverte depuis l'écran d'accueil |
+| résultat | exception JS non rattrapée, ~116 ms, `RCTFatal` → `abort`, avant tout rendu |
+
+⚠️ **CE N'ÉTAIT PAS UN DÉFAUT D'iPAD.** Le build 5 se fermait aussi sur
+iPhone. Apple est simplement tombée dessus sur un iPad.
+
+⚠️ **ET LE MOTIF QUI AVAIT CLASSÉ L'AVERTISSEMENT SANS SUITE ÉTAIT FAUX.**
+`scripts/appstore.sh` §4 bis disait, depuis le 2 septembre : « `expo-constants`
+n'a qu'un seul appelant (`lib/push.ts`), et il porte un repli ». Il en avait un
+second, sans repli, **sur le chemin du démarrage**. Un raisonnement juste sur
+un inventaire incomplet.
+
+## Ce qui a été corrigé
+
+| | |
+|---|---|
+| Phase Xcode | « Copy » devient **« Generate EXConstants app.config »** : elle appelle `getAppConfig.js` d'Expo et écrit directement dans l'app. Plus de copie depuis `${BUILT_PRODUCTS_DIR}/../../EXConstants/`, un chemin qui ne résout pas en archivage. |
+| Silence | La phase **interrompt le build** si le fichier n'est pas là à l'arrivée. L'ancienne faisait `if [ -f "$SRC" ]; then cp …; fi` — rien, et vert. |
+| `appstore.sh` §4 bis | repassé en **refus**, avec le motif corrigé. |
+| Garde | `tests/app-config-embarque.test.ts`, cinq contrôles. Sabotée deux fois. |
+
+⚠️ **LA GARDE ÉTAIT FAIBLE À SA PREMIÈRE ÉCRITURE**, et seul le sabotage l'a
+montré : elle lisait 900 caractères à partir du test d'existence, débordait sur
+le bloc « Aucun .ipa produit » qui porte son propre `exit 1`, et passait au vert
+sabotée. Resserrée sur le bloc `if … fi`. *Une garde qu'on n'a pas sabotée
+n'est pas une garde.*
+
+# ⚠️ LA MISE À JOUR XCODE 27 A TOUT MASQUÉ — 22 septembre 2026, au soir
+
+Julien a installé macOS 27 / Xcode 27 pendant la session, sans le dire (il l'a
+dit après). Xcode 26.4 a disparu avec la mise à jour : **un seul Xcode sur la
+machine**. Tout ce qui suit vient de là, et **rien de tout cela ne concerne le
+refus d'Apple**.
+
+## Le vrai verrou : UIScene
+
+Une application compilée avec le **SDK iOS 27** et dépourvue du cycle de vie
+par scènes **plante au lancement sur iOS 27**, avant la première ligne de code
+de l'application. La pile le nomme :
+`___UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`.
+Sous iOS 26 ce n'était qu'un avertissement ; le SDK de la version majeure
+suivante en fait une assertion.
+
+**Mesuré dans les deux sens, sur le même iPad simulé :**
+
+| Binaire | iOS 26.4 | iOS 27 |
+|---|---|---|
+| SDK 26.x | — | **démarre** |
+| SDK 27 | démarre | plante |
+
+Le verrou porte donc sur **le SDK de compilation**, pas sur l'OS de l'appareil.
+Le contrôle se fait sur ce qui est gravé dans le binaire.
+
+⚠️ **Apple ne recompile rien.** La revue installe le fichier déposé, tel quel,
+sur de vrais appareils sous l'OS du moment. Un binaire SDK 26 passe la revue
+même faite sur un iPad iOS 27.
+
+**Expo 56 ne sait pas faire les scènes.** Le correctif n'existe qu'à partir
+d'**Expo 57.0.23**, avec `expo-build-properties` et `ios.enableSceneSupport`
+(expo/expo#46664). Changer de SDK Expo la veille d'un redépôt n'était pas une
+option.
+
+## La sortie : Xcode 26.6 à côté de Xcode 27
+
+`/Applications/Xcode-26.6.app` (SDK iOS 26.5), installé **à côté** de Xcode 27,
+pas à la place. Apple n'exige que Xcode 26 au minimum et **aucune date n'est
+annoncée** pour Xcode 27.
+
+- Le `.xip` allégé fait 2,2 Go et **n'embarque pas la plateforme iOS** :
+  `xcodebuild -downloadPlatform iOS -architectureVariant arm64` (8,5 Go).
+- **Pas de `xcode-select`** — donc pas de mot de passe, pas de réglage système
+  modifié. On passe par la variable d'environnement, commande par commande :
+  `DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer`.
+  `xcodebuild` et `xcrun` l'honorent tous les deux, `scripts/simulateur.sh`
+  n'a rien eu à changer.
+- ⚠️ Xcode 26.6 **ne sait pas piloter un simulateur iOS 27** : on compile en
+  visant un appareil iOS 26.x, puis on installe le résultat sur l'appareil
+  iOS 27 avec le `simctl` du système.
+- Pour l'archive, Julien ouvre **Xcode-26.6**, pas Xcode.
+
+## Ce qui a été fait, et défait
+
+**Gardé** — `ios/Podfile`, `post_install` aligne les cibles de déploiement des
+pods sur celle de l'application (16.4). Sans effet quand tout est déjà correct,
+utile le jour où on passera à Xcode 27.
+
+**Défait** — la montée d'`expo-modules-core` de 56.0.16 à 56.0.26 (et
+`expo-modules-jsi` 56.0.9 → 56.0.13). Elle ne servait qu'à contourner une
+erreur Swift 6.4 propre à Xcode 27 : `JavaScriptRuntime.swift:219`, « a C
+function pointer can only be formed from a reference to a 'func' or a literal
+closure ». Sous Xcode 26.6 cette erreur n'existe pas. **On ne change pas de
+code natif dans une application en cours de publication sans raison** : le
+socle redevient exactement celui du build 5. `git checkout package.json
+package-lock.json ios/Podfile.lock`, puis `npm install` et `pod install`.
+
+**Gardé aussi** — `scripts/simulateur.sh` : `open -a Simulator` est devenu
+facultatif. `Simulator.app` n'existe plus dans Xcode 27 et Launch Services
+garde une fiche périmée ; sous `set -e` le script s'arrêtait **avant la
+compilation**. L'appareil est déjà démarré à cette ligne, `install` et `launch`
+n'en ont pas besoin.
+
+⚠️ **`npx expo install --check` signale une dizaine d'autres paquets en
+retard** (`expo-router`, `expo-linking`, `expo-notifications`…). Volontairement
+**pas** mis à jour. À traiter à part, après la publication — en même temps que
+la montée en Expo 57, qui réglera les scènes pour de bon.
+
+# ⚠️ CE QUE LE `app.config` ABSENT PROUVE — ET CE QU'IL NE PROUVE PAS
+
+En inspectant les archives conservées, une nuance importante :
+
+| Archive | Build | SDK | `app.config` |
+|---|---|---|---|
+| 24 juin | 1 | iphoneos26.4 | présent |
+| 2 sept. | 1 | iphoneos26.4 | **absent** |
+| 3 sept. | 2 | iphoneos26.4 | **absent** |
+| 8 sept. | 3 | iphoneos26.4 | **absent** |
+| 8 sept. | 4 | iphoneos26.4 | **absent** |
+| 15 sept. | 5 | iphoneos26.4 | **absent** |
+
+Les builds 2, 3 et 4 en manquaient aussi. **On ne peut donc pas affirmer que
+l'absence d'`app.config` explique à elle seule le plantage du build 5** — c'est
+une cause possible, pas une cause démontrée. Le défaut est réel et la
+correction reste bonne ; l'affirmation, elle, était trop forte.
+
+## Vérifications faites, 22 septembre au soir
+
+Compilation Release avec Xcode 26.6 (SDK iphonesimulator26.5), dépendances
+d'origine, `app.config` présent (1887 octets) :
+
+- **iPad Pro 13" sous iOS 27** — démarre, écran de connexion complet
+- **iPhone 18 Pro sous iOS 27** — démarre, écran de connexion complet
+- **iPad sous iOS 26.4** — démarre
+- Aucun nouveau rapport de plantage (comptés avant/après à chaque lancement)
+- 526 tests au vert
+
+Android n'est pas concerné : la production est **en examen chez Google depuis
+le 19 septembre** (versionCode 1) et aucun changement natif ne subsiste dans
+la branche.
+
 ## Ce qui reste à faire
 
-1. **Lire le rapport de crash d'Apple**, symbolisé. Rien d'autre ne dit la cause.
-2. **Reproduire** : `CONSOLE=1 CONFIG=Release ./scripts/simulateur.sh ipad`.
-3. Corriger, monter le numéro à 6, archiver.
+1. **Archiver et déposer** : **Xcode-26.6** → Organizer, par Julien.
+   Contrôler avant envoi que l'archive porte `DTSDKName = iphoneos26.5`.
+2. Répondre à Apple sur le même fil de revue en décrivant la correction.
