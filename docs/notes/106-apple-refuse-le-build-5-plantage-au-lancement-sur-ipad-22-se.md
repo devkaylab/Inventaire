@@ -276,4 +276,22 @@ la branche.
 
 1. **Archiver et déposer** : **Xcode-26.6** → Organizer, par Julien.
    Contrôler avant envoi que l'archive porte `DTSDKName = iphoneos26.5`.
-2. Répondre à Apple sur le même fil de revue en décrivant la correction.
+2. **Ouvrir le build depuis TestFlight**, sur un vrai appareil, AVANT de
+   soumettre en revue. Une seule ouverture suffit.
+3. Répondre à Apple sur le même fil de revue en décrivant la correction.
+
+## La règle qui sort de ce refus
+
+⚠️ **Le défaut n'existait QUE dans l'archive.** Simulateur, installation
+directe depuis Xcode, tests : tout passait au vert. Ce qui manquait dans le
+bundle livré ne manquait nulle part ailleurs.
+
+TestFlight sert **l'artefact que l'examinateur lance**, avec les autorisations
+de distribution — `get-task-allow` absent, APNs de production, certificat de
+distribution. Une installation depuis Xcode n'a rien de tout ça, et un build de
+développement ne charge même pas le même JavaScript (Metro au lieu du bundle
+embarqué).
+
+**Donc : aucun build ne part en revue sans avoir été ouvert une fois depuis
+TestFlight sur un vrai appareil.** Pas un parcours complet — juste l'ouvrir.
+Un quart d'heure, contre une semaine de refus.
