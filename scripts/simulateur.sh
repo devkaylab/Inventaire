@@ -94,7 +94,20 @@ echo "→ Cible : $NOM ($UDID)"
 if [ "$ETAT" != "Booted" ]; then
   echo "→ Démarrage du simulateur…"
   xcrun simctl bootstatus "$UDID" -b
-  open -a Simulator --args -CurrentDeviceUDID "$UDID"
+  # ⚠️ **L'OUVERTURE DE LA FENÊTRE NE DOIT PAS FAIRE ÉCHOUER LE SCRIPT.**
+  # Xcode 27 ne livre plus `Simulator.app` dans
+  # `Contents/Developer/Applications/` ; Launch Services garde pourtant une
+  # fiche périmée vers cet ancien chemin, et `open -a Simulator` rend
+  # « Unable to find application named 'Simulator' ». Sous `set -e`, tout
+  # s'arrêtait là — avant même la compilation, le 22 septembre 2026, le jour
+  # où il fallait justement vérifier un refus d'Apple.
+  #
+  # L'appareil est DÉJÀ démarré à cette ligne (`bootstatus -b` a attendu) :
+  # `install` et `launch` fonctionnent sans fenêtre. Celle-ci n'est qu'un
+  # confort pour regarder — on le dit, et on continue.
+  if ! open -a Simulator --args -CurrentDeviceUDID "$UDID" 2>/dev/null; then
+    echo "  (fenêtre du simulateur indisponible — l'appareil tourne quand même)"
+  fi
 fi
 
 # Les frameworks prébuilts (Debug / Release) : c'est le `post_install` d'`ios/Podfile`

@@ -146,7 +146,7 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				B0E175634EF1F728ED159B18 /* [CP] Embed Pods Frameworks */,
-				A1B2C3D4E5F60001A1B2C3D4 /* Copy EXConstants app.config */,
+				A1B2C3D4E5F60001A1B2C3D4 /* Generate EXConstants app.config */,
 			);
 			buildRules = (
 			);
@@ -308,7 +308,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Inventaire/Pods-Inventaire-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A1B2C3D4E5F60001A1B2C3D4 /* Copy EXConstants app.config */ = {
+		A1B2C3D4E5F60001A1B2C3D4 /* Generate EXConstants app.config */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -316,12 +316,12 @@
 			);
 			inputPaths = (
 			);
-			name = "Copy EXConstants app.config";
+			name = "Generate EXConstants app.config";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "SRC=\"${BUILT_PRODUCTS_DIR}/../../EXConstants/EXConstants.bundle/app.config\"\nDEST=\"${TARGET_BUILD_DIR}/${PRODUCT_NAME}.app/EXConstants.bundle/app.config\"\nif [ -f \"$SRC\" ]; then\n  cp \"$SRC\" \"$DEST\"\nfi\n";
+			shellScript = "set -eo pipefail\n# ⚠️ ON GÉNÈRE, ON NE COPIE PLUS — ET ON ÉCHOUE FORT SI ÇA MANQUE.\n#\n# Le 22 septembre 2026, Apple a refusé la 1.0 build 5 (Guideline 2.1a) :\n# l'app se fermait ~116 ms après le lancement, avant tout rendu. Cause,\n# vérifiée sur l'archive livrée : `app.config` était ABSENT de\n# `EXConstants.bundle`. Sans lui, `Constants.expoConfig` est nul, et\n# `expo-linking` LÈVE sans condition dans une app autonome\n# (`resolveScheme` → « needs access to the expo-constants manifest »).\n# expo-router l'appelle au démarrage, par `getInitialURL` → `getRootURL`\n# → `Linking.createURL('/')`, dès que l'app est ouverte depuis l'écran\n# d'accueil. Exception JS non rattrapée → RCTFatal → abort.\n#\n# L'ancienne version copiait depuis\n# `${BUILT_PRODUCTS_DIR}/../../EXConstants/…`, un chemin qui ne résout\n# pas en archivage, et le `if [ -f ]` avalait l'échec : le build passait\n# au vert avec une app qui ne démarre pas. C'est ce silence qui a coûté\n# une soumission.\nSCRIPTS=\"$SRCROOT/../node_modules/expo-constants/scripts\"\nDEST=\"${TARGET_BUILD_DIR}/${PRODUCT_NAME}.app/EXConstants.bundle\"\nmkdir -p \"$DEST\"\n\"$SCRIPTS/with-node.sh\" \"$SCRIPTS/getAppConfig.js\" \"$SRCROOT/..\" \"$DEST\"\nif [ ! -s \"$DEST/app.config\" ]; then\n  echo \"error: app.config absent de $DEST — l'application se fermerait au lancement (refus Apple du 22 septembre 2026). Build interrompu volontairement.\"\n  exit 1\nfi\n";
 		};
 		B0E175634EF1F728ED159B18 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -395,7 +395,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Inventaire/Inventaire.entitlements;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 8YL7866PHB;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -433,7 +433,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Inventaire/Inventaire.entitlements;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 8YL7866PHB;
 				INFOPLIST_FILE = Inventaire/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
