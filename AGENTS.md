@@ -10,7 +10,7 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 
 - **Expo a changé** : lire https://docs.expo.dev/versions/v56.0.0/ avant d'écrire du code natif.
 - **Julien** : tutoyer, réponses courtes, pas d'emoji, langage simple. Commit + push à chaque changement terminé (push = déploie le site).
-- **Builds** : iOS local = `./scripts/simulateur.sh` seul (jamais `xcodebuild` à la main) ; publication iOS = Xcode → Organizer, par Julien. Android = `./scripts/pixel.sh` (test) / `./scripts/play.sh` (publication). `android/` est généré et gitignoré, `ios/` est versionné. Le déclenchement d'un build appartient à Julien.
+- **Builds** : iOS local = `./scripts/simulateur.sh` seul (jamais `xcodebuild` à la main) ; publication iOS = Xcode → Organizer, par Julien. Android = `./scripts/pixel.sh` (test) / `./scripts/play.sh` (publication). `android/` est généré et gitignoré, `ios/` est versionné. Le déclenchement d'un build appartient à Julien. ⚠️ `supportsTablet: false` n'empêche pas l'installation sur iPad et Apple y revoit l'app (refus du build 5, 22 septembre) : la lancer sur un simulateur iPad avant chaque dépôt — `CONSOLE=1 CONFIG=Release ./scripts/simulateur.sh ipad`.
 - **Numéros de build** : iOS vit à 3 endroits (app.json, Info.plist, project.pbxproj ×2), monté juste avant l'archive ; Android `versionCode` dans app.json, augmente à chaque dépôt. Lire l'état réel avant d'affirmer.
 - **Dépendance native** → `cd ios && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install`, et LIRE sa sortie.
 - **Migrations** : appliquer par `supabase db query --file … --linked` ou la console, JAMAIS `db push`. Contrôle de dérive : `node scripts/mesurer-migrations.mjs`. `create or replace` rend EXECUTE à PUBLIC : reposer les droits (`revoke … from public, anon`) dans la même migration. Changer une signature = `drop` de l'ancienne.
@@ -133,4 +133,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [L'abonnement est un cumul](docs/notes/103-l-abonnement-est-un-cumul-16-septembre-2026.md)
 - [La page « Découvrir » : ce qu'est Quantinvo](docs/notes/104-la-page-decouvrir-19-septembre-2026.md)
 - [« Pourquoi nous choisir » et « L'inventaire », refondues](docs/notes/105-pourquoi-et-inventaire-refondues-19-septembre-2026.md)
-- [⚠️ Apple refuse le build 5 : plantage au lancement sur iPad](docs/notes/106-apple-refuse-le-build-5-plantage-au-lancement-sur-ipad-22-se.md)
+- [⚠️ Apple refuse le build 5 : `supportsTablet: false` n'épargne pas l'iPad](docs/notes/106-apple-refuse-le-build-5-plantage-au-lancement-sur-ipad-22-se.md)

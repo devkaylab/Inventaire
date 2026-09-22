@@ -144,21 +144,21 @@ redimensionner la ferait refuser.
 Apple ne demande plus que le plus grand appareil de chaque famille et met les
 autres à l'échelle tout seul : d'où un seul jeu iPhone.
 
-⚠️ **LE JEU iPad EST REDEVENU OBLIGATOIRE — 22 septembre 2026.**
-`supportsTablet` était passé à faux le 8 septembre, précisément pour s'épargner
-ces captures, et le dossier `captures-ipad-13/` avait été retiré le
-13 septembre. Apple a refusé la version 1.0 (build 5) le 22 : revue faite sur un
-**iPad Air 11" (M3)**, plantage au lancement. Un `supportsTablet` à faux ne met
-pas l'iPad hors de portée — il y fait seulement tourner l'application dans une
-fenêtre de téléphone, et Apple la teste quand même. La compatibilité a donc été
-**rouverte** (`app.json` + `TARGETED_DEVICE_FAMILY` dans le projet Xcode ;
-`tests/ardoise-app.test.ts` compare les deux).
+⚠️ **IL N'Y A PLUS DE JEU iPad, et ce n'est pas un oubli.** `supportsTablet`
+est passé à **faux** le 8 septembre 2026 : l'application est en portrait et
+pensée pour un téléphone, Apple ne réclame donc plus de captures iPad. Le
+dossier `captures-ipad-13/` a été retiré le 13 septembre. Le remettre suppose
+d'abord de rouvrir la compatibilité iPad dans `app.json`. Décision reconduite
+le 22 septembre 2026.
 
-⚠️ **Conséquence directe : il faut refaire un jeu iPad avant le prochain dépôt.**
-App Store Connect ne demande que le plus grand des iPad — **2048 × 2732**
-(iPad Pro 13", portrait). Cinq visuels, mêmes accroches et même composition que
-le jeu iPhone : les trois jeux ne diffèrent que par la taille, et les refaire
-c'est les refaire tous les trois.
+⚠️ **MAIS CE DRAPEAU NE DISPENSE PAS DE L'iPAD À LA REVUE**, et ça a coûté une
+soumission. Une application iPhone s'installe quand même sur un iPad et y
+tourne dans une fenêtre de téléphone ; rien dans App Store Connect ne permet de
+l'en empêcher. Apple a refusé la version 1.0 (build 5) le 22 septembre —
+`Guideline 2.1(a)`, revue faite sur un **iPad Air 11" (M3)** sous iPadOS 27.0,
+plantage au lancement. Pas de captures iPad à produire, donc, mais
+**l'application doit démarrer sur un iPad avant chaque dépôt** :
+`./scripts/simulateur.sh ipad`.
 
 ⚠️ **Ce ne sont pas des captures brutes, mais des VISUELS DE FICHE** : une
 accroche en deux lignes, un fond plein, et l'écran posé dans un téléphone en
@@ -167,10 +167,9 @@ ouvrir un rayon, suivre l'avancement, arbitrer un écart, sortir le rapport,
 compter à la douchette. Une capture brute est honnête mais muette : sur une
 fiche, la personne défile vite et c'est l'accroche qui dit ce que fait l'app.
 
-⚠️ **Les jeux ne diffèrent QUE par la taille** (1320 × 2868 pour l'iPhone,
-2048 × 2732 pour l'iPad depuis le 22 septembre, 1080 × 2160 pour Google) — même
-composition, mêmes accroches. Les refaire, c'est les refaire tous, sinon les
-fiches cessent de se ressembler.
+⚠️ **Les deux jeux ne diffèrent QUE par la taille** (1320 × 2868 pour Apple,
+1080 × 2160 pour Google) — même composition, mêmes accroches. Les refaire, c'est
+les refaire tous les deux, sinon les deux fiches cessent de se ressembler.
 
 ⚠️ **Le viseur est noir sur la capture du comptage** : un simulateur n'a pas de
 caméra. C'est honnête, mais ça ne vend pas — c'est le seul écran dans ce cas, et
