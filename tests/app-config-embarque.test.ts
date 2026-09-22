@@ -20,6 +20,10 @@
 // ⚠️ **ET CE N'ÉTAIT PAS UN DÉFAUT D'iPAD.** Le build 5 se fermait aussi sur
 // iPhone ; Apple est simplement tombée dessus sur un iPad.
 //
+// ⚠️ **CAUSE POSSIBLE, PAS CAUSE DÉMONTRÉE.** Les archives des builds 2, 3 et
+// 4 manquaient du même fichier. Le défaut est réel et la garde reste bonne,
+// mais il n'explique pas à lui seul le refus du build 5.
+//
 // ⚠️ **CE QUI A LAISSÉ PASSER ÇA, C'EST DU SILENCE**, à deux endroits :
 // une phase Xcode en `if [ -f "$SRC" ]; then cp …; fi` qui ne faisait rien
 // quand la source manquait, et un contrôle d'avant-dépôt qui se contentait
@@ -125,5 +129,24 @@ describe('app.config est embarqué, et son absence se voit', () => {
       path.join(racine, 'node_modules/expo-router/build/link/linking.js'), 'utf8')
     expect(routeur, 'expo-router fabrique bien l’URL racine au démarrage')
       .toContain("Linking.createURL('/')")
+  })
+
+  /**
+   * ⚠️ **LE SDK iOS 27 FABRIQUE UNE APPLICATION QUI PLANTE AU LANCEMENT.**
+   * Il impose le cycle de vie UIScene, qu'Expo 56 n'adopte pas. Mesuré le
+   * 22 septembre 2026 dans les deux sens, sur le même iPad simulé : binaire
+   * SDK 26 → démarre sous iOS 27 ; binaire SDK 27 → plante. Le contrôle porte
+   * sur le SDK de COMPILATION, et Apple ne recompile rien.
+   *
+   * La garde du script LIT la version sur l'outil qui va compiler — elle ne
+   * cite pas un chemin en dur, qui deviendrait faux au prochain Xcode.
+   */
+  it('le script d’archive refuse un SDK iOS qui n’est pas en 26', () => {
+    const script = sansCommentaires(lire('scripts/appstore.sh'))
+    const bloc = script.slice(0, script.indexOf('find-identity'))
+    expect(bloc, 'la version est lue, pas décidée')
+      .toContain('xcodebuild -showsdks')
+    expect(bloc, 'seul un SDK 26 passe').toContain('iphoneos26*')
+    expect(bloc, 'tout le reste est refusé').toMatch(/\*\)[\s\S]*exit 1/)
   })
 })
