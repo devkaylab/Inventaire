@@ -24,6 +24,37 @@ EXPORT="ios/build/export"
 WS="ios/Inventaire.xcworkspace"
 SCHEME="Inventaire"
 
+# ── 0. ⚠️ UN XCODE 26, JAMAIS XCODE 27 ─────────────────────────────────────
+# Le SDK iOS 27 impose le cycle de vie UIScene. Expo 56 ne sait pas le faire :
+# une application compilée avec ce SDK plante au lancement sur iOS 27, AVANT
+# la première ligne de notre code — donc chez l'examinateur d'Apple, et chez
+# tout utilisateur à jour. Mesuré le 22 septembre 2026 dans les deux sens.
+# Apple n'exige que Xcode 26 au minimum : on reste dessus jusqu'à Expo 57.
+# La version n'est pas décidée ici, elle est LUE sur l'outil qui va compiler.
+if [ -z "$DEVELOPER_DIR" ]; then
+  for CANDIDAT in /Applications/Xcode*.app(N); do
+    V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
+          "$CANDIDAT/Contents/Info.plist" 2>/dev/null) || continue
+    case "$V" in 26.*) export DEVELOPER_DIR="$CANDIDAT/Contents/Developer"; break ;; esac
+  done
+fi
+
+SDK=$(xcodebuild -showsdks 2>/dev/null | sed -n 's/.*-sdk \(iphoneos[0-9.]*\).*/\1/p' | head -1)
+case "$SDK" in
+  iphoneos26*)
+    echo "→ $(xcodebuild -version 2>/dev/null | head -1) — SDK $SDK"
+    ;;
+  *)
+    echo "✗ SDK iOS attendu en 26.x, trouvé : ${SDK:-aucun}."
+    echo
+    echo "  Un binaire compilé avec le SDK iOS 27 plante au lancement sur"
+    echo "  iOS 27 : Expo 56 n'adopte pas le cycle de vie UIScene."
+    echo "  Installer un Xcode 26 à côté (developer.apple.com/download/all),"
+    echo "  puis relancer. Voir docs/notes/106-*."
+    exit 1
+    ;;
+esac
+
 # ── 1. Un certificat de DISTRIBUTION, pas de développement ─────────────────
 if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Distribution"; then
   echo "✗ Aucun certificat « Apple Distribution » sur cette machine."
