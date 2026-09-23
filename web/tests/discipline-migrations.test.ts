@@ -180,3 +180,70 @@ describe('le rattrapage n’a rien changé, et ne doit rien changer', () => {
     }
   })
 })
+
+/**
+ * ⚠️⚠️ **UNE TABLE NEUVE PORTE SES DROITS** — Supabase, 30 octobre 2026.
+ *
+ * Jusque-là, Supabase accordait tout seul l'accès de l'API à toute table créée
+ * dans `public`. À partir du 30 octobre, il ne le fait plus : une table créée
+ * sans `grant` reste **injoignable depuis l'application**, avec un
+ * « permission denied ». Les tables déjà en place gardent leurs droits — la
+ * production ne risque rien — mais toute migration écrite désormais doit dire
+ * elle-même qui entre.
+ *
+ * ⚠️ **LES 29 TABLES D'AVANT SONT HORS SUJET**, et cette garde ne les touche
+ * pas : elles existent en production, leurs droits y sont acquis, et les
+ * réécrire ne servirait qu'à risquer une régression. Le seuil est une DATE, pas
+ * une liste de noms — la liste vieillirait, la date non.
+ *
+ * ⚠️ **`grant` N'EST PAS RLS.** Le `grant` ouvre la porte de la table ; RLS
+ * trie les lignes une fois entré. Une table ouverte sans RLS est une table
+ * entièrement lisible. Les deux se posent, toujours.
+ *
+ * Une table qui ne doit PAS être exposée reste possible : elle le dit en SQL,
+ * par un `revoke` explicite. Pas par un commentaire — une garde ne lit pas les
+ * commentaires.
+ */
+describe('une table créée après le 30 octobre 2026 porte ses droits', () => {
+  /** Le jour où la règle est entrée au dépôt. Avant, rien n'est jugé. */
+  const SEUIL = '20260923'
+
+  const neuves = fichiers.filter((f) => f.slice(0, 8) >= SEUIL)
+
+  /** Les tables `public` créées par un fichier, sans ses commentaires. */
+  const tablesCreees = (sql: string) =>
+    [...code(sql).matchAll(/create table\s+(?:if not exists\s+)?(?:public\.)?([a-z0-9_]+)/gi)]
+      .map((m) => m[1].toLowerCase())
+
+  it('⚠️ chaque table neuve est ouverte, ou fermée, mais jamais muette', () => {
+    const muettes: string[] = []
+
+    for (const f of neuves) {
+      const sql = code(readFileSync(path.join(dossierMigrations, f), 'utf8'))
+      for (const table of tablesCreees(sql)) {
+        // Ouverte : un `grant` la rend joignable par l'application.
+        const ouverte = new RegExp(
+          `grant [^;]*\\bon\\s+(?:table\\s+)?(?:public\\.)?${table}\\s+to\\b[^;]*\\bauthenticated\\b`, 'i')
+        // Fermée : un `revoke` dit qu'on l'a voulue hors de l'API.
+        const fermee = new RegExp(
+          `revoke [^;]*\\bon\\s+(?:table\\s+)?(?:public\\.)?${table}\\s+from\\b[^;]*\\bauthenticated\\b`, 'i')
+        if (!ouverte.test(sql) && !fermee.test(sql)) muettes.push(`${f} → ${table}`)
+      }
+    }
+
+    expect(muettes,
+      'ces tables seraient injoignables depuis l’application : ajouter leurs `grant` ' +
+      'dans la migration qui les crée, ou un `revoke` si elles doivent rester hors API')
+      .toEqual([])
+  })
+
+  it('le seuil ne juge que ce qui vient après lui', () => {
+    // ⚠️ La garde doit rester SANS EFFET sur l'existant. Si ce compte tombe à
+    // zéro un jour, c'est que le seuil a été déplacé ou les fichiers renommés —
+    // et la garde ne garderait plus rien sans le dire.
+    const anciennes = fichiers.filter((f) => f.slice(0, 8) < SEUIL)
+    expect(anciennes.length, 'des migrations existent avant le seuil').toBeGreaterThan(0)
+    expect(anciennes.some((f) => tablesCreees(readFileSync(path.join(dossierMigrations, f), 'utf8')).length > 0),
+      'et certaines créent des tables — ce sont celles qu’on laisse tranquilles').toBe(true)
+  })
+})
