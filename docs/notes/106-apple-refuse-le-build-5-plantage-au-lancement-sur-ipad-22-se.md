@@ -272,6 +272,43 @@ Android n'est pas concerné : la production est **en examen chez Google depuis
 le 19 septembre** (versionCode 1) et aucun changement natif ne subsiste dans
 la branche.
 
+## Les rapports de plantage d'Apple, enfin lus — 23 septembre 2026
+
+⚠️ **Toute l'enquête a été menée sans les ouvrir.** La cause avait été déduite
+de l'archive et du code installé ; les trois `.ips` joints au refus sont restés
+sur App Store Connect pendant deux jours. Téléchargés sur une question de
+Julien — « on a bien couvert toutes les erreurs ? » — ils confirment, mais
+c'était une vérification à faire le premier jour.
+
+Les trois sont identiques :
+
+- build 5, **iPhone OS 27.0** dans le rapport alors qu'Apple annonce un iPad
+  Air 11" sous iPadOS 27.0 — cohérent : l'app est iPhone-only et tournait en
+  mode de compatibilité
+- `EXC_CRASH` / `SIGABRT`
+- et surtout la pile de l'exception :
+
+```
+__exceptionPreprocess → objc_exception_throw → RCTGetFatalHandler
+  → -[RCTExceptionsManager reportFatal:stack:exceptionId:extraDataAsJSON:]
+  → -[RCTExceptionsManager reportException:]
+```
+
+C'est **le chemin par lequel React Native transforme une erreur JavaScript non
+rattrapée en plantage fatal**. L'exception Objective-C visible au sommet n'est
+que le véhicule. Autrement dit : le JS a levé au démarrage, et l'application
+s'est arrêtée — exactement le mécanisme décrit plus haut.
+
+⚠️ **CE QUE LES RAPPORTS NE DISENT PAS** : le message de l'erreur JS. Il vit
+dans `extraDataAsJSON`, qui n'est pas dans le `.ips`. Ils établissent donc la
+CLASSE du défaut (erreur JS fatale au démarrage), pas son identité. La chaîne
+qui la nomme reste indirecte : `app.config` mesuré absent de l'archive
+effectivement livrée, `expo-linking` qui lève sans lui, `expo-router` qui
+l'appelle au démarrage — et le build 7 qui démarre.
+
+**Et Apple n'a signalé QUE ça.** Un seul motif, 2.1(a). La remarque sur l'iPad
+en fin de message est une mise en garde générale, pas un second grief.
+
 ## Ce qui reste à faire
 
 1. **Archiver et déposer** : **Xcode-26.6** → Organizer, par Julien.
