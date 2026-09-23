@@ -26,6 +26,9 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     getItem: async (k: string) => asyncStore.get(k) ?? null,
     setItem: async (k: string, v: string) => void asyncStore.set(k, v),
     removeItem: async (k: string) => void asyncStore.delete(k),
+    // ⚠️ Sans `getAllKeys`, le contrôle d'installation neuve LÈVE, son
+    // `catch` l'avale, et tous les tests passent sans rien éprouver.
+    getAllKeys: async () => [...asyncStore.keys()],
   },
 }))
 vi.mock('react-native', () => ({ Platform: { OS: 'ios' } }))
@@ -36,9 +39,16 @@ const CLE = 'sb-heabesqvlinzarqenymj-auth-token'
 /** Une session Supabase réelle pèse plusieurs kilo-octets. */
 const session = (n: number) => JSON.stringify({ access_token: 'x'.repeat(n), user: { id: 'u1' } })
 
+const MARQUE = 'quantinvo.installation'
+
 beforeEach(() => {
   trousseau.clear()
   asyncStore.clear()
+  // ⚠️ Sans cette marque, chaque test décrirait une installation NEUVE et la
+  // session serait effacée à la première lecture. Les tests ci-dessous
+  // parlent d'une application déjà installée ; ceux de la réinstallation
+  // s'en occupent à part.
+  asyncStore.set(MARQUE, '1')
 })
 
 describe('le jeton de session dans le trousseau', () => {
@@ -138,5 +148,62 @@ describe('⚠️ un module natif absent ne donne pas un écran blanc', () => {
 
     trousseauPresent = true
     alerte.mockRestore()
+  })
+})
+
+/**
+ * ⚠️⚠️ **SUPPRIMER L'APPLICATION DOIT DÉCONNECTER.**
+ *
+ * Le trousseau d'iOS survit à la suppression de l'app : Julien a réinstallé
+ * depuis TestFlight le 22 septembre 2026 et s'est retrouvé connecté, sans mot
+ * de passe. Sur un téléphone d'équipe, ce n'est pas acceptable.
+ *
+ * Le piège est dans la détection : au premier lancement qui suit une MISE À
+ * JOUR, la marque d'installation n'existe pas non plus. S'en contenter
+ * déconnecterait tout le monde ce jour-là. D'où le second critère — le
+ * stockage ordinaire entièrement vide.
+ */
+describe('supprimer l’application déconnecte', () => {
+  /** Le module retient son verdict : on repart d'une page blanche à chaque fois. */
+  async function demarrer() {
+    vi.resetModules()
+    return (await import('@/lib/sessionStore')).sessionStore
+  }
+
+  it('⚠️ une installation neuve n’hérite pas de la session restée au trousseau', async () => {
+    // Ce que laisse une désinstallation : le trousseau plein, le reste vide.
+    trousseau.set(CLE, '1')
+    trousseau.set(`${CLE}__0`, session(50))
+    asyncStore.clear()
+
+    const store = await demarrer()
+    expect(await store.getItem(CLE), 'la session d’avant ne ressort pas').toBeNull()
+    expect(trousseau.size, 'et elle est effacée, pas seulement masquée').toBe(0)
+  })
+
+  it('⚠️ mais une simple MISE À JOUR ne déconnecte personne', async () => {
+    const v = session(50)
+    trousseau.set(CLE, '1')
+    trousseau.set(`${CLE}__0`, v)
+    // Pas encore de marque — cette version vient d'arriver — mais le stockage
+    // ordinaire porte les traces de l'usage précédent.
+    asyncStore.clear()
+    asyncStore.set('quantinvo.langue', 'fr')
+
+    const store = await demarrer()
+    expect(await store.getItem(CLE), 'la session tient').toBe(v)
+    expect(asyncStore.get(MARQUE), 'et la marque est posée pour la suite').toBeDefined()
+  })
+
+  it('le contrôle ne se fait qu’une fois, pas à chaque lecture', async () => {
+    const v = session(50)
+    asyncStore.set(MARQUE, '1')
+    const store = await demarrer()
+    await store.setItem(CLE, v)
+    expect(await store.getItem(CLE)).toBe(v)
+    // Le stockage ordinaire se vide en cours de route (déconnexion, purge des
+    // caches) : la lecture suivante ne doit pas conclure « installation neuve ».
+    asyncStore.clear()
+    expect(await store.getItem(CLE), 'toujours là').toBe(v)
   })
 })
