@@ -2348,7 +2348,15 @@ describe('le tour de l’application, côté compteur', () => {
     // « Corriger » ne s'ouvre pas par-dessus un volet en cours, et « trois
     // façons de scanner » attend que celui de la balise soit refermé.
     expect(scan).toMatch(/!voletRef\.current\) setVolet\(\{ genre: 'corriger' \}\)/)
-    expect(scan).toMatch(/if \(balisePhase \|\| volet !== null \|\| !repereModes\.aVoir\) return/)
+    // ⚠️ La condition ÉNUMÈRE ce qui occupe déjà l'écran : on vérifie qu'elle
+    // commence bien par un retour anticipé, sans figer sa liste — elle s'est
+    // allongée le 22 septembre 2026 et elle s'allongera encore.
+    expect(scan).toMatch(/if \(balisePhase \|\| volet !== null \|\|[^)]*\) return/)
+    // ⚠️ **ET LA FICHE « ARTICLE INCONNU » EN FAIT PARTIE**, depuis le premier
+    // essai TestFlight : le volet d'aide ouvert par-dessus elle la rendait
+    // impossible à fermer, et l'écran ne répondait plus. Voir
+    // tests/un-seul-modal-au-scan.test.ts.
+    expect(scan).toMatch(/illisibleCode !== null \|\| !repereModes\.aVoir\) return/)
   })
 
   it('⚠️ sur l’écran de comptage, un repère RECOUVRE — il ne pousse pas', () => {
