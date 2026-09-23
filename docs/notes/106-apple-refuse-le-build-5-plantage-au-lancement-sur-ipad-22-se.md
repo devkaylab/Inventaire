@@ -303,16 +303,27 @@ interne restait en **« Aucun build disponible »**, aucune invitation n'arrivai
 et TestFlight sur l'iPhone n'affichait que l'écran « Redeem » — alors que le
 groupe montrait bien le build « En cours de test ».
 
-Deux gestes ont été faits coup sur coup : le testeur a été **retiré du groupe
-puis remis**, et le champ **« Éléments à tester »** du build (TestFlight → le
-build → Détails des tests) a été rempli. L'invitation est partie ensuite.
+Ce qui a débloqué : écrire un commentaire dans **« Éléments à tester »** sur le
+build (TestFlight → le build → Détails des tests). L'invitation est partie
+aussitôt.
 
-⚠️ **LEQUEL A AGI N'EST PAS ÉTABLI**, et la première rédaction de cette fiche
-l'affirmait à tort. Le **build 7 a distribué son invitation avec « Éléments à
-tester » VIDE** : le champ n'est donc pas le mécanisme. Le re-ajout du testeur
-est l'explication la plus probable — il recrée la fiche testeur, que le groupe
-affichait encore en « Aucun build disponible » alors qu'il montrait le build
-« En cours de test ».
+⚠️ **ET CE N'EST NÉCESSAIRE QU'À LA PREMIÈRE FOIS.** Les trois mesures :
 
-À faire quand un testeur ne voit pas un build : les deux, en commençant par le
-re-ajout. Et ne pas chercher du côté de l'Apple ID — une heure y a été perdue.
+| | « Éléments à tester » | invitation |
+|---|---|---|
+| Build 6, avant | vide | aucune |
+| Build 6, après le commentaire | 32 caractères | partie aussitôt |
+| Build 7 | vide | partie quand même |
+
+Le testeur avait aussi été retiré du groupe puis remis, peu avant — ce qui n'a
+pas suffi à lui seul.
+
+⚠️ **CETTE FICHE A ÉTÉ ÉCRITE DE TRAVERS DEUX FOIS DE SUITE.** D'abord « il
+faut remplir le champ », sans contre-épreuve. Puis, en voyant le build 7 partir
+avec le champ vide, « c'est le re-ajout du testeur » — en oubliant que le
+re-ajout, lui, n'avait rien débloqué. C'est Julien qui a proposé la lecture qui
+tient les trois lignes. Un compteur qui bouge après un geste ne dit pas que
+c'est ce geste, et un compteur qui ne bouge plus ne dit pas que le geste était
+inutile : il faut la troisième mesure.
+
+Et ne pas chercher du côté de l'Apple ID — une heure y a été perdue.
