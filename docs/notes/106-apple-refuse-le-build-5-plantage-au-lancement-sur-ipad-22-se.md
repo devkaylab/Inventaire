@@ -295,3 +295,17 @@ embarqué).
 **Donc : aucun build ne part en revue sans avoir été ouvert une fois depuis
 TestFlight sur un vrai appareil.** Pas un parcours complet — juste l'ouvrir.
 Un quart d'heure, contre une semaine de refus.
+
+### ⚠️ Et TestFlight ne distribue rien tant que « Détails des tests » est vide
+
+Une heure perdue le 22 septembre à chercher du côté de l'Apple ID. Le testeur
+interne restait en **« Aucun build disponible »**, aucune invitation n'arrivait,
+et TestFlight sur l'iPhone n'affichait que l'écran « Redeem » — alors que le
+groupe montrait bien le build « En cours de test ».
+
+La cause : le champ **« Éléments à tester »** du build (TestFlight → le build →
+Détails des tests) était vide. Une fois un commentaire saisi, l'invitation est
+partie et l'app est apparue.
+
+Rien dans l'interface ne le dit. À vérifier EN PREMIER quand un testeur ne voit
+pas un build.
