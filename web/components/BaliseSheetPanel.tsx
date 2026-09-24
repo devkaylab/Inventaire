@@ -54,7 +54,7 @@ export function BaliseSheetPanel({ context, onRetour, onAffecter }: Props) {
     setBusy(true)
     try {
       const filename = await downloadBaliseSheet(r.series.codes, r.series.from, r.series.to)
-      setDone(t('Planche téléchargée : %{fichier}. Imprimez-la à 100 % (taille réelle) sur des planches Avery L7160.', { fichier: filename }))
+      setDone(t('Planche téléchargée : %{fichier}. Imprimez-la à 100 % (taille réelle) sur des planches A4 de 80 étiquettes 35,6 × 16,9 mm.', { fichier: filename }))
     } catch {
       setError(t('La planche n’a pas pu être générée. Réessayez, ou créez-la depuis l’application.'))
     } finally {
@@ -78,7 +78,7 @@ export function BaliseSheetPanel({ context, onRetour, onAffecter }: Props) {
 
       <ol className="balise-steps">
         <li>
-          <strong>{t('Imprimez')}</strong> {t('la planche ci-dessous sur des feuilles d’étiquettes autocollantes Avery L7160 (21 par page), à 100 % — sans « ajuster à la page ».')}
+          <strong>{t('Imprimez')}</strong> {t('la planche ci-dessous sur des feuilles d’étiquettes A4 de 80 étiquettes 35,6 × 16,9 mm (Avery L4732, Herma 4336, ou tout équivalent), à 100 % — sans « ajuster à la page ».')}
         </li>
         <li>
           <strong>{t('Collez')}</strong> {t('les balises dans le magasin, dans l’ordre des numéros : c’est plus simple à retrouver ensuite (par exemple 1 à 10 dans la réserve, 11 à 30 en surface de vente).')}
