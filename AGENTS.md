@@ -134,3 +134,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [La page « Découvrir » : ce qu'est Quantinvo](docs/notes/104-la-page-decouvrir-19-septembre-2026.md)
 - [« Pourquoi nous choisir » et « L'inventaire », refondues](docs/notes/105-pourquoi-et-inventaire-refondues-19-septembre-2026.md)
 - [⚠️ Apple refuse le build 5 : `supportsTablet: false` n'épargne pas l'iPad](docs/notes/106-apple-refuse-le-build-5-plantage-au-lancement-sur-ipad-22-se.md)
+- [La balise rétrécit, et le dessin devient unique](docs/notes/107-la-balise-retrecit-et-le-dessin-devient-unique-24-septembre-2026.md)

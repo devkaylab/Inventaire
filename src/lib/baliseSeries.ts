@@ -6,8 +6,9 @@
 // imprime la planche. Les numéros n'ont aucun sens côté serveur tant qu'ils ne
 // sont pas affectés à un emplacement dans un inventaire (define_zone, par plage).
 //
-// Module volontairement sans dépendance native : testé en Node (tests/).
-// Dupliqué dans web/lib/baliseSeries.ts : garder les deux identiques.
+// ⚠️⚠️ **CE FICHIER EXISTE EN DEUX EXEMPLAIRES IDENTIQUES**, `src/lib/` pour
+// l'app et `web/lib/` pour le site. Module sans dépendance native, donc testé
+// en Node des deux côtés. `web/tests/balises.test.ts` compare les deux textes.
 
 export type BaliseFormat = 'simple' | 'four' | 'five'
 
@@ -30,7 +31,7 @@ export const BALISE_FORMATS: BaliseFormatInfo[] = [
   { id: 'five', label: '5 chiffres', example: '10000, 10001…', defaultStart: 10000, min: 10000, max: 99999 },
 ]
 
-/** Nombre maximal de balises par planche générée (≈ 48 pages A4 de 21 étiquettes). */
+/** Nombre maximal de balises par planche générée (≈ 13 pages A4 de 80 étiquettes). */
 export const MAX_BALISES_PER_SHEET = 1000
 
 export function baliseFormat(id: BaliseFormat): BaliseFormatInfo {
