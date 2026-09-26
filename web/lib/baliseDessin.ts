@@ -152,7 +152,10 @@ export async function dessinerPlanche(codes: string[]): Promise<PDFDocument> {
     p.drawRectangle({ x: X(colonneX), y: Y(y + c.filet), width: pt(7), height: pt(c.filet), color: ACCENT })
     y += c.filet + 0.75
 
-    for (const [mot, teinte] of [['COMPTÉ', ACCENT], ['AUDITÉ', OCRE]] as const) {
+    // ⚠️ AU FÉMININ : le sujet est LA BALISE. Le masculin « Compté » est
+    // réservé aux quantités (colonne `counted_qty` du rapport). Partout où
+    // le produit parle de balises, il dit « Comptées » et « Auditées ».
+    for (const [mot, teinte] of [['COMPTÉE', ACCENT], ['AUDITÉE', OCRE]] as const) {
       p.drawRectangle({
         x: X(colonneX), y: Y(y + c.boite),
         width: pt(c.boite), height: pt(c.boite),
