@@ -148,7 +148,17 @@ autres à l'échelle tout seul : d'où un seul jeu iPhone.
 est passé à **faux** le 8 septembre 2026 : l'application est en portrait et
 pensée pour un téléphone, Apple ne réclame donc plus de captures iPad. Le
 dossier `captures-ipad-13/` a été retiré le 13 septembre. Le remettre suppose
-d'abord de rouvrir la compatibilité iPad dans `app.json`.
+d'abord de rouvrir la compatibilité iPad dans `app.json`. Décision reconduite
+le 22 septembre 2026.
+
+⚠️ **MAIS CE DRAPEAU NE DISPENSE PAS DE L'iPAD À LA REVUE**, et ça a coûté une
+soumission. Une application iPhone s'installe quand même sur un iPad et y
+tourne dans une fenêtre de téléphone ; rien dans App Store Connect ne permet de
+l'en empêcher. Apple a refusé la version 1.0 (build 5) le 22 septembre —
+`Guideline 2.1(a)`, revue faite sur un **iPad Air 11" (M3)** sous iPadOS 27.0,
+plantage au lancement. Pas de captures iPad à produire, donc, mais
+**l'application doit démarrer sur un iPad avant chaque dépôt** :
+`./scripts/simulateur.sh ipad`.
 
 ⚠️ **Ce ne sont pas des captures brutes, mais des VISUELS DE FICHE** : une
 accroche en deux lignes, un fond plein, et l'écran posé dans un téléphone en

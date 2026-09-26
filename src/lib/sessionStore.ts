@@ -102,8 +102,48 @@ async function effacerMorceaux(cle: string, jusqua: number): Promise<void> {
   for (let i = 0; i < jusqua; i++) await SecureStore.deleteItemAsync(morceau(cle, i))
 }
 
+/**
+ * ⚠️⚠️ **LE TROUSSEAU SURVIT À LA SUPPRESSION DE L'APPLICATION.** C'est une
+ * règle d'iOS, pas un défaut : le Keychain n'est pas dans le bac à sable de
+ * l'app. Supprimer Quantinvo puis la réinstaller rendait donc la personne
+ * connectée, sans mot de passe. Vu par Julien le 22 septembre 2026, au premier
+ * essai TestFlight : il arrivait directement dans l'application.
+ *
+ * Sur un téléphone d'équipe, ce n'est pas ce qu'on veut : **supprimer l'app
+ * doit déconnecter.** On le détecte par ce qui, lui, part bien avec l'app —
+ * `AsyncStorage`.
+ *
+ * ⚠️ **ET SURTOUT PAS PAR LA SEULE ABSENCE DE LA MARQUE.** Au premier
+ * lancement qui suit une MISE À JOUR, la marque n'existe pas non plus : s'en
+ * contenter déconnecterait tout le monde ce jour-là — un matin d'inventaire,
+ * ça coûte plus cher que le défaut qu'on ferme. On regarde donc si le stockage
+ * ordinaire est ENTIÈREMENT vide, ce qui n'arrive qu'à une installation neuve.
+ */
+const CLE_INSTALLATION = 'quantinvo.installation'
+
+let installationVerifiee: Promise<void> | null = null
+
+async function oublierSessionSiInstallationNeuve(cle: string): Promise<void> {
+  if (surLeWeb) return
+  try {
+    if (await AsyncStorage.getItem(CLE_INSTALLATION)) return
+    const cles = await AsyncStorage.getAllKeys()
+    if (cles.length === 0) await sessionStore.removeItem(cle)
+    await AsyncStorage.setItem(CLE_INSTALLATION, String(Date.now()))
+  } catch {
+    // Une session qu'on n'a pas su effacer vaut mieux qu'une application qui
+    // ne monte pas : ce fichier est chargé par la racine. Même raison que
+    // `trousseauDispo`.
+  }
+}
+
 export const sessionStore = {
   async getItem(cle: string): Promise<string | null> {
+    // Avant toute lecture, et une seule fois : la session d'avant la
+    // suppression ne doit pas ressortir.
+    installationVerifiee ??= oublierSessionSiInstallationNeuve(cle)
+    await installationVerifiee
+
     if (await horsTrousseau(cle)) return AsyncStorage.getItem(cle)
 
     const n = await lireNombre(cle)
