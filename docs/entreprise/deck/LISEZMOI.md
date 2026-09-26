@@ -11,12 +11,13 @@ inventé ni répétition, et **sans signe ni mot coupé en début de ligne**.
 | `build-commercial.js` | `Quantinvo-commercial.pptx` | Direction, contrôle de gestion, achats : l'inventaire et la loi, les problèmes, les solutions, pourquoi nous, les prix | 15 |
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Administrateur, superviseurs, compteurs : un premier inventaire, geste par geste, site et application | 28 |
 | `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, accès, réseau, appareils, données, sécurité, ce qu'il faut prévoir | 17 |
+| `build-presentation.js` | `Quantinvo-presentation.pptx` | Présentation du 2 octobre 2026, 25 minutes puis démonstration — **le texte est celui de Julien, mot pour mot** | 18 |
 
 Générer et contrôler, depuis ce dossier :
 
 ```
-for f in build-commercial.js build-prise-en-main.js build-dsi.js; do node $f && FONT_MODE=brand node $f; done
-node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx Quantinvo-prise-en-main.pptx Quantinvo-prise-en-main-marque.pptx Quantinvo-dossier-DSI.pptx Quantinvo-dossier-DSI-marque.pptx
+for f in build-commercial.js build-prise-en-main.js build-dsi.js build-presentation.js; do node $f && FONT_MODE=brand node $f; done
+node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx Quantinvo-prise-en-main.pptx Quantinvo-prise-en-main-marque.pptx Quantinvo-dossier-DSI.pptx Quantinvo-dossier-DSI-marque.pptx Quantinvo-presentation.pptx Quantinvo-presentation-marque.pptx
 ```
 
 - **`charte.js` pose la typographie française partout** (`typo()`) : espace
@@ -32,6 +33,18 @@ node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx
 - **Captures du site** : `../captures-site/2026-09-19-rayon-textile/` (compte
   de démo réel), jamais `web/screenshots/` (faux compte de test).
 - **L'écart vaut compté − théorique**, le signe du rapport.
+
+⚠️ **`captures/boite-a-outils.png` EST PÉRIMÉE** depuis le 24 septembre 2026 :
+elle affiche « Avery L7160 », alors que la planche a changé de format
+(35,6 × 16,9 mm, 80 par feuille — fiche 107) et que l'application dit
+maintenant le format sans nommer une seule marque. `build-presentation.js`
+l'écarte et montre `creer-balises.png`, qui porte le même en-tête sans
+afficher de référence. **À reprendre à la prochaine passe de captures**, avec
+`creer-balises` et `zones` qui en dépendent.
+
+`captures/planche-balises.png` n'est PAS une capture d'écran : ce sont six
+balises telles qu'elles sortent du générateur, rendues depuis le PDF réel le
+26 septembre 2026. À refaire si le dessin change (`src/lib/baliseDessin.ts`).
 
 Les six anciens scripts (`build.js`, `build-court.js`, `build-tarifs.js`,
 `build-samaritaine.js`, `build-histoire.js`, `build-pourquoi.js`) ont été
