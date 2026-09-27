@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { LIENS_PUBLICS } from '../lib/navigation'
+import { APP_STORE_URL, noteBoutiques, PLAY_STORE_URL, PUBLIEE_ANDROID, PUBLIEE_IOS } from '../lib/appStores'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const shell = lire('../components/AppShell.tsx')
@@ -383,14 +384,49 @@ describe('les boutons des boutiques d’applications', () => {
     expect(badges).not.toMatch(/https:\/\/(apps\.apple|play\.google)/)
   })
 
-  it('disent la vérité tant que l’application n’est pas publiée', () => {
-    // Tant que PUBLIEE vaut faux, les liens ouvrent la recherche de chaque
-    // boutique — jamais une fiche qui n'existe pas — et l'écran l'annonce.
-    expect(stores).toContain('export const PUBLIEE')
-    if (/export const PUBLIEE = false/.test(stores)) {
-      expect(stores).toContain('search?term=')
-      expect(stores).toContain('store/search?q=')
-      expect(badges).toContain('arrive bientôt')
+  /**
+   * ⚠️⚠️ **CETTE GARDE A CESSÉ DE MORDRE SANS RIEN DIRE**, le 27 septembre
+   * 2026. Elle lisait `export const PUBLIEE` et n'entrait dans ses
+   * vérifications que si elle trouvait `export const PUBLIEE = false`. Le jour
+   * où le drapeau a été dédoublé, `PUBLIEE_IOS` a continué de contenir la
+   * sous-chaîne `export const PUBLIEE` — elle est restée verte — mais plus
+   * rien n'était vérifié : ni les adresses, ni la phrase. Une garde qui
+   * s'éteint en silence est pire qu'une garde absente.
+   *
+   * Celle-ci LIT LES DEUX DRAPEAUX et en déduit ce qu'elle exige.
+   */
+  it('chaque adresse suit le drapeau de SA boutique', () => {
+    // ⚠️ **ON LIT LA VALEUR, PAS LE FICHIER.** Première version de cette
+    // garde : `expect(stores).toContain(ios ? 'app/quantinvo/id' : 'search')`.
+    // Elle ne mordait pas — les DEUX adresses figurent dans le ternaire du
+    // fichier, donc la chaîne cherchée s'y trouvait quel que soit le drapeau.
+    // Trouvé en la sabotant, pas en la relisant.
+    expect(APP_STORE_URL, 'l’adresse App Store ne suit pas PUBLIEE_IOS')
+      .toMatch(PUBLIEE_IOS ? /apps\.apple\.com\/fr\/app\/quantinvo\/id\d+$/ : /\/search\?term=/)
+    expect(PLAY_STORE_URL, 'l’adresse Play ne suit pas PUBLIEE_ANDROID')
+      .toMatch(PUBLIEE_ANDROID ? /store\/apps\/details\?id=/ : /store\/search\?q=/)
+    // Un drapeau unique rendait le cas d'aujourd'hui inexprimable : l'App
+    // Store en ligne le 27 septembre, Google Play encore en examen.
+    expect(stores, 'un `PUBLIEE` seul ne dit pas de quelle boutique on parle')
+      .not.toMatch(/export const PUBLIEE\s*=/)
+  })
+
+  it('la phrase dit exactement ce qui manque, dans les quatre cas', () => {
+    // La règle est une fonction pure : on l'exerce, on ne la relit pas.
+    expect(noteBoutiques(true, true), 'tout est en ligne : plus de phrase').toBeNull()
+    expect(noteBoutiques(false, false)).toBe('deux')
+    expect(noteBoutiques(true, false), 'iOS ouvert, Play en examen').toBe('play')
+    expect(noteBoutiques(false, true)).toBe('apple')
+    // Et le composant s'en sert au lieu de refaire le raisonnement.
+    expect(badges).toContain('noteBoutiques(PUBLIEE_IOS, PUBLIEE_ANDROID)')
+  })
+
+  it('les trois phrases sont écrites en toutes lettres', () => {
+    // ⚠️ La garde d'i18n LIT le fichier, elle ne l'exécute pas : un
+    // `t(variable)` lui échapperait et la traduction anglaise manquerait sans
+    // que rien ne le dise. Les trois restent donc littérales.
+    for (const phrase of ['les deux boutiques', 'bientôt sur Google Play', 'bientôt sur l’App Store']) {
+      expect(badges, `« ${phrase} » doit rester dans un t('…') littéral`).toContain(phrase)
     }
   })
 
