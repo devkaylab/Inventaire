@@ -16,10 +16,11 @@ import { ModelesPanel } from '@/components/ModelesPanel'
 import Link from 'next/link'
 import { Chargement } from '@/components/Chargement'
 import { useTraduction } from '@/lib/i18n'
+import { StoreBadges } from '@/components/StoreBadges'
 
 export default function OutilsPage() {
   const guard = useAuthGuard('supervisor')
-  const { t } = useTraduction()
+  const { t, langue } = useTraduction()
   const [company, setCompany] = useState<Company | null>(null)
 
   const charger = useCallback(async () => {
@@ -52,6 +53,16 @@ export default function OutilsPage() {
         </p>
         <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
           <Link href="/outils/prise-en-main" className="btn btn-sm">{t('Ouvrir le guide')}</Link>
+        </div>
+        {/* ⚠️ C'EST LE SUPERVISEUR QUI INSTALLE SON ÉQUIPE. Il prépare
+            l'inventaire depuis son ordinateur, puis doit dire à ses compteurs
+            où prendre l'application — la boîte à outils est l'endroit où il
+            cherche déjà ce qui se prépare à l'avance. Les boutons sont les
+            mêmes que sur le site public : `StoreBadges` est seul à savoir
+            quelle boutique est ouverte. */}
+        <div className="outils-boutiques">
+          <span className="outils-boutiques-titre">{t('Où la télécharger')}</span>
+          <StoreBadges langue={langue} />
         </div>
       </div>
     </AppShell>

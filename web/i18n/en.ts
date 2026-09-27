@@ -842,6 +842,8 @@ export const en: Dictionnaire = {
   "Lun": "Mon",
   "l’adresse de contact figurant dans nos mentions légales": "the contact address in our legal notice",
   "L’appareil en trop ne peut pas commencer à compter : il attend qu’un collègue termine, et son écran se débloque tout seul dès qu’une place se libère. Personne n’est jamais interrompu en plein comptage — un appareil qui compte garde sa place jusqu’au bout. Si le cas se répète, l’administrateur élargit l’offre depuis le site : c’est immédiat, et le magasin en profite dans la minute.": "The extra device cannot start counting: it waits for a colleague to finish, and its screen unlocks on its own as soon as a seat frees up. Nobody is ever interrupted mid-count — a device that is counting keeps its seat to the end. If it keeps happening, the administrator upgrades the plan from the website: it is immediate, and the store benefits within the minute.",
+  "L’application": "The app",
+  "Où la télécharger": "Where to get it",
   "l’App Store": "the App Store",
   "L’application arrive bientôt sur les deux boutiques. En attendant, ces liens ouvrent la recherche.": "The app is coming soon to both stores. Until then, these links open a search.",
   "L’application arrive bientôt sur Google Play. En attendant, ce lien ouvre la recherche.": "The app is coming soon to Google Play. For now, that link opens a search.",

@@ -10,6 +10,7 @@ import { PRIVACY_URL } from '@/lib/links'
 import { mentionsCompletes } from '@/lib/legal'
 import { LangueToggle } from '@/components/LangueToggle'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { StoreBadges } from '@/components/StoreBadges'
 import { RedirectionLangue } from '@/components/RedirectionLangue'
 import { traduction, type Langue } from '@/lib/traduction'
 
@@ -72,6 +73,12 @@ export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
   return (
     <footer className="site-footer">
       <div className="container inner">
+        {/* ⚠️ LE PIED EST PASSÉ EN DEUX BLOCS le 27 septembre 2026, jour de la
+            publication sur l'App Store. Il était une rangée unique en
+            espace-entre ; les boutiques y auraient été un cinquième objet
+            parmi les liens, au même poids qu'une mention légale. Elles
+            tiennent leur colonne, à droite, et le site garde la sienne. */}
+        <div className="pied-site">
         <div className="brand"><Logo size={24} /><span>Quantinvo</span></div>
         <div className="links">
           {/* Même ordre que la barre (lib/navigation.ts). */}
@@ -90,11 +97,20 @@ export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
             chercher quand on ne les a pas vus en haut, et c'est la seule place
             possible pour le thème — la barre du haut porte déjà l'action
             commerciale, elle ne doit pas devenir un tableau de bord. */}
-        <div className="pied-reglages">
-          <LangueToggle place="pose" />
-          <ThemeToggle place="pose" />
+        <div className="pied-bas">
+          <div className="pied-reglages">
+            <LangueToggle place="pose" />
+            <ThemeToggle place="pose" />
+          </div>
+          <span className="muted">© 2026 Devkaylab · Quantinvo</span>
         </div>
-        <span className="muted">© 2026 Devkaylab · Quantinvo</span>
+        </div>
+        {/* Les boutons vivent dans `StoreBadges` : un seul endroit sait quelle
+            boutique est ouverte, et ce qu'il faut dire de l'autre. */}
+        <div className="pied-boutiques">
+          <span className="pied-boutiques-titre">{t('L’application')}</span>
+          <StoreBadges langue={langue} />
+        </div>
       </div>
     </footer>
   )
