@@ -28,9 +28,10 @@
 // ⚠️ L'ACCENT VERT SERT UNE SEULE FOIS : le grand chiffre de la page 26. Les
 // pastilles de la page 3 sont en encre, les lieux des rôles (page 2) en gris.
 //
-// ⚠️ Les applications ne sont pas encore sur les boutiques
-// (web/lib/appStores.ts, PUBLIEE) : le guide dit « installe l'application »,
-// jamais « disponible sur l'App Store ».
+// ⚠️ Une seule boutique a ouvert : App Store le 27 septembre 2026, Google
+// Play examine encore (web/lib/appStores.ts, PUBLIEE_IOS / PUBLIEE_ANDROID).
+// Le guide dit donc « installe l'application » — une phrase vraie des deux
+// côtés — et ne nomme aucune boutique. À revoir quand Play ouvrira.
 
 const { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, typo } = require('./charte')
 
