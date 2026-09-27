@@ -208,7 +208,14 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
   it('la porte est en CSS, sur la seule coquille', () => {
     // En CSS et non en mesure JavaScript : pas de bascule visible au
     // chargement, et le rendu serveur reste le même.
-    const bloc = css.split('@media (max-width: 719px)')[1]?.split('\n}')[0] ?? ''
+    // ⚠️ **L'ACCOLADE COMPTE.** Le découpage se faisait sur
+    // `'@media (max-width: 719px)'` tout court : le 27 septembre 2026, un
+    // commentaire ajouté plus haut dans la feuille CITAIT ce seuil pour
+    // expliquer d'où venaient des styles, et la garde a découpé dans le
+    // commentaire. Elle est tombée sur un code parfaitement sain. Une garde
+    // qui vise du texte doit viser ce qui OUVRE un bloc, jamais ce qui en
+    // parle.
+    const bloc = css.split('@media (max-width: 719px) {')[1]?.split('\n}')[0] ?? ''
     expect(bloc, 'le rail et le contenu sont masqués sous 720 px').toContain('.app-rail, .app-main, .dash { display: none; }')
     expect(css).toContain('.ordinateur-requis { display: none; }')
   })
@@ -375,6 +382,31 @@ describe('les boutons des boutiques d’applications', () => {
     // Et rien ne renvoie vers le web : un compteur y trouverait « Mon compte »,
     // que l'espace connecté referme sous 720 px.
     expect(bienvenue).not.toContain('Continuer sur le web')
+  })
+
+  /**
+   * ⚠️ **LE PIED EST LE SEUL ENDROIT QUI COUVRE TOUTE LA VITRINE.** Demande de
+   * Julien le 27 septembre 2026, jour de la publication : « sur toutes les
+   * pages ». La garde vise donc `SiteChrome`, pas une liste de pages — une
+   * page publique ajoutée demain porte les badges sans que personne n'y pense.
+   */
+  it('figurent au pied de toutes les pages publiques', () => {
+    const chrome = lire('../components/SiteChrome.tsx')
+    expect(chrome, 'le pied commun doit porter les badges').toContain('<StoreBadges langue={langue} />')
+    // Ils tiennent leur propre colonne : mêlés aux liens du pied, ils
+    // auraient le poids d'une mention légale.
+    expect(chrome).toContain('pied-boutiques')
+  })
+
+  /**
+   * ⚠️ **ET DANS LA BOÎTE À OUTILS**, côté connecté : c'est le superviseur qui
+   * installe son équipe. Il prépare l'inventaire depuis son ordinateur, puis
+   * doit dire à ses compteurs où prendre l'application.
+   */
+  it('figurent dans la boîte à outils du superviseur', () => {
+    const outils = lire('../app/outils/page.tsx')
+    expect(outils).toContain('<StoreBadges langue={langue} />')
+    expect(outils, 'sous la prise en main, pas ailleurs').toMatch(/Prise en main[\s\S]*outils-boutiques/)
   })
 
   it('les adresses ne vivent qu’à un seul endroit', () => {
