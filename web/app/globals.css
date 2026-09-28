@@ -237,8 +237,22 @@ a { color: inherit; text-decoration: none; }
   opacity: 0;
   transform: translateY(10px);
 }
+/* ⚠️ DEUX CLASSES, PARCE QU'IL Y A DEUX FAÇONS D'ÉCHANGER. `.echange` sert
+   quand les deux contenus RESTENT MONTÉS et qu'on bascule `display` — c'est le
+   cas d'un sélecteur dont on ne veut pas recharger les images. `.echange-entre`
+   sert quand React démonte l'ancien et monte le nouveau : il n'y a alors rien
+   à faire sortir, et une animation d'entrée suffit.
+   ⚠️ Elle ne rejoue que si l'élément est REMONTÉ : poser un `key` qui change
+   sur le conteneur est ce qui déclenche l'animation, sinon React réutilise le
+   nœud et rien ne se passe. */
+.echange-entre { animation: echange-monte .26s cubic-bezier(0.33, 1, 0.68, 1) both; }
+@keyframes echange-monte {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .echange { transition: none; }
+  .echange-entre { animation: none; }
   @starting-style { .echange { opacity: 1; transform: none; } }
 }
 
