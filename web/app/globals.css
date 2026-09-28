@@ -4961,6 +4961,43 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .ald-tete p { margin-top: 14px; font-size: 17px; line-height: 1.55; color: var(--text-2); }
 
 .ald-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: stretch; }
+/* ── Le tunnel On-Demand : le compteur d'appareils ──────────
+   ⚠️ CES CLASSES ONT ÉTÉ ÉCRITES DANS LE TSX AVANT D'EXISTER ICI, le
+   28 septembre 2026 : le compteur s'affichait « −1+ », trois caractères collés,
+   parce que `.res-compteur` n'avait aucun style. Rien ne l'avait signalé — ni
+   tsc, ni les 1546 tests, ni la build. Une classe inventée ne fait pas d'erreur,
+   elle fait une page moche. */
+.res-compteur { display: flex; align-items: center; margin-top: 12px; width: max-content; }
+.res-compteur button {
+  width: 48px; height: 54px; background: var(--surface);
+  border: 1px solid var(--hairline); color: var(--text);
+  font-size: 20px; cursor: pointer; font-family: inherit;
+  transition: background .18s ease, border-color .18s ease;
+}
+.res-compteur button:first-child { border-radius: var(--r) 0 0 var(--r); }
+.res-compteur button:last-child { border-radius: 0 var(--r) var(--r) 0; }
+.res-compteur button:hover { border-color: var(--border-strong); }
+.res-compteur output {
+  width: 82px; height: 54px; display: grid; place-items: center;
+  background: var(--bg); border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 23px; font-weight: 700;
+}
+.res-aide { margin-top: 12px; max-width: 52ch; line-height: 1.55; }
+.res-raccourcis { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.res-raccourci {
+  min-width: 46px; padding: 8px 16px; border-radius: var(--r-pastille);
+  border: 1px solid var(--hairline); background: var(--surface);
+  color: var(--text-2); font-size: 14px; cursor: pointer; font-family: inherit;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+.res-raccourci:hover { border-color: var(--border-strong); }
+.res-raccourci.actif { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.res-clause {
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hairline);
+  font-size: 13px; line-height: 1.5;
+}
+
 /* ── L'offre On-Demand ──────────────────────────────────────
    ⚠️ C'EST LA PLANCHE `Main` DE LA MAQUETTE, au pixel près dans son esprit :
    un titre qui EST l'offre, une phrase, trois points, un bouton et le prix

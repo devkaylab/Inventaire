@@ -149,7 +149,11 @@ export const SECTEURS: { cle: Secteur; nom: string }[] = [
   { cle: 'autre', nom: 'Autre' },
 ]
 
-export type Tranche = { cle: string; nom: string; min: number; max: number; prixCents?: number }
+export type Tranche = {
+  cle: string; nom: string; min: number; max: number; prixCents?: number
+  /** L'étiquette courte du tunnel. Un bouton de tranche n'a pas la place d'une phrase. */
+  court?: string
+}
 
 /**
  * ⚠️ **ON RETIENT LE HAUT DE LA TRANCHE, JAMAIS LE MILIEU.** Un prix ferme se
@@ -157,14 +161,14 @@ export type Tranche = { cle: string; nom: string; min: number; max: number; prix
  * qui permet de ne pas revenir vers lui le soir de l'inventaire.
  */
 export const TRANCHES_ARTICLES: Tranche[] = [
-  { cle: 'a', nom: 'Moins de 2 000 pièces', min: 0, max: 2_000, prixCents: 3_900 },
-  { cle: 'b', nom: '2 000 à 5 000 pièces', min: 2_000, max: 5_000, prixCents: 4_400 },
-  { cle: 'c', nom: '5 000 à 10 000 pièces', min: 5_000, max: 10_000, prixCents: 10_900 },
-  { cle: 'd', nom: '10 000 à 20 000 pièces', min: 10_000, max: 20_000, prixCents: 12_900 },
-  { cle: 'e', nom: '20 000 à 30 000 pièces', min: 20_000, max: 30_000, prixCents: 14_500 },
-  { cle: 'f', nom: '30 000 à 50 000 pièces', min: 30_000, max: 50_000, prixCents: 15_500 },
-  { cle: 'g', nom: '50 000 à 100 000 pièces', min: 50_000, max: 100_000, prixCents: 34_900 },
-  { cle: 'h', nom: '100 000 à 150 000 pièces', min: 100_000, max: 150_000, prixCents: 44_500 },
+  { cle: 'a', court: '< 2 000', nom: 'Moins de 2 000 pièces', min: 0, max: 2_000, prixCents: 3_900 },
+  { cle: 'b', court: '2–5 000', nom: '2 000 à 5 000 pièces', min: 2_000, max: 5_000, prixCents: 4_400 },
+  { cle: 'c', court: '5–10 000', nom: '5 000 à 10 000 pièces', min: 5_000, max: 10_000, prixCents: 10_900 },
+  { cle: 'd', court: '10–20 000', nom: '10 000 à 20 000 pièces', min: 10_000, max: 20_000, prixCents: 12_900 },
+  { cle: 'e', court: '20–30 000', nom: '20 000 à 30 000 pièces', min: 20_000, max: 30_000, prixCents: 14_500 },
+  { cle: 'f', court: '30–50 000', nom: '30 000 à 50 000 pièces', min: 30_000, max: 50_000, prixCents: 15_500 },
+  { cle: 'g', court: '50–100 000', nom: '50 000 à 100 000 pièces', min: 50_000, max: 100_000, prixCents: 34_900 },
+  { cle: 'h', court: '100–150 000', nom: '100 000 à 150 000 pièces', min: 100_000, max: 150_000, prixCents: 44_500 },
 ]
 
 export const TRANCHES_REFERENCES: Tranche[] = [

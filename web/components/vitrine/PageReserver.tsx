@@ -113,7 +113,7 @@ export function PageReserver() {
    * à Essential, donc le prix à 44 € — voir `minimumAppareils`. Le moteur en
    * base applique la même borne : celle-ci n'est que l'affichage.
    */
-  const [appareils, setAppareils] = useState(1)
+  const [appareilsVoulus, setAppareilsVoulus] = useState(1)
 
   // ⚠️ Chaque étape recommence en haut. Sans ça, on arrive au milieu de la
   // question suivante — d'autant plus que les étapes n'ont pas la même hauteur.
@@ -260,14 +260,27 @@ export function PageReserver() {
     return new Date(jour.getFullYear(), jour.getMonth(), jour.getDate(), h, m)
   }, [jour, heure])
 
+  /** Le haut de la tranche choisie, et le minimum d'appareils qu'il impose. */
+  const hautDeTranche = TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)?.max ?? 0
+  const minimumChoisi = hautDeTranche ? minimumAppareils(hautDeTranche) : 1
+
+  /**
+   * ⚠️ **LE PLANCHER SE CALCULE À L'AFFICHAGE, IL NE SE STOCKE PAS.** L'état
+   * démarrait à 1 alors que la tranche par défaut en impose six : le compteur
+   * disait « 1 » et la phrase en dessous « plusieurs jours — une soirée.
+   * C'est le minimum », trois contradictions sur deux lignes. Borner ici plutôt
+   * que de compter sur chaque geste pour le faire, c'est ce qui garantit qu'on
+   * ne repasse jamais sous le minimum, quel que soit l'ordre des clics.
+   */
+  const appareils = Math.max(appareilsVoulus, minimumChoisi)
+  const setAppareils = (n: number | ((p: number) => number)) =>
+    setAppareilsVoulus((p) => Math.max(minimumChoisi,
+      typeof n === 'function' ? n(Math.max(p, minimumChoisi)) : n))
+
   const resultat: PrixFerme = useMemo(
     () => prixFerme({ codePostal, secteur, trancheArticles, debut, formule, appareils }),
     [codePostal, secteur, trancheArticles, debut, formule, appareils],
   )
-
-  /** Le haut de la tranche choisie, et le minimum d'appareils qu'il impose. */
-  const hautDeTranche = TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)?.max ?? 0
-  const minimumChoisi = hautDeTranche ? minimumAppareils(hautDeTranche) : 1
 
   /**
    * ⚠️ Le conseil se CALCULE, il ne se choisit pas : la durée vient du volume
@@ -387,14 +400,20 @@ export function PageReserver() {
           <>
             <div>
               <dt>Pièces</dt>
-              <dd>{TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)?.nom
-                ?? <span className="muted">À choisir</span>}</dd>
+              <dd>{(() => {
+                const t = TRANCHES_ARTICLES.find((x) => x.cle === trancheArticles)
+                return t ? (t.court ?? t.nom) : <span className="muted">À choisir</span>
+              })()}</dd>
             </div>
             <div>
               <dt>Appareils</dt>
               <dd>{appareils > minimumChoisi
                 ? `${appareils} (${minimumChoisi} compris, ${appareils - minimumChoisi} en plus)`
                 : `${appareils} (compris)`}</dd>
+            </div>
+            <div>
+              <dt>Durée estimée</dt>
+              <dd>{resultat.ok ? duree(resultat.chaine.dureeMinutes) : <span className="muted">—</span>}</dd>
             </div>
             <div>
               <dt>Période</dt>
@@ -429,6 +448,16 @@ export function PageReserver() {
           </dd>
         </div>
       </dl>
+      {/* ⚠️ La clause vit ICI et nulle part ailleurs (Julien, sur la maquette) :
+          « gardons la phrase seulement dans le volet de droite ». Elle porte sa
+          justification — « nous comptons ce que vous comptez » — sans quoi
+          « réajusté » se lit comme une pénalité qu'on s'autorise. */}
+      {logicielSeul && resultat.ok && (
+        <p className="res-clause muted">
+          Prix de la tranche, {minimumChoisi} appareil{minimumChoisi > 1 ? 's' : ''} compris.{' '}
+          {clauseTolerance}
+        </p>
+      )}
     </aside>
   )
 
@@ -477,7 +506,7 @@ export function PageReserver() {
         {etape === 1 && logicielSeul && (
           <div className="res-colonnes">
             <section className="res-questions echange-entre">
-              <h1>Combien de pièces prévoyez-vous de compter&nbsp;?</h1>
+              <h1>Combien d’appareils prévoyez-vous d’utiliser&nbsp;?</h1>
 
               <div className="field">
                 <span className="champ-label">Pièces à compter</span>
@@ -488,10 +517,9 @@ export function PageReserver() {
                             onClick={() => {
                               setTrancheArticles(t.cle)
                               setAppareils(minimumAppareils(t.max))
-                            }}>{t.nom}</button>
+                            }}>{t.court ?? t.nom}</button>
                   ))}
                 </div>
-                <p className="muted res-aide">{clauseTolerance}</p>
               </div>
 
               <div className="field">
@@ -504,6 +532,18 @@ export function PageReserver() {
                           onClick={() => setAppareils((n) => Math.min(100, n + 1))}>+</button>
                 </div>
                 <p className="muted res-aide">{conseilAppareils}</p>
+                {/* ⚠️ Les raccourcis de la maquette : un compteur à flèches
+                    seul oblige à cliquer six fois pour arriver à six. Ceux qui
+                    tombent sous le minimum imposé par la taille sont écartés —
+                    proposer un chiffre qu'on refusera ensuite est pire que ne
+                    pas le proposer. */}
+                <div className="res-raccourcis">
+                  {[2, 4, 6, 10, 20].filter((n) => n >= minimumChoisi).map((n) => (
+                    <button key={n} type="button"
+                            className={`res-raccourci${appareils === n ? ' actif' : ''}`}
+                            onClick={() => setAppareils(n)}>{n}</button>
+                  ))}
+                </div>
               </div>
 
               <div className="res-actions">
@@ -512,7 +552,10 @@ export function PageReserver() {
                         onClick={() => setEtape(2)}>Continuer</button>
               </div>
             </section>
-            {recap}
+            {/* ⚠️ **PAS DE VOLET À LA PREMIÈRE QUESTION** (Julien, sur la
+                maquette) : il afficherait « Période — à choisir » et un tiret à
+                la place du prix, c'est-à-dire les trous de sa propre réponse.
+                Il arrive avec le prix, et c'est un meilleur moment. */}
           </div>
         )}
 
