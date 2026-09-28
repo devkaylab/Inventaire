@@ -47,7 +47,25 @@ const {
   WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign, convertMillimetersToTwip,
 } = require('docx')
 
-const { P, logoPng } = require('../deck/charte')
+const { P, logoPng, qrPng } = require('../deck/charte')
+
+// ── Ce qui change avec le produit ───────────────────────────────────────────
+// ⚠️ **CES QUATRE LIGNES PÉRIMENT, LE RESTE NON.** Elles vivaient dispersées
+// dans la mise en page : « build 4 » au milieu d'un tableau, « pas encore
+// publiée » sous un autre, la date dans le pied. La fiche du dossier de Julien
+// annonçait encore, le 28 septembre, une application non publiée et un build 4
+// — trois builds et une publication de retard. Groupées ici, elles se
+// vérifient d'un coup d'œil avant chaque génération.
+//
+// Le numéro de build se lit dans `app.json`, il ne se recopie pas : c'est la
+// seule valeur du lot qui existe ailleurs dans le dépôt.
+const APP_JSON = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'app.json'), 'utf8'))
+const VERSION = `${APP_JSON.expo.version} (build ${APP_JSON.expo.ios.buildNumber})`
+const ETABLIE_LE = '28 septembre 2026'
+/** ⚠️ Publiée sur l'App Store le 27 septembre 2026 ; Google Play examine encore. */
+const APP_STORE = 'apps.apple.com/fr/app/quantinvo/id6807966626'
+/** ⚠️ `…/open`, jamais une fiche de boutique : voir `qrPng` dans la charte. */
+const QR_URL = 'https://www.quantinvo.com/open'
 
 const F = 'Arial'
 const mm = convertMillimetersToTwip
@@ -127,7 +145,7 @@ const tel = (fichier, legende) => cell([
   }),
 ], mm(36), { valign: VerticalAlign.TOP })
 
-const doc = (LOGO) => new Document({
+const doc = (LOGO, QR) => new Document({
   creator: 'Devkaylab', title: 'Quantinvo — fiche produit', description: "Application d'inventaire pour le commerce de détail",
   sections: [{
     properties: { page: { margin: { top: mm(12), bottom: mm(10), left: mm(15), right: mm(15) } } },
@@ -262,7 +280,7 @@ const doc = (LOGO) => new Document({
               section('Publication'),
               fait('Nom', 'Quantinvo'),
               fait('Identifiant', 'com.quantinvo.app'),
-              fait('Version', '1.0.0 (build 4)'),
+              fait('Version', VERSION),
               fait('Catégorie', 'Professionnel (Business)'),
               fait('Classification', '4+ — aucun contenu sensible.'),
               fait('Éditeur', 'Devkaylab'),
@@ -278,27 +296,36 @@ const doc = (LOGO) => new Document({
       tableau([
         new TableRow({
           children: [
+            // ⚠️ LE CODE D'ABORD, LES ADRESSES ENSUITE. La fiche se lit sur
+            // un écran ou sur papier, et dans les deux cas le lecteur a son
+            // téléphone en main : un code se scanne, une adresse se retape.
             cell([
-              par(txt('App Store', { size: 17, bold: true, color: P.INK }), { after: 40 }),
-              par(txt('apps.apple.com/fr/search?term=Quantinvo', { size: 15, color: P.ACCENT }), { after: 0 }),
-            ], COL, { padR: mm(3) }),
+              new Paragraph({
+                children: [new ImageRun({ type: 'png', data: QR, transformation: { width: 22 * PX, height: 22 * PX } })],
+                spacing: { after: 0 },
+              }),
+            ], mm(24), { valign: VerticalAlign.TOP }),
+            cell([], mm(4)),
+            cell([
+              par(txt('Un seul code, pour tous les téléphones', { size: 17, bold: true, color: P.INK }), { after: 40 }),
+              par(txt('Il ouvre l’application si elle est installée, propose la boutique sinon.', { size: 15, color: P.INK2 }), { after: 50 }),
+              par(txt('www.quantinvo.com/open', { size: 15, color: P.ACCENT }), { after: 0 }),
+            ], mm(74), { padR: mm(3) }),
             cell([], GOUT),
             cell([
-              par(txt('Google Play', { size: 17, bold: true, color: P.INK }), { after: 40 }),
+              par(txt('App Store', { size: 17, bold: true, color: P.INK }), { after: 40 }),
+              par(txt(APP_STORE, { size: 15, color: P.ACCENT }), { after: 90 }),
+              par(txt('Google Play · en cours d’examen', { size: 17, bold: true, color: P.INK }), { after: 40 }),
               par(txt('play.google.com/store/search?q=Quantinvo&c=apps', { size: 15, color: P.ACCENT }), { after: 0 }),
-            ], COL),
+            ], mm(72)),
           ],
         }),
-      ], [COL, GOUT, COL]),
-      new Paragraph({
-        children: [new TextRun({ text: 'L’application n’est pas encore publiée. Ces deux adresses mènent aujourd’hui à la recherche de chaque boutique, et afficheront la fiche le jour de la mise en ligne.', font: F, size: 15, color: P.SLATE, italics: true })],
-        spacing: { before: 80, after: 0 },
-      }),
+      ], [mm(24), mm(4), mm(74), GOUT, mm(72)]),
 
       // ── Pied ─────────────────────────────────────────────────────────────
       new Paragraph({
-        children: [new TextRun({ text: 'Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le 9 septembre 2026, application version 1.0.0.', font: F, size: 14, color: P.SLATE })],
-        spacing: { before: 130, after: 0 },
+        children: [new TextRun({ text: `Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le ${ETABLIE_LE}, application version ${VERSION}.`, font: F, size: 14, color: P.SLATE })],
+        spacing: { before: 70, after: 0 },
         border: { top: { style: BorderStyle.SINGLE, size: 4, color: P.HAIR, space: 5 } },
       }),
     ],
@@ -309,7 +336,10 @@ async function main() {
   // `logoPng` rend une donnée « image/png;base64,… » — la forme qu'attend
   // pptxgenjs. Ici il faut les octets.
   const LOGO = Buffer.from((await logoPng(640)).split(',')[1], 'base64')
-  const b = await Packer.toBuffer(doc(LOGO))
+  // 640 px pour 30 mm : largement de quoi imprimer net, et un QR trop maigre
+  // à l'impression est un QR qui ne se lit pas.
+  const QR = await qrPng(QR_URL, 640)
+  const b = await Packer.toBuffer(doc(LOGO, QR))
   fs.writeFileSync(path.join(__dirname, 'Quantinvo-fiche-produit.docx'), b)
   console.log('OK Quantinvo-fiche-produit.docx')
 }

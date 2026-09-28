@@ -144,10 +144,17 @@ export const PARCOURS: Parcours[] = [
       },
       {
         image: 'inventaire-superviseur',
-        titre: "Suivre, puis clôturer",
+        titre: "Suivre l'avancement",
         texte:
-          "L'avancement se lit en balises comptées, pas en pièces. À la clôture, l'inventaire passe en lecture seule et le rapport se fige — les écarts se lisent plus au large sur le site.",
-        repere: 'La confirmation compte les balises jamais comptées avant de clôturer.',
+          "Il se lit en balises comptées, pas en pièces. Chaque rayon terminé remonte tout seul : rien à rafraîchir, rien à demander à l'équipe.",
+        repere: 'Le suivi se lit aussi sur le site, plus au large.',
+      },
+      {
+        image: 'audit',
+        titre: "Arbitrer les écarts d'audit, puis clôturer",
+        texte:
+          "Quand un second passage ne donne pas le même compte que le premier, l'écran les oppose balise par balise : on retient le compteur, l'auditeur, ou une troisième quantité. À la clôture, l'inventaire passe en lecture seule et le rapport se fige.",
+        repere: '« Les écarts se comparent balise par balise », en tête de l’écran.',
       },
     ],
   },
