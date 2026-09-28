@@ -175,8 +175,12 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       pas une option.
 
       **Demande de conversion envoyée le 15 septembre 2026** par ce formulaire.
-      Réponse attendue par courriel ; Apple n'annonce aucun délai pour ce cas.
-      Reçue le : ______  Issue : ______
+      **Réponse d'Apple le 21 septembre 2026** (Sukkry, dossier 102964327628) :
+      six conditions, et « respond to this email » quand on est prêt.
+      **Réponse envoyée le 28 septembre 2026** — la migration est lancée. Le
+      texte et les pièges sont dans
+      `docs/entreprise/reponse-apple-migration-organisation.md`.
+      Aboutie le : ______
 - [ ] Google Play : même logique, compte développeur au nom de la société
       (utile pour le build Android en backlog).
 - [ ] Nom de domaine quantinvo.com : mettre la société comme titulaire

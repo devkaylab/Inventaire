@@ -8,6 +8,15 @@ qu'un support qui doit les rechercher.
 
 Rédigée en anglais parce que Sukkry a écrit en anglais.
 
+## ✅ ENVOYÉE LE 28 SEPTEMBRE 2026
+
+Le compteur part de là. **Deux semaines = 12 octobre 2026**, au-delà desquelles
+le silence n'est plus normal : demander un **rappel téléphonique** sur
+`developer.apple.com/contact/`, pas une relance écrite (voir plus bas).
+**Quatre semaines = 26 octobre 2026.**
+
+Reçue le : ______  Issue : ______
+
 ## ⚠️ À vérifier AVANT d'envoyer
 
 1. **La double authentification** est bien active sur l'Apple Account de
