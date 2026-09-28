@@ -312,7 +312,7 @@ export const en: Dictionnaire = {
   "Capacité": "Capacity",
   "casse et la perte": "breakage and loss",
   "Ce document n’existe qu’en français. En cas de divergence, la version française fait foi.": "This document is only available in French. Should the two versions differ, the French version prevails.",
-  "Ce guide décrit l'application mobile. Le suivi en direct, les écarts et le rapport se lisent sur ce site, plus au large.": "This guide covers the mobile app. Live tracking, variances and the report are read on this website, with more room.",
+  "Ce guide décrit l'application mobile. Le suivi, les écarts et le rapport se lisent aussi sur ce site, plus au large.": "This guide covers the mobile app. Progress, discrepancies and the report can also be read on this site, with more room.",
   "Ce lien d'invitation n'est plus valable ou a déjà été utilisé. Si vous avez déjà choisi votre mot de passe, connectez-vous. Sinon, demandez une nouvelle invitation à la personne qui vous a ajouté.": "This invitation link is no longer valid or has already been used. If you already chose your password, sign in. Otherwise, ask the person who added you for a new invitation.",
   "Ce lien de réinitialisation n'est plus valable ou a déjà été utilisé. Demandez-en un nouveau depuis la page « Mot de passe oublié ».": "This reset link is no longer valid or has already been used. Request a new one from the “Forgot your password” page.",
   "ce magasin": "this store",
