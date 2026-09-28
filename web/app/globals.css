@@ -91,6 +91,29 @@
   --r-grand: 10px;
   --r-pastille: 999px;
 
+  /* Tailles de texte — SIX VALEURS, comme les rayons en ont quatre.
+     ⚠️ Posées le 28 septembre 2026 : le parcours On-Demand en comptait treize
+     (46, 38, 32, 23, 20, 17, 16, 15, 14,5, 14, 13, 12,5, 11), relevées à
+     l'écran. Julien : « trop de tailles de police différentes, harmonise ».
+     Treize tailles ne se lisent pas comme une hiérarchie, elles se lisent
+     comme un accident — plus rien ne dit ce qui compte.
+     Chaque marche a un emploi, et un seul :
+       · affiche  le titre d'une page qui n'a qu'une chose à dire ;
+       · titre    la question en cours, et le montant qui y répond ;
+       · nombre   ce qui se règle — compteur d'appareils, flèches d'un mois ;
+       · chapo    la phrase sous un titre d'affiche ;
+       · texte    tout le courant : boutons, options, valeurs, jours ;
+       · petit    l'étiquette et l'aide, jamais une phrase qui porte.
+     ⚠️ SEUL LE PARCOURS ON-DEMAND LES EMPLOIE pour l'instant ; le reste du
+     site garde ses tailles en dur (34 valeurs, mesurées le même jour). Les y
+     porter est un chantier à part, page par page, et chaque page se regarde. */
+  --t-affiche: clamp(32px, 4.4vw, 46px);
+  --t-titre: clamp(26px, 3vw, 32px);
+  --t-nombre: 20px;
+  --t-chapo: 17px;
+  --t-texte: 15px;
+  --t-petit: 13px;
+
   --radius: 16px;
   --max: 1080px;
 }
@@ -4793,9 +4816,9 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    40 px de marge, un fond flouté et un filet (règle du 11 septembre 2026,
    « l'en-tête et le pied ne sont pas bridés à la largeur de lecture »).
    Ce qui suit n'ajoute QUE les trois objets propres au tunnel. */
-.res-titre { font-family: var(--police-titre), system-ui, sans-serif; font-weight: 600; font-size: 15px; }
+.res-titre { font-family: var(--police-titre), system-ui, sans-serif; font-weight: 600; font-size: var(--t-texte); }
 .res-pas { display: flex; align-items: center; gap: 10px; list-style: none; margin: 0 auto; padding: 0; }
-.res-pas li { font-size: 13px; color: var(--text-3); display: flex; align-items: center; gap: 10px; }
+.res-pas li { font-size: var(--t-petit); color: var(--text-3); display: flex; align-items: center; gap: 10px; }
 .res-pas li::after { content: ''; width: 16px; height: 1px; background: var(--hairline); }
 .res-pas li:last-child::after { display: none; }
 .res-pas li.ici { color: var(--accent-2); font-weight: 600; }
@@ -4809,27 +4832,27 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-colonnes { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; }
 .res-questions h1 {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: 30px; font-weight: 700; letter-spacing: -0.7px; margin-bottom: 8px;
+  font-size: var(--t-titre); font-weight: 700; letter-spacing: -0.7px; margin-bottom: 8px;
 }
 .res-questions > p.muted { margin-bottom: 26px; max-width: 58ch; line-height: 1.55; }
 .res-questions .field { margin-bottom: 18px; }
 .res-colonnes:has(.res-jauge) .res-questions .field,
 .res-seule .res-questions .field { margin-bottom: 30px; }
 .res-colonnes:has(.res-jauge) .res-questions h1,
-.res-seule .res-questions h1 { font-size: clamp(26px, 3vw, 32px); margin-bottom: 0; }
+.res-seule .res-questions h1 { font-size: var(--t-titre); margin-bottom: 0; }
 .res-colonnes:has(.res-jauge) .champ-label,
-.res-seule .champ-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.res-seule .champ-label { font-size: var(--t-texte); font-weight: 600; color: var(--text); }
 
 .res-cote { display: flex; flex-direction: column; gap: 16px; }
 .res-encadre { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
-.res-encadre h2 { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 12px; }
+.res-encadre h2 { font-size: var(--t-petit); font-weight: 600; color: var(--text-2); margin-bottom: 12px; }
 .res-encadre ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.res-encadre li { font-size: 14.5px; padding-left: 18px; position: relative; }
+.res-encadre li { font-size: var(--t-texte); padding-left: 18px; position: relative; }
 .res-encadre li::before {
   content: ''; position: absolute; left: 0; top: 8px;
   width: 6px; height: 6px; border-radius: 999px; background: var(--accent);
 }
-.res-encadre p { font-size: 14px; line-height: 1.55; margin-bottom: 14px; }
+.res-encadre p { font-size: var(--t-texte); line-height: 1.55; margin-bottom: 14px; }
 
 .res-recap { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
 /* ── Le tunnel ponctuel, tel que la planche le montre ───────
@@ -4860,18 +4883,18 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-jauge { display: flex; gap: 8px; margin-bottom: 30px; }
 .res-jauge span { height: 3px; flex-grow: 1; border-radius: 2px; background: var(--hairline); transition: background .3s ease; }
 .res-jauge span.fait { background: var(--accent); }
-.res-fenetre { margin-top: 16px; font-size: 14px; line-height: 1.55; max-width: 48ch; }
-.res-recap h2 { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 14px; }
+.res-fenetre { margin-top: 16px; font-size: var(--t-texte); line-height: 1.55; max-width: 48ch; }
+.res-recap h2 { font-size: var(--t-petit); font-weight: 600; color: var(--text-2); margin-bottom: 14px; }
 .res-recap dl { display: flex; flex-direction: column; gap: 14px; margin: 0; }
-.res-recap dt { font-size: 12.5px; color: var(--text-3); margin-bottom: 3px; }
-.res-recap dd { margin: 0; font-size: 15px; font-weight: 600; }
-.res-recap .num { font-size: 20px; }
+.res-recap dt { font-size: var(--t-petit); color: var(--text-3); margin-bottom: 3px; }
+.res-recap dd { margin: 0; font-size: var(--t-texte); font-weight: 600; }
+.res-recap .num { font-size: var(--t-nombre); }
 
 .res-actions {
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; margin-top: 28px; flex-wrap: wrap;
 }
-.res-actions .muted { font-size: 13px; }
+.res-actions .muted { font-size: var(--t-petit); }
 
 .res-etabs-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
 .res-etabs { display: flex; flex-direction: column; gap: 8px; }
@@ -4882,35 +4905,35 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .res-etab:hover { border-color: var(--border-strong); }
 .res-etab.actif { background: var(--accent-soft); border-color: var(--accent); }
-.res-etab-nom { font-size: 15px; font-weight: 600; }
-.res-etab-detail { font-size: 13px; color: var(--text-2); }
+.res-etab-nom { font-size: var(--t-texte); font-weight: 600; }
+.res-etab-detail { font-size: var(--t-petit); color: var(--text-2); }
 
-.res-zone-note { font-size: 12.5px; color: var(--text-3); margin: -8px 0 22px; }
+.res-zone-note { font-size: var(--t-petit); color: var(--text-3); margin: -8px 0 22px; }
 
 .res-refus { background: var(--surface); border-radius: var(--r-grand); padding: 22px; margin: 4px 0 20px; }
-.res-refus h2 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-.res-refus p { font-size: 14.5px; line-height: 1.6; margin-bottom: 10px; max-width: 60ch; }
+.res-refus h2 { font-size: var(--t-chapo); font-weight: 700; margin-bottom: 8px; }
+.res-refus p { font-size: var(--t-texte); line-height: 1.6; margin-bottom: 10px; max-width: 60ch; }
 
 /* ── Le calendrier ─────────────────────────────────────────────────────── */
 .res-quand { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
 .res-calendrier { background: var(--surface); border-radius: var(--r-grand); padding: 18px; }
 .res-colonnes:has(.res-jauge) .res-calendrier { background: none; padding: 0; }
 .res-colonnes:has(.res-jauge) .res-mois { justify-content: flex-start; gap: 10px; margin-bottom: 16px; }
-.res-colonnes:has(.res-jauge) .res-jour-nom { text-transform: uppercase; letter-spacing: .07em; font-size: 11px; }
+.res-colonnes:has(.res-jauge) .res-jour-nom { text-transform: uppercase; letter-spacing: .07em; font-size: var(--t-petit); }
 .res-mois { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.res-mois strong { font-size: 15px; font-weight: 600; }
-.res-mois .link-btn { font-size: 20px; line-height: 1; padding: 2px 10px; }
+.res-mois strong { font-size: var(--t-texte); font-weight: 600; }
+.res-mois .link-btn { font-size: var(--t-nombre); line-height: 1; padding: 2px 10px; }
 .res-jours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.res-jour-nom { text-align: center; font-size: 11.5px; color: var(--text-3); padding-bottom: 6px; }
+.res-jour-nom { text-align: center; font-size: var(--t-petit); color: var(--text-3); padding-bottom: 6px; }
 .res-jour {
   aspect-ratio: 1; border: 0; border-radius: var(--r);
   background: var(--surface-2); color: var(--text);
-  font: inherit; font-size: 14px; cursor: pointer;
+  font: inherit; font-size: var(--t-texte); cursor: pointer;
 }
 .res-jour:hover:not(:disabled) { background: var(--accent-soft); }
 .res-jour.choisi { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .res-jour.vide { background: transparent; color: var(--text-3); cursor: not-allowed; opacity: .5; }
-.res-legende { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--text-3); }
+.res-legende { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: var(--t-petit); color: var(--text-3); }
 .res-pastille { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
 .res-pastille.dispo { background: var(--accent); }
 .res-pastille.absente { background: var(--surface-2); margin-left: 12px; }
@@ -4920,7 +4943,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-option {
   border: 1px solid var(--hairline); border-radius: var(--r-bouton);
   background: transparent; color: var(--text-2);
-  padding: 9px 14px; font: inherit; font-size: 14px; cursor: pointer;
+  padding: 9px 14px; font: inherit; font-size: var(--t-texte); cursor: pointer;
 }
 .res-option:hover { border-color: var(--border-strong); color: var(--text); }
 .res-option.actif { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
@@ -4932,32 +4955,36 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .res-engagement input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
 .res-engagement span { display: flex; flex-direction: column; gap: 5px; }
-.res-engagement strong { font-size: 14.5px; font-weight: 600; }
-.res-engagement em { font-style: normal; font-size: 13px; color: var(--text-2); line-height: 1.55; }
+.res-engagement strong { font-size: var(--t-texte); font-weight: 600; }
+.res-engagement em { font-style: normal; font-size: var(--t-petit); color: var(--text-2); line-height: 1.55; }
 
 /* ── L'écran du prix ───────────────────────────────────────────────────── */
 .res-prix-page { max-width: 660px; margin: 0 auto; }
 .res-prix-tete { margin-bottom: 22px; }
 .res-prix-tete h1 {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: 30px; font-weight: 700; letter-spacing: -0.7px;
+  font-size: var(--t-titre); font-weight: 700; letter-spacing: -0.7px;
 }
 .res-prix-carte { background: var(--surface); border-radius: var(--r-grand); padding: 30px; }
+/* ⚠️ UNE SEULE DÉCLARATION. Le montant en avait trois — 54 px, 38 px, et
+   42 px sous 560 px — qui se recouvraient dans l'ordre du fichier ; personne
+   ne pouvait dire de mémoire laquelle gagnait. Il tient le même rang que la
+   question à laquelle il répond, donc la même marche. */
 .res-montant {
   display: block; font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: 54px; font-weight: 700; letter-spacing: -1.6px; line-height: 1;
+  font-size: var(--t-titre); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
 }
-.res-prix-carte > p.muted { font-size: 13px; margin-top: 8px; }
+.res-prix-carte > p.muted { font-size: var(--t-petit); margin-top: 8px; }
 .res-compris { list-style: none; padding: 0; margin: 24px 0 26px; display: flex; flex-direction: column; gap: 12px; }
-.res-compris li { font-size: 14.5px; line-height: 1.5; padding-left: 20px; position: relative; }
+.res-compris li { font-size: var(--t-texte); line-height: 1.5; padding-left: 20px; position: relative; }
 .res-compris li::before {
   content: ''; position: absolute; left: 0; top: 8px;
   width: 7px; height: 7px; border-radius: 999px; background: var(--accent);
 }
-.res-prix-carte .link-btn { display: block; margin: 14px auto 0; font-size: 14px; }
+.res-prix-carte .link-btn { display: block; margin: 14px auto 0; font-size: var(--t-texte); }
 .res-notes { margin-top: 28px; display: flex; flex-direction: column; gap: 20px; }
-.res-notes h2 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-.res-notes p { font-size: 14px; color: var(--text-2); line-height: 1.6; }
+.res-notes h2 { font-size: var(--t-texte); font-weight: 700; margin-bottom: 6px; }
+.res-notes p { font-size: var(--t-texte); color: var(--text-2); line-height: 1.6; }
 
 @media (max-width: 980px) {
   .res-colonnes { grid-template-columns: 1fr; }
@@ -4976,15 +5003,14 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 @media (max-width: 560px) {
   .res-page { padding-top: 28px; padding-bottom: 56px; }
-  .res-montant { font-size: 42px; }
 }
 .res-note-os { margin-top: 22px; }
-.res-bascule { display: block; margin: -14px 0 22px; font-size: 14px; }
+.res-bascule { display: block; margin: -14px 0 22px; font-size: var(--t-texte); }
 .res-oubli { display: inline-block; margin-top: 8px; color: var(--text-2); }
 .res-oubli:hover { color: var(--text); }
-.res-suite { display: block; margin: 10px auto 0; font-size: 14px; }
-.res-aucun-prelevement { font-size: 12.5px; color: var(--text-3); text-align: center; }
-.res-ferme { font-size: 13px; color: var(--warning-text); text-align: center; margin-top: 12px; line-height: 1.5; }
+.res-suite { display: block; margin: 10px auto 0; font-size: var(--t-texte); }
+.res-aucun-prelevement { font-size: var(--t-petit); color: var(--text-3); text-align: center; }
+.res-ferme { font-size: var(--t-petit); color: var(--warning-text); text-align: center; margin-top: 12px; line-height: 1.5; }
 
 /* ── « À la demande » — le concept, puis les deux formules au même rang ──
    Maquette : la planche Main. Ni ombre ni bordure sur les cartes : elles se
@@ -4993,10 +5019,10 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .ald-tete { max-width: 700px; margin-bottom: 40px; }
 .ald-tete h1 {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: clamp(32px, 4.4vw, 46px); font-weight: 700;
+  font-size: var(--t-affiche); font-weight: 700;
   letter-spacing: -1.1px; line-height: 1.08;
 }
-.ald-tete p { margin-top: 14px; font-size: 17px; line-height: 1.55; color: var(--text-2); }
+.ald-tete p { margin-top: 14px; font-size: var(--t-chapo); line-height: 1.55; color: var(--text-2); }
 
 .ald-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: stretch; }
 /* ── Le tunnel On-Demand : le compteur d'appareils ──────────
@@ -5009,7 +5035,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-compteur button {
   width: 48px; height: 54px; background: var(--surface);
   border: 1px solid var(--hairline); color: var(--text);
-  font-size: 20px; cursor: pointer; font-family: inherit;
+  font-size: var(--t-nombre); cursor: pointer; font-family: inherit;
   transition: background .18s ease, border-color .18s ease;
 }
 .res-compteur button:first-child { border-radius: var(--r) 0 0 var(--r); }
@@ -5019,24 +5045,23 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   width: 82px; height: 54px; display: grid; place-items: center;
   background: var(--bg); border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  font-size: 23px; font-weight: 700;
+  font-size: var(--t-nombre); font-weight: 700;
 }
 .res-aide { margin-top: 12px; max-width: 52ch; line-height: 1.55; }
 .res-raccourcis { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 .res-raccourci {
   min-width: 46px; padding: 8px 16px; border-radius: var(--r-pastille);
   border: 1px solid var(--hairline); background: var(--surface);
-  color: var(--text-2); font-size: 14px; cursor: pointer; font-family: inherit;
+  color: var(--text-2); font-size: var(--t-texte); cursor: pointer; font-family: inherit;
   transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 .res-raccourci:hover { border-color: var(--border-strong); }
 .res-raccourci.actif { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 .res-jour.fenetre { background: var(--accent-soft); color: var(--text); }
 .res-somme { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
-.res-montant { font-size: 38px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .res-clause {
   margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hairline);
-  font-size: 13px; line-height: 1.5;
+  font-size: var(--t-petit); line-height: 1.5;
 }
 
 /* ── L'offre On-Demand ──────────────────────────────────────
@@ -5047,15 +5072,15 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .ald-offre { padding: clamp(48px, 7vw, 88px) 0 clamp(64px, 9vw, 110px); max-width: 680px; }
 .ald-offre h1 {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: clamp(32px, 4.4vw, 46px); font-weight: 700;
+  font-size: var(--t-affiche); font-weight: 700;
   letter-spacing: -0.02em; line-height: 1.14; margin: 0;
 }
-.ald-promesse { margin-top: 18px; font-size: 17px; line-height: 1.6; color: var(--text-2); }
+.ald-promesse { margin-top: 18px; font-size: var(--t-chapo); line-height: 1.6; color: var(--text-2); }
 .ald-points { list-style: none; padding: 0; margin-top: 32px; display: flex; flex-direction: column; gap: 13px; }
-.ald-points li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 1.5; color: var(--text-2); }
+.ald-points li { display: flex; gap: 12px; align-items: flex-start; font-size: var(--t-texte); line-height: 1.5; color: var(--text-2); }
 .ald-points li svg { flex: none; margin-top: 3px; }
 .ald-action { margin-top: 40px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.ald-depart { font-size: 15px; color: var(--text-2); }
+.ald-depart { font-size: var(--t-texte); color: var(--text-2); }
 .ald-depart b { color: var(--text); font-weight: 700; }
 /* La coupure du titre ne vaut qu'au-dessus de la largeur de lecture : plus bas,
    la ligne se replie toute seule et un `<br>` forcé ferait un veuf. */
@@ -5067,14 +5092,14 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .ald-carte h3 {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: 25px; font-weight: 700; letter-spacing: -0.5px;
+  font-size: var(--t-nombre); font-weight: 700; letter-spacing: -0.5px;
 }
-.ald-carte > p { font-size: 15px; line-height: 1.6; }
+.ald-carte > p { font-size: var(--t-texte); line-height: 1.6; }
 .ald-carte ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 11px; flex-grow: 1; }
-.ald-carte li { display: flex; align-items: flex-start; gap: 11px; font-size: 14.5px; line-height: 1.5; }
+.ald-carte li { display: flex; align-items: flex-start; gap: 11px; font-size: var(--t-texte); line-height: 1.5; }
 .ald-carte li svg { flex: none; margin-top: 2px; }
 .ald-pied { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
-.ald-pied p { font-size: 14px; }
+.ald-pied p { font-size: var(--t-texte); }
 .ald-pied b { color: var(--text); font-weight: 600; }
 .inv-promesses ul { gap: 11px; }
 .inv-promesses li { color: var(--text); }
@@ -5082,16 +5107,16 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   content: ''; flex: none; margin-top: 8px;
   width: 6px; height: 6px; border-radius: 999px; background: var(--accent);
 }
-.ald-note { margin-top: 40px; font-size: 14.5px; line-height: 1.6; max-width: 76ch; }
+.ald-note { margin-top: 40px; font-size: var(--t-texte); line-height: 1.6; max-width: 76ch; }
 
 /* La bascule d'une formule à l'autre, sur l'écran du prix. Elle porte un
    montant : c'est le seul endroit du parcours où les deux sont lisibles
    ensemble. */
 .res-bascule {
   margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--hairline);
-  font-size: 14px; line-height: 1.6; text-align: center;
+  font-size: var(--t-texte); line-height: 1.6; text-align: center;
 }
-.res-bascule .link-btn { font-size: 14px; }
+.res-bascule .link-btn { font-size: var(--t-texte); }
 
 /* Le concept, avant le choix (Julien, 20 septembre 2026). Trois colonnes de
    texte, sans fond : ce n'est pas une offre, c'est une explication — lui
@@ -5103,13 +5128,13 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .ald-concept h2 {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: 17px; font-weight: 700; letter-spacing: -0.2px; margin-bottom: 9px;
+  font-size: var(--t-chapo); font-weight: 700; letter-spacing: -0.2px; margin-bottom: 9px;
 }
-.ald-concept p { font-size: 14.5px; line-height: 1.6; }
+.ald-concept p { font-size: var(--t-texte); line-height: 1.6; }
 
 .ald-question {
   font-family: var(--police-titre), system-ui, sans-serif;
-  font-size: clamp(22px, 2.6vw, 28px); font-weight: 700;
+  font-size: var(--t-titre); font-weight: 700;
   letter-spacing: -0.6px; margin-bottom: 24px;
 }
 
