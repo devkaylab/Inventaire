@@ -645,12 +645,16 @@ describe('la formule logiciel seul', () => {
       // c'est qu'aucune de ces surfaces n'apparaît AVANT un drapeau.
       const source = sansCommentaires(lire(`web/${f}`))
       const drapeau = source.indexOf('FORMULE_EQUIPE_OUVERTE')
-      expect(drapeau, `${f} : le drapeau doit y être`).toBeGreaterThanOrEqual(0)
-      for (const marque of ['Nous, avec la nôtre', 'autreFormule.ok']) {
+      for (const marque of ['Nous, avec la nôtre', 'autreFormule.ok', 'devenir-inventoriste']) {
         const ou = source.indexOf(marque)
-        if (ou >= 0) {
-          expect(ou, `${f} : « ${marque} » n’est pas sous le drapeau`).toBeGreaterThan(drapeau)
-        }
+        if (ou < 0) continue
+        // ⚠️ **NE PAS EXIGER LE DRAPEAU QUAND IL N'Y A RIEN À GARDER.** La
+        // page d'offre a été refaite le 28 septembre 2026 : la formule équipe
+        // n'y est plus du tout, pas même sous condition. C'est plus fort qu'un
+        // drapeau, et une garde qui réclamait sa présence aurait poussé à
+        // réintroduire ce qu'on venait de retirer.
+        expect(drapeau, `${f} : « ${marque} » sans drapeau`).toBeGreaterThanOrEqual(0)
+        expect(ou, `${f} : « ${marque} » n’est pas sous le drapeau`).toBeGreaterThan(drapeau)
       }
     }
   })

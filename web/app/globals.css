@@ -4961,19 +4961,28 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .ald-tete p { margin-top: 14px; font-size: 17px; line-height: 1.55; color: var(--text-2); }
 
 .ald-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: stretch; }
-/* ⚠️ L'offre unique NE SE POSE PAS dans la grille à deux colonnes : une carte
-   seule y restait collée à gauche, avec une moitié de page vide à droite. Elle
-   prend la largeur de lecture, et ses points se rangent en deux colonnes tant
-   qu'il y a la place — une liste de trois lignes sur 900 px fait maigre. */
-.ald-offre .ald-carte { padding: 40px 38px; gap: 24px; }
-.ald-offre .ald-carte h3 { font-size: clamp(26px, 3vw, 32px); }
-.ald-offre .ald-carte > p { font-size: 16.5px; max-width: 58ch; }
-@media (min-width: 720px) {
-  .ald-offre .ald-carte ul {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px; flex-grow: 0;
-  }
+/* ── L'offre On-Demand ──────────────────────────────────────
+   ⚠️ C'EST LA PLANCHE `Main` DE LA MAQUETTE, au pixel près dans son esprit :
+   un titre qui EST l'offre, une phrase, trois points, un bouton et le prix
+   d'appel sur la même ligne. Pas de carte, pas de grille — la page n'a plus
+   qu'une chose à dire, et une carte sert à en séparer deux. */
+.ald-offre { padding: clamp(48px, 7vw, 88px) 0 clamp(64px, 9vw, 110px); max-width: 680px; }
+.ald-offre h1 {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: clamp(32px, 4.4vw, 46px); font-weight: 700;
+  letter-spacing: -0.02em; line-height: 1.14; margin: 0;
 }
-.ald-offre .ald-pied { flex-direction: row; align-items: center; gap: 20px; flex-wrap: wrap; }
+.ald-promesse { margin-top: 18px; font-size: 17px; line-height: 1.6; color: var(--text-2); }
+.ald-points { list-style: none; padding: 0; margin-top: 32px; display: flex; flex-direction: column; gap: 13px; }
+.ald-points li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 1.5; color: var(--text-2); }
+.ald-points li svg { flex: none; margin-top: 3px; }
+.ald-action { margin-top: 40px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.ald-depart { font-size: 15px; color: var(--text-2); }
+.ald-depart b { color: var(--text); font-weight: 700; }
+/* La coupure du titre ne vaut qu'au-dessus de la largeur de lecture : plus bas,
+   la ligne se replie toute seule et un `<br>` forcé ferait un veuf. */
+.ald-coupe { display: none; }
+@media (min-width: 720px) { .ald-coupe { display: inline; } }
 .ald-carte {
   background: var(--surface); border-radius: var(--r-grand);
   padding: 34px 32px; display: flex; flex-direction: column; gap: 20px;

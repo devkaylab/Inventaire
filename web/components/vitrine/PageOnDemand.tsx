@@ -1,53 +1,52 @@
 'use client'
 
 /**
- * « On-demand » — le concept, puis le choix.
+ * « On-demand » — l'offre.
+ *
+ * ⚠️⚠️ **CETTE PAGE EST LA PLANCHE `Main` DE LA MAQUETTE, PAS UNE VARIATION
+ * DESSUS.** Elle a été refaite le 28 septembre 2026 après un reproche de
+ * Julien qui portait juste : « je veux la même chose que l'artefact, tu me
+ * proposes quelque chose sur lequel on a travaillé et tu codes autre chose ».
+ * J'avais porté le TEXTE de la maquette dans l'ancienne charpente — hero,
+ * bandeau de trois colonnes, « Qui tient le téléphone ? », une carte — et le
+ * résultat n'avait rien à voir avec ce qui avait été validé écran par écran.
+ *
+ * **La règle qui en sort : quand une maquette a été validée, c'est elle qu'on
+ * code, structure comprise.** Si quelque chose doit s'en écarter, ça se dit
+ * avant, pas après.
+ *
+ * ⚠️ **CE QUE LA REFONTE A RETIRÉ**, et qu'on ne remet pas sans le décider :
+ *   · « Un inventaire, le jour où vous en avez besoin » et sa promesse en
+ *     trois lignes — le titre est maintenant l'offre elle-même ;
+ *   · le bandeau « Vous réservez une date / Le logiciel est prêt le jour J /
+ *     Vous repartez avec le rapport » — il expliquait le concept AVANT le
+ *     choix, et il n'y a plus de choix à préparer ;
+ *   · « Qui tient le téléphone ? », qui séparait les deux formules ;
+ *   · les trois notes de bas de page (abonnement, déjà abonné, devenir
+ *     inventoriste).
  *
  * ⚠️ **LE PRODUIT S'APPELLE ON-DEMAND, MÊME EN FRANÇAIS** (Julien, 21
- * septembre 2026, après que j'eus lu sa consigne à l'envers). « Même en
- * français » voulait dire : le nom ne se traduit pas.
+ * septembre 2026) : le nom ne se traduit pas, et l'adresse suit le nom —
+ * `/on-demand`, avec une redirection permanente depuis `/a-la-demande` pour
+ * les liens de préversion déjà partagés (`web/next.config.mjs`).
  *
- * ⚠️ **ET L'ADRESSE SUIT LE NOM** : `/on-demand`. J'avais proposé de garder
- * `/a-la-demande` pour ne pas casser de liens ; Julien a tranché l'inverse, et
- * il a raison — deux noms pour la même chose, dont un dans la barre d'adresse,
- * c'est la même incohérence un cran plus bas. Une redirection permanente
- * couvre les liens de préversion déjà partagés (`web/next.config.mjs`).
+ * ⚠️ **AUCUN PRIX N'EST ÉCRIT DANS CE FICHIER.** Le « à partir de » se calcule
+ * sur la plus petite tranche, qui se déduit de la liste. Un prix recopié a
+ * déjà survécu à une revalorisation sur trois pages (31 août 2026).
  *
- * Maquette : la planche Main.
- *
- * ⚠️ **ELLE EXISTE PARCE QUE RIEN NE MENAIT À LA RÉSERVATION.** Constat de
- * Julien, 20 septembre 2026 : « depuis le site quantinvo, je n'ai aucun bouton
- * qui mène vers on demand ». Le tunnel `/reserver` était construit et
- * inatteignable — une porte sans couloir.
- *
- * ⚠️ **ET SA PREMIÈRE VERSION ENVOYAIT « VOUS, AVEC VOTRE ÉQUIPE » VERS UN
- * ABONNEMENT ANNUEL.** Second constat de Julien, le même jour : « si le client
- * n'a pas besoin de compteurs quantinvo, on lui propose l'abonnement quantinvo
- * os ce qui n'est pas logique, il peut y aller directement par l'offre
- * quantinvo ». Une page « à la demande » qui propose douze mois d'engagement
- * propose l'inverse de ce qu'on est venu y chercher. Les deux colonnes mènent
- * donc maintenant au MÊME tunnel, et ce qui les sépare est ce que Julien a
- * demandé de mettre au milieu : qui tient le téléphone.
- *
- * ⚠️ **LE CONCEPT VIENT AVANT LE CHOIX** (Julien, 20 septembre 2026 : « tu
- * présenteras le concept avant de proposer le choix »). Demander « vous ou
- * nous ? » à quelqu'un qui ne sait pas encore ce qu'on vend, c'est lui
- * demander d'arbitrer entre deux choses qu'il ne connaît pas.
- *
- * ⚠️ **AUCUN PRIX N'EST ÉCRIT DANS CE FICHIER.** Les deux « à partir de » sont
- * calculés par la chaîne, sur la plus petite tranche d'articles. Un prix
- * recopié a déjà survécu à une revalorisation sur trois pages (31 août 2026).
+ * ⚠️ La formule équipe est fermée (`FORMULE_EQUIPE_OUVERTE`) : rien ne la
+ * mentionne ici, et rien n'invite à devenir inventoriste — on recruterait pour
+ * un service qu'on ne vend pas.
  */
 import Link from 'next/link'
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome'
-import { useTraduction } from '@/lib/i18n'
 import { euros } from '@/lib/offres'
-import { FORMULE_EQUIPE_OUVERTE, TRANCHES_ARTICLES, chaine } from '@/lib/prixOnDemand'
+import { REGLAGES, TRANCHES_ARTICLES, chaine } from '@/lib/prixOnDemand'
 
-function Coche({ accent = false }: { accent?: boolean }) {
+function Coche() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-         stroke={accent ? 'var(--accent-2)' : 'var(--text-2)'} strokeWidth="2.4"
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="var(--accent-2)" strokeWidth="2.4"
          strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="4 12 9.5 17.5 20 6.5" />
     </svg>
@@ -55,153 +54,47 @@ function Coche({ accent = false }: { accent?: boolean }) {
 }
 
 export function PageOnDemand() {
-  const { lien } = useTraduction()
-
-  // ⚠️ LE PRIX D'APPEL SE DÉDUIT DE LA CHAÎNE, il ne se recopie pas — et la
-  // plus petite tranche se déduit de la liste, elle ne se cite pas non plus.
   const plusPetite = TRANCHES_ARTICLES.reduce((a, b) => (b.max < a.max ? b : a))
-  const departLogiciel = chaine(plusPetite.max, 1, 'logiciel_seul').prixCents / 100
-  const departEquipe = chaine(plusPetite.max, 1, 'equipe_quantinvo').prixCents / 100
+  const depart = chaine(plusPetite.max, 1, 'logiciel_seul').prixCents / 100
 
   return (
     <>
       <SiteHeader langue="fr" />
       <main className="container ald-page">
-        <header className="ald-tete">
-          <h1>Un inventaire, le jour où vous en avez besoin</h1>
-          <p>
-            {/* ⚠️ DEUX QUESTIONS, PLUS TROIS. La troisième — secteur,
-                références, code-barres — ne servait qu'aux coefficients de
-                pénibilité de la formule équipe, qui est fermée. La promesse
-                doit dire ce que le tunnel fait vraiment. */}
-            Vous répondez à deux questions — combien de pièces, et à partir de
-            quand — et votre prix s’affiche. Pas de devis, pas d’abonnement,
-            pas de rendez‑vous commercial&nbsp;: <b>le prix affiché est le prix
-            payé</b>.
-          </p>
-        </header>
+        <section className="ald-offre">
+          {/* ⚠️ Le titre coupe en deux lignes, comme la maquette : « Ouvrez
+              Quantinvo » puis « le temps d'un inventaire ». Le `<br>` ne tient
+              que sur grand écran — sous 720 px la ligne se replie toute seule
+              et la coupure forcée ferait un veuf. */}
+          <h1>
+            Ouvrez Quantinvo<br className="ald-coupe" />{' '}
+            le temps d’un inventaire
+          </h1>
 
-        {/* ⚠️ Trois phrases, pas une liste d'arguments : ce bloc répond à
-            « c'est quoi ? », et quelqu'un qui ne sait pas encore ce qu'on vend
-            ne peut pas trier des arguments. */}
-        <section className="ald-concept">
-          <div>
-            <h2>Vous réservez une date</h2>
-            <p className="muted">
-              Comme on réserve une salle. Vous choisissez le jour et l’heure,
-              vous payez le montant affiché, c’est réservé. Annulation sans
-              frais jusqu’à trois jours avant.
-            </p>
-          </div>
-          <div>
-            <h2>Le logiciel est prêt le jour J</h2>
-            <p className="muted">
-              Import de votre stock, découpage du magasin en zones, comptage,
-              seconde passe d’audit, rapport d’écarts. C’est Quantinvo, celui
-              que les enseignes utilisent toute l’année.
-            </p>
-          </div>
-          <div>
-            <h2>Vous repartez avec le rapport</h2>
-            <p className="muted">
-              Écarts référence par référence, export Excel, et de quoi justifier
-              vos chiffres. Il est à vous, que vous ayez compté vous‑même ou non.
-            </p>
+          <p className="ald-promesse">
+            Vos collaborateurs comptent sur leurs téléphones. Vous réservez le
+            nombre d’appareils dont vous avez besoin, pour une semaine.
+          </p>
+
+          <ul className="ald-points">
+            <li><Coche />Comptage, audit en seconde passe, rapport d’écarts</li>
+            <li><Coche />{REGLAGES.fenetreJours === 7 ? 'Une semaine d’accès' : `${REGLAGES.fenetreJours} jours d’accès`}</li>
+            {/* ⚠️ Formule de Julien (28 septembre 2026), en remplacement de
+                « Partout en France, et même pour ce soir » : celle-là était un
+                argument CONTRE la formule équipe, qui n'est plus sur la page,
+                et personne ne s'attend à ce qu'un logiciel s'arrête à Lyon. */}
+            <li><Coche />Un inventaire en autonomie et à votre rythme</li>
+          </ul>
+
+          <div className="ald-action">
+            <Link href="/reserver?formule=logiciel" className="btn btn-primary">
+              Réserver
+            </Link>
+            <span className="ald-depart">
+              À partir de <b>{euros(depart)}</b>
+            </span>
           </div>
         </section>
-
-        {/* ⚠️ LE CHOIX ARRIVE ICI, ET PAS AVANT. Les deux colonnes sont au même
-            rang : une page qui pousse l'équipe dirait à quelqu'un qui a du
-            personnel qu'il s'est trompé, et une page qui la relègue en ferait
-            un service de dépannage. */}
-        {/* ⚠️ « Qui tient le téléphone ? » était la question QUI SÉPARAIT les
-            deux formules. Avec une seule réponse, elle sonne creux — et elle
-            laissait la carte dans une grille à deux colonnes, donc collée à
-            gauche avec une moitié de page vide. La classe `ald-offre` la pose
-            pleine largeur. */}
-        <div className="ald-offre">
-          <section className="ald-carte">
-            <h3>Ouvrez Quantinvo le temps d’un inventaire</h3>
-            <p className="muted">
-              Vos collaborateurs comptent sur leurs téléphones. Vous réservez le
-              nombre d’appareils dont vous avez besoin, <b>pour une semaine</b>.
-            </p>
-            <ul>
-              <li><Coche />Comptage, audit en seconde passe, rapport d’écarts</li>
-              <li><Coche />Une semaine d’accès</li>
-              {/* ⚠️ « Partout en France, et même pour ce soir » a sauté : c'était
-                  un argument CONTRE la formule équipe, qui n'est plus sur la
-                  page. Personne ne s'attend à ce qu'un logiciel s'arrête à
-                  Lyon. Remplacé par ce qui distingue vraiment — on le fait
-                  soi-même. Formule de Julien, 28 septembre 2026. */}
-              <li><Coche />Un inventaire en autonomie et à votre rythme</li>
-            </ul>
-            <div className="ald-pied">
-              <p className="muted">
-                À partir de <b>{euros(departLogiciel)}</b> pour un inventaire
-              </p>
-              <Link href="/reserver?formule=logiciel" className="btn btn-primary">
-                Réserver le logiciel
-              </Link>
-            </div>
-          </section>
-
-          {/* ⚠️ « Nous, avec la nôtre » est FERMÉE, pas supprimée : le bloc
-              reste ici, sous son drapeau, parce qu'il rouvrira. Décision de
-              Julien du 28 septembre 2026 — trop lourd juridiquement (le lien
-              de subordination d'une équipe encadrée) et trop tôt pour
-              Quantinvo. Voir `FORMULE_EQUIPE_OUVERTE`. */}
-          {FORMULE_EQUIPE_OUVERTE && (
-            <section className="ald-carte">
-              <h3>Nous, avec la nôtre</h3>
-              <p className="muted">
-                Nous venons avec les inventoristes et les téléphones. Vous suivez
-                l’avancement depuis votre bureau et vous recevez le rapport.
-              </p>
-              <ul>
-                <li><Coche accent />Une équipe formée, un responsable sur place</li>
-                <li><Coche accent />Contrôle des écarts et second comptage compris</li>
-                <li><Coche accent />Personne à recruter, personne à former</li>
-              </ul>
-              <div className="ald-pied">
-                <p className="muted">
-                  À partir de <b>{euros(departEquipe)}</b> pour un inventaire
-                </p>
-                {/* ⚠️ `/reserver` n'est pas une page de vitrine : elle reste en
-                    français quelle que soit la langue de celle-ci, parce que le
-                    service ne couvre que la France. `lien()` la laisse donc
-                    telle quelle, et c'est voulu. */}
-                <Link href="/reserver?formule=equipe" className="btn btn-primary">
-                  Réserver une équipe
-                </Link>
-              </div>
-            </section>
-          )}
-        </div>
-
-        {/* ⚠️ C'est ICI que la question « et si je compte toute l'année ? » se
-            pose, une fois les deux formules lues — pas avant, où elle aurait
-            détourné quelqu'un venu pour un seul inventaire. */}
-        <p className="ald-note muted">
-          Vous comptez plusieurs fois par an, ou toute l’année&nbsp;?
-          L’abonnement revient moins cher dès le troisième inventaire.{' '}
-          <Link href={lien('/decouvrir')}>Découvrir Quantinvo OS</Link>.
-        </p>
-
-        <p className="ald-note muted">
-          Déjà abonné&nbsp;? Vous réservez depuis votre tableau de bord, avec vos
-          magasins et vos coordonnées de facturation — sans recréer de compte.
-        </p>
-
-        {/* ⚠️ Cette invitation n'a plus de destinataire tant que la formule
-            équipe est fermée : on recruterait pour un service qu'on ne vend
-            pas. La page existe toujours, on n'y envoie simplement personne. */}
-        {FORMULE_EQUIPE_OUVERTE && (
-          <p className="ald-note muted">
-            Vous comptez sur le terrain&nbsp;?{' '}
-            <Link href="/devenir-inventoriste">Réaliser des inventaires pour Quantinvo</Link>.
-          </p>
-        )}
       </main>
       <SiteFooter langue="fr" />
     </>
