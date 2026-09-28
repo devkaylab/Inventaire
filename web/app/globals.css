@@ -4961,6 +4961,19 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .ald-tete p { margin-top: 14px; font-size: 17px; line-height: 1.55; color: var(--text-2); }
 
 .ald-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: stretch; }
+/* ⚠️ L'offre unique NE SE POSE PAS dans la grille à deux colonnes : une carte
+   seule y restait collée à gauche, avec une moitié de page vide à droite. Elle
+   prend la largeur de lecture, et ses points se rangent en deux colonnes tant
+   qu'il y a la place — une liste de trois lignes sur 900 px fait maigre. */
+.ald-offre .ald-carte { padding: 40px 38px; gap: 24px; }
+.ald-offre .ald-carte h3 { font-size: clamp(26px, 3vw, 32px); }
+.ald-offre .ald-carte > p { font-size: 16.5px; max-width: 58ch; }
+@media (min-width: 720px) {
+  .ald-offre .ald-carte ul {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px; flex-grow: 0;
+  }
+}
+.ald-offre .ald-pied { flex-direction: row; align-items: center; gap: 20px; flex-wrap: wrap; }
 .ald-carte {
   background: var(--surface); border-radius: var(--r-grand);
   padding: 34px 32px; display: flex; flex-direction: column; gap: 20px;

@@ -114,9 +114,12 @@ export function PageOnDemand() {
             rang : une page qui pousse l'équipe dirait à quelqu'un qui a du
             personnel qu'il s'est trompé, et une page qui la relègue en ferait
             un service de dépannage. */}
-        <h2 className="ald-question">Qui tient le téléphone&nbsp;?</h2>
-
-        <div className="ald-choix">
+        {/* ⚠️ « Qui tient le téléphone ? » était la question QUI SÉPARAIT les
+            deux formules. Avec une seule réponse, elle sonne creux — et elle
+            laissait la carte dans une grille à deux colonnes, donc collée à
+            gauche avec une moitié de page vide. La classe `ald-offre` la pose
+            pleine largeur. */}
+        <div className="ald-offre">
           <section className="ald-carte">
             <h3>Ouvrez Quantinvo le temps d’un inventaire</h3>
             <p className="muted">
@@ -137,7 +140,7 @@ export function PageOnDemand() {
               <p className="muted">
                 À partir de <b>{euros(departLogiciel)}</b> pour un inventaire
               </p>
-              <Link href="/reserver?formule=logiciel" className="btn btn-ghost">
+              <Link href="/reserver?formule=logiciel" className="btn btn-primary">
                 Réserver le logiciel
               </Link>
             </div>
@@ -186,18 +189,19 @@ export function PageOnDemand() {
         </p>
 
         <p className="ald-note muted">
-          Déjà abonné&nbsp;? Vous réservez une équipe depuis votre tableau de
-          bord, avec vos magasins et vos coordonnées de facturation — sans
-          recréer de compte.
+          Déjà abonné&nbsp;? Vous réservez depuis votre tableau de bord, avec vos
+          magasins et vos coordonnées de facturation — sans recréer de compte.
         </p>
 
-        {/* ⚠️ C'est ICI que quelqu'un qui vient de lire « nous venons avec les
-            inventoristes » se demande comment en devenir un. Le mettre au seul
-            pied de page, c'est le mettre là où on ne le cherche pas. */}
-        <p className="ald-note muted">
-          Vous comptez sur le terrain&nbsp;?{' '}
-          <Link href="/devenir-inventoriste">Réaliser des inventaires pour Quantinvo</Link>.
-        </p>
+        {/* ⚠️ Cette invitation n'a plus de destinataire tant que la formule
+            équipe est fermée : on recruterait pour un service qu'on ne vend
+            pas. La page existe toujours, on n'y envoie simplement personne. */}
+        {FORMULE_EQUIPE_OUVERTE && (
+          <p className="ald-note muted">
+            Vous comptez sur le terrain&nbsp;?{' '}
+            <Link href="/devenir-inventoriste">Réaliser des inventaires pour Quantinvo</Link>.
+          </p>
+        )}
       </main>
       <SiteFooter langue="fr" />
     </>
