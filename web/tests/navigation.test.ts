@@ -399,14 +399,19 @@ describe('les boutons des boutiques d’applications', () => {
   })
 
   /**
-   * ⚠️ **ET DANS LA BOÎTE À OUTILS**, côté connecté : c'est le superviseur qui
-   * installe son équipe. Il prépare l'inventaire depuis son ordinateur, puis
-   * doit dire à ses compteurs où prendre l'application.
+   * ⚠️⚠️ **LA BOÎTE À OUTILS NE PORTE PAS DE BOUTONS, ELLE PORTE UN CODE.**
+   * L'espace connecté ne s'ouvre pas sous 720 px : on y est toujours devant un
+   * ordinateur, et un bouton de téléchargement tapable n'y servait à rien — il
+   * fallait ressortir son téléphone et chercher « Quantinvo » dans une
+   * boutique. Le superviseur fait scanner son écran. Idée de Julien, éprouvée
+   * par lui sur un iPhone vierge le 28 septembre 2026.
    */
-  it('figurent dans la boîte à outils du superviseur', () => {
+  it('la boîte à outils porte le code à scanner, pas les deux boutons', () => {
     const outils = lire('../app/outils/page.tsx')
-    expect(outils).toContain('<StoreBadges langue={langue} />')
-    expect(outils, 'sous la prise en main, pas ailleurs').toMatch(/Prise en main[\s\S]*outils-boutiques/)
+    expect(outils).toContain('<QrInstallation />')
+    expect(outils, 'sous la prise en main, pas ailleurs').toMatch(/Prise en main[\s\S]*outils-installer/)
+    expect(outils, 'les boutons sont restés au pied du site public')
+      .not.toContain('StoreBadges')
   })
 
   it('les adresses ne vivent qu’à un seul endroit', () => {
