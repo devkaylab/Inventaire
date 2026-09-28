@@ -655,6 +655,26 @@ describe('la formule logiciel seul', () => {
     }
   })
 
+  /**
+   * ⚠️ **LE LOGICIEL SEUL NE DEMANDE NI ADRESSE NI SECTEUR**, et son prix ne
+   * doit donc pas les exiger. La condition les réclamait encore le
+   * 28 septembre 2026, et le tunnel répondait « il manque une réponse » à une
+   * question qu'il ne posait plus. Trouvé en cliquant, pas en relisant.
+   */
+  it('⚠️ le prix du logiciel se calcule sans adresse ni secteur', () => {
+    const dansUnMois = new Date(Date.now() + 30 * 24 * 3600_000)
+    const r = prixAffiche({
+      codePostal: '', secteur: '', trancheArticles: 'd',
+      debut: dansUnMois, formule: 'logiciel_seul',
+    })
+    expect(r.ok, 'le logiciel seul doit rendre un prix sans adresse').toBe(true)
+    // L'équipe, elle, les exige toujours : elle se déplace.
+    expect(prixAffiche({
+      codePostal: '', secteur: '', trancheArticles: 'd',
+      debut: dansUnMois, formule: 'equipe_quantinvo',
+    }).ok).toBe(false)
+  })
+
   it('une date passée reste refusée, même sans équipe', () => {
     const hier = new Date(Date.now() - 24 * 3600_000)
     expect(prixAffiche({

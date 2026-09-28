@@ -70,9 +70,14 @@ export function PageOnDemand() {
         <header className="ald-tete">
           <h1>Un inventaire, le jour où vous en avez besoin</h1>
           <p>
-            Vous répondez à trois questions — où, quand, combien d’articles — et
-            votre prix s’affiche. Pas de devis, pas d’abonnement, pas de rendez‑vous
-            commercial&nbsp;: <b>le prix affiché est le prix payé</b>.
+            {/* ⚠️ DEUX QUESTIONS, PLUS TROIS. La troisième — secteur,
+                références, code-barres — ne servait qu'aux coefficients de
+                pénibilité de la formule équipe, qui est fermée. La promesse
+                doit dire ce que le tunnel fait vraiment. */}
+            Vous répondez à deux questions — combien de pièces, et à partir de
+            quand — et votre prix s’affiche. Pas de devis, pas d’abonnement,
+            pas de rendez‑vous commercial&nbsp;: <b>le prix affiché est le prix
+            payé</b>.
           </p>
         </header>
 
@@ -113,16 +118,20 @@ export function PageOnDemand() {
 
         <div className="ald-choix">
           <section className="ald-carte">
-            <h3>Vous, avec votre équipe</h3>
+            <h3>Ouvrez Quantinvo le temps d’un inventaire</h3>
             <p className="muted">
-              Vos collaborateurs comptent sur leurs téléphones. Nous vous
-              ouvrons Quantinvo <b>le temps de cet inventaire</b> — rien à
-              installer, rien à résilier.
+              Vos collaborateurs comptent sur leurs téléphones. Vous réservez le
+              nombre d’appareils dont vous avez besoin, <b>pour une semaine</b>.
             </p>
             <ul>
               <li><Coche />Comptage, audit en seconde passe, rapport d’écarts</li>
-              <li><Coche />Autant d’appareils que votre magasin en demande</li>
-              <li><Coche />Partout en France, et même pour ce soir</li>
+              <li><Coche />Une semaine d’accès</li>
+              {/* ⚠️ « Partout en France, et même pour ce soir » a sauté : c'était
+                  un argument CONTRE la formule équipe, qui n'est plus sur la
+                  page. Personne ne s'attend à ce qu'un logiciel s'arrête à
+                  Lyon. Remplacé par ce qui distingue vraiment — on le fait
+                  soi-même. Formule de Julien, 28 septembre 2026. */}
+              <li><Coche />Un inventaire en autonomie et à votre rythme</li>
             </ul>
             <div className="ald-pied">
               <p className="muted">

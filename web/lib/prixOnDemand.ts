@@ -333,7 +333,16 @@ export function prixFerme(r: Reponses, maintenant = new Date()): PrixFerme {
   const formule = r.formule ?? formuleParDefaut()
   const logiciel = formule === 'logiciel_seul'
   const tranche = TRANCHES_ARTICLES.find((t) => t.cle === r.trancheArticles)
-  if (!r.codePostal || !r.secteur || !tranche || !r.debut) return { ok: false, refus: 'incomplet' }
+  // ⚠️ **CHAQUE FORMULE N'EXIGE QUE CE QU'ELLE DEMANDE.** Le logiciel seul ne
+  // pose plus ni l'adresse ni le secteur : l'une ne sert qu'à faire venir une
+  // équipe, l'autre qu'aux coefficients de pénibilité. Les exiger quand même
+  // renvoyait « il manque une réponse » sur un tunnel qui ne posait plus la
+  // question — trouvé en cliquant jusqu'au prix, pas en relisant le code.
+  // Ce que les deux formules exigent, d'abord — et dans cet ordre, pour que
+  // TypeScript sache ensuite que `tranche` et `r.debut` existent.
+  if (!tranche || !r.debut) return { ok: false, refus: 'incomplet' }
+  // Puis ce que seule l'équipe exige, parce qu'elle se déplace.
+  if (!logiciel && (!r.codePostal || !r.secteur)) return { ok: false, refus: 'incomplet' }
   // ⚠️ DEUX REFUS NE VALENT QUE POUR L'ÉQUIPE, et c'est par nécessité : la
   // zone existe parce que six personnes doivent pouvoir se déplacer, le délai
   // parce qu'une équipe se constitue. Le logiciel se livre partout, tout de

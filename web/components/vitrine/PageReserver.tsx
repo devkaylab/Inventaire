@@ -41,10 +41,19 @@ import {
   TRANCHES_ARTICLES, TRANCHES_REFERENCES,
   prixFerme, duree, estDesservi,
   FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
+  REGLAGES, minimumAppareils,
   type PrixFerme, type Formule, type MomentCle, type Secteur,
 } from '@/lib/prixOnDemand'
 
-const ETAPES = ['Établissement', 'Date', 'Stock'] as const
+/**
+ * ⚠️ **DEUX PARCOURS, DEUX LISTES.** Le logiciel seul pose DEUX questions —
+ * c'est sa promesse, et la troisième (secteur, références, code-barres) ne
+ * sert qu'aux coefficients de pénibilité de la formule équipe. Les poser à
+ * quelqu'un qui achète une licence, c'est lui faire remplir un formulaire
+ * pour rien.
+ */
+const ETAPES_LOGICIEL = ['Volume', 'Date'] as const
+const ETAPES_EQUIPE = ['Établissement', 'Date', 'Stock'] as const
 
 const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
@@ -95,6 +104,16 @@ export function PageReserver() {
     setFormule(formuleDemandee(params.get('formule')))
   }, [params])
   const logicielSeul = formule === 'logiciel_seul'
+
+  /**
+   * Le nombre d'appareils demandé.
+   *
+   * ⚠️ **IL NE DESCEND PAS SOUS LE MINIMUM QU'IMPOSE LA TAILLE.** Sans ça,
+   * déclarer 100 000 pièces sur deux appareils ramènerait le mois de référence
+   * à Essential, donc le prix à 44 € — voir `minimumAppareils`. Le moteur en
+   * base applique la même borne : celle-ci n'est que l'affichage.
+   */
+  const [appareils, setAppareils] = useState(1)
 
   // ⚠️ Chaque étape recommence en haut. Sans ça, on arrive au milieu de la
   // question suivante — d'autant plus que les étapes n'ont pas la même hauteur.
@@ -242,9 +261,40 @@ export function PageReserver() {
   }, [jour, heure])
 
   const resultat: PrixFerme = useMemo(
-    () => prixFerme({ codePostal, secteur, trancheArticles, debut, formule }),
-    [codePostal, secteur, trancheArticles, debut, formule],
+    () => prixFerme({ codePostal, secteur, trancheArticles, debut, formule, appareils }),
+    [codePostal, secteur, trancheArticles, debut, formule, appareils],
   )
+
+  /** Le haut de la tranche choisie, et le minimum d'appareils qu'il impose. */
+  const hautDeTranche = TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)?.max ?? 0
+  const minimumChoisi = hautDeTranche ? minimumAppareils(hautDeTranche) : 1
+
+  /**
+   * ⚠️ Le conseil se CALCULE, il ne se choisit pas : la durée vient du volume
+   * et du nombre d'appareils, à la productivité du ponctuel. Trois cas — « il
+   * en faudrait N » quand le client en a déjà mis plus n'aurait aucun sens.
+   */
+  const conseilAppareils = useMemo(() => {
+    if (!hautDeTranche) return 'Choisissez d’abord un volume.'
+    const heures = hautDeTranche / (REGLAGES.productivitePonctuel * appareils)
+    const arrondi = Math.ceil(heures * 2) / 2
+    const lu = arrondi > 12
+      ? 'plusieurs jours'
+      : `${Math.floor(arrondi)} h${arrondi % 1 >= 0.5 ? ' 30' : ''}`
+    const fin = appareils > minimumChoisi ? ' — vous êtes large.'
+      : ' — une soirée. C’est le minimum pour cette taille d’inventaire.'
+    return `Avec ${appareils} appareil${appareils > 1 ? 's' : ''}, comptez environ ${lu}${fin}`
+  }, [hautDeTranche, appareils, minimumChoisi])
+
+  /**
+   * ⚠️ **LA TOLÉRANCE EST À DOUBLE SENS**, et c'est ce qui la rend acceptable :
+   * une clause qui ne facture que les dépassements est une pénalité, pas une
+   * mesure. Quantinvo est le seul à connaître le compte réel, puisque c'est
+   * son outil qui a compté — la règle est vérifiable des deux côtés.
+   */
+  const clauseTolerance =
+    `Nous comptons ce que vous comptez : au-delà de ${REGLAGES.tolerancePct} % d’écart `
+    + 'sur cette tranche, la réservation est réajustée à la clôture, dans les deux sens.'
 
   /** L'autre formule, au même volume — pour montrer l'écart sans le recopier. */
   const autreFormule: PrixFerme = useMemo(
@@ -333,21 +383,48 @@ export function PageReserver() {
     <aside className="res-recap" aria-label="Votre réservation">
       <h2>Votre réservation</h2>
       <dl>
-        <div>
-          <dt>Établissement</dt>
-          <dd>{magasin.trim() || adresse.trim() || <span className="muted">À renseigner</span>}</dd>
-        </div>
-        <div>
-          <dt>Date</dt>
-          <dd>{debut ? `${enDate(debut)}, ${enHeure(debut)}` : <span className="muted">À choisir</span>}</dd>
-        </div>
+        {logicielSeul ? (
+          <>
+            <div>
+              <dt>Pièces</dt>
+              <dd>{TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)?.nom
+                ?? <span className="muted">À choisir</span>}</dd>
+            </div>
+            <div>
+              <dt>Appareils</dt>
+              <dd>{appareils > minimumChoisi
+                ? `${appareils} (${minimumChoisi} compris, ${appareils - minimumChoisi} en plus)`
+                : `${appareils} (compris)`}</dd>
+            </div>
+            <div>
+              <dt>Période</dt>
+              {/* ⚠️ UNE SEMAINE, pas le temps du comptage : « l'inventaire peut
+                  durer assez longtemps, on ne compte en général pas plus
+                  longtemps » (Julien, 28 septembre 2026). */}
+              <dd>{resultat.ok
+                ? `${enDate(resultat.arrivee)} → ${enDate(resultat.finPrevue)}`
+                : <span className="muted">À choisir</span>}</dd>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <dt>Établissement</dt>
+              <dd>{magasin.trim() || adresse.trim() || <span className="muted">À renseigner</span>}</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd>{debut ? `${enDate(debut)}, ${enHeure(debut)}` : <span className="muted">À choisir</span>}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>{etape >= 5 ? 'À payer' : 'Prix'}</dt>
           <dd>
             {resultat.ok
               ? <strong className="num">{enEuros(resultat.chaine.prixCents)}</strong>
               : <span className="muted">
-                  {etape < 3 ? 'Après la dernière question' : 'Une réponse et il s’affiche'}
+                  {etape < 2 ? 'Après la dernière question' : 'Une réponse et il s’affiche'}
                 </span>}
           </dd>
         </div>
@@ -375,7 +452,7 @@ export function PageReserver() {
           </Link>
           <span className="res-titre">Réserver un inventaire</span>
           <ol className="res-pas" aria-label="Progression">
-            {ETAPES.map((nom, i) => (
+            {(logicielSeul ? ETAPES_LOGICIEL : ETAPES_EQUIPE).map((nom, i) => (
               <li key={nom} className={etape > i + 1 ? 'fait' : etape === i + 1 ? 'ici' : ''}
                   aria-current={etape === i + 1 ? 'step' : undefined}>
                 {nom}
@@ -391,7 +468,55 @@ export function PageReserver() {
       <div className="site-header-espace" aria-hidden="true" />
 
       <main className="container res-page">
-        {etape === 1 && (
+        {/* ⚠️ **DEUX ÉTAPES 1, ET C'EST VOULU.** Le logiciel seul n'a pas besoin
+            de savoir OÙ : il se livre partout, il n'y a ni zone ni équipe à
+            déplacer. Il a besoin de savoir COMBIEN — de pièces, puis
+            d'appareils. L'adresse redescend au moment du compte, où elle sert
+            à facturer. L'étape de l'équipe reste juste en dessous, intacte,
+            derrière `FORMULE_EQUIPE_OUVERTE`. */}
+        {etape === 1 && logicielSeul && (
+          <div className="res-colonnes">
+            <section className="res-questions echange-entre">
+              <h1>Combien de pièces prévoyez-vous de compter&nbsp;?</h1>
+
+              <div className="field">
+                <span className="champ-label">Pièces à compter</span>
+                <div className="res-choix">
+                  {TRANCHES_ARTICLES.map((t) => (
+                    <button key={t.cle} type="button"
+                            className={`res-option${trancheArticles === t.cle ? ' actif' : ''}`}
+                            onClick={() => {
+                              setTrancheArticles(t.cle)
+                              setAppareils(minimumAppareils(t.max))
+                            }}>{t.nom}</button>
+                  ))}
+                </div>
+                <p className="muted res-aide">{clauseTolerance}</p>
+              </div>
+
+              <div className="field">
+                <label htmlFor={`${uid}-appareils`}>Nombre d’appareils souhaités</label>
+                <div className="res-compteur">
+                  <button type="button" aria-label="Un appareil de moins"
+                          onClick={() => setAppareils((n) => Math.max(minimumChoisi, n - 1))}>−</button>
+                  <output id={`${uid}-appareils`} htmlFor={`${uid}-appareils`}>{appareils}</output>
+                  <button type="button" aria-label="Un appareil de plus"
+                          onClick={() => setAppareils((n) => Math.min(100, n + 1))}>+</button>
+                </div>
+                <p className="muted res-aide">{conseilAppareils}</p>
+              </div>
+
+              <div className="res-actions">
+                <button type="button" className="btn btn-primary"
+                        disabled={!trancheArticles}
+                        onClick={() => setEtape(2)}>Continuer</button>
+              </div>
+            </section>
+            {recap}
+          </div>
+        )}
+
+        {etape === 1 && !logicielSeul && (
           <div className="res-colonnes">
             <section className="res-questions">
               <h1>Où faut-il compter ?</h1>
@@ -524,16 +649,16 @@ export function PageReserver() {
           </div>
         )}
 
+        {/* ⚠️ La date ouvre une FENÊTRE d'une semaine pour le logiciel, pas un
+            créneau : le client compte quand il veut dedans. */}
         {etape === 2 && (
           <div className="res-colonnes">
-            <section className="res-questions">
-              <h1>Quand ?</h1>
+            <section className="res-questions echange-entre">
+              <h1>{logicielSeul ? 'À partir de quand ?' : 'Quand ?'}</h1>
               <p className="muted">
-                Avant l’ouverture, en pleine journée ou après la fermeture — comme
-                vous voulez.{' '}
                 {logicielSeul
-                  ? 'Le logiciel s’ouvre à l’heure que vous choisissez, même aujourd’hui.'
-                  : 'Nous n’affichons que les créneaux où nous avons une équipe.'}
+                  ? `Votre licence s’ouvre ce jour-là et reste ouverte ${REGLAGES.fenetreJours} jours. Vous comptez quand vous voulez dans cette semaine, autant de fois qu’il le faut.`
+                  : 'Avant l’ouverture, en pleine journée ou après la fermeture — comme vous voulez. Nous n’affichons que les créneaux où nous avons une équipe.'}
               </p>
 
               <div className="res-quand">
@@ -638,7 +763,9 @@ export function PageReserver() {
               <div className="res-actions">
                 <button type="button" className="btn btn-ghost" onClick={() => setEtape(1)}>Retour</button>
                 <button type="button" className="btn btn-primary" disabled={!etape2Prete}
-                        onClick={() => setEtape(3)}>Continuer</button>
+                        onClick={() => setEtape(logicielSeul ? 4 : 3)}>
+                  {logicielSeul ? 'Voir mon prix' : 'Continuer'}
+                </button>
               </div>
             </section>
             {recap}
@@ -647,7 +774,7 @@ export function PageReserver() {
 
         {etape === 3 && (
           <div className="res-colonnes">
-            <section className="res-questions">
+            <section className="res-questions echange-entre">
               <h1>Que faut-il compter ?</h1>
 
               <div className="field">
@@ -774,12 +901,17 @@ export function PageReserver() {
                     <strong>
                       Quantinvo ouvert pour {nb(resultat.chaine.appareils)} appareil
                       {resultat.chaine.appareils > 1 ? 's' : ''}
-                    </strong>, le temps de cet inventaire
+                    {/* ⚠️ « le temps de cet inventaire » était devenu faux le jour
+                        où la licence est passée à une semaine : elle ne se ferme
+                        pas quand le comptage finit. Une phrase vague au moment de
+                        payer, c'est une réclamation plus tard. */}
+                    </strong>, pendant {REGLAGES.fenetreJours} jours
                   </li>
                   <li>
-                    Prévoyez {nb(resultat.chaine.compteursAttendus)} personne
-                    {resultat.chaine.compteursAttendus > 1 ? 's' : ''} pour {duree(resultat.chaine.dureeMinutes)} environ
-                    {resultat.chaine.compteursAttendus >= 3 ? ', plus qui encadre' : ''}
+                    Comptez environ {duree(resultat.chaine.dureeMinutes)} de travail
+                    {resultat.chaine.appareils > 1
+                      ? `, à ${nb(resultat.chaine.appareils)} appareils en parallèle`
+                      : ''}
                   </li>
                   <li>Comptage, seconde passe d’audit, écarts recomptés</li>
                   <li>Rapport à la clôture — Excel, CSV, PDF</li>
