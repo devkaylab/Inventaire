@@ -4993,6 +4993,9 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .res-raccourci:hover { border-color: var(--border-strong); }
 .res-raccourci.actif { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.res-jour.fenetre { background: var(--accent-soft); color: var(--text); }
+.res-somme { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
+.res-montant { font-size: 38px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .res-clause {
   margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hairline);
   font-size: 13px; line-height: 1.5;

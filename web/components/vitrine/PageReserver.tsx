@@ -437,17 +437,40 @@ export function PageReserver() {
             </div>
           </>
         )}
-        <div>
-          <dt>{etape >= 5 ? 'À payer' : 'Prix'}</dt>
-          <dd>
-            {resultat.ok
-              ? <strong className="num">{enEuros(resultat.chaine.prixCents)}</strong>
-              : <span className="muted">
-                  {etape < 2 ? 'Après la dernière question' : 'Une réponse et il s’affiche'}
-                </span>}
-          </dd>
-        </div>
+        {!logicielSeul && (
+          <div>
+            <dt>{etape >= 5 ? 'À payer' : 'Prix'}</dt>
+            <dd>
+              {resultat.ok
+                ? <strong className="num">{enEuros(resultat.chaine.prixCents)}</strong>
+                : <span className="muted">
+                    {etape < 2 ? 'Après la dernière question' : 'Une réponse et il s’affiche'}
+                  </span>}
+            </dd>
+          </div>
+        )}
       </dl>
+
+      {/* ⚠️ **LE PRIX EN GRAND, ET LE BOUTON SOUS LUI** — c'est la planche, et
+          c'est mieux placé : l'action est contre le chiffre qu'elle engage et
+          contre le détail de ce qu'on achète. Le montant ne s'écrit qu'une
+          fois : il était dans le libellé du bouton tant que celui-ci vivait à
+          l'autre bout de l'écran. */}
+      {logicielSeul && (
+        <div className="res-somme">
+          {resultat.ok ? (
+            <>
+              <strong className="res-montant">{enEuros(resultat.chaine.prixCents)}</strong>
+              <button type="button" className="btn btn-primary btn-block"
+                      onClick={() => setEtape(connecte ? 7 : 5)}>Réserver</button>
+            </>
+          ) : (
+            <span className="muted">
+              {etape < 2 ? 'Après la dernière question' : 'Une réponse et il s’affiche'}
+            </span>
+          )}
+        </div>
+      )}
       {/* ⚠️ La clause vit ICI et nulle part ailleurs (Julien, sur la maquette) :
           « gardons la phrase seulement dans le volet de droite ». Elle porte sa
           justification — « nous comptons ce que vous comptez » — sans quoi
@@ -547,6 +570,10 @@ export function PageReserver() {
               </div>
 
               <div className="res-actions">
+                {/* ⚠️ Un retour dès la PREMIÈRE question (demande de Julien,
+                    28 septembre 2026) : sans lui, la seule sortie du tunnel
+                    est la croix du navigateur, et on perd ce qu'on a saisi. */}
+                <Link href={lien('/on-demand')} className="btn btn-ghost">Retour</Link>
                 <button type="button" className="btn btn-primary"
                         disabled={!trancheArticles}
                         onClick={() => setEtape(2)}>Continuer</button>
@@ -737,30 +764,39 @@ export function PageReserver() {
                       const tropTot = finDuJour.getTime()
                         < aujourdhui.getTime() + (logicielSeul ? 0 : DELAI_HEURES) * 3600_000
                       const choisi = jour?.toDateString() === d.toDateString()
+                      // ⚠️ **LA FENÊTRE SE VOIT, PAS SEULEMENT SON PREMIER
+                      // JOUR** : on vend une semaine, et un calendrier qui
+                      // n'éclaire qu'une case laisse croire qu'on vend un jour.
+                      const dansLaFenetre = logicielSeul && jour != null && !choisi
+                        && d.getTime() > jour.getTime()
+                        && d.getTime() < jour.getTime() + REGLAGES.fenetreJours * 24 * 3600_000
                       return (
                         <button key={d.toISOString()} type="button" disabled={tropTot}
-                                className={`res-jour${choisi ? ' choisi' : ''}${tropTot ? ' vide' : ''}`}
+                                className={`res-jour${choisi ? ' choisi' : ''}${dansLaFenetre ? ' fenetre' : ''}${tropTot ? ' vide' : ''}`}
                                 onClick={() => setJour(d)}>
                           {d.getDate()}
                         </button>
                       )
                     })}
                   </div>
+                  {!logicielSeul && (
                   <p className="res-legende">
-                    {logicielSeul ? (
-                      <>
-                        <span className="res-pastille dispo" /> Ouvrable
-                        <span className="res-pastille absente" /> Déjà passé
-                      </>
-                    ) : (
+                    {(
                       <>
                         <span className="res-pastille dispo" /> Équipe disponible
                         <span className="res-pastille absente" /> Pas d’équipe
                       </>
                     )}
                   </p>
+                  )}
                 </div>
 
+                {/* ⚠️ **PAS D'HEURE POUR LE LOGICIEL** — la planche ne la montre
+                    pas, et elle a raison : une licence qui court sept jours ne
+                    se règle pas à l'heure près. L'équipe, elle, arrive à une
+                    heure dite. Le créneau par défaut suffit à ouvrir la
+                    licence le jour choisi. */}
+                {!logicielSeul && (
                 <div className="res-heures">
                   <div className="field">
                     <span className="champ-label">Moment de la journée</span>
@@ -790,6 +826,7 @@ export function PageReserver() {
                       : 'L’équipe arrive quinze minutes avant pour s’installer.'}
                   </p>
                 </div>
+                )}
               </div>
 
               {!resultat.ok && resultat.refus === 'trop_tot' && jour && (
@@ -805,10 +842,16 @@ export function PageReserver() {
 
               <div className="res-actions">
                 <button type="button" className="btn btn-ghost" onClick={() => setEtape(1)}>Retour</button>
+                {/* ⚠️ Pas de « Voir mon prix » pour le logiciel : le prix est
+                    DÉJÀ dans le volet, à côté, et le bouton qui engage est
+                    juste dessous. Un second bouton pour aller voir ce qu'on a
+                    sous les yeux est un pas de plus pour rien. */}
+                {!logicielSeul && (
                 <button type="button" className="btn btn-primary" disabled={!etape2Prete}
-                        onClick={() => setEtape(logicielSeul ? 4 : 3)}>
-                  {logicielSeul ? 'Voir mon prix' : 'Continuer'}
+                        onClick={() => setEtape(3)}>
+                  Continuer
                 </button>
+                )}
               </div>
             </section>
             {recap}
