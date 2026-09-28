@@ -690,6 +690,93 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .site-footer a:hover { color: var(--text); }
 .muted { color: var(--text-3); font-size: 13px; }
 
+/* ── Le pied en deux blocs : le site à gauche, l'application à droite ──
+   Posé le 27 septembre 2026, jour de la publication sur l'App Store.
+
+   ⚠️ `.boutiques-row` ET `.boutiques-note` N'EXISTENT QUE SOUS 720 PX
+   (`@media (max-width: 719px)`, écran « ordinateur requis »). Au-delà, elles
+   n'ont AUCUN style : deux liens collés l'un à l'autre, sans gouttière. D'où
+   ces règles-ci, qui les portent dans le pied à toute largeur. Elles sont
+   plus spécifiques que celles de la requête, donc elles tiennent aussi en
+   dessous, où la colonne reste une colonne. */
+.site-footer .inner { align-items: flex-start; gap: 48px; }
+.pied-site { display: flex; flex-direction: column; gap: 20px; flex: 1 1 520px; min-width: 0; }
+.pied-bas { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.site-footer .links { max-width: 640px; }
+
+.pied-boutiques { display: flex; flex-direction: column; gap: 10px; flex: none; }
+.pied-boutiques-titre {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+/* Empilés et de largeur ÉGALE : deux pastilles de largeurs différentes se
+   lisent comme un défaut d'alignement — même raison que sur /open. */
+.pied-boutiques .boutiques-row { display: grid; gap: 8px; }
+.pied-boutiques .boutiques-note {
+  color: var(--text-3); font-size: 12px; line-height: 1.5; max-width: 216px; margin: 2px 0 0;
+}
+
+/* ⚠️ LE PASSAGE À LA COLONNE EST DÉLIBÉRÉ, PAS SUBI. Laissé au `flex-wrap`,
+   le bloc des boutiques descendait tout seul vers 864 px et se retrouvait posé
+   sous le copyright sans rien qui l'en sépare — un quatrième paragraphe dans
+   un pied qui en avait trois. Ici la bascule a un seuil connu, donc le filet
+   qui l'accompagne tombe toujours au bon endroit. */
+@media (max-width: 880px) {
+  .site-footer .inner { flex-direction: column; gap: 0; }
+  .pied-site { flex: none; width: 100%; }
+  .pied-boutiques {
+    width: 100%; margin-top: 24px; padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+  }
+  /* De la place : côte à côte tant qu'elle y est. */
+  .pied-boutiques .boutiques-row { grid-template-columns: repeat(auto-fit, minmax(200px, 216px)); }
+  .pied-boutiques .boutiques-note { max-width: 44ch; }
+}
+
+/* ── Le code à scanner, dans la boîte à outils ───────────────────────── */
+.outils-installer {
+  display: flex; flex-direction: column; gap: 14px;
+  margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--hairline);
+}
+.outils-boutiques-titre {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+.outils-installer-corps { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+/* ⚠️ LA CARTE DU CODE RESTE BLANCHE EN THÈME SOMBRE. Un lecteur de QR attend
+   des modules sombres sur un fond clair ; le code garde donc ses couleurs, et
+   sa carte aussi, sinon la zone de silence disparaîtrait dans le fond. */
+.outils-installer-code {
+  flex: none; padding: 10px; background: #ffffff;
+  border: 1px solid var(--hairline); border-radius: var(--r);
+}
+.outils-installer-dire { display: flex; flex-direction: column; gap: 7px; padding-top: 4px; }
+.outils-installer-dire strong {
+  font-family: var(--police-titre), system-ui, sans-serif;
+  font-size: 15px; font-weight: 600; color: var(--text);
+}
+.outils-installer-dire p {
+  margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text-2); max-width: 44ch;
+}
+.outils-installer-dire a { font-size: 12.5px; color: var(--text-3); }
+.outils-installer-dire a:hover { color: var(--text-2); }
+
+/* Le même bloc, dans le guide qui s'imprime. */
+.pem-installer { display: flex; gap: 20px; align-items: flex-start; margin-top: 26px; }
+.pem-installer-code {
+  flex: none; padding: 9px; background: #ffffff;
+  border: 1px solid var(--hairline); border-radius: var(--r);
+}
+.pem-installer-dire h3 { margin: 2px 0 6px; font-size: 16px; }
+.pem-installer-dire p { margin: 0 0 7px; font-size: 13.5px; line-height: 1.55; color: var(--text-2); max-width: 52ch; }
+.pem-installer-dire a { font-size: 12.5px; color: var(--text-3); }
+/* ⚠️ À L'IMPRESSION, LE BLOC NE SE COUPE PAS EN DEUX. Un code à cheval sur
+   deux feuilles ne se scanne pas — et c'est justement la feuille imprimée qui
+   le porte. */
+@media print {
+  .pem-installer { break-inside: avoid; page-break-inside: avoid; }
+}
+
 /* ── Carte d'authentification ───────────────────────────── */
 .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 40px 24px; }
 .auth-card {
@@ -2837,6 +2924,20 @@ body:has(.site-footer) .theme-toggle { display: none; }
   transition: opacity .15s ease, transform .08s ease;
 }
 .store-badge:hover { opacity: .88; }
+
+/* ⚠️⚠️ **LE CONTENEUR NE RECOLORE PAS LE BADGE.** `.site-footer a` pose
+   `color: var(--text-2)` sur TOUS les liens du pied, et un badge EST un lien :
+   il gagnait sur `.store-badge`, et le texte des deux boutons sortait gris sur
+   noir — rgb(87,95,92) sur rgb(20,24,26), soit 2,3 pour 1. Illisible. Mis en
+   ligne le 27 septembre 2026, vu par Julien sur la prod le lendemain ; je ne
+   l'avais pas regardé d'assez près sur ma propre capture.
+
+   Le sélecteur passe par `.boutiques`, l'enveloppe du composant : deux classes
+   battent `<conteneur> a` (une classe, un élément) quel que soit l'ordre du
+   fichier. Et `:hover` en compte une de plus, ce qu'il faut pour battre
+   `.site-footer a:hover`, qui remettait le texte en ENCRE sur encre. */
+.boutiques .store-badge { color: var(--bg); }
+.boutiques .store-badge:hover { color: var(--bg); }
 .store-badge:active { transform: translateY(1px); }
 .store-badge svg { flex: none; }
 .store-badge-txt { display: flex; flex-direction: column; text-align: left; line-height: 1.15; }

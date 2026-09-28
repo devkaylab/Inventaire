@@ -8,11 +8,12 @@
 // Les adresses vivent dans `lib/appStores.ts`, un seul endroit à modifier le
 // jour de la publication.
 
-import { APP_STORE_URL, PLAY_STORE_URL, PUBLIEE } from '@/lib/appStores'
+import { APP_STORE_URL, noteBoutiques, PLAY_STORE_URL, PUBLIEE_ANDROID, PUBLIEE_IOS } from '@/lib/appStores'
 import { traduction, type Langue } from '@/lib/traduction'
 
 export function StoreBadges({ langue = 'fr' }: { langue?: Langue }) {
   const { t } = traduction(langue)
+  const note = noteBoutiques(PUBLIEE_IOS, PUBLIEE_ANDROID)
   return (
     <div className="boutiques">
       <div className="boutiques-row">
@@ -25,7 +26,11 @@ export function StoreBadges({ langue = 'fr' }: { langue?: Langue }) {
           <AppleIcon />
           <span className="store-badge-txt">
             <span className="store-badge-sur">{t('Télécharger sur')}</span>
-            <span className="store-badge-nom">l’App Store</span>
+            {/* ⚠️ L'élision est FRANÇAISE. Écrite en dur, elle donnait
+                « Download on l'App Store » sur /en/open — invisible tant que
+                le bouton menait à une recherche, voyant le jour où il mène à
+                la fiche. Vu le 27 septembre 2026, jour de la publication. */}
+            <span className="store-badge-nom">{t('l’App Store')}</span>
           </span>
         </a>
 
@@ -43,9 +48,19 @@ export function StoreBadges({ langue = 'fr' }: { langue?: Langue }) {
         </a>
       </div>
 
-      {!PUBLIEE && (
+      {note === 'deux' && (
         <p className="boutiques-note">
           {t('L’application arrive bientôt sur les deux boutiques. En attendant, ces liens ouvrent la recherche.')}
+        </p>
+      )}
+      {note === 'play' && (
+        <p className="boutiques-note">
+          {t('L’application arrive bientôt sur Google Play. En attendant, ce lien ouvre la recherche.')}
+        </p>
+      )}
+      {note === 'apple' && (
+        <p className="boutiques-note">
+          {t('L’application arrive bientôt sur l’App Store. En attendant, ce lien ouvre la recherche.')}
         </p>
       )}
     </div>

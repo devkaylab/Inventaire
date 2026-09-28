@@ -18,6 +18,7 @@ import { AppShell } from '@/components/AppShell'
 import { getMyCompany, type Company } from '@/lib/account'
 import { CAPTURES_LE, CAPTURES_A_REFAIRE, PARCOURS } from '@/lib/priseEnMain'
 import { Chargement } from '@/components/Chargement'
+import { QrInstallation, URL_INSTALLATION } from '@/components/QrInstallation'
 import { useTraduction } from '@/lib/i18n'
 
 export default function PriseEnMainPage() {
@@ -46,7 +47,7 @@ export default function PriseEnMainPage() {
         </div>
         <div className="app-head-actions pem-actions">
           <Link href="/outils" className="btn btn-ghost btn-sm">{t('Retour à la boîte à outils')}</Link>
-          <button type="button" className="btn btn-sm" onClick={() => window.print()}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => window.print()}>
             {t('Imprimer')}
           </button>
         </div>
@@ -119,8 +120,23 @@ export default function PriseEnMainPage() {
         </section>
       ))}
 
+      {/* ⚠️ LE CODE PART AVEC LA FEUILLE. Ce guide s'imprime — c'est sa
+          raison d'être, on le pose devant une recrue. Un guide papier qui
+          montre l'application sans dire où la prendre est un cul-de-sac : il
+          faudrait rouvrir le site pour trouver le lien. Demande de Julien,
+          28 septembre 2026 : « au cas où le superviseur l'imprime, et comme
+          ça l'info se trouve au même endroit ». */}
+      <div className="panel pem-installer">
+        <div className="pem-installer-code"><QrInstallation taille={124} /></div>
+        <div className="pem-installer-dire">
+          <h3>{t('Installer l’application')}</h3>
+          <p>{t('Faites-le scanner par votre compteur. Si l’application est déjà installée, elle s’ouvre ; sinon, la boutique de son téléphone lui est proposée.')}</p>
+          <a href={URL_INSTALLATION} target="_blank" rel="noreferrer">{t('www.quantinvo.com/open')}</a>
+        </div>
+      </div>
+
       <p className="pem-pied">
-        {t("Ce guide décrit l'application mobile. Le suivi en direct, les écarts et le rapport se lisent sur ce site, plus au large.")}
+        {t("Ce guide décrit l'application mobile. Le suivi, les écarts et le rapport se lisent aussi sur ce site, plus au large.")}
       </p>
     </AppShell>
   )

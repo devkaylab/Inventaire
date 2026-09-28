@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { LIENS_PUBLICS } from '../lib/navigation'
+import { APP_STORE_URL, noteBoutiques, PLAY_STORE_URL, PUBLIEE_ANDROID, PUBLIEE_IOS } from '../lib/appStores'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const shell = lire('../components/AppShell.tsx')
@@ -207,7 +208,14 @@ describe('l’espace connecté ne s’ouvre pas sur un petit écran', () => {
   it('la porte est en CSS, sur la seule coquille', () => {
     // En CSS et non en mesure JavaScript : pas de bascule visible au
     // chargement, et le rendu serveur reste le même.
-    const bloc = css.split('@media (max-width: 719px)')[1]?.split('\n}')[0] ?? ''
+    // ⚠️ **L'ACCOLADE COMPTE.** Le découpage se faisait sur
+    // `'@media (max-width: 719px)'` tout court : le 27 septembre 2026, un
+    // commentaire ajouté plus haut dans la feuille CITAIT ce seuil pour
+    // expliquer d'où venaient des styles, et la garde a découpé dans le
+    // commentaire. Elle est tombée sur un code parfaitement sain. Une garde
+    // qui vise du texte doit viser ce qui OUVRE un bloc, jamais ce qui en
+    // parle.
+    const bloc = css.split('@media (max-width: 719px) {')[1]?.split('\n}')[0] ?? ''
     expect(bloc, 'le rail et le contenu sont masqués sous 720 px').toContain('.app-rail, .app-main, .dash { display: none; }')
     expect(css).toContain('.ordinateur-requis { display: none; }')
   })
@@ -376,6 +384,36 @@ describe('les boutons des boutiques d’applications', () => {
     expect(bienvenue).not.toContain('Continuer sur le web')
   })
 
+  /**
+   * ⚠️ **LE PIED EST LE SEUL ENDROIT QUI COUVRE TOUTE LA VITRINE.** Demande de
+   * Julien le 27 septembre 2026, jour de la publication : « sur toutes les
+   * pages ». La garde vise donc `SiteChrome`, pas une liste de pages — une
+   * page publique ajoutée demain porte les badges sans que personne n'y pense.
+   */
+  it('figurent au pied de toutes les pages publiques', () => {
+    const chrome = lire('../components/SiteChrome.tsx')
+    expect(chrome, 'le pied commun doit porter les badges').toContain('<StoreBadges langue={langue} />')
+    // Ils tiennent leur propre colonne : mêlés aux liens du pied, ils
+    // auraient le poids d'une mention légale.
+    expect(chrome).toContain('pied-boutiques')
+  })
+
+  /**
+   * ⚠️⚠️ **LA BOÎTE À OUTILS NE PORTE PAS DE BOUTONS, ELLE PORTE UN CODE.**
+   * L'espace connecté ne s'ouvre pas sous 720 px : on y est toujours devant un
+   * ordinateur, et un bouton de téléchargement tapable n'y servait à rien — il
+   * fallait ressortir son téléphone et chercher « Quantinvo » dans une
+   * boutique. Le superviseur fait scanner son écran. Idée de Julien, éprouvée
+   * par lui sur un iPhone vierge le 28 septembre 2026.
+   */
+  it('la boîte à outils porte le code à scanner, pas les deux boutons', () => {
+    const outils = lire('../app/outils/page.tsx')
+    expect(outils).toContain('<QrInstallation />')
+    expect(outils, 'sous la prise en main, pas ailleurs').toMatch(/Prise en main[\s\S]*outils-installer/)
+    expect(outils, 'les boutons sont restés au pied du site public')
+      .not.toContain('StoreBadges')
+  })
+
   it('les adresses ne vivent qu’à un seul endroit', () => {
     // Le jour de la publication, un seul fichier change. Un lien écrit en
     // dur dans le composant se retrouverait oublié.
@@ -383,14 +421,49 @@ describe('les boutons des boutiques d’applications', () => {
     expect(badges).not.toMatch(/https:\/\/(apps\.apple|play\.google)/)
   })
 
-  it('disent la vérité tant que l’application n’est pas publiée', () => {
-    // Tant que PUBLIEE vaut faux, les liens ouvrent la recherche de chaque
-    // boutique — jamais une fiche qui n'existe pas — et l'écran l'annonce.
-    expect(stores).toContain('export const PUBLIEE')
-    if (/export const PUBLIEE = false/.test(stores)) {
-      expect(stores).toContain('search?term=')
-      expect(stores).toContain('store/search?q=')
-      expect(badges).toContain('arrive bientôt')
+  /**
+   * ⚠️⚠️ **CETTE GARDE A CESSÉ DE MORDRE SANS RIEN DIRE**, le 27 septembre
+   * 2026. Elle lisait `export const PUBLIEE` et n'entrait dans ses
+   * vérifications que si elle trouvait `export const PUBLIEE = false`. Le jour
+   * où le drapeau a été dédoublé, `PUBLIEE_IOS` a continué de contenir la
+   * sous-chaîne `export const PUBLIEE` — elle est restée verte — mais plus
+   * rien n'était vérifié : ni les adresses, ni la phrase. Une garde qui
+   * s'éteint en silence est pire qu'une garde absente.
+   *
+   * Celle-ci LIT LES DEUX DRAPEAUX et en déduit ce qu'elle exige.
+   */
+  it('chaque adresse suit le drapeau de SA boutique', () => {
+    // ⚠️ **ON LIT LA VALEUR, PAS LE FICHIER.** Première version de cette
+    // garde : `expect(stores).toContain(ios ? 'app/quantinvo/id' : 'search')`.
+    // Elle ne mordait pas — les DEUX adresses figurent dans le ternaire du
+    // fichier, donc la chaîne cherchée s'y trouvait quel que soit le drapeau.
+    // Trouvé en la sabotant, pas en la relisant.
+    expect(APP_STORE_URL, 'l’adresse App Store ne suit pas PUBLIEE_IOS')
+      .toMatch(PUBLIEE_IOS ? /apps\.apple\.com\/fr\/app\/quantinvo\/id\d+$/ : /\/search\?term=/)
+    expect(PLAY_STORE_URL, 'l’adresse Play ne suit pas PUBLIEE_ANDROID')
+      .toMatch(PUBLIEE_ANDROID ? /store\/apps\/details\?id=/ : /store\/search\?q=/)
+    // Un drapeau unique rendait le cas d'aujourd'hui inexprimable : l'App
+    // Store en ligne le 27 septembre, Google Play encore en examen.
+    expect(stores, 'un `PUBLIEE` seul ne dit pas de quelle boutique on parle')
+      .not.toMatch(/export const PUBLIEE\s*=/)
+  })
+
+  it('la phrase dit exactement ce qui manque, dans les quatre cas', () => {
+    // La règle est une fonction pure : on l'exerce, on ne la relit pas.
+    expect(noteBoutiques(true, true), 'tout est en ligne : plus de phrase').toBeNull()
+    expect(noteBoutiques(false, false)).toBe('deux')
+    expect(noteBoutiques(true, false), 'iOS ouvert, Play en examen').toBe('play')
+    expect(noteBoutiques(false, true)).toBe('apple')
+    // Et le composant s'en sert au lieu de refaire le raisonnement.
+    expect(badges).toContain('noteBoutiques(PUBLIEE_IOS, PUBLIEE_ANDROID)')
+  })
+
+  it('les trois phrases sont écrites en toutes lettres', () => {
+    // ⚠️ La garde d'i18n LIT le fichier, elle ne l'exécute pas : un
+    // `t(variable)` lui échapperait et la traduction anglaise manquerait sans
+    // que rien ne le dise. Les trois restent donc littérales.
+    for (const phrase of ['les deux boutiques', 'bientôt sur Google Play', 'bientôt sur l’App Store']) {
+      expect(badges, `« ${phrase} » doit rester dans un t('…') littéral`).toContain(phrase)
     }
   })
 

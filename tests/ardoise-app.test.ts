@@ -372,7 +372,21 @@ describe('Registre, sur les deux écrans qui font foi', () => {
  *
  * Décision de Julien, à la revue d'avant publication : `supportsTablet` était
  * vrai, donc Apple aurait exigé des captures iPad — pour une application en
- * portrait, pensée pour une main et un rayon.
+ * portrait, pensée pour une main et un rayon. Décision reconduite le
+ * 22 septembre 2026, après le refus d'Apple.
+ *
+ * ⚠️ **ET CE DRAPEAU NE MET PAS L'APPLICATION HORS DE PORTÉE DES iPAD.** Il a
+ * été cru tel pendant deux semaines, et ça a coûté une revue. Sur l'App Store,
+ * une application iPhone s'installe sur un iPad et y tourne dans une fenêtre
+ * de téléphone ; rien dans App Store Connect ne permet de l'en empêcher, la
+ * liste des appareils étant déduite du binaire. Ce que ce drapeau décide,
+ * c'est si l'application **s'adapte** à l'iPad — pas si elle y **tourne**.
+ * Apple a refusé la version 1.0 (build 5) le 22 septembre 2026,
+ * `Guideline 2.1(a)`, pour un plantage au lancement constaté sur un
+ * **iPad Air 11" (M3)** sous iPadOS 27.0, et son message le dit :
+ * « apps that may be downloaded onto iPad devices should function as expected
+ * for iPad users ». Donc : pas de captures iPad à fournir, mais l'application
+ * doit démarrer sur un iPad. `./scripts/simulateur.sh ipad` sert à le voir.
  *
  * ⚠️ **LA CLÉ VIT À DEUX ENDROITS, ET LE SECOND EST VERSIONNÉ.** `app.json`
  * ne gouverne que ce qu'`expo prebuild` régénère ; `ios/` ne se régénère

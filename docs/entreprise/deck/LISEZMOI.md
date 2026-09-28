@@ -11,12 +11,13 @@ inventé ni répétition, et **sans signe ni mot coupé en début de ligne**.
 | `build-commercial.js` | `Quantinvo-commercial.pptx` | Direction, contrôle de gestion, achats : l'inventaire et la loi, les problèmes, les solutions, pourquoi nous, les prix | 15 |
 | `build-prise-en-main.js` | `Quantinvo-prise-en-main.pptx` | Administrateur, superviseurs, compteurs : un premier inventaire, geste par geste, site et application | 28 |
 | `build-dsi.js` | `Quantinvo-dossier-DSI.pptx` | Direction informatique : architecture, hébergement, accès, réseau, appareils, données, sécurité, ce qu'il faut prévoir | 17 |
+| `build-presentation.js` | `Quantinvo-presentation.pptx` | Présentation du 2 octobre 2026, 25 minutes puis démonstration — **le texte est celui de Julien, mot pour mot** | 18 |
 
 Générer et contrôler, depuis ce dossier :
 
 ```
-for f in build-commercial.js build-prise-en-main.js build-dsi.js; do node $f && FONT_MODE=brand node $f; done
-node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx Quantinvo-prise-en-main.pptx Quantinvo-prise-en-main-marque.pptx Quantinvo-dossier-DSI.pptx Quantinvo-dossier-DSI-marque.pptx
+for f in build-commercial.js build-prise-en-main.js build-dsi.js build-presentation.js; do node $f && FONT_MODE=brand node $f; done
+node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx Quantinvo-prise-en-main.pptx Quantinvo-prise-en-main-marque.pptx Quantinvo-dossier-DSI.pptx Quantinvo-dossier-DSI-marque.pptx Quantinvo-presentation.pptx Quantinvo-presentation-marque.pptx
 ```
 
 - **`charte.js` pose la typographie française partout** (`typo()`) : espace
@@ -32,6 +33,21 @@ node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx
 - **Captures du site** : `../captures-site/2026-09-19-rayon-textile/` (compte
   de démo réel), jamais `web/screenshots/` (faux compte de test).
 - **L'écart vaut compté − théorique**, le signe du rapport.
+
+⚠️ **`captures/boite-a-outils.png` PÉRIMERA AVEC LA NOUVELLE BALISE.** Elle
+affiche « Avery L7160 », ce qui est encore exact ici : le nouveau format
+(35,6 × 16,9 mm, 80 par feuille) attend sur la branche que Julien ait
+réimprimé une planche de calage à 100 % sur du vrai prédécoupé — la fusion du
+28 septembre 2026 l'a délibérément laissé de côté. Le jour où il arrive, cette
+capture ment, et il faut la reprendre avec `creer-balises` et `zones` qui en
+dépendent. `build-presentation.js` l'écarte déjà et montre `creer-balises.png`,
+qui porte le même en-tête sans afficher de référence de support.
+
+`captures/planche-balises.png` n'est PAS une capture d'écran : ce sont six
+balises telles qu'elles sortent du générateur, rendues depuis le PDF réel le
+26 septembre 2026. ⚠️ Elles montrent le format qui n'est PAS encore ici — à
+refaire le jour où le dessin arrive (`src/lib/baliseDessin.ts`, sur la
+branche).
 
 Les six anciens scripts (`build.js`, `build-court.js`, `build-tarifs.js`,
 `build-samaritaine.js`, `build-histoire.js`, `build-pourquoi.js`) ont été
@@ -63,8 +79,29 @@ installées (posées dans `~/Library/Fonts` le 9 septembre, Regular et Bold avec
 leurs italiques). La version sans suffixe est en Arial : c'est celle qu'on
 envoie, elle s'affiche à l'identique partout.
 
-Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
-retouche serait écrasée à la prochaine génération. On modifie le script.
+## ⚠️⚠️ AUCUN DECK NE SE RÉGÉNÈRE SANS QUE JULIEN LE DEMANDE (28 septembre 2026)
+
+**Julien retouche ses decks à la main.** Il l'a dit ce jour-là, après avoir vu
+qu'une régénération était partie toute seule : sa
+`Quantinvo-presentation.pptx` d'iCloud portait ses modifications, faites dans
+PowerPoint, et rien dans le dépôt ne les contient. Une génération les aurait
+effacées sans trace.
+
+Ça vaut pour **générer** comme pour **copier un deck dans son dossier**. On
+peut modifier un script, lire un deck, corriger le LISEZMOI — on ne lance pas
+`node build-*.js` et on n'écrase pas un fichier de son dossier tant qu'il ne
+l'a pas demandé.
+
+⚠️ **CE PARAGRAPHE A REMPLACÉ SON CONTRAIRE.** On lisait ici : « Les fichiers
+`.pptx` sont générés, jamais retouchés à la main : une retouche serait écrasée
+à la prochaine génération. On modifie le script. » C'était l'intention de
+départ, ce n'est plus l'usage — et une note qui décrit une intention périmée
+est précisément ce qui fait détruire le travail de quelqu'un.
+
+Ce qui reste vrai de l'ancienne règle : **une retouche à la main ne survit pas
+à une génération**. Donc quand Julien change quelque chose dans un deck et
+qu'il veut le garder, la bonne suite est de porter le changement dans le
+script — pas de s'interdire de régénérer pour toujours.
 
 ## La passe de captures d’Ardoise (9 et 10 septembre 2026)
 

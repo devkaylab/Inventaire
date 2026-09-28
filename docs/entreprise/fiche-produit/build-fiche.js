@@ -23,12 +23,14 @@
 // il doit s'ouvrir à l'identique sur le poste du client, qui n'a ni Archivo ni
 // Public Sans installées. Même arbitrage que la version sans suffixe des decks.
 //
-// ⚠️ **Les téléphones viennent TOUS de `../deck/encadrees/`.** Les trois
-// exceptions locales (`accueil-superviseur.png`, `ecarts-audit.png`,
-// `rapport.png`) ont disparu le 2 septembre 2026 avec la passe de captures :
-// le jeu du deck est désormais du même jour, il n'y a plus rien à rattraper
-// ici. `img()` garde son repli local — il sert le jour où un écran devrait
-// être repris avant la passe suivante —, mais aucun fichier ne l'emprunte.
+// ⚠️ **Les téléphones viennent TOUS de `../deck/captures/`, encadrés à la
+// volée par `cadrer()`** — la fonction des diapos, le même bezel. Ils lisaient
+// avant les PNG tout faits de `../deck/encadrees/` ; ceux-là sont le téléphone
+// ENTIER, et le bandeau d'ici le veut coupé (voir `TELH`). `encadrees/` n'est
+// qu'un cache de `cadrer()` — `encadrer.js` ne fait rien d'autre —, donc rien
+// n'est perdu, et il y a un dessin de moins à tenir synchronisé. Le repli
+// local d'`img()` a disparu avec : aucun fichier ne l'empruntait depuis la
+// passe de captures du 2 septembre 2026.
 //
 // ⚠️ **L'écran des écarts s'appelle `audit.png`**, pas `ecarts-audit.png` :
 // c'est le nom que les decks emploient, et la passe du 2 septembre l'a versé
@@ -39,6 +41,11 @@
 // n'entre pas dans le bandeau : cinq téléphones à 36 mm remplissent déjà la
 // largeur utile, et passer à six les rendrait illisibles. Si on veut le
 // montrer, c'est un écran à remplacer, pas un de plus.
+//
+// ⚠️ **LA FICHE TIENT SUR UNE PAGE, ET IL RESTE 2,5 mm.** Ce n'est pas une
+// marge de manœuvre : toute ligne ajoutée en pousse une sur une seconde page —
+// le pied, en général, qui part seul et ne se voit pas dans le .docx. **Après
+// toute retouche, recompter les pages du PDF**, pas du document Word.
 
 const fs = require('fs')
 const path = require('path')
@@ -47,16 +54,54 @@ const {
   WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign, convertMillimetersToTwip,
 } = require('docx')
 
-const { P, logoPng } = require('../deck/charte')
+const { P, logoPng, qrPng, cadrer } = require('../deck/charte')
+
+// ── Ce qui change avec le produit ───────────────────────────────────────────
+// ⚠️ **CES QUATRE LIGNES PÉRIMENT, LE RESTE NON.** Elles vivaient dispersées
+// dans la mise en page : « build 4 » au milieu d'un tableau, « pas encore
+// publiée » sous un autre, la date dans le pied. La fiche du dossier de Julien
+// annonçait encore, le 28 septembre, une application non publiée et un build 4
+// — trois builds et une publication de retard. Groupées ici, elles se
+// vérifient d'un coup d'œil avant chaque génération.
+//
+// Le numéro de build se lit dans `app.json`, il ne se recopie pas : c'est la
+// seule valeur du lot qui existe ailleurs dans le dépôt.
+const APP_JSON = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'app.json'), 'utf8'))
+const VERSION = `${APP_JSON.expo.version} (build ${APP_JSON.expo.ios.buildNumber})`
+const ETABLIE_LE = '28 septembre 2026'
+/** ⚠️ Publiée sur l'App Store le 27 septembre 2026 ; Google Play examine encore. */
+const APP_STORE = 'apps.apple.com/fr/app/quantinvo/id6807966626'
+/** ⚠️ `…/open`, jamais une fiche de boutique : voir `qrPng` dans la charte. */
+const QR_URL = 'https://www.quantinvo.com/open'
+/** Côté du code d'installation. 22 mm : la même taille que sur le guide. */
+const QR_MM = 22
 
 const F = 'Arial'
 const mm = convertMillimetersToTwip
-const ENCADREES = path.join(__dirname, '..', 'deck', 'encadrees')
 
-/** Un téléphone encadré : celui du deck, ou l'exception locale. */
+/**
+ * Les téléphones du bandeau, dessinés par `cadrer()` avant la mise en page.
+ *
+ * ⚠️ On ne lit plus les PNG tout faits de `../deck/encadrees/` : ceux-là sont
+ * le téléphone ENTIER, et le bandeau de cette fiche le veut coupé (voir
+ * `TELH`). `encadrees/` n'est de toute façon qu'un `cadrer()` mis en cache —
+ * `encadrer.js` ne fait rien d'autre —, donc on appelle la même fonction,
+ * avec la place qu'on a. Un dessin de moins à tenir synchronisé.
+ */
+const CADRES = new Map()
+
 const img = (f) => {
-  const local = path.join(__dirname, f)
-  return fs.readFileSync(fs.existsSync(local) ? local : path.join(ENCADREES, f))
+  const cadre = CADRES.get(f)
+  if (!cadre) throw new Error(`téléphone « ${f} » non préparé : voir preparerTelephones()`)
+  return cadre
+}
+
+/** Encadre et coupe les cinq écrans du bandeau. */
+async function preparerTelephones(fichiers) {
+  for (const f of fichiers) {
+    const { data } = await cadrer(path.join('captures', f), { w: TEL, h: TELH })
+    CADRES.set(f, Buffer.from(data.split(',')[1], 'base64'))
+  }
 }
 
 const AUCUN = { top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } }
@@ -110,15 +155,53 @@ const tableau = (rows, widths) => new Table({
 const COL = mm(87)   // une colonne sur deux
 const GOUT = mm(6)   // la gouttière entre elles
 
-// Cinq téléphones en bandeau : 31 mm de large, rapport 637/1345. À cinq, la
-// largeur utile (180 mm) fixe la taille — on ne choisit que les légendes.
+/**
+ * mm → unité de `ImageRun.transformation`.
+ *
+ * ⚠️⚠️ **CE N'EST PAS DU POINT, C'EST DU PIXEL À 96 DPI.** `docx` convertit
+ * `width`/`height` en EMU à raison de 9525 EMU par unité, soit 96 par pouce —
+ * pas 72. La première version divisait par 72 : **toute image de cette fiche
+ * sortait à 75 % de la taille demandée**. Les téléphones annoncés à 31 mm
+ * s'imprimaient à 23,3 mm, le code d'installation à 16,5 mm au lieu de 22.
+ * Même défaut, même jour, dans le guide de prise en main (28 septembre 2026),
+ * où il a été mesuré sur le PDF produit avant d'être corrigé des deux côtés.
+ */
+const PXMM = 96 / 25.4
+
+// Cinq téléphones en bandeau, 31 mm de large : à cinq, la largeur utile
+// (180 mm) fixe la taille.
 const TEL = 31
-const TELH = Math.round((TEL * 1345 / 637) * 10) / 10
-const PX = 2.8346 // mm → points
+/**
+ * ⚠️ **LE BANDEAU EST COUPÉ, ET C'EST VOULU** — 46 mm au lieu des 65,4 mm
+ * d'un téléphone entier. La fiche tient sur UNE page et n'avait plus deux
+ * millimètres de marge : rendre aux images leur vraie taille demandait de
+ * trouver la place quelque part. On la prend sur le bas des écrans, qui ne
+ * porte rien ici — les cinq se lisent par le haut (la liste, la tuile 26 %,
+ * les zones, les deux quantités opposées, les quatre totaux) — plutôt que sur
+ * leur largeur, qui est ce qui les rend lisibles. C'est le débord des diapos,
+ * et `cadrer()` le dessine déjà.
+ *
+ * ⚠️ Ne PAS reprendre ce procédé dans le guide de prise en main : là-bas le
+ * repère cité à côté de l'écran désigne parfois un bouton du bas.
+ */
+const TELH = 42
+
+/**
+ * Les cinq écrans du bandeau, dans l'ordre du parcours. La liste est écrite
+ * une fois : c'est elle que `preparerTelephones()` encadre, et elle que la
+ * mise en page pose — un écran ajouté ici ne peut pas manquer son cadre.
+ */
+const ECRANS = [
+  ['accueil-superviseur.png', 'Les inventaires'],
+  ['inventaire-superviseur.png', 'Le suivi'],
+  ['zones.png', 'Zones et balises'],
+  ['audit.png', 'Écarts d’audit'],
+  ['rapport.png', 'Rapport et écarts'],
+]
 
 const tel = (fichier, legende) => cell([
   new Paragraph({
-    children: [new ImageRun({ type: 'png', data: img(fichier), transformation: { width: TEL * PX, height: TELH * PX } })],
+    children: [new ImageRun({ type: 'png', data: img(fichier), transformation: { width: TEL * PXMM, height: TELH * PXMM } })],
     spacing: { after: 70 }, alignment: AlignmentType.CENTER,
   }),
   new Paragraph({
@@ -127,7 +210,7 @@ const tel = (fichier, legende) => cell([
   }),
 ], mm(36), { valign: VerticalAlign.TOP })
 
-const doc = (LOGO) => new Document({
+const doc = (LOGO, QR) => new Document({
   creator: 'Devkaylab', title: 'Quantinvo — fiche produit', description: "Application d'inventaire pour le commerce de détail",
   sections: [{
     properties: { page: { margin: { top: mm(12), bottom: mm(10), left: mm(15), right: mm(15) } } },
@@ -213,11 +296,7 @@ const doc = (LOGO) => new Document({
       tableau([
         new TableRow({
           children: [
-            tel('accueil-superviseur.png', 'Les inventaires'),
-            tel('inventaire-superviseur.png', 'Le suivi'),
-            tel('zones.png', 'Zones et balises'),
-            tel('audit.png', 'Écarts d’audit'),
-            tel('rapport.png', 'Rapport et écarts'),
+            ...ECRANS.map(([f, legende]) => tel(f, legende)),
           ],
         }),
       ], [mm(36), mm(36), mm(36), mm(36), mm(36)]),
@@ -262,7 +341,7 @@ const doc = (LOGO) => new Document({
               section('Publication'),
               fait('Nom', 'Quantinvo'),
               fait('Identifiant', 'com.quantinvo.app'),
-              fait('Version', '1.0.0 (build 4)'),
+              fait('Version', VERSION),
               fait('Catégorie', 'Professionnel (Business)'),
               fait('Classification', '4+ — aucun contenu sensible.'),
               fait('Éditeur', 'Devkaylab'),
@@ -278,27 +357,36 @@ const doc = (LOGO) => new Document({
       tableau([
         new TableRow({
           children: [
+            // ⚠️ LE CODE D'ABORD, LES ADRESSES ENSUITE. La fiche se lit sur
+            // un écran ou sur papier, et dans les deux cas le lecteur a son
+            // téléphone en main : un code se scanne, une adresse se retape.
             cell([
-              par(txt('App Store', { size: 17, bold: true, color: P.INK }), { after: 40 }),
-              par(txt('apps.apple.com/fr/search?term=Quantinvo', { size: 15, color: P.ACCENT }), { after: 0 }),
-            ], COL, { padR: mm(3) }),
+              new Paragraph({
+                children: [new ImageRun({ type: 'png', data: QR, transformation: { width: QR_MM * PXMM, height: QR_MM * PXMM } })],
+                spacing: { after: 0 },
+              }),
+            ], mm(24), { valign: VerticalAlign.TOP }),
+            cell([], mm(4)),
+            cell([
+              par(txt('Un seul code, pour tous les téléphones', { size: 17, bold: true, color: P.INK }), { after: 40 }),
+              par(txt('Il ouvre l’application si elle est installée, propose la boutique sinon.', { size: 15, color: P.INK2 }), { after: 50 }),
+              par(txt('www.quantinvo.com/open', { size: 15, color: P.ACCENT }), { after: 0 }),
+            ], mm(74), { padR: mm(3) }),
             cell([], GOUT),
             cell([
-              par(txt('Google Play', { size: 17, bold: true, color: P.INK }), { after: 40 }),
+              par(txt('App Store', { size: 17, bold: true, color: P.INK }), { after: 40 }),
+              par(txt(APP_STORE, { size: 15, color: P.ACCENT }), { after: 90 }),
+              par(txt('Google Play · en cours d’examen', { size: 17, bold: true, color: P.INK }), { after: 40 }),
               par(txt('play.google.com/store/search?q=Quantinvo&c=apps', { size: 15, color: P.ACCENT }), { after: 0 }),
-            ], COL),
+            ], mm(72)),
           ],
         }),
-      ], [COL, GOUT, COL]),
-      new Paragraph({
-        children: [new TextRun({ text: 'L’application n’est pas encore publiée. Ces deux adresses mènent aujourd’hui à la recherche de chaque boutique, et afficheront la fiche le jour de la mise en ligne.', font: F, size: 15, color: P.SLATE, italics: true })],
-        spacing: { before: 80, after: 0 },
-      }),
+      ], [mm(24), mm(4), mm(74), GOUT, mm(72)]),
 
       // ── Pied ─────────────────────────────────────────────────────────────
       new Paragraph({
-        children: [new TextRun({ text: 'Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le 9 septembre 2026, application version 1.0.0.', font: F, size: 14, color: P.SLATE })],
-        spacing: { before: 130, after: 0 },
+        children: [new TextRun({ text: `Devkaylab · contact@quantinvo.com · www.quantinvo.com — fiche établie le ${ETABLIE_LE}, application version ${VERSION}.`, font: F, size: 14, color: P.SLATE })],
+        spacing: { before: 70, after: 0 },
         border: { top: { style: BorderStyle.SINGLE, size: 4, color: P.HAIR, space: 5 } },
       }),
     ],
@@ -309,7 +397,11 @@ async function main() {
   // `logoPng` rend une donnée « image/png;base64,… » — la forme qu'attend
   // pptxgenjs. Ici il faut les octets.
   const LOGO = Buffer.from((await logoPng(640)).split(',')[1], 'base64')
-  const b = await Packer.toBuffer(doc(LOGO))
+  // 640 px pour 30 mm : largement de quoi imprimer net, et un QR trop maigre
+  // à l'impression est un QR qui ne se lit pas.
+  const QR = await qrPng(QR_URL, 640)
+  await preparerTelephones(ECRANS.map(([f]) => f))
+  const b = await Packer.toBuffer(doc(LOGO, QR))
   fs.writeFileSync(path.join(__dirname, 'Quantinvo-fiche-produit.docx'), b)
   console.log('OK Quantinvo-fiche-produit.docx')
 }

@@ -329,7 +329,10 @@ async function main() {
       rows: [
         ['Nom', 'Quantinvo'],
         ['Identifiant iOS et Android', 'com.quantinvo.app'],
-        ['App Store, Google Play', 'Publication en cours'],
+        // ⚠️ Les deux boutiques n'ont pas ouvert le même jour : Apple a publié
+        // le 27 septembre 2026, Google examinait encore (envoi du 19).
+        ['App Store', 'Publiée'],
+        ['Google Play', 'Publication en cours'],
       ],
     })
     d.alineas(s, [
