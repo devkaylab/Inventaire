@@ -24,7 +24,7 @@
 
 /** Les réglages de la version en vigueur. Copie de `reglages_prix`. */
 export const REGLAGES = {
-  version: 1,
+  version: 2,
   tauxInventoristeCents: 2000,
   tauxResponsableCents: 2800,
   productivite: 800,
@@ -39,7 +39,55 @@ export const REGLAGES = {
   // `alter table … default` — et la garde les lit là où ils sont.
   tarifAppareilCents: 1600,
   fraisFixesLogicielCents: 1900,
+  // ⚠️ Les quatre réglages de la grille à deux axes (version 2). Ils vivent
+  // dans la même migration que les autres, en clair, et la garde les compare.
+  supplementAppareilCents: 2500,
+  tolerancePct: 10,
+  fenetreJours: 7,
+  soireeMinutes: 420,
+  // ⚠️ UNE SECONDE PRODUCTIVITÉ, ET C'EST VOULU. `productivite` (800) sert à
+  // la formule ÉQUIPE, dont les exemples validés vivent dans son document de
+  // conception : cette formule est FERMÉE, et re-chiffrer une formule fermée
+  // sans la revalider est pire que la laisser telle quelle. 500 est le repère
+  // de Julien pour un inventoriste moyen, et c'est lui qui dimensionne le
+  // ponctuel.
+  productivitePonctuel: 500,
 } as const
+
+/**
+ * ⚠️⚠️ **LE MOIS D'ABONNEMENT QUI COUVRE CES APPAREILS**, et sa moitié.
+ *
+ * C'est l'ancre de toute la grille ponctuelle — la règle des deux inventaires
+ * (Julien, 28 septembre 2026) : « comme au cinéma, au-delà de deux séances par
+ * mois l'abonnement revient moins cher que la place ». Deux réservations
+ * restent sous le mois, trois le dépassent.
+ *
+ * ⚠️ Les trois montants sont ceux de `offres.ts` — Essential, Advanced,
+ * Enterprise. Ils sont recopiés ici parce que la fonction en base ne peut pas
+ * lire ce module, et qu'ils font foi des deux côtés : une garde les compare.
+ */
+export function moisCouvrant(appareils: number): number {
+  return appareils <= 2 ? 8900 : (appareils <= 20 ? 31000 : 89000)
+}
+
+/** La moitié du mois : le plafond d'une réservation ponctuelle. */
+export function plafondPonctuel(appareils: number): number {
+  return Math.floor(moisCouvrant(appareils) / 2)
+}
+
+/**
+ * Le minimum d'appareils qu'impose la taille.
+ *
+ * ⚠️ **SANS LUI, LA RÈGLE SE RETOURNE** : déclarer 100 000 pièces sur deux
+ * appareils ramènerait le mois de référence à Essential, donc le prix à 44 €.
+ * Défaut trouvé par Julien en manipulant la maquette. Physiquement, deux
+ * appareils ne comptent pas 100 000 pièces en sept jours — à 500 à l'heure,
+ * ils en font 70 000 au plus. La licence est dimensionnée pour le travail.
+ */
+export function minimumAppareils(articles: number): number {
+  return Math.max(1, Math.ceil(
+    articles / (REGLAGES.productivitePonctuel * (REGLAGES.soireeMinutes / 60))))
+}
 
 /**
  * Les deux formules de la même réservation.
@@ -101,7 +149,7 @@ export const SECTEURS: { cle: Secteur; nom: string }[] = [
   { cle: 'autre', nom: 'Autre' },
 ]
 
-export type Tranche = { cle: string; nom: string; min: number; max: number }
+export type Tranche = { cle: string; nom: string; min: number; max: number; prixCents?: number }
 
 /**
  * ⚠️ **ON RETIENT LE HAUT DE LA TRANCHE, JAMAIS LE MILIEU.** Un prix ferme se
@@ -109,13 +157,14 @@ export type Tranche = { cle: string; nom: string; min: number; max: number }
  * qui permet de ne pas revenir vers lui le soir de l'inventaire.
  */
 export const TRANCHES_ARTICLES: Tranche[] = [
-  { cle: 'a', nom: 'Moins de 2 000 articles', min: 0, max: 2_000 },
-  { cle: 'b', nom: '2 000 à 5 000 articles', min: 2_000, max: 5_000 },
-  { cle: 'c', nom: '5 000 à 10 000 articles', min: 5_000, max: 10_000 },
-  { cle: 'd', nom: '10 000 à 20 000 articles', min: 10_000, max: 20_000 },
-  { cle: 'e', nom: '20 000 à 30 000 articles', min: 20_000, max: 30_000 },
-  { cle: 'f', nom: '30 000 à 50 000 articles', min: 30_000, max: 50_000 },
-  { cle: 'g', nom: '50 000 à 100 000 articles', min: 50_000, max: 100_000 },
+  { cle: 'a', nom: 'Moins de 2 000 pièces', min: 0, max: 2_000, prixCents: 3_900 },
+  { cle: 'b', nom: '2 000 à 5 000 pièces', min: 2_000, max: 5_000, prixCents: 4_400 },
+  { cle: 'c', nom: '5 000 à 10 000 pièces', min: 5_000, max: 10_000, prixCents: 10_900 },
+  { cle: 'd', nom: '10 000 à 20 000 pièces', min: 10_000, max: 20_000, prixCents: 12_900 },
+  { cle: 'e', nom: '20 000 à 30 000 pièces', min: 20_000, max: 30_000, prixCents: 14_500 },
+  { cle: 'f', nom: '30 000 à 50 000 pièces', min: 30_000, max: 50_000, prixCents: 15_500 },
+  { cle: 'g', nom: '50 000 à 100 000 pièces', min: 50_000, max: 100_000, prixCents: 34_900 },
+  { cle: 'h', nom: '100 000 à 150 000 pièces', min: 100_000, max: 150_000, prixCents: 44_500 },
 ]
 
 export const TRANCHES_REFERENCES: Tranche[] = [
@@ -171,46 +220,72 @@ export type Chaine = {
 export function chaine(
   articlesRetenus: number,
   coefficient = 1,
-  formule: Formule = 'equipe_quantinvo',
+  formule: Formule = 'logiciel_seul',
+  appareilsDemandes?: number,
 ): Chaine {
   const r = REGLAGES
   const logiciel = formule === 'logiciel_seul'
   const heuresPersonne = articlesRetenus / r.productivite
+
+  if (logiciel) {
+    // ⚠️⚠️ **LE PRIX VIENT DE LA TRANCHE, PLUS DU COÛT.** Voir la migration
+    // `20260928120001` pour le pourquoi : « coût + marge » faisait BAISSER le
+    // prix à la pièce quand le volume montait, ce qui est l'inverse de ce
+    // qu'il faut. L'ancre est la règle des deux inventaires.
+    const minimum = minimumAppareils(articlesRetenus)
+    const appareils = Math.max(minimum, appareilsDemandes ?? minimum)
+    const bande = TRANCHES_ARTICLES.find((t) => t.max >= articlesRetenus)
+    const base = bande?.prixCents ?? 0
+    const prixCents = Math.min(
+      base + r.supplementAppareilCents * Math.max(0, appareils - minimum),
+      plafondPonctuel(appareils),
+    )
+    const dureeMinutes = Math.ceil(
+      (articlesRetenus / (r.productivitePonctuel * appareils)) * 60 / r.arrondiMinutes,
+    ) * r.arrondiMinutes
+    const coutCents = r.fraisFixesLogicielCents
+    return {
+      formule, articlesRetenus, heuresPersonne,
+      inventoristes: 0,
+      compteursAttendus: appareils,
+      appareils,
+      licenceCents: prixCents,
+      responsable: false,
+      dureeMinutes,
+      equipeCents: 0,
+      coutCents,
+      prixCents,
+      margeCents: prixCents - coutCents,
+      marge: prixCents === 0 ? 0 : (prixCents - coutCents) / prixCents,
+      remunerationInventoristeCents: 0,
+      remunerationResponsableCents: 0,
+    }
+  }
+
+  // La formule équipe, inchangée : fermée côté site, pas supprimée.
   const compteursAttendus = Math.ceil(heuresPersonne / (r.dureeCibleMinutes / 60))
   const dureeMinutes =
     Math.ceil((heuresPersonne / compteursAttendus) * 60 / r.arrondiMinutes) * r.arrondiMinutes
   const responsable = compteursAttendus >= r.responsableDesN
   const appareils = compteursAttendus + (responsable ? 1 : 0)
   const heuresFacturees = dureeMinutes / 60
-
-  // ⚠️ AUCUN COEFFICIENT SUR LE LOGICIEL SEUL : secteur, horaire, dimanche et
-  // code-barres décrivent tous la pénibilité du TRAVAIL HUMAIN. Le logiciel
-  // coûte la même chose un dimanche à 23 h qu'un mardi à 10 h.
-  const equipeCents = logiciel ? 0 : Math.round(
+  const equipeCents = Math.round(
     (compteursAttendus * r.tauxInventoristeCents
       + (responsable ? r.tauxResponsableCents : 0)) * heuresFacturees,
   )
-  const licenceCents = logiciel ? appareils * r.tarifAppareilCents : 0
-  const fraisCents = logiciel ? r.fraisFixesLogicielCents : r.fraisFixesCents
-  const coutCents = logiciel ? fraisCents : equipeCents + fraisCents
-  // ⚠️ LE LOGICIEL NE PASSE PAS PAR LA MARGE CIBLE : son prix EST la somme de
-  // la licence et des frais. Le diviser par 0,75 reviendrait à inventer un
-  // coût pour le majorer.
-  const prixCents = logiciel
-    ? Math.round((licenceCents + fraisCents) / 100) * 100
-    : Math.round((coutCents / (1 - r.margeCible)) * coefficient / 100) * 100
+  const coutCents = equipeCents + r.fraisFixesCents
+  const prixCents = Math.round((coutCents / (1 - r.margeCible)) * coefficient / 100) * 100
   return {
     formule, articlesRetenus, heuresPersonne,
-    inventoristes: logiciel ? 0 : compteursAttendus,
-    compteursAttendus, appareils, licenceCents,
-    responsable: logiciel ? false : responsable,
+    inventoristes: compteursAttendus,
+    compteursAttendus, appareils, licenceCents: 0,
+    responsable,
     dureeMinutes, equipeCents, coutCents, prixCents,
     margeCents: prixCents - coutCents,
     marge: prixCents === 0 ? 0 : (prixCents - coutCents) / prixCents,
-    remunerationInventoristeCents:
-      logiciel ? 0 : Math.round(r.tauxInventoristeCents * heuresFacturees),
+    remunerationInventoristeCents: Math.round(r.tauxInventoristeCents * heuresFacturees),
     remunerationResponsableCents:
-      logiciel || !responsable ? 0 : Math.round(r.tauxResponsableCents * heuresFacturees),
+      responsable ? Math.round(r.tauxResponsableCents * heuresFacturees) : 0,
   }
 }
 
@@ -222,6 +297,8 @@ export type Reponses = {
   trancheArticles: string
   debut: Date | null
   formule?: Formule
+  /** Ce que le client a demandé. En deçà du minimum, le minimum gagne. */
+  appareils?: number
 }
 
 /**
@@ -266,13 +343,18 @@ export function prixFerme(r: Reponses, maintenant = new Date()): PrixFerme {
   if (r.debut.getTime() < maintenant.getTime() + delai * 3600_000) {
     return { ok: false, refus: 'trop_tot' }
   }
-  const c = chaine(tranche.max, 1, formule)
+  const c = chaine(tranche.max, 1, formule, r.appareils)
   if (c.marge < REGLAGES.margeMinimum) return { ok: false, refus: 'marge_insuffisante' }
   return {
     ok: true,
     chaine: c,
     arrivee: new Date(r.debut.getTime() - (logiciel ? 0 : 15) * 60_000),
-    finPrevue: new Date(r.debut.getTime() + c.dureeMinutes * 60_000),
+    // ⚠️ POUR LE LOGICIEL, LA LICENCE COURT UNE SEMAINE, pas le temps du
+    // comptage : « l'inventaire peut durer assez longtemps, on ne compte en
+    // général pas plus longtemps » (Julien, 28 septembre 2026).
+    finPrevue: new Date(r.debut.getTime() + (logiciel
+      ? REGLAGES.fenetreJours * 24 * 3600_000
+      : c.dureeMinutes * 60_000)),
     annulationGratuiteJusquAu: new Date(r.debut.getTime() - 3 * 24 * 3600_000),
   }
 }

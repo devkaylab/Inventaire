@@ -27,6 +27,7 @@ drop table if exists public.missions cascade;
 drop table if exists public.mission_groupes cascade;
 drop sequence if exists public.missions_reference_seq cascade;
 drop table if exists public.reglages_annulation cascade;
+drop table if exists public.tranches_prix cascade;
 drop table if exists public.coefficients_prix cascade;
 drop table if exists public.reglages_prix cascade;
 drop table if exists public.zones_desservies cascade;

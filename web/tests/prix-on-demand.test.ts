@@ -19,6 +19,7 @@ import { derniereDefinition, dossierMigrations } from './migrations'
 import {
   REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee,
   FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
+  TRANCHES_ARTICLES, minimumAppareils, moisCouvrant, plafondPonctuel,
 } from '../lib/prixOnDemand'
 import { prixFerme as prixAffiche } from '../lib/prixOnDemand'
 
@@ -51,6 +52,26 @@ function migrations(): { fichier: string; sql: string }[] {
  * reposer de réglages : la garde a cherché un `insert` là où il n'y en a plus.
  * Elle cherche donc maintenant l'`insert` lui-même, où qu'il soit.
  */
+/**
+ * La dernière migration qui pose CE QU'ON CHERCHE — pas « la dernière qui
+ * parle de prix ».
+ *
+ * ⚠️ La distinction a mordu le 28 septembre 2026 : la grille à deux axes a
+ * ajouté une migration qui pose les réglages mais NI les coefficients, NI les
+ * zones, NI l'ancienne fonction. Une garde qui prenait « la dernière du
+ * sujet » les cherchait dedans et tombait, alors que rien n'était cassé. On
+ * cherche donc chacun là où il est DÉFINI, comme `derniereDefinition()` le
+ * fait pour les fonctions.
+ */
+function derniereMigrationAvec(motif: string | RegExp): string {
+  const avec = migrations().filter((m) => {
+    const sql = sansCorpsDeFonction(sansCommentaires(m.sql))
+    return typeof motif === 'string' ? sql.includes(motif) : motif.test(sql)
+  })
+  expect(avec.length, `aucune migration ne pose ${motif}`).toBeGreaterThan(0)
+  return sansCorpsDeFonction(avec[avec.length - 1].sql)
+}
+
 function migrationDuPrix(): string {
   // ⚠️ **HORS CORPS DE FONCTION**, et c'est un piège qui s'est refermé le jour
   // même : `admin_poser_reglages_prix` contient elle aussi un
@@ -140,7 +161,9 @@ function chaine(articles: number, r: Reglages, coefficient = 1) {
     duree: REGLAGES.dureeCibleMinutes,
     resp: REGLAGES.tauxResponsableCents,
   })
-  const c = chaineAffichee(articles, coefficient)
+  // ⚠️ La formule est NOMMÉE : le défaut a basculé vers le logiciel seul le
+  // 28 septembre 2026, et ce bloc rejoue les exemples de la formule ÉQUIPE.
+  const c = chaineAffichee(articles, coefficient, 'equipe_quantinvo')
   return {
     inventoristes: c.inventoristes,
     responsable: c.responsable,
@@ -240,7 +263,7 @@ describe('les coefficients sont neutres au lancement', () => {
    * cette garde est là pour qu'elle soit prise, pas subie.
    */
   it('aucun coefficient ne s’écarte de 1,00', () => {
-    const sql = sansCommentaires(migrationDuPrix())
+    const sql = sansCommentaires(derniereMigrationAvec(/insert into public\.coefficients_prix[\s\S]*values/))
     const i = sql.indexOf('insert into public.coefficients_prix')
     expect(i).toBeGreaterThan(0)
     const bloc = sql.slice(i, sql.indexOf(';', i))
@@ -250,7 +273,7 @@ describe('les coefficients sont neutres au lancement', () => {
   })
 
   it('les départements desservis ne sont pas majorés non plus', () => {
-    const sql = sansCommentaires(migrationDuPrix())
+    const sql = sansCommentaires(derniereMigrationAvec('insert into public.zones_desservies'))
     const i = sql.indexOf('insert into public.zones_desservies')
     const bloc = sql.slice(i, sql.indexOf(';', i))
     const valeurs = [...bloc.matchAll(/,\s*(\d+\.\d+)\s*\)/g)].map((m) => Number(m[1]))
@@ -287,7 +310,7 @@ describe('le moteur, en base', () => {
    * inventaire, et ce que touche l'inventoriste qui est chez lui.
    */
   it('n’est pas appelable depuis un navigateur de client', () => {
-    const sql = migrationDuPrix()
+    const sql = derniereMigrationAvec('grant execute on function public.prix_mission')
     expect(sql).toMatch(/revoke all on function public\.prix_mission\([^)]*\)\s*\n?\s*from public, anon, authenticated;/)
     expect(sql).not.toMatch(/grant execute on function public\.prix_mission\([^)]*\)\s*\n?\s*to [^;]*authenticated/)
   })
@@ -351,13 +374,15 @@ describe('le doublon d’affichage suit celui qui fait foi', () => {
     // `responsable_des_n` et `arrondi_minutes` ont une valeur par défaut en
     // base : la garde les lit dans la DÉFINITION de la table, pas dans l'insert.
     const sql = sansCommentaires(migrationDuPrix())
-    const table = sql.slice(sql.indexOf('create table if not exists public.reglages_prix'))
+    const table = sansCommentaires(
+      derniereMigrationAvec('create table if not exists public.reglages_prix'),
+    ).slice(0)
     expect(table).toContain(`responsable_des_n       integer not null default ${REGLAGES.responsableDesN}`)
     expect(table).toContain(`arrondi_minutes         integer not null default ${REGLAGES.arrondiMinutes}`)
   })
 
   it('les départements desservis sont les mêmes des deux côtés', () => {
-    const sql = sansCommentaires(migrationDuPrix())
+    const sql = sansCommentaires(derniereMigrationAvec('insert into public.zones_desservies'))
     const i = sql.indexOf('insert into public.zones_desservies')
     const bloc = sql.slice(i, sql.indexOf(';', i))
     const enBase = [...bloc.matchAll(/\('(\d{2})',/g)].map((m) => m[1]).sort()
@@ -474,27 +499,77 @@ describe('la formule logiciel seul', () => {
    * de la page ne seraient plus comparables — et c'est tout l'intérêt de les
    * mettre côte à côte.
    */
-  it('le dimensionnement est le même dans les deux formules', () => {
+  /**
+   * ⚠️ **LES DEUX FORMULES NE SE DIMENSIONNENT PLUS PAREIL, ET C'EST VOULU.**
+   * Cette garde disait l'inverse jusqu'au 28 septembre 2026 — elle était juste
+   * tant que le ponctuel était un devis d'équipe déguisé. Le ponctuel se cale
+   * maintenant sur 500 articles/heure et sept heures ; l'équipe garde 800 et
+   * 4 h 30, parce qu'on ne re-chiffre pas une formule fermée.
+   */
+  it('le ponctuel se dimensionne sur SA productivité, pas sur celle de l’équipe', () => {
     for (const articles of [2_000, 10_000, 20_000, 30_000, 50_000, 100_000]) {
-      const equipe = chaineAffichee(articles, 1, 'equipe_quantinvo')
       const logiciel = chaineAffichee(articles, 1, 'logiciel_seul')
-      expect(logiciel.compteursAttendus, `${articles} — compteurs`)
-        .toBe(equipe.compteursAttendus)
-      expect(logiciel.appareils, `${articles} — appareils`).toBe(equipe.appareils)
-      expect(logiciel.dureeMinutes, `${articles} — durée`).toBe(equipe.dureeMinutes)
+      // Le minimum d'appareils : ce qu'il faut pour tenir en une soirée.
+      const attendu = Math.max(1, Math.ceil(
+        articles / (REGLAGES.productivitePonctuel * (REGLAGES.soireeMinutes / 60))))
+      expect(logiciel.appareils, `${articles} — appareils`).toBe(attendu)
+      // Et la durée retombe bien sous la soirée visée.
+      expect(logiciel.dureeMinutes, `${articles} — durée`)
+        .toBeLessThanOrEqual(REGLAGES.soireeMinutes)
     }
   })
 
-  it('le prix est la licence plus les frais, et rien d’autre', () => {
-    for (const articles of [2_000, 20_000, 100_000]) {
-      const c = chaineAffichee(articles, 1, 'logiciel_seul')
-      expect(c.licenceCents).toBe(c.appareils * r.tarifAppareil)
-      expect(c.prixCents).toBe(c.licenceCents + r.fraisFixesLogiciel)
-      // ⚠️ L'arrondi à l'euro ne doit rien changer : un tarif et des frais en
-      // euros ronds donnent un prix en euros ronds. Si ce test tombe un jour,
-      // c'est qu'un réglage est passé aux centimes — et le prix affiché ne
-      // serait plus le prix payé.
-      expect(c.prixCents % 100).toBe(0)
+  /**
+   * ⚠️ **LA TAILLE IMPOSE UN MINIMUM, ET C'EST CE QUI TIENT LA GRILLE.** Sans
+   * lui, déclarer 100 000 pièces sur deux appareils ramenait le mois de
+   * référence à Essential, donc le prix à 44 €. Trouvé par Julien en
+   * manipulant la maquette, le 28 septembre 2026.
+   */
+  it('⚠️ on ne descend pas sous le minimum d’appareils qu’impose la taille', () => {
+    const c = chaineAffichee(100_000, 1, 'logiciel_seul', 2)
+    expect(c.appareils).toBe(minimumAppareils(100_000))
+    expect(c.appareils).toBeGreaterThan(2)
+    expect(c.prixCents).toBe(
+      TRANCHES_ARTICLES.find((t) => t.max === 100_000)?.prixCents)
+  })
+
+  /**
+   * ⚠️ **LA RÈGLE DES DEUX INVENTAIRES**, sur les huit tranches : deux
+   * réservations restent sous le mois d'abonnement, trois le dépassent. C'est
+   * l'ancre de tout le barème — sans elle, le taux à la pièce n'est qu'un
+   * chiffre qu'on s'est donné, et un ponctuel plus cher que la moitié d'un
+   * mois résiliable n'a aucun acheteur.
+   */
+  it('⚠️ deux inventaires restent sous le mois, trois le dépassent', () => {
+    for (const t of TRANCHES_ARTICLES) {
+      const c = chaineAffichee(t.max, 1, 'logiciel_seul')
+      const mois = moisCouvrant(c.appareils)
+      expect(c.prixCents * 2, `${t.nom} — deux`).toBeLessThanOrEqual(mois)
+      expect(c.prixCents * 3, `${t.nom} — trois`).toBeGreaterThan(mois)
+    }
+  })
+
+  /**
+   * ⚠️ **LE PRIX EST CELUI DE LA TRANCHE**, plus les appareils demandés
+   * au-delà du minimum, plafonné à la moitié d'un mois d'abonnement. Il ne
+   * vient plus d'une licence par appareil majorée de frais — ce modèle faisait
+   * BAISSER le prix à la pièce quand le volume montait.
+   */
+  it('le prix est celui de la tranche, plus les appareils en trop', () => {
+    for (const t of TRANCHES_ARTICLES) {
+      const minimum = minimumAppareils(t.max)
+      expect(chaineAffichee(t.max, 1, 'logiciel_seul').prixCents).toBe(t.prixCents)
+
+      // Deux appareils de plus que le minimum, tant que le plafond ne mord pas.
+      const deuxDePlus = chaineAffichee(t.max, 1, 'logiciel_seul', minimum + 2)
+      expect(deuxDePlus.prixCents).toBe(Math.min(
+        (t.prixCents ?? 0) + 2 * REGLAGES.supplementAppareilCents,
+        plafondPonctuel(minimum + 2),
+      ))
+
+      // ⚠️ L'arrondi à l'euro ne doit rien changer : un prix affiché aux
+      // centimes ne serait plus le prix payé.
+      expect(deuxDePlus.prixCents % 100, `${t.nom} — euros ronds`).toBe(0)
     }
   })
 

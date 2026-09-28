@@ -3,6 +3,15 @@
 *Document de conception, 20 septembre 2026. Rien n'est construit.*
 Couvre les points 11, 12, 13 et 38 du plan.
 
+> ⚠️⚠️ **CE DOCUMENT DÉCRIT LA FORMULE ÉQUIPE, QUI EST FERMÉE** depuis le
+> 28 septembre 2026 (`FORMULE_EQUIPE_OUVERTE`). Ses chiffres restent justes
+> pour elle, et ils sont volontairement figés : on ne re-chiffre pas une
+> formule fermée sans la revalider. **Le prix du ponctuel, lui, ne se calcule
+> plus comme ça** — il vient d'une tranche, ancrée sur la règle des deux
+> inventaires. Voir [08](08-le-prix-recale-sur-le-marche.md) pour le pourquoi
+> et [09](09-on-demand-commence-par-le-logiciel-seul.md) pour le périmètre, et
+> la migration `20260928120001_la_grille_a_deux_axes.sql` pour ce qui fait foi.
+
 ---
 
 ## 1. La promesse, et ce qu'elle interdit
