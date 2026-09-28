@@ -34,17 +34,20 @@ node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx
   de démo réel), jamais `web/screenshots/` (faux compte de test).
 - **L'écart vaut compté − théorique**, le signe du rapport.
 
-⚠️ **`captures/boite-a-outils.png` EST PÉRIMÉE** depuis le 24 septembre 2026 :
-elle affiche « Avery L7160 », alors que la planche a changé de format
-(35,6 × 16,9 mm, 80 par feuille — fiche 107) et que l'application dit
-maintenant le format sans nommer une seule marque. `build-presentation.js`
-l'écarte et montre `creer-balises.png`, qui porte le même en-tête sans
-afficher de référence. **À reprendre à la prochaine passe de captures**, avec
-`creer-balises` et `zones` qui en dépendent.
+⚠️ **`captures/boite-a-outils.png` PÉRIMERA AVEC LA NOUVELLE BALISE.** Elle
+affiche « Avery L7160 », ce qui est encore exact ici : le nouveau format
+(35,6 × 16,9 mm, 80 par feuille) attend sur la branche que Julien ait
+réimprimé une planche de calage à 100 % sur du vrai prédécoupé — la fusion du
+28 septembre 2026 l'a délibérément laissé de côté. Le jour où il arrive, cette
+capture ment, et il faut la reprendre avec `creer-balises` et `zones` qui en
+dépendent. `build-presentation.js` l'écarte déjà et montre `creer-balises.png`,
+qui porte le même en-tête sans afficher de référence de support.
 
 `captures/planche-balises.png` n'est PAS une capture d'écran : ce sont six
 balises telles qu'elles sortent du générateur, rendues depuis le PDF réel le
-26 septembre 2026. À refaire si le dessin change (`src/lib/baliseDessin.ts`).
+26 septembre 2026. ⚠️ Elles montrent le format qui n'est PAS encore ici — à
+refaire le jour où le dessin arrive (`src/lib/baliseDessin.ts`, sur la
+branche).
 
 Les six anciens scripts (`build.js`, `build-court.js`, `build-tarifs.js`,
 `build-samaritaine.js`, `build-histoire.js`, `build-pourquoi.js`) ont été
