@@ -4813,6 +4813,12 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .res-questions > p.muted { margin-bottom: 26px; max-width: 58ch; line-height: 1.55; }
 .res-questions .field { margin-bottom: 18px; }
+.res-colonnes:has(.res-jauge) .res-questions .field,
+.res-seule .res-questions .field { margin-bottom: 30px; }
+.res-colonnes:has(.res-jauge) .res-questions h1,
+.res-seule .res-questions h1 { font-size: clamp(26px, 3vw, 32px); margin-bottom: 0; }
+.res-colonnes:has(.res-jauge) .champ-label,
+.res-seule .champ-label { font-size: 14px; font-weight: 600; color: var(--text); }
 
 .res-cote { display: flex; flex-direction: column; gap: 16px; }
 .res-encadre { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
@@ -4826,6 +4832,35 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-encadre p { font-size: 14px; line-height: 1.55; margin-bottom: 14px; }
 
 .res-recap { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
+/* ── Le tunnel ponctuel, tel que la planche le montre ───────
+   ⚠️ LE VOLET EST UNE COLONNE, PAS UNE CARTE qui épouse son contenu : sur la
+   planche il court du haut au bas de l'écran. Une carte qui s'arrête au
+   dernier mot laisse la page bancale, et c'est ce que Julien a vu. */
+/* ⚠️ **DEUX COLONNES SEULEMENT QUAND IL Y A UN VOLET.** Écrite en
+   `:has(.res-jauge)`, cette règle gagnait aussi sur la première question — qui
+   porte la jauge mais pas de volet — et y réservait 340 px pour rien : le
+   contenu tombait à 660 px de large et le titre se coupait en deux. La
+   condition dit maintenant ce qu'elle veut dire. */
+.res-colonnes:has(.res-jauge):has(.res-recap) { align-items: stretch; grid-template-columns: minmax(0, 1fr) 340px; }
+.res-colonnes:has(.res-jauge) .res-recap { padding: 32px 30px; display: flex; flex-direction: column; }
+/* ⚠️ **UNE ÉTAPE SANS VOLET PREND TOUTE LA LARGEUR.** La grille réservait ses
+   340 px même quand rien ne venait les occuper : la première question se
+   retrouvait tassée sur 60 % de la page, avec un vide à droite. */
+.res-seule { grid-template-columns: minmax(0, 1fr); }
+.res-seule .res-questions { max-width: 860px; }
+/* Les actions se groupent à gauche : `space-between` envoyait « Continuer » à
+   l'autre bout de la page, loin de ce qu'on vient de régler. */
+.res-seule .res-actions,
+.res-colonnes:has(.res-jauge) .res-actions { justify-content: flex-start; gap: 12px; margin-top: 36px; }
+/* ⚠️ **LES DEUX ÉTAPES FONT LA MÊME HAUTEUR.** Sans ça le pied de page
+   remonte de quatre-vingt-dix pixels entre la première question et la seconde,
+   et l'écran « saute » à chaque Continuer. La valeur est celle de la plus
+   haute — le calendrier plus son volet — mesurée, pas devinée. */
+.res-colonnes:has(.res-jauge) { min-height: 660px; }
+.res-jauge { display: flex; gap: 8px; margin-bottom: 30px; }
+.res-jauge span { height: 3px; flex-grow: 1; border-radius: 2px; background: var(--hairline); transition: background .3s ease; }
+.res-jauge span.fait { background: var(--accent); }
+.res-fenetre { margin-top: 16px; font-size: 14px; line-height: 1.55; max-width: 48ch; }
 .res-recap h2 { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 14px; }
 .res-recap dl { display: flex; flex-direction: column; gap: 14px; margin: 0; }
 .res-recap dt { font-size: 12.5px; color: var(--text-3); margin-bottom: 3px; }
@@ -4859,6 +4894,9 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 /* ── Le calendrier ─────────────────────────────────────────────────────── */
 .res-quand { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
 .res-calendrier { background: var(--surface); border-radius: var(--r-grand); padding: 18px; }
+.res-colonnes:has(.res-jauge) .res-calendrier { background: none; padding: 0; }
+.res-colonnes:has(.res-jauge) .res-mois { justify-content: flex-start; gap: 10px; margin-bottom: 16px; }
+.res-colonnes:has(.res-jauge) .res-jour-nom { text-transform: uppercase; letter-spacing: .07em; font-size: 11px; }
 .res-mois { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .res-mois strong { font-size: 15px; font-weight: 600; }
 .res-mois .link-btn { font-size: 20px; line-height: 1; padding: 2px 10px; }

@@ -55,7 +55,9 @@ import {
 const ETAPES_LOGICIEL = ['Volume', 'Date'] as const
 const ETAPES_EQUIPE = ['Établissement', 'Date', 'Stock'] as const
 
-const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+// ⚠️ Trois lettres, comme la planche : « L M M J V S D » demande de compter
+// les colonnes pour savoir laquelle est mercredi.
+const JOURS = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 const JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
@@ -504,7 +506,7 @@ export function PageReserver() {
           </Link>
           <span className="res-titre">Réserver un inventaire</span>
           <ol className="res-pas" aria-label="Progression">
-            {(logicielSeul ? ETAPES_LOGICIEL : ETAPES_EQUIPE).map((nom, i) => (
+            {(logicielSeul ? [] : ETAPES_EQUIPE).map((nom, i) => (
               <li key={nom} className={etape > i + 1 ? 'fait' : etape === i + 1 ? 'ici' : ''}
                   aria-current={etape === i + 1 ? 'step' : undefined}>
                 {nom}
@@ -527,8 +529,15 @@ export function PageReserver() {
             à facturer. L'étape de l'équipe reste juste en dessous, intacte,
             derrière `FORMULE_EQUIPE_OUVERTE`. */}
         {etape === 1 && logicielSeul && (
-          <div className="res-colonnes">
+          <div className="res-colonnes res-seule">
             <section className="res-questions echange-entre">
+              {/* ⚠️ La barre de la planche : deux segments, celui de l'étape en
+                  cours en accent. Elle remplace la liste d'étapes de la barre du
+                  site pour le ponctuel — deux indicateurs se contrediraient. */}
+              <div className="res-jauge" aria-hidden="true">
+                <span className="fait" />
+                <span className={etape >= 2 ? 'fait' : ''} />
+              </div>
               <h1>Combien d’appareils prévoyez-vous d’utiliser&nbsp;?</h1>
 
               <div className="field">
@@ -561,7 +570,7 @@ export function PageReserver() {
                     proposer un chiffre qu'on refusera ensuite est pire que ne
                     pas le proposer. */}
                 <div className="res-raccourcis">
-                  {[2, 4, 6, 10, 20].filter((n) => n >= minimumChoisi).map((n) => (
+                  {[2, 4, 6, 10, 20].map((n) => (
                     <button key={n} type="button"
                             className={`res-raccourci${appareils === n ? ' actif' : ''}`}
                             onClick={() => setAppareils(n)}>{n}</button>
@@ -724,10 +733,16 @@ export function PageReserver() {
         {etape === 2 && (
           <div className="res-colonnes">
             <section className="res-questions echange-entre">
+              {logicielSeul && (
+              <div className="res-jauge" aria-hidden="true">
+                <span className="fait" />
+                <span className="fait" />
+              </div>
+              )}
               <h1>{logicielSeul ? 'À partir de quand ?' : 'Quand ?'}</h1>
               <p className="muted">
                 {logicielSeul
-                  ? `Votre licence s’ouvre ce jour-là et reste ouverte ${REGLAGES.fenetreJours} jours. Vous comptez quand vous voulez dans cette semaine, autant de fois qu’il le faut.`
+                  ? 'Votre licence s’ouvre ce jour-là et reste ouverte sept jours.'
                   : 'Avant l’ouverture, en pleine journée ou après la fermeture — comme vous voulez. Nous n’affichons que les créneaux où nous avons une équipe.'}
               </p>
 
@@ -779,6 +794,13 @@ export function PageReserver() {
                       )
                     })}
                   </div>
+                  {logicielSeul && resultat.ok && (
+                    <p className="res-fenetre muted">
+                      Du {enDate(resultat.arrivee)} au {enDate(resultat.finPrevue)}.
+                      {' '}Vous comptez quand vous voulez dans cette semaine,
+                      autant de fois qu’il le faut.
+                    </p>
+                  )}
                   {!logicielSeul && (
                   <p className="res-legende">
                     {(
