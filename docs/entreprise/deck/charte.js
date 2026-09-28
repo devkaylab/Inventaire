@@ -82,6 +82,39 @@ const MOBILE = path.resolve(__dirname, 'captures')
 // AU DIXIÈME PRÈS. Le bloc plein (x 3→11) et la première allée (11→14) se
 // TOUCHENT : ils se lisent comme une seule forme. Ne pas « corriger » cet
 // écart, c'est un choix de Julien.
+/**
+ * Un QR en PNG, pour les documents.
+ *
+ * ⚠️ **L'ADRESSE EST TOUJOURS `…/open`**, jamais une fiche de boutique : cette
+ * page ouvre l'application installée, et propose la boutique du téléphone
+ * sinon. Un seul code sert donc les deux gestes et les deux plateformes, et il
+ * ne périmera pas le jour où Google Play ouvrira. Éprouvé par Julien sur un
+ * iPhone vierge le 28 septembre 2026.
+ *
+ * ⚠️ **SOMBRE SUR CLAIR, et la zone de silence de quatre modules en fait
+ * partie** : un lecteur attend des modules sombres sur un fond clair, et sans
+ * la marge blanche autour, le code ne se lit pas du tout.
+ *
+ * `qrcode` n'est pas une dépendance de ce dossier et on n'en installe pas ici
+ * — `npm install <paquet>` a déjà élagué ce `node_modules` une fois. On le
+ * prend donc là où il est déjà déclaré, dans le site.
+ */
+async function qrPng(adresse, px = 640) {
+  const QRCode = require(path.resolve(__dirname, '../../../web/node_modules/qrcode'))
+  const qr = QRCode.create(adresse, { errorCorrectionLevel: 'M' })
+  const n = qr.modules.size
+  let d = ''
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) if (qr.modules.data[r * n + c]) d += `M${c} ${r}h1v1h-1z`
+  }
+  const v = n + 8
+  const svg = `<svg width="${px}" height="${px}" viewBox="-4 -4 ${v} ${v}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+    <rect x="-4" y="-4" width="${v}" height="${v}" fill="#FFFFFF"/>
+    <path d="${d}" fill="#14181A"/>
+  </svg>`
+  return await sharp(Buffer.from(svg)).png().toBuffer()
+}
+
 async function logoPng(px = 640, couleur = '#14181A') {
   const svg = `<svg width="${px}" height="${px}" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
     <rect x="1.5" y="1.5" width="33" height="33" fill="none" stroke="${couleur}" stroke-width="3"/>
@@ -447,4 +480,4 @@ async function ecrire(pres, base) {
   console.log('OK', fichier)
 }
 
-module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, logoPng, typo }
+module.exports = { P, FONT, FONTD, W, H, M, COL, RX, RW, preparer, ecrire, capture, cadrer, logoPng, qrPng, typo }
