@@ -109,3 +109,49 @@ describe('le badge de boutique garde ses couleurs', () => {
     expect(css).toMatch(/\.boutiques \.store-badge:hover\s*\{[^}]*color:\s*var\(--bg\)/)
   })
 })
+
+describe('le code à scanner de la boîte à outils', () => {
+  const composant = readFileSync(path.join(racine, 'components/QrInstallation.tsx'), 'utf8')
+
+  /**
+   * ⚠️ **UN QR NE SE RELIT PAS À L'ŒIL.** Une adresse recopiée en dur y
+   * survivrait à un changement de domaine sans que personne ne s'en aperçoive :
+   * le code continuerait d'afficher des carrés impeccables menant nulle part.
+   * Il se DÉDUIT donc de `SITE_URL`, et la garde l'exige.
+   */
+  it('l’adresse se déduit de SITE_URL, elle ne s’y recopie pas', () => {
+    expect(composant).toContain("import { SITE_URL } from '@/lib/site'")
+    expect(composant).toMatch(/URL_INSTALLATION = `\$\{SITE_URL\}\/open`/)
+    expect(composant, 'aucune adresse écrite en dur').not.toMatch(/https:\/\/www\.quantinvo/)
+  })
+
+  /**
+   * ⚠️ **C'EST CETTE ADRESSE-LÀ QUI A ÉTÉ ÉPROUVÉE**, le 28 septembre 2026,
+   * sur un iPhone où l'application n'était pas installée : le scan a mené à
+   * Quantinvo puis à l'App Store. Le test lie le code livré à ce qui a été
+   * vérifié sur un vrai téléphone — la seule preuve qui valait.
+   */
+  it('porte `/open`, et pas une fiche de boutique', async () => {
+    const { URL_INSTALLATION } = await import('../components/QrInstallation')
+    expect(URL_INSTALLATION).toBe('https://www.quantinvo.com/open')
+    // Une fiche de boutique périmerait le jour où Google Play ouvre, et ne
+    // servirait qu'à une plateforme sur deux.
+    expect(URL_INSTALLATION).not.toContain('apps.apple.com')
+    expect(URL_INSTALLATION).not.toContain('play.google.com')
+  })
+
+  /**
+   * ⚠️ **SOMBRE SUR CLAIR, DANS LES DEUX THÈMES.** Un lecteur de QR attend des
+   * modules sombres sur un fond clair ; peindre le code avec les jetons du
+   * site le ferait s'inverser en thème sombre, et une partie des téléphones
+   * décrocherait. La zone de silence de quatre modules en fait partie.
+   */
+  it('garde ses couleurs quel que soit le thème', () => {
+    expect(composant, 'le fond du code est blanc, écrit en dur').toContain('fill="#FFFFFF"')
+    expect(composant, 'les modules sont en encre, écrite en dur').toContain('fill="#14181A"')
+    expect(composant, 'aucun jeton de thème sur le code').not.toMatch(/fill=\{?["']?var\(--/)
+    expect(composant, 'la zone de silence de 4 modules').toMatch(/viewBox=\{`-4 -4/)
+    // Et la carte qui le porte reste blanche elle aussi.
+    expect(css).toMatch(/\.outils-installer-code\s*\{[^}]*background:\s*#ffffff/i)
+  })
+})
