@@ -17,8 +17,11 @@ Rédigée en anglais parce que Sukkry a écrit en anglais.
    (point 5). Ils disparaissent avec l'adhésion individuelle, et l'app est
    publiée depuis le 27 septembre 2026 : c'est l'historique du lancement.
 3. **La dénomination est celle du RCS, à la lettre.** La lettre écrit
-   « Devkaylab ». Si l'extrait porte une autre casse ou une autre forme, c'est
-   celle-là qu'il faut — Apple compare à la fiche D&B, qui compare au registre.
+   **`DEVKAYLAB`** en capitales, comme la checklist l'avait relevé le
+   15 septembre 2026 — pas « Devkaylab » comme le site l'écrit pour le
+   public. Apple compare à la fiche D&B, qui compare au registre : c'est la
+   graphie du registre qui gagne, pas celle de la marque. À confirmer sur
+   l'extrait avant d'envoyer.
 4. ⚠️ **La fiche D&B classe Devkaylab en société, pas en entreprise
    individuelle.** C'est le seul vrai motif de refus (« Your organization is
    not listed as a legal entity »), et « à associé unique » peut induire un
@@ -95,7 +98,7 @@ semaines, a débloqué son dossier en demandant un **rappel téléphonique** dep
 >
 > Organization details:
 >
-> - Legal entity name: Devkaylab
+> - Legal entity name: DEVKAYLAB
 > - Legal form: Société par actions simplifiée à associé unique (SASU),
 >   incorporated in France
 > - Registration: 109 680 389 R.C.S. Paris (SIREN 109 680 389)
@@ -117,7 +120,7 @@ semaines, a débloqué son dossier en demandant un **rappel téléphonique** dep
 >    legal form and its R.C.S. registration number.
 > 3. Understood. No certificate or provisioning profile renewal is planned
 >    during the migration period.
-> 4. Understood. Devkaylab will apply to all apps we distribute.
+> 4. Understood. DEVKAYLAB will apply to all apps we distribute.
 > 5. Understood.
 > 6. Not applicable. Our app is free and has no in-app purchases; subscriptions
 >    are sold on our own website, outside the App Store.
