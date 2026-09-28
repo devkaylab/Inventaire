@@ -46,7 +46,7 @@ export default function PriseEnMainPage() {
         </div>
         <div className="app-head-actions pem-actions">
           <Link href="/outils" className="btn btn-ghost btn-sm">{t('Retour à la boîte à outils')}</Link>
-          <button type="button" className="btn btn-sm" onClick={() => window.print()}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => window.print()}>
             {t('Imprimer')}
           </button>
         </div>

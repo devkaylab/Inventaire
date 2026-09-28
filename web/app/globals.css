@@ -2886,6 +2886,20 @@ body:has(.site-footer) .theme-toggle { display: none; }
   transition: opacity .15s ease, transform .08s ease;
 }
 .store-badge:hover { opacity: .88; }
+
+/* ⚠️⚠️ **LE CONTENEUR NE RECOLORE PAS LE BADGE.** `.site-footer a` pose
+   `color: var(--text-2)` sur TOUS les liens du pied, et un badge EST un lien :
+   il gagnait sur `.store-badge`, et le texte des deux boutons sortait gris sur
+   noir — rgb(87,95,92) sur rgb(20,24,26), soit 2,3 pour 1. Illisible. Mis en
+   ligne le 27 septembre 2026, vu par Julien sur la prod le lendemain ; je ne
+   l'avais pas regardé d'assez près sur ma propre capture.
+
+   Le sélecteur passe par `.boutiques`, l'enveloppe du composant : deux classes
+   battent `<conteneur> a` (une classe, un élément) quel que soit l'ordre du
+   fichier. Et `:hover` en compte une de plus, ce qu'il faut pour battre
+   `.site-footer a:hover`, qui remettait le texte en ENCRE sur encre. */
+.boutiques .store-badge { color: var(--bg); }
+.boutiques .store-badge:hover { color: var(--bg); }
 .store-badge:active { transform: translateY(1px); }
 .store-badge svg { flex: none; }
 .store-badge-txt { display: flex; flex-direction: column; text-align: left; line-height: 1.15; }
