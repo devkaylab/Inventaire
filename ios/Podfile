@@ -78,6 +78,33 @@ target 'Inventaire' do
       end
     end
 
+    # ⚠️ **AUCUN POD NE VISE PLUS BAS QUE L'APPLICATION.**
+    #
+    # Xcode 27 REFUSE une cible de déploiement inférieure à 15.0 : « the range
+    # of supported deployment target versions is 15.0 to 27.0.x ». Or certains
+    # pods — et surtout leurs cibles de RESSOURCES, celles en `-resources` ou
+    # `-RNSVGFilters` — gardent la valeur de leur podspec : 9.0 pour Mute,
+    # 12.4 pour RNSVG, 13.4 pour RNCAsyncStorage. Tant que Xcode 26 les
+    # tolérait, personne ne les voyait. Le 22 septembre 2026, au moment de
+    # préparer le build 6 après le refus d'Apple, elles ont bloqué la
+    # compilation ENTIÈRE — le pire moment pour découvrir ça.
+    #
+    # ⚠️ CE NE SONT PAS SEULEMENT LES CIBLES DE CODE. `pods_project.targets`
+    # inclut les cibles de ressources, et c'est justement elles qui sortaient
+    # dans les erreurs. Les traiter toutes, sans exception.
+    #
+    # On aligne sur la cible de l'application, pas sur le minimum d'Xcode :
+    # un pod qui viserait 15.0 alors que l'app vise 16.4 ne sert à rien.
+    cible = podfile_properties['ios.deploymentTarget'] || '16.4'
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        actuelle = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if actuelle.nil? || actuelle.to_f < cible.to_f
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = cible
+        end
+      end
+    end
+
     # ⚠️ Les frameworks PRÉBUILTS (core React, ExpoModulesCore, ExpoCamera…)
     # existent en Debug et en Release, dans un seul dossier chacun. Au build, un
     # script les échange s'il lit, dans `.last_build_configuration`, une autre

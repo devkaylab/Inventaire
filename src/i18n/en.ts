@@ -463,7 +463,7 @@ export const en: Dictionnaire = {
   "La caméra lit les balises et les codes-barres": "The camera reads tags and barcodes",
   "La douchette est bien plus rapide sur un gros rayon. Le choix se fait en haut de l'écran, et il tient pour tout le comptage.": "The scanner is much faster on a big aisle. The choice is made at the top of the screen, and it holds for the whole count.",
   "La génération du rapport Excel a échoué.": "The Excel report could not be generated.",
-  "la planche sur des feuilles d’étiquettes autocollantes Avery L7160, à 100 % (taille réelle).": "the sheet on Avery L7160 self-adhesive label sheets, at 100% (actual size).",
+  "la planche sur des feuilles d’étiquettes A4 de 80 étiquettes 35,6 × 16,9 mm, à 100 % (taille réelle).": "the sheet on A4 label sheets of 80 labels, 35.6 × 16.9 mm, at 100% (actual size).",
   "La quantité retenue part dans le rapport. Un nouveau comptage ne l’écrase pas.": "The kept quantity goes into the report. A new count does not overwrite it.",
   "La suppression efface votre compte et vos informations personnelles. Elle vous sera demandée une seconde fois.": "Deletion erases your account and your personal information. You will be asked a second time.",
   "Langue": "Language",

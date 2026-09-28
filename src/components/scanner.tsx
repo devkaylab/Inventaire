@@ -714,10 +714,10 @@ export function Scanner({
    * Règle du projet : on ne sert jamais deux aides à la fois.
    */
   useEffect(() => {
-    if (balisePhase || volet !== null || !repereModes.aVoir) return
+    if (balisePhase || volet !== null || illisibleCode !== null || !repereModes.aVoir) return
     const id = setTimeout(() => setVolet(v => (v === null ? { genre: 'modes' } : v)), 700)
     return () => clearTimeout(id)
-  }, [balisePhase, volet, repereModes.aVoir])
+  }, [balisePhase, volet, illisibleCode, repereModes.aVoir])
 
   /**
    * Fermer un volet, c'est avoir lu — donc marquer le repère correspondant.
@@ -855,6 +855,10 @@ export function Scanner({
       if (!article) {
         playErrorSound()
         illisibleRef.current = value
+        // ⚠️ L'aide s'efface devant la fiche : deux volets superposés, c'est
+        // celui du dessous qu'on ne peut plus fermer. On ne marque PAS le
+        // repère — personne n'a lu, le volet reviendra après.
+        setVolet(null)
         setIllisibleCode(value)
         return
       }
@@ -2182,9 +2186,20 @@ export function Scanner({
 
       {/* Les deux repères du premier scan. Un volet, pas une alerte système :
           il dit ce qui vient de se passer ET ce qui vient ensuite, dans la
-          charte, avec un seul geste. Il ne reviendra pas. */}
+          charte, avec un seul geste. Il ne reviendra pas.
+
+          ⚠️⚠️ **UN VOILE, PAS UNE `Modal`** — et c'est un défaut payé, le
+          22 septembre 2026, sur le premier essai TestFlight. Ce volet ÉTAIT une
+          `Modal`. Scanner un article inconnu pendant qu'il était ouvert montait
+          une seconde `Modal` (« article inconnu ») : iOS refuse de présenter un
+          contrôleur par-dessus un autre, la fiche ne s'ouvrait jamais, et
+          l'écran restait sourd — on ne pouvait plus changer de mode de scan.
+          Même leçon que `GeneratingOverlay` le 23 août et que la feuille des
+          scans juste au-dessus. Le scan peut survenir À TOUT MOMENT : c'est
+          donc la fiche « article inconnu » qui garde la `Modal`, parce qu'elle
+          porte un champ de saisie et qu'elle ne doit JAMAIS échouer à
+          s'afficher. Une aide, elle, se contente d'un voile. */}
       {volet && (
-        <Modal transparent animationType="slide" onRequestClose={fermerVolet}>
           <Pressable style={styles.voletFond} onPress={fermerVolet}>
             <Pressable style={styles.volet} onPress={() => {}}>
               <View style={styles.voletPoignee} />
@@ -2264,7 +2279,6 @@ export function Scanner({
               </Pressable>
             </Pressable>
           </Pressable>
-        </Modal>
       )}
     </ClavierEvite>
   )
@@ -2462,7 +2476,7 @@ function makeStyles(t: Theme) {
     triggerBtnText: { fontSize: 16, fontFamily: Font.bold, color: t.textPrimary },
 
     permBox: { alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
-    voletFond: { flex: 1, backgroundColor: 'rgba(5,7,13,0.55)', justifyContent: 'flex-end' },
+    voletFond: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(5,7,13,0.55)', justifyContent: 'flex-end' },
     volet: { backgroundColor: t.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: Spacing.xl, paddingBottom: Spacing.xxxl, gap: Spacing.sm },
     voletPoignee: { width: 36, height: 4, borderRadius: 4, backgroundColor: t.borderStrong, alignSelf: 'center', marginBottom: Spacing.md },
     voletIcone: { width: 52, height: 52, borderRadius: Radius.lg, backgroundColor: 'rgba(56,201,255,0.12)', borderWidth: 1, borderColor: 'rgba(56,201,255,0.35)', alignItems: 'center', justifyContent: 'center' },
