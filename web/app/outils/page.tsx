@@ -52,7 +52,7 @@ export default function OutilsPage() {
           {t("Les deux parcours de l'application mobile, écran par écran — pour le revoir, ou le montrer à une nouvelle recrue.")}
         </p>
         <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Link href="/outils/prise-en-main" className="btn btn-sm">{t('Ouvrir le guide')}</Link>
+          <Link href="/outils/prise-en-main" className="btn btn-ghost btn-sm">{t('Ouvrir le guide')}</Link>
         </div>
         {/* ⚠️ C'EST LE SUPERVISEUR QUI INSTALLE SON ÉQUIPE. Il prépare
             l'inventaire depuis son ordinateur, puis doit dire à ses compteurs
