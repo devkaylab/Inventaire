@@ -83,10 +83,34 @@ Le raccourci ne dispense pas du socle invisible — et l'un des points devient
    `provider_profiles`.
 3. **Le prix en base, verrouillé à la réservation.** Même règle que
    `prix_offre` : le navigateur affiche, le serveur calcule.
-4. **La fenêtre de la licence.** Elle n'est définie nulle part. Proposition :
-   **elle ouvre à l'heure choisie et dure 24 h**, parce qu'un inventaire qui
-   déborde à 2 h du matin ne doit pas se retrouver dehors — et parce qu'une
-   règle en heures se dit en une phrase.
+4. ✅ **La fenêtre de la licence : UNE SEMAINE** (Julien, 28 septembre 2026 :
+   « l'inventaire peut durer assez longtemps, on ne compte en général pas plus
+   longtemps »). Elle ouvre le jour choisi et court sept jours. J'avais proposé
+   24 h : c'était calé sur l'idée d'un inventaire d'une nuit, qui est le cas de
+   la formule équipe, pas celui d'un magasin qui compte lui-même rayon par
+   rayon sur plusieurs jours.
+
+   ⚠️ **Ce que la semaine ouvre, et qu'il faut savoir** : à douze réservations
+   par an, le ponctuel revient moins cher que l'abonnement annuel entre 3 et
+   8 appareils (1 368 € contre 3 300 €), pour douze semaines d'usage. Le point
+   de bascule va de 10 à 28 réservations selon le nombre d'appareils.
+
+   | Appareils | 1 résa | 12 résas/an | Abonnement annuel | Bascule |
+   |---|---|---|---|---|
+   | 2 | 89 € | 1 068 € | 950 € | 10 résas |
+   | 3 | 114 € | 1 368 € | 3 300 € | 28 résas |
+   | 6 | 189 € | 2 268 € | 3 300 € | 17 résas |
+   | 10 | 289 € | 3 468 € | 3 300 € | 11 résas |
+   | 20 | 310 € | 3 720 € | 3 300 € | 10 résas |
+
+   **Ce n'est pas un défaut de la fenêtre, c'est la grille d'abonnement** :
+   Advanced saute de 2 à 20 appareils, donc un magasin à 6 appareils paie déjà
+   pour 20. Le ponctuel ne fait que le révéler. À ne corriger que si un client
+   réel s'y installe.
+
+   ⚠️ **Et la semaine tient la brèche de `plafond_appareils` ouverte sept jours
+   d'affilée** au lieu d'une nuit. Raison de plus de la fermer avant la
+   première vente, pas après.
 
 ---
 
@@ -180,12 +204,15 @@ Décision de Julien du 28 septembre 2026, à garder pour le jour où la formule
 
 ## 8. Ce qui reste à trancher
 
-1. **La fenêtre de la licence : 24 h ?** Rien ne la définit aujourd'hui.
-2. **Peut-on vendre avant que Quantinvo OS soit vendu une fois ?**
-   `07-par-ou-on-commence.md` dit non, et la vente est fermée tant que
-   `legal.ts` n'a pas l'adresse et le téléphone de l'hébergeur.
+1. ✅ **La fenêtre : une semaine.** Tranché le 28 septembre 2026, voir § 3.4.
+2. ✅ **La règle « pas avant que Quantinvo OS soit vendu une fois » est
+   MAINTENUE** (Julien, 28 septembre 2026). On construit en preview, on ne
+   vend pas. La vente reste fermée tant que `legal.ts` n'a pas l'adresse et le
+   téléphone de l'hébergeur.
 3. **Un tarif pro** — carnet prépayé ou dégressivité. Pas aujourd'hui, mais
    avant le premier prestataire régulier.
 4. **Le magasin du client du prestataire.** Il crée un magasin par client,
    dans SON entreprise. Rien ne l'en empêche — mais personne n'a vérifié que
    les écrans tiennent avec trente magasins dont vingt-neuf sont inactifs.
+5. **Le lien de subordination**, pour le jour où la formule équipe revient —
+   « on verra plus tard » (Julien, 28 septembre 2026).
