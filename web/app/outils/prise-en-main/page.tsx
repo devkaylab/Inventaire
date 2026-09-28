@@ -136,7 +136,7 @@ export default function PriseEnMainPage() {
       </div>
 
       <p className="pem-pied">
-        {t("Ce guide décrit l'application mobile. Le suivi en direct, les écarts et le rapport se lisent sur ce site, plus au large.")}
+        {t("Ce guide décrit l'application mobile. Le suivi, les écarts et le rapport se lisent aussi sur ce site, plus au large.")}
       </p>
     </AppShell>
   )
