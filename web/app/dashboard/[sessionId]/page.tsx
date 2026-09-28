@@ -260,7 +260,12 @@ export default function SessionDashboardPage() {
             <MobileNav tabs={TABS} active={tab} onSelect={k => selectTab(k as Tab)} />
           </div>
 
-          <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+          {/* ⚠️ `key={tab}` n'est pas décoratif : sans lui React réutilise ce
+              nœud d'un onglet à l'autre, et l'animation d'entrée ne rejoue
+              jamais. Les enfants sont de toute façon démontés — le `key` ne
+              coûte rien de plus. */}
+          <div key={tab} className="echange-entre"
+               role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
             {tab === 'suivi' && (
               <SuiviTab
                 session={session}
