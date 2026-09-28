@@ -23,12 +23,14 @@
 // il doit s'ouvrir à l'identique sur le poste du client, qui n'a ni Archivo ni
 // Public Sans installées. Même arbitrage que la version sans suffixe des decks.
 //
-// ⚠️ **Les téléphones viennent TOUS de `../deck/encadrees/`.** Les trois
-// exceptions locales (`accueil-superviseur.png`, `ecarts-audit.png`,
-// `rapport.png`) ont disparu le 2 septembre 2026 avec la passe de captures :
-// le jeu du deck est désormais du même jour, il n'y a plus rien à rattraper
-// ici. `img()` garde son repli local — il sert le jour où un écran devrait
-// être repris avant la passe suivante —, mais aucun fichier ne l'emprunte.
+// ⚠️ **Les téléphones viennent TOUS de `../deck/captures/`, encadrés à la
+// volée par `cadrer()`** — la fonction des diapos, le même bezel. Ils lisaient
+// avant les PNG tout faits de `../deck/encadrees/` ; ceux-là sont le téléphone
+// ENTIER, et le bandeau d'ici le veut coupé (voir `TELH`). `encadrees/` n'est
+// qu'un cache de `cadrer()` — `encadrer.js` ne fait rien d'autre —, donc rien
+// n'est perdu, et il y a un dessin de moins à tenir synchronisé. Le repli
+// local d'`img()` a disparu avec : aucun fichier ne l'empruntait depuis la
+// passe de captures du 2 septembre 2026.
 //
 // ⚠️ **L'écran des écarts s'appelle `audit.png`**, pas `ecarts-audit.png` :
 // c'est le nom que les decks emploient, et la passe du 2 septembre l'a versé
@@ -39,6 +41,11 @@
 // n'entre pas dans le bandeau : cinq téléphones à 36 mm remplissent déjà la
 // largeur utile, et passer à six les rendrait illisibles. Si on veut le
 // montrer, c'est un écran à remplacer, pas un de plus.
+//
+// ⚠️ **LA FICHE TIENT SUR UNE PAGE, ET IL RESTE 2,5 mm.** Ce n'est pas une
+// marge de manœuvre : toute ligne ajoutée en pousse une sur une seconde page —
+// le pied, en général, qui part seul et ne se voit pas dans le .docx. **Après
+// toute retouche, recompter les pages du PDF**, pas du document Word.
 
 const fs = require('fs')
 const path = require('path')
@@ -47,7 +54,7 @@ const {
   WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign, convertMillimetersToTwip,
 } = require('docx')
 
-const { P, logoPng, qrPng } = require('../deck/charte')
+const { P, logoPng, qrPng, cadrer } = require('../deck/charte')
 
 // ── Ce qui change avec le produit ───────────────────────────────────────────
 // ⚠️ **CES QUATRE LIGNES PÉRIMENT, LE RESTE NON.** Elles vivaient dispersées
@@ -66,15 +73,35 @@ const ETABLIE_LE = '28 septembre 2026'
 const APP_STORE = 'apps.apple.com/fr/app/quantinvo/id6807966626'
 /** ⚠️ `…/open`, jamais une fiche de boutique : voir `qrPng` dans la charte. */
 const QR_URL = 'https://www.quantinvo.com/open'
+/** Côté du code d'installation. 22 mm : la même taille que sur le guide. */
+const QR_MM = 22
 
 const F = 'Arial'
 const mm = convertMillimetersToTwip
-const ENCADREES = path.join(__dirname, '..', 'deck', 'encadrees')
 
-/** Un téléphone encadré : celui du deck, ou l'exception locale. */
+/**
+ * Les téléphones du bandeau, dessinés par `cadrer()` avant la mise en page.
+ *
+ * ⚠️ On ne lit plus les PNG tout faits de `../deck/encadrees/` : ceux-là sont
+ * le téléphone ENTIER, et le bandeau de cette fiche le veut coupé (voir
+ * `TELH`). `encadrees/` n'est de toute façon qu'un `cadrer()` mis en cache —
+ * `encadrer.js` ne fait rien d'autre —, donc on appelle la même fonction,
+ * avec la place qu'on a. Un dessin de moins à tenir synchronisé.
+ */
+const CADRES = new Map()
+
 const img = (f) => {
-  const local = path.join(__dirname, f)
-  return fs.readFileSync(fs.existsSync(local) ? local : path.join(ENCADREES, f))
+  const cadre = CADRES.get(f)
+  if (!cadre) throw new Error(`téléphone « ${f} » non préparé : voir preparerTelephones()`)
+  return cadre
+}
+
+/** Encadre et coupe les cinq écrans du bandeau. */
+async function preparerTelephones(fichiers) {
+  for (const f of fichiers) {
+    const { data } = await cadrer(path.join('captures', f), { w: TEL, h: TELH })
+    CADRES.set(f, Buffer.from(data.split(',')[1], 'base64'))
+  }
 }
 
 const AUCUN = { top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } }
@@ -128,15 +155,53 @@ const tableau = (rows, widths) => new Table({
 const COL = mm(87)   // une colonne sur deux
 const GOUT = mm(6)   // la gouttière entre elles
 
-// Cinq téléphones en bandeau : 31 mm de large, rapport 637/1345. À cinq, la
-// largeur utile (180 mm) fixe la taille — on ne choisit que les légendes.
+/**
+ * mm → unité de `ImageRun.transformation`.
+ *
+ * ⚠️⚠️ **CE N'EST PAS DU POINT, C'EST DU PIXEL À 96 DPI.** `docx` convertit
+ * `width`/`height` en EMU à raison de 9525 EMU par unité, soit 96 par pouce —
+ * pas 72. La première version divisait par 72 : **toute image de cette fiche
+ * sortait à 75 % de la taille demandée**. Les téléphones annoncés à 31 mm
+ * s'imprimaient à 23,3 mm, le code d'installation à 16,5 mm au lieu de 22.
+ * Même défaut, même jour, dans le guide de prise en main (28 septembre 2026),
+ * où il a été mesuré sur le PDF produit avant d'être corrigé des deux côtés.
+ */
+const PXMM = 96 / 25.4
+
+// Cinq téléphones en bandeau, 31 mm de large : à cinq, la largeur utile
+// (180 mm) fixe la taille.
 const TEL = 31
-const TELH = Math.round((TEL * 1345 / 637) * 10) / 10
-const PX = 2.8346 // mm → points
+/**
+ * ⚠️ **LE BANDEAU EST COUPÉ, ET C'EST VOULU** — 46 mm au lieu des 65,4 mm
+ * d'un téléphone entier. La fiche tient sur UNE page et n'avait plus deux
+ * millimètres de marge : rendre aux images leur vraie taille demandait de
+ * trouver la place quelque part. On la prend sur le bas des écrans, qui ne
+ * porte rien ici — les cinq se lisent par le haut (la liste, la tuile 26 %,
+ * les zones, les deux quantités opposées, les quatre totaux) — plutôt que sur
+ * leur largeur, qui est ce qui les rend lisibles. C'est le débord des diapos,
+ * et `cadrer()` le dessine déjà.
+ *
+ * ⚠️ Ne PAS reprendre ce procédé dans le guide de prise en main : là-bas le
+ * repère cité à côté de l'écran désigne parfois un bouton du bas.
+ */
+const TELH = 42
+
+/**
+ * Les cinq écrans du bandeau, dans l'ordre du parcours. La liste est écrite
+ * une fois : c'est elle que `preparerTelephones()` encadre, et elle que la
+ * mise en page pose — un écran ajouté ici ne peut pas manquer son cadre.
+ */
+const ECRANS = [
+  ['accueil-superviseur.png', 'Les inventaires'],
+  ['inventaire-superviseur.png', 'Le suivi'],
+  ['zones.png', 'Zones et balises'],
+  ['audit.png', 'Écarts d’audit'],
+  ['rapport.png', 'Rapport et écarts'],
+]
 
 const tel = (fichier, legende) => cell([
   new Paragraph({
-    children: [new ImageRun({ type: 'png', data: img(fichier), transformation: { width: TEL * PX, height: TELH * PX } })],
+    children: [new ImageRun({ type: 'png', data: img(fichier), transformation: { width: TEL * PXMM, height: TELH * PXMM } })],
     spacing: { after: 70 }, alignment: AlignmentType.CENTER,
   }),
   new Paragraph({
@@ -231,11 +296,7 @@ const doc = (LOGO, QR) => new Document({
       tableau([
         new TableRow({
           children: [
-            tel('accueil-superviseur.png', 'Les inventaires'),
-            tel('inventaire-superviseur.png', 'Le suivi'),
-            tel('zones.png', 'Zones et balises'),
-            tel('audit.png', 'Écarts d’audit'),
-            tel('rapport.png', 'Rapport et écarts'),
+            ...ECRANS.map(([f, legende]) => tel(f, legende)),
           ],
         }),
       ], [mm(36), mm(36), mm(36), mm(36), mm(36)]),
@@ -301,7 +362,7 @@ const doc = (LOGO, QR) => new Document({
             // téléphone en main : un code se scanne, une adresse se retape.
             cell([
               new Paragraph({
-                children: [new ImageRun({ type: 'png', data: QR, transformation: { width: 22 * PX, height: 22 * PX } })],
+                children: [new ImageRun({ type: 'png', data: QR, transformation: { width: QR_MM * PXMM, height: QR_MM * PXMM } })],
                 spacing: { after: 0 },
               }),
             ], mm(24), { valign: VerticalAlign.TOP }),
@@ -339,6 +400,7 @@ async function main() {
   // 640 px pour 30 mm : largement de quoi imprimer net, et un QR trop maigre
   // à l'impression est un QR qui ne se lit pas.
   const QR = await qrPng(QR_URL, 640)
+  await preparerTelephones(ECRANS.map(([f]) => f))
   const b = await Packer.toBuffer(doc(LOGO, QR))
   fs.writeFileSync(path.join(__dirname, 'Quantinvo-fiche-produit.docx'), b)
   console.log('OK Quantinvo-fiche-produit.docx')
