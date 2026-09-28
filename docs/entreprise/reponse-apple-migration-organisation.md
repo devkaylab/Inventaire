@@ -54,10 +54,33 @@ Relevé le 28 septembre 2026 sur la machine de Julien :
 | Profil `iOS Team Store Provisioning Profile: com.quantinvo.app` | en cache local, **8 septembre 2027** |
 | App Store Connect | reste ouvert pendant la migration (Apple, point 3) |
 
-Une correction iOS peut donc être signée, archivée et téléversée pendant toute
-la migration. ⚠️ **À condition de ne rien faire qui force Xcode à régénérer un
+Une correction iOS peut donc être **signée et archivée** pendant toute la
+migration. ⚠️ **À condition de ne rien faire qui force Xcode à régénérer un
 profil** : pas de nouvelle capability, pas de changement d'identifiant, pas de
-nouvel appareil enregistré.
+nouvel appareil enregistré. La restriction ne dure QUE la migration ; ensuite
+les nouveaux certificats sont émis au nom de Devkaylab.
+
+⚠️⚠️ **CE QUI N'EST PAS PROUVÉ : qu'on puisse la TÉLÉVERSER.** Apple écrit au
+point 3 que « access to all other developer resources, including App Store
+Connect, remains intact ». Un développeur écrit l'inverse sur le forum d'Apple
+(fil 817034) : « I am unable to submit updates. I also cannot use the old
+(individual) account normally because it appears to be locked in this
+transition state. » **Aucun employé d'Apple n'a répondu, ni pour confirmer ni
+pour démentir.** On part quand même — décision de Julien, 28 septembre 2026 —
+mais en sachant que le pire cas est deux à quatre semaines sans pouvoir
+corriger l'app iOS.
+
+## Combien de temps
+
+**Apple ne s'engage sur aucun délai**, ni dans le courriel de Sukkry ni dans sa
+documentation. Relevé sur les forums d'Apple, cas de 2026 : 17 jours (fil
+816092), « plus de trois semaines » (fil 814367), 61 jours (juillet-septembre).
+Compter **deux à quatre semaines**, sans garantie.
+
+⚠️ **Le levier si ça traîne** : l'auteur du fil 814367, bloqué à trois
+semaines, a débloqué son dossier en demandant un **rappel téléphonique** depuis
+`developer.apple.com/contact/` — pas en relançant par courriel. Ses relances
+écrites étaient restées sans réponse.
 
 ---
 
