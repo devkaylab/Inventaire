@@ -73,6 +73,13 @@ describe('prise en main', () => {
     const bloc = css.slice(css.indexOf('@media print'))
     expect(bloc).toContain('.pem-etape')
     expect(bloc).toContain('break-inside: avoid')
-    expect(bloc).toMatch(/\.pem-cache \{ display: block/)
+    // ⚠️ La classe a changé de nom le 28 septembre 2026 — `.pem-cache` est
+    // devenue `.bascule-hors`, le vocabulaire d'échange commun au site. La
+    // garde suit le NOM EN VIGUEUR, lu dans la page, plutôt que de le citer :
+    // un renommage ne doit pas pouvoir la faire passer au vert par accident.
+    const classeMasquee = lire('app/outils/prise-en-main/page.tsx')
+      .match(/pem-parcours [\w-]+\$\{actif === p\.cle \? '' : ' ([\w-]+)'\}/)?.[1]
+    expect(classeMasquee).toBeTruthy()
+    expect(bloc).toMatch(new RegExp(`\\.${classeMasquee} \\{ display: block`))
   })
 })
