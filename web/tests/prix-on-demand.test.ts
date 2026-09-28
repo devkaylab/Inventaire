@@ -16,7 +16,10 @@ import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, dossierMigrations } from './migrations'
-import { REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee } from '../lib/prixOnDemand'
+import {
+  REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee,
+  FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
+} from '../lib/prixOnDemand'
 import { prixFerme as prixAffiche } from '../lib/prixOnDemand'
 
 const racine = path.resolve(__dirname, '../..')
@@ -528,15 +531,53 @@ describe('la formule logiciel seul', () => {
       .find((d) => !(DEPARTEMENTS_DESSERVIS as readonly string[]).includes(d))
     expect(horsZone, 'il faut un département non desservi pour ce test').toBeTruthy()
 
+    // ⚠️ La formule est NOMMÉE des deux côtés depuis le 28 septembre 2026 :
+    // le défaut n'est plus l'équipe (`FORMULE_EQUIPE_OUVERTE` est faux), donc
+    // ne rien passer ne testait plus la règle qu'on croit tester.
     const dehors = `${horsZone}000`
-    expect(prixAffiche({ ...base, codePostal: dehors, debut: dansUnMois }).ok).toBe(false)
+    expect(prixAffiche({
+      ...base, codePostal: dehors, debut: dansUnMois, formule: 'equipe_quantinvo' }).ok).toBe(false)
     expect(prixAffiche({
       ...base, codePostal: dehors, debut: dansUnMois, formule: 'logiciel_seul' }).ok).toBe(true)
 
     const dedans = `${DEPARTEMENTS_DESSERVIS[0]}000`
-    expect(prixAffiche({ ...base, codePostal: dedans, debut: dansTroisHeures }).ok).toBe(false)
+    expect(prixAffiche({
+      ...base, codePostal: dedans, debut: dansTroisHeures, formule: 'equipe_quantinvo' }).ok).toBe(false)
     expect(prixAffiche({
       ...base, codePostal: dedans, debut: dansTroisHeures, formule: 'logiciel_seul' }).ok).toBe(true)
+  })
+
+  /**
+   * ⚠️ **LA FORMULE ÉQUIPE EST FERMÉE, ET ON LE PROUVE.** Julien, 28 septembre
+   * 2026 : trop lourd juridiquement, trop tôt. Rien n'est supprimé — donc rien
+   * n'empêcherait, sans cette garde, qu'un chemin y ramène par accident.
+   */
+  it('⚠️ tant que l’équipe est fermée, aucun chemin n’y mène', () => {
+    expect(FORMULE_EQUIPE_OUVERTE).toBe(false)
+    expect(formuleParDefaut()).toBe('logiciel_seul')
+
+    // L'adresse ne rouvre pas ce que le drapeau ferme.
+    expect(formuleDemandee('equipe')).toBe('logiciel_seul')
+    expect(formuleDemandee('logiciel')).toBe('logiciel_seul')
+    expect(formuleDemandee(null)).toBe('logiciel_seul')
+
+    // Et les deux surfaces publiques ne montrent la formule que sous le drapeau.
+    for (const f of ['components/vitrine/PageOnDemand.tsx', 'components/vitrine/PageReserver.tsx']) {
+      // ⚠️ Sans ses commentaires : le bloc qui EXPLIQUE la fermeture cite
+      // forcément « Nous, avec la nôtre », et la garde se mordait la queue.
+      // Et on ne compare pas LIGNE À LIGNE : le drapeau garde un bloc, il
+      // n'est pas sur la même ligne que ce qu'il garde. Ce qu'on vérifie,
+      // c'est qu'aucune de ces surfaces n'apparaît AVANT un drapeau.
+      const source = sansCommentaires(lire(`web/${f}`))
+      const drapeau = source.indexOf('FORMULE_EQUIPE_OUVERTE')
+      expect(drapeau, `${f} : le drapeau doit y être`).toBeGreaterThanOrEqual(0)
+      for (const marque of ['Nous, avec la nôtre', 'autreFormule.ok']) {
+        const ou = source.indexOf(marque)
+        if (ou >= 0) {
+          expect(ou, `${f} : « ${marque} » n’est pas sous le drapeau`).toBeGreaterThan(drapeau)
+        }
+      }
+    }
   })
 
   it('une date passée reste refusée, même sans équipe', () => {

@@ -53,6 +53,35 @@ export const REGLAGES = {
  */
 export type Formule = 'equipe_quantinvo' | 'logiciel_seul'
 
+/**
+ * ⚠️⚠️ **LA FORMULE ÉQUIPE EST FERMÉE.** Décision de Julien, 28 septembre
+ * 2026 : « on laisse tomber "Nous, avec la nôtre" pour le moment, trop lourd
+ * juridiquement parlant et trop tôt pour Quantinvo ».
+ *
+ * **Rien n'est supprimé, tout devient inatteignable.** Le code de la formule
+ * équipe — chaîne de prix, zones, délai de 48 h, page « devenir inventoriste »
+ * — reste écrit et testé : il rouvrira le jour où le statut des inventoristes
+ * sera tranché avec un avocat et où Stripe Connect sera en place. Ces deux-là
+ * étaient les seules dépendances EXTÉRIEURES du projet, et les fermer est
+ * précisément ce qui rend le logiciel seul livrable tout de suite.
+ *
+ * ⚠️ Le drapeau ne se contourne pas par l'adresse : `?formule=equipe` ne
+ * rouvre rien tant qu'il vaut `false`. Garde : `web/tests/prix-on-demand.test.ts`.
+ */
+export const FORMULE_EQUIPE_OUVERTE = false
+
+/** La formule par défaut, et la seule quand l'équipe est fermée. */
+export function formuleParDefaut(): Formule {
+  return FORMULE_EQUIPE_OUVERTE ? 'equipe_quantinvo' : 'logiciel_seul'
+}
+
+/** Ce que l'adresse a le droit de demander. Une formule fermée retombe sur l'autre. */
+export function formuleDemandee(parametre: string | null): Formule {
+  if (parametre === 'equipe' && FORMULE_EQUIPE_OUVERTE) return 'equipe_quantinvo'
+  if (parametre === 'logiciel') return 'logiciel_seul'
+  return formuleParDefaut()
+}
+
 /** Les départements où une équipe peut être constituée. Copie de `zones_desservies`. */
 export const DEPARTEMENTS_DESSERVIS = [
   '59', '69', '75', '77', '78', '91', '92', '93', '94', '95',
@@ -224,7 +253,7 @@ export function estDesservi(codePostal: string): boolean {
 
 /** Le prix ferme affiché pendant le parcours. La base refait le même calcul. */
 export function prixFerme(r: Reponses, maintenant = new Date()): PrixFerme {
-  const formule = r.formule ?? 'equipe_quantinvo'
+  const formule = r.formule ?? formuleParDefaut()
   const logiciel = formule === 'logiciel_seul'
   const tranche = TRANCHES_ARTICLES.find((t) => t.cle === r.trancheArticles)
   if (!r.codePostal || !r.secteur || !tranche || !r.debut) return { ok: false, refus: 'incomplet' }

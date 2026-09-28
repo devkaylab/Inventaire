@@ -42,7 +42,7 @@ import Link from 'next/link'
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome'
 import { useTraduction } from '@/lib/i18n'
 import { euros } from '@/lib/offres'
-import { TRANCHES_ARTICLES, chaine } from '@/lib/prixOnDemand'
+import { FORMULE_EQUIPE_OUVERTE, TRANCHES_ARTICLES, chaine } from '@/lib/prixOnDemand'
 
 function Coche({ accent = false }: { accent?: boolean }) {
   return (
@@ -134,30 +134,37 @@ export function PageOnDemand() {
             </div>
           </section>
 
-          <section className="ald-carte">
-            <h3>Nous, avec la nôtre</h3>
-            <p className="muted">
-              Nous venons avec les inventoristes et les téléphones. Vous suivez
-              l’avancement depuis votre bureau et vous recevez le rapport.
-            </p>
-            <ul>
-              <li><Coche accent />Une équipe formée, un responsable sur place</li>
-              <li><Coche accent />Contrôle des écarts et second comptage compris</li>
-              <li><Coche accent />Personne à recruter, personne à former</li>
-            </ul>
-            <div className="ald-pied">
+          {/* ⚠️ « Nous, avec la nôtre » est FERMÉE, pas supprimée : le bloc
+              reste ici, sous son drapeau, parce qu'il rouvrira. Décision de
+              Julien du 28 septembre 2026 — trop lourd juridiquement (le lien
+              de subordination d'une équipe encadrée) et trop tôt pour
+              Quantinvo. Voir `FORMULE_EQUIPE_OUVERTE`. */}
+          {FORMULE_EQUIPE_OUVERTE && (
+            <section className="ald-carte">
+              <h3>Nous, avec la nôtre</h3>
               <p className="muted">
-                À partir de <b>{euros(departEquipe)}</b> pour un inventaire
+                Nous venons avec les inventoristes et les téléphones. Vous suivez
+                l’avancement depuis votre bureau et vous recevez le rapport.
               </p>
-              {/* ⚠️ `/reserver` n'est pas une page de vitrine : elle reste en
-                  français quelle que soit la langue de celle-ci, parce que le
-                  service ne couvre que la France. `lien()` la laisse donc
-                  telle quelle, et c'est voulu. */}
-              <Link href="/reserver?formule=equipe" className="btn btn-primary">
-                Réserver une équipe
-              </Link>
-            </div>
-          </section>
+              <ul>
+                <li><Coche accent />Une équipe formée, un responsable sur place</li>
+                <li><Coche accent />Contrôle des écarts et second comptage compris</li>
+                <li><Coche accent />Personne à recruter, personne à former</li>
+              </ul>
+              <div className="ald-pied">
+                <p className="muted">
+                  À partir de <b>{euros(departEquipe)}</b> pour un inventaire
+                </p>
+                {/* ⚠️ `/reserver` n'est pas une page de vitrine : elle reste en
+                    français quelle que soit la langue de celle-ci, parce que le
+                    service ne couvre que la France. `lien()` la laisse donc
+                    telle quelle, et c'est voulu. */}
+                <Link href="/reserver?formule=equipe" className="btn btn-primary">
+                  Réserver une équipe
+                </Link>
+              </div>
+            </section>
+          )}
         </div>
 
         {/* ⚠️ C'est ICI que la question « et si je compte toute l'année ? » se

@@ -40,6 +40,7 @@ import {
   DELAI_HEURES, MOMENTS, OU_NOUS_ALLONS, SECTEURS,
   TRANCHES_ARTICLES, TRANCHES_REFERENCES,
   prixFerme, duree, estDesservi,
+  FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
   type PrixFerme, type Formule, type MomentCle, type Secteur,
 } from '@/lib/prixOnDemand'
 
@@ -89,11 +90,9 @@ export function PageReserver() {
    * refaire le parcours.
    */
   const params = useSearchParams()
-  const [formule, setFormule] = useState<Formule>('equipe_quantinvo')
+  const [formule, setFormule] = useState<Formule>(formuleParDefaut())
   useEffect(() => {
-    const p = params.get('formule')
-    if (p === 'logiciel') setFormule('logiciel_seul')
-    else if (p === 'equipe') setFormule('equipe_quantinvo')
+    setFormule(formuleDemandee(params.get('formule')))
   }, [params])
   const logicielSeul = formule === 'logiciel_seul'
 
@@ -828,7 +827,7 @@ export function PageReserver() {
                   deux — et c'est le seul endroit du parcours où il a les deux
                   chiffres sous les yeux. Un lien qui dirait « voir l'autre
                   formule » l'obligerait à refaire le tunnel pour savoir. */}
-              {autreFormule.ok && (
+              {FORMULE_EQUIPE_OUVERTE && autreFormule.ok && (
                 <p className="res-bascule muted">
                   {logicielSeul
                     ? 'Personne pour compter ce jour-là ?'
