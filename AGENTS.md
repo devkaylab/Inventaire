@@ -21,6 +21,7 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - **Gardes** : `web/tests/` et `tests/`. Une garde déduit sa liste, ne la cite pas ; lit le code sans ses commentaires ; passe par `derniereDefinition()` (jamais un nom de migration en dur). Saboter pour vérifier qu'elle mord. Ne jamais filtrer la sortie d'un contrôle qui garde un `&&`.
 - **Lint du site** : `npm run lint` depuis `web/` (`eslint .`).
 - **Identité** : Ardoise (outil) et Registre (ce qui fait foi : rapport, écarts, devis). Pas de design « IA ». Tokens partagés : `src/constants/ink.ts` ↔ `web/app/globals.css`.
+- **Decks et documents** : ⚠️ **AUCUN deck ne se régénère, et aucun fichier de son dossier ne s'écrase, sans que Julien le demande** — il les retouche à la main, et une génération efface ses modifications sans trace (28 septembre 2026). Modifier un script, lire un deck : oui. Lancer `node build-*.js` : seulement sur demande. Atelier et pièges : `docs/entreprise/deck/LISEZMOI.md`.
 - **Doublons volontaires** app/site qui bougent ensemble : presence, import, report, password, baliseSeries, erreursServeur, grille tarifaire (5 copies, un test compare).
 - **i18n** : la phrase française est la clé (`t('…')`) ; ajouter l'entrée anglaise dans `src/i18n/en.ts` / `web/i18n/en.ts`.
 - **Vérifier l'effet, pas le code de retour** ; une page à deux états se regarde dans les deux ; un chiffre invraisemblable est d'abord un défaut de mesure ; une note d'état se vérifie avant d'être citée.

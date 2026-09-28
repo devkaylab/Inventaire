@@ -76,8 +76,29 @@ installées (posées dans `~/Library/Fonts` le 9 septembre, Regular et Bold avec
 leurs italiques). La version sans suffixe est en Arial : c'est celle qu'on
 envoie, elle s'affiche à l'identique partout.
 
-Les fichiers `.pptx` sont **générés, jamais retouchés à la main** : une
-retouche serait écrasée à la prochaine génération. On modifie le script.
+## ⚠️⚠️ AUCUN DECK NE SE RÉGÉNÈRE SANS QUE JULIEN LE DEMANDE (28 septembre 2026)
+
+**Julien retouche ses decks à la main.** Il l'a dit ce jour-là, après avoir vu
+qu'une régénération était partie toute seule : sa
+`Quantinvo-presentation.pptx` d'iCloud portait ses modifications, faites dans
+PowerPoint, et rien dans le dépôt ne les contient. Une génération les aurait
+effacées sans trace.
+
+Ça vaut pour **générer** comme pour **copier un deck dans son dossier**. On
+peut modifier un script, lire un deck, corriger le LISEZMOI — on ne lance pas
+`node build-*.js` et on n'écrase pas un fichier de son dossier tant qu'il ne
+l'a pas demandé.
+
+⚠️ **CE PARAGRAPHE A REMPLACÉ SON CONTRAIRE.** On lisait ici : « Les fichiers
+`.pptx` sont générés, jamais retouchés à la main : une retouche serait écrasée
+à la prochaine génération. On modifie le script. » C'était l'intention de
+départ, ce n'est plus l'usage — et une note qui décrit une intention périmée
+est précisément ce qui fait détruire le travail de quelqu'un.
+
+Ce qui reste vrai de l'ancienne règle : **une retouche à la main ne survit pas
+à une génération**. Donc quand Julien change quelque chose dans un deck et
+qu'il veut le garder, la bonne suite est de porter le changement dans le
+script — pas de s'interdire de régénérer pour toujours.
 
 ## La passe de captures d’Ardoise (9 et 10 septembre 2026)
 
