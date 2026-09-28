@@ -199,6 +199,49 @@ a { color: inherit; text-decoration: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
 
+/* ── Le second mouvement : l'ÉCHANGE ───────────────────────
+   `.reveal` couvre ce qui ARRIVE au scroll, en 550 ms. Il ne couvre pas ce
+   qui REMPLACE autre chose — un onglet, une étape, un panneau qui prend la
+   place du précédent. Ces échanges claquaient (`display: none` d'un côté,
+   `display: block` de l'autre), et c'est ce que Julien a relevé sur la
+   maquette On-Demand le 28 septembre 2026 : « c'est trop sec ».
+
+   Même grammaire que `.reveal` — fondu plus légère montée — mais DEUX FOIS
+   PLUS COURT : on attend un remplacement, on ne le découvre pas. 260 ms, la
+   même courbe que le menu mobile.
+
+   ⚠️ **LE NOM `.bascule` ÉTAIT DÉJÀ PRIS** — c'est l'interrupteur du site
+   (`.bascule-piste`, `.bascule.on`), en `display: flex`. Posé sous ce nom, ce
+   bloc s'appliquait à tous les interrupteurs. Vu en mesurant l'effet dans le
+   navigateur, pas en relisant le fichier : `getComputedStyle` rendait `flex`
+   là où `none` était attendu.
+
+   ⚠️ `allow-discrete` et `@starting-style` sont ce qui permet d'animer un
+   passage par `display: none` sans démonter le contenu — donc sans recharger
+   les images d'un parcours, ce qu'un remontage React aurait fait. Là où le
+   navigateur ne les connaît pas, l'échange reste instantané : c'est le
+   comportement d'aujourd'hui, jamais pire. */
+.echange {
+  transition:
+    opacity .26s ease,
+    transform .26s cubic-bezier(0.33, 1, 0.68, 1),
+    display .26s allow-discrete;
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  .echange { opacity: 0; transform: translateY(10px); }
+}
+.echange-hors {
+  display: none;
+  opacity: 0;
+  transform: translateY(10px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .echange { transition: none; }
+  @starting-style { .echange { opacity: 1; transform: none; } }
+}
+
 /* ── Header ─────────────────────────────────────────────── */
 .site-header {
   position: sticky; top: 0; z-index: 20;
@@ -3862,7 +3905,6 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .pem-onglet-on { background: var(--accent); color: #fff; }
 .pem-onglet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.pem-cache { display: none; }
 .pem-parcours { margin-top: 22px; }
 .pem-titre { font-size: 20px; font-weight: 700; margin: 0; }
 .pem-intro { color: var(--text-2); margin-top: 6px; max-width: 68ch; }
@@ -3904,7 +3946,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 @media print {
   .app-rail, .pem-actions, .pem-onglets, .pem-avis { display: none !important; }
   .app-main { margin-left: 0 !important; padding: 0 !important; }
-  .pem-cache { display: block !important; }
+  .echange-hors { display: block !important; opacity: 1; transform: none; }
   .pem-etape { break-inside: avoid; page-break-inside: avoid; border-color: #CCC; }
   .pem-parcours { break-before: page; }
   .pem-parcours:first-of-type { break-before: auto; }

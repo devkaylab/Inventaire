@@ -85,7 +85,7 @@ export default function PriseEnMainPage() {
       {PARCOURS.map((p) => (
         <section
           key={p.cle}
-          className={`pem-parcours${actif === p.cle ? '' : ' pem-cache'}`}
+          className={`pem-parcours echange${actif === p.cle ? '' : ' echange-hors'}`}
           aria-label={t('Parcours %{nom}', { nom: t(p.nom) })}
         >
           <h2 className="pem-titre">{t(p.nom)}</h2>
