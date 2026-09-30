@@ -34,14 +34,15 @@ node verifier-typo.js Quantinvo-commercial.pptx Quantinvo-commercial-marque.pptx
   de démo réel), jamais `web/screenshots/` (faux compte de test).
 - **L'écart vaut compté − théorique**, le signe du rapport.
 
-⚠️ **`captures/boite-a-outils.png` PÉRIMERA AVEC LA NOUVELLE BALISE.** Elle
-affiche « Avery L7160 », ce qui est encore exact ici : le nouveau format
-(35,6 × 16,9 mm, 80 par feuille) attend sur la branche que Julien ait
-réimprimé une planche de calage à 100 % sur du vrai prédécoupé — la fusion du
-28 septembre 2026 l'a délibérément laissé de côté. Le jour où il arrive, cette
-capture ment, et il faut la reprendre avec `creer-balises` et `zones` qui en
-dépendent. `build-presentation.js` l'écarte déjà et montre `creer-balises.png`,
-qui porte le même en-tête sans afficher de référence de support.
+⚠️ **`captures/boite-a-outils.png` EST PÉRIMÉE DEPUIS LE 30 SEPTEMBRE 2026.**
+Elle affiche « Avery L7160 » ; le site n'en produit plus. Le calage a été
+réimprimé à 100 % sur du vrai prédécoupé le 29 septembre, les cadres sont
+tombés pile sur les étiquettes, et le nouveau format (35,6 × 16,9 mm, 80 par
+feuille) est passé sur `main`. **Cette capture ment maintenant**, et il faut
+la reprendre avec `creer-balises` et `zones`, qui en dépendent — quand Julien
+le demandera, jamais d'office. `build-presentation.js` l'écarte déjà et montre
+`creer-balises.png`, qui porte le même en-tête sans afficher de référence de
+support : le deck de la présentation ne montre donc aucun format faux.
 
 `captures/planche-balises.png` n'est PAS une capture d'écran : ce sont six
 balises telles qu'elles sortent du générateur, rendues depuis le PDF réel le
