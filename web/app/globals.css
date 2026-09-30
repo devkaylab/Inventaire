@@ -2875,6 +2875,16 @@ body:has(.site-footer) .theme-toggle { display: none; }
    inventaire. Une classe plutôt qu'un style en ligne : le jour où un autre
    écran en a besoin, il n'a rien à recopier. */
 .page-sub { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+/* ⚠️ **LA SEULE PAGE CENTRÉE DE L'ESPACE CONNECTÉ**, et c'est voulu — demande
+   de Julien le 30 septembre 2026, en regardant « Nouvel inventaire » sur son
+   écran : le formulaire collé à gauche laissait toute la moitié droite vide.
+   Partout ailleurs, ce qui se borne SE COLLE À GAUCHE : décision du 5 septembre,
+   et elle tient. Une liste, une fiche, un tableau de bord REMPLISSENT leur
+   largeur — colonne de travail, colonne de références. Ici il n'y a rien à
+   mettre à côté : quatre champs, seuls sur deux mille pixels.
+   ⚠️ Ne pas étendre cette classe à une page qui a de quoi remplir sa largeur,
+   et ne toujours pas remettre de `max-width` sur `.app-main`. */
+.page-seule { max-width: 720px; margin-inline: auto; }
 /* Le lien de rappel au-dessus du titre d'un inventaire (piste A de la
    maquette « Retour vers Mes inventaires »). Discret : il accompagne le
    titre, il ne rivalise pas avec lui. */
