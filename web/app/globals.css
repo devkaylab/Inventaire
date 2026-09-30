@@ -4664,7 +4664,13 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   display: flex; flex-direction: column; gap: 14px;
 }
 .ins-carte h1 { font-size: 25px; font-weight: 800; letter-spacing: -.5px; margin: 0; line-height: 1.2; }
-.ins-carte > p.muted { margin: 0; }
+/* ⚠️ Le bloc d'une étape reprend la colonne de `.ins-carte` : enveloppé pour
+   l'animation, il devenait un seul élément flex et le formulaire se collait. */
+.ins-etape { display: flex; flex-direction: column; gap: 14px; }
+/* Le titre et le chapô d'une étape sont désormais dans `.ins-etape` : le
+   sélecteur d'enfant direct ne les atteignait plus, et leur marge revenait. */
+.ins-carte > p.muted,
+.ins-etape > p.muted { margin: 0; }
 .ins-jauge { height: 3px; background: var(--hairline); border-radius: var(--r); overflow: hidden; }
 .ins-jauge i { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
 /* ⚠️ « Étape 3 sur 8 » RESTE, mais en phrase — plus en petites capitales

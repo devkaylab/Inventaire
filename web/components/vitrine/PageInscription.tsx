@@ -276,6 +276,16 @@ export function PageInscription() {
             </div>
             <p className="ins-pas">{t('Étape %{n} sur %{total}', { n: etape, total: ETAPES })}</p>
 
+            {/* ⚠️ **LE `key` EST CE QUI ANIME LE PAS SUIVANT.** Sans lui React
+                réutilise le nœud d'une étape à l'autre et rien ne bouge.
+                ⚠️ **ET `.ins-etape` N'EST PAS DÉCORATIF** : `.ins-carte` est une
+                colonne flex à `gap: 14px`, et ses enfants étaient jusqu'ici les
+                titres, les champs et les boutons de l'étape. Les envelopper en
+                fait UN seul élément flex : sans rendre le gap au conteneur, tout
+                le formulaire se collait. La jauge et le message d'erreur restent
+                dehors — ils ne changent pas avec l'étape. */}
+            <div key={etape} className="echange-entre ins-etape">
+
             {etape === 1 && (
               <>
                 <h1>{t('Inscrire mon entreprise')}</h1>
@@ -534,6 +544,8 @@ export function PageInscription() {
                 </p>
               </>
             )}
+
+            </div>
 
             {erreur && <p className="souscrire-erreur douce" role="alert">{erreur}</p>}
           </section>
