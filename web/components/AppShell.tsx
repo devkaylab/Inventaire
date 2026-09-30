@@ -346,7 +346,7 @@ export function AppShell({
             ⚠️ Le `key` est ce qui le déclenche. Sans lui React réutilise le
             nœud d'une route à l'autre et l'animation ne rejoue jamais — le
             piège relevé le 28 septembre sur les onglets du tableau de bord. */}
-        <div key={pathname} className="echange-entre">{children}</div>
+        <div key={pathname} className="transition-page">{children}</div>
       </main>
       <LangueToggle />
     </>

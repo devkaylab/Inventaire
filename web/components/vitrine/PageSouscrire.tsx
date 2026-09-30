@@ -212,7 +212,7 @@ export function PageSouscrire() {
   return (
     <>
       <SiteHeader langue={langue} />
-      <main className="echange-entre">
+      <main>
         <section className="section souscrire-section">
           <div className="container">
             {/* ⚠️ FERMÉE TANT QUE LA SOCIÉTÉ N'EST PAS IMMATRICULÉE (Julien,

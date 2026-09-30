@@ -34,7 +34,7 @@ export function SuppressionCompte({ langue }: { langue: Langue }) {
         <Link href={lien('/')} className="brand"><Logo size={38} /><span>Quantinvo</span></Link>
       </header>
 
-      <main className="legal echange-entre">
+      <main className="legal">
         <h1>{t('Supprimer son compte')}</h1>
 
         <p>

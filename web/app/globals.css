@@ -246,6 +246,46 @@ a { color: inherit; text-decoration: none; }
    sur le conteneur est ce qui déclenche l'animation, sinon React réutilise le
    nœud et rien ne se passe. */
 .echange-entre { animation: echange-monte .26s cubic-bezier(0.33, 1, 0.68, 1) both; }
+
+/* ── LA TRANSITION ENTRE DEUX PAGES (30 septembre 2026) ───────────────────
+   ⚠️ **C'EST LA DEMANDE, ET C'EST CE QUI MANQUAIT** : « imaginons que je passe
+   de l'accueil à l'inventaire, c'est surtout ça que je veux ». `data-reveal`
+   fait apparaître les éléments AU DÉFILEMENT, et `.echange-entre` ce qui
+   remplace autre chose DANS une page. Aucun des deux ne couvrait le passage
+   d'une adresse à une autre : l'écran était remplacé d'un coup.
+
+   ⚠️ **SUR `main`, PAS SUR LA PAGE ENTIÈRE.** L'en-tête et le pied ne bougent
+   pas d'une page à l'autre : les faire disparaître puis revenir, c'est un
+   clignotement, pas une transition. Seul le contenu s'échange, et c'est
+   exactement ce qu'on voit sur un site qui fait ça bien.
+
+   ⚠️ **ET PAS DE `transform` ICI.** Un ancêtre transformé devient le bloc
+   conteneur de ses descendants `position: fixed` — le bouton de langue et
+   celui du thème sauteraient pendant les 260 ms. Un fondu seul n'a pas ce
+   défaut. C'est la différence avec `.echange-entre`, qui n'enveloppe jamais
+   de contenu fixe.
+
+   ⚠️ **UNE RÈGLE PLUTÔT QUE QUATORZE CLASSES.** Le site a quatorze `main` et
+   il en aura d'autres ; la transition vient de l'élément, pas d'un attribut
+   qu'on oublie. `.app-main` est exclu : l'espace connecté a la sienne, posée
+   dans `AppShell` avec le chemin pour clé. */
+/* ⚠️ **PAS DE `both` ICI, ET C'EST LE POINT LE PLUS IMPORTANT DE CE BLOC.**
+   Avec `animation-fill-mode: both`, l'élément porte l'image de départ —
+   `opacity: 0` — AVANT que l'animation démarre et si elle ne démarre jamais.
+   Mesuré : une page est restée à zéro pendant une recompilation. Une
+   transition ratée doit laisser la page LISIBLE, jamais blanche. Sans
+   `fill-mode`, l'opacité de base reste 1 : si l'animation ne joue pas, on
+   perd le fondu, pas le contenu. C'est la règle que `RevealObserver` applique
+   déjà en ne masquant rien sans JavaScript. */
+/* L'espace connecté passe par la même animation : une seule transition de page
+   pour tout le site, une seule durée, et surtout PAS de `transform` — un
+   ancêtre transformé devient le bloc conteneur de ses descendants
+   `position: fixed`, et les volets de l'espace connecté en sont. */
+main:not(.app-main), .app-main > .transition-page { animation: page-entre .3s ease; }
+@keyframes page-entre { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  main:not(.app-main), .app-main > .transition-page { animation: none; }
+}
 @keyframes echange-monte {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
