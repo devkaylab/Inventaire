@@ -279,3 +279,19 @@ describe('Registre — les exports', () => {
     expect(table(rapportApp)).toBe(table(rapportSite))
   })
 })
+
+describe('le papier du Registre passe sous le rail', () => {
+  // Constat de Julien, 1er octobre 2026 : sur les Écarts d'audit et le
+  // Rapport, la bande déborde sur la tuile d'à côté. `.registre` déborde de
+  // 24 px (voulu) ; le rail le recouvrait tant que le panneau d'onglet n'était
+  // pas un contexte d'empilement. `animation-fill-mode: both` en faisait un
+  // pour toujours.
+  it('aucune animation d’entrée ne tient son image finale', () => {
+    const regles = [...code(css).matchAll(/([^{}]*\.(?:echange-entre|transition-page)[^{}]*)\{([^}]*)\}/g)]
+    expect(regles.length).toBeGreaterThan(0)
+    for (const [, selecteur, corps] of regles) {
+      expect(corps, selecteur.trim()).not.toMatch(/animation[^;]*\b(both|forwards)\b|animation-fill-mode\s*:\s*(both|forwards)/)
+    }
+  })
+})
+

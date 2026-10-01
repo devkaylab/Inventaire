@@ -245,7 +245,15 @@ a { color: inherit; text-decoration: none; }
    ⚠️ Elle ne rejoue que si l'élément est REMONTÉ : poser un `key` qui change
    sur le conteneur est ce qui déclenche l'animation, sinon React réutilise le
    nœud et rien ne se passe. */
-.echange-entre { animation: echange-monte .26s cubic-bezier(0.33, 1, 0.68, 1) both; }
+/* ⚠️ PAS DE `both` NON PLUS (1er octobre 2026). Tant qu'une animation
+   d'opacité ou de transform « tient » son image finale, l'élément reste un
+   contexte d'empilement — pour toujours. Le panneau d'onglet du tableau de
+   bord passait alors AU-DESSUS du rail (`position: sticky`), et le papier du
+   Registre, qui déborde de 24 px dans une gouttière de 20, mangeait le bord
+   droit de la tuile voisine sur les Écarts d'audit et le Rapport. Sans
+   `fill-mode`, le contexte disparaît à la fin des 260 ms et l'ordre de
+   peinture redevient celui d'avant les transitions. */
+.echange-entre { animation: echange-monte .26s cubic-bezier(0.33, 1, 0.68, 1); }
 
 /* ── LA TRANSITION ENTRE DEUX PAGES (30 septembre 2026) ───────────────────
    ⚠️ **C'EST LA DEMANDE, ET C'EST CE QUI MANQUAIT** : « imaginons que je passe
