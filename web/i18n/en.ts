@@ -1738,4 +1738,10 @@ export const en: Dictionnaire = {
   "Recaler le stock théorique, et traiter les causes.": "Realign book stock, and deal with the causes.",
   "Zones et balises, double comptage, écarts tranchés en direct : l’outil de cette méthode.": "Zones and tags, double counting, variances settled live: the tool for this method.",
   "Notre outil": "Our tool",
+  "Import annulé : rien n'a été modifié.": "Import cancelled: nothing was changed.",
+  "Ligne %{n} (SKU %{sku}) : le prix d’achat %{valeur} est trop grand, le maximum est 99 999 999.": "Row %{n} (SKU %{sku}): the purchase price %{valeur} is too large. The maximum is 99,999,999.",
+  "Ligne %{n} (SKU %{sku}) : la quantité %{valeur} est trop grande, le maximum est 9 999 999.": "Row %{n} (SKU %{sku}): the quantity %{valeur} is too large. The maximum is 9,999,999.",
+  "SKU %{sku} : ses quantités additionnées sur plusieurs lignes dépassent 9 999 999.": "SKU %{sku}: its quantities added up across several rows exceed 9,999,999.",
+  "Vérifiez que chaque colonne du fichier contient la bonne information : un SKU ou un code-barres placé dans la colonne des quantités ou des prix donne ce résultat.": "Check that each column of the file holds the right information: a SKU or barcode placed in the quantity or price column causes this.",
+  "Le fichier contient %{count} autre valeur trop grande.": { one: "The file contains %{count} other value that is too large.", other: "The file contains %{count} other values that are too large." },
 }
