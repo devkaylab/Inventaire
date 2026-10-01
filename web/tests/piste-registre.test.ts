@@ -294,12 +294,14 @@ describe('le papier du Registre passe sous le rail', () => {
     }
   })
 
-  it('le rail porte son propre indice, quel que soit le panneau', () => {
-    // La première correction (retirer `both`) ne suffisait pas sur l'écran de
-    // Julien : l'ordre ne doit dépendre d'aucune animation.
-    const rail = code(css).match(/\.dash-rail\s*\{([^}]*)\}/)?.[1] ?? ''
-    expect(rail).toMatch(/position:\s*sticky/)
-    expect(rail).toMatch(/z-index:\s*[1-9]/)
+  it('le document est dans un cadre, sans déborder de sa colonne', () => {
+    // Demande de Julien, 1er octobre 2026 : « les deux sections doivent être
+    // dans un frame comme sur les autres pages ». Une marge négative le
+    // refaisait passer sous le rail.
+    const regles = [...code(css).matchAll(/(^|\n)\s*\.registre\s*\{([^}]*)\}/g)].map(m => m[2])
+    expect(regles.length).toBeGreaterThan(0)
+    expect(regles.join(';'), 'le Registre a perdu son cadre').toMatch(/border-radius:\s*var\(--radius\)/)
+    for (const r of regles) expect(r, 'le Registre déborde de nouveau').not.toMatch(/margin[^;]*-\d/)
   })
 })
 

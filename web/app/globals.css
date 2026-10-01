@@ -1727,14 +1727,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 
 /* Le rail de gauche : progression, puis informations. Le collant passe du
    panneau au rail, pour que les deux tuiles montent ensemble. */
-.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: calc(var(--appbar-h) + 24px); z-index: 1; }
-/* ⚠️ `z-index: 1` : LE RAIL PASSE TOUJOURS DEVANT LE PANNEAU D'ONGLET. Le
-   papier du Registre (`.registre`, marge −24 px) déborde de 4 px sous le rail,
-   dans une gouttière de 20. Sans indice, l'ordre de peinture dépendait de ce
-   que le panneau devenait ou non un contexte d'empilement — et une animation
-   d'entrée en fait un (constat de Julien, 1er octobre 2026 : le rapport
-   « n'est plus dans son frame », le bord droit des tuiles du rail mangé).
-   L'indice fige l'ordre, quel que soit le navigateur ou l'animation. */
+.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: calc(var(--appbar-h) + 24px); }
 /* `.panel` porte un `margin-top: 16px` pour les pages qui empilent des blocs.
    Dans le rail, l'espacement vient du `gap` : sans cette remise à zéro, la
    première carte descendait de 16 px sous la barre d'onglets d'en face, et
@@ -4915,9 +4908,21 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 
 /* En thème clair, le fond glisse vers le papier. L'écart avec `--bg` (#f2f3f1)
    est assez petit pour qu'aucune couture ne se voie, assez grand pour qu'on
-   sente le grain. En sombre il n'y a pas de papier : on ne touche à rien. */
+   sente le grain. En sombre il n'y a pas de papier : la carte prend la
+   surface des autres panneaux.
+
+   ⚠️ LE DOCUMENT EST DANS UN CADRE, COMME LES AUTRES ONGLETS (1er octobre
+   2026). Il débordait de 24 px de chaque côté, sans bord ni coin : un papier
+   posé à même la page, qui passait sous le rail dans une gouttière de 20 px.
+   Demande de Julien : « les deux sections doivent être dans un frame comme
+   sur les autres pages ». Même rayon et même retrait que `.panel` ; à
+   l'intérieur, la grammaire du Registre (filets, chasse fixe) ne change pas.
+   Le rayon est posé ici, sur l'élément — jamais en redéfinissant `--r`. */
 :root[data-theme="light"] .registre { background: #faf9f6; }
-.registre { padding: 22px 24px 26px; margin: 0 -24px; }
+.registre {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 22px 24px 26px; margin: 0; box-shadow: var(--shadow-card);
+}
 
 /* ── L'en-tête du document ───────────────────────────────────────────────
    Il ne répète pas celui de la page : la page nomme l'INVENTAIRE, le document
@@ -4986,7 +4991,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .registre .dash-table { border-top: 1px solid var(--text); }
 .registre .dash-table th, .registre .dash-table td { padding-left: 0; }
 .registre .dash-table th:last-child, .registre .dash-table td:last-child { padding-right: 0; }
-.registre .dash-table thead th { background: var(--bg); border-bottom: 1px solid var(--border-strong); }
+.registre .dash-table thead th { background: var(--surface); border-bottom: 1px solid var(--border-strong); }
 :root[data-theme="light"] .registre .dash-table thead th { background: #faf9f6; }
 .registre .dash-table tbody tr:last-child td { border-bottom: 1px solid var(--text); }
 
@@ -5034,8 +5039,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    couleurs. Registre s'arrête au bord de ce qui engage. */
 
 @media (max-width: 860px) {
-  .registre { margin: 0; padding: 18px 0 22px; }
-  :root[data-theme="light"] .registre { background: transparent; }
+  .registre { padding: 18px 16px 22px; }
   .registre .dash-stat + .dash-stat { border-left: 0; padding-left: 0; }
 }
 
