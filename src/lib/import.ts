@@ -143,6 +143,38 @@ function pickCode(r: Record<string, unknown>, keys: string[]): string {
   return ''
 }
 
+// ⚠️ UNE VALEUR TROP GRANDE REFUSE TOUT LE FICHIER, AVANT LE VIDAGE.
+// Plafonds des colonnes en base : `theoretical_qty numeric(10, 3)` et
+// `unit_purchase_price numeric(10, 2)`. Au-delà, Postgres rejette le lot avec
+// « numeric field overflow » [22003], APRÈS `vider_import` : l'ancien stock
+// était effacé, le nouveau à moitié chargé (1er octobre 2026, le SKU placé
+// dans la colonne quantité). Mêmes plafonds et mêmes phrases que
+// web/lib/import.ts — les deux fichiers bougent ensemble.
+const QTE_MAX = 9_999_999.999
+const PRIX_MAX = 99_999_999.99
+
+function depasse(v: number, max: number): boolean {
+  return !(Math.abs(v) <= max)
+}
+
+/** Le premier défaut trouvé, et combien d'autres le suivent. */
+type Debordement = { premier: string; autres: number }
+
+function noterDebordement(d: Debordement | null, motif: () => string): Debordement {
+  return d ? { ...d, autres: d.autres + 1 } : { premier: motif(), autres: 0 }
+}
+
+function messageDebordement(d: Debordement): string {
+  return [
+    t("Import annulé : rien n'a été modifié."),
+    d.premier,
+    d.autres > 0
+      ? tn('Le fichier contient %{count} autre valeur trop grande.', 'Le fichier contient %{count} autres valeurs trop grandes.', d.autres)
+      : '',
+    t('Vérifiez que chaque colonne du fichier contient la bonne information : un SKU ou un code-barres placé dans la colonne des quantités ou des prix donne ce résultat.'),
+  ].filter(Boolean).join(' ')
+}
+
 // ─── XLSX → raw rows ──────────────────────────────────────────────────────────
 async function xlsxToRawRows(uri: string): Promise<Record<string, unknown>[]> {
   const bytes = await new File(uri).bytes()
@@ -197,6 +229,7 @@ export async function importCatalogFile(
   const articleMap = new Map<string, TablesInsert<'articles'>>()
   let skipped = 0
   let keptByEan = 0
+  let debordement: Debordement | null = null
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
     const ean = pickCode(r, EAN_KEYS) || null
@@ -216,6 +249,12 @@ export async function importCatalogFile(
       label: String(r['label'] ?? r['libelle'] ?? r['designation'] ?? r['description'] ?? r['nom'] ?? '').trim() || '',
       unit_purchase_price: isNaN(price) ? 0 : price,
     }
+    const prix = article.unit_purchase_price ?? 0
+    if (depasse(prix, PRIX_MAX)) {
+      debordement = noterDebordement(debordement, () => t('Ligne %{n} (SKU %{sku}) : le prix d’achat %{valeur} est trop grand, le maximum est 99 999 999.', {
+        n: i + 2, sku, valeur: cellToCode(prix),
+      }))
+    }
     const already = articleMap.get(sku)
     if (already?.ean && ean && already.ean !== ean) {
       articleMap.set(ean, { ...article, sku: ean })
@@ -226,6 +265,7 @@ export async function importCatalogFile(
     // si la nouvelle ligne n'en porte pas.
     articleMap.set(sku, already?.ean && !ean ? { ...article, ean: already.ean } : article)
   }
+  if (debordement) throw new Error(messageDebordement(debordement))
   const articles = Array.from(articleMap.values())
   // Les deux constats ci-dessous ne perdent AUCUN article : ce sont des
   // regroupements, pas des lignes écartées. D'où `notes` et non `errors`.
@@ -294,6 +334,9 @@ export async function importStockFile(
   // 2. Validate & aggregate — sum qty across all locations for the same SKU
   const stockMap = new Map<string, number>()
   let skipped = 0
+  let debordement: Debordement | null = null
+  // Un SKU déjà signalé par une ligne ne l'est pas une seconde fois par son total.
+  const signales = new Set<string>()
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
     const sku = pickCode(r, SKU_KEYS)
@@ -303,8 +346,22 @@ export async function importStockFile(
       continue
     }
     const qty = parseFloat(String(r['theoreticalqty'] ?? r['qtetheorique'] ?? r['quantitetheorique'] ?? r['quantite'] ?? r['qty'] ?? r['qte'] ?? r['stock'] ?? r['quantity'] ?? '0'))
-    stockMap.set(sku, (stockMap.get(sku) ?? 0) + (isNaN(qty) ? 0 : qty))
+    const quantite = isNaN(qty) ? 0 : qty
+    if (depasse(quantite, QTE_MAX)) {
+      signales.add(sku)
+      debordement = noterDebordement(debordement, () => t('Ligne %{n} (SKU %{sku}) : la quantité %{valeur} est trop grande, le maximum est 9 999 999.', {
+        n: i + 2, sku, valeur: cellToCode(quantite),
+      }))
+    }
+    stockMap.set(sku, (stockMap.get(sku) ?? 0) + quantite)
   }
+  // Plusieurs emplacements s'additionnent : le total peut déborder sans
+  // qu'aucune ligne seule ne le fasse.
+  for (const [sku, somme] of stockMap) {
+    if (signales.has(sku) || !depasse(somme, QTE_MAX)) continue
+    debordement = noterDebordement(debordement, () => t('SKU %{sku} : ses quantités additionnées sur plusieurs lignes dépassent 9 999 999.', { sku }))
+  }
+  if (debordement) throw new Error(messageDebordement(debordement))
   const payload: TablesInsert<'theoretical_stock'>[] = Array.from(stockMap.entries()).map(
     ([sku, theoretical_qty]) => ({ session_id: sessionId, sku, theoretical_qty })
   )
