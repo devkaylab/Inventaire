@@ -293,5 +293,13 @@ describe('le papier du Registre passe sous le rail', () => {
       expect(corps, selecteur.trim()).not.toMatch(/animation[^;]*\b(both|forwards)\b|animation-fill-mode\s*:\s*(both|forwards)/)
     }
   })
+
+  it('le rail porte son propre indice, quel que soit le panneau', () => {
+    // La première correction (retirer `both`) ne suffisait pas sur l'écran de
+    // Julien : l'ordre ne doit dépendre d'aucune animation.
+    const rail = code(css).match(/\.dash-rail\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(rail).toMatch(/position:\s*sticky/)
+    expect(rail).toMatch(/z-index:\s*[1-9]/)
+  })
 })
 

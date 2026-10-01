@@ -1727,7 +1727,14 @@ body:has(.site-footer) .theme-toggle { display: none; }
 
 /* Le rail de gauche : progression, puis informations. Le collant passe du
    panneau au rail, pour que les deux tuiles montent ensemble. */
-.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: calc(var(--appbar-h) + 24px); }
+.dash-rail { display: flex; flex-direction: column; gap: 20px; position: sticky; top: calc(var(--appbar-h) + 24px); z-index: 1; }
+/* ⚠️ `z-index: 1` : LE RAIL PASSE TOUJOURS DEVANT LE PANNEAU D'ONGLET. Le
+   papier du Registre (`.registre`, marge −24 px) déborde de 4 px sous le rail,
+   dans une gouttière de 20. Sans indice, l'ordre de peinture dépendait de ce
+   que le panneau devenait ou non un contexte d'empilement — et une animation
+   d'entrée en fait un (constat de Julien, 1er octobre 2026 : le rapport
+   « n'est plus dans son frame », le bord droit des tuiles du rail mangé).
+   L'indice fige l'ordre, quel que soit le navigateur ou l'animation. */
 /* `.panel` porte un `margin-top: 16px` pour les pages qui empilent des blocs.
    Dans le rail, l'espacement vient du `gap` : sans cette remise à zéro, la
    première carte descendait de 16 px sous la barre d'onglets d'en face, et
