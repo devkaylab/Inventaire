@@ -4361,6 +4361,41 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .etape h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 5px 0 4px; }
 .etape p { color: var(--text-2); font-size: 15px; }
 
+/* ── LES TROIS GESTES DÉFILENT SUR UN TÉLÉPHONE (1er octobre 2026) ─────────
+   ⚠️ **MESURÉ AVANT D'Y TOUCHER**, sur 375 × 812 : la section faisait
+   2 051 px de haut — **deux écrans et demi pour trois gestes**, et un
+   cinquième de toute la page d'accueil. Empilées, les trois étapes se lisent
+   en faisant défiler, et personne ne défile deux écrans et demi pour une
+   idée qu'il a comprise à la première.
+
+   ⚠️ **LE DÉFILEMENT EST CELUI DU NAVIGATEUR**, comme pour `.carrousel-piste`
+   de la page Découvrir : `scroll-snap`, pas une translation calculée. Le
+   doigt, la molette et le clavier marchent sans une ligne de JavaScript, et
+   rien n'est masqué — les trois étapes restent dans le document, lisibles par
+   un moteur de recherche comme par un lecteur d'écran.
+
+   ⚠️ **LA CARTE FAIT 82 %, PAS 100 %.** Le bord de la suivante doit dépasser :
+   c'est ce qui dit qu'on peut faire glisser. À 100 % rien ne le signale, et
+   un carrousel dont on ignore l'existence est une section tronquée.
+
+   ⚠️ Les marges négatives rendent au rail les 24 px du `.container` : sans
+   elles la carte suivante s'arrêterait au bord du texte au lieu du bord de
+   l'écran, et le débord ne se verrait pas. `scroll-padding` remet le calage
+   au même endroit que le texte. */
+@media (max-width: 560px) {
+  .etapes {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%;
+    gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory;
+    scrollbar-width: none; overscroll-behavior-x: contain;
+    margin-inline: -24px; padding-inline: 24px; scroll-padding-inline: 24px;
+  }
+  .etapes::-webkit-scrollbar { display: none; }
+  .etape { scroll-snap-align: start; }
+  /* Le visuel ne porte plus la marge basse de la colonne : dans une carte, il
+     colle au texte qui le commente. */
+  .etape-vue { margin-bottom: 16px; }
+}
+
 /* ── Le produit se voit : un téléphone, un écran large ───────────────────────
    ⚠️ La colonne du téléphone est BORNÉE (236 px). Sur l'écran de Julien
    (1568 px), une grille à deux parts égales étirait la capture à plus du
