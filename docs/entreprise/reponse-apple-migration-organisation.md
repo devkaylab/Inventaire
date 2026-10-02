@@ -152,3 +152,33 @@ semaines, a débloqué son dossier en demandant un **rappel téléphonique** dep
   reprendre à la version suivante.
 - Les nouveaux certificats seront émis au nom de Devkaylab. Les anciens
   restent valables jusqu'à leur date.
+
+---
+
+## Le dossier est déposé — 2 octobre 2026
+
+Apple a envoyé le lien d'adhésion, le formulaire est rempli, le code de
+vérification est passé : **« enrollment is being processed »**.
+
+Ce qui a été saisi, et pourquoi :
+
+- **Legal entity name : `DEVKAYLAB SASU`.** Le champ demandait d'inclure le
+  type d'entité. Capitales pour le nom — c'est la graphie du RCS, celle que la
+  fiche D&B reprend ; « Devkaylab » est la marque. Forme abrégée APRÈS le nom,
+  comme « Acme Inc. », pas la dénomination française en toutes lettres.
+- **Adresse de courrier : `contact@quantinvo.com`.** Apple refuse les
+  fournisseurs gratuits ; surtout pas `devkaylab@gmail.com`, qui est l'adresse
+  du compte Play. Ce qui rend celle-ci recevable n'est pas le nom du domaine
+  mais le lien public domaine ↔ société : vérifié le 2 octobre, le WHOIS de
+  `quantinvo.com` porte `Registrant Organization: Devkaylab`, et les MX
+  répondent (ImprovMX). Le code y est bien arrivé.
+
+⚠️ **Le WHOIS porte encore `Registrant Email: devkaylab@gmail.com`.** Ça ne
+bloque rien — Apple lit le champ *Organization* — mais à passer à `contact@`
+**une fois le dossier traité**, via **Vercel → Domains → Registrant
+Information** (pas Name.com, simple registraire). Ne pas le changer pendant le
+traitement : la fiche ne doit pas bouger sous les yeux de l'examinateur.
+
+⚠️ **Rien côté iOS tant que ce n'est pas confirmé** : pas d'archive, pas de
+capability, pas d'appareil enregistré. Relancer par rappel téléphonique si rien
+au 12 octobre 2026.
