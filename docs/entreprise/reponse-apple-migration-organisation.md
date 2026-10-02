@@ -162,10 +162,14 @@ vérification est passé : **« enrollment is being processed »**.
 
 Ce qui a été saisi, et pourquoi :
 
-- **Legal entity name : `DEVKAYLAB SASU`.** Le champ demandait d'inclure le
-  type d'entité. Capitales pour le nom — c'est la graphie du RCS, celle que la
-  fiche D&B reprend ; « Devkaylab » est la marque. Forme abrégée APRÈS le nom,
-  comme « Acme Inc. », pas la dénomination française en toutes lettres.
+- **Legal entity name : `DEVKAYLAB`, et RIEN D'AUTRE.** ⚠️ Le champ demandait
+  pourtant d'inclure le type d'entité, et le conseil donné sur le moment était
+  `DEVKAYLAB SASU` — **il était faux** : cette graphie ne correspond pas à la
+  fiche D&B, qui ne porte que la dénomination. C'est la fiche qui gagne,
+  toujours : Apple compare à elle, pas à ce que le libellé du champ suggère.
+  Capitales dans tous les cas — graphie du RCS ; « Devkaylab » est la marque.
+  **La règle à retenir : recopier la fiche D&B à l'identique, et ignorer ce que
+  le formulaire paraît demander en plus.**
 - **Adresse de courrier : `contact@quantinvo.com`.** Apple refuse les
   fournisseurs gratuits ; surtout pas `devkaylab@gmail.com`, qui est l'adresse
   du compte Play. Ce qui rend celle-ci recevable n'est pas le nom du domaine
