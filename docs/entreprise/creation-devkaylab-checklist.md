@@ -116,8 +116,8 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       chaque classe supplémentaire environ 40 €.
       Vérifier d'abord la disponibilité sur data.inpi.fr.
       ✅ **DÉPOSÉE ET PAYÉE LE 3 OCTOBRE 2026** — 270 € (190 € la première classe
-      + 2 × 40 €). Référence client `QUANTINVO-2026-FR`. Numéro national : à
-      reporter ici, l'INPI l'envoie par courriel.
+      + 2 × 40 €). Référence client `QUANTINVO-2026-FR`. **Numéro national : 5304695**
+      (lu sur le récapitulatif, `Produits/Quantinvo/INPI.pdf` dans l'iCloud).
       · **Marque verbale `Quantinvo`**, pas figurative : elle protège le mot
         quelle que soit sa typographie, un logo ne protégerait que son dessin.
       · **18 libellés, tous issus de la liste officielle (TMClass)**, aucune
