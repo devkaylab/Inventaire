@@ -336,3 +336,58 @@ describe('les fiches de boutique annoncées aux machines', () => {
     expect(organisation, 'les boutiques ne décrivent pas l’éditeur').not.toContain('boutiquesEnLigne')
   })
 })
+
+describe('le moyeu des pages de sujet', () => {
+  /*
+   * ⚠️ TROIS PAGES DE RÉFÉRENCEMENT SONT ARRIVÉES LE 3 OCTOBRE 2026, et elles
+   * traitent des morceaux d'un sujet que `/inventaire` traite en large. C'est
+   * la structure qui les sauve : sans liens depuis la page large, elles
+   * n'existeraient que dans le plan du site — et surtout, deux pages d'un même
+   * site qui traitent le même sujet au même niveau se font concurrence au lieu
+   * de s'additionner. Les liens disent à un moteur laquelle traite quoi.
+   *
+   * LA GARDE DÉDUIT SA LISTE DU MOYEU LUI-MÊME : elle lit les pages que
+   * `/inventaire` cite, et exige la réciproque. Une quatrième page ajoutée
+   * demain à ce bloc entre dans la garde sans que personne n'y pense.
+   */
+  const VITRINE = path.resolve(__dirname, '../components/vitrine')
+  const moyeu = readFileSync(path.join(VITRINE, 'Inventaire.tsx'), 'utf8')
+  const rayons = [...moyeu.matchAll(/className="dq-lien"/g)].length
+  const cites = [...moyeu.matchAll(/lien\('(\/[a-z0-9-]+)'\)\} className="dq-lien"/g)].map(m => m[1])
+
+  /** Le composant qui sert une adresse publique, via son `app/<chemin>/page.tsx`. */
+  function composantDe(chemin: string): string {
+    const page = readFileSync(path.resolve(APP, chemin.replace(/^\//, ''), 'page.tsx'), 'utf8')
+    const nom = /from '@\/components\/vitrine\/(\w+)'/.exec(page)?.[1]
+    expect(nom, `${chemin} ne sert pas un composant de la vitrine`).toBeTruthy()
+    return readFileSync(path.join(VITRINE, `${nom}.tsx`), 'utf8')
+  }
+
+  it('la page large cite ses pages de détail', () => {
+    // Si ce compte tombe à zéro, la garde ne vérifie plus rien : le bloc a
+    // changé de forme et les deux tests suivants passent à vide.
+    expect(rayons, 'le bloc « Pour aller plus loin » a disparu de /inventaire').toBeGreaterThan(2)
+    expect(cites).toHaveLength(rayons)
+  })
+
+  it('chaque page citée existe, est au plan du site et renvoie au moyeu', () => {
+    const site = lire('../lib/site.ts')
+    for (const chemin of cites) {
+      expect(existsSync(path.resolve(APP, chemin.replace(/^\//, ''), 'page.tsx')), `${chemin} n’existe pas`).toBe(true)
+      expect(site, `${chemin} n’est pas au plan du site`).toContain(`chemin: '${chemin}'`)
+      // ⚠️ La réciproque, c'est ce qui fait un moyeu et pas un cul-de-sac.
+      expect(composantDe(chemin), `${chemin} ne renvoie pas vers /inventaire`)
+        .toContain("lien('/inventaire')")
+    }
+  })
+
+  it('aucune page de détail ne reprend le titre de la page large', () => {
+    // Deux titres qui visent la même requête se remplacent dans les
+    // résultats au lieu de s'ajouter. Les titres vivent tous dans
+    // `metaVitrineTextes.ts` : on les compare entre eux, sans en citer un.
+    const textes = lire('../lib/metaVitrineTextes.ts')
+    const titres = [...textes.matchAll(/title: '([^']+)'/g)].map(m => m[1])
+    const doublons = titres.filter((t, i) => titres.indexOf(t) !== i)
+    expect(doublons, `titres en double : ${doublons.join(' · ')}`).toEqual([])
+  })
+})

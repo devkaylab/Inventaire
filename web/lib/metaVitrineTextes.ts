@@ -36,6 +36,35 @@ export const META_VITRINE = {
     title: 'Stocktaking: why count your stock, and how to do it well',
     description: 'Annual, cycle and targeted counts: what a stocktake is, what the gap between book stock and actual stock reveals — shrinkage, theft, breakage, admin errors — and how to keep stock reliable all year.',
   }),
+  /*
+   * ⚠️ TROIS PAGES DE RÉFÉRENCEMENT, 3 octobre 2026. Elles visent ce qu'on
+   * TAPE — « logiciel d'inventaire magasin », « démarque inconnue »,
+   * « inventaire tournant » — là où le reste de la vitrine vise le nom du
+   * produit, donc ne peut répondre qu'à quelqu'un qui le connaît déjà.
+   * Les titres portent le terme cherché en premier, sans la marque : le
+   * gabarit du layout ajoute « — Quantinvo ».
+   */
+  logicielInventaire: (l: Langue): Metadata => metaVitrine(l, '/logiciel-inventaire', {
+    title: 'Logiciel d’inventaire pour magasin : comment choisir',
+    description: 'Papier, tableur, terminaux loués ou application mobile : comment les magasins comptent leur stock, ce qu’un logiciel d’inventaire doit savoir faire, et les six questions à poser avant de choisir.',
+  }, {
+    title: 'Stocktaking software for retail: how to choose',
+    description: 'Paper, spreadsheets, rented terminals or a mobile app: how stores count their stock, what stocktaking software has to be able to do, and the six questions to ask before you choose.',
+  }),
+  demarqueInconnue: (l: Langue): Metadata => metaVitrine(l, '/demarque-inconnue', {
+    title: 'Démarque inconnue : définition, calcul et réduction',
+    description: 'La marchandise qui manque sans explication : différence avec la démarque connue, calcul de la valeur et du taux avec un exemple chiffré, les quatre causes et par quoi commencer pour la réduire.',
+  }, {
+    title: 'Shrinkage: definition, calculation and reduction',
+    description: 'Stock that goes missing with no explanation: how it differs from recorded loss, how to work out the value and the rate with a worked example, the four causes, and where to start to bring it down.',
+  }),
+  inventaireTournant: (l: Langue): Metadata => metaVitrine(l, '/inventaire-tournant', {
+    title: 'Inventaire tournant : méthode, fréquence, mise en place',
+    description: 'Compter son magasin zone par zone toute l’année sans le fermer : le classement A, B, C et ses fréquences, les règles de découpage des zones, et un calendrier de mise en route en quatre semaines.',
+  }, {
+    title: 'Cycle counting: method, frequency, getting started',
+    description: 'Counting your store zone by zone all year without closing it: A, B, C classification and how often to count each, the rules for cutting zones, and a four-week plan to get started.',
+  }),
   pourquoi: (l: Langue): Metadata => metaVitrine(l, '/pourquoi-nous-choisir', {
     title: 'Pourquoi choisir Quantinvo',
     description: 'Vos équipes comptent avec leur téléphone, vous pilotez en direct, le stock validé est fiable. Import sans reformater, audit des écarts, licence par magasin à partir de 89 € par mois : les raisons de choisir Quantinvo.',

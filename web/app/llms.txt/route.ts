@@ -89,6 +89,13 @@ function corps(): string {
     `- [L'inventaire](${url('/inventaire')}) : pourquoi compter son stock, et comment bien le faire.`,
     `- [Pourquoi nous choisir](${url('/pourquoi-nous-choisir')}) : ce qui distingue l'outil.`,
     `- [Tarifs](${url('/tarifs')}) : la grille complète, et les questions qu'on nous pose.`,
+    '',
+    '## Guides',
+    '',
+    `- [Logiciel d'inventaire pour magasin](${url('/logiciel-inventaire')}) : comment les magasins comptent aujourd'hui, ce qu'un tel outil doit savoir faire, et les questions à poser avant d'en choisir un.`,
+    `- [La démarque inconnue](${url('/demarque-inconnue')}) : la différence avec la démarque connue, le calcul de la valeur et du taux, les quatre causes, et comment la réduire.`,
+    `- [L'inventaire tournant](${url('/inventaire-tournant')}) : le classement A, B, C et ses fréquences, les règles de découpage des zones, et une mise en route en quatre semaines.`,
+    '',
     `- [Confidentialité](${url('/confidentialite')}) · [Conditions générales](${url('/conditions-generales')}) · [Supprimer son compte](${url('/suppression-compte')})`,
     '',
     ...(boutiques.length
