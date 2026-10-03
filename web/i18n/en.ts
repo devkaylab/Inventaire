@@ -1925,4 +1925,8 @@ export const en: Dictionnaire = {
   "Les logiciels d’inventaire": "Stocktaking software",
   "Ce qu’un tel outil doit savoir faire, et les questions à poser avant de choisir.": "What such a tool has to be able to do, and the questions to ask before choosing.",
   "Les erreurs administratives": "Administrative errors",
+
+  // Les trois liens rangés au pied le 3 octobre 2026.
+  "Souscrire": "Subscribe",
+  "Accès superviseur": "Supervisor access",
 }

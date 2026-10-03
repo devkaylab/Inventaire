@@ -391,3 +391,79 @@ describe('le moyeu des pages de sujet', () => {
     expect(doublons, `titres en double : ${doublons.join(' · ')}`).toEqual([])
   })
 })
+
+describe('aucune page du plan du site n’est orpheline', () => {
+  /*
+   * ⚠️ TROIS PAGES ONT VÉCU AU PLAN DU SITE SANS QU'AUCUN LIEN NE MÈNE À
+   * ELLES — `/souscrire`, `/superviseur` et `/suppression-compte`, jusqu'au
+   * 3 octobre 2026. Rien ne le signalait : elles répondaient en 200, elles
+   * étaient au plan du site, et chaque test passait. Mais un moteur suit les
+   * liens avant tout : une page que rien ne cite a l'air de n'intéresser
+   * personne, et elle est explorée en dernier, si elle l'est.
+   *
+   * ⚠️ CELLE DE GOOGLE PLAY EST LA PLUS COÛTEUSE DES TROIS : la boutique
+   * exige une adresse publique de suppression de compte, et une page
+   * atteignable seulement en tapant son adresse tient mal cette promesse.
+   *
+   * LA GARDE DÉDUIT SA LISTE DU PLAN DU SITE. Une page publique ajoutée
+   * demain devra être citée quelque part, ou justifier ici pourquoi non.
+   */
+  const SOURCES = (() => {
+    const out: string[] = []
+    const balayer = (d: string) => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name)
+        if (e.isDirectory()) balayer(p)
+        else if (/\.tsx?$/.test(e.name)) out.push(p)
+      }
+    }
+    for (const d of ['app', 'components', 'lib']) balayer(path.resolve(__dirname, '..', d))
+    // ⚠️ `lib/site.ts` EST LE PLAN DU SITE LUI-MÊME : s'y citer n'est pas être
+    // lié. Les titres et descriptions non plus — ils décrivent, ils ne mènent
+    // nulle part.
+    return out
+      .filter(f => !/lib[/\\](site|metaVitrineTextes)\.ts$/.test(f))
+      .map(f => readFileSync(f, 'utf8'))
+      .join('\n')
+  })()
+
+  /** Les formes qu'un VRAI lien prend dans ce dépôt — pas une balise canonique. */
+  function liensVers(chemin: string): number {
+    const e = chemin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const formes = [
+      new RegExp(`lien\\('${e}'\\)`, 'g'),       // vitrine, dans la langue de la page
+      new RegExp(`href="${e}"`, 'g'),            // lien écrit en dur
+      new RegExp(`href: '${e}'`, 'g'),           // entrée de lib/navigation.ts
+      new RegExp(`quantinvo\\.com${e}'`, 'g'),   // adresse absolue (PRIVACY_URL)
+    ]
+    return formes.reduce((n, r) => n + (SOURCES.match(r)?.length ?? 0), 0)
+  }
+
+  const site = lire('../lib/site.ts')
+  const francaises = [...site.matchAll(/chemin: '(\/[^']*)'/g)]
+    .map(m => m[1])
+    .filter(c => c !== '/' && !c.startsWith('/en'))
+
+  it('la liste se déduit bien du plan du site', () => {
+    expect(francaises.length).toBeGreaterThan(8)
+  })
+
+  it('chaque page française du plan du site est citée quelque part', () => {
+    const orphelines = francaises.filter(c => liensVers(c) === 0)
+    expect(
+      orphelines,
+      `au plan du site mais aucun lien n’y mène : ${orphelines.join(', ')}`,
+    ).toEqual([])
+  })
+
+  it('les jumelles /en n’ont pas besoin d’être citées séparément', () => {
+    // `lien()` traduit l'adresse à l'affichage : un seul `lien('/tarifs')`
+    // rend `/tarifs` en français et `/en/tarifs` en anglais. Les citer deux
+    // fois serait l'erreur inverse.
+    const anglaises = [...site.matchAll(/chemin: '(\/en[^']*)'/g)].map(m => m[1])
+    expect(anglaises.length).toBeGreaterThan(5)
+    for (const c of anglaises) {
+      expect(SOURCES, `${c} est écrit en dur : il doit passer par lien()`).not.toContain(`href="${c}"`)
+    }
+  })
+})
