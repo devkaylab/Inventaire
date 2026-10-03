@@ -33,13 +33,39 @@
 export const PUBLIEE_IOS = true
 export const PUBLIEE_ANDROID = true
 
-export const APP_STORE_URL = PUBLIEE_IOS
-  ? 'https://apps.apple.com/fr/app/quantinvo/id6807966626'
-  : 'https://apps.apple.com/fr/search?term=Quantinvo'
+/**
+ * Les deux FICHES, et les deux RECHERCHES. Séparées depuis le 3 octobre 2026,
+ * parce que les données structurées ont besoin de la fiche seule : un bouton
+ * peut pointer vers une recherche, un balisage ne peut pas (voir
+ * `boutiquesEnLigne` plus bas).
+ */
+const FICHE_APP_STORE = 'https://apps.apple.com/fr/app/quantinvo/id6807966626'
+const FICHE_PLAY = 'https://play.google.com/store/apps/details?id=com.quantinvo.app'
+const RECHERCHE_APP_STORE = 'https://apps.apple.com/fr/search?term=Quantinvo'
+const RECHERCHE_PLAY = 'https://play.google.com/store/search?q=Quantinvo&c=apps'
 
-export const PLAY_STORE_URL = PUBLIEE_ANDROID
-  ? 'https://play.google.com/store/apps/details?id=com.quantinvo.app'
-  : 'https://play.google.com/store/search?q=Quantinvo&c=apps'
+export const APP_STORE_URL = PUBLIEE_IOS ? FICHE_APP_STORE : RECHERCHE_APP_STORE
+
+export const PLAY_STORE_URL = PUBLIEE_ANDROID ? FICHE_PLAY : RECHERCHE_PLAY
+
+/**
+ * Les fiches de boutique réellement en ligne, pour les données structurées.
+ *
+ * ⚠️ **UNE BOUTIQUE FERMÉE N'A PAS DE FICHE, ELLE A UNE RECHERCHE.** Les deux
+ * constantes ci-dessus retombent sur l'adresse de recherche de la plateforme,
+ * et c'est juste pour un bouton — la page s'ouvre, et montrera la fiche le
+ * jour venu. C'est faux dans un balisage : annoncer une page de recherche
+ * comme la page officielle du produit est une fausse déclaration, et c'est
+ * une machine qui la lit, sans rien vérifier.
+ *
+ * Cette fonction ne passe donc JAMAIS par `APP_STORE_URL` : elle rend la
+ * fiche, ou rien. Les drapeaux entrent en paramètre, comme pour
+ * `noteBoutiques` — la garde exerce ainsi les quatre cas, pas seulement celui
+ * du jour.
+ */
+export function boutiquesEnLigne(ios: boolean, android: boolean): string[] {
+  return [...(ios ? [FICHE_APP_STORE] : []), ...(android ? [FICHE_PLAY] : [])]
+}
 
 /**
  * Ce qui n'est pas encore en ligne, d'après les deux drapeaux.
