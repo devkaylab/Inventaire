@@ -115,7 +115,40 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       d'inventaire et pas seulement un logiciel. Une classe coûte environ 190 €,
       chaque classe supplémentaire environ 40 €.
       Vérifier d'abord la disponibilité sur data.inpi.fr.
-      Fait le : ______  Numéro : ______
+      ✅ **DÉPOSÉE ET PAYÉE LE 3 OCTOBRE 2026** — 270 € (190 € la première classe
+      + 2 × 40 €). Référence client `QUANTINVO-2026-FR`. Numéro national : à
+      reporter ici, l'INPI l'envoie par courriel.
+      · **Marque verbale `Quantinvo`**, pas figurative : elle protège le mot
+        quelle que soit sa typographie, un logo ne protégerait que son dessin.
+      · **18 libellés, tous issus de la liste officielle (TMClass)**, aucune
+        saisie libre — c'est ce qui évite une objection de l'examinateur.
+        ⚠️ Le panier s'était rempli tout seul des **47 termes de la classe 9
+        entière** (combinaisons de plongée, extincteurs, bornes de recharge).
+        Vidé et refait à la main. Un libellé trop large n'est pas une sécurité :
+        il multiplie les portes d'opposition et expose à la déchéance pour
+        non-usage au bout de cinq ans. Le meilleur terme du dépôt est
+        « Logiciels d'inventaires » — il nomme exactement le produit.
+      · **Polynésie française : NON.** L'option coûtait 60 € et le territoire
+        n'a ni client ni projet. Elle ne peut plus être ajoutée après coup.
+      · **Aucune priorité revendiquée** : c'est ce dépôt qui crée la date, et
+        elle ouvre **six mois pour étendre à l'UE** (~1 050 €) en la conservant.
+        Échéance : 3 avril 2027.
+      ⚠️ **DISPONIBILITÉ VÉRIFIÉE LE 3 OCTOBRE, MAIS EN SURFACE** : zéro
+      « Quantinvo » à l'INPI comme sur TMview (toutes bases européennes). En
+      revanche `quantivia` est enregistrée à l'**EUIPO depuis 2017, en classes 9
+      et 42** — les mêmes que nous, sur un territoire qui couvre la France.
+      Début commun, rythme proche. L'élément `QUANTI` est faiblement distinctif
+      et les finales diffèrent, donc rien n'est joué — mais c'est le candidat à
+      une opposition, et la recherche approfondie de l'INPI n'a PAS été commandée.
+      ⚠️ **L'INPI ne vérifie aucune antériorité de lui-même et ne prévient
+      personne.** Il publie au BOPI (~6 semaines), et une fenêtre d'opposition
+      de **2 mois** s'ouvre. Que quelqu'un réagisse dépend de son abonnement à un
+      service de surveillance. Passer les 2 mois n'immunise pas : une action en
+      nullité reste possible jusqu'à **5 ans** de tolérance en connaissance de
+      cause.
+      ⚠️ **La facture de 270 € est une dépense PERSONNELLE**, pas de la SASU :
+      la marque est au nom propre de Julien. Ne pas la passer dans les comptes
+      de Devkaylab — c'est la contrepartie du montage à redevance.
 
       ⚠️ **CE CHOIX RENVERSE L'HYPOTHÈSE DE DÉPART** (« la société doit posséder
       la marque », en tête de ce fichier). La raison écrite alors tient toujours :
