@@ -941,3 +941,60 @@ describe('⚠️ une location se compte en appareils, pas en équipe', () => {
     expect(corps).toMatch(/\(v_prix ->> 'appareils'\)::integer/)
   })
 })
+
+describe('⚠️ plus personne ne se déplace : le peigne', () => {
+  /**
+   * Julien, 4 octobre 2026 : « je t'ai donné le cap à suivre, fait en sorte que
+   * tout s'adapte, vérifie chaque recoin ». Le cap : On-Demand, c'est louer
+   * Quantinvo. Personne ne se déplace.
+   *
+   * ⚠️ LA LISTE SE DÉDUIT : on balaie les écrans que le CLIENT voit, et on
+   * refuse les phrases qui décrivent une venue. Les pages de la console
+   * Quantinvo et la formule équipe — fermée, pas supprimée — ne sont pas
+   * concernées : elles parlent d'un métier qui rouvrira.
+   */
+  const racine = path.resolve(__dirname, '..')
+
+  /** Les écrans du parcours client On-Demand. */
+  function ecransDuClient(): string[] {
+    const trouves: string[] = []
+    const descendre = (rel: string) => {
+      for (const e of readdirSync(path.join(racine, rel), { withFileTypes: true })) {
+        const r = path.join(rel, e.name)
+        if (e.isDirectory()) { descendre(r); continue }
+        if (e.name === 'page.tsx') trouves.push(r)
+      }
+    }
+    descendre(path.join('app', 'on-demand'))
+    return trouves
+  }
+
+  /** Le code sans ses commentaires : une garde lit ce qui s'affiche. */
+  const sansCommentaires = (s: string) =>
+    s.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+
+  it('aucun écran client n’annonce la venue de quelqu’un', () => {
+    // Chaque motif a été vu à l'écran le 4 octobre, et chacun était faux.
+    const interdits = [
+      /L’équipe arrive/, /équipe est sur place/, /Quelqu’un pour ouvrir/,
+      /rémunérons les inventoristes/, /À prévoir sur place/,
+    ]
+    const ecrans = ecransDuClient()
+    expect(ecrans.length, 'plus aucun écran client On-Demand').toBeGreaterThan(2)
+    for (const f of ecrans) {
+      const code = sansCommentaires(readFileSync(path.join(racine, f), 'utf8'))
+      for (const motif of interdits) {
+        expect(motif.test(code), `${f} annonce encore une venue : ${motif}`).toBe(false)
+      }
+    }
+  })
+
+  it('et aucun ne compte des inventoristes à la place des appareils', () => {
+    for (const f of ecransDuClient()) {
+      const code = sansCommentaires(readFileSync(path.join(racine, f), 'utf8'))
+      expect(code, `${f} affiche des inventoristes`).not.toMatch(/inventoriste\{/)
+    }
+  })
+})

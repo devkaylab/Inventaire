@@ -93,7 +93,7 @@ export default function MesInventairesPage() {
               <div className="od-prochain-nom">{prochain.magasin_nom}</div>
               <p className="muted">
                 {enDateLongue(prochain.debut_prevu)}, {enHeure(prochain.debut_prevu)}
-                {' — '}{prochain.inventoristes} inventoriste{prochain.inventoristes > 1 ? 's' : ''}
+                {' — '}{prochain.appareils ?? prochain.inventoristes} appareil{(prochain.appareils ?? prochain.inventoristes) > 1 ? 's' : ''}
                 {prochain.responsable ? ' et 1 responsable' : ''}
                 {' · '}{duree(prochain.duree_prevue_minutes)} environ
               </p>

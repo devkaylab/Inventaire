@@ -1,0 +1,24 @@
+-- ⚠️ `missions` AVAIT SA POLICY, PAS SA PORTE (4 octobre 2026).
+--
+-- « Vos inventaires » rendait « permission denied for table missions ». Et
+-- pourtant la règle de lecture existe depuis le début, écrite et juste :
+--
+--   missions_lire [SELECT] : company_id = l'entreprise de l'appelant
+--                            OU is_admin()
+--                            OU la mission lui est assignée
+--
+-- Il manquait le `grant`. C'est le piège que les notes du projet décrivent mot
+-- pour mot : **`grant` ouvre la porte, RLS trie les lignes — les deux,
+-- toujours.** Une policy sans droit ne protège rien, elle interdit tout, et
+-- elle le fait en silence jusqu'au jour où quelqu'un ouvre la page.
+--
+-- ⚠️ LECTURE SEULE. Rien ne s'écrit dans `missions` depuis le client : la
+-- réservation, les transitions et l'annulation passent par des fonctions
+-- `security definer` qui vérifient autre chose que l'appartenance.
+--
+-- Pourquoi un `grant` plutôt qu'une fonction, à la différence de `stores` :
+-- ici la policy EXISTE et dit l'intention. Sur `stores`, il n'y a jamais eu de
+-- policy de lecture pour `authenticated` — tout le produit y passe par une
+-- fonction, et c'est ce chemin-là qu'il fallait reprendre.
+
+grant select on public.missions to authenticated;

@@ -161,12 +161,17 @@ export default function MonInventairePage() {
 
       {aVenir && (
         <section className="admin-section">
-          <div className="admin-section-head"><div><h2>À prévoir sur place</h2></div></div>
+          {/* ⚠️ CETTE LISTE RECEVAIT UNE ÉQUIPE (réécrite le 4 octobre 2026).
+              « Quelqu'un pour ouvrir à 21:45 », « un contact joignable » : on
+              décrivait l'accueil de gens qui se déplaçaient. On n'envoie plus
+              personne — le client compte avec son équipe, chez lui, quand il
+              veut dans la semaine. Il ne reste que ce qui dépend VRAIMENT de
+              lui, et sans quoi le rapport est muet. */}
+          <div className="admin-section-head"><div><h2>À préparer</h2></div></div>
           <ul className="od-prevoir">
-            <li>Quelqu’un pour ouvrir à {enHeure(mission.arrivee_prevue)}</li>
-            <li>Un contact joignable pendant l’inventaire</li>
-            <li>La réserve ouverte et éclairée</li>
-            <li>Votre fichier de stock déposé avant la veille</li>
+            <li>Votre fichier de stock, déposé avant de commencer</li>
+            <li>Vos balises imprimées et posées dans les rayons</li>
+            <li>Les comptes de vos compteurs créés</li>
           </ul>
           <p className="muted small" style={{ marginTop: 14 }}>
             {/* ⚠️ On le dit franchement : sans fichier, l'inventaire a lieu mais
@@ -197,8 +202,11 @@ export default function MonInventairePage() {
 
           {frais.equipe_sur_place ? (
             <p className="muted">
-              L’équipe est sur place. L’inventaire ne s’annule plus depuis cette
-              page — appelez-nous, nous verrons ensemble.
+              {/* ⚠️ `equipe_sur_place` garde son nom en base — c'est le même
+                  moment, le créneau commencé. Ce n'est plus une équipe qui
+                  arrive, c'est l'inventaire qui a démarré. */}
+              L’inventaire a commencé. Il ne s’annule plus depuis cette page —
+              appelez-nous, nous verrons ensemble.
             </p>
           ) : (
             <>
@@ -228,8 +236,14 @@ export default function MonInventairePage() {
               {/* ⚠️ La phrase qui explique, et elle n'est pas cosmétique : sans
                   elle, des frais d'annulation se lisent comme une punition. */}
               <p className="muted small" style={{ marginTop: 12 }}>
-                Nous rémunérons les inventoristes qui se sont rendus disponibles
-                pour vous.
+                {/* ⚠️ La phrase qui explique, et elle n'est pas cosmétique :
+                    sans elle, des frais d'annulation se lisent comme une
+                    punition. L'ancienne disait « nous rémunérons les
+                    inventoristes qui se sont rendus disponibles » — plus
+                    personne ne se rend disponible. Ce qui est réservé, et qui
+                    ne l'est pour personne d'autre, c'est la licence. */}
+                Votre licence et vos appareils sont retenus pour cette
+                semaine-là.
               </p>
 
               {!demandeAnnulation ? (
