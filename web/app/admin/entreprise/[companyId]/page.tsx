@@ -470,6 +470,55 @@ export default function AdminCompanyPage() {
    * produit et non un `confirm()` du navigateur, comme le reste de cette page
    * — `window.confirm` ne sait pas exiger un geste délibéré.
    */
+  /**
+   * ⚠️ LA BASCULE SE FAIT DEPUIS LA LIGNE DE LA PERSONNE, dans les deux sens
+   * (demande de Julien, 4 octobre 2026). Révoquer se faisait déjà par
+   * identifiant ; promouvoir obligeait à RETAPER L'ADRESSE de quelqu'un qu'on
+   * a sous les yeux, dans le formulaire qui sert d'abord à inviter une
+   * personne sans compte. Deux gestes asymétriques pour une bascule qui, elle,
+   * est symétrique.
+   */
+  async function promouvoir(m: Member) {
+    const details = [
+      `${(m.full_name ?? '').trim() || 'Sans nom'} — ${m.email ?? 'adresse inconnue'}`,
+      'Il gérera les superviseurs et les magasins de toute l’entreprise.',
+    ]
+    // Une promotion fait monter un compteur en superviseur : c'est une
+    // conséquence réelle sur ce qu'il voit, elle se dit avant.
+    if (m.role !== 'supervisor') {
+      details.push('Compteur aujourd’hui, il devient superviseur : il verra les inventaires et les rapports.')
+    }
+    const ok = await confirmer({
+      title: 'Nommer cette personne administrateur ?',
+      message: 'Seul Quantinvo nomme et révoque un administrateur d’entreprise.',
+      details,
+      confirmLabel: 'Nommer administrateur',
+    })
+    if (!ok) return
+    await appel('admin_promouvoir_admin_entreprise', { p_user: m.id })
+  }
+
+  async function retirerAdministration(m: Member) {
+    const details = [
+      `${(m.full_name ?? '').trim() || 'Sans nom'} — ${m.email ?? 'adresse inconnue'}`,
+      'Son compte superviseur et ses magasins sont conservés.',
+    ]
+    // ⚠️ Une entreprise sans administrateur remonte dans « À traiter » sur
+    // /admin et repasse « gérée par Quantinvo » : autant le dire avant.
+    if (admins.length === 1) {
+      details.push('C’est le dernier administrateur : sans lui, plus personne n’y gère les superviseurs.')
+    }
+    const ok = await confirmer({
+      title: 'Retirer le rôle d’administrateur ?',
+      message: 'La personne garde son compte et ses accès magasin.',
+      details,
+      confirmLabel: 'Retirer l’administration',
+      tone: 'danger',
+    })
+    if (!ok) return
+    await appel('admin_revoke_company_admin', { p_user: m.id })
+  }
+
   async function supprimerPersonne(m: Member) {
     const nom = (m.full_name ?? '').trim()
     const details = [
@@ -842,6 +891,15 @@ export default function AdminCompanyPage() {
                   </div>
                 </div>
                 <div className="req-actions">
+                  {m.is_company_admin ? (
+                    <button className="link-btn" onClick={() => retirerAdministration(m)}>
+                      Retirer l&apos;administration
+                    </button>
+                  ) : (
+                    <button className="link-btn" onClick={() => promouvoir(m)}>
+                      Nommer administrateur
+                    </button>
+                  )}
                   <button className="link-btn danger-link" onClick={() => supprimerPersonne(m)}>
                     Supprimer le compte
                   </button>
