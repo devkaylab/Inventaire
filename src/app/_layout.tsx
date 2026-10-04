@@ -37,6 +37,7 @@ import { ThemeProvider, useThemeControls } from '@/lib/theme'
 import { useLangue } from '@/lib/i18n'
 import { chargerLangue } from '@/lib/langueAppareil'
 import { SplashAnimation } from '@/components/SplashAnimation'
+import { BandeauBaseEssai } from '@/components/BandeauBaseEssai'
 import { OfflineTopBanner } from '@/components/OfflineTopBanner'
 import { PorteBienvenue } from '@/components/PorteBienvenue'
 import { Dialogues } from '@/components/ui/Dialogue'
@@ -155,6 +156,10 @@ export default function RootLayout() {
               l'application, pas seulement l'écran concerné. */}
           <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
             <BarreEtat />
+            {/* ⚠️ TOUT EN HAUT, AVANT MÊME LE HORS-LIGNE : savoir sur quelle
+                base on écrit prime sur tout le reste. Ne rend rien du tout sur
+                l'app publiée. */}
+            <BandeauBaseEssai />
             {/* Au-dessus de la pile : le bandeau doit coiffer l'en-tête de
                 chaque écran, et rester visible quelle que soit la page. */}
             <OfflineTopBanner />
