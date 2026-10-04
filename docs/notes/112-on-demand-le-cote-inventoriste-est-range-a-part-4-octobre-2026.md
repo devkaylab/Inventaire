@@ -61,9 +61,8 @@ serait un choix de produit, pas de rangement :
 2. **La console `/admin/missions/[id]`** garde la partie « proposer la mission
    à des candidats, en retirer quelqu'un » (`admin_proposer_mission`,
    `admin_candidats_mission`, `admin_retirer_de_la_mission`).
-3. **« Zone desservie »** (`zones_desservies`, `estDesservi`) suppose que
-   Quantinvo envoie des gens quelque part. Sans équipe envoyée, la notion
-   change de sens, voire disparaît.
+3. ~~« Zone desservie »~~ — **tranché le soir même.** Julien : « la notion
+   "envoyer une équipe" est nulle ». Voir ci-dessous.
 
 ## ⚠️ Et une question de modèle, avant d'écrire quoi que ce soit
 
@@ -75,3 +74,26 @@ magasin, le rapport, les écarts — et qui paie ? Ça se décide avant le code.
 ## Vérifié
 
 551 tests de l'app, 1 638 du site, `tsc` sans erreur, lint 0 erreur.
+
+
+## ⚠️ La zone desservie ne gouverne plus rien — 4 octobre 2026, le soir
+
+`/on-demand/groupe` grisait les magasins d'un département « non desservi » et
+refusait de les réserver. **Une enseigne de dix magasins dont quatre hors zone
+n'en réservait que six.**
+
+Le reste du code avait déjà raison : partout ailleurs la zone n'est regardée
+que si la formule est `equipe_quantinvo`, et la base elle-même **retombe sur
+`logiciel_seul`** quand la ligne ne dit rien (`reserver_ma_mission`). Le
+navigateur refusait donc ce que le serveur acceptait — le pire cas, parce que
+rien ne remonte.
+
+Et **aucune garde ne le voyait** : la suite est restée verte avant comme après
+la correction. Trois gardes neuves, deux sabotages :
+
+- **la liste se déduit** — tout fichier du site qui appelle `estDesservi` doit
+  aussi regarder la formule ; sinon il refuse une location que la base
+  accepterait ;
+- la page « groupe » ne consulte plus la zone **du tout** : elle ne connaît pas
+  la formule, donc elle n'a aucun moyen de poser la question correctement ;
+- le refus `hors_zone` de la bibliothèque reste conditionné à `!logiciel`.

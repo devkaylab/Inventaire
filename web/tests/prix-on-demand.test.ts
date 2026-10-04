@@ -764,3 +764,60 @@ describe('à la demande ne dit pas « devis »', () => {
     expect(fautes, fautes.join('\n')).toEqual([])
   })
 })
+
+describe('⚠️ « envoyer une équipe » ne gouverne plus rien sur le chemin location', () => {
+  /**
+   * Julien, 4 octobre 2026 : « on reste uniquement sur la partie où on met
+   * Quantinvo à dispo, la notion "envoyer une équipe" est nulle ».
+   *
+   * Le défaut réparé ce jour-là : `/on-demand/groupe` grisait les magasins
+   * d'un département « non desservi » et refusait de les réserver. Une
+   * enseigne de dix magasins dont quatre hors zone n'en réservait que six —
+   * alors que la base, elle, acceptait : `reserver_ma_mission` retombe sur
+   * `logiciel_seul` quand la ligne ne dit rien de la formule. Le navigateur
+   * refusait ce que le serveur autorisait, et aucune garde ne le voyait.
+   */
+
+  /** La liste SE DÉDUIT : tout fichier du site qui consulte la zone. */
+  function fichiersQuiLisentLaZone(): string[] {
+    const racine = path.resolve(__dirname, '..')
+    const trouves: string[] = []
+    const descendre = (rel: string) => {
+      for (const e of readdirSync(path.join(racine, rel), { withFileTypes: true })) {
+        const r = path.join(rel, e.name)
+        if (e.isDirectory()) { if (e.name !== 'node_modules' && e.name !== '.next') descendre(r); continue }
+        if (!/\.tsx?$/.test(e.name)) continue
+        // La définition elle-même ne compte pas : c'est ses APPELS qu'on garde.
+        if (r === path.join('lib', 'prixOnDemand.ts')) continue
+        const code = readFileSync(path.join(racine, r), 'utf8')
+        if (/estDesservi\s*\(/.test(code)) trouves.push(r)
+      }
+    }
+    for (const d of ['app', 'components', 'lib', 'hooks']) descendre(d)
+    return trouves
+  }
+
+  it('aucun appel à la zone n’échappe à la formule', () => {
+    for (const f of fichiersQuiLisentLaZone()) {
+      const code = readFileSync(path.resolve(__dirname, '..', f), 'utf8')
+      // La zone n'a de sens que pour l'équipe : un appel qui ne regarde pas la
+      // formule refuse une location que la base accepterait.
+      expect(/logiciel/i.test(code), `${f} consulte la zone sans regarder la formule`).toBe(true)
+    }
+  })
+
+  it('la page « groupe » ne consulte plus la zone du tout', () => {
+    // Elle ne connaît pas la formule, et n'a donc aucun moyen de poser la
+    // question correctement. C'est de là que venait le défaut.
+    const code = readFileSync(
+      path.resolve(__dirname, '..', 'app/on-demand/groupe/page.tsx'), 'utf8')
+    expect(code).not.toMatch(/estDesservi\s*\(/)
+    expect(code, 'elle affiche encore un refus de zone').not.toMatch(/Pas encore desservi/)
+  })
+
+  it('le refus « hors zone » reste réservé à l’équipe', () => {
+    // Côté bibliothèque, la règle était déjà juste : on la fige.
+    const lib = readFileSync(path.resolve(__dirname, '..', 'lib/prixOnDemand.ts'), 'utf8')
+    expect(lib).toMatch(/if \(!logiciel && !estDesservi\(r\.codePostal\)\) return \{ ok: false, refus: 'hors_zone' \}/)
+  })
+})

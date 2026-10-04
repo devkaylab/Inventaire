@@ -10,9 +10,19 @@
  * tuerait la promesse. Un prix par magasin, une seule réservation, une seule
  * facture.
  *
- * ⚠️ **ET UN MAGASIN NON DESSERVI RESTE DANS LA LISTE**, avec la raison. Le
- * cacher laisserait croire à un oubli de saisie, et l'enseigne chercherait un
- * établissement qu'elle a bien déclaré.
+ * ⚠️⚠️ **PLUS AUCUNE NOTION DE ZONE DESSERVIE ICI** (4 octobre 2026). Cette
+ * page grisait les magasins d'un département « non desservi » et refusait de
+ * les réserver : une enseigne de dix magasins dont quatre hors zone n'en
+ * réservait que six. « Desservi » voulait dire « on peut y envoyer une
+ * équipe » — et on n'envoie plus personne. Julien : « on reste uniquement sur
+ * la partie où on met Quantinvo à dispo, la notion "envoyer une équipe" est
+ * nulle ».
+ *
+ * Le reste du code avait déjà raison : partout ailleurs, la zone n'est
+ * regardée que si la formule est `equipe_quantinvo` — et la base elle-même
+ * retombe sur `logiciel_seul` quand la ligne ne dit rien. Seule cette page
+ * l'avait oublié, et elle refusait donc côté navigateur ce que le serveur
+ * acceptait.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -24,7 +34,7 @@ import { euros } from '@/lib/offres'
 import { nb } from '@/lib/format'
 import { VERSION_CONDITIONS } from '@/lib/conditions'
 import {
-  DELAI_HEURES, TRANCHES_ARTICLES, chaine, estDesservi,
+  DELAI_HEURES, TRANCHES_ARTICLES, chaine,
 } from '@/lib/prixOnDemand'
 import { mesEtablissements, type Etablissement } from '@/lib/onDemandClient'
 import { enDateCourte } from '@/lib/missionsClient'
@@ -184,12 +194,10 @@ export default function GroupePage() {
                 </thead>
                 <tbody>
                   {(etablissements ?? []).map((e) => {
-                    const cp = codePostalDe(e)
-                    const desservi = cp !== '' && estDesservi(cp)
                     const c = choix[e.id] ?? { date: '', tranche: trancheDe(e) }
                     const prix = prixDe(e)
                     return (
-                      <tr key={e.id} style={{ opacity: desservi ? 1 : 0.55 }}>
+                      <tr key={e.id}>
                         <td>
                           {e.name}
                           <div className="muted small">
@@ -202,27 +210,21 @@ export default function GroupePage() {
                             : <span className="muted">Jamais</span>}
                         </td>
                         <td>
-                          {desservi ? (
-                            <input type="date" min={auPlusTot} value={c.date}
-                                   onChange={(ev) => setChoix((s) => ({
-                                     ...s, [e.id]: { ...c, date: ev.target.value },
-                                   }))} />
-                          ) : (
-                            <span className="muted">Pas encore desservi</span>
-                          )}
+                          <input type="date" min={auPlusTot} value={c.date}
+                                 onChange={(ev) => setChoix((s) => ({
+                                   ...s, [e.id]: { ...c, date: ev.target.value },
+                                 }))} />
                         </td>
                         <td>
-                          {desservi ? (
-                            <select value={c.tranche}
-                                    onChange={(ev) => setChoix((s) => ({
-                                      ...s, [e.id]: { ...c, tranche: ev.target.value },
-                                    }))}>
-                              <option value="">Choisir…</option>
-                              {TRANCHES_ARTICLES.map((t) => (
-                                <option key={t.cle} value={t.cle}>{t.nom}</option>
-                              ))}
-                            </select>
-                          ) : <span className="muted">—</span>}
+                          <select value={c.tranche}
+                                  onChange={(ev) => setChoix((s) => ({
+                                    ...s, [e.id]: { ...c, tranche: ev.target.value },
+                                  }))}>
+                            <option value="">Choisir…</option>
+                            {TRANCHES_ARTICLES.map((t) => (
+                              <option key={t.cle} value={t.cle}>{t.nom}</option>
+                            ))}
+                          </select>
                         </td>
                         <td className="num">
                           {prix === null ? <span className="muted">—</span> : euros(prix / 100)}
