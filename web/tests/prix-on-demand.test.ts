@@ -866,3 +866,35 @@ describe('⚠️ les magasins se lisent par une fonction, jamais par la table', 
       /revoke all on function public\.mes_etablissements\(\) from public, anon/)
   })
 })
+
+describe('⚠️ louer Quantinvo, c’est zéro inventoriste', () => {
+  /**
+   * 4 octobre 2026, trouvé en réservant pour de vrai : `missions` portait
+   * `check (inventoristes >= 1)`. Juste tant qu'une mission voulait dire « on
+   * envoie une équipe » — plus du tout depuis la grille à deux axes, où le
+   * `logiciel_seul` rend `inventoristes = 0`. **Toute location échouait**, sur
+   * un message de Postgres brut à l'écran.
+   *
+   * ⚠️ Aucun test ne pouvait le voir : la chaîne de prix est éprouvée à
+   * l'unité, la contrainte vit en base, et les deux étaient justes séparément.
+   */
+  it('la contrainte la plus récente accepte zéro', () => {
+    // La liste SE DÉDUIT : le dernier fichier qui touche la contrainte fait foi.
+    const fichiers = readdirSync(dossierMigrations)
+      .filter((f) => f.endsWith('.sql'))
+      .filter((f) => readFileSync(path.join(dossierMigrations, f), 'utf8')
+        .includes('missions_inventoristes_check'))
+      .sort()
+    expect(fichiers.length, 'plus aucune migration ne pose cette contrainte').toBeGreaterThan(0)
+    const dernier = readFileSync(path.join(dossierMigrations, fichiers[fichiers.length - 1]), 'utf8')
+    const pose = dernier.slice(dernier.lastIndexOf('add constraint missions_inventoristes_check'))
+    expect(pose, 'la contrainte exige encore un inventoriste').toMatch(/inventoristes >= 0/)
+  })
+
+  it('et la chaîne de prix du logiciel seul en rend bien zéro', () => {
+    // Les deux moitiés du défaut, tenues ensemble : si la chaîne se remettait à
+    // rendre des inventoristes pour une location, la contrainte ne suffirait pas.
+    const c = chaineAffichee(30000, 1, 'logiciel_seul', 9)
+    expect(c.inventoristes).toBe(0)
+  })
+})
