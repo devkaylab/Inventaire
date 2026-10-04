@@ -1064,3 +1064,43 @@ describe('⚠️ rien ne doit bloquer le client et son inventaire', () => {
     expect(corps).toMatch(/insert into public\.stores/)
   })
 })
+
+describe('⚠️ une location est arbitrée comme une location', () => {
+  /**
+   * Le défaut le plus grave du parcours, trouvé en le déroulant de bout en
+   * bout (4 octobre 2026), et il tenait à une ligne manquante.
+   *
+   * `reserver_ma_mission` calculait bien le prix en `logiciel_seul` — le JSON
+   * `calcul` le disait — mais **n'écrivait pas la colonne `formule`**. Elle
+   * gardait son défaut, `equipe_quantinvo`. Or c'est elle que lit
+   * `missions_verifier_transition` pour choisir la machine d'états :
+   *
+   *   location : confirmee → prete → en_cours
+   *   équipe   : confirmee → en_constitution → equipe_complete → prete
+   *
+   * `confirmee → prete` était donc refusé, et `en_constitution` réclame une
+   * équipe qu'on ne constitue plus. **La mission ne pouvait plus avancer du
+   * tout** — ni session d'inventaire, ni appareils ouverts.
+   */
+  it('la réservation écrit la formule, elle ne la laisse pas par défaut', () => {
+    const corps = derniereDefinition('reserver_ma_mission').corps
+    expect(corps, 'la colonne `formule` n’est pas dans l’insert').toMatch(/formule, inventoristes/)
+    expect(corps).toMatch(/coalesce\(v_prix ->> 'formule', 'logiciel_seul'\)/)
+  })
+
+  it('⚠️ et le déclencheur arbitre AVEC elle', () => {
+    // S'il retombait sur le défaut de la fonction (`equipe_quantinvo`), écrire
+    // la colonne ne servirait à rien.
+    const corps = derniereDefinition('missions_verifier_transition').corps
+    expect(corps).toMatch(/transition_mission_permise\(old\.etat, new\.etat, new\.formule\)/)
+  })
+
+  it('le parcours de la location va bien jusqu’à « en cours »', () => {
+    // Les deux maillons qui portent tout le reste : la session d'inventaire
+    // naît à `en_cours`, et les appareils s'ouvrent dans la foulée.
+    const machine = derniereDefinition('transition_mission_permise').corps
+    const partie = machine.slice(machine.indexOf("'logiciel_seul'"))
+    expect(partie).toMatch(/when 'confirmee'\s*then array\['prete'/)
+    expect(partie).toMatch(/when 'prete'\s*then array\['en_cours'/)
+  })
+})
