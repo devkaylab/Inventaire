@@ -143,3 +143,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [On-Demand a son propre projet Supabase](docs/notes/109-on-demand-a-son-propre-projet-supabase-4-octobre-2026.md)
 - [⚠️ L'app dit sur quelle base elle écrit](docs/notes/110-l-app-dit-sur-quelle-base-elle-ecrit-4-octobre-2026.md)
 - [⚠️ On-Demand — **migrations appliquées en base**, site sur la préversion, et **une seule migration touche OS**](docs/notes/111-on-demand-la-premiere-tranche-20-septembre-2026.md)
+- [⚠️ On-Demand : le côté inventoriste est rangé à part](docs/notes/112-on-demand-le-cote-inventoriste-est-range-a-part-4-octobre-2026.md)

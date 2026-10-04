@@ -61,15 +61,28 @@ describe('le site est explorable', () => {
       // Se met elle-même en noindex tant que l'éditeur n'est pas immatriculé.
       'mentions-legales',
       // On-Demand : `noindex` tant que le produit n'est pas ouvert, et en
-      // français seul — l'indexer ferait venir des gens qu'on décevrait. Les
-      // deux entreront au plan du site le jour de l'ouverture, ensemble.
-      'reserver', 'on-demand', 'devenir-inventoriste',
+      // français seul — l'indexer ferait venir des gens qu'on décevrait. Elles
+      // entreront au plan du site le jour de l'ouverture, ensemble.
+      'reserver', 'on-demand',
     ])
     const auPlan = new Set(
       [...site.matchAll(/chemin: '\/([^']*)'/g)].map(m => m[1].split('/')[0]).filter(Boolean),
     )
     const orphelines = routes().filter(r => !ECARTEES.has(r) && !auPlan.has(r))
     expect(orphelines, `pages publiques absentes du plan du site : ${orphelines.join(', ')}`).toEqual([])
+
+    // ⚠️ **UNE EXCLUSION QUI SURVIT À SA PAGE AFFAIBLIT LA GARDE POUR
+    // TOUJOURS**, et sans bruit. `devenir-inventoriste` est resté ici après la
+    // suppression de la page (4 octobre 2026) : la suite est restée verte, et
+    // le jour où une page reprendrait ce nom, elle serait écartée du plan du
+    // site sans que personne ne l'ait décidé. Une liste d'exceptions se
+    // nettoie en même temps que ce qu'elle excepte.
+    // ⚠️ On teste l'EXISTENCE DU DOSSIER, pas `routes()` : `devis` n'a pas de
+    // `page.tsx` à sa racine (il sert `devis/[token]`), et s'appuyer sur
+    // `routes()` l'aurait déclaré périmé alors qu'il est bien là.
+    const perimees = [...ECARTEES].filter(r => !existsSync(path.join(APP, r)))
+    expect(perimees, `écartées du plan du site alors qu'elles n'existent plus : ${perimees.join(', ')}`)
+      .toEqual([])
   })
 
   it('les pages à jeton et l’espace connecté sont fermés aux robots', () => {
