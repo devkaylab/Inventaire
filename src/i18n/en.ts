@@ -407,6 +407,7 @@ export const en: Dictionnaire = {
   "Générer mes balises": "Generate my tags",
   "hier": "yesterday",
   "Hors ligne — le comptage continue": "Offline — counting continues",
+  "BASE D’ESSAI — pas la production": "TEST DATABASE — not production",
   "Identifiants": "Credentials",
   "Ignorer": "Skip",
   "Ignorer — revenir au scan": "Ignore — back to scanning",

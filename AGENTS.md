@@ -139,3 +139,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [La balise rétrécit, et le dessin devient unique](docs/notes/107-la-balise-retrecit-et-le-dessin-devient-unique-24-septembre-2026.md)
 - [⚠️ Un aperçu n'écrit pas dans la production](docs/notes/108-un-apercu-n-ecrit-pas-dans-la-production-4-octobre-2026.md)
 - [On-Demand a son propre projet Supabase](docs/notes/109-on-demand-a-son-propre-projet-supabase-4-octobre-2026.md)
+- [⚠️ L'app dit sur quelle base elle écrit](docs/notes/110-l-app-dit-sur-quelle-base-elle-ecrit-4-octobre-2026.md)

@@ -8,6 +8,7 @@
 #   ./scripts/simulateur.sh "iPad Air 11-inch (M3)"  # par son NOM
 #   ./scripts/simulateur.sh ipad                   # le premier iPad disponible
 #   CONFIG=Release ./scripts/simulateur.sh         # JS embarqué, sans Metro
+#   BASE=ondemand CONFIG=Release ./scripts/simulateur.sh   # sur .env.ondemand
 #
 # ⚠️ **C'est le seul chemin à emprunter.** Un `xcodebuild` lancé à la main
 # oublie deux étapes, et les deux se manifestent APRÈS l'installation, quand
@@ -39,6 +40,39 @@ cd "$RACINE"
 CIBLE="${1:-booted}"
 CONFIG="${CONFIG:-Debug}"
 APP="ios/build/dd/Build/Products/${CONFIG}-iphonesimulator/Inventaire.app"
+
+# ── BASE : brancher ce build sur une AUTRE base que la production ──────────
+#
+# `BASE=ondemand` lit `.env.ondemand` au lieu du `.env` habituel. Mesuré le
+# 4 octobre 2026 : `@expo/env` n'écrase JAMAIS une variable déjà posée dans
+# l'environnement (« la variable du shell gagne »). Exporter ici suffit donc,
+# sans toucher au `.env` — et surtout sans risquer de l'y laisser.
+#
+# ⚠️ **RELEASE OBLIGATOIRE, et ce n'est pas une préférence.** En Debug le JS
+# ne vient pas de ce script : il vient de Metro, lancé dans un AUTRE terminal,
+# qui lit `.env` et ne verra jamais ce qu'on exporte ici. Le build s'ouvrirait
+# alors sur la PRODUCTION en croyant être sur la base d'essai — exactement le
+# défaut que le bandeau est censé rendre impossible. On refuse.
+if [ -n "$BASE" ]; then
+  FICHIER="$RACINE/.env.$BASE"
+  if [ ! -f "$FICHIER" ]; then
+    echo "✗ Fichier d'environnement introuvable : .env.$BASE"
+    echo "  Les fichiers disponibles :"
+    ls -1 "$RACINE"/.env.* 2>/dev/null | sed 's|.*/|    |' || echo "    (aucun)"
+    exit 1
+  fi
+  if [ "$CONFIG" != "Release" ]; then
+    echo "✗ BASE=$BASE demande CONFIG=Release."
+    echo "  En Debug le JS vient de Metro, qui lit .env — la base choisie ici"
+    echo "  ne l'atteindrait pas, et l'app tournerait sur la production."
+    echo "    BASE=$BASE CONFIG=Release ./scripts/simulateur.sh $CIBLE"
+    exit 1
+  fi
+  set -a
+  . "$FICHIER"
+  set +a
+  echo "→ Base : .env.$BASE"
+fi
 
 # ── La cible : « booted », un UDID, ou un nom d'appareil ───────────────────
 # Rendre un UDID et un seul. Un nom partiel suffit (« ipad », « iPhone 17 »),
