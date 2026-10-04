@@ -80,7 +80,31 @@ ajoute ses appareils ; en dehors, le client retombe à deux.
 - **L'inscription d'un client neuf** passe par la fonction edge `inscription`,
   donc par `VENTE_OUVERTE` — fermé tant que `web/lib/legal.ts` est incomplet.
   Et aucune fonction edge n'est déployée sur le projet d'essai.
-- **Préparer avant le jour J.** La session d'inventaire naît à « en cours »,
-  alors que l'écran du client demande d'avoir déposé son fichier et posé ses
-  balises *avant de commencer*. Il n'a nulle part où le faire tant que la
-  mission n'est pas ouverte.
+## ⚠️ Et une erreur de ma part, corrigée par Julien
+
+J'avais écrit que le client « n'a nulle part où préparer tant que la mission
+n'est pas ouverte ». **C'est faux.** Julien : « pourquoi le client n'atterrit
+pas sur son Dashboard Quantinvo OS ? »
+
+Il y atterrit. Vérifié sur l'aperçu avec le compte d'essai : tableau de bord
+complet, « Nouvel inventaire », « Mon équipe », les compteurs du mois. Louer
+fait de lui un utilisateur ordinaire, et il prépare comme n'importe qui.
+
+**Ce qui reste vrai, et qui est une autre question :** ouvrir la mission crée
+**un second inventaire**, celui de la mission, avec son propre numéro. Si le
+client en a déjà créé un lui-même, rien ne les relie — son import et ses
+balises sont dans l'autre.
+
+## Les appareils, pour un client neuf
+
+Une entreprise créée par une location prend le plan `standard`, que
+`plafond_appareils` ne connaît pas : elle rend `null`, et le plafond effectif
+retombe sur son plancher.
+
+| | appareils |
+|---|---|
+| pendant la semaine louée | **11** (2 + les 9 de la mission) |
+| en dehors | **2** |
+
+Préparer — importer, imprimer les balises, inviter l'équipe — ne consomme
+aucun appareil. Le plancher ne gêne donc pas la préparation.
