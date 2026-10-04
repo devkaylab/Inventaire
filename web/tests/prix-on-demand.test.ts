@@ -967,3 +967,40 @@ describe('⚠️ plus personne ne se déplace : le peigne', () => {
     }
   })
 })
+
+describe('⚠️ la console d’une mission ne parle plus d’équipe', () => {
+  /**
+   * Julien, 4 octobre 2026 : « on ne propose plus d'équipe donc on ne garde
+   * pas ce qui y fait référence ». La console d'une mission portait deux
+   * sections entières — « L'équipe — N inventoristes », avec les places vides
+   * et les rémunérations, et « Qui pourrait la faire », avec Proposer et
+   * Retirer. Elles sont parties, et le code vit sur
+   * `on-demand-inventoristes`.
+   */
+  const ecran = readFileSync(
+    path.resolve(__dirname, '..', 'app/admin/missions/[id]/page.tsx'), 'utf8')
+    .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+    .replace(/\s+/g, ' ')
+
+  it('plus rien n’y propose ni ne retire quelqu’un', () => {
+    for (const fn of ['admin_proposer_mission', 'admin_candidats_mission',
+                      'admin_retirer_de_la_mission']) {
+      expect(ecran, `la console appelle encore ${fn}`).not.toContain(fn)
+    }
+  })
+
+  it('elle montre ce que le client a loué', () => {
+    expect(ecran).toContain('Ce que le client a loué')
+    expect(ecran, 'elle compte encore une équipe').not.toMatch(/L’équipe —/)
+    expect(ecran, 'elle montre encore ce qui est versé à l’équipe')
+      .not.toMatch(/Versé à l’équipe/)
+  })
+
+  it('⚠️ et la base lui rend le nombre d’appareils', () => {
+    // Sans ça, l'écran retombe sur `inventoristes` et affiche « 0 appareil ».
+    const corps = derniereDefinition('admin_mission').corps
+    expect(corps).toMatch(/'appareils', v_m\.appareils/)
+  })
+})
