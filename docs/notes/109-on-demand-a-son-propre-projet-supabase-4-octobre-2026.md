@@ -64,6 +64,20 @@ PUBLIC — voir AGENTS.md).
 **Aucune donnée** : 0 entreprise, 0 magasin, 0 profil, 0 compte `auth.users`.
 Le dump est `--schema-only`.
 
+## ⚠️ Un écart VOULU avec la production, depuis le 4 octobre au soir
+
+Le jumeau n'en est plus tout à fait un, et c'est la raison d'être de ce
+projet : `20260928120001_la_grille_a_deux_axes.sql` y est **appliquée**, et
+pas en production.
+
+Mesuré après coup : `prix_mission` rend désormais un prix de **tranche** côté
+essai — 30 000 articles → **145 €**, 9 appareils imposés, version 2 — là où la
+production garde l'ancien « coût + marge ». Le site calculait déjà la nouvelle
+grille dans le navigateur ; les deux concordent enfin, côté essai.
+
+⚠️ Ne pas lire une future mesure de dérive comme un accident : **cet écart-là
+est volontaire**, et c'est le seul.
+
 ## ⚠️ Ce que le dump NE COPIE PAS — et qui se voit tard
 
 `pg_dump --schema public` ne sort QUE `public`. Trois objets vitaux vivent
