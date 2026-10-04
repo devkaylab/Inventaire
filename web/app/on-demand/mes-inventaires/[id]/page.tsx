@@ -125,16 +125,25 @@ export default function MonInventairePage() {
           <table className="dash-table">
             <tbody>
               <tr><td>Établissement</td><td>{mission.magasin_nom}<div className="muted small">{mission.adresse}</div></td></tr>
+              {/* ⚠️ L'HEURE DE DÉBUT, PAS L'HEURE D'ARRIVÉE (4 octobre 2026).
+                  `arrivee_prevue` vaut le début moins un quart d'heure, « pour
+                  s'installer » : c'était l'heure à laquelle une équipe de
+                  Quantinvo se présentait. On n'envoie plus personne, et le
+                  client compte quand il veut — la seule heure qui le concerne
+                  est celle de son inventaire. */}
               <tr>
-                <td>L’équipe arrive à</td>
-                <td>{enHeure(mission.arrivee_prevue)}<div className="muted small">
-                  un quart d’heure avant, pour s’installer</div></td>
+                <td>Début de l’inventaire</td>
+                <td>{enHeure(mission.debut_prevu)}</td>
               </tr>
+              {/* ⚠️ LES APPAREILS, PAS L'ÉQUIPE. `inventoristes` compte les gens
+                  envoyés : il vaut 0 en location, et l'écran affichait donc
+                  « 0 inventoriste ». Ce que le client a réservé, et ce qui fait
+                  son prix, c'est un nombre d'appareils. */}
               <tr>
-                <td>Équipe</td>
+                <td>Appareils</td>
                 <td>
-                  {mission.inventoristes} inventoriste{mission.inventoristes > 1 ? 's' : ''}
-                  {mission.responsable ? ' et 1 responsable' : ''}
+                  {mission.appareils ?? mission.inventoristes} appareil
+                  {(mission.appareils ?? mission.inventoristes) > 1 ? 's' : ''}
                 </td>
               </tr>
               <tr><td>Durée prévue</td><td>{duree(mission.duree_prevue_minutes)} environ</td></tr>

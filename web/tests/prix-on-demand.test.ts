@@ -898,3 +898,46 @@ describe('⚠️ louer Quantinvo, c’est zéro inventoriste', () => {
     expect(c.inventoristes).toBe(0)
   })
 })
+
+describe('⚠️ une location se compte en appareils, pas en équipe', () => {
+  /**
+   * 4 octobre 2026, Julien devant l'écran d'une réservation réelle : « On parle
+   * encore d'équipe, je veux heure de début d'inventaire à la place de l'heure
+   * d'arrivée et nombre d'appareil à la place d'équipe ».
+   *
+   * Derrière le libellé, un défaut de fond : `prix_mission` rend DEUX nombres —
+   * `inventoristes` (les gens envoyés, 0 en location) et `appareils` (les
+   * téléphones du client). La réservation ne gardait que le premier, et
+   * `plafond_mission_en_cours` — **la seule pièce d'On-Demand qui touche
+   * Quantinvo OS** — comptait les appareils depuis `inventoristes`. Une
+   * location ouvrait donc **zéro appareil** : le neuvième téléphone se serait
+   * fait refuser le soir du comptage.
+   */
+  const ecran = readFileSync(
+    path.resolve(__dirname, '..', 'app/on-demand/mes-inventaires/[id]/page.tsx'), 'utf8')
+
+  it('l’écran montre l’heure de début, pas l’heure d’arrivée', () => {
+    expect(ecran).toContain('Début de l’inventaire')
+    expect(ecran, 'il annonce encore l’arrivée d’une équipe')
+      .not.toMatch(/L’équipe arrive à/)
+  })
+
+  it('il montre des appareils, pas des inventoristes', () => {
+    expect(ecran).toContain('Appareils')
+    expect(ecran).toContain('mission.appareils')
+    expect(ecran, 'il compte encore des inventoristes').not.toMatch(/\{mission\.inventoristes\} inventoriste/)
+  })
+
+  it('⚠️ et le plafond d’appareils compte bien les APPAREILS', () => {
+    // Le libellé seul aurait menti : sans cette ligne, l'écran dirait
+    // « 9 appareils » pendant que la base en ouvrirait zéro.
+    const corps = derniereDefinition('plafond_mission_en_cours').corps
+    expect(corps).toContain('m.appareils')
+  })
+
+  it('et la réservation écrit les deux nombres', () => {
+    const corps = derniereDefinition('reserver_ma_mission').corps
+    expect(corps).toMatch(/inventoristes, appareils, responsable/)
+    expect(corps).toMatch(/\(v_prix ->> 'appareils'\)::integer/)
+  })
+})

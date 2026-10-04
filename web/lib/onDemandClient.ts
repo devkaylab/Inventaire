@@ -29,6 +29,8 @@ export type Mission = {
   debut_prevu: string
   arrivee_prevue: string
   duree_prevue_minutes: number
+  /** Les appareils ouverts au client. `inventoristes` compte les gens envoyés — 0 en location. */
+  appareils: number | null
   inventoristes: number
   responsable: boolean
   articles_retenus: number
@@ -41,7 +43,7 @@ export type Mission = {
 /** Les colonnes que le client a le droit de lire — la base les retient déjà. */
 const COLONNES =
   'id,reference,magasin_nom,adresse,ville,store_id,inventory_session_id,etat,'
-  + 'secteur,debut_prevu,arrivee_prevue,duree_prevue_minutes,inventoristes,'
+  + 'secteur,debut_prevu,arrivee_prevue,duree_prevue_minutes,appareils,inventoristes,'
   + 'responsable,articles_retenus,prix_cents,annulation_gratuite_jusqu_au,'
   + 'terminee_le,created_at'
 
