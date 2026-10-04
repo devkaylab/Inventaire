@@ -57,11 +57,33 @@ type Detail = {
   equipe?: Membre[]
 }
 
+/**
+ * Le parcours d'une LOCATION, dans l'ordre. La base refuse tout ce qui n'est
+ * pas permis depuis l'état courant : on propose, elle arbitre.
+ */
+const PARCOURS = [
+  { cle: 'paiement_autorise', bouton: 'Paiement autorisé' },
+  { cle: 'confirmee', bouton: 'Confirmer' },
+  { cle: 'prete', bouton: 'Prête' },
+  { cle: 'en_cours', bouton: 'Ouvrir l’inventaire' },
+  { cle: 'controle_qualite', bouton: 'Contrôle qualité' },
+  { cle: 'terminee', bouton: 'Terminer' },
+  { cle: 'payee', bouton: 'Payée' },
+]
+
+const LIBELLE_ETAT: Record<string, string> = Object.fromEntries(
+  PARCOURS.map((e) => [e.cle, e.bouton]).concat([
+    ['prix_calcule', 'Prix calculé'], ['brouillon', 'Brouillon'],
+    ['annulee', 'Annulée'], ['remboursee', 'Remboursée'], ['echouee', 'Échouée'],
+    ['litige', 'Litige'],
+  ]))
+
 export default function AdminMissionPage() {
   const guard = useAuthGuard('admin')
   const { id } = useParams<{ id: string }>()
   const [detail, setDetail] = useState<Detail | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [occupe, setOccupe] = useState(false)
 
   const charger = useCallback(async () => {
     // ⚠️ `admin_candidats_mission` n'est plus appelée (4 octobre 2026) : on ne
@@ -72,6 +94,30 @@ export default function AdminMissionPage() {
   }, [id])
 
   useEffect(() => { if (guard.status === 'ready') charger() }, [guard.status, charger])
+
+  /**
+   * ⚠️ **SANS CECI, UNE MISSION RÉSERVÉE NE BOUGEAIT JAMAIS** (4 octobre 2026).
+   * `admin_avancer_mission` existait en base depuis le 20 septembre, et AUCUN
+   * écran ne l'appelait : une réservation restait à « Prix calculé », donc pas
+   * de session d'inventaire — elle n'est créée qu'en passant « en cours » —,
+   * donc pas d'appareils ouverts, donc pas d'inventaire. Le client payait et
+   * attendait.
+   *
+   * ⚠️ ON NE RECOPIE PAS LA MACHINE D'ÉTATS ICI. `transition_mission_permise`
+   * arbitre en base, et refuse par un message lisible. Deux tables d'états qui
+   * divergent, c'est une console qui propose un bouton qui ne marche pas.
+   */
+  const avancer = async (etat: string) => {
+    setErreur(null); setOccupe(true)
+    const { data, error } = await supabase.rpc('admin_avancer_mission', {
+      p_mission: id, p_etat: etat,
+    })
+    setOccupe(false)
+    if (error) { setErreur(error.message); return }
+    const r = data as { success: boolean; error?: string }
+    if (!r?.success) { setErreur(r?.error ?? 'Transition impossible.'); return }
+    charger()
+  }
 
   if (guard.status !== 'ready') return <Chargement />
   if (erreur && !detail) return <AppShell profile={guard.profile}><p className="field-err">{erreur}</p></AppShell>
@@ -118,6 +164,30 @@ export default function AdminMissionPage() {
               <tr><td>Durée prévue</td><td>{duree(m.duree_prevue_minutes)} environ</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* ⚠️ Les états sont ceux du parcours LOCATION — la base arbitre, cette
+          liste ne fait que proposer. L'ordre est celui du parcours, pour qu'on
+          lise la suite sans la chercher. */}
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <div>
+            <h2>Où en est la mission</h2>
+            <p className="muted small">{LIBELLE_ETAT[m.etat] ?? m.etat}</p>
+          </div>
+        </div>
+        <div className="res-actions" style={{ flexWrap: 'wrap' }}>
+          {PARCOURS.map((e) => (
+            <button key={e.cle} type="button" className="btn btn-ghost" disabled={occupe}
+                    onClick={() => avancer(e.cle)}>
+              {e.bouton}
+            </button>
+          ))}
+          <button type="button" className="btn btn-danger" disabled={occupe}
+                  onClick={() => avancer('annulee')}>
+            Annuler la mission
+          </button>
         </div>
       </section>
 

@@ -1004,3 +1004,63 @@ describe('⚠️ la console d’une mission ne parle plus d’équipe', () => {
     expect(corps).toMatch(/'appareils', v_m\.appareils/)
   })
 })
+
+describe('⚠️ rien ne doit bloquer le client et son inventaire', () => {
+  /**
+   * Julien, 4 octobre 2026 : « que rien ne bloque l'user et son inventaire ».
+   *
+   * ⚠️ **UNE MISSION RÉSERVÉE NE BOUGEAIT JAMAIS.**
+   * `admin_avancer_mission` existe en base depuis le 20 septembre, et **aucun
+   * écran ne l'appelait** — vérifié sur tout le dossier `web/`. Une
+   * réservation restait à « Prix calculé ». Or la session d'inventaire n'est
+   * créée qu'au passage « en cours », et les appareils ne s'ouvrent que par le
+   * déclencheur qui suit ce même passage. Le client réservait, payait, et
+   * attendait un inventaire qui ne pouvait pas commencer.
+   */
+  const racine = path.resolve(__dirname, '..')
+
+  it('la console sait faire avancer une mission', () => {
+    const ecran = readFileSync(
+      path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
+    expect(ecran, 'plus aucun écran ne fait avancer une mission')
+      .toContain("rpc('admin_avancer_mission'")
+  })
+
+  it('⚠️ et elle sait l’ouvrir — l’état qui crée la session', () => {
+    // `en_cours` n'est pas un état comme un autre : c'est lui qui crée la
+    // session d'inventaire ET déclenche l'ouverture des appareils. Sans ce
+    // bouton-là, les autres ne servent à rien.
+    const ecran = readFileSync(
+      path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
+    expect(ecran).toMatch(/cle: 'en_cours'/)
+    const def = derniereDefinition('admin_avancer_mission').corps
+    expect(def).toMatch(/p_etat = 'en_cours' and v_m\.inventory_session_id is null/)
+    expect(def).toContain('creer_la_session_de_mission')
+  })
+
+  it('⚠️ la console ne recopie pas la machine d’états', () => {
+    // Deux tables qui divergent, c'est un bouton qui ne marche pas. La base
+    // arbitre, et la console se contente de proposer.
+    //
+    // ⚠️ LA GARDE LIT LE CODE SANS SES COMMENTAIRES, et elle l'a appris en
+    // mordant sur le commentaire qui NOMME la fonction d'arbitrage pour
+    // expliquer qu'on ne la recopie pas. Une garde qui interdit un mot
+    // interdit aussi de l'expliquer.
+    const ecran = readFileSync(
+      path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
+      .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n')
+    expect(ecran, 'la console décide elle-même des transitions permises')
+      .not.toMatch(/transition_mission_permise|TRANSITIONS\s*[:=]/)
+  })
+
+  it('louer crée une vraie entreprise, avec son administrateur', () => {
+    // C'est ce qui rend le client « utilisateur lambda de Quantinvo OS » : il
+    // peut ensuite inviter superviseurs et compteurs comme n'importe qui.
+    const corps = derniereDefinition('reserver_ma_mission').corps
+    expect(corps).toMatch(/insert into public\.companies/)
+    expect(corps).toMatch(/role = 'supervisor', is_company_admin = true/)
+    expect(corps).toMatch(/insert into public\.stores/)
+  })
+})
