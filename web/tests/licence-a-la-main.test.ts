@@ -230,16 +230,40 @@ describe('la console pose la licence', () => {
   it('l’écran sait marquer, et démarquer', () => {
     expect(nu).toContain('admin_marquer_entreprise_essai')
     expect(nu).toContain('admin_marquer_magasin_essai')
-    // La case d'un magasin s'efface quand toute l'entreprise est un essai :
-    // la laisser cliquable laisserait croire qu'elle change quelque chose.
-    expect(nu).toContain('disabled={detail.company.est_test}')
+    // La case d'un magasin se verrouille quand TOUTE l'entreprise est un
+    // essai : la laisser cliquable laisserait croire qu'elle change quelque
+    // chose, alors que le magasin est déjà écarté par héritage.
+    expect(nu).toMatch(/verrou=\{detail\.company\.est_test\}/)
+    expect(nu).toContain('disabled={verrou}')
   })
 
-  it('la licence et le prix restent deux gestes distincts', () => {
-    // Une licence posée à la main peut couvrir un tarif négocié qui n'est pas
-    // celui de la grille : le prix garde sa propre ligne.
+  /**
+   * ⚠️ **CETTE GARDE DISAIT L'INVERSE IL Y A UNE HEURE**, et c'est Julien qui
+   * a tranché : « la section est trop chargée ». J'avais séparé la licence et
+   * le prix en deux gestes, au nom d'« une chose à la fois ». Mauvaise
+   * découpe : les appareils et le prix sont les deux faces d'une offre, et les
+   * deux rangées s'appelaient toutes les deux « Licence ».
+   *
+   * Ce qui se défend n'a pas changé — une licence posée à la main doit
+   * pouvoir porter un tarif négocié, pas seulement celui de la grille. Ce qui
+   * change, c'est que ça se fait en UN enregistrement, donc une seule trace au
+   * journal avec son motif.
+   */
+  it('l’offre se pose en un seul geste, prix compris', () => {
     expect(nu).toContain('admin_poser_licence_magasin')
-    expect(nu).toContain('admin_set_store_price')
+    expect(nu, 'le prix doit voyager avec la licence').toMatch(/p_annual_price_cents: cents/)
+    // Deux enregistrements auraient laissé deux traces au journal pour un
+    // seul changement d'offre, et un motif sur une seule des deux.
+    expect(nu, 'le prix ne se pose plus à part').not.toContain('admin_set_store_price')
+  })
+
+  it('la ligne au repos ne répète pas ce que le menu dit déjà', () => {
+    // C'est la moitié de l'encombrement que Julien a signalé : le menu
+    // affiche « Essential — Jusqu'à 2 appareils », et un libellé à côté
+    // répétait « 2 appareils à la fois · Essential ».
+    const bloc = nu.slice(nu.indexOf('function OffreMagasin'))
+    expect(bloc, 'le repère ne s’affiche que s’il manque quelque chose')
+      .toMatch(/!modifie && manque/)
   })
 })
 

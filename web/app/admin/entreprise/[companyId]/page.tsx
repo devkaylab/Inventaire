@@ -768,25 +768,12 @@ export default function AdminCompanyPage() {
                       <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
                     </div>
                   </div>
-                  <LicenceMagasin store={s} onSaved={charger} />
-                  <TarifMagasin store={s} onSaved={charger} />
-                  <div className="store-sup" style={{ marginTop: 6, alignItems: 'center' }}>
-                    <label className="remember-label">
-                      <input
-                        type="checkbox"
-                        checked={s.est_test}
-                        onChange={(e) => marquerMagasin(s, e.target.checked)}
-                        disabled={detail.company.est_test}
-                      />
-                      Magasin d&apos;essai
-                    </label>
-                    {/* Un magasin d'une entreprise d'essai l'est forcément :
-                        la case devient inutile, et le dire vaut mieux que la
-                        laisser décochée alors que le magasin est bien écarté. */}
-                    {detail.company.est_test && (
-                      <span className="muted small">Toute l&apos;entreprise est un essai.</span>
-                    )}
-                  </div>
+                  <OffreMagasin
+                    store={s}
+                    verrou={detail.company.est_test}
+                    onEssai={(essai) => marquerMagasin(s, essai)}
+                    onSaved={charger}
+                  />
                   <AppareilsMagasin a={appareils.find((x) => x.store_id === s.id)} />
                   <div className="store-sup">
                     {s.supervisor_ids.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
@@ -984,47 +971,86 @@ function CompanyAdminBlock({
 }
 
 /**
- * Tarif annuel d'un magasin — la licence est par magasin, au volume de
- * stock. Tant qu'il n'est pas posé, le tableau de bord estime ce magasin au
- * panier moyen et le signale : renseigner le vrai chiffre rend le revenu
- * exact.
- */
-/**
- * La licence d'un magasin, posée à la main.
+ * L'OFFRE D'UN MAGASIN, SUR UNE SEULE LIGNE.
  *
- * ⚠️ C'EST LE SEUL CHAMP QUI DÉCIDE SI UN TÉLÉPHONE PEUT COMPTER. Le plan de
- * l'entreprise ne sert que de repli : `plafond_appareils` fait
- * `coalesce(stores.devices, …plan…)`, donc dès que les appareils sont posés
- * sur le magasin, c'est eux qui gagnent. Passer l'entreprise en Enterprise ne
- * changerait rien à un magasin dont les appareils sont renseignés.
+ * ⚠️ ELLE ÉTAIT EN TROIS RANGÉES ET DEUX GESTES, et Julien l'a arrêté net le
+ * 4 octobre 2026 : « la section est trop chargée ». Il avait raison deux fois.
+ * D'abord parce que trois rangées du même poids visuel, pour une seule idée —
+ * ce que ce magasin a le droit de faire — se lisent comme trois réglages sans
+ * rapport. Ensuite parce que DEUX CHOSES S'APPELAIENT « LICENCE » : le nombre
+ * d'appareils et le prix annuel, l'un sous l'autre, le même mot.
+ *
+ * J'avais défendu deux gestes séparés, « une chose à la fois ». C'était la
+ * mauvaise découpe : les appareils et le prix sont les DEUX FACES d'une offre,
+ * on ne change jamais l'un sans penser à l'autre. Un seul enregistrement, un
+ * seul motif, une seule trace au journal.
+ *
+ * ⚠️ LE MENU EST LE SEUL CHAMP QUI DÉCIDE SI UN TÉLÉPHONE PEUT COMPTER.
+ * `plafond_appareils` fait `coalesce(stores.devices, …plan de l'entreprise…)` :
+ * dès que les appareils sont posés sur le magasin, c'est eux qui gagnent, et
+ * passer l'entreprise en Enterprise ne changerait rien.
  *
  * ⚠️ LE MOTIF PART AU JOURNAL, et c'est ce qui rend l'écart retrouvable : dans
  * six mois, « virement du 12/10 » et « essai Bon Marché » ne se devinent pas
- * d'un nombre d'appareils.
+ * d'un nombre d'appareils. Il n'apparaît qu'au moment de valider — au repos,
+ * la ligne reste nue.
  *
  * ⚠️ AUCUN CHAMP STRIPE N'EST TOUCHÉ : un client qui règle par virement n'a
  * pas d'abonnement, et lui en inventer un ferait mentir la synchronisation.
  */
-function LicenceMagasin({ store, onSaved }: { store: Store; onSaved: () => void }) {
-  const initial = store.devices === null ? '' : String(store.devices)
-  const [valeur, setValeur] = useState(initial)
+function OffreMagasin({
+  store, verrou, onEssai, onSaved,
+}: {
+  store: Store
+  verrou: boolean
+  onEssai: (essai: boolean) => void
+  onSaved: () => void
+}) {
+  const appareilsInitial = store.devices === null ? '' : String(store.devices)
+  const prixInitial = store.annual_price_cents === null ? '' : String(Math.round(store.annual_price_cents / 100))
+  const [appareils, setAppareils] = useState(appareilsInitial)
+  const [prix, setPrix] = useState(prixInitial)
   const [motif, setMotif] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { setValeur(initial) }, [initial])
+  useEffect(() => { setAppareils(appareilsInitial); setPrix(prixInitial) }, [appareilsInitial, prixInitial])
 
-  const modifie = valeur !== initial
-  const offre = nomOffre(store.devices)
+  const modifie = appareils !== appareilsInitial || prix.trim() !== prixInitial
+
+  /**
+   * Changer de tranche propose le prix de la grille — mais seulement si le
+   * champ est vide. Écraser un prix déjà saisi effacerait un tarif négocié, et
+   * c'est précisément le cas que cet écran sert.
+   */
+  function choisirTranche(valeur: string) {
+    setAppareils(valeur)
+    if (prix.trim() !== '' || valeur === '') return
+    const cents = prixCents(Number(valeur), 'yearly')
+    if (cents !== null) setPrix(String(Math.round(cents / 100)))
+  }
+
+  function annuler() {
+    setAppareils(appareilsInitial)
+    setPrix(prixInitial)
+    setMotif('')
+  }
 
   async function enregistrer() {
-    const appareils = valeur === '' ? null : Number(valeur)
+    let cents: number | null = null
+    const brut = prix.trim()
+    if (brut !== '') {
+      const euros = Number(brut.replace(/\s/g, '').replace(',', '.'))
+      if (!Number.isFinite(euros) || euros < 0) {
+        alert('Indiquez un montant en euros, par exemple 2400.')
+        return
+      }
+      cents = Math.round(euros * 100)
+    }
     setBusy(true)
     const { data, error } = await supabase.rpc('admin_poser_licence_magasin', {
       p_store_id: store.id,
-      p_devices: appareils,
-      // Le prix garde sa propre ligne : une licence posée à la main peut
-      // couvrir un tarif négocié qui n'est pas celui de la grille.
-      p_annual_price_cents: null,
+      p_devices: appareils === '' ? null : Number(appareils),
+      p_annual_price_cents: cents,
       p_motif: motif.trim() || null,
     })
     setBusy(false)
@@ -1036,100 +1062,64 @@ function LicenceMagasin({ store, onSaved }: { store: Store; onSaved: () => void 
     onSaved()
   }
 
+  // Au repos, UN SEUL repère, et seulement s'il manque quelque chose : le menu
+  // dit déjà la tranche, le répéter à côté faisait la moitié de l'encombrement.
+  const manque = store.devices === null
+    ? 'Sans licence, deux appareils à la fois au maximum.'
+    : store.annual_price_cents === null
+      ? 'Prix estimé au panier moyen tant qu’il est vide.'
+      : null
+
   return (
-    <div className="store-sup" style={{ marginTop: 10, alignItems: 'center' }}>
-      <label className="muted small" htmlFor={`licence-${store.id}`}>Licence</label>
-      <select
-        id={`licence-${store.id}`}
-        className="champ-select"
-        value={valeur}
-        onChange={(e) => setValeur(e.target.value)}
-        aria-label={`Licence de ${store.name}`}
-      >
-        <option value="">Non déclarée</option>
-        {TRANCHES.map((t) => (
-          <option key={t.cle} value={t.appareils}>{t.nom} — {t.plage}</option>
-        ))}
-      </select>
-      {!modifie && (
-        <span className="muted small">
-          {store.devices === null
-            ? 'Non déclarée : deux appareils à la fois, pas plus.'
-            : `${nb(store.devices)} appareil${store.devices > 1 ? 's' : ''} à la fois${offre ? ` · ${offre}` : ''}`}
-        </span>
-      )}
+    <>
+      <div className="store-offre">
+        <label htmlFor={`offre-${store.id}`}>Offre</label>
+        <select
+          id={`offre-${store.id}`}
+          className="store-sup-select"
+          value={appareils}
+          onChange={(e) => choisirTranche(e.target.value)}
+        >
+          <option value="">Sans licence</option>
+          {TRANCHES.map((t) => (
+            <option key={t.cle} value={t.appareils}>{t.nom} — {t.plage}</option>
+          ))}
+        </select>
+        <input
+          className="dash-audit-input store-offre-prix"
+          inputMode="numeric"
+          value={prix}
+          placeholder="—"
+          onChange={(e) => setPrix(e.target.value)}
+          aria-label={`Prix annuel de ${store.name}, en euros`}
+        />
+        <span className="muted small">€ / an</span>
+        {!modifie && manque && <span className="muted small">{manque}</span>}
+        <label className="remember-label store-offre-essai">
+          <input
+            type="checkbox"
+            checked={store.est_test}
+            onChange={(e) => onEssai(e.target.checked)}
+            disabled={verrou}
+          />
+          {verrou ? 'Essai (toute l’entreprise)' : 'Magasin d’essai'}
+        </label>
+      </div>
       {modifie && (
-        <>
+        <div className="store-offre store-offre-suite">
           <input
             className="dash-audit-input"
             value={motif}
             placeholder="Motif : virement, essai…"
             onChange={(e) => setMotif(e.target.value)}
-            aria-label={`Motif du changement de licence de ${store.name}`}
+            aria-label={`Motif du changement d’offre de ${store.name}`}
           />
-          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={enregistrer}>
-            {busy ? 'Enregistrement…' : 'Poser la licence'}
+          <button className="btn btn-primary btn-sm" disabled={busy} onClick={enregistrer}>
+            {busy ? 'Enregistrement…' : 'Enregistrer'}
           </button>
-        </>
+          <button className="link-btn" onClick={annuler} disabled={busy}>Annuler</button>
+        </div>
       )}
-    </div>
-  )
-}
-
-function TarifMagasin({ store, onSaved }: { store: Store; onSaved: () => void }) {
-  const initial = store.annual_price_cents === null ? '' : String(Math.round(store.annual_price_cents / 100))
-  const [valeur, setValeur] = useState(initial)
-  const [busy, setBusy] = useState(false)
-
-  // Le champ suit la valeur du serveur quand elle change (rechargement).
-  useEffect(() => { setValeur(initial) }, [initial])
-
-  const modifie = valeur.trim() !== initial
-
-  async function enregistrer() {
-    const brut = valeur.trim()
-    let cents: number | null = null
-    if (brut !== '') {
-      const euros = Number(brut.replace(/\s/g, '').replace(',', '.'))
-      if (!Number.isFinite(euros) || euros < 0) {
-        alert('Indiquez un montant en euros, par exemple 2400.')
-        return
-      }
-      cents = Math.round(euros * 100)
-    }
-    setBusy(true)
-    const { data, error } = await supabase.rpc('admin_set_store_price', {
-      p_store_id: store.id, p_price_cents: cents,
-    })
-    setBusy(false)
-    if (error || !data?.success) {
-      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
-      return
-    }
-    onSaved()
-  }
-
-  return (
-    <div className="store-sup" style={{ marginTop: 10, alignItems: 'center' }}>
-      <label className="muted small" htmlFor={`tarif-${store.id}`}>Licence annuelle</label>
-      <input
-        id={`tarif-${store.id}`}
-        className="dash-audit-input"
-        inputMode="numeric"
-        value={valeur}
-        placeholder="Non renseignée"
-        onChange={(e) => setValeur(e.target.value)}
-        aria-label={`Licence annuelle de ${store.name}, en euros`}
-      />
-      <span className="muted small">€ / an</span>
-      {modifie && (
-        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={enregistrer}>
-          {busy ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-      )}
-      {!modifie && store.annual_price_cents === null && (
-        <span className="muted small">Estimé au panier moyen tant qu&apos;il est vide</span>
-      )}
-    </div>
+    </>
   )
 }

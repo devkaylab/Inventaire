@@ -1480,6 +1480,24 @@ body:has(.site-footer) .theme-toggle { display: none; }
 }
 .store-sup-select:focus { border-color: var(--accent); }
 
+/* ── L'offre d'un magasin, sur UNE ligne (4 octobre 2026) ────────────────
+   ⚠️ ELLE TENAIT EN TROIS RANGÉES, et deux d'entre elles s'appelaient
+   « Licence » : le nombre d'appareils, et le prix annuel. Constat de Julien
+   sur la console — « la section est trop chargée ». Une seule idée, une seule
+   ligne : ce que ce magasin a le droit de faire, et ce qu'il coûte.
+   Le repère en clair ne s'affiche que s'il MANQUE quelque chose ; le menu dit
+   déjà la tranche, le répéter à côté faisait la moitié de l'encombrement. */
+.store-offre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.store-offre > label:first-child { color: var(--text-2); font-size: 13px; }
+.store-offre-prix { width: 84px; text-align: right; }
+/* Le marquage se range à l'opposé : il ne fait pas partie de l'offre, il dit
+   si ce magasin compte dans les chiffres. */
+.store-offre-essai { margin-left: auto; }
+.store-offre-suite { margin-top: 6px; }
+/* Le motif est du texte libre : à la largeur d'un champ de quantité, son
+   invite se coupait au milieu (« Motif : virem… »). */
+.store-offre-suite .dash-audit-input { width: 260px; text-align: left; }
+
 /* ── Ajouter une personne : le rôle d'abord ──────────────────────────────
    Une seule porte pour les deux rôles. Le choix se fait sur deux cartes
    plutôt qu'un menu déroulant : ce n'est pas un réglage parmi d'autres,
