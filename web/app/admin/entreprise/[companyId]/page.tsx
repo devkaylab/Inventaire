@@ -23,14 +23,19 @@ import { AppShell } from '@/components/AppShell'
 import { UsageConstate } from '@/components/admin/UsageConstate'
 import { densite } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
-import { TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
+import { OFFRES, TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
 import { ETIQUETTE, lireAppareils, type AppareilsDuMagasin } from '@/lib/appareils'
 import { Chargement } from '@/components/Chargement'
 
-type Company = { id: string; name: string; join_code: string; created_at: string }
+type Company = {
+  id: string; name: string; join_code: string; created_at: string
+  est_test: boolean
+}
 type Store = {
   id: string; name: string; join_code: string
   annual_price_cents: number | null
+  devices: number | null
+  est_test: boolean
   supervisor_ids: string[]
 }
 type Member = {
@@ -58,6 +63,16 @@ function frDate(s: string) {
 }
 
 const nb = (n: number) => n.toLocaleString('fr-FR')
+
+/**
+ * Les licences proposées à la main, DÉDUITES DE LA GRILLE.
+ *
+ * ⚠️ Écrire ici « Essential 2 / Advanced 20 / Enterprise 100 » aurait figé
+ * une grille qui a déjà été revalorisée une fois (31 août 2026). Le nombre
+ * d'appareils d'une tranche, c'est son plafond : c'est exactement ce que
+ * `plafond_appareils` lit côté base.
+ */
+const TRANCHES = OFFRES.map((o) => ({ cle: o.cle, nom: o.nom, appareils: o.max, plage: o.plage }))
 
 /**
  * Ce qu'il faut pour deviser, sur une ligne : la tranche, son prix, et le
@@ -264,6 +279,10 @@ export default function AdminCompanyPage() {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [storeName, setStoreName] = useState('')
+  // '' = licence non déclarée. ⚠️ Un magasin créé sans appareils déclarés
+  // est plafonné à DEUX depuis `plafond_appareils_effectif` : le menu existe
+  // pour que ça ne se découvre plus le jour du comptage.
+  const [storeDevices, setStoreDevices] = useState('')
   const [copie, setCopie] = useState<string | null>(null)
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
   // Les appareils de tous les magasins, en un seul appel. Une boucle par
@@ -416,7 +435,16 @@ export default function AdminCompanyPage() {
     e.preventDefault()
     const nom = storeName.trim()
     if (!nom) return
-    if (await appel('admin_add_store', { p_company_id: companyId, p_name: nom })) setStoreName('')
+    const appareils = storeDevices === '' ? null : Number(storeDevices)
+    const ok = await appel('admin_add_store', {
+      p_company_id: companyId,
+      p_name: nom,
+      p_devices: appareils,
+      // Le prix de la grille suit la tranche choisie ; il reste modifiable
+      // juste en dessous, pour un tarif négocié.
+      p_annual_price_cents: appareils === null ? null : prixCents(appareils, 'yearly'),
+    })
+    if (ok) { setStoreName(''); setStoreDevices('') }
   }
 
   async function supprimerMagasin(s: Store) {
@@ -471,6 +499,20 @@ export default function AdminCompanyPage() {
     charger()
   }
 
+  /**
+   * ⚠️ LE MARQUAGE EST UN GESTE DE JULIEN, PAS UNE DÉDUCTION. Rien dans les
+   * données ne distingue un essai d'un vrai client — un pilote chez un vrai
+   * client porte de vraies personnes et de vrais comptages. Seule la case
+   * tranche, et elle se décoche.
+   */
+  async function marquerEntreprise(essai: boolean) {
+    await appel('admin_marquer_entreprise_essai', { p_company_id: companyId, p_essai: essai })
+  }
+
+  async function marquerMagasin(s: Store, essai: boolean) {
+    await appel('admin_marquer_magasin_essai', { p_store_id: s.id, p_essai: essai })
+  }
+
   async function supprimerEntreprise() {
     if (!detail) return
     if (!confirm(`Supprimer définitivement « ${detail.company.name} » ?\n\nTous ses inventaires et données seront supprimés, et ses membres détachés de l'entreprise. Cette action est irréversible.`)) return
@@ -522,6 +564,26 @@ export default function AdminCompanyPage() {
           {copie === detail.company.join_code ? 'Copié' : 'Copier'}
         </button>
         <span className="muted small" style={{ marginLeft: 10 }}>créée le {frDate(detail.company.created_at)}</span>
+      </div>
+
+      {/* ⚠️ MARQUÉE, PAS CACHÉE. Une entreprise d'essai sort des chiffres de
+          pilotage — chiffre d'affaires, usage, magasins dormants — mais reste
+          dans les listes : une entreprise invisible qu'on a oublié de nettoyer
+          est pire qu'une ligne étiquetée. */}
+      <div className="code-row" style={{ marginTop: 6 }}>
+        <label className="remember-label">
+          <input
+            type="checkbox"
+            checked={detail.company.est_test}
+            onChange={(e) => marquerEntreprise(e.target.checked)}
+          />
+          Entreprise d&apos;essai
+        </label>
+        <span className="muted small">
+          {detail.company.est_test
+            ? 'Écartée du chiffre d’affaires et des relevés d’usage, ainsi que tous ses magasins.'
+            : 'Comptée comme un client réel.'}
+        </span>
       </div>
 
       <section className="admin-section">
@@ -650,6 +712,20 @@ export default function AdminCompanyPage() {
           </div>
           <form className="inline-form" onSubmit={ajouterMagasin}>
             <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Nouveau magasin" />
+            {/* ⚠️ SANS CE MENU, LE MAGASIN NAÎT PLAFONNÉ À DEUX APPAREILS.
+                `admin_add_store` accepte la licence depuis toujours ; c'est
+                l'écran qui ne la lui passait pas. */}
+            <select
+              className="champ-select"
+              value={storeDevices}
+              onChange={(e) => setStoreDevices(e.target.value)}
+              aria-label="Licence du nouveau magasin"
+            >
+              <option value="">Licence non déclarée</option>
+              {TRANCHES.map((t) => (
+                <option key={t.cle} value={t.appareils}>{t.nom} — {t.plage}</option>
+              ))}
+            </select>
             <button className="btn btn-ghost">Ajouter</button>
           </form>
         </div>
@@ -692,7 +768,25 @@ export default function AdminCompanyPage() {
                       <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
                     </div>
                   </div>
+                  <LicenceMagasin store={s} onSaved={charger} />
                   <TarifMagasin store={s} onSaved={charger} />
+                  <div className="store-sup" style={{ marginTop: 6, alignItems: 'center' }}>
+                    <label className="remember-label">
+                      <input
+                        type="checkbox"
+                        checked={s.est_test}
+                        onChange={(e) => marquerMagasin(s, e.target.checked)}
+                        disabled={detail.company.est_test}
+                      />
+                      Magasin d&apos;essai
+                    </label>
+                    {/* Un magasin d'une entreprise d'essai l'est forcément :
+                        la case devient inutile, et le dire vaut mieux que la
+                        laisser décochée alors que le magasin est bien écarté. */}
+                    {detail.company.est_test && (
+                      <span className="muted small">Toute l&apos;entreprise est un essai.</span>
+                    )}
+                  </div>
                   <AppareilsMagasin a={appareils.find((x) => x.store_id === s.id)} />
                   <div className="store-sup">
                     {s.supervisor_ids.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
@@ -895,6 +989,93 @@ function CompanyAdminBlock({
  * panier moyen et le signale : renseigner le vrai chiffre rend le revenu
  * exact.
  */
+/**
+ * La licence d'un magasin, posée à la main.
+ *
+ * ⚠️ C'EST LE SEUL CHAMP QUI DÉCIDE SI UN TÉLÉPHONE PEUT COMPTER. Le plan de
+ * l'entreprise ne sert que de repli : `plafond_appareils` fait
+ * `coalesce(stores.devices, …plan…)`, donc dès que les appareils sont posés
+ * sur le magasin, c'est eux qui gagnent. Passer l'entreprise en Enterprise ne
+ * changerait rien à un magasin dont les appareils sont renseignés.
+ *
+ * ⚠️ LE MOTIF PART AU JOURNAL, et c'est ce qui rend l'écart retrouvable : dans
+ * six mois, « virement du 12/10 » et « essai Bon Marché » ne se devinent pas
+ * d'un nombre d'appareils.
+ *
+ * ⚠️ AUCUN CHAMP STRIPE N'EST TOUCHÉ : un client qui règle par virement n'a
+ * pas d'abonnement, et lui en inventer un ferait mentir la synchronisation.
+ */
+function LicenceMagasin({ store, onSaved }: { store: Store; onSaved: () => void }) {
+  const initial = store.devices === null ? '' : String(store.devices)
+  const [valeur, setValeur] = useState(initial)
+  const [motif, setMotif] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => { setValeur(initial) }, [initial])
+
+  const modifie = valeur !== initial
+  const offre = nomOffre(store.devices)
+
+  async function enregistrer() {
+    const appareils = valeur === '' ? null : Number(valeur)
+    setBusy(true)
+    const { data, error } = await supabase.rpc('admin_poser_licence_magasin', {
+      p_store_id: store.id,
+      p_devices: appareils,
+      // Le prix garde sa propre ligne : une licence posée à la main peut
+      // couvrir un tarif négocié qui n'est pas celui de la grille.
+      p_annual_price_cents: null,
+      p_motif: motif.trim() || null,
+    })
+    setBusy(false)
+    if (error || !data?.success) {
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      return
+    }
+    setMotif('')
+    onSaved()
+  }
+
+  return (
+    <div className="store-sup" style={{ marginTop: 10, alignItems: 'center' }}>
+      <label className="muted small" htmlFor={`licence-${store.id}`}>Licence</label>
+      <select
+        id={`licence-${store.id}`}
+        className="champ-select"
+        value={valeur}
+        onChange={(e) => setValeur(e.target.value)}
+        aria-label={`Licence de ${store.name}`}
+      >
+        <option value="">Non déclarée</option>
+        {TRANCHES.map((t) => (
+          <option key={t.cle} value={t.appareils}>{t.nom} — {t.plage}</option>
+        ))}
+      </select>
+      {!modifie && (
+        <span className="muted small">
+          {store.devices === null
+            ? 'Non déclarée : deux appareils à la fois, pas plus.'
+            : `${nb(store.devices)} appareil${store.devices > 1 ? 's' : ''} à la fois${offre ? ` · ${offre}` : ''}`}
+        </span>
+      )}
+      {modifie && (
+        <>
+          <input
+            className="dash-audit-input"
+            value={motif}
+            placeholder="Motif : virement, essai…"
+            onChange={(e) => setMotif(e.target.value)}
+            aria-label={`Motif du changement de licence de ${store.name}`}
+          />
+          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={enregistrer}>
+            {busy ? 'Enregistrement…' : 'Poser la licence'}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 function TarifMagasin({ store, onSaved }: { store: Store; onSaved: () => void }) {
   const initial = store.annual_price_cents === null ? '' : String(Math.round(store.annual_price_cents / 100))
   const [valeur, setValeur] = useState(initial)

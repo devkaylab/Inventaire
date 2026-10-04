@@ -119,6 +119,11 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Le tarif ne peut pas être négatif.': 'The price cannot be negative.',
   'Le téléphone est trop long.': 'The phone number is too long.',
   'Le volume doit être positif.': 'The volume must be positive.',
+  // Licence posée à la main (4 octobre 2026) : nul veut dire « non
+  // déclarée », ce qu'il faut pouvoir reposer après un pilote. Seule une
+  // valeur négative ou zéro est refusée.
+  "Le nombre d'appareils doit être positif.": 'The number of devices must be positive.',
+  'Le prix annuel ne peut pas être négatif.': 'The annual price cannot be negative.',
   'Lien invalide.': 'Invalid link.',
   'Magasin absent de la demande': 'No store on this request',
   'Magasin introuvable': 'Store not found',
