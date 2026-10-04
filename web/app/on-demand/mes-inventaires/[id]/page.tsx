@@ -177,8 +177,8 @@ export default function MonInventairePage() {
             {/* ⚠️ On le dit franchement : sans fichier, l'inventaire a lieu mais
                 le rapport n'a pas d'écarts. C'est la différence entre « compter »
                 et « contrôler », et le client doit la connaître AVANT le soir. */}
-            Le fichier de stock — CSV ou Excel, sans reformater. Sans lui, nous
-            comptons quand même, mais il n’y aura pas d’écarts : seulement des
+            Le fichier de stock — CSV ou Excel, sans reformater. Sans lui, vous
+            comptez quand même, mais il n’y aura pas d’écarts : seulement des
             quantités.
           </p>
         </section>

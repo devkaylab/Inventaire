@@ -16,7 +16,11 @@ import { PageOnDemand } from '@/components/vitrine/PageOnDemand'
 export const metadata: Metadata = {
   title: 'On-demand',
   description:
-    'Un inventaire le jour où vous en avez besoin. Le logiciel seul le temps d’un comptage, ou notre équipe chez vous. Un prix ferme, sans devis.',
+        // ⚠️ « ou notre équipe chez vous » est parti (4 octobre 2026) : la formule
+    // équipe est fermée, et cette phrase promettait un service qu'on ne rend
+    // pas. Une description de page se lit dans un résultat de recherche et dans
+    // un aperçu de partage — c'est une promesse publique.
+    'Un inventaire le jour où vous en avez besoin : Quantinvo à disposition le temps d’un comptage, un prix ferme, sans devis.',
   robots: { index: false, follow: false },
 }
 

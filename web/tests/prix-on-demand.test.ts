@@ -969,17 +969,30 @@ describe('⚠️ plus personne ne se déplace : le peigne', () => {
     return trouves
   }
 
-  /** Le code sans ses commentaires : une garde lit ce qui s'affiche. */
+  /**
+   * Le code sans ses commentaires, **et sur une seule ligne**.
+   *
+   * ⚠️ LE SAUT DE LIGNE A FAILLI RENDRE CETTE GARDE INUTILE. Le texte fautif
+   * était coupé par l'éditeur — « Sans lui, nous\n            comptons » — et
+   * un motif écrit avec une espace simple ne le voyait pas. Le sabotage l'a
+   * dit : la garde est restée verte avec la phrase remise. Une phrase d'écran
+   * ne se cherche donc jamais telle quelle, mais après avoir écrasé les
+   * espaces.
+   */
   const sansCommentaires = (s: string) =>
     s.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
       .replace(/\/\*[\s\S]*?\*\//g, ' ')
       .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+      .replace(/\s+/g, ' ')
 
   it('aucun écran client n’annonce la venue de quelqu’un', () => {
     // Chaque motif a été vu à l'écran le 4 octobre, et chacun était faux.
     const interdits = [
       /L’équipe arrive/, /équipe est sur place/, /Quelqu’un pour ouvrir/,
       /rémunérons les inventoristes/, /À prévoir sur place/,
+      // ⚠️ Et le « nous » qui compte : « sans lui, NOUS comptons quand même »
+      // laissait croire que Quantinvo tient la douchette. C'est le client.
+      /nous comptons/i, /notre équipe/i, /nos compteurs/i, /nous intervenons/i,
     ]
     const ecrans = ecransDuClient()
     expect(ecrans.length, 'plus aucun écran client On-Demand').toBeGreaterThan(2)
