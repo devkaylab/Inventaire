@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { cellToCode, EAN_KEYS, mapCatalogRows, mapStockRows, normalizeHeader } from '@/lib/import'
+import { cellToCode, EAN_KEYS, mapCatalogRows, mapStockRows, normalizeHeader, PRIX_MAX, QTE_MAX } from '@/lib/import'
 import { MODELE_REFERENCEMENT, MODELE_STOCK } from '@/lib/modeles'
 
 const S = 'session-1'
@@ -232,6 +232,70 @@ describe('mapStockRows', () => {
   it('traite une quantité absente comme zéro, sans planter', () => {
     const { rows } = mapStockRows([{ sku: 'A' }], S)
     expect(rows[0].theoretical_qty).toBe(0)
+  })
+})
+
+describe('une valeur trop grande refuse le fichier, en clair', () => {
+  // Constat de Julien, 1er octobre 2026 : « numeric field overflow (A field
+  // with precision 10, scale 3 must round to an absolute value less than
+  // 10^7.) [22003] » à l'import du stock théorique. Le SKU était dans la
+  // colonne quantité, et la base refusait après avoir vidé l'ancien stock.
+  const sansCommentaires = (f: string) => readFileSync(join(__dirname, f), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+  it('un code-barres dans la colonne quantité est nommé, ligne et SKU', () => {
+    const { refus } = mapStockRows([
+      { sku: 'A', quantite: '3' },
+      { sku: 'B', quantite: 3760123456789 },
+      { sku: 'C', quantite: 3760123456796 },
+    ], S)
+    expect(refus).toContain('Ligne 3 (SKU B)')
+    expect(refus).toContain('3760123456789')
+    expect(refus).toMatch(/rien n'a été modifié/)
+    expect(refus).toMatch(/1 autre valeur/)
+    // L'écran le montre à quelqu'un qui ne connaît pas Postgres.
+    expect(refus).not.toMatch(/numeric|overflow|precision|22003/i)
+  })
+
+  it('le total de plusieurs emplacements déborde aussi', () => {
+    const { refus } = mapStockRows([
+      { sku: 'A', quantite: '6000000' },
+      { sku: 'A', quantite: '6000000' },
+    ], S)
+    expect(refus).toMatch(/SKU A/)
+  })
+
+  it('jusqu’au plafond, rien n’est refusé', () => {
+    expect(mapStockRows([{ sku: 'A', quantite: String(QTE_MAX) }], S).refus).toBeNull()
+    expect(mapStockRows([{ sku: 'A', quantite: '-12' }], S).refus).toBeNull()
+    expect(mapCatalogRows([{ sku: 'A', pa: String(PRIX_MAX) }], S).refus).toBeNull()
+  })
+
+  it('un prix d’achat trop grand refuse le référentiel', () => {
+    const { refus } = mapCatalogRows([{ sku: 'A', pa: '3760123456789' }], S)
+    expect(refus).toContain('Ligne 2 (SKU A)')
+  })
+
+  it('⚠️ le refus part AVANT le vidage de l’ancien import', () => {
+    const code = sansCommentaires('../lib/import.ts')
+    for (const [fn, map] of [['importCatalogFile', 'mapCatalogRows'], ['importStockFile', 'mapStockRows']]) {
+      const corps = code.slice(code.indexOf(`export async function ${fn}`))
+      expect(corps.indexOf(map), fn).toBeGreaterThan(-1)
+      expect(corps.indexOf('if (refus) throw'), fn).toBeGreaterThan(-1)
+      expect(corps.indexOf('if (refus) throw'), fn).toBeLessThan(corps.indexOf('vider_import'))
+    }
+  })
+
+  it('l’application mobile porte les mêmes plafonds, refusés avant le vidage', () => {
+    const mobile = sansCommentaires('../../src/lib/import.ts')
+    expect(mobile).toContain(`const QTE_MAX = ${QTE_MAX.toLocaleString('en-US', { maximumFractionDigits: 3 }).replaceAll(',', '_')}`)
+    expect(mobile).toContain(`const PRIX_MAX = ${PRIX_MAX.toLocaleString('en-US', { maximumFractionDigits: 2 }).replaceAll(',', '_')}`)
+    for (const fn of ['importCatalogFile', 'importStockFile']) {
+      const corps = mobile.slice(mobile.indexOf(`export async function ${fn}`))
+      const refus = corps.indexOf('if (debordement) throw')
+      expect(refus, fn).toBeGreaterThan(-1)
+      expect(refus, fn).toBeLessThan(corps.indexOf('vider_import'))
+    }
   })
 })
 

@@ -260,6 +260,37 @@ export function Inventaire({ langue }: { langue: Langue }) {
           </div>
         </section>
 
+        {/*
+          ── Le moyeu (3 octobre 2026) ──
+          ⚠️ CETTE PAGE EST LA PAGE LARGE DU SUJET, et les trois autres en
+          creusent chacune un morceau. Sans ces liens, elles n'existeraient
+          que dans le plan du site : un moteur suit les liens avant tout, et
+          une page qu'aucune autre ne cite a l'air de n'intéresser personne.
+          C'est aussi ce qui dit à Google laquelle traite quoi, donc ce qui
+          évite qu'elles se fassent concurrence entre elles.
+        */}
+        <section className="section">
+          <div className="container">
+            <div className="dq-tete" data-reveal="0">
+              <h2>{t('Pour aller plus loin')}</h2>
+            </div>
+            <div className="dq-liens">
+              <Link href={lien('/demarque-inconnue')} className="dq-lien" data-reveal="1">
+                <h3>{t('La démarque inconnue')}</h3>
+                <p>{t('Ce qu’elle est, comment on la calcule, et comment on la réduit.')}</p>
+              </Link>
+              <Link href={lien('/inventaire-tournant')} className="dq-lien" data-reveal="2">
+                <h3>{t('L’inventaire tournant')}</h3>
+                <p>{t('Compter une zone par semaine : la méthode, les fréquences, la mise en place.')}</p>
+              </Link>
+              <Link href={lien('/logiciel-inventaire')} className="dq-lien" data-reveal="3">
+                <h3>{t('Les logiciels d’inventaire')}</h3>
+                <p>{t('Ce qu’un tel outil doit savoir faire, et les questions à poser avant de choisir.')}</p>
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <section className="section bande-accent final">
           <div className="container" data-reveal="0">
             <h2>{t('Fiabilisez votre stock avec Quantinvo')}</h2>

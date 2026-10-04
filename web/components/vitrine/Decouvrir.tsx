@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
 import { Carrousel } from '@/components/Carrousel'
+import { FaqJsonLd } from '@/components/DonneesStructurees'
 import { IconAudit, IconReport, IconStore } from '@/components/icons'
 import { OFFRES, euros } from '@/lib/offres'
 import { traduction, type Langue } from '@/lib/traduction'
@@ -156,6 +157,18 @@ export function Decouvrir({ langue }: { langue: Langue }) {
       traduite: true,
     },
   ]
+
+  /**
+   * ⚠️ **LE BALISAGE ET LES QUESTIONS DÉPLIABLES SORTENT DE LA MÊME LISTE**,
+   * déjà traduite. Deux listes auraient dérivé, et `FaqJsonLd` annoncerait
+   * alors aux machines des réponses que la page n'affiche plus — ce que
+   * Google compte comme une fausse déclaration, et ce qu'un assistant
+   * recopie sans rien vérifier (voir components/DonneesStructurees.tsx).
+   */
+  const FAQ = QUESTIONS.map((item) => ({
+    question: t(item.q),
+    reponse: item.traduite ? item.r : t(item.r),
+  }))
 
   return (
     <>
@@ -357,13 +370,16 @@ export function Decouvrir({ langue }: { langue: Langue }) {
           <div className="container dq-faq">
             <h2 data-reveal="0">{t('Quantinvo en questions')}</h2>
             <div className="dq-faq-liste" data-reveal="1">
-              {QUESTIONS.map((item) => (
-                <details className="collapsible" key={item.q}>
-                  <summary>{t(item.q)}</summary>
-                  <p className="collapsible-body">{item.traduite ? item.r : t(item.r)}</p>
+              {FAQ.map((item) => (
+                <details className="collapsible" key={item.question}>
+                  <summary>{item.question}</summary>
+                  <p className="collapsible-body">{item.reponse}</p>
                 </details>
               ))}
             </div>
+            {/* Les questions sont VISIBLES juste au-dessus : c'est la
+                condition de Google pour une FAQPage. */}
+            <FaqJsonLd items={FAQ} />
           </div>
         </section>
 

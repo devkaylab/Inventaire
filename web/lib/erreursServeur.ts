@@ -52,6 +52,8 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Ce compte appartient à une autre entreprise.': 'This account belongs to another company.',
   "Ce compte est administrateur de l'entreprise : son rôle est géré par Quantinvo.": 'This account is a company administrator. Its role is managed by Quantinvo.',
   "Ce compte est déjà administrateur de l'entreprise.": 'This account is already a company administrator.',
+  "Ce compte n'appartient à aucune entreprise.": 'This account does not belong to any company.',
+  "Cette notification n'existe plus.": 'This notification no longer exists.',
   "Ce compte n'a pas encore de profil.": 'This account has no profile yet.',
   "Ce compte n'est pas administrateur d'entreprise.": 'This account is not a company administrator.',
   'Ce devis a expiré. Demandez-nous une nouvelle proposition.': 'This quote has expired. Ask us for a new one.',
@@ -136,6 +138,11 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Le tarif ne peut pas être négatif.': 'The price cannot be negative.',
   'Le téléphone est trop long.': 'The phone number is too long.',
   'Le volume doit être positif.': 'The volume must be positive.',
+  // Licence posée à la main (4 octobre 2026) : nul veut dire « non
+  // déclarée », ce qu'il faut pouvoir reposer après un pilote. Seule une
+  // valeur négative ou zéro est refusée.
+  "Le nombre d'appareils doit être positif.": 'The number of devices must be positive.',
+  'Le prix annuel ne peut pas être négatif.': 'The annual price cannot be negative.',
   'Lien invalide.': 'Invalid link.',
   'Magasin absent de la demande': 'No store on this request',
   'Magasin introuvable dans votre entreprise.': 'Store not found in your company.',

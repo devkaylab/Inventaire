@@ -33,3 +33,19 @@ Vérifié au navigateur (route jetable, retirée) : le panneau en clair et en
 sombre, et les deux téléchargements réels — classeurs relus, cellules en
 texte. Tests de garde : `web/tests/import.test.ts`, blocs « Code Ean » et
 « les modèles de la boîte à outils ».
+
+## Une valeur trop grande refuse le fichier (1er octobre 2026)
+
+Constat de Julien à l'import du stock théorique : « numeric field overflow (A
+field with precision 10, scale 3 must round to an absolute value less than
+10^7.) [22003] ». Le SKU était dans la colonne quantité. `theoretical_qty` est
+un `numeric(10, 3)` (plafond 9 999 999,999), `unit_purchase_price` un
+`numeric(10, 2)` (99 999 999,99). Pire que le message : la base refusait APRÈS
+`vider_import`, donc l'ancien stock était effacé et le nouveau à moitié chargé.
+
+Désormais les deux `lib/import.ts` contrôlent chaque quantité, chaque total
+par SKU et chaque prix AVANT le vidage, et refusent tout le fichier (choix de
+Julien : une valeur qui déborde signale un fichier décalé). Le message nomme
+la première ligne, son SKU, la valeur, le nombre d'autres cas, et la cause
+probable. Gardes : bloc « une valeur trop grande refuse le fichier, en clair »
+de `web/tests/import.test.ts`.

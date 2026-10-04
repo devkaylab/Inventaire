@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { InscriptionLink } from '@/components/InscriptionLink'
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome'
+import { FaqJsonLd } from '@/components/DonneesStructurees'
 import { TarifsGrille } from '@/components/TarifsGrille'
 import { CONTACT_EMAIL } from '@/lib/contact'
 import { MENTION_TVA, TVA_APPLICABLE, economiesAnnuelles, euros } from '@/lib/offres'
@@ -51,6 +52,16 @@ const QUESTIONS = [
 
 export function Tarifs({ langue }: { langue: Langue }) {
   const { t } = traduction(langue)
+  /**
+   * ⚠️ **LE BALISAGE ET LES QUESTIONS DÉPLIABLES SORTENT DE LA MÊME LISTE**,
+   * déjà traduite et déjà garnie de ses variables — les économies annuelles
+   * viennent de la grille. Deux listes auraient dérivé, et `FaqJsonLd`
+   * annoncerait aux machines un chiffre que la page n'affiche plus.
+   */
+  const FAQ = QUESTIONS.map((item) => ({
+    question: t(item.q),
+    reponse: t(item.r, 'vars' in item ? item.vars : undefined),
+  }))
   return (
     <>
       <SiteHeader langue={langue} />
@@ -117,13 +128,16 @@ export function Tarifs({ langue }: { langue: Langue }) {
           <div className="container">
             <h2 className="tarifs-titre" data-reveal="0">{t('Les questions qu’on nous pose')}</h2>
             <div className="tarifs-faq" data-reveal="1">
-              {QUESTIONS.map((item) => (
-                <details className="collapsible" key={item.q}>
-                  <summary>{t(item.q)}</summary>
-                  <p className="collapsible-body">{t(item.r, 'vars' in item ? item.vars : undefined)}</p>
+              {FAQ.map((item) => (
+                <details className="collapsible" key={item.question}>
+                  <summary>{item.question}</summary>
+                  <p className="collapsible-body">{item.reponse}</p>
                 </details>
               ))}
             </div>
+            {/* Les questions sont VISIBLES juste au-dessus : c'est la
+                condition de Google pour une FAQPage. */}
+            <FaqJsonLd items={FAQ} />
           </div>
         </section>
 

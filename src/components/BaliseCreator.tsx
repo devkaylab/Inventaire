@@ -58,7 +58,7 @@ export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
 
   const print = useMutation({
     mutationFn: (series: BaliseSeries) =>
-      buildBaliseSheetFile(`${series.from}-${series.to}`, series.codes.map((code) => ({ code }))),
+      buildBaliseSheetFile(`${series.from}-${series.to}`, series.codes),
     onSuccess: (planche) => {
       // ⚠️ **Le seul endroit où l'étape 1 du bandeau de démarrage se coche.**
       // Une planche est dessinée ici, sur le téléphone, et n'écrit rien en
@@ -77,7 +77,7 @@ export function BaliseCreator({ context, onRetour, onAffecter }: Props) {
   })
 
   const steps = [
-    [t('Imprimez'), t('la planche sur des feuilles d’étiquettes autocollantes Avery L7160, à 100 % (taille réelle).')],
+    [t('Imprimez'), t('la planche sur des feuilles d’étiquettes A4 de 80 étiquettes 35,6 × 16,9 mm, à 100 % (taille réelle).')],
     [t('Collez'), t('les balises dans le magasin, dans l’ordre des numéros : 1 à 10 dans la réserve, 11 à 30 en surface de vente, par exemple.')],
     context === 'zones'
       ? [t('Revenez ici'), t('indiquer quelles balises sont à quel endroit.')]

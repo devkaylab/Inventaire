@@ -370,7 +370,22 @@ export function AppShell({
           le 6 septembre 2026. Portées par la coquille de l'espace connecté,
           elles n'atteignent que les écrans qui les emploient : le rapport, les
           écarts, le rapport de magasin. Voir `lib/policesRegistre.ts`. */}
-      <main className={`app-main ${policeRegistre.variable} ${policeNombre.variable}`}>{children}</main>
+      <main className={`app-main ${policeRegistre.variable} ${policeNombre.variable}`}>
+        {/* ⚠️ **L'ESPACE CONNECTÉ N'AVAIT AUCUNE ANIMATION D'ARRIVÉE.** La
+            vitrine en a une depuis toujours — `data-reveal`, posé élément par
+            élément — mais pas une seule des trente-six pages connectées :
+            chaque navigation remplaçait l'écran d'un coup sec. Demande de
+            Julien le 30 septembre 2026 : « je veux un effet de transition,
+            vitrine et OS ».
+            ⚠️ **UN SEUL ENDROIT PLUTÔT QUE TRENTE-SIX.** Poser `data-reveal`
+            sur chaque page aurait demandé de les rouvrir toutes, et la
+            suivante serait née sans. Ici la coquille porte le mouvement : une
+            page connectée l'a du seul fait d'exister.
+            ⚠️ Le `key` est ce qui le déclenche. Sans lui React réutilise le
+            nœud d'une route à l'autre et l'animation ne rejoue jamais — le
+            piège relevé le 28 septembre sur les onglets du tableau de bord. */}
+        <div key={pathname} className="transition-page">{children}</div>
+      </main>
       <LangueToggle />
     </>
   )

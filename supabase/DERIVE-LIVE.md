@@ -2,8 +2,11 @@
 
 La CLI Supabase n'étant pas installée sur le poste, ce fichier tient lieu de
 `db pull` : il fige la définition **live** (relevée le 20 août 2026, projet
-`inventaire-smartcount`) des objets créés directement via l'outil MCP, sans
-migration dans le dépôt. Toute refonte de ces objets doit partir d'ici, pas
+`heabesqvlinzarqenymj`) des objets créés directement via l'outil MCP, sans
+migration dans le dépôt. ⚠️ **Le projet est désigné par sa référence, pas par
+son nom** : le nom s'affiche dans le tableau de bord et se renomme (ce qui a
+été fait le 3 octobre 2026), la référence est ce que portent les variables
+d'environnement et elle ne change jamais. Toute refonte de ces objets doit partir d'ici, pas
 d'une migration hypothétique.
 
 ## Table `account_deletion_requests`

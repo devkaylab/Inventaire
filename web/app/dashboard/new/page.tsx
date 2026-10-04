@@ -90,7 +90,7 @@ export default function NewSessionPage() {
 
   return (
     <AppShell profile={guard.profile} companyName={companyName}>
-      <div style={{ maxWidth: 720 }}>
+      <div className="page-seule">
         <h1 className="page-title">{t('Nouvel inventaire')}</h1>
         <p className="muted" style={{ marginBottom: 24 }}>
           {t('Après la création, vous serez guidé : renseigner les zones à inventorier, transférer les fichiers, puis suivre le comptage.')}

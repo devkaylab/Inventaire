@@ -22,6 +22,7 @@ import { getMyCompany } from '@/lib/account'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { friendlyError } from '@/lib/errors'
 import { fmtDateTime, relativeTime } from '@/lib/format'
 import { Chargement } from '@/components/Chargement'
@@ -72,6 +73,7 @@ function initiales(nom: string): string {
 
 export default function MessagesPage() {
   const toast = useToast()
+  const confirmer = useConfirm()
   const guard = useAuthGuard('supervisor')
   useTraduction()
   const [companyName, setCompanyName] = useState<string | null>(null)
@@ -143,6 +145,35 @@ export default function MessagesPage() {
       if (cible) void ouvrirFil(cible)
     })
   }, [guard.status, chargerFils, ouvrirFil])
+
+  /**
+   * ⚠️ EFFACER N'EST PAS SUPPRIMER CHEZ L'AUTRE. La conversation quitte MA
+   * boîte ; mon interlocuteur la garde entière. S'il réécrit, elle me revient
+   * neuve — avec ses nouveaux messages seulement, jamais ceux que j'ai
+   * effacés. Règle posée par Julien le 4 octobre 2026.
+   *
+   * ⚠️ ET IL N'Y A PAS DE CORBEILLE : de mon côté, c'est sans retour. La
+   * confirmation le dit avec ces mots-là, parce qu'aucun écran ne repêchera.
+   */
+  async function effacerFil() {
+    if (!ouvert) return
+    const ok = await confirmer({
+      title: t('Effacer cette conversation ?'),
+      message: t('Elle disparaît de votre boîte, définitivement : il n’y a pas de corbeille.'),
+      details: [
+        tn('%{count} message effacé de votre côté.', '%{count} messages effacés de votre côté.', ouvert.messages.length),
+        t('Votre interlocuteur garde la conversation entière.'),
+        t('S’il vous réécrit, une nouvelle conversation s’ouvrira — sans ce qui a été effacé.'),
+      ],
+      confirmLabel: t('Effacer'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    const { error } = await supabase.rpc('effacer_mon_fil', { p_fil: ouvert.id })
+    if (error) { toast.error(friendlyError(error)); return }
+    setOuvert(null)
+    setFils(await chargerFils())
+  }
 
   async function repondre(e: React.FormEvent) {
     e.preventDefault()
@@ -367,7 +398,15 @@ export default function MessagesPage() {
             ) : (
               <>
                 <header className="fil-tete">
-                  <h2>{ouvert.sujet}</h2>
+                  <div className="fil-tete-haut">
+                    <h2>{ouvert.sujet}</h2>
+                    {/* Une seule place pour le geste : la conversation ouverte.
+                        Dans la liste, chaque ligne est déjà un bouton — y
+                        glisser une croix ferait un bouton dans un bouton. */}
+                    <button type="button" className="link-btn danger-link" onClick={effacerFil}>
+                      {t('Effacer')}
+                    </button>
+                  </div>
                   <p className="fil-tete-sous">
                     {fils.find((f) => f.id === ouvert.id)?.avec}
                     {ouvert.entreprise && guard.profile.is_admin && ` · ${ouvert.entreprise}`}

@@ -23,14 +23,19 @@ import { AppShell } from '@/components/AppShell'
 import { UsageConstate } from '@/components/admin/UsageConstate'
 import { densite } from '@/lib/tarifs'
 import { lignesProposees, referenceProposee, totalProposeCents, type Rythme } from '@/lib/devis'
-import { TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
+import { OFFRES, TVA_APPLICABLE, nomOffre, prixCents } from '@/lib/offres'
 import { ETIQUETTE, lireAppareils, type AppareilsDuMagasin } from '@/lib/appareils'
 import { Chargement } from '@/components/Chargement'
 
-type Company = { id: string; name: string; join_code: string; created_at: string }
+type Company = {
+  id: string; name: string; join_code: string; created_at: string
+  est_test: boolean
+}
 type Store = {
   id: string; name: string; join_code: string
   annual_price_cents: number | null
+  devices: number | null
+  est_test: boolean
   supervisor_ids: string[]
 }
 type Member = {
@@ -58,6 +63,16 @@ function frDate(s: string) {
 }
 
 const nb = (n: number) => n.toLocaleString('fr-FR')
+
+/**
+ * Les licences proposées à la main, DÉDUITES DE LA GRILLE.
+ *
+ * ⚠️ Écrire ici « Essential 2 / Advanced 20 / Enterprise 100 » aurait figé
+ * une grille qui a déjà été revalorisée une fois (31 août 2026). Le nombre
+ * d'appareils d'une tranche, c'est son plafond : c'est exactement ce que
+ * `plafond_appareils` lit côté base.
+ */
+const TRANCHES = OFFRES.map((o) => ({ cle: o.cle, nom: o.nom, appareils: o.max, plage: o.plage }))
 
 /**
  * Ce qu'il faut pour deviser, sur une ligne : la tranche, son prix, et le
@@ -264,6 +279,10 @@ export default function AdminCompanyPage() {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [storeName, setStoreName] = useState('')
+  // '' = licence non déclarée. ⚠️ Un magasin créé sans appareils déclarés
+  // est plafonné à DEUX depuis `plafond_appareils_effectif` : le menu existe
+  // pour que ça ne se découvre plus le jour du comptage.
+  const [storeDevices, setStoreDevices] = useState('')
   const [copie, setCopie] = useState<string | null>(null)
   const [demandes, setDemandes] = useState<StoreRequest[]>([])
   // Les appareils de tous les magasins, en un seul appel. Une boucle par
@@ -416,7 +435,16 @@ export default function AdminCompanyPage() {
     e.preventDefault()
     const nom = storeName.trim()
     if (!nom) return
-    if (await appel('admin_add_store', { p_company_id: companyId, p_name: nom })) setStoreName('')
+    const appareils = storeDevices === '' ? null : Number(storeDevices)
+    const ok = await appel('admin_add_store', {
+      p_company_id: companyId,
+      p_name: nom,
+      p_devices: appareils,
+      // Le prix de la grille suit la tranche choisie ; il reste modifiable
+      // juste en dessous, pour un tarif négocié.
+      p_annual_price_cents: appareils === null ? null : prixCents(appareils, 'yearly'),
+    })
+    if (ok) { setStoreName(''); setStoreDevices('') }
   }
 
   async function supprimerMagasin(s: Store) {
@@ -442,6 +470,55 @@ export default function AdminCompanyPage() {
    * produit et non un `confirm()` du navigateur, comme le reste de cette page
    * — `window.confirm` ne sait pas exiger un geste délibéré.
    */
+  /**
+   * ⚠️ LA BASCULE SE FAIT DEPUIS LA LIGNE DE LA PERSONNE, dans les deux sens
+   * (demande de Julien, 4 octobre 2026). Révoquer se faisait déjà par
+   * identifiant ; promouvoir obligeait à RETAPER L'ADRESSE de quelqu'un qu'on
+   * a sous les yeux, dans le formulaire qui sert d'abord à inviter une
+   * personne sans compte. Deux gestes asymétriques pour une bascule qui, elle,
+   * est symétrique.
+   */
+  async function promouvoir(m: Member) {
+    const details = [
+      `${(m.full_name ?? '').trim() || 'Sans nom'} — ${m.email ?? 'adresse inconnue'}`,
+      'Il gérera les superviseurs et les magasins de toute l’entreprise.',
+    ]
+    // Une promotion fait monter un compteur en superviseur : c'est une
+    // conséquence réelle sur ce qu'il voit, elle se dit avant.
+    if (m.role !== 'supervisor') {
+      details.push('Compteur aujourd’hui, il devient superviseur : il verra les inventaires et les rapports.')
+    }
+    const ok = await confirmer({
+      title: 'Nommer cette personne administrateur ?',
+      message: 'Seul Quantinvo nomme et révoque un administrateur d’entreprise.',
+      details,
+      confirmLabel: 'Nommer administrateur',
+    })
+    if (!ok) return
+    await appel('admin_promouvoir_admin_entreprise', { p_user: m.id })
+  }
+
+  async function retirerAdministration(m: Member) {
+    const details = [
+      `${(m.full_name ?? '').trim() || 'Sans nom'} — ${m.email ?? 'adresse inconnue'}`,
+      'Son compte superviseur et ses magasins sont conservés.',
+    ]
+    // ⚠️ Une entreprise sans administrateur remonte dans « À traiter » sur
+    // /admin et repasse « gérée par Quantinvo » : autant le dire avant.
+    if (admins.length === 1) {
+      details.push('C’est le dernier administrateur : sans lui, plus personne n’y gère les superviseurs.')
+    }
+    const ok = await confirmer({
+      title: 'Retirer le rôle d’administrateur ?',
+      message: 'La personne garde son compte et ses accès magasin.',
+      details,
+      confirmLabel: 'Retirer l’administration',
+      tone: 'danger',
+    })
+    if (!ok) return
+    await appel('admin_revoke_company_admin', { p_user: m.id })
+  }
+
   async function supprimerPersonne(m: Member) {
     const nom = (m.full_name ?? '').trim()
     const details = [
@@ -469,6 +546,20 @@ export default function AdminCompanyPage() {
     const { data, error } = await supabase.rpc('admin_delete_user', { p_user_id: m.id })
     if (error || !data?.success) { alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue')); return }
     charger()
+  }
+
+  /**
+   * ⚠️ LE MARQUAGE EST UN GESTE DE JULIEN, PAS UNE DÉDUCTION. Rien dans les
+   * données ne distingue un essai d'un vrai client — un pilote chez un vrai
+   * client porte de vraies personnes et de vrais comptages. Seule la case
+   * tranche, et elle se décoche.
+   */
+  async function marquerEntreprise(essai: boolean) {
+    await appel('admin_marquer_entreprise_essai', { p_company_id: companyId, p_essai: essai })
+  }
+
+  async function marquerMagasin(s: Store, essai: boolean) {
+    await appel('admin_marquer_magasin_essai', { p_store_id: s.id, p_essai: essai })
   }
 
   async function supprimerEntreprise() {
@@ -522,6 +613,26 @@ export default function AdminCompanyPage() {
           {copie === detail.company.join_code ? 'Copié' : 'Copier'}
         </button>
         <span className="muted small" style={{ marginLeft: 10 }}>créée le {frDate(detail.company.created_at)}</span>
+      </div>
+
+      {/* ⚠️ MARQUÉE, PAS CACHÉE. Une entreprise d'essai sort des chiffres de
+          pilotage — chiffre d'affaires, usage, magasins dormants — mais reste
+          dans les listes : une entreprise invisible qu'on a oublié de nettoyer
+          est pire qu'une ligne étiquetée. */}
+      <div className="code-row" style={{ marginTop: 6 }}>
+        <label className="remember-label">
+          <input
+            type="checkbox"
+            checked={detail.company.est_test}
+            onChange={(e) => marquerEntreprise(e.target.checked)}
+          />
+          Entreprise d&apos;essai
+        </label>
+        <span className="muted small">
+          {detail.company.est_test
+            ? 'Écartée du chiffre d’affaires et des relevés d’usage, ainsi que tous ses magasins.'
+            : 'Comptée comme un client réel.'}
+        </span>
       </div>
 
       <section className="admin-section">
@@ -650,6 +761,20 @@ export default function AdminCompanyPage() {
           </div>
           <form className="inline-form" onSubmit={ajouterMagasin}>
             <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Nouveau magasin" />
+            {/* ⚠️ SANS CE MENU, LE MAGASIN NAÎT PLAFONNÉ À DEUX APPAREILS.
+                `admin_add_store` accepte la licence depuis toujours ; c'est
+                l'écran qui ne la lui passait pas. */}
+            <select
+              className="champ-select"
+              value={storeDevices}
+              onChange={(e) => setStoreDevices(e.target.value)}
+              aria-label="Licence du nouveau magasin"
+            >
+              <option value="">Licence non déclarée</option>
+              {TRANCHES.map((t) => (
+                <option key={t.cle} value={t.appareils}>{t.nom} — {t.plage}</option>
+              ))}
+            </select>
             <button className="btn btn-ghost">Ajouter</button>
           </form>
         </div>
@@ -692,7 +817,12 @@ export default function AdminCompanyPage() {
                       <button className="link-btn danger-link" onClick={() => supprimerMagasin(s)}>Supprimer</button>
                     </div>
                   </div>
-                  <TarifMagasin store={s} onSaved={charger} />
+                  <OffreMagasin
+                    store={s}
+                    verrou={detail.company.est_test}
+                    onEssai={(essai) => marquerMagasin(s, essai)}
+                    onSaved={charger}
+                  />
                   <AppareilsMagasin a={appareils.find((x) => x.store_id === s.id)} />
                   <div className="store-sup">
                     {s.supervisor_ids.length === 0 && <span className="muted small">Aucun superviseur affecté</span>}
@@ -761,6 +891,15 @@ export default function AdminCompanyPage() {
                   </div>
                 </div>
                 <div className="req-actions">
+                  {m.is_company_admin ? (
+                    <button className="link-btn" onClick={() => retirerAdministration(m)}>
+                      Retirer l&apos;administration
+                    </button>
+                  ) : (
+                    <button className="link-btn" onClick={() => promouvoir(m)}>
+                      Nommer administrateur
+                    </button>
+                  )}
                   <button className="link-btn danger-link" onClick={() => supprimerPersonne(m)}>
                     Supprimer le compte
                   </button>
@@ -890,24 +1029,73 @@ function CompanyAdminBlock({
 }
 
 /**
- * Tarif annuel d'un magasin — la licence est par magasin, au volume de
- * stock. Tant qu'il n'est pas posé, le tableau de bord estime ce magasin au
- * panier moyen et le signale : renseigner le vrai chiffre rend le revenu
- * exact.
+ * L'OFFRE D'UN MAGASIN, SUR UNE SEULE LIGNE.
+ *
+ * ⚠️ ELLE ÉTAIT EN TROIS RANGÉES ET DEUX GESTES, et Julien l'a arrêté net le
+ * 4 octobre 2026 : « la section est trop chargée ». Il avait raison deux fois.
+ * D'abord parce que trois rangées du même poids visuel, pour une seule idée —
+ * ce que ce magasin a le droit de faire — se lisent comme trois réglages sans
+ * rapport. Ensuite parce que DEUX CHOSES S'APPELAIENT « LICENCE » : le nombre
+ * d'appareils et le prix annuel, l'un sous l'autre, le même mot.
+ *
+ * J'avais défendu deux gestes séparés, « une chose à la fois ». C'était la
+ * mauvaise découpe : les appareils et le prix sont les DEUX FACES d'une offre,
+ * on ne change jamais l'un sans penser à l'autre. Un seul enregistrement, un
+ * seul motif, une seule trace au journal.
+ *
+ * ⚠️ LE MENU EST LE SEUL CHAMP QUI DÉCIDE SI UN TÉLÉPHONE PEUT COMPTER.
+ * `plafond_appareils` fait `coalesce(stores.devices, …plan de l'entreprise…)` :
+ * dès que les appareils sont posés sur le magasin, c'est eux qui gagnent, et
+ * passer l'entreprise en Enterprise ne changerait rien.
+ *
+ * ⚠️ LE MOTIF PART AU JOURNAL, et c'est ce qui rend l'écart retrouvable : dans
+ * six mois, « virement du 12/10 » et « essai Bon Marché » ne se devinent pas
+ * d'un nombre d'appareils. Il n'apparaît qu'au moment de valider — au repos,
+ * la ligne reste nue.
+ *
+ * ⚠️ AUCUN CHAMP STRIPE N'EST TOUCHÉ : un client qui règle par virement n'a
+ * pas d'abonnement, et lui en inventer un ferait mentir la synchronisation.
  */
-function TarifMagasin({ store, onSaved }: { store: Store; onSaved: () => void }) {
-  const initial = store.annual_price_cents === null ? '' : String(Math.round(store.annual_price_cents / 100))
-  const [valeur, setValeur] = useState(initial)
+function OffreMagasin({
+  store, verrou, onEssai, onSaved,
+}: {
+  store: Store
+  verrou: boolean
+  onEssai: (essai: boolean) => void
+  onSaved: () => void
+}) {
+  const appareilsInitial = store.devices === null ? '' : String(store.devices)
+  const prixInitial = store.annual_price_cents === null ? '' : String(Math.round(store.annual_price_cents / 100))
+  const [appareils, setAppareils] = useState(appareilsInitial)
+  const [prix, setPrix] = useState(prixInitial)
+  const [motif, setMotif] = useState('')
   const [busy, setBusy] = useState(false)
 
-  // Le champ suit la valeur du serveur quand elle change (rechargement).
-  useEffect(() => { setValeur(initial) }, [initial])
+  useEffect(() => { setAppareils(appareilsInitial); setPrix(prixInitial) }, [appareilsInitial, prixInitial])
 
-  const modifie = valeur.trim() !== initial
+  const modifie = appareils !== appareilsInitial || prix.trim() !== prixInitial
+
+  /**
+   * Changer de tranche propose le prix de la grille — mais seulement si le
+   * champ est vide. Écraser un prix déjà saisi effacerait un tarif négocié, et
+   * c'est précisément le cas que cet écran sert.
+   */
+  function choisirTranche(valeur: string) {
+    setAppareils(valeur)
+    if (prix.trim() !== '' || valeur === '') return
+    const cents = prixCents(Number(valeur), 'yearly')
+    if (cents !== null) setPrix(String(Math.round(cents / 100)))
+  }
+
+  function annuler() {
+    setAppareils(appareilsInitial)
+    setPrix(prixInitial)
+    setMotif('')
+  }
 
   async function enregistrer() {
-    const brut = valeur.trim()
     let cents: number | null = null
+    const brut = prix.trim()
     if (brut !== '') {
       const euros = Number(brut.replace(/\s/g, '').replace(',', '.'))
       if (!Number.isFinite(euros) || euros < 0) {
@@ -917,38 +1105,79 @@ function TarifMagasin({ store, onSaved }: { store: Store; onSaved: () => void })
       cents = Math.round(euros * 100)
     }
     setBusy(true)
-    const { data, error } = await supabase.rpc('admin_set_store_price', {
-      p_store_id: store.id, p_price_cents: cents,
+    const { data, error } = await supabase.rpc('admin_poser_licence_magasin', {
+      p_store_id: store.id,
+      p_devices: appareils === '' ? null : Number(appareils),
+      p_annual_price_cents: cents,
+      p_motif: motif.trim() || null,
     })
     setBusy(false)
     if (error || !data?.success) {
-      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
+      alert('Erreur : ' + (error?.message ?? data?.error ?? 'inconnue'))
       return
     }
+    setMotif('')
     onSaved()
   }
 
+  // Au repos, UN SEUL repère, et seulement s'il manque quelque chose : le menu
+  // dit déjà la tranche, le répéter à côté faisait la moitié de l'encombrement.
+  const manque = store.devices === null
+    ? 'Sans licence, deux appareils à la fois au maximum.'
+    : store.annual_price_cents === null
+      ? 'Prix estimé au panier moyen tant qu’il est vide.'
+      : null
+
   return (
-    <div className="store-sup" style={{ marginTop: 10, alignItems: 'center' }}>
-      <label className="muted small" htmlFor={`tarif-${store.id}`}>Licence annuelle</label>
-      <input
-        id={`tarif-${store.id}`}
-        className="dash-audit-input"
-        inputMode="numeric"
-        value={valeur}
-        placeholder="Non renseignée"
-        onChange={(e) => setValeur(e.target.value)}
-        aria-label={`Licence annuelle de ${store.name}, en euros`}
-      />
-      <span className="muted small">€ / an</span>
+    <>
+      <div className="store-offre">
+        <label htmlFor={`offre-${store.id}`}>Offre</label>
+        <select
+          id={`offre-${store.id}`}
+          className="store-sup-select"
+          value={appareils}
+          onChange={(e) => choisirTranche(e.target.value)}
+        >
+          <option value="">Sans licence</option>
+          {TRANCHES.map((t) => (
+            <option key={t.cle} value={t.appareils}>{t.nom} — {t.plage}</option>
+          ))}
+        </select>
+        <input
+          className="dash-audit-input store-offre-prix"
+          inputMode="numeric"
+          value={prix}
+          placeholder="—"
+          onChange={(e) => setPrix(e.target.value)}
+          aria-label={`Prix annuel de ${store.name}, en euros`}
+        />
+        <span className="muted small">€ / an</span>
+        {!modifie && manque && <span className="muted small">{manque}</span>}
+        <label className="remember-label store-offre-essai">
+          <input
+            type="checkbox"
+            checked={store.est_test}
+            onChange={(e) => onEssai(e.target.checked)}
+            disabled={verrou}
+          />
+          {verrou ? 'Essai (toute l’entreprise)' : 'Magasin d’essai'}
+        </label>
+      </div>
       {modifie && (
-        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={enregistrer}>
-          {busy ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
+        <div className="store-offre store-offre-suite">
+          <input
+            className="dash-audit-input"
+            value={motif}
+            placeholder="Motif : virement, essai…"
+            onChange={(e) => setMotif(e.target.value)}
+            aria-label={`Motif du changement d’offre de ${store.name}`}
+          />
+          <button className="btn btn-primary btn-sm" disabled={busy} onClick={enregistrer}>
+            {busy ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+          <button className="link-btn" onClick={annuler} disabled={busy}>Annuler</button>
+        </div>
       )}
-      {!modifie && store.annual_price_cents === null && (
-        <span className="muted small">Estimé au panier moyen tant qu&apos;il est vide</span>
-      )}
-    </div>
+    </>
   )
 }

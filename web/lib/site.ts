@@ -40,6 +40,11 @@ export const PAGES_PUBLIQUES: PagePublique[] = [
   { chemin: '/inventaire', priorite: 0.9, frequence: 'monthly' },
   { chemin: '/pourquoi-nous-choisir', priorite: 0.9, frequence: 'monthly' },
   { chemin: '/tarifs', priorite: 0.9, frequence: 'monthly' },
+  // ⚠️ Les pages de référencement : priorité haute, elles sont faites pour
+  // être trouvées. `yearly` serait faux — leur contenu bougera.
+  { chemin: '/logiciel-inventaire', priorite: 0.9, frequence: 'monthly' },
+  { chemin: '/demarque-inconnue', priorite: 0.8, frequence: 'monthly' },
+  { chemin: '/inventaire-tournant', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/souscrire', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/inscription', priorite: 0.7, frequence: 'monthly' },
   { chemin: '/open', priorite: 0.5, frequence: 'monthly' },
@@ -54,6 +59,9 @@ export const PAGES_PUBLIQUES: PagePublique[] = [
   { chemin: '/en/inventaire', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/en/pourquoi-nous-choisir', priorite: 0.8, frequence: 'monthly' },
   { chemin: '/en/tarifs', priorite: 0.8, frequence: 'monthly' },
+  { chemin: '/en/logiciel-inventaire', priorite: 0.8, frequence: 'monthly' },
+  { chemin: '/en/demarque-inconnue', priorite: 0.7, frequence: 'monthly' },
+  { chemin: '/en/inventaire-tournant', priorite: 0.7, frequence: 'monthly' },
   { chemin: '/en/souscrire', priorite: 0.7, frequence: 'monthly' },
   { chemin: '/en/inscription', priorite: 0.6, frequence: 'monthly' },
   { chemin: '/en/open', priorite: 0.4, frequence: 'monthly' },

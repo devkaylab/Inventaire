@@ -268,7 +268,55 @@ a { color: inherit; text-decoration: none; }
    ⚠️ Elle ne rejoue que si l'élément est REMONTÉ : poser un `key` qui change
    sur le conteneur est ce qui déclenche l'animation, sinon React réutilise le
    nœud et rien ne se passe. */
-.echange-entre { animation: echange-monte .26s cubic-bezier(0.33, 1, 0.68, 1) both; }
+/* ⚠️ PAS DE `both` NON PLUS (1er octobre 2026). Tant qu'une animation
+   d'opacité ou de transform « tient » son image finale, l'élément reste un
+   contexte d'empilement — pour toujours. Le panneau d'onglet du tableau de
+   bord passait alors AU-DESSUS du rail (`position: sticky`), et le papier du
+   Registre, qui déborde de 24 px dans une gouttière de 20, mangeait le bord
+   droit de la tuile voisine sur les Écarts d'audit et le Rapport. Sans
+   `fill-mode`, le contexte disparaît à la fin des 260 ms et l'ordre de
+   peinture redevient celui d'avant les transitions. */
+.echange-entre { animation: echange-monte .26s cubic-bezier(0.33, 1, 0.68, 1); }
+
+/* ── LA TRANSITION ENTRE DEUX PAGES (30 septembre 2026) ───────────────────
+   ⚠️ **C'EST LA DEMANDE, ET C'EST CE QUI MANQUAIT** : « imaginons que je passe
+   de l'accueil à l'inventaire, c'est surtout ça que je veux ». `data-reveal`
+   fait apparaître les éléments AU DÉFILEMENT, et `.echange-entre` ce qui
+   remplace autre chose DANS une page. Aucun des deux ne couvrait le passage
+   d'une adresse à une autre : l'écran était remplacé d'un coup.
+
+   ⚠️ **SUR `main`, PAS SUR LA PAGE ENTIÈRE.** L'en-tête et le pied ne bougent
+   pas d'une page à l'autre : les faire disparaître puis revenir, c'est un
+   clignotement, pas une transition. Seul le contenu s'échange, et c'est
+   exactement ce qu'on voit sur un site qui fait ça bien.
+
+   ⚠️ **ET PAS DE `transform` ICI.** Un ancêtre transformé devient le bloc
+   conteneur de ses descendants `position: fixed` — le bouton de langue et
+   celui du thème sauteraient pendant les 260 ms. Un fondu seul n'a pas ce
+   défaut. C'est la différence avec `.echange-entre`, qui n'enveloppe jamais
+   de contenu fixe.
+
+   ⚠️ **UNE RÈGLE PLUTÔT QUE QUATORZE CLASSES.** Le site a quatorze `main` et
+   il en aura d'autres ; la transition vient de l'élément, pas d'un attribut
+   qu'on oublie. `.app-main` est exclu : l'espace connecté a la sienne, posée
+   dans `AppShell` avec le chemin pour clé. */
+/* ⚠️ **PAS DE `both` ICI, ET C'EST LE POINT LE PLUS IMPORTANT DE CE BLOC.**
+   Avec `animation-fill-mode: both`, l'élément porte l'image de départ —
+   `opacity: 0` — AVANT que l'animation démarre et si elle ne démarre jamais.
+   Mesuré : une page est restée à zéro pendant une recompilation. Une
+   transition ratée doit laisser la page LISIBLE, jamais blanche. Sans
+   `fill-mode`, l'opacité de base reste 1 : si l'animation ne joue pas, on
+   perd le fondu, pas le contenu. C'est la règle que `RevealObserver` applique
+   déjà en ne masquant rien sans JavaScript. */
+/* L'espace connecté passe par la même animation : une seule transition de page
+   pour tout le site, une seule durée, et surtout PAS de `transform` — un
+   ancêtre transformé devient le bloc conteneur de ses descendants
+   `position: fixed`, et les volets de l'espace connecté en sont. */
+main:not(.app-main), .app-main > .transition-page { animation: page-entre .3s ease; }
+@keyframes page-entre { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  main:not(.app-main), .app-main > .transition-page { animation: none; }
+}
 @keyframes echange-monte {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
@@ -1460,6 +1508,24 @@ body:has(.site-footer) .theme-toggle { display: none; }
   font-family: inherit;
 }
 .store-sup-select:focus { border-color: var(--accent); }
+
+/* ── L'offre d'un magasin, sur UNE ligne (4 octobre 2026) ────────────────
+   ⚠️ ELLE TENAIT EN TROIS RANGÉES, et deux d'entre elles s'appelaient
+   « Licence » : le nombre d'appareils, et le prix annuel. Constat de Julien
+   sur la console — « la section est trop chargée ». Une seule idée, une seule
+   ligne : ce que ce magasin a le droit de faire, et ce qu'il coûte.
+   Le repère en clair ne s'affiche que s'il MANQUE quelque chose ; le menu dit
+   déjà la tranche, le répéter à côté faisait la moitié de l'encombrement. */
+.store-offre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.store-offre > label:first-child { color: var(--text-2); font-size: 13px; }
+.store-offre-prix { width: 84px; text-align: right; }
+/* Le marquage se range à l'opposé : il ne fait pas partie de l'offre, il dit
+   si ce magasin compte dans les chiffres. */
+.store-offre-essai { margin-left: auto; }
+.store-offre-suite { margin-top: 6px; }
+/* Le motif est du texte libre : à la largeur d'un champ de quantité, son
+   invite se coupait au milieu (« Motif : virem… »). */
+.store-offre-suite .dash-audit-input { width: 260px; text-align: left; }
 
 /* ── Ajouter une personne : le rôle d'abord ──────────────────────────────
    Une seule porte pour les deux rôles. Le choix se fait sur deux cartes
@@ -2961,6 +3027,16 @@ body:has(.site-footer) .theme-toggle { display: none; }
    inventaire. Une classe plutôt qu'un style en ligne : le jour où un autre
    écran en a besoin, il n'a rien à recopier. */
 .page-sub { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+/* ⚠️ **LA SEULE PAGE CENTRÉE DE L'ESPACE CONNECTÉ**, et c'est voulu — demande
+   de Julien le 30 septembre 2026, en regardant « Nouvel inventaire » sur son
+   écran : le formulaire collé à gauche laissait toute la moitié droite vide.
+   Partout ailleurs, ce qui se borne SE COLLE À GAUCHE : décision du 5 septembre,
+   et elle tient. Une liste, une fiche, un tableau de bord REMPLISSENT leur
+   largeur — colonne de travail, colonne de références. Ici il n'y a rien à
+   mettre à côté : quatre champs, seuls sur deux mille pixels.
+   ⚠️ Ne pas étendre cette classe à une page qui a de quoi remplir sa largeur,
+   et ne toujours pas remettre de `max-width` sur `.app-main`. */
+.page-seule { max-width: 720px; margin-inline: auto; }
 /* Le lien de rappel au-dessus du titre d'un inventaire (piste A de la
    maquette « Retour vers Mes inventaires »). Discret : il accompagne le
    titre, il ne rivalise pas avec lui. */
@@ -3351,7 +3427,6 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   padding: 10px 12px; border-radius: var(--r); text-align: left;
   background: none; border: none; color: inherit; font-family: inherit;
 }
-.notif-rang + .notif-rang { border-top: 1px solid var(--hairline); border-radius: 0 0 var(--r) var(--r); }
 .notif-rang-lien { cursor: pointer; }
 .notif-rang-lien:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
 .notif-corps { min-width: 0; flex: 1; }
@@ -3365,6 +3440,30 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    comme une étiquette et n'incitait à rien. */
 .notif-cta { display: inline-block; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; }
 .notif-point { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; margin-top: 6px; }
+
+/* ── Effacer une notification (4 octobre 2026) ───────────────────────────
+   ⚠️ LA CROIX EST UNE SŒUR DE LA LIGNE, PAS SON ENFANT : une ligne qui mène
+   quelque part est déjà un `<button>`, et un bouton dans un bouton n'est ni
+   valide ni atteignable au clavier. Le trait de séparation a donc migré de
+   `.notif-rang + .notif-rang` vers la ligne qui les enveloppe — sans ça il
+   aurait disparu, et rien ne l'aurait signalé. */
+.notif-ligne { display: flex; align-items: flex-start; border-radius: var(--r); }
+.notif-ligne + .notif-ligne { border-top: 1px solid var(--hairline); border-radius: 0 0 var(--r) var(--r); }
+.notif-ligne:hover .notif-x { opacity: 1; }
+.notif-x {
+  flex: none; align-self: center; margin-right: 6px;
+  width: 24px; height: 24px; border-radius: var(--r);
+  border: 0; background: none; cursor: pointer;
+  color: var(--text-3); font-size: 17px; line-height: 1;
+  opacity: 0; transition: opacity .15s ease, color .15s ease;
+}
+.notif-x:hover, .notif-x:focus-visible { opacity: 1; color: var(--text); }
+
+/* Le titre du panneau porte « Tout effacer » à sa droite. */
+.notif-panneau-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+/* Le sujet d'une conversation, et son effacement, sur la même ligne. */
+.fil-tete-haut { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
 /* La ligne des appareils, dans le bloc d'un magasin de la console. */
 .store-appareils { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
@@ -4340,6 +4439,41 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .etape h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 5px 0 4px; }
 .etape p { color: var(--text-2); font-size: 15px; }
 
+/* ── LES TROIS GESTES DÉFILENT SUR UN TÉLÉPHONE (1er octobre 2026) ─────────
+   ⚠️ **MESURÉ AVANT D'Y TOUCHER**, sur 375 × 812 : la section faisait
+   2 051 px de haut — **deux écrans et demi pour trois gestes**, et un
+   cinquième de toute la page d'accueil. Empilées, les trois étapes se lisent
+   en faisant défiler, et personne ne défile deux écrans et demi pour une
+   idée qu'il a comprise à la première.
+
+   ⚠️ **LE DÉFILEMENT EST CELUI DU NAVIGATEUR**, comme pour `.carrousel-piste`
+   de la page Découvrir : `scroll-snap`, pas une translation calculée. Le
+   doigt, la molette et le clavier marchent sans une ligne de JavaScript, et
+   rien n'est masqué — les trois étapes restent dans le document, lisibles par
+   un moteur de recherche comme par un lecteur d'écran.
+
+   ⚠️ **LA CARTE FAIT 82 %, PAS 100 %.** Le bord de la suivante doit dépasser :
+   c'est ce qui dit qu'on peut faire glisser. À 100 % rien ne le signale, et
+   un carrousel dont on ignore l'existence est une section tronquée.
+
+   ⚠️ Les marges négatives rendent au rail les 24 px du `.container` : sans
+   elles la carte suivante s'arrêterait au bord du texte au lieu du bord de
+   l'écran, et le débord ne se verrait pas. `scroll-padding` remet le calage
+   au même endroit que le texte. */
+@media (max-width: 560px) {
+  .etapes {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%;
+    gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory;
+    scrollbar-width: none; overscroll-behavior-x: contain;
+    margin-inline: -24px; padding-inline: 24px; scroll-padding-inline: 24px;
+  }
+  .etapes::-webkit-scrollbar { display: none; }
+  .etape { scroll-snap-align: start; }
+  /* Le visuel ne porte plus la marge basse de la colonne : dans une carte, il
+     colle au texte qui le commente. */
+  .etape-vue { margin-bottom: 16px; }
+}
+
 /* ── Le produit se voit : un téléphone, un écran large ───────────────────────
    ⚠️ La colonne du téléphone est BORNÉE (236 px). Sur l'écran de Julien
    (1568 px), une grille à deux parts égales étirait la capture à plus du
@@ -4683,7 +4817,13 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   display: flex; flex-direction: column; gap: 14px;
 }
 .ins-carte h1 { font-size: 25px; font-weight: 800; letter-spacing: -.5px; margin: 0; line-height: 1.2; }
-.ins-carte > p.muted { margin: 0; }
+/* ⚠️ Le bloc d'une étape reprend la colonne de `.ins-carte` : enveloppé pour
+   l'animation, il devenait un seul élément flex et le formulaire se collait. */
+.ins-etape { display: flex; flex-direction: column; gap: 14px; }
+/* Le titre et le chapô d'une étape sont désormais dans `.ins-etape` : le
+   sélecteur d'enfant direct ne les atteignait plus, et leur marge revenait. */
+.ins-carte > p.muted,
+.ins-etape > p.muted { margin: 0; }
 .ins-jauge { height: 3px; background: var(--hairline); border-radius: var(--r); overflow: hidden; }
 .ins-jauge i { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
 /* ⚠️ « Étape 3 sur 8 » RESTE, mais en phrase — plus en petites capitales
@@ -5196,9 +5336,21 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 
 /* En thème clair, le fond glisse vers le papier. L'écart avec `--bg` (#f2f3f1)
    est assez petit pour qu'aucune couture ne se voie, assez grand pour qu'on
-   sente le grain. En sombre il n'y a pas de papier : on ne touche à rien. */
+   sente le grain. En sombre il n'y a pas de papier : la carte prend la
+   surface des autres panneaux.
+
+   ⚠️ LE DOCUMENT EST DANS UN CADRE, COMME LES AUTRES ONGLETS (1er octobre
+   2026). Il débordait de 24 px de chaque côté, sans bord ni coin : un papier
+   posé à même la page, qui passait sous le rail dans une gouttière de 20 px.
+   Demande de Julien : « les deux sections doivent être dans un frame comme
+   sur les autres pages ». Même rayon et même retrait que `.panel` ; à
+   l'intérieur, la grammaire du Registre (filets, chasse fixe) ne change pas.
+   Le rayon est posé ici, sur l'élément — jamais en redéfinissant `--r`. */
 :root[data-theme="light"] .registre { background: #faf9f6; }
-.registre { padding: 22px 24px 26px; margin: 0 -24px; }
+.registre {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 22px 24px 26px; margin: 0; box-shadow: var(--shadow-card);
+}
 
 /* ── L'en-tête du document ───────────────────────────────────────────────
    Il ne répète pas celui de la page : la page nomme l'INVENTAIRE, le document
@@ -5267,7 +5419,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .registre .dash-table { border-top: 1px solid var(--text); }
 .registre .dash-table th, .registre .dash-table td { padding-left: 0; }
 .registre .dash-table th:last-child, .registre .dash-table td:last-child { padding-right: 0; }
-.registre .dash-table thead th { background: var(--bg); border-bottom: 1px solid var(--border-strong); }
+.registre .dash-table thead th { background: var(--surface); border-bottom: 1px solid var(--border-strong); }
 :root[data-theme="light"] .registre .dash-table thead th { background: #faf9f6; }
 .registre .dash-table tbody tr:last-child td { border-bottom: 1px solid var(--text); }
 
@@ -5315,8 +5467,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    couleurs. Registre s'arrête au bord de ce qui engage. */
 
 @media (max-width: 860px) {
-  .registre { margin: 0; padding: 18px 0 22px; }
-  :root[data-theme="light"] .registre { background: transparent; }
+  .registre { padding: 18px 16px 22px; }
   .registre .dash-stat + .dash-stat { border-left: 0; padding-left: 0; }
 }
 

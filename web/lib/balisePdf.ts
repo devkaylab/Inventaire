@@ -1,73 +1,24 @@
-// Planche de balises (PDF) générée dans le navigateur.
+// Planche de balises (PDF) téléchargée depuis le navigateur.
 //
-// Même dessin que `src/lib/balises.ts` dans l'app mobile : gabarit Avery L7160
-// (A4, 21 étiquettes 63,5 × 38,1 mm), QR à gauche contenant `SCB1:<numéro>`,
-// numéro en gros à droite. À imprimer à 100 % (taille réelle). Si l'un des
-// deux dessins change, changer l'autre : une balise imprimée depuis le site
-// doit être scannée exactement comme une balise imprimée depuis l'app.
+// ⚠️ **LE DESSIN N'EST PLUS ICI.** Il vit dans `baliseDessin.ts`, dont l'app
+// tient une copie identique : une balise imprimée depuis le site doit se
+// scanner exactement comme une balise imprimée depuis l'app. Ce fichier ne
+// garde que ce que le navigateur fait et que le téléphone ne fait pas —
+// fabriquer un blob et le donner à télécharger.
+//
+// À imprimer à 100 % (taille réelle) sur des planches A4 de 80 étiquettes
+// 35,6 × 16,9 mm.
 
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import QRCode from 'qrcode'
+import { dessinerPlanche } from '@/lib/baliseDessin'
 
-/** Préfixe du QR d'une balise — identique à BALISE_PREFIX dans l'app. */
-export const BALISE_PREFIX = 'SCB1'
-
-export function balisePayload(code: string): string {
-  return `${BALISE_PREFIX}:${code}`
-}
-
-const MM = 72 / 25.4
-const L7160 = {
-  pageW: 210, pageH: 297,
-  cols: 3, rows: 7,
-  labelW: 63.5, labelH: 38.1,
-  marginLeft: 7.25, marginTop: 15.15,
-  pitchX: 66.0, pitchY: 38.1,
-}
+// Le format du QR vit dans `baliseCode.ts`, lui aussi en double. Réexporté
+// pour que les appelants — et les tests — n'aient rien à savoir.
+export { BALISE_PREFIX, balisePayload, parseBalise } from '@/lib/baliseCode'
+export { GABARIT, PAR_PLANCHE } from '@/lib/baliseDessin'
 
 /** Construit le PDF d'une liste de numéros de balises. Renvoie les octets. */
 export async function buildBaliseSheet(codes: string[]): Promise<Uint8Array> {
-  const t = L7160
-  const doc = await PDFDocument.create()
-  const fontB = await doc.embedFont(StandardFonts.HelveticaBold)
-
-  const pageWpt = t.pageW * MM, pageHpt = t.pageH * MM
-  const per = t.cols * t.rows
-  const pad = 3 * MM
-  const qrSize = (t.labelH - 8) * MM
-  const textX0 = 3 + (t.labelH - 8) + 3
-
-  let page: ReturnType<typeof doc.addPage> | null = null
-  codes.forEach((code, idx) => {
-    if (idx % per === 0) page = doc.addPage([pageWpt, pageHpt])
-    const p = page!
-    const cell = idx % per
-    const col = cell % t.cols, row = Math.floor(cell / t.cols)
-
-    const labelLeftPt = (t.marginLeft + col * t.pitchX) * MM
-    const labelBottomPt = pageHpt - (t.marginTop + row * t.pitchY + t.labelH) * MM
-    const labelHpt = t.labelH * MM
-
-    const qr = QRCode.create(balisePayload(code), { errorCorrectionLevel: 'M' })
-    const size = qr.modules.size
-    const data = qr.modules.data
-    const mod = qrSize / size
-    const qx = labelLeftPt + pad
-    const qy = labelBottomPt + (labelHpt - qrSize) / 2
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if (data[r * size + c]) {
-          p.drawRectangle({ x: qx + c * mod, y: qy + (size - 1 - r) * mod, width: mod, height: mod, color: rgb(0, 0, 0) })
-        }
-      }
-    }
-
-    const tx = labelLeftPt + textX0 * MM
-    const centerY = labelBottomPt + labelHpt / 2
-    p.drawText(code, { x: tx, y: centerY - 9, size: 26, font: fontB, color: rgb(0.1, 0.11, 0.16) })
-  })
-
-  return await doc.save()
+  return await (await dessinerPlanche(codes)).save()
 }
 
 /** Nom de fichier de la planche, ex. `balises_1000-1049_2026-08-21.pdf`. */

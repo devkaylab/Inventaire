@@ -16,6 +16,7 @@
 // dans son en-tête.
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { dossierMigrations } from './migrations'
 
@@ -37,9 +38,38 @@ const lire = (f: string) => readFileSync(path.join(dossierMigrations, f), 'utf8'
  * posées. Une garde qui dépend d'une convention de nommage protège le nommage,
  * pas le produit.
  */
-const DEBUT_DU_CHANTIER = '20260920'
-const dateDe = (f: string) => f.slice(0, 8)
-const ONDEMAND = fichiers.filter((f) => dateDe(f) >= DEBUT_DU_CHANTIER)
+
+/**
+ * ⚠️⚠️ **LA DATE NE SUFFIT PLUS, ET LA FUSION DU 4 OCTOBRE 2026 L'A MONTRÉ.**
+ * La règle disait « le chantier, c'est tout ce qui date du 20 septembre ou
+ * après ». Vrai tant que `main` n'avançait pas. En fusionnant `main` dans
+ * cette branche, trois migrations de Quantinvo OS — la licence à la main, la
+ * promotion d'un administrateur, l'effacement d'une conversation — sont
+ * tombées du mauvais côté : la garde exigeait d'elles qu'elles s'annoncent
+ * comme touchant OS, alors qu'elles SONT OS.
+ *
+ * Une garde qui dépend d'une date protège la date, pas le produit — c'est la
+ * même leçon que la convention de nommage, une porte plus loin.
+ *
+ * Le chantier, c'est donc : **les migrations que cette branche ajoute à
+ * `main`**. Demandé à git, pas déduit d'un nom ni d'un calendrier. Si git ne
+ * répond pas, la garde ÉCHOUE — elle ne se tait pas.
+ */
+function migrationsDeLaBranche(): string[] {
+  const surMain = execFileSync(
+    'git', ['ls-tree', '-r', '--name-only', 'main', '--', 'supabase/migrations'],
+    { cwd: path.resolve(__dirname, '../..'), encoding: 'utf8' },
+  )
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.endsWith('.sql'))
+    .map((l) => path.basename(l))
+  if (surMain.length === 0) throw new Error('git n’a pas rendu les migrations de main')
+  const connues = new Set(surMain)
+  return fichiers.filter((f) => !connues.has(f))
+}
+
+const ONDEMAND = migrationsDeLaBranche()
 
 /** Celles qui portent le nom du chantier — pour la règle de l'exception. */
 const NOMMEES_ON_DEMAND = ONDEMAND.filter((f) => /_on_demand_/.test(f))
@@ -64,8 +94,11 @@ const EXCEPTION = '20260920200001_on_demand_le_plafond_d_appareils.sql'
 function objetsDeQuantinvoOS(): { fonctions: Set<string>; policies: Set<string> } {
   const fonctions = new Set<string>()
   const policies = new Set<string>()
+  const duChantier = new Set(ONDEMAND)
   for (const f of fichiers) {
-    if (dateDe(f) >= DEBUT_DU_CHANTIER) continue
+    // ⚠️ Ce que Quantinvo OS avait posé = tout ce qui N'EST PAS de cette
+    // branche. Même règle que ci-dessus, et une seule source.
+    if (duChantier.has(f)) continue
     const sql = sansCommentaires(lire(f))
     for (const m of sql.matchAll(/create (?:or replace )?function public\.(\w+)\s*\(/gi)) {
       fonctions.add(m[1])

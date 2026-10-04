@@ -9,6 +9,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { LIENS_PUBLICS } from '../lib/navigation'
 import { APP_STORE_URL, noteBoutiques, PLAY_STORE_URL, PUBLIEE_ANDROID, PUBLIEE_IOS } from '../lib/appStores'
+import { derniereDefinition, fichierDe } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
 const shell = lire('../components/AppShell.tsx')
@@ -556,15 +557,39 @@ describe('le tarif des magasins', () => {
     expect(migration).toContain('annual_price_cents')
   })
 
+  /**
+   * ⚠️ **AMENDÉE LE 4 OCTOBRE 2026, PAS AFFAIBLIE.** Ce qu'elle défend n'a pas
+   * changé : **le tarif d'un magasin ne se modifie que par une RPC gardée**,
+   * jamais par une écriture directe depuis le navigateur. Ce qui a changé,
+   * c'est le geste — les appareils et le prix sont les deux faces d'une offre
+   * et se posent ensemble (`admin_poser_licence_magasin`), parce que la
+   * section était devenue illisible avec deux rangées nommées « Licence ».
+   *
+   * Elle ne cite donc plus UNE fonction : elle exige que l'écran passe par une
+   * RPC d'administration, et que celle-là soit fermée à `anon` et journalisée.
+   * Une troisième façon de poser un tarif demain entrera dans la garde.
+   */
   it('se modifie depuis la fiche de l’entreprise, par une RPC gardée', () => {
-    expect(fiche).toContain("rpc('admin_set_store_price'")
-    expect(migration).toMatch(/revoke all on function public\.admin_set_store_price\(uuid, integer\) from public, anon/)
+    const appels = [...fiche.matchAll(/rpc\('(admin_[a-z_]+)'/g)].map((m) => m[1])
+    const poseurs = appels.filter((fn) => /price|licence/.test(fn))
+    expect(poseurs, 'aucune RPC ne pose le tarif depuis la fiche').not.toEqual([])
+
+    for (const fn of new Set(poseurs)) {
+      const { corps } = derniereDefinition(fn)
+      expect(corps, `${fn} doit vérifier qui appelle`).toContain('is_admin()')
+      expect(corps, `${fn} doit laisser une trace`).toContain('log_admin_action')
+      expect(fichierDe(fn), `${fn} doit rester fermée à anon`)
+        .toMatch(new RegExp(`revoke all on function public\\.${fn}\\([^)]*\\) from public, anon`))
+    }
   })
 
   it('journalise chaque changement de tarif', () => {
-    // C'est de l'argent : la trace suit la même règle que les autres
-    // actions d'administration.
-    const corps = migration.split('function public.admin_set_store_price(')[1]?.split('$$;')[0] ?? ''
+    // C'est de l'argent : la trace suit la même règle que les autres actions
+    // d'administration. Vérifiée ci-dessus sur CHAQUE poseur de tarif que la
+    // fiche emploie, plutôt que sur un seul nommé ici — c'est la même leçon
+    // que `derniereDefinition` : une garde qui cite un nom ne voit pas ce
+    // qu'une autre fonction fait à sa place.
+    const { corps } = derniereDefinition('admin_set_store_price')
     expect(corps).toContain('log_admin_action')
     expect(corps).toContain('is_admin()')
   })

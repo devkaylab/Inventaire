@@ -10,6 +10,7 @@
 import Papa from 'papaparse'
 import { supabase } from '@/lib/supabaseClient'
 import { errorMessage } from '@/lib/errors'
+import { t, tn } from '@/lib/i18n'
 
 export type ImportProgress = { parsed: number; uploaded: number; total: number }
 /**
@@ -25,6 +26,43 @@ export type ImportProgress = { parsed: number; uploaded: number; total: number }
  * fois par emplacement, et l'écran criait sur le cas normal.
  */
 export type ImportResult = { uploaded: number; errors: string[]; notes: string[] }
+
+/**
+ * ⚠️ UNE VALEUR TROP GRANDE REFUSE TOUT LE FICHIER, AVANT LE VIDAGE.
+ *
+ * Plafonds des colonnes en base : `theoretical_qty numeric(10, 3)` et
+ * `unit_purchase_price numeric(10, 2)`. Au-delà, Postgres rejette le lot avec
+ * « numeric field overflow » [22003] — phrase que l'écran affichait telle
+ * quelle, et qui arrivait APRÈS `vider_import` : l'ancien stock était effacé,
+ * le nouveau à moitié chargé. Cas réel, 1er octobre 2026 : le SKU placé dans
+ * la colonne quantité. Une valeur qui déborde signale un fichier décalé, pas
+ * une ligne isolée ; d'où le refus du fichier entier plutôt qu'une ligne
+ * ignorée. Mêmes plafonds dans `src/lib/import.ts`.
+ */
+export const QTE_MAX = 9_999_999.999
+export const PRIX_MAX = 99_999_999.99
+
+function depasse(v: number, max: number): boolean {
+  return !(Math.abs(v) <= max)
+}
+
+/** Le premier défaut trouvé, et combien d'autres le suivent. */
+type Debordement = { premier: string; autres: number }
+
+function noterDebordement(d: Debordement | null, motif: () => string): Debordement {
+  return d ? { ...d, autres: d.autres + 1 } : { premier: motif(), autres: 0 }
+}
+
+function messageDebordement(d: Debordement): string {
+  return [
+    t("Import annulé : rien n'a été modifié."),
+    d.premier,
+    d.autres > 0
+      ? tn('Le fichier contient %{count} autre valeur trop grande.', 'Le fichier contient %{count} autres valeurs trop grandes.', d.autres)
+      : '',
+    t('Vérifiez que chaque colonne du fichier contient la bonne information : un SKU ou un code-barres placé dans la colonne des quantités ou des prix donne ce résultat.'),
+  ].filter(Boolean).join(' ')
+}
 
 type ArticleInsert = {
   session_id: string
@@ -181,13 +219,14 @@ async function readRows(file: File): Promise<Record<string, unknown>[]> {
  *   d'écraser l'EAN précédent (contrainte UNIQUE (session_id, sku) oblige).
  */
 export function mapCatalogRows(rawRows: Record<string, unknown>[], sessionId: string): {
-  articles: ArticleInsert[]; errors: string[]; notes: string[]; skipped: number
+  articles: ArticleInsert[]; errors: string[]; notes: string[]; skipped: number; refus: string | null
 } {
   const errors: string[] = []
   const notes: string[] = []
   const byS = new Map<string, ArticleInsert>()
   let skipped = 0
   let keptByEan = 0
+  let debordement: Debordement | null = null
 
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
@@ -205,6 +244,11 @@ export function mapCatalogRows(rawRows: Record<string, unknown>[], sessionId: st
       brand: pickText(r, BRAND_KEYS),
       label: pickText(r, LABEL_KEYS),
       unit_purchase_price: pickNumber(r, PRICE_KEYS),
+    }
+    if (depasse(article.unit_purchase_price, PRIX_MAX)) {
+      debordement = noterDebordement(debordement, () => t('Ligne %{n} (SKU %{sku}) : le prix d’achat %{valeur} est trop grand, le maximum est 99 999 999.', {
+        n: i + 2, sku, valeur: cellToCode(article.unit_purchase_price),
+      }))
     }
     const already = byS.get(sku)
     if (already?.ean && ean && already.ean !== ean) {
@@ -232,7 +276,7 @@ export function mapCatalogRows(rawRows: Record<string, unknown>[], sessionId: st
     // la marque et le prix.
     notes.push(`${dupes} ligne(s) répètent une référence déjà vue — une seule fiche par référence, la dernière ligne fait foi`)
   }
-  return { articles, errors, notes, skipped }
+  return { articles, errors, notes, skipped, refus: debordement ? messageDebordement(debordement) : null }
 }
 
 export async function importCatalogFile(
@@ -240,7 +284,8 @@ export async function importCatalogFile(
 ): Promise<ImportResult> {
   const rawRows = await readRows(file)
   const total = rawRows.length
-  const { articles, errors, notes } = mapCatalogRows(rawRows, sessionId)
+  const { articles, errors, notes, refus } = mapCatalogRows(rawRows, sessionId)
+  if (refus) throw new Error(refus)
 
   onProgress?.({ parsed: total, uploaded: 0, total: articles.length })
 
@@ -277,12 +322,15 @@ export async function importCatalogFile(
 
 /** Agrège les quantités par SKU (un article peut occuper plusieurs emplacements). */
 export function mapStockRows(rawRows: Record<string, unknown>[], sessionId: string): {
-  rows: StockInsert[]; errors: string[]; notes: string[]; skipped: number
+  rows: StockInsert[]; errors: string[]; notes: string[]; skipped: number; refus: string | null
 } {
   const errors: string[] = []
   const notes: string[] = []
   const byS = new Map<string, number>()
   let skipped = 0
+  let debordement: Debordement | null = null
+  // Un SKU déjà signalé par une ligne ne l'est pas une seconde fois par son total.
+  const signales = new Set<string>()
 
   for (let i = 0; i < rawRows.length; i++) {
     const r = rawRows[i]
@@ -292,7 +340,20 @@ export function mapStockRows(rawRows: Record<string, unknown>[], sessionId: stri
       if (errors.length < 10) errors.push(`Ligne ${i + 2} : SKU manquant — ignorée`)
       continue
     }
-    byS.set(sku, (byS.get(sku) ?? 0) + pickNumber(r, QTY_KEYS))
+    const qty = pickNumber(r, QTY_KEYS)
+    if (depasse(qty, QTE_MAX)) {
+      signales.add(sku)
+      debordement = noterDebordement(debordement, () => t('Ligne %{n} (SKU %{sku}) : la quantité %{valeur} est trop grande, le maximum est 9 999 999.', {
+        n: i + 2, sku, valeur: cellToCode(qty),
+      }))
+    }
+    byS.set(sku, (byS.get(sku) ?? 0) + qty)
+  }
+  // Plusieurs emplacements s'additionnent : le total peut déborder sans
+  // qu'aucune ligne seule ne le fasse.
+  for (const [sku, total] of byS) {
+    if (signales.has(sku) || !depasse(total, QTE_MAX)) continue
+    debordement = noterDebordement(debordement, () => t('SKU %{sku} : ses quantités additionnées sur plusieurs lignes dépassent 9 999 999.', { sku }))
   }
 
   const rows = [...byS.entries()].map(([sku, theoretical_qty]) => ({ session_id: sessionId, sku, theoretical_qty }))
@@ -301,7 +362,7 @@ export function mapStockRows(rawRows: Record<string, unknown>[], sessionId: stri
     // Sommer plusieurs emplacements est le comportement attendu, pas un défaut.
     notes.push(`${locations - rows.length} ligne(s) multi-emplacements agrégée(s) — quantités sommées par SKU`)
   }
-  return { rows, errors, notes, skipped }
+  return { rows, errors, notes, skipped, refus: debordement ? messageDebordement(debordement) : null }
 }
 
 export async function importStockFile(
@@ -309,7 +370,8 @@ export async function importStockFile(
 ): Promise<ImportResult> {
   const rawRows = await readRows(file)
   const total = rawRows.length
-  const { rows, errors, notes } = mapStockRows(rawRows, sessionId)
+  const { rows, errors, notes, refus } = mapStockRows(rawRows, sessionId)
+  if (refus) throw new Error(refus)
 
   onProgress?.({ parsed: total, uploaded: 0, total: rows.length })
 

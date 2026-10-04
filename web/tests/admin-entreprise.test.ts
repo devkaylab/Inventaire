@@ -9,8 +9,11 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ACTIONS } from '../lib/journal'
+import { derniereDefinition, dossierMigrations } from './migrations'
 
 const lire = (p: string) => readFileSync(path.resolve(__dirname, p), 'utf8')
+/** Le SQL sans ses commentaires : ils citent forcément ce qu'ils décrivent. */
+const sansCommentaires = (t: string) => t.replace(/--.*$/gm, ' ')
 const m1 = lire('../../supabase/migrations/20260820190001_admin_entreprise_drapeau.sql')
 const m2 = lire('../../supabase/migrations/20260820190002_invitations_avec_role.sql')
 const m3 = lire('../../supabase/migrations/20260820190003_fonctions_admin_entreprise.sql')
@@ -107,13 +110,102 @@ describe('fonctions de l’administrateur d’entreprise (migration 3)', () => {
   })
 })
 
-describe('nomination par Quantinvo (migration 4)', () => {
-  it('les deux fonctions admin sont journalisées', () => {
-    for (const fn of ['admin_invite_company_admin', 'admin_revoke_company_admin']) {
-      const corps = m4.split(`function public.${fn}(`)[1]?.split('$$;')[0] ?? ''
-      expect(corps, `${fn} doit appeler log_admin_action`).toContain('log_admin_action')
-      expect(corps, `${fn} doit vérifier is_admin`).toContain('is_admin()')
+describe('nomination par Quantinvo', () => {
+  /**
+   * ⚠️ **CETTE GARDE LISAIT `m4`, DONC UN FICHIER NOMMÉ EN DUR.** Elle est
+   * restée verte le 4 octobre 2026 alors qu'`admin_invite_company_admin`
+   * venait d'être réécrite dans une AUTRE migration : elle validait une
+   * définition qui ne tournait plus — le défaut exact que `derniereDefinition`
+   * existe pour empêcher, et qui a déjà coûté deux fois sur ce projet.
+   *
+   * Elle ne cite plus de fichier, et plus de liste : elle DÉDUIT les
+   * fonctions qui touchent au drapeau d'administrateur.
+   */
+  function porteursDuDrapeau(): string[] {
+    const noms = new Set<string>()
+    for (const f of readdirSync(dossierMigrations).filter((f) => f.endsWith('.sql'))) {
+      const texte = readFileSync(path.join(dossierMigrations, f), 'utf8')
+      for (const m of texte.matchAll(/create (?:or replace )?function public\.([a-z_]+)\(/gi)) {
+        const { corps } = derniereDefinition(m[1])
+        if (/is_company_admin\s*=\s*(true|false)/.test(corps)) noms.add(m[1])
+      }
     }
+    return [...noms].sort()
+  }
+
+  const porteurs = porteursDuDrapeau()
+
+  it('il y a bien des fonctions à surveiller', () => {
+    expect(porteurs.length).toBeGreaterThan(0)
+  })
+
+  /**
+   * ⚠️ **LA DÉDUCTION A TROUVÉ UN SECOND PROMOTEUR**, que je ne cherchais
+   * pas : `promouvoir_admin_apres_paiement`. Il n'est PAS une action
+   * d'administration — il est appelé par le webhook Stripe, sans
+   * administrateur humain derrière, pour rattacher le prospect à l'entreprise
+   * qu'il vient de payer. Il ne peut donc ni vérifier `is_admin()` ni
+   * journaliser une action d'admin, et `fulfil_paid_request` trace à sa place.
+   *
+   * Ce qui le protège est AILLEURS, et la garde le vérifie là où il est :
+   * il ne touche qu'un profil SANS entreprise. Déplacer quelqu'un d'une
+   * entreprise à une autre par ce chemin serait la famille de VR-003.
+   */
+  const HORS_ADMINISTRATION = new Map([
+    ['promouvoir_admin_apres_paiement', 'webhook Stripe : aucun administrateur humain derrière'],
+    // ⚠️ Arrivée par la fusion de `main` dans `on-demand`, le 4 octobre 2026.
+    // Le tunnel On-Demand crée l'entreprise du visiteur et le nomme
+    // administrateur de CELLE QU'IL VIENT DE CRÉER. Pas davantage une action
+    // d'administration que la précédente : il n'y a personne derrière, et le
+    // compte promu est celui de l'appelant.
+    ['reserver_ma_mission', 'tunnel On-Demand : le visiteur ouvre sa propre entreprise'],
+  ])
+
+  it('chaque action d’administration est réservée à Quantinvo et journalisée', () => {
+    for (const fn of porteurs.filter((f) => !HORS_ADMINISTRATION.has(f))) {
+      const { corps, fichier } = derniereDefinition(fn)
+      expect(corps, `${fn} (${fichier}) doit vérifier qui appelle`).toContain('is_admin()')
+      expect(corps, `${fn} (${fichier}) doit laisser une trace`).toContain('log_admin_action')
+    }
+  })
+
+  it('et les promoteurs hors administration ne touchent qu’un compte libre', () => {
+    // Chacun a sa protection, et elle n'est pas la même : le chemin du
+    // paiement n'agit que sur un profil SANS entreprise ; le tunnel n'agit que
+    // sur le profil de l'appelant. Dans les deux cas, personne n'est déplacé
+    // d'une entreprise vers une autre — c'est la famille de VR-003.
+    const PROTECTION = new Map([
+      ['promouvoir_admin_apres_paiement', 'company_id is null'],
+      ['reserver_ma_mission', 'where id = v_uid'],
+    ])
+    for (const fn of porteurs.filter((f) => HORS_ADMINISTRATION.has(f))) {
+      const attendu = PROTECTION.get(fn)
+      expect(attendu, `${fn} est exempté sans qu’on dise ce qui le protège`).toBeTruthy()
+      expect(sansCommentaires(derniereDefinition(fn).corps), `${fn} : protection absente`)
+        .toContain(attendu!)
+    }
+  })
+
+  /**
+   * ⚠️ **UNE SEULE FAÇON DE PROMOUVOIR.** Le 4 octobre 2026, la promotion
+   * existait par ADRESSE (`admin_invite_company_admin`, qui sert d'abord à
+   * inviter quelqu'un sans compte). La liste des personnes avait besoin d'une
+   * promotion par IDENTIFIANT. Deux `update` séparés auraient divergé à la
+   * première correction portée sur un seul des deux — c'est la règle des
+   * fonctions sœurs. Le chemin par adresse DÉLÈGUE donc à celui par
+   * identifiant, et n'écrit plus le drapeau lui-même.
+   */
+  it('la promotion n’a qu’une seule implémentation', () => {
+    const promoteurs = porteurs
+      .filter((fn) => !HORS_ADMINISTRATION.has(fn))
+      .filter((fn) => /is_company_admin\s*=\s*true/.test(derniereDefinition(fn).corps))
+    expect(
+      promoteurs,
+      `plusieurs fonctions promeuvent en direct : ${promoteurs.join(', ')}`,
+    ).toHaveLength(1)
+    expect(derniereDefinition('admin_invite_company_admin').corps,
+      'le chemin par adresse doit déléguer, pas recopier')
+      .toContain('public.admin_promouvoir_admin_entreprise(')
   })
 })
 
@@ -130,9 +222,26 @@ describe('écrans', () => {
     expect(pageEquipe).toContain('double')
   })
 
-  it('la fiche entreprise nomme par l’edge function, jamais en direct', () => {
+  it('la fiche entreprise nomme par une porte gardée, jamais en direct', () => {
+    // Deux portes, deux usages : l'edge pour inviter quelqu'un qui n'a pas
+    // encore de compte, la RPC pour basculer une personne déjà listée.
     expect(ficheEntreprise).toContain("functions.invoke('invite-company-admin'")
-    expect(ficheEntreprise).toContain("rpc('admin_revoke_company_admin'")
+    // ⚠️ On cherche le NOM de la fonction, pas la forme de l'appel : la fiche
+    // passe par un helper commun (`appel(...)`) pour les RPC qui rechargent
+    // l'écran, et citer `rpc('…')` ferait tomber la garde sur du code juste.
+    expect(ficheEntreprise).toContain('admin_promouvoir_admin_entreprise')
+    expect(ficheEntreprise).toContain('admin_revoke_company_admin')
+    // Et jamais le drapeau écrit depuis le navigateur.
+    expect(ficheEntreprise).not.toContain(".from('profiles')")
+  })
+
+  it('la bascule se fait des deux côtés, depuis la ligne de la personne', () => {
+    // Demande de Julien, 4 octobre 2026 : « dans personnes ajoute moi un
+    // bouton pour promouvoir en admin », puis « et inversement ».
+    const liste = ficheEntreprise.slice(ficheEntreprise.indexOf('detail.members.map'))
+    expect(liste, 'la ligne doit porter les deux sens').toContain('m.is_company_admin ?')
+    expect(liste).toContain('retirerAdministration(m)')
+    expect(liste).toContain('promouvoir(m)')
   })
 })
 

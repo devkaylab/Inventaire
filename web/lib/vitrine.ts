@@ -15,6 +15,10 @@ export const PREFIXE_EN = '/en'
 /** Les pages françaises qui ont leur jumelle sous `/en`. */
 export const CHEMINS_VITRINE = [
   '/', '/decouvrir', '/tarifs', '/inventaire', '/pourquoi-nous-choisir',
+  // ⚠️ Les trois pages de référencement du 3 octobre 2026. Entrer ici est ce
+  // qui leur donne leur jumelle `/en`, leur `hreflang` et leur place au plan
+  // du site — un test refuse une page de la vitrine sans sa jumelle.
+  '/logiciel-inventaire', '/demarque-inconnue', '/inventaire-tournant',
   '/inscription', '/souscrire', '/superviseur', '/open', '/suppression-compte',
 ] as const
 

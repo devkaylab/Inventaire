@@ -292,7 +292,22 @@ describe('la franchise en base de TVA', () => {
           motif.test(l) &&
           // La condition vit souvent une ligne au-dessus, sur la première
           // branche d'un ternaire.
-          !lignes.slice(Math.max(0, i - 2), i + 3).some((v) => v.includes('TVA_APPLICABLE')))
+          !lignes.slice(Math.max(0, i - 2), i + 3).some((v) => v.includes('TVA_APPLICABLE')) &&
+          /*
+           * ⚠️ AMENDÉE LE 3 OCTOBRE 2026, PAS AFFAIBLIE. Ce que la garde
+           * défend n'a pas changé : **le prix que NOUS facturons ne
+           * s'annonce jamais hors d'une taxe qui ne s'applique pas.** Ce qui
+           * a changé, c'est qu'une page parle désormais du chiffre d'affaires
+           * DU LECTEUR — le taux de démarque se calcule sur le CA hors taxes
+           * du magasin, et c'est le terme comptable exact. Le référent n'est
+           * plus notre tarif, et `TVA_APPLICABLE` n'a rien à y dire.
+           *
+           * L'exemption est donc portée par le SUJET de la phrase, pas par un
+           * marqueur qu'on pourrait poser n'importe où : une ligne qui annonce
+           * un de nos prix ne parle pas du chiffre d'affaires de son lecteur,
+           * donc elle reste prise. Saboter pour le vérifier.
+           */
+          !/chiffre d[’']affaires/i.test(l))
         expect(
           fautives,
           `${fichier.slice(racine.length + 1)} écrit ${motif} sans regarder TVA_APPLICABLE`,

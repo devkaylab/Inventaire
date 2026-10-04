@@ -7,7 +7,7 @@ import { RevealObserver } from '@/components/RevealObserver'
 import { EnTeteAuDefilement } from '@/components/EnTeteAuDefilement'
 import { Parallaxe } from '@/components/Parallaxe'
 import { PRIVACY_URL } from '@/lib/links'
-import { mentionsCompletes } from '@/lib/legal'
+import { mentionsCompletes, venteOuverte } from '@/lib/legal'
 import { LangueToggle } from '@/components/LangueToggle'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { StoreBadges } from '@/components/StoreBadges'
@@ -86,9 +86,26 @@ export function SiteFooter({ langue = 'fr' }: { langue?: Langue }) {
           <Link href={lien('/decouvrir')}>{t('Notre outil')}</Link>
           <Link href={lien('/pourquoi-nous-choisir')}>{t('Pourquoi nous choisir ?')}</Link>
           <Link href={lien('/tarifs')}>{t('Tarifs')}</Link>
+          {/* ⚠️ TROIS PAGES RANGÉES ICI LE 3 OCTOBRE 2026 : elles étaient au
+              plan du site et AUCUNE page ne pointait vers elles. Un moteur
+              suit les liens avant tout — une page que rien ne cite a l'air de
+              n'intéresser personne, et elle n'est explorée qu'en dernier.
+              Le pied est le seul endroit qui couvre toute la vitrine. */}
+          {/* ⚠️ « Souscrire » SUIT L'OUVERTURE DE LA VENTE, comme les mentions
+              légales suivent leur complétude, trois lignes plus bas. Tant que
+              `lib/legal.ts` est incomplet, la page répond « la souscription en
+              ligne ouvre bientôt » : l'annoncer depuis chaque page du site
+              reviendrait à mettre une porte fermée dans la vitrine. Le jour où
+              la vente ouvre, le lien apparaît tout seul. */}
+          {venteOuverte() && <Link href={lien('/souscrire')}>{t('Souscrire')}</Link>}
           <Link href="/login">{t('Se connecter')}</Link>
+          <Link href={lien('/superviseur')}>{t('Accès superviseur')}</Link>
           <a href={PRIVACY_URL} target="_blank" rel="noreferrer">{t('Confidentialité')}</a>
           <Link href="/conditions-generales">{t('Conditions générales')}</Link>
+          {/* ⚠️ Google Play EXIGE une adresse publique de suppression de
+              compte, atteignable sans installer l'application. Elle l'était
+              par son adresse ; elle l'est maintenant par un lien. */}
+          <Link href={lien('/suppression-compte')}>{t('Supprimer son compte')}</Link>
           {/* Une identification à trous ne vaut pas mieux que pas de page : on
               ne l'annonce qu'une fois les mentions requises renseignées. */}
           {mentionsCompletes() && <Link href="/mentions-legales">{t('Mentions légales')}</Link>}

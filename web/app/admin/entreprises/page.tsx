@@ -28,6 +28,7 @@ type CompanyOverview = {
   company_admin_count: number
   pending_invitations: number
   last_session_at: string | null
+  est_test: boolean
 }
 
 function frDate(s: string) {
@@ -135,8 +136,13 @@ export default function AdminEntreprisesPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {/* ⚠️ L'ESSAI SE VOIT AVANT TOUT LE RESTE : sans ça, une
+                    entreprise d'essai se lit comme un client, et ses chiffres
+                    manquants (aucun magasin, pas d'administrateur) se lisent
+                    comme des anomalies à traiter. */}
+                {c.est_test && <span className="role-tag">Essai</span>}
                 {/* Ce qui demande attention se voit sans ouvrir la fiche. */}
-                {c.store_count === 0 && (
+                {!c.est_test && c.store_count === 0 && (
                   <span className="dash-badge dash-badge-counting"><span className="dash-dot" />Aucun magasin</span>
                 )}
                 {c.company_admin_count === 0 ? (

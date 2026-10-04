@@ -1,3 +1,4 @@
+import { boutiquesEnLigne, PUBLIEE_ANDROID, PUBLIEE_IOS } from '@/lib/appStores'
 import { OFFRES, TVA_APPLICABLE } from '@/lib/offres'
 import { SITE_URL, url } from '@/lib/site'
 import { traduction, type Langue } from '@/lib/traduction'
@@ -85,6 +86,23 @@ export function LogicielJsonLd({ langue = 'fr' }: { langue?: Langue }) {
         'Fonctionne hors ligne, synchronisation au retour du réseau',
       ].map((f) => t(f)),
       publisher: { '@id': `${SITE_URL}/#organisation` },
+      /*
+       * ⚠️ LES FICHES DE BOUTIQUE VONT SUR LE LOGICIEL, PAS SUR L'ÉDITEUR.
+       * Une fiche App Store décrit l'application — c'est donc la même entité
+       * que ce bloc, et `sameAs` le dit. La poser sur `Organization` aurait
+       * annoncé la page de l'app comme une page de la société : faux, et
+       * c'est précisément le genre de déclaration qu'un assistant recopie.
+       * `installUrl` est l'autre moitié : là où on obtient le logiciel.
+       *
+       * Et seulement les boutiques OUVERTES — `boutiquesEnLigne` rend la
+       * fiche ou rien, jamais la recherche (voir `lib/appStores.ts`).
+       */
+      ...(boutiquesEnLigne(PUBLIEE_IOS, PUBLIEE_ANDROID).length
+        ? {
+            sameAs: boutiquesEnLigne(PUBLIEE_IOS, PUBLIEE_ANDROID),
+            installUrl: boutiquesEnLigne(PUBLIEE_IOS, PUBLIEE_ANDROID),
+          }
+        : {}),
       offers: OFFRES.map(o => ({
         '@type': 'Offer',
         name: o.nom,

@@ -7,15 +7,18 @@ sur place. **Elle se crée partout où on en a besoin**, avec le mode d'emploi e
 trois étapes (imprimer, coller, indiquer) écrit pour des personnes peu à l'aise :
 
 - app : profil et écran Zones d'un inventaire (`BaliseCreator`, formulaire
-  `BaliseSheetModal`, dessin `src/lib/balises.ts`) ;
-- site : Mon compte et onglet Set up (`BaliseSheetPanel`, dessin
-  `web/lib/balisePdf.ts`, téléchargement du PDF dans le navigateur).
+  `BaliseSheetModal`, fichier + partage dans `src/lib/balises.ts`) ;
+- site : Mon compte et onglet Set up (`BaliseSheetPanel`, téléchargement du
+  PDF dans `web/lib/balisePdf.ts`).
 
-La logique des séries est dupliquée volontairement (`src/lib/baliseSeries.ts`
-et `web/lib/baliseSeries.ts`, un test garde l'identité : `web/tests/balises.test.ts`).
-**Les deux dessins de planche doivent rester identiques** (gabarit Avery L7160,
-QR `SCB1:<numéro>`) : une balise imprimée depuis le site doit se scanner comme
-une balise imprimée depuis l'app. **Aucun compteur de balises n'est affiché**,
+**Le dessin lui-même n'est plus dans ni l'un ni l'autre** (24 septembre 2026) :
+il vit dans `baliseDessin.ts`, recopié à l'identique des deux côtés, avec
+`baliseCode.ts` (le format du QR) et `baliseSeries.ts` (les numérotations).
+Une balise imprimée depuis le site doit se scanner comme une balise imprimée
+depuis l'app : les trois modules portent donc la même marque en en-tête, et
+`web/tests/balises.test.ts` **déduit sa liste de cette marque** avant de
+comparer les textes caractère par caractère. Le gabarit et les cotes sont
+décrits dans la fiche 107. **Aucun compteur de balises n'est affiché**,
 ni dans l'app ni sur le site : personne n'en a l'usage, les zones s'affectent
 par plage libre (`define_zone`).
 

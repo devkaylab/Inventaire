@@ -105,12 +105,81 @@ restent valables ; les étapes 1, 4 et 5 tombent.
 
 ## Étape 4 — Propriété de Quantinvo
 
-- [ ] Déposer la marque « Quantinvo » à l'INPI au nom de Devkaylab SASU.
-      Classes utiles : 9 (logiciels), 42 (SaaS, logiciels en ligne), éventuellement
-      35 (gestion de stocks, services aux entreprises). Une classe coûte
-      environ 190 €, chaque classe supplémentaire environ 40 €.
+- [ ] Déposer la marque « Quantinvo » à l'INPI **au nom propre de Julien**, puis
+      la concéder à Devkaylab SASU par un contrat de licence contre une
+      **redevance de 5 % du chiffre d'affaires** (décision du 3 octobre 2026 ;
+      un premier taux de 15 % a été écarté le même jour, voir ci-dessous).
+      Classes utiles : 9 (logiciels), 42 (SaaS, logiciels en ligne), et 35
+      (gestion de stocks, services aux entreprises) — la 35 n'est plus
+      « éventuelle » depuis qu'On-Demand prévoit de vendre une PRESTATION
+      d'inventaire et pas seulement un logiciel. Une classe coûte environ 190 €,
+      chaque classe supplémentaire environ 40 €.
       Vérifier d'abord la disponibilité sur data.inpi.fr.
-      Fait le : ______  Numéro : ______
+      ✅ **DÉPOSÉE ET PAYÉE LE 3 OCTOBRE 2026** — 270 € (190 € la première classe
+      + 2 × 40 €). Référence client `QUANTINVO-2026-FR`. **Numéro national : 5304695**
+      (lu sur le récapitulatif, `Produits/Quantinvo/INPI.pdf` dans l'iCloud).
+      · **Marque verbale `Quantinvo`**, pas figurative : elle protège le mot
+        quelle que soit sa typographie, un logo ne protégerait que son dessin.
+      · **18 libellés, tous issus de la liste officielle (TMClass)**, aucune
+        saisie libre — c'est ce qui évite une objection de l'examinateur.
+        ⚠️ Le panier s'était rempli tout seul des **47 termes de la classe 9
+        entière** (combinaisons de plongée, extincteurs, bornes de recharge).
+        Vidé et refait à la main. Un libellé trop large n'est pas une sécurité :
+        il multiplie les portes d'opposition et expose à la déchéance pour
+        non-usage au bout de cinq ans. Le meilleur terme du dépôt est
+        « Logiciels d'inventaires » — il nomme exactement le produit.
+      · **Polynésie française : NON.** L'option coûtait 60 € et le territoire
+        n'a ni client ni projet. Elle ne peut plus être ajoutée après coup.
+      · **Aucune priorité revendiquée** : c'est ce dépôt qui crée la date, et
+        elle ouvre **six mois pour étendre à l'UE** (~1 050 €) en la conservant.
+        Échéance : 3 avril 2027.
+      ⚠️ **DISPONIBILITÉ VÉRIFIÉE LE 3 OCTOBRE, MAIS EN SURFACE** : zéro
+      « Quantinvo » à l'INPI comme sur TMview (toutes bases européennes). En
+      revanche `quantivia` est enregistrée à l'**EUIPO depuis 2017, en classes 9
+      et 42** — les mêmes que nous, sur un territoire qui couvre la France.
+      Début commun, rythme proche. L'élément `QUANTI` est faiblement distinctif
+      et les finales diffèrent, donc rien n'est joué — mais c'est le candidat à
+      une opposition, et la recherche approfondie de l'INPI n'a PAS été commandée.
+      ⚠️ **L'INPI ne vérifie aucune antériorité de lui-même et ne prévient
+      personne.** Il publie au BOPI (~6 semaines), et une fenêtre d'opposition
+      de **2 mois** s'ouvre. Que quelqu'un réagisse dépend de son abonnement à un
+      service de surveillance. Passer les 2 mois n'immunise pas : une action en
+      nullité reste possible jusqu'à **5 ans** de tolérance en connaissance de
+      cause.
+      ⚠️ **La facture de 270 € est une dépense PERSONNELLE**, pas de la SASU :
+      la marque est au nom propre de Julien. Ne pas la passer dans les comptes
+      de Devkaylab — c'est la contrepartie du montage à redevance.
+
+      ⚠️ **CE CHOIX RENVERSE L'HYPOTHÈSE DE DÉPART** (« la société doit posséder
+      la marque », en tête de ce fichier). La raison écrite alors tient toujours :
+      un investisseur ou un acheteur qui découvre que la marque appartient au
+      dirigeant en demandera l'apport avant de signer, et ça se négociera à ce
+      moment-là, jamais en faveur de Julien. Le choix est assumé, il n'est pas
+      oublié.
+
+      ⚠️ **Le taux doit être défendable comme un prix de marché.** 15 % relève du
+      luxe ou de la franchise, où la marque apporte la clientèle ; 5 % est le haut
+      de la fourchette usuelle pour une marque de logiciel, et se défend ici parce
+      que « Quantinvo » EST le nom du produit, des deux fiches de boutique, du
+      domaine et de toute l'identité commerciale. En dessous de 3 %, aucune
+      discussion possible. Au-delà de 5 %, prévoir de quoi le justifier.
+
+      ⚠️ **Trois choses à ne pas rater dans le contrat :**
+      · la société ne doit PAS payer le dépôt — la marque est à Julien, les 230 à
+        270 € sont à sa charge ;
+      · c'est une convention réglementée (associé unique et président) : à
+        consigner dans le registre des décisions ;
+      · prévoir ce qui se passe en année déficitaire — sans clause, 5 % du CA
+        sont dus même quand la société perd de l'argent. Suspension, plancher ou
+        plafond, au choix de l'expert-comptable.
+
+      ⚠️ **« Le CA fait avec la marque » vaut 100 % du CA** : tout passe par
+      Quantinvo. Ne pas écrire une formule qui laisse croire à une part.
+
+      ⚠️ **À faire valider par l'expert-comptable AVANT que ça entre dans les
+      comptes**, pas après. C'est lui qui défendra le taux en cas de contrôle.
+      Inscrire aussi la licence au registre national des marques : sans
+      inscription, elle n'est pas opposable aux tiers.
 - [x] **Numéro D-U-N-S de Devkaylab : `288196187`.** Il EXISTAIT DÉJÀ —
       D&B l'avait attribué sans qu'on demande rien, ce qui est courant pour une
       société française une fois immatriculée. Trouvé le 15 septembre 2026 par
@@ -175,8 +244,12 @@ restent valables ; les étapes 1, 4 et 5 tombent.
       pas une option.
 
       **Demande de conversion envoyée le 15 septembre 2026** par ce formulaire.
-      Réponse attendue par courriel ; Apple n'annonce aucun délai pour ce cas.
-      Reçue le : ______  Issue : ______
+      **Réponse d'Apple le 21 septembre 2026** (Sukkry, dossier 102964327628) :
+      six conditions, et « respond to this email » quand on est prêt.
+      **Réponse envoyée le 28 septembre 2026** — la migration est lancée. Le
+      texte et les pièges sont dans
+      `docs/entreprise/reponse-apple-migration-organisation.md`.
+      Aboutie le : ______
 - [ ] Google Play : même logique, compte développeur au nom de la société
       (utile pour le build Android en backlog).
 - [ ] Nom de domaine quantinvo.com : mettre la société comme titulaire
