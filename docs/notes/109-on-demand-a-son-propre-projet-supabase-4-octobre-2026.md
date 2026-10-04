@@ -73,14 +73,48 @@ Le dump est `--schema-only`.
 - **Aucun réglage d'authentification** n'a été recopié (gabarits d'e-mail,
   redirections). À faire le jour où un parcours d'invitation sera testé.
 
-## Il reste à brancher l'aperçu
+## L'aperçu est branché — et deux pièges Vercel au passage
 
-Dans Vercel, **portée Preview uniquement** :
+Fait le jour même, dans la console Vercel. **Deux choses que personne
+n'aurait devinées :**
+
+1. ⚠️ **La variable de la clé en Preview s'appelait
+   `EXT_PUBLIC_SUPABASE_ANON_KEY`** — il manquait le `N`. Elle n'a donc
+   jamais été lue par quoi que ce soit, et c'est pour ça que l'aperçu tournait
+   sur la clé de production : `envAnonKey` était vide, et le repli prenait la
+   main. Le défaut vivait là depuis le 12 août.
+2. ⚠️ **Vercel refuse désormais qu'une variable `NEXT_PUBLIC_*` soit de type
+   « Secret »**, et un Secret ne peut plus être converti en « Config » : il est
+   en écriture seule, donc illisible, donc impossible à reprendre. Les anciennes
+   ont dû être **supprimées puis recréées en Config**. Leurs valeurs d'origine
+   sont perdues — elles pointaient sur la production, mesuré dans le bundle.
+
+État posé, **portée Preview uniquement, type Config** :
 
 ```
 NEXT_PUBLIC_SUPABASE_URL      = https://lqgusznqcunjhrqslcug.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY = sb_publishable_ISjK0RBpXaogcU7fKrtJFw_GfNUbfx1
 ```
 
-Puis redéployer. Tant que ce n'est pas fait, le garde-fou de la note 108 arrête
-l'aperçu au lieu de le laisser écrire en production — c'est voulu.
+La production n'a pas été touchée : ses deux variables du 4 août sont
+intactes.
+
+## Mesuré après redéploiement
+
+Les deux bundles servis, comptés script par script :
+
+| | réf. On-Demand | réf. production |
+|---|---|---|
+| `quantinvo-git-on-demand…vercel.app` | **1** | **0** |
+| `www.quantinvo.com` | **0** | **1** |
+
+La séparation est donc effective, et dans les deux sens. Le formulaire de
+connexion de la production répond normalement ; l'aperçu démarre sans
+l'écran d'arrêt de la note 108, ce qui prouve au passage que les deux
+variables sont bien lues.
+
+⚠️ Le repli écrit en dur **disparaît du bundle** quand les variables existent :
+`process.env.X || FALLBACK` se résout à la construction, et le minifieur jette
+la branche morte. Zéro occurrence de la production dans l'aperçu ne veut donc
+pas dire que le repli a été retiré du code — il est toujours là, pour la
+production.
