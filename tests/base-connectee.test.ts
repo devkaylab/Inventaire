@@ -142,6 +142,18 @@ describe('le script de simulateur ne peut pas mentir sur la base', () => {
     expect(script).not.toMatch(/>\s*\.env\b/)
   })
 
+  it('⚠️ il vérifie ce qu’il a VRAIMENT installé', () => {
+    // « ✓ Prêt » a menti le 4 octobre 2026 : `simctl install` a rendu 0 alors
+    // que l'appareil s'était éteint, et l'app lancée était la précédente. Le
+    // bandeau semblait ne pas marcher. On compare donc le JS posé à celui
+    // qu'on vient de construire, au lieu de croire le code de retour.
+    const bloc = script.slice(script.indexOf('simctl install'))
+    expect(bloc).toContain('get_app_container')
+    expect(bloc).toMatch(/md5 -q "\$POSE\/main\.jsbundle"/)
+    expect(bloc.slice(0, bloc.indexOf('terminate')), 'il n’arrête pas sur une installation périmée')
+      .toContain('exit 1')
+  })
+
   it('un fichier d’environnement absent arrête tout', () => {
     const bloc = script.slice(script.indexOf('if [ -n "$BASE" ]'))
     expect(bloc).toMatch(/if \[ ! -f "\$FICHIER" \]/)

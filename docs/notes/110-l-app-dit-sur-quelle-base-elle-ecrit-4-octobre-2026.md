@@ -67,10 +67,39 @@ s'arrête et donne la commande juste.
 On-Demand ne laisse pas de trace dans le produit qui tourne. Le mécanisme, lui,
 est générique — `BASE=<nom>` lit `.env.<nom>`.
 
-## Vérifié
+## Vérifié au simulateur, dans les DEUX états
+
+iPhone 17 Pro, `CONFIG=Release`, écran de connexion :
+
+| build | bandeau | contenu décalé | réf. On-Demand dans le bundle |
+|---|---|---|---|
+| `BASE=ondemand` | **rouge, « BASE D'ESSAI — pas la production · lqgusznqcunjhrqslcug »** | oui | 1 |
+| sans `BASE` | **aucun** | non | 0 |
+
+Deux bundles d'empreintes différentes, et le second ne contient **aucune**
+référence au projet d'essai.
+
+## ⚠️ Deux pièges payés pour y arriver
+
+**1. `strings` ne voit pas le texte du bandeau.** Première mesure : zéro
+occurrence de « BASE D'ESSAI » dans le bundle — de quoi conclure que le build
+était périmé. Faux. **Hermes range en UTF-16 toute chaîne contenant un
+caractère non-ASCII**, et l'apostrophe typographique en est un. En comparant
+les octets dans les deux encodages, les textes étaient bien là. Un chiffre
+invraisemblable est d'abord un défaut de mesure.
+
+**2. ⚠️ « ✓ Prêt » a menti, et le script le dit maintenant.** L'application
+lancée n'était PAS celle qui venait d'être construite : `simctl install` avait
+rendu 0 alors que le simulateur s'était éteint entre-temps. Le bandeau semblait
+ne pas marcher. `scripts/simulateur.sh` **compare désormais le JavaScript
+réellement installé à celui qu'il vient de produire**, et s'arrête si les deux
+diffèrent. Le code de retour ne suffisait pas — c'est tout le propos.
+
+## Vérifié aussi
 
 - **Six sabotages, six morsures** : l'hôte de production lu dans
   l'environnement, un `includes` au lieu de l'égalité, la sortie du composant
   déplacée après la construction de la vue, la couleur prise au thème, le
   bandeau retiré du layout, et `BASE` acceptant le mode Debug.
-- 549 tests de l'app au vert, 1 565 du site, `tsc` sans erreur.
+- Plus une septième garde, sabotée elle aussi : le contrôle d'installation.
+- 550 tests de l'app au vert, 1 565 du site, `tsc` sans erreur.

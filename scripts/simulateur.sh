@@ -165,6 +165,24 @@ node node_modules/expo-constants/scripts/getAppConfig.js "$RACINE" "$APP/EXConst
 
 echo "→ Installation et lancement…"
 xcrun simctl install "$UDID" "$APP"
+
+# ⚠️ **« ✓ PRÊT » A DÉJÀ MENTI — 4 octobre 2026.** `simctl install` a rendu 0
+# alors que l'appareil s'était éteint entre-temps : l'application lancée
+# ensuite était l'INSTALLATION PRÉCÉDENTE, et le bandeau qu'on venait d'écrire
+# semblait ne pas marcher. Une demi-heure passée à soupçonner le code.
+#
+# On ne croit donc plus le code de retour : on compare le JavaScript RÉELLEMENT
+# installé à celui qu'on vient de construire.
+POSE=$(xcrun simctl get_app_container "$UDID" com.quantinvo.app 2>/dev/null || true)
+if [ -n "$POSE" ] && [ -f "$APP/main.jsbundle" ]; then
+  if [ "$(md5 -q "$POSE/main.jsbundle")" != "$(md5 -q "$APP/main.jsbundle")" ]; then
+    echo "✗ L'application installée n'est PAS celle qui vient d'être construite."
+    echo "  Le simulateur s'est probablement éteint pendant l'installation."
+    echo "  Relancer la commande résout en général."
+    exit 1
+  fi
+fi
+
 xcrun simctl terminate "$UDID" com.quantinvo.app 2>/dev/null || true
 
 # Barre d'état figée : sans elle, l'heure et la batterie changent d'une
