@@ -210,41 +210,21 @@ export default function MonInventairePage() {
             </p>
           ) : (
             <>
+              {/* ⚠️ GRATUITE, ET SANS CONDITION (4 octobre 2026). Il y avait ici
+                  un tableau de paliers — « si vous annulez / vous payez » —
+                  justifié par la paie des inventoristes qui s'étaient rendus
+                  disponibles. Plus personne ne se rend disponible : des frais
+                  sans cette raison ne seraient plus qu'une punition. Décision
+                  de Julien, « pas de frais ». Le tableau part avec eux : un
+                  tableau à une seule ligne à zéro se lit comme un piège qu'on
+                  cherche. */}
               <p className="muted">
-                {gratuite
-                  ? `Gratuite jusqu’au ${frais.gratuite_jusqu_au
-                      ? `${enDateLongue(frais.gratuite_jusqu_au)} à ${enHeure(frais.gratuite_jusqu_au)}` : ''}.`
-                  : 'Passé le délai gratuit, une part du montant reste due.'}
+                L’annulation est gratuite, jusqu’au début de l’inventaire.
               </p>
-              <div className="dash-table-wrap" style={{ marginTop: 14 }}>
-                <table className="dash-table">
-                  <thead><tr><th>Si vous annulez</th><th className="num">Vous payez</th></tr></thead>
-                  <tbody>
-                    {frais.paliers.map((p) => (
-                      <tr key={p.heures_avant}>
-                        <td>
-                          {p.heures_avant >= 72 ? 'Plus de 72 h avant'
-                            : p.heures_avant >= 24 ? 'De 72 h à 24 h avant'
-                            : 'Moins de 24 h avant'}
-                        </td>
-                        <td className="num">{euros(p.client_cents / 100)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {/* ⚠️ La phrase qui explique, et elle n'est pas cosmétique : sans
-                  elle, des frais d'annulation se lisent comme une punition. */}
-              <p className="muted small" style={{ marginTop: 12 }}>
-                {/* ⚠️ La phrase qui explique, et elle n'est pas cosmétique :
-                    sans elle, des frais d'annulation se lisent comme une
-                    punition. L'ancienne disait « nous rémunérons les
-                    inventoristes qui se sont rendus disponibles » — plus
-                    personne ne se rend disponible. Ce qui est réservé, et qui
-                    ne l'est pour personne d'autre, c'est la licence. */}
-                Votre licence et vos appareils sont retenus pour cette
-                semaine-là.
-              </p>
+              {/* ⚠️ Il y avait ici une phrase qui JUSTIFIAIT les frais — « nous
+                  rémunérons les inventoristes qui se sont rendus disponibles ».
+                  Sans frais, elle n'a plus rien à expliquer : une justification
+                  sans montant fait chercher un montant. */}
 
               {!demandeAnnulation ? (
                 <p style={{ marginTop: 18 }}>
@@ -256,11 +236,9 @@ export default function MonInventairePage() {
               ) : (
                 <div className="od-confirmer">
                   <p>
-                    <b>
-                      {frais.a_payer_cents === 0
-                        ? 'Cette annulation est gratuite.'
-                        : `Cette annulation vous sera facturée ${euros(frais.a_payer_cents / 100)}.`}
-                    </b>
+                    {/* La branche « facturée » est partie avec les frais : la
+                        garder aurait laissé croire qu'un cas la déclenche. */}
+                    <b>Cette annulation est gratuite.</b>
                   </p>
                   <div className="res-actions">
                     <button type="button" className="btn btn-ghost" disabled={occupe}
