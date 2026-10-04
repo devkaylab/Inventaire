@@ -15,7 +15,7 @@
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { derniereDefinition, dossierMigrations } from './migrations'
+import { derniereDefinition, dossierMigrations, fichierDe } from './migrations'
 import {
   REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee,
   FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
@@ -819,5 +819,50 @@ describe('⚠️ « envoyer une équipe » ne gouverne plus rien sur le chemin l
     // Côté bibliothèque, la règle était déjà juste : on la fige.
     const lib = readFileSync(path.resolve(__dirname, '..', 'lib/prixOnDemand.ts'), 'utf8')
     expect(lib).toMatch(/if \(!logiciel && !estDesservi\(r\.codePostal\)\) return \{ ok: false, refus: 'hors_zone' \}/)
+  })
+})
+
+describe('⚠️ les magasins se lisent par une fonction, jamais par la table', () => {
+  /**
+   * 4 octobre 2026 : `/on-demand/groupe` rendait « permission denied for table
+   * stores ». `mesEtablissements()` faisait `from('stores').select(...)`, et
+   * `authenticated` n'a pas `select` sur cette table — ses droits sont `dDtm`.
+   * L'écran n'avait donc JAMAIS fonctionné, ni en préversion ni en production :
+   * il n'avait simplement jamais été exercé contre une vraie base.
+   *
+   * ⚠️ La réparation ne consiste PAS à ouvrir `stores` : ce serait élargir une
+   * porte dans toute la production pour un écran d'une branche.
+   */
+  const racine = path.resolve(__dirname, '..')
+
+  /** La liste SE DÉDUIT : tout fichier du site qui parle à Supabase. */
+  function fichiersQuiLisentDesMagasins(): string[] {
+    const trouves: string[] = []
+    const descendre = (rel: string) => {
+      for (const e of readdirSync(path.join(racine, rel), { withFileTypes: true })) {
+        const r = path.join(rel, e.name)
+        if (e.isDirectory()) { if (e.name !== 'node_modules' && e.name !== '.next') descendre(r); continue }
+        if (!/\.tsx?$/.test(e.name)) continue
+        if (/from\(\s*'stores'\s*\)/.test(readFileSync(path.join(racine, r), 'utf8'))) trouves.push(r)
+      }
+    }
+    for (const d of ['app', 'components', 'lib', 'hooks']) descendre(d)
+    return trouves
+  }
+
+  it('aucun écran ne lit la table `stores` en direct', () => {
+    const directs = fichiersQuiLisentDesMagasins()
+    expect(directs, `lecture directe de stores (interdite à authenticated) : ${directs.join(', ')}`)
+      .toEqual([])
+  })
+
+  it('la fonction referme sa porte et trie par l’appelant', () => {
+    const def = derniereDefinition('mes_etablissements')
+    // Elle trie sur `auth.uid()`, pas sur un paramètre de l'appelant.
+    expect(def.corps).toContain('ss.user_id = auth.uid()')
+    expect(def.corps).not.toMatch(/p_user|p_company/)
+    // `create or replace` rend EXECUTE à PUBLIC : les droits se reposent.
+    expect(fichierDe('mes_etablissements')).toMatch(
+      /revoke all on function public\.mes_etablissements\(\) from public, anon/)
   })
 })

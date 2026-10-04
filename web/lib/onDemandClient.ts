@@ -84,8 +84,13 @@ export type Etablissement = {
  * demande. La maquette en fait la liste de départ d'une nouvelle réservation.
  */
 export async function mesEtablissements(): Promise<Etablissement[]> {
+  // ⚠️ PAR LA FONCTION, PAS PAR LA TABLE. `authenticated` n'a pas le droit de
+  // lire `stores` (ses droits sont `dDtm`, jamais `select`) : la lecture
+  // directe d'avant rendait « permission denied for table stores », et cet
+  // écran n'a donc jamais fonctionné. Tout le produit passe par une fonction
+  // `security definer` ; celui-ci ne le faisait pas.
   const [stores, missions] = await Promise.all([
-    supabase.from('stores').select('id,name,address,sqm').order('name'),
+    supabase.rpc('mes_etablissements'),
     mesMissions(),
   ])
   if (stores.error) throw stores.error
