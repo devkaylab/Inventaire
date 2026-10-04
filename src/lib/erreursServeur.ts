@@ -46,6 +46,7 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   "Ce compte est administrateur de l'entreprise : son rôle est géré par Quantinvo.": 'This account is a company administrator. Its role is managed by Quantinvo.',
   "Ce compte est déjà administrateur de l'entreprise.": 'This account is already a company administrator.',
   "Ce compte n'appartient à aucune entreprise.": 'This account does not belong to any company.',
+  "Cette notification n'existe plus.": 'This notification no longer exists.',
   "Ce compte n'a pas encore de profil.": 'This account has no profile yet.',
   "Ce compte n'est pas administrateur d'entreprise.": 'This account is not a company administrator.',
   'Ce devis a expiré. Demandez-nous une nouvelle proposition.': 'This quote has expired. Ask us for a new one.',

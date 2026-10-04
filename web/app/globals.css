@@ -3398,7 +3398,6 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   padding: 10px 12px; border-radius: var(--r); text-align: left;
   background: none; border: none; color: inherit; font-family: inherit;
 }
-.notif-rang + .notif-rang { border-top: 1px solid var(--hairline); border-radius: 0 0 var(--r) var(--r); }
 .notif-rang-lien { cursor: pointer; }
 .notif-rang-lien:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
 .notif-corps { min-width: 0; flex: 1; }
@@ -3412,6 +3411,30 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
    comme une étiquette et n'incitait à rien. */
 .notif-cta { display: inline-block; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; }
 .notif-point { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; margin-top: 6px; }
+
+/* ── Effacer une notification (4 octobre 2026) ───────────────────────────
+   ⚠️ LA CROIX EST UNE SŒUR DE LA LIGNE, PAS SON ENFANT : une ligne qui mène
+   quelque part est déjà un `<button>`, et un bouton dans un bouton n'est ni
+   valide ni atteignable au clavier. Le trait de séparation a donc migré de
+   `.notif-rang + .notif-rang` vers la ligne qui les enveloppe — sans ça il
+   aurait disparu, et rien ne l'aurait signalé. */
+.notif-ligne { display: flex; align-items: flex-start; border-radius: var(--r); }
+.notif-ligne + .notif-ligne { border-top: 1px solid var(--hairline); border-radius: 0 0 var(--r) var(--r); }
+.notif-ligne:hover .notif-x { opacity: 1; }
+.notif-x {
+  flex: none; align-self: center; margin-right: 6px;
+  width: 24px; height: 24px; border-radius: var(--r);
+  border: 0; background: none; cursor: pointer;
+  color: var(--text-3); font-size: 17px; line-height: 1;
+  opacity: 0; transition: opacity .15s ease, color .15s ease;
+}
+.notif-x:hover, .notif-x:focus-visible { opacity: 1; color: var(--text); }
+
+/* Le titre du panneau porte « Tout effacer » à sa droite. */
+.notif-panneau-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+/* Le sujet d'une conversation, et son effacement, sur la même ligne. */
+.fil-tete-haut { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
 /* La ligne des appareils, dans le bloc d'un magasin de la console. */
 .store-appareils { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }

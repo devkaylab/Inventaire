@@ -1929,4 +1929,13 @@ export const en: Dictionnaire = {
   // Les trois liens rangés au pied le 3 octobre 2026.
   "Souscrire": "Subscribe",
   "Accès superviseur": "Supervisor access",
+
+  // Effacer une conversation et ses notifications (4 octobre 2026).
+  "Effacer cette conversation ?": "Delete this conversation?",
+  "Elle disparaît de votre boîte, définitivement : il n’y a pas de corbeille.": "It disappears from your inbox for good: there is no trash.",
+  "%{count} message effacé de votre côté.": {"one": "%{count} message deleted on your side.", "other": "%{count} messages deleted on your side."},
+  "Votre interlocuteur garde la conversation entière.": "The other person keeps the whole conversation.",
+  "S’il vous réécrit, une nouvelle conversation s’ouvrira — sans ce qui a été effacé.": "If they write to you again, a new conversation opens — without anything you deleted.",
+  "Tout effacer": "Delete all",
+  "Effacer cette notification": "Delete this notification",
 }

@@ -11,7 +11,7 @@
 // (`marquer_notifications_lues`), la pastille tombe. Les libellés sont figés
 // à l'écriture côté serveur ; ici on ne fait que les mettre en phrase.
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { relativeTime } from '@/lib/format'
@@ -173,15 +173,42 @@ export function Notifications() {
   const [liste, setListe] = useState<Notif[]>([])
   const boiteRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    let actif = true
+  // ⚠️ `setState` RESTE DANS LE RAPPEL DE LA PROMESSE, pas dans le corps de
+  // l'effet : c'est la forme que la règle `react-hooks` accepte — on
+  // s'abonne à un système extérieur, on ne met pas l'état à jour en
+  // cascade. En `await`ant dans le corps, le linter avertit.
+  const charger = useCallback(() =>
     supabase.rpc('mes_notifications').then(({ data, error }) => {
-      if (!actif || error || !data) return
+      if (error || !data) return
       setNonLues(Number(data.non_lues ?? 0))
       setListe((data.liste ?? []) as Notif[])
-    })
-    return () => { actif = false }
-  }, [])
+    }), [])
+
+  // ⚠️ UN SEUL APPEL DANS TOUT CE FICHIER, et une garde le compte
+  // (`tests/decompte-appareils.test.ts`) : la cloche ne sonde pas, elle lit
+  // une fois au montage et après chaque effacement. En ajoutant `charger`
+  // j'avais laissé l'appel d'origine à côté — deux chemins pour la même
+  // lecture, et la garde a mordu.
+  useEffect(() => { void charger() }, [charger])
+
+  /**
+   * ⚠️ LA CLOCHE MÊLE DEUX CHOSES : de vraies notifications, qui
+   * n'appartiennent qu'à soi, et un reflet des conversations. Seules les
+   * premières s'effacent ici — une conversation s'efface depuis Messages, là
+   * où on voit ce qu'on efface. Vider la cloche en emportant au passage un
+   * échange avec un client serait une perte que personne n'a demandée.
+   */
+  const effacable = (n: Notif) => n.type !== 'message'
+
+  async function effacer(n: Notif) {
+    await supabase.rpc('effacer_ma_notification', { p_id: n.id })
+    await charger()
+  }
+
+  async function toutEffacer() {
+    await supabase.rpc('effacer_mes_notifications')
+    await charger()
+  }
 
   useEffect(() => {
     if (!ouvert) return
@@ -247,7 +274,16 @@ export function Notifications() {
 
       {ouvert && (
         <div className="notif-panneau" role="dialog" aria-label={t('Notifications')}>
-          <div className="notif-panneau-tete">{t('Notifications')}</div>
+          <div className="notif-panneau-tete">
+            <span>{t('Notifications')}</span>
+            {/* Il n'y a pas de corbeille : l'effacement est sans retour, et le
+                bouton n'apparaît que s'il y a quelque chose à effacer. */}
+            {liste.some(effacable) && (
+              <button type="button" className="link-btn" onClick={toutEffacer}>
+                {t('Tout effacer')}
+              </button>
+            )}
+          </div>
           {liste.length === 0 ? (
             <p className="notif-vide">{t('Rien pour l’instant.')}</p>
           ) : (
@@ -263,15 +299,32 @@ export function Notifications() {
                   </div>
                 </>
               )
-              return p.lien ? (
-                <button type="button" className="notif-rang notif-rang-lien" key={n.id} onClick={() => ouvrir(p.lien)}>
-                  <span className="notif-corps">{corps}</span>
-                  {!n.lu && <span className="notif-point" aria-label={t('non lue')} />}
-                </button>
-              ) : (
-                <div className="notif-rang" key={n.id}>
-                  <span className="notif-corps">{corps}</span>
-                  {!n.lu && <span className="notif-point" aria-label={t('non lue')} />}
+              // ⚠️ LA CROIX EST À CÔTÉ DE LA LIGNE, PAS DEDANS : une ligne
+              // qui mène quelque part EST un bouton, et un bouton dans un
+              // bouton n'est ni valide ni cliquable au clavier.
+              return (
+                <div className="notif-ligne" key={n.id}>
+                  {p.lien ? (
+                    <button type="button" className="notif-rang notif-rang-lien" onClick={() => ouvrir(p.lien)}>
+                      <span className="notif-corps">{corps}</span>
+                      {!n.lu && <span className="notif-point" aria-label={t('non lue')} />}
+                    </button>
+                  ) : (
+                    <div className="notif-rang">
+                      <span className="notif-corps">{corps}</span>
+                      {!n.lu && <span className="notif-point" aria-label={t('non lue')} />}
+                    </div>
+                  )}
+                  {effacable(n) && (
+                    <button
+                      type="button"
+                      className="notif-x"
+                      onClick={() => effacer(n)}
+                      aria-label={t('Effacer cette notification')}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               )
             })
