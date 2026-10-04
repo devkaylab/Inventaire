@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { configDeRepli } from './apercuSansBase'
 
 // Valeurs publiques de repli.
 //
@@ -19,23 +20,28 @@ import { createClient } from '@supabase/supabase-js'
 // production garde les siennes, et pointer un déploiement sur un autre projet
 // Supabase reste possible sans toucher à ce fichier.
 //
+// ⚠️ ET CE REPLI EST LA PRODUCTION. Un APERÇU qui tombe dessus écrirait chez
+// les vrais clients : `lib/apercuSansBase.ts` le détecte et `GardeApercu`
+// refuse alors d'ouvrir l'app. La production, elle, garde son repli.
+//
 // À maintenir : si la clé publishable est révoquée ou tournée côté Supabase,
 // mettre à jour la constante ci-dessous.
 const FALLBACK_URL = 'https://heabesqvlinzarqenymj.supabase.co'
 const FALLBACK_ANON_KEY = 'sb_publishable_J857c9oNhoSphjsKD6bM1Q_Cvw7t8B2'
 
-const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const envAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-const url = envUrl || FALLBACK_URL
-const anonKey = envAnonKey || FALLBACK_ANON_KEY
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_URL
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_ANON_KEY
 
 /** Adresse et clé publique du projet, pour un second client jetable (voir `lib/reauth.ts`). */
 export const supabaseUrl = url
 export const supabasePublishableKey = anonKey
 
-/** `true` quand le déploiement tourne sur le repli faute de variables d'environnement. */
-export const usingFallbackConfig = !envUrl || !envAnonKey
+/**
+ * `true` quand le déploiement tourne sur le repli faute de variables
+ * d'environnement. La règle vit dans `lib/apercuSansBase.ts` — une seule
+ * définition, pour que le garde et le client ne puissent pas diverger.
+ */
+export const usingFallbackConfig = configDeRepli
 
 if (usingFallbackConfig && typeof window !== 'undefined') {
   console.warn(

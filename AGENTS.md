@@ -137,3 +137,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [« Pourquoi nous choisir » et « L'inventaire », refondues](docs/notes/105-pourquoi-et-inventaire-refondues-19-septembre-2026.md)
 - [⚠️ Apple refuse le build 5 : `supportsTablet: false` n'épargne pas l'iPad](docs/notes/106-apple-refuse-le-build-5-plantage-au-lancement-sur-ipad-22-se.md)
 - [La balise rétrécit, et le dessin devient unique](docs/notes/107-la-balise-retrecit-et-le-dessin-devient-unique-24-septembre-2026.md)
+- [⚠️ Un aperçu n'écrit pas dans la production](docs/notes/108-un-apercu-n-ecrit-pas-dans-la-production-4-octobre-2026.md)

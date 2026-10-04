@@ -6,6 +6,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import { LangueProvider } from '@/lib/i18n'
 import { OrganisationJsonLd } from '@/components/DonneesStructurees'
+import { GardeApercu } from '@/components/GardeApercu'
 import { SITE_URL } from '@/lib/site'
 import './globals.css'
 
@@ -113,18 +114,23 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <script dangerouslySetInnerHTML={{ __html: LANG_INIT }} />
         <OrganisationJsonLd />
-        {/* La langue de l'espace connecté se relit APRÈS l'hydratation (voir
-            lib/i18n.tsx) : le serveur rend en français, le navigateur aussi au
-            premier passage, puis la préférence s'applique. La vitrine, elle,
-            n'appelle pas ce module et reste en français. */}
-        <LangueProvider>
-          <ToastProvider>
-            <ConfirmProvider>
-              {children}
-            </ConfirmProvider>
-          </ToastProvider>
-        </LangueProvider>
-        <ThemeToggle />
+        {/* ⚠️ LE GARDE ENVELOPPE TOUT, providers compris : un aperçu tombé sur
+            le repli de production ne doit pas même monter l'arbre qui porte
+            les écrans connectés. Voir components/GardeApercu.tsx. */}
+        <GardeApercu>
+          {/* La langue de l'espace connecté se relit APRÈS l'hydratation (voir
+              lib/i18n.tsx) : le serveur rend en français, le navigateur aussi au
+              premier passage, puis la préférence s'applique. La vitrine, elle,
+              n'appelle pas ce module et reste en français. */}
+          <LangueProvider>
+            <ToastProvider>
+              <ConfirmProvider>
+                {children}
+              </ConfirmProvider>
+            </ToastProvider>
+          </LangueProvider>
+          <ThemeToggle />
+        </GardeApercu>
       </body>
     </html>
   )
