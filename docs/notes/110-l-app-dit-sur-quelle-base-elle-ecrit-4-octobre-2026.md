@@ -95,6 +95,21 @@ ne pas marcher. `scripts/simulateur.sh` **compare désormais le JavaScript
 réellement installé à celui qu'il vient de produire**, et s'arrête si les deux
 diffèrent. Le code de retour ne suffisait pas — c'est tout le propos.
 
+## ⚠️ Troisième piège : le script n'imposait pas Xcode 26.6
+
+Julien a lancé la commande sans le préfixe `DEVELOPER_DIR=…` — que j'avais mis
+sans y penser dans mes propres essais. Le build est parti sur **Xcode 27**,
+`iPhoneSimulator27.0.sdk`, et a échoué sur `ExpoModulesJSI xcframework` : un
+mur de clang de trois cents lignes où le seul indice utile était le nom du SDK,
+noyé au milieu.
+
+**Une règle qu'il faut se rappeler à chaque fois n'est pas une règle, c'est un
+piège.** Le script pose maintenant `DEVELOPER_DIR` lui-même quand
+`/Applications/Xcode-26.6.app` existe, annonce la version qu'il emploie, et
+**refuse** un Xcode 27 — sur la version réellement rendue par `xcodebuild`,
+pas sur le chemin, pour qu'un Xcode 27 visé à la main soit arrêté aussi. Un
+`DEVELOPER_DIR` passé par l'appelant reste prioritaire.
+
 ## Vérifié aussi
 
 - **Six sabotages, six morsures** : l'hôte de production lu dans

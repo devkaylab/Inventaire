@@ -126,6 +126,22 @@ describe('le bandeau est réellement monté', () => {
 describe('le script de simulateur ne peut pas mentir sur la base', () => {
   const script = lire('scripts/simulateur.sh')
 
+  it('⚠️ il impose Xcode 26.6 lui-même', () => {
+    // 4 octobre 2026 : la commande lancée sans le préfixe `DEVELOPER_DIR=…` a
+    // compilé avec le SDK 27 et échoué sur un mur de clang où le seul indice
+    // était `iPhoneSimulator27.0.sdk`. Une règle qu'il faut se rappeler à
+    // chaque fois n'est pas une règle. Le script la pose.
+    expect(script).toContain('/Applications/Xcode-26.6.app/Contents/Developer')
+    // Et il laisse passer un DEVELOPER_DIR voulu : essayer un autre Xcode
+    // exprès doit rester possible.
+    expect(script).toMatch(/if \[ -z "\$DEVELOPER_DIR" \]/)
+    // Le refus porte sur la version RÉELLE, pas sur le chemin : un Xcode 27
+    // installé ailleurs, ou visé à la main, doit être arrêté aussi.
+    const refus = script.slice(script.indexOf('VERSION_XCODE='))
+    expect(refus).toMatch(/\*"Xcode 27"\*\)/)
+    expect(refus.slice(0, refus.indexOf('esac'))).toContain('exit 1')
+  })
+
   it('⚠️ BASE refuse le mode Debug', () => {
     // En Debug le JS vient de Metro, lancé ailleurs, qui lit `.env` : la base
     // choisie ne l'atteindrait pas et l'app tournerait sur la PRODUCTION en

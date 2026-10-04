@@ -37,6 +37,39 @@ set -e
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RACINE"
 
+# ── XCODE 26.6, ET LE SCRIPT S'EN CHARGE ──────────────────────────────────
+#
+# ⚠️ **iOS NE SE COMPILE PAS AVEC XCODE 27.** Le SDK 27 impose UIScene, qu'Expo
+# 56 ne sait pas faire : l'application plante au lancement sur iOS 27 — et ici,
+# elle ne compile même pas (`ExpoModulesJSI xcframework` échoue).
+#
+# La consigne était de préfixer CHAQUE commande par `DEVELOPER_DIR=…`. Julien
+# l'a lancée sans, le 4 octobre 2026, et a reçu un mur de clang illisible où le
+# seul indice utile était `iPhoneSimulator27.0.sdk`, noyé au milieu. Une règle
+# qu'il faut se rappeler à chaque fois n'est pas une règle : c'est un piège.
+# Le script la pose lui-même.
+#
+# `DEVELOPER_DIR` passé par l'appelant reste prioritaire — essayer un autre
+# Xcode volontairement doit rester possible. Pas de `xcode-select`, donc pas de
+# mot de passe, et rien de changé pour le reste du système.
+XCODE_PROJET="/Applications/Xcode-26.6.app/Contents/Developer"
+if [ -z "$DEVELOPER_DIR" ] && [ -d "$XCODE_PROJET" ]; then
+  export DEVELOPER_DIR="$XCODE_PROJET"
+fi
+
+VERSION_XCODE="$(xcodebuild -version 2>/dev/null | head -1)"
+case "$VERSION_XCODE" in
+  *"Xcode 27"*)
+    echo "✗ $VERSION_XCODE — Expo 56 ne compile pas avec le SDK 27."
+    echo "  Installer Xcode 26.6 dans /Applications/Xcode-26.6.app,"
+    echo "  ou viser un autre Xcode à la main :"
+    echo "    DEVELOPER_DIR=/chemin/vers/Xcode.app/Contents/Developer \\"
+    echo "      ./scripts/simulateur.sh"
+    exit 1
+    ;;
+esac
+echo "→ ${VERSION_XCODE:-Xcode (version inconnue)}"
+
 CIBLE="${1:-booted}"
 CONFIG="${CONFIG:-Debug}"
 APP="ios/build/dd/Build/Products/${CONFIG}-iphonesimulator/Inventaire.app"
