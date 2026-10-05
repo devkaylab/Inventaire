@@ -10,6 +10,7 @@
 // explicitement, jamais laissé à ce qui restait dans la ligne.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
+import { lienDuCourriel } from '../_shared/lienDuCourriel.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
   })
   if (linkErr) return json(inviteFailure(linkErr.message))
 
-  const actionLink = link?.properties?.action_link
+  const actionLink = lienDuCourriel(link?.properties, redirectTo)
   if (!actionLink) {
     return json({ success: true, emailSent: false, emailError: 'Lien d’invitation absent de la réponse Supabase.' })
   }

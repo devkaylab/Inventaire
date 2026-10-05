@@ -7,6 +7,7 @@
 // entreprise.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
+import { lienDuCourriel } from '../_shared/lienDuCourriel.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
   })
   if (linkErr) return sendFailed(linkErr.message)
 
-  const actionLink = link?.properties?.action_link
+  const actionLink = lienDuCourriel(link?.properties, redirectTo)
   if (!actionLink) return sendFailed('lien absent de la réponse Supabase')
 
   const fromAddr = Deno.env.get('INVITE_FROM_EMAIL') ?? 'Quantinvo <onboarding@resend.dev>'

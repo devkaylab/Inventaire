@@ -142,3 +142,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ L'app dit sur quelle base elle écrit](docs/notes/110-l-app-dit-sur-quelle-base-elle-ecrit-4-octobre-2026.md)
 - [⚠️ L'administrateur d'entreprise retire un membre](docs/notes/114-l-admin-d-entreprise-retire-un-membre-5-octobre-2026.md)
 - [⚠️⚠️ Ajouter quelqu'un à un inventaire : l'app cachait la recherche](docs/notes/119-ajouter-quelqu-un-a-un-inventaire-5-octobre-2026.md)
+- [⚠️ Le lien d'un e-mail ne se grille plus avant le clic (Microsoft 365)](docs/notes/120-le-lien-d-un-e-mail-ne-se-grille-plus-5-octobre-2026.md)
