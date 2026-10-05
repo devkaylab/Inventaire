@@ -1026,16 +1026,20 @@ describe('⚠️ rien ne doit bloquer le client et son inventaire', () => {
       .toContain("rpc('admin_avancer_mission'")
   })
 
-  it('⚠️ et elle sait l’ouvrir — l’état qui crée la session', () => {
-    // `en_cours` n'est pas un état comme un autre : c'est lui qui crée la
-    // session d'inventaire ET déclenche l'ouverture des appareils. Sans ce
+  it('⚠️ et elle sait l’ouvrir — l’état qui ouvre l’accès', () => {
+    // `en_cours` n'est pas un état comme un autre : c'est lui qui déclenche
+    // l'ouverture de la fenêtre, donc les appareils en plus. Sans ce
     // bouton-là, les autres ne servent à rien.
+    //
+    // ⚠️ AMENDÉE LE 5 OCTOBRE : elle demandait aussi que cet état CRÉE la
+    // session d'inventaire. Julien a ramené On-Demand à un accès — le client
+    // crée ses inventaires lui-même. Ce qui reste vrai, c'est le déclencheur.
     const ecran = readFileSync(
       path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
     expect(ecran).toMatch(/cle: 'en_cours'/)
-    const def = derniereDefinition('admin_avancer_mission').corps
-    expect(def).toMatch(/p_etat = 'en_cours' and v_m\.inventory_session_id is null/)
-    expect(def).toContain('creer_la_session_de_mission')
+    const trigger = derniereDefinition('missions_accorder_les_acces').corps
+    expect(trigger).toMatch(/new\.etat = 'en_cours'/)
+    expect(trigger).toContain('ouvrir_les_acces_mission')
   })
 
   it('⚠️ la console ne recopie pas la machine d’états', () => {
@@ -1105,75 +1109,82 @@ describe('⚠️ une location est arbitrée comme une location', () => {
   })
 })
 
-describe('⚠️ un seul inventaire, et il naît avec la réservation', () => {
+describe('⚠️ une réservation ouvre un accès, elle ne crée rien', () => {
   /**
-   * Julien, 4 octobre 2026, entre deux sorties proposées : **B** — « la
-   * mission crée l'inventaire dès la réservation, et c'est celui-là que le
-   * client prépare ».
+   * Cette garde en REMPLACE deux, et il faut dire lesquelles : « un seul
+   * inventaire, et il naît avec la réservation » et « un inventaire loué est
+   * toujours par zones ». Elles défendaient un choix que j'avais proposé — la
+   * réservation crée l'inventaire — et Julien l'a renversé le 5 octobre 2026 :
    *
-   * Le défaut : louer fait du client un utilisateur ORDINAIRE de Quantinvo OS.
-   * Il atterrit sur son tableau de bord et prépare naturellement un inventaire
-   * à lui — import, balises, équipe. Puis l'ouverture de la mission lui en
-   * créait un SECOND, vide. Deux à l'écran, rien pour dire lequel compte, et
-   * tout son travail dans l'autre.
+   *   « On veut juste que On-Demand donne accès à Quantinvo OS juste le temps
+   *   d'un inventaire, c'est tout, le reste doit être la même chose que pour
+   *   un utilisateur lambda. Ce qui change c'est la facturation et la durée
+   *   d'utilisation. »
+   *   « Une réservation ne crée pas automatiquement l'inventaire, c'est le
+   *   client qui créera son inventaire. »
+   *
+   * ⚠️ Ce que je construisais était plus compliqué que le produit : j'en étais
+   * à débattre du mode de comptage « puisque personne n'est là pour choisir »,
+   * alors qu'il y a toujours quelqu'un — le client.
    */
-  it('la réservation crée la session dans la foulée', () => {
-    const corps = derniereDefinition('reserver_ma_mission').corps
-    expect(corps).toMatch(/perform public\.creer_la_session_de_mission\(v_id\)/)
+  it('la réservation ne crée aucun inventaire', () => {
+    const corps = derniereDefinition('reserver_ma_mission').corps.replace(/--.*$/gm, ' ')
+    expect(corps, 'la réservation crée encore un inventaire')
+      .not.toContain('creer_la_session_de_mission')
   })
 
-  it('⚠️ et la session accepte de naître dès le prix calculé', () => {
-    // Elle exigeait `confirmee` : une équipe se constituait après la
-    // confirmation. Sans équipe, cette borne ne protège plus rien — elle
-    // empêchait seulement le client de préparer.
-    const corps = derniereDefinition('creer_la_session_de_mission').corps
-    expect(corps).toMatch(/not in \('prix_calcule'/)
+  it('l’ouverture de l’accès non plus', () => {
+    const corps = derniereDefinition('admin_avancer_mission').corps.replace(/--.*$/gm, ' ')
+    expect(corps).not.toContain('creer_la_session_de_mission')
   })
 
-  it('rien ne peut en créer deux', () => {
-    // La fonction rend `{deja: true}` si la mission en a déjà une, et
-    // `admin_avancer_mission` ne l'appelle que sur un identifiant nul.
-    const session = derniereDefinition('creer_la_session_de_mission').corps
-    expect(session).toMatch(/if v_m\.inventory_session_id is not null then/)
-    const avancer = derniereDefinition('admin_avancer_mission').corps
-    expect(avancer).toMatch(/inventory_session_id is null/)
+  it('⚠️ et l’accès s’ouvre SANS qu’un inventaire existe', () => {
+    // Le piège : `ouvrir_les_acces_mission` sortait en premier si la mission
+    // n'avait pas de session. Sans inventaire créé d'office, la fenêtre ne se
+    // serait jamais ouverte — donc aucun appareil en plus, jamais.
+    const corps = derniereDefinition('ouvrir_les_acces_mission').corps.replace(/--.*$/gm, ' ')
+    expect(corps, 'l’accès dépend encore d’un inventaire')
+      .not.toMatch(/if not found or v_m\.inventory_session_id is null/)
   })
 
-  it('et l’écran y mène avant le jour, pas seulement après', () => {
+  it('⚠️ la fenêtre est celle qu’on vend : la semaine, depuis la date choisie', () => {
+    // Elle valait « début + durée estimée + 2 h » — une nuit, le modèle de
+    // l'équipe qui vient et repart. Et elle partait du jour où Quantinvo
+    // appuie sur le bouton : mesuré, une réservation du 20 ouverte le 5
+    // donnait 22 jours.
+    const corps = derniereDefinition('ouvrir_les_acces_mission').corps.replace(/--.*$/gm, ' ')
+    expect(corps).toMatch(/v_fin := v_m\.debut_prevu \+ make_interval\(days =>/)
+    expect(corps, 'la fenêtre dure encore une nuit')
+      .not.toMatch(/duree_prevue_minutes/)
+    expect(corps).toMatch(/greatest\(now\(\), v_m\.debut_prevu\)/)
+  })
+
+  it('⚠️ et au bout des sept jours, l’inventaire se clôture — pas se supprime', () => {
+    const corps = derniereDefinition('cloturer_les_inventaires_hors_fenetre').corps
+    expect(corps).toMatch(/set status = 'closed'/)
+    expect(corps.toLowerCase(), 'la tâche supprime au lieu de clôturer')
+      .not.toContain('delete from')
+    // Et seulement ce qui est né dans la fenêtre : un inventaire d'avant la
+    // réservation ne la regarde pas.
+    expect(corps).toMatch(/s\.created_at >= f\.acces_ouverts_le/)
+  })
+
+  it('une tâche l’exécute, et toutes les heures', () => {
+    // Une fenêtre se referme à l'heure près — 20:00 ou 22:00 sept jours plus
+    // tard. Une tâche nocturne laisserait l'inventaire ouvert jusqu'au matin.
+    const fichier = fichierDe('cloturer_les_inventaires_hors_fenetre')
+    expect(fichier).toMatch(/cron\.schedule\(\s*'cloturer-hors-fenetre',\s*'5 \* \* \* \*'/)
+    expect(fichier, 'rejouer la migration créerait un doublon')
+      .toMatch(/cron\.unschedule\('cloturer-hors-fenetre'\)/)
+  })
+
+  it('l’écran ne mène plus à un inventaire désigné', () => {
     const ecran = readFileSync(path.resolve(
       __dirname, '..', 'app/on-demand/mes-inventaires/[id]/page.tsx'), 'utf8')
       .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ').replace(/\s+/g, ' ')
-    expect(ecran).toMatch(/Préparer l’inventaire/)
-    expect(ecran, 'l’écran ne mène à l’inventaire qu’une fois fini')
-      .toMatch(/aVenir \? 'Votre inventaire' : 'Votre rapport'/)
-  })
-})
-
-describe('⚠️ une migration finit son corps par `$function$;`', () => {
-  /**
-   * Trouvé le 4 octobre 2026, et par une garde d'un AUTRE sujet.
-   *
-   * Reprendre une définition de `pg_get_functiondef` est la bonne méthode —
-   * elle évite de recopier deux cents lignes et d'y glisser une divergence.
-   * Mais sa sortie se termine par `$function$` sans point-virgule, et
-   * l'ajouter sur la ligne suivante produit `$function$\n;`.
-   *
-   * ⚠️ **`derniereDefinition` cherche `$function$;` pour borner un corps.**
-   * Sans cette suite exacte, elle lit jusqu'à la fin du fichier — donc la
-   * fonction SUIVANTE. Dans une migration qui en porte deux, le corps de la
-   * première contenait celui de la seconde, et une garde de l'espace
-   * administrateur a signalé un promoteur de plus. Elle avait raison.
-   *
-   * Toutes les gardes du projet passent par ce helper : une terminaison
-   * détachée les rend toutes approximatives, sans que rien ne tombe.
-   */
-  it('aucune migration ne laisse son point-virgule sur la ligne suivante', () => {
-    const fautives = readdirSync(dossierMigrations)
-      .filter((f) => f.endsWith('.sql'))
-      .filter((f) => readFileSync(path.join(dossierMigrations, f), 'utf8')
-        .includes('$function$\n;'))
-    expect(fautives, `corps non borné, `
-      + `donc lu jusqu’à la fin du fichier : ${fautives.join(', ')}`).toEqual([])
+    expect(ecran, 'il vise encore l’inventaire de la réservation')
+      .not.toMatch(/dashboard\/\$\{mission\.inventory_session_id\}/)
+    expect(ecran).toMatch(/Créez votre inventaire depuis votre tableau de bord/)
   })
 })
 

@@ -109,10 +109,14 @@ export default function MonInventairePage() {
         <section className="admin-section">
           <h2>Où en est votre inventaire</h2>
           <p className="muted">{explication}</p>
-          {enCours && mission.inventory_session_id && (
+          {/* ⚠️ Ce bouton visait l'inventaire que la réservation créait. Une
+              réservation n'en crée plus : elle ouvre un accès, le client crée
+              ses inventaires lui-même, autant qu'il veut dans la semaine. On
+              l'emmène donc chez lui, pas sur un inventaire désigné. */}
+          {enCours && (
             <p style={{ marginTop: 18 }}>
-              <Link href={`/dashboard/${mission.inventory_session_id}`} className="btn btn-primary">
-                Suivre en direct
+              <Link href="/dashboard" className="btn btn-primary">
+                Aller à mes inventaires
               </Link>
             </p>
           )}
@@ -169,10 +173,14 @@ export default function MonInventairePage() {
               lui, et sans quoi le rapport est muet. */}
           <div className="admin-section-head"><div><h2>À préparer</h2></div></div>
           <ul className="od-prevoir">
-            <li>Votre fichier de stock, déposé avant de commencer</li>
-            <li>Vos balises imprimées et posées dans les rayons</li>
-            <li>Les comptes de vos compteurs créés</li>
+            <li>Créez votre inventaire depuis votre tableau de bord</li>
+            <li>Déposez-y votre fichier de stock</li>
+            <li>Imprimez vos balises et posez-les dans les rayons</li>
+            <li>Créez les comptes de vos compteurs</li>
           </ul>
+          <p style={{ marginTop: 16 }}>
+            <Link href="/dashboard" className="btn btn-ghost">Aller à mon tableau de bord</Link>
+          </p>
           <p className="muted small" style={{ marginTop: 14 }}>
             {/* ⚠️ On le dit franchement : sans fichier, l'inventaire a lieu mais
                 le rapport n'a pas d'écarts. C'est la différence entre « compter »
@@ -184,28 +192,13 @@ export default function MonInventairePage() {
         </section>
       )}
 
-      {/* ⚠️ LE MÊME INVENTAIRE, AVANT ET APRÈS (4 octobre 2026). Il n'existait
-          qu'à partir de l'ouverture de la mission, et le client — qui a son
-          tableau de bord Quantinvo OS comme n'importe qui — en créait un autre
-          pour préparer. Il naît maintenant avec la réservation : c'est là qu'il
-          dépose son fichier et imprime ses balises, et c'est le même qui porte
-          son rapport ensuite. Un seul, du début à la fin. */}
-      {mission.inventory_session_id && !enCours && (
-        <section className="admin-section">
-          <h2>{aVenir ? 'Votre inventaire' : 'Votre rapport'}</h2>
-          <p className="muted">
-            {aVenir
-              ? 'Déposez votre fichier de stock, imprimez vos balises, invitez votre équipe. C’est ici que vous compterez.'
-              : 'Écarts contrôlés, quantités comptées, exports Excel, CSV et PDF.'}
-          </p>
-          <p style={{ marginTop: 18 }}>
-            <Link href={`/dashboard/${mission.inventory_session_id}`}
-                  className={aVenir ? 'btn btn-primary' : 'btn btn-ghost'}>
-              {aVenir ? 'Préparer l’inventaire' : 'Ouvrir le rapport'}
-            </Link>
-          </p>
-        </section>
-      )}
+      {/* ⚠️ IL Y AVAIT ICI « VOTRE INVENTAIRE », qui menait à celui que la
+          réservation créait (5 octobre 2026). Elle n'en crée plus : Julien a
+          ramené On-Demand à ce qu'il est — « On-Demand donne accès à Quantinvo
+          OS juste le temps d'un inventaire, le reste doit être la même chose
+          que pour un utilisateur lambda ». Le client crée ses inventaires
+          depuis son tableau de bord, comme tout le monde, autant qu'il en veut
+          dans la semaine. */}
 
       {aVenir && frais && (
         <section className="admin-section">
