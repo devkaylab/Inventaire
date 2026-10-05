@@ -15,6 +15,7 @@
  */
 import { supabase } from '@/lib/supabaseClient'
 import { chaine, TRANCHES_ARTICLES } from '@/lib/prixOnDemand'
+import { VERSION_CONDITIONS } from '@/lib/conditions'
 
 export type Mission = {
   id: string
@@ -121,4 +122,120 @@ export function prixIndicatif(e: Etablissement): number | null {
   const tranche = TRANCHES_ARTICLES.find((t) => t.max >= e.derniere!.articles_retenus)
   if (!tranche) return null
   return chaine(tranche.max).prixCents
+}
+
+/**
+ * ⚠️⚠️ **RÉSERVER POUR DE VRAI** (5 octobre 2026).
+ *
+ * Julien : « Un pro qui revient avec une adresse connue en tant que client doit
+ * pouvoir louer Quantinvo s'il le souhaite. »
+ *
+ * En cherchant où brancher ce cas, un trou plus large : **le tunnel `/reserver`
+ * ne créait AUCUNE réservation.** Son seul appel serveur était l'envoi d'un
+ * code d'inscription ; `reserver_ma_mission` n'était appelée de nulle part dans
+ * le site. L'écran d'arrivée affirmait pourtant « Votre réservation est
+ * enregistrée avec ce prix ». Elle ne l'était pas — ni pour un visiteur, ni
+ * pour un client déjà connecté.
+ *
+ * Le pro à l'adresse connue se connecte (le tunnel a « J'ai déjà un compte »
+ * depuis le début) : c'est donc ce chemin-là qui doit aboutir, et c'est celui
+ * que cette fonction ferme.
+ *
+ * ⚠️ AUCUN MONTANT NE PART D'ICI. `reserver_ma_mission` recalcule le prix en
+ * base — « laisser le client porter un montant, c'est le laisser réserver à un
+ * centime » (docs/notes/074). On envoie des réponses, pas un total.
+ */
+export type Reponses = {
+  entreprise: string
+  magasin: string
+  adresse: string
+  codePostal: string
+  ville: string
+  secteur: string
+  surfaceVente: string
+  surfaceReserve: string
+  articlesMin: number
+  articlesMax: number
+  referencesMin: number | null
+  referencesMax: number | null
+  codeBarres: string
+  formule: string
+  appareils: number
+  debut: Date
+  moment: string
+  siren: string
+}
+
+/**
+ * Ce que chaque refus veut dire, en français. ⚠️ Les clés sont les `code` que
+ * rendent `reserver_ma_mission` et `prix_mission` — un code inconnu s'affiche
+ * tel quel plutôt que de laisser un écran muet.
+ */
+export const REFUS_RESERVATION: Record<string, string> = {
+  adresse: 'Cette adresse n’a pas pu être lue. Reprenez-la à l’étape 1.',
+  articles: 'Le volume de pièces manque. Reprenez l’étape 3.',
+  code_postal: 'Le code postal doit comporter cinq chiffres.',
+  conditions: 'Les conditions générales ont changé pendant votre visite. Rechargez la page, votre parcours est conservé.',
+  date: 'La date n’a pas pu être lue. Reprenez l’étape 2.',
+  engagement: 'Il manque votre accord de l’étape 3.',
+  entreprise: 'Il manque la raison sociale de votre entreprise.',
+  format: 'Ces réponses n’ont pas pu être lues. Rechargez la page.',
+  formule: 'Cette formule n’existe pas.',
+  hors_grille: 'Ce volume sort de notre grille. Écrivez-nous depuis votre messagerie Quantinvo.',
+  hors_zone: 'Nous ne desservons pas encore cette adresse avec une équipe.',
+  magasin: 'Le nom du magasin est trop long (80 caractères au maximum).',
+  marge_insuffisante: 'Nous ne pouvons pas tenir ce prix. Écrivez-nous.',
+  non_connecte: 'Votre session a expiré. Reconnectez-vous, votre parcours est conservé.',
+  pas_de_reglages: 'Notre grille tarifaire est momentanément indisponible. Réessayez dans un instant.',
+  siren: 'Ce SIREN n’est pas valide.',
+  trop_tot: 'Cette date est trop proche. Choisissez un créneau plus tard.',
+}
+
+/**
+ * ⚠️ **LE `code` REMONTE AVEC LE MESSAGE, ET C'EST CE QUI ÉVITE DE RECOPIER LA
+ * RÈGLE.** `reserver_ma_mission` crée une entreprise au client qui n'en a pas
+ * d'utilisable — et depuis le 5 octobre, un compteur chez quelqu'un d'autre en
+ * fait partie. L'écran pourrait deviner le cas en relisant `profiles.role`,
+ * mais il recopierait alors une règle qui vit en base, et les deux
+ * divergeraient le jour où elle change. Il tente, et si le serveur réclame la
+ * raison sociale (`entreprise`), il la demande. Le serveur décide.
+ */
+export async function reserverMaMission(
+  r: Reponses,
+): Promise<{ ok: true; reference: string; prixCents: number }
+         | { ok: false; code: string; message: string }> {
+  const { data, error } = await supabase.rpc('reserver_ma_mission', {
+    p_reponses: {
+      entreprise: r.entreprise,
+      siren: r.siren,
+      magasin: r.magasin,
+      adresse: r.adresse,
+      code_postal: r.codePostal,
+      ville: r.ville,
+      secteur: r.secteur,
+      surface_vente: r.surfaceVente,
+      surface_reserve: r.surfaceReserve,
+      articles_min: r.articlesMin,
+      articles_max: r.articlesMax,
+      references_min: r.referencesMin,
+      references_max: r.referencesMax,
+      code_barres: r.codeBarres,
+      formule: r.formule,
+      appareils: r.appareils,
+      debut: r.debut.toISOString(),
+      moment: r.moment,
+      engagement: true,
+      cgv_version: VERSION_CONDITIONS,
+    },
+  })
+  if (error) return { ok: false, code: '', message: error.message }
+  const rep = data as { success?: boolean; code?: string; reference?: string; prix_cents?: number } | null
+  if (!rep?.success || !rep.reference) {
+    const code = rep?.code ?? ''
+    return {
+      ok: false, code,
+      message: REFUS_RESERVATION[code] ?? (code || 'La réservation n’a pas pu être prise.'),
+    }
+  }
+  return { ok: true, reference: rep.reference, prixCents: rep.prix_cents ?? 0 }
 }

@@ -31,7 +31,7 @@ import { PasswordRules } from '@/components/PasswordRules'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { passwordError } from '@/lib/password'
 import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
-import { mesEtablissements, type Etablissement } from '@/lib/onDemandClient'
+import { mesEtablissements, reserverMaMission, type Etablissement } from '@/lib/onDemandClient'
 import { useTraduction } from '@/lib/i18n'
 import { Logo } from '@/components/Logo'
 import { euros } from '@/lib/offres'
@@ -194,6 +194,16 @@ export function PageReserver() {
   const [siren, setSiren] = useState('')
   const [societe, setSociete] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
+  /**
+   * ⚠️ LA RÉFÉRENCE DE LA RÉSERVATION PRISE, et c'est elle qui distingue les
+   * deux arrivées : « c'est réservé, voici votre référence » pour un client
+   * connecté, « regardez votre boîte mail » pour un visiteur dont le compte
+   * reste à ouvrir. L'écran d'arrivée affirmait « votre réservation est
+   * enregistrée » dans les deux cas — et dans aucun ce n'était vrai.
+   */
+  const [reference, setReference] = useState<string | null>(null)
+  /** Le serveur réclame une raison sociale : il n'a pas d'entreprise utilisable. */
+  const [entrepriseAFournir, setEntrepriseAFournir] = useState(false)
   const [occupe, setOccupe] = useState(false)
 
   /**
@@ -364,6 +374,64 @@ export function PageReserver() {
     return data as { success?: boolean; error?: string } | null
   }, [])
 
+  /**
+   * ⚠️⚠️ **C'EST ICI QUE LA RÉSERVATION EXISTE**, et elle n'existait nulle part
+   * avant le 5 octobre 2026 : le seul appel serveur du tunnel était l'envoi
+   * d'un code d'inscription. On arrivait sur « Votre réservation est
+   * enregistrée avec ce prix » sans que rien n'ait été écrit.
+   *
+   * ⚠️ AUCUN MONTANT N'EST ENVOYÉ. `reserver_ma_mission` recalcule le prix en
+   * base ; ce qui part d'ici, ce sont les réponses.
+   *
+   * ⚠️ ET SI LE SERVEUR RÉCLAME LA RAISON SOCIALE, ON LA DEMANDE — on ne
+   * devine pas son cas en relisant `profiles.role`. C'est lui qui sait si
+   * l'appelant a une entreprise utilisable, et depuis le 5 octobre un compteur
+   * invité chez quelqu'un d'autre n'en a plus : celui qui paie devient le
+   * client, avec la sienne.
+   */
+  const reserverMaintenant = async () => {
+    if (!debut || !resultat.ok) return
+    const tranche = TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)
+    if (!tranche) { setErreur('Choisissez un volume de pièces.'); return }
+    setErreur(null); setOccupe(true)
+    const r = await reserverMaMission({
+      entreprise: societe.trim(),
+      siren: siren.trim(),
+      magasin: magasin.trim(),
+      adresse: adresse.trim(),
+      codePostal: codePostal,
+      ville: ville.trim(),
+      secteur,
+      surfaceVente,
+      surfaceReserve,
+      articlesMin: tranche.min,
+      articlesMax: tranche.max,
+      referencesMin: null,
+      referencesMax: null,
+      codeBarres: codeBarres,
+      formule,
+      appareils,
+      debut,
+      moment,
+    })
+    setOccupe(false)
+    if (!r.ok) {
+      if (r.code === 'entreprise' || r.code === 'siren') {
+        setEntrepriseAFournir(true)
+        setEtape(8)
+        setErreur(r.code === 'siren' ? r.message : null)
+        return
+      }
+      setErreur(r.message)
+      return
+    }
+    setReference(r.reference)
+    // Le parcours est consommé : le garder ferait réapparaître cette
+    // réservation la prochaine fois.
+    try { window.localStorage.removeItem(REPRISE) } catch { /* indisponible */ }
+    setEtape(7)
+  }
+
   const seConnecter = async () => {
     setErreur(null); setOccupe(true)
     const { error } = await supabase.auth.signInWithPassword({
@@ -372,7 +440,12 @@ export function PageReserver() {
     setOccupe(false)
     if (error) { setErreur('Adresse ou mot de passe incorrect.'); return }
     setMotDePasse('')
-    setEtape(7)
+    setConnecte(true)
+    // ⚠️ IL EST VENU RÉSERVER, PAS SE CONNECTER. Le bouton dit « Se connecter
+    // et continuer » : l'envoyer sur un écran d'attente serait lui faire
+    // recommencer. C'est le chemin du pro qui revient avec une adresse déjà
+    // connue — celui que Julien a demandé le 5 octobre 2026.
+    await reserverMaintenant()
   }
 
   const ouvrirMonCompte = async () => {
@@ -382,7 +455,7 @@ export function PageReserver() {
     const mauvaisSiren = siren.trim() ? messageSiren(siren) : null
     if (mauvaisSiren) { setErreur(mauvaisSiren); return }
     setOccupe(true)
-    const r = await edge({ action: 'code', email: courriel.trim().toLowerCase() })
+    const r = await edge({ action: 'code', email: courriel.trim().toLowerCase(), retour: 'reserver' })
     setOccupe(false)
     if (!r?.success) {
       setErreur(r?.error ?? 'Envoi impossible.')
@@ -463,8 +536,29 @@ export function PageReserver() {
           {resultat.ok ? (
             <>
               <strong className="res-montant">{enEuros(resultat.chaine.prixCents)}</strong>
+              {/* ⚠️ **CE BOUTON-CI N'AVAIT PAS LE VERROU DE VENTE** (trouvé le
+                  5 octobre 2026). Celui de l'écran du prix l'avait, pas celui
+                  du récapitulatif — et tant que rien n'était enregistré, ça ne
+                  se voyait pas. Le jour où il réserve pour de vrai, il vendrait
+                  pendant que `web/lib/legal.ts` est incomplet. */}
               <button type="button" className="btn btn-primary btn-block"
-                      onClick={() => setEtape(connecte ? 7 : 5)}>Réserver</button>
+                      disabled={occupe || !venteOuverte()}
+                      onClick={() => { if (connecte) void reserverMaintenant(); else setEtape(5) }}>
+                {occupe ? 'Un instant…' : 'Réserver'}
+              </button>
+              {/* ⚠️ **UN BOUTON MORT DIT POURQUOI.** En formule logiciel, ce
+                  bouton EST l'action principale : le parcours s'arrête à la
+                  date, et l'écran du prix — qui porte l'explication de la vente
+                  fermée — n'est jamais atteint. Mesuré au volet le 5 octobre
+                  2026 : le verrou qu'on venait de poser laissait un bouton gris
+                  sans un mot. */}
+              {!venteOuverte() && (
+                <p className="res-ferme">
+                  La réservation n’est pas encore ouverte. Ce prix est bien celui
+                  que vous paierez le jour où elle le sera.
+                </p>
+              )}
+              {erreur && <p className="field-err">{erreur}</p>}
             </>
           ) : (
             <span className="muted">
@@ -1038,10 +1132,19 @@ export function PageReserver() {
                 </ul>
               )}
               {venteOuverte() ? (
-                <button type="button" className="btn btn-primary btn-block"
-                        onClick={() => setEtape(connecte ? 7 : 5)}>
-                  Réserver — {enEuros(resultat.chaine.prixCents)}
-                </button>
+                <>
+                  <button type="button" className="btn btn-primary btn-block"
+                          disabled={occupe}
+                          onClick={() => { if (connecte) void reserverMaintenant(); else setEtape(5) }}>
+                    {occupe ? 'Un instant…' : `Réserver — ${enEuros(resultat.chaine.prixCents)}`}
+                  </button>
+                  {/* ⚠️ LE REFUS S'AFFICHE SOUS LE BOUTON QUI L'A PROVOQUÉ.
+                      Sans ça, un « cette date est trop proche » rendu par la
+                      base ne s'écrirait nulle part : cet écran n'avait aucun
+                      endroit pour une erreur, puisqu'il ne parlait au serveur
+                      que depuis le 5 octobre 2026. */}
+                  {erreur && <p className="field-err">{erreur}</p>}
+                </>
               ) : (
                 /* ⚠️ MÊME VERROU QUE `/inscription` ET `/souscrire` : tant que
                    `web/lib/legal.ts` est incomplet, rien ne se vend. Le prix
@@ -1269,26 +1372,108 @@ export function PageReserver() {
           </div>
         )}
 
-        {etape === 7 && (
+        {/* ⚠️⚠️ **DEUX ARRIVÉES, PARCE QU'IL Y A DEUX SITUATIONS** (5 octobre
+            2026). Cet écran disait « Votre réservation est enregistrée avec ce
+            prix » à tout le monde — alors que le tunnel n'écrivait rien, nulle
+            part. Désormais : une référence quand c'est réservé, et un renvoi
+            vers la boîte mail quand le compte reste à ouvrir. */}
+        {etape === 7 && reference && (
           <div className="res-prix-page">
             <div className="res-prix-tete">
-              <h1>Le paiement arrive</h1>
+              <h1>C’est réservé</h1>
               <p className="muted">
-                {/* ⚠️ Cette page n'existe pas encore, et le dire vaut mieux que
-                    de la dessiner à moitié : l'empreinte bancaire passe par
-                    Stripe, qui n'est pas en live (`docs/notes/047`). */}
-                L’empreinte bancaire n’est pas encore branchée. Votre réservation
-                est enregistrée avec ce prix ; nous vous écrivons dès que le
-                paiement ouvre.
+                Votre inventaire est enregistré sous la référence <strong>{reference}</strong>.
+                Vous le retrouvez dans vos inventaires, avec ce qu’il reste à préparer.
               </p>
             </div>
             <div className="res-prix-carte">
               <ul className="res-compris">
-                <li>Nous bloquons le montant sur votre carte à la réservation.</li>
-                <li>Le débit a lieu à la fin de l’inventaire, rapport disponible.</li>
+                <li>Annulation gratuite jusqu’à trois jours avant, sans frais.</li>
+                <li>Vous créez votre inventaire depuis votre tableau de bord, quand vous voulez.</li>
+                {/* ⚠️ Le paiement n'est pas branché, et le dire vaut mieux que
+                    de laisser croire qu'une carte a été prise. */}
+                <li>Le paiement n’est pas encore ouvert : nous vous écrivons dès qu’il l’est.</li>
+              </ul>
+              <Link href="/on-demand/mes-inventaires" className="btn btn-primary btn-block">
+                Voir mes inventaires
+              </Link>
+              <Link href="/dashboard" className="btn btn-ghost btn-block">
+                Aller à mon tableau de bord
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {etape === 7 && !reference && (
+          <div className="res-prix-page">
+            <div className="res-prix-tete">
+              <h1>Regardez votre boîte mail</h1>
+              <p className="muted">
+                {/* ⚠️ LA MÊME PHRASE DANS TOUS LES CAS, et c'est ici que ça se
+                    joue : « cette adresse a déjà un compte » rouvrirait
+                    l'oracle d'énumération fermé le 28 août 2026. C'est
+                    l'e-mail, qui n'atteint que le propriétaire de la boîte,
+                    qui dit la vérité — et il dit quoi faire : si un compte
+                    existe déjà, se connecter, et la réservation reprend ici. */}
+                Nous venons de vous écrire à {courriel.trim().toLowerCase()}. Le
+                message vous dit comment continuer — soit avec le code, soit en
+                vous connectant si vous avez déjà un compte.
+              </p>
+            </div>
+            <div className="res-prix-carte">
+              <ul className="res-compris">
+                <li>Votre parcours est conservé : vous reprenez où vous en êtes.</li>
                 <li>Annulation gratuite jusqu’à trois jours avant.</li>
               </ul>
+              <button type="button" className="btn btn-primary btn-block"
+                      onClick={() => { setErreur(null); setEtape(6) }}>
+                J’ai déjà un compte — me connecter
+              </button>
               <Link href={lien('/')} className="btn btn-ghost btn-block">Revenir à l’accueil</Link>
+            </div>
+          </div>
+        )}
+
+        {/* ⚠️ **LA RAISON SOCIALE, DEMANDÉE SEULEMENT QUAND LE SERVEUR LA
+            RÉCLAME.** Un pro connecté n'a pas forcément d'entreprise
+            utilisable : depuis le 5 octobre 2026, un compteur invité chez
+            quelqu'un d'autre n'en a plus — celui qui paie devient le client,
+            avec la sienne. L'écran ne devine pas son cas en relisant
+            `profiles.role`, il réagit au refus. */}
+        {etape === 8 && entrepriseAFournir && (
+          <div className="res-colonnes">
+            <section className="res-questions">
+              <h1>Au nom de quelle entreprise ?</h1>
+              <p className="muted">
+                C’est elle qui apparaîtra sur votre facture et sur votre rapport
+                d’inventaire.
+              </p>
+              <div className="field-duo">
+                <div className="field">
+                  <label htmlFor={`${uid}-soc2`}>Raison sociale</label>
+                  <input id={`${uid}-soc2`} value={societe} maxLength={80}
+                         autoComplete="organization"
+                         onChange={(e) => setSociete(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor={`${uid}-siren2`}>SIREN <span className="muted">(facultatif)</span></label>
+                  <input id={`${uid}-siren2`} value={siren} inputMode="numeric"
+                         placeholder="123 456 789"
+                         onChange={(e) => setSiren(formaterSiren(e.target.value))} />
+                </div>
+              </div>
+              {erreur && <p className="field-err">{erreur}</p>}
+              <div className="res-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setEtape(4)}>Retour</button>
+                <button type="button" className="btn btn-primary"
+                        disabled={occupe || societe.trim() === '' || !venteOuverte()}
+                        onClick={() => void reserverMaintenant()}>
+                  {occupe ? 'Un instant…' : 'Réserver'}
+                </button>
+              </div>
+            </section>
+            <div className="res-cote">
+              {recap}
             </div>
           </div>
         )}

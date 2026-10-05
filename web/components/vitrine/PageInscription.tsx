@@ -146,7 +146,7 @@ export function PageInscription() {
   // ─── Les gestes ───────────────────────────────────────────────────────────
   const demanderCode = async () => {
     setErreur(null); setOccupe(true)
-    const r = await edge({ action: 'code', email: email.trim().toLowerCase() })
+    const r = await edge({ action: 'code', email: email.trim().toLowerCase(), retour: 'inscription' })
     setOccupe(false)
     if (!r?.success) { setErreur(r?.error ?? t('Envoi impossible.')); return }
     setEtape(2)

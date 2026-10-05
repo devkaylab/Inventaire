@@ -148,3 +148,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ L'administrateur d'entreprise retire un membre](docs/notes/114-l-admin-d-entreprise-retire-un-membre-5-octobre-2026.md)
 - [⚠️ Une réservation ouvre un accès. Rien de plus](docs/notes/115-une-reservation-ouvre-un-acces-5-octobre-2026.md)
 - [⚠️⚠️ Un inventaire à la fois, celui qui paie, et **une porte trop grande** (`grant select` sans colonnes)](docs/notes/116-un-inventaire-a-la-fois-et-la-porte-trop-grande-5-octobre-2026.md)
+- [⚠️⚠️ Le tunnel `/reserver` ne réservait rien — et le pro qui revient](docs/notes/117-le-tunnel-reserve-pour-de-vrai-5-octobre-2026.md)

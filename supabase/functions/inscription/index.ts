@@ -99,6 +99,23 @@ Deno.serve(async (req) => {
   const texte = (c: string) => String(corps[c] ?? '').trim()
   const action = texte('action') || 'code'
 
+  /**
+   * ⚠️ **D'OÙ VIENT LA PERSONNE, SUR LISTE BLANCHE** (5 octobre 2026). Cette
+   * fonction sert DEUX tunnels : `/inscription` (l'abonnement) et `/reserver`
+   * (la location). Le message envoyé à une adresse déjà connue doit ramener au
+   * bon endroit — renvoyer un abonné vers la location, ou l'inverse, serait pire
+   * que l'ancien cul-de-sac.
+   *
+   * ⚠️ ET C'EST UNE LISTE, PAS UN PASSAGE : un chemin recopié depuis le corps de
+   * la requête ferait de ce bouton d'e-mail une redirection ouverte, signée
+   * Quantinvo. Ce qui n'est pas dans la liste retombe sur la connexion.
+   */
+  const RETOURS: Record<string, { chemin: string; libelle: string }> = {
+    reserver: { chemin: '/reserver', libelle: 'Reprendre ma réservation' },
+    inscription: { chemin: '/inscription', libelle: 'Reprendre mon inscription' },
+  }
+  const retour = RETOURS[texte('retour')] ?? { chemin: '/login', libelle: 'Me connecter' }
+
   // ⚠️ AVANT TOUTE ACTION, y compris l'envoi du code : ouvrir un compte de
   // prospect qui ne pourra pas payer ne laisserait que des comptes orphelins.
   if (!VENTE_OUVERTE) return boutiqueFermee()
@@ -123,13 +140,23 @@ Deno.serve(async (req) => {
 
     try {
       if (data?.outcome === 'compte_existant') {
+        // ⚠️⚠️ **IL N'Y A RIEN À CRÉER, MAIS IL Y A QUELQUE CHOSE À FAIRE**
+        // (5 octobre 2026). Julien : « un pro qui revient avec une adresse
+        // connue en tant que client doit pouvoir louer Quantinvo s'il le
+        // souhaite ». Ce message était un cul-de-sac : il annonçait un refus et
+        // renvoyait vers `/login`, qui ne sait rien de la réservation en cours.
+        // Le tunnel conserve le parcours par navigateur (`quantinvo-reserver`) :
+        // le bouton ramène donc sur `/reserver`, où « J'ai déjà un compte »
+        // enchaîne la connexion ET la réservation.
         const m = emailQuantinvo({
           titre: 'Vous avez déjà un compte Quantinvo',
           paragraphes: [
             'Quelqu’un vient de demander un code d’inscription avec cette adresse. Vous avez déjà un compte : il n’y a rien à créer.',
-            'Connectez-vous avec votre mot de passe habituel. Si vous l’avez oublié, la page de connexion sait le réinitialiser.',
+            retour.chemin === '/login'
+              ? 'Connectez-vous avec votre mot de passe habituel. Si vous l’avez oublié, la page de connexion sait le réinitialiser.'
+              : 'Reprenez où vous en étiez et choisissez « J’ai déjà un compte » : votre mot de passe habituel suffit, et vous continuez sans rien retaper. Si vous l’avez oublié, la page de connexion sait le réinitialiser.',
           ],
-          bouton: { libelle: 'Me connecter', lien: `${site()}/login` },
+          bouton: { libelle: retour.libelle, lien: `${site()}${retour.chemin}` },
           note: 'Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message : rien n’a été créé.',
           raison: 'Vous recevez ce message parce que cette adresse a été saisie sur la page d’inscription de Quantinvo.',
           siteUrl: site(),

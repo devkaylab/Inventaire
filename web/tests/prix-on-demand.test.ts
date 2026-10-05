@@ -1493,3 +1493,132 @@ describe('⚠️ la porte des missions ne s’ouvre pas sur la comptabilité', (
     expect(manquantes, `le client lit sans droit : ${manquantes.join(', ')}`).toEqual([])
   })
 })
+
+describe('⚠️ le tunnel réserve pour de vrai', () => {
+  /**
+   * ⚠️⚠️ 5 octobre 2026. Julien : « un pro qui revient avec une adresse connue
+   * en tant que client doit pouvoir louer Quantinvo s'il le souhaite ».
+   *
+   * En cherchant où brancher ce cas, un trou plus large : **le tunnel ne créait
+   * aucune réservation.** Son seul appel serveur était l'envoi d'un code
+   * d'inscription ; `reserver_ma_mission` n'était appelée de nulle part dans le
+   * site. L'écran d'arrivée affirmait pourtant « Votre réservation est
+   * enregistrée avec ce prix », pour un visiteur comme pour un client connecté.
+   */
+  const tunnel = () => lire('web/components/vitrine/PageReserver.tsx')
+  const client = () => lire('web/lib/onDemandClient.ts')
+
+  it('⚠️ le tunnel appelle bien la fonction qui réserve', () => {
+    expect(client()).toMatch(/rpc\('reserver_ma_mission'/)
+    expect(tunnel(), 'l’écran ne réserve pas').toMatch(/reserverMaMission\(/)
+  })
+
+  it('⚠️ et il n’envoie aucun montant', () => {
+    // « Laisser le client porter un montant, c'est le laisser réserver à un
+    // centime » (docs/notes/074). Le prix est recalculé par `prix_mission`.
+    const appel = client().slice(client().indexOf('p_reponses:'))
+    const bloc = appel.slice(0, appel.indexOf('})'))
+    expect(bloc, 'le navigateur porte un prix').not.toMatch(/prix|cents|montant|total/i)
+  })
+
+  it('⚠️ les deux boutons « Réserver » portent le verrou de vente', () => {
+    // Celui de l'écran du prix l'avait, celui du récapitulatif NON — et tant
+    // que rien n'était enregistré, ça ne se voyait pas.
+    const src = tunnel().replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
+    const boutons = [...src.matchAll(/<button[\s\S]{0,400}?>[\s\S]{0,200}?Réserver[\s\S]{0,40}?<\/button>/g)]
+      .map((m) => m[0])
+    expect(boutons.length, 'les boutons de réservation ne se lisent plus').toBeGreaterThan(1)
+    const nus = boutons.filter((b) => !/venteOuverte\(\)|disabled>/.test(b))
+    expect(nus, `un bouton réserve sans verrou de vente : ${nus.join(' | ')}`).toEqual([])
+  })
+
+  it('⚠️ chaque refus de la base a sa phrase', () => {
+    // Les codes se lisent dans les deux fonctions, ils ne se citent pas ici.
+    const codes = new Set<string>()
+    for (const fn of ['reserver_ma_mission', 'prix_mission']) {
+      for (const m of derniereDefinition(fn).corps.matchAll(/'code'\s*,\s*'(\w+)'/g)) codes.add(m[1])
+    }
+    expect(codes.size, 'les codes de refus ne se lisent plus').toBeGreaterThan(8)
+    const src = client()
+    const table = src.slice(src.indexOf('REFUS_RESERVATION'), src.indexOf('export async function reserverMaMission'))
+    const sans = [...codes].filter((c) => !new RegExp(`\\b${c}:`).test(table))
+    expect(sans, `refus sans phrase : ${sans.join(', ')}`).toEqual([])
+  })
+
+  it('⚠️ l’écran d’arrivée ne dit « enregistrée » que si elle l’est', () => {
+    const src = tunnel()
+    const arrivee = src.slice(src.indexOf('etape === 7'))
+    // La référence rendue par la base est la seule preuve.
+    expect(arrivee).toMatch(/etape === 7 && reference/)
+    expect(arrivee).toMatch(/etape === 7 && !reference/)
+    const sansReference = arrivee.slice(arrivee.indexOf('etape === 7 && !reference'))
+    expect(sansReference.replace(/\s+/g, ' '), 'l’écran sans réservation la dit enregistrée')
+      .not.toMatch(/réservation est enregistrée/)
+  })
+
+  it('⚠️ la raison sociale se demande sur refus du serveur, elle ne se devine pas', () => {
+    const src = sansCommentaires(tunnel())
+    expect(src).toMatch(/r\.code === 'entreprise'/)
+    // Et la page ne rejoue pas la règle de la base en relisant le rôle.
+    expect(src, 'l’écran recopie la règle du serveur').not.toMatch(/'employee'|'counter'/)
+  })
+
+  it('⚠️ le retour de l’e-mail est une liste blanche, pas un chemin recopié', () => {
+    // Un chemin pris dans le corps de la requête ferait de ce bouton une
+    // redirection ouverte signée Quantinvo.
+    const fn = lire('supabase/functions/inscription/index.ts')
+    expect(fn).toMatch(/RETOURS: Record<string, \{ chemin: string; libelle: string \}>/)
+    expect(fn).toMatch(/RETOURS\[texte\('retour'\)\] \?\? \{ chemin: '\/login'/)
+    // ⚠️ L'ANCRE DOIT EXISTER AVANT D'ÊTRE LUE. Première version :
+    // `fn.slice(fn.indexOf(…))` — `indexOf` rend -1 quand la ligne a disparu,
+    // `slice(-1)` rend le dernier caractère, et la garde passait au vert sur un
+    // fichier saboté. Trouvé en la sabotant, pas en la relisant.
+    const i = fn.indexOf('bouton: { libelle: retour.libelle')
+    expect(i, 'le bouton ne passe plus par la liste blanche').toBeGreaterThan(-1)
+    // Et rien, nulle part, n'interpole une valeur de la requête dans un lien.
+    expect(fn, 'un lien d’e-mail est bâti sur une valeur recopiée')
+      .not.toMatch(/lien:\s*`[^`]*\$\{\s*texte\(/)
+    // Et les deux tunnels disent d'où ils viennent.
+    expect(lire('web/components/vitrine/PageReserver.tsx')).toMatch(/retour: 'reserver'/)
+    expect(lire('web/components/vitrine/PageInscription.tsx')).toMatch(/retour: 'inscription'/)
+  })
+})
+
+describe('⚠️ ce que le navigateur envoie, la base le lit', () => {
+  /**
+   * ⚠️⚠️ **UNE CLÉ MAL NOMMÉE NE LÈVE RIEN.** `p_reponses ->> 'code_postal'`
+   * sur un objet qui porte `codePostal` rend `null`, et la réservation est
+   * refusée pour une raison qui ne dit pas laquelle — ou pire, passe avec une
+   * surface vide. Aucun type ne protège : c'est du JSON des deux côtés.
+   *
+   * La garde lit les clés que la fonction DEMANDE, dans la définition qui
+   * tourne, et vérifie que l'appel les envoie toutes. Elle ne cite rien.
+   */
+  it('chaque clé lue par reserver_ma_mission est envoyée', () => {
+    const corps = derniereDefinition('reserver_ma_mission').corps
+    const lues = new Set([...corps.matchAll(/p_reponses\s*->>\s*'(\w+)'/g)].map((m) => m[1]))
+    expect(lues.size, 'les clés lues par la base ne se lisent plus').toBeGreaterThan(12)
+
+    const src = lire('web/lib/onDemandClient.ts')
+    const appel = src.slice(src.indexOf('p_reponses: {'))
+    const envoi = appel.slice(0, appel.indexOf('\n    },'))
+    const envoyees = new Set([...envoi.matchAll(/^\s{6}(\w+):/gm)].map((m) => m[1]))
+
+    const oubliees = [...lues].filter((c) => !envoyees.has(c))
+    expect(oubliees, `clés lues par la base mais jamais envoyées : ${oubliees.join(', ')}`).toEqual([])
+  })
+
+  it('et rien n’est envoyé que la base ne lise', () => {
+    // L'autre sens : une clé inventée côté navigateur est du bruit, et elle
+    // laisse croire qu'une réponse a été transmise.
+    const corps = derniereDefinition('reserver_ma_mission').corps
+    const lues = new Set([...corps.matchAll(/p_reponses\s*->>\s*'(\w+)'/g)].map((m) => m[1]))
+    const src = lire('web/lib/onDemandClient.ts')
+    const appel = src.slice(src.indexOf('p_reponses: {'))
+    const envoi = appel.slice(0, appel.indexOf('\n    },'))
+    const envoyees = [...envoi.matchAll(/^\s{6}(\w+):/gm)].map((m) => m[1])
+    expect(envoyees.length, 'l’appel ne se lit plus').toBeGreaterThan(12)
+    const inutiles = envoyees.filter((c) => !lues.has(c))
+    expect(inutiles, `envoyées mais jamais lues : ${inutiles.join(', ')}`).toEqual([])
+  })
+})
