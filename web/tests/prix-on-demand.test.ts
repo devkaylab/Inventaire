@@ -1176,3 +1176,61 @@ describe('⚠️ une migration finit son corps par `$function$;`', () => {
       + `donc lu jusqu’à la fin du fichier : ${fautives.join(', ')}`).toEqual([])
   })
 })
+
+describe('⚠️ les liens d’On-Demand mènent quelque part', () => {
+  /**
+   * 4 octobre 2026, en préparant un inventaire réservé pour de vrai : le
+   * bouton « Préparer l'inventaire » rendait **404**. Les écrans On-Demand
+   * pointaient vers `/inventaire/{id}`, et la route du produit est
+   * `/dashboard/{id}`. Trois liens morts : préparer, suivre en direct, ouvrir
+   * le rapport.
+   *
+   * ⚠️ **ET LA PREMIÈRE VERSION DE CETTE GARDE NE MORDAIT PAS.** Elle
+   * vérifiait que le premier segment existe dans `app/` — or `inventaire`
+   * existe : c'est la page vitrine. Ce qui manquait, c'est le `[id]` DERRIÈRE.
+   * Le sabotage l'a dit : verte avec le lien mort remis. Une garde qui
+   * contrôle le dossier parent ne contrôle pas la route.
+   *
+   * La liste SE DÉDUIT : on relève les liens internes des écrans On-Demand, et
+   * un lien dynamique exige un segment dynamique dans le dossier visé.
+   */
+  const racine = path.resolve(__dirname, '..')
+
+  /** Les liens internes des écrans On-Demand : leur cible, et s'ils sont dynamiques. */
+  function liensInternes(): { fichier: string; cible: string; dynamique: boolean }[] {
+    const trouves: { fichier: string; cible: string; dynamique: boolean }[] = []
+    const descendre = (rel: string) => {
+      for (const e of readdirSync(path.join(racine, rel), { withFileTypes: true })) {
+        const r = path.join(rel, e.name)
+        if (e.isDirectory()) { descendre(r); continue }
+        if (!/\.tsx?$/.test(e.name)) continue
+        const code = readFileSync(path.join(racine, r), 'utf8')
+          .split('\n').filter((l) => !l.trim().startsWith('*') && !l.trim().startsWith('//')).join('\n')
+        for (const m of code.matchAll(/href=[{"]`?\/([a-z0-9-]+)(\/\$\{)?/gi)) {
+          trouves.push({ fichier: r, cible: m[1], dynamique: Boolean(m[2]) })
+        }
+      }
+    }
+    descendre(path.join('app', 'on-demand'))
+    descendre(path.join('app', 'reserver'))
+    return trouves
+  }
+
+  it('aucun ne mène à une route inexistante', () => {
+    const app = path.join(racine, 'app')
+    const dossiers = new Set(readdirSync(app, { withFileTypes: true })
+      .filter((d) => d.isDirectory()).map((d) => d.name))
+    const liens = liensInternes()
+    expect(liens.length, 'plus aucun lien interne dans les écrans On-Demand').toBeGreaterThan(3)
+
+    const morts = liens.filter(({ cible, dynamique }) => {
+      if (!dossiers.has(cible)) return true
+      if (!dynamique) return false
+      // ⚠️ Un lien `/cible/${x}` exige un segment dynamique DANS `cible`.
+      return !readdirSync(path.join(app, cible), { withFileTypes: true })
+        .some((d) => d.isDirectory() && d.name.startsWith('['))
+    })
+    expect(morts.map((m) => `${m.fichier} → /${m.cible}${m.dynamique ? '/…' : ''}`),
+      'liens vers une route qui n’existe pas').toEqual([])
+  })
+})

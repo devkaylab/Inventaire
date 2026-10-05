@@ -6,7 +6,7 @@
  * Maquette : les planches Confirme, Suivi et Annuler.
  *
  * ⚠️ **LE SUIVI EN DIRECT N'EST PAS REFAIT ICI.** Un inventaire On-Demand est
- * un inventaire Quantinvo : la page `/inventaire/[id]` porte déjà l'avancement,
+ * un inventaire Quantinvo : la page `/dashboard/[id]` porte déjà l'avancement,
  * les zones, les écarts et le rapport. En redessiner une version « On-Demand »
  * donnerait deux écrans à tenir en phase, et l'un des deux finirait en retard
  * sur l'autre. Cette page porte ce que l'AUTRE ne sait pas : la mission, son
@@ -111,7 +111,7 @@ export default function MonInventairePage() {
           <p className="muted">{explication}</p>
           {enCours && mission.inventory_session_id && (
             <p style={{ marginTop: 18 }}>
-              <Link href={`/inventaire/${mission.inventory_session_id}`} className="btn btn-primary">
+              <Link href={`/dashboard/${mission.inventory_session_id}`} className="btn btn-primary">
                 Suivre en direct
               </Link>
             </p>
@@ -199,7 +199,7 @@ export default function MonInventairePage() {
               : 'Écarts contrôlés, quantités comptées, exports Excel, CSV et PDF.'}
           </p>
           <p style={{ marginTop: 18 }}>
-            <Link href={`/inventaire/${mission.inventory_session_id}`}
+            <Link href={`/dashboard/${mission.inventory_session_id}`}
                   className={aVenir ? 'btn btn-primary' : 'btn btn-ghost'}>
               {aVenir ? 'Préparer l’inventaire' : 'Ouvrir le rapport'}
             </Link>
