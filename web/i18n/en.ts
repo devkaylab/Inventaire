@@ -1938,4 +1938,6 @@ export const en: Dictionnaire = {
   "S’il vous réécrit, une nouvelle conversation s’ouvrira — sans ce qui a été effacé.": "If they write to you again, a new conversation opens — without anything you deleted.",
   "Tout effacer": "Delete all",
   "Effacer cette notification": "Delete this notification",
+  "L’équipe du magasin n’a pas pu être chargée. Ce n’est pas qu’elle est vide : la liste n’est pas arrivée.": "The store team could not be loaded. It is not that it is empty: the list never arrived.",
+  'Réessayer': 'Try again',
 }

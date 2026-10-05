@@ -33,6 +33,16 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
 }) {
   const toast = useToast()
   const [annuaire, setAnnuaire] = useState<DirectoryEntry[]>([])
+  /**
+   * ⚠️ **UNE LISTE QUI N'A PAS PU SE CHARGER N'EST PAS UNE LISTE VIDE**
+   * (Julien, 5 octobre 2026). L'échec était avalé — `.catch(() =>
+   * setAnnuaire([]))` — et l'écran rendait alors « personne de l'équipe de ce
+   * magasin ne correspond ». Une coupure réseau et une équipe vide se
+   * ressemblaient exactement, et il n'y avait aucun moyen de faire la
+   * différence depuis l'écran.
+   */
+  const [etat, setEtat] = useState<'chargement' | 'pret' | 'echec'>('chargement')
+  const [essai, setEssai] = useState(0)
   const [query, setQuery] = useState('')
   const [choisi, setChoisi] = useState<DirectoryEntry | null>(null)
   const [role, setRole] = useState<SessionRole>('counter')
@@ -41,11 +51,12 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
   useEffect(() => {
     if (!storeId) return
     let vivant = true
+    setEtat('chargement')
     getStoreDirectory(storeId)
-      .then(rows => { if (vivant) setAnnuaire(rows) })
-      .catch(() => { if (vivant) setAnnuaire([]) })
+      .then(rows => { if (vivant) { setAnnuaire(rows); setEtat('pret') } })
+      .catch(() => { if (vivant) { setAnnuaire([]); setEtat('echec') } })
     return () => { vivant = false }
-  }, [storeId])
+  }, [storeId, essai])
 
   // Déjà dans l'inventaire : on ne les propose pas. Les reproposer ferait
   // découvrir le doublon au moment de l'envoi.
@@ -70,7 +81,8 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
       .slice(0, 8)
   }, [annuaire, q, choisi, exclus, exclusMails])
 
-  const rienTrouve = q.length > 0 && !choisi && suggestions.length === 0
+  // ⚠️ « Rien trouvé » ne se dit que si la liste est VRAIMENT là.
+  const rienTrouve = etat === 'pret' && q.length > 0 && !choisi && suggestions.length === 0
 
   function choisir(entry: DirectoryEntry) {
     setChoisi(entry)
@@ -180,6 +192,15 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
             {t('Changer')}
           </button>
         </div>
+      )}
+
+      {etat === 'echec' && (
+        <p className="field-err" style={{ marginTop: 10 }}>
+          {t('L’équipe du magasin n’a pas pu être chargée. Ce n’est pas qu’elle est vide : la liste n’est pas arrivée.')}{' '}
+          <button type="button" className="link-btn" onClick={() => setEssai(n => n + 1)}>
+            {t('Réessayer')}
+          </button>
+        </p>
       )}
 
       {rienTrouve && (

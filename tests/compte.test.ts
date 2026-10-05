@@ -1509,6 +1509,11 @@ describe('le tunnel de préparation (23 août 2026)', () => {
   const zonesEcran = lire('app/(supervisor)/[sessionId]/zones.tsx')
   const importEcran = lire('app/(supervisor)/[sessionId]/import.tsx')
   const compteurs = lire('app/(supervisor)/[sessionId]/invite.tsx')
+  const codeSeulInvite = () => compteurs
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((l) => !l.trim().startsWith('//'))
+    .join('\n')
 
   // ── Le pop-up de création ───────────────────────────────────────────────
   //
@@ -1640,9 +1645,38 @@ describe('le tunnel de préparation (23 août 2026)', () => {
     expect(compteurs).toContain('Compte créé, ajout à faire')
   })
 
-  it('« pas d’équipe » se juge sur l’annuaire, pas sur la recherche', () => {
-    expect(compteurs).toContain('const equipeVide = directory !== undefined')
-    expect(compteurs).toContain("d.role !== 'supervisor'")
+  /**
+   * ⚠️⚠️ **CETTE GARDE EXIGEAIT LE DÉFAUT** (corrigé le 5 octobre 2026). Elle
+   * demandait `d.role !== 'supervisor'` dans la règle, sans dire pourquoi —
+   * elle figeait une ligne, pas une décision.
+   *
+   * Le défaut, vu sur la production : Julien ajoute Théo à son inventaire et ne
+   * le voit pas dans l'équipe. L'écran affichait « pas encore d'équipe » et
+   * CACHAIT la barre de recherche, parce que l'annuaire de La Samaritaine ne
+   * contient que deux superviseurs — lui et Théo.
+   *
+   * L'auteur voulait s'exclure lui-même (« l'annuaire contient toujours au
+   * moins le superviseur ») et a filtré sur le RÔLE, alors que le test juste
+   * avant l'exclut déjà par son identifiant. Une entreprise dont l'équipe n'est
+   * faite que de superviseurs ne pouvait ajouter personne, jamais.
+   */
+  it('⚠️ « pas d’équipe » ne retire que SOI, jamais les autres superviseurs', () => {
+    // ⚠️ Sans les commentaires : celui de l'écran RACONTE le défaut, donc il
+    // cite la ligne qu'on interdit. Septième fois que ce piège se présente.
+    const regle = codeSeulInvite().match(/const equipeVide =[\s\S]*?\.length === 0/)?.[0] ?? ''
+    expect(regle, 'la règle « pas encore d’équipe » ne se lit plus').not.toBe('')
+    expect(regle).toContain('d.user_id !== profile?.id')
+    expect(regle, 'elle retire encore les autres superviseurs de l’annuaire')
+      .not.toMatch(/role\s*!==\s*'supervisor'/)
+  })
+
+  it('⚠️ et l’écran sait pourtant ajouter un superviseur', () => {
+    // C'est ce qui rendait le défaut absurde : le choix du rôle propose
+    // « Co-superviseur » pendant que la recherche était cachée.
+    const code = codeSeulInvite()
+    expect(code).toMatch(/active=\{role === 'supervisor'\}/)
+    // Et la recherche dépend bien de cette règle, et d'elle seule.
+    expect(code).toContain('{!equipeVide && (')
   })
 
   // ⚠️ **« Nouvel inventaire » ne se masque jamais.** Il l'a été deux fois, et
