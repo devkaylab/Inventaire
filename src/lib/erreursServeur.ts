@@ -185,7 +185,12 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Session introuvable ou code incorrect': 'Inventory not found or wrong code',
   'Session introuvable': 'Inventory not found',
   "Seul le créateur de cet inventaire, ou l'administrateur de votre entreprise, peut le supprimer.": 'Only the creator of this inventory, or your company administrator, can delete it.',
+  // ⚠️ L'ANCIENNE PHRASE RESTE : une migration ne réécrit pas les refus déjà
+  // rendus par d'autres chemins, et un message disparu devient un message
+  // brut à l'écran.
   'Seul le créateur peut retirer un membre.': 'Only the creator can remove a member.',
+  "Seul le créateur ou un administrateur de l'entreprise peut retirer un membre.":
+    'Only the creator or a company administrator can remove a member.',
   'Statut invalide': 'Invalid status',
   'Stock ou surface hors de portée : vérifiez la saisie.': 'Stock or floor area out of range: check what you entered.',
   'Superviseur introuvable dans votre entreprise.': 'Supervisor not found in your company.',

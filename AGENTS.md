@@ -145,3 +145,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ On-Demand — **migrations appliquées en base**, site sur la préversion, et **une seule migration touche OS**](docs/notes/111-on-demand-la-premiere-tranche-20-septembre-2026.md)
 - [⚠️ On-Demand : le côté inventoriste est rangé à part](docs/notes/112-on-demand-le-cote-inventoriste-est-range-a-part-4-octobre-2026.md)
 - [⚠️ Le parcours de la location, de bout en bout](docs/notes/113-le-parcours-de-la-location-de-bout-en-bout-4-octobre-2026.md)
+- [⚠️ L'administrateur d'entreprise retire un membre](docs/notes/114-l-admin-d-entreprise-retire-un-membre-5-octobre-2026.md)
