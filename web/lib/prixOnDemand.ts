@@ -24,7 +24,7 @@
 
 /** Les réglages de la version en vigueur. Copie de `reglages_prix`. */
 export const REGLAGES = {
-  version: 2,
+  version: 3,
   tauxInventoristeCents: 2000,
   tauxResponsableCents: 2800,
   productivite: 800,
@@ -52,27 +52,65 @@ export const REGLAGES = {
   // de Julien pour un inventoriste moyen, et c'est lui qui dimensionne le
   // ponctuel.
   productivitePonctuel: 500,
+  // ⚠️ LA PART DU MOIS (version 3, 5 octobre 2026). Une semaine de location
+  // vaut le mois d'abonnement qui couvre les mêmes appareils, majoré de dix
+  // pour cent. Elle valait la MOITIÉ d'un mois : louer coûtait alors 2,4 fois
+  // moins que s'abonner au même produit, et le mangeait.
+  partDuMois: 1.1,
 } as const
 
+/** Jusqu'où va le tarif d'entrée, en appareils. Trois, soit 10 000 pièces. */
+export const TARIF_ENTREE_APPAREILS = 3
+
 /**
- * ⚠️⚠️ **LE MOIS D'ABONNEMENT QUI COUVRE CES APPAREILS**, et sa moitié.
+ * ⚠️⚠️ **LE MOIS D'ABONNEMENT QUI COUVRE CES APPAREILS.**
  *
- * C'est l'ancre de toute la grille ponctuelle — la règle des deux inventaires
- * (Julien, 28 septembre 2026) : « comme au cinéma, au-delà de deux séances par
- * mois l'abonnement revient moins cher que la place ». Deux réservations
- * restent sous le mois, trois le dépassent.
+ * C'est l'ancre de toute la grille ponctuelle. La règle des deux inventaires
+ * (Julien, 28 septembre 2026) en faisait la MOITIÉ d'un mois : « comme au
+ * cinéma, au-delà de deux séances par mois l'abonnement revient moins cher que
+ * la place ». ⚠️ **Mesuré le 5 octobre 2026, le compte ne tombait pas juste** :
+ * six appareils, c'est Advanced à 310 € par mois, et on vendait la semaine
+ * 129 €. Il fallait VINGT-SIX réservations dans l'année pour que s'abonner
+ * redevienne intéressant — personne ne fait vingt-six inventaires. La location
+ * mangeait l'abonnement. Décision de Julien : **la semaine vaut le mois + 10 %**.
+ *
+ * ⚠️ **AVEC UN TARIF D'ENTRÉE JUSQU'À TROIS APPAREILS** — 10 000 pièces, le
+ * volume d'un petit magasin. Appliquer le palier plein dès le premier appareil
+ * aurait donné 341 € là où envoyer une équipe entière en coûte 589 : 58 % du
+ * service rendu complet, pour un logiciel que le client exploite lui-même. Le
+ * client se serait dit « pour 250 € de plus, ils viennent le faire ». Au-dessus
+ * de 10 000 pièces le rapport redevient tenable (341 contre 949, soit 36 %),
+ * et le palier plein s'applique.
+ *
+ * Le point d'entrée n'est pas inventé : il est sur la droite qui joint
+ * Essential à Advanced.
  *
  * ⚠️ Les trois montants sont ceux de `offres.ts` — Essential, Advanced,
  * Enterprise. Ils sont recopiés ici parce que la fonction en base ne peut pas
  * lire ce module, et qu'ils font foi des deux côtés : une garde les compare.
  */
 export function moisCouvrant(appareils: number): number {
-  return appareils <= 2 ? 8900 : (appareils <= 20 ? 31000 : 89000)
+  if (appareils <= 2) return 8900
+  // ⚠️ LE TARIF D'ENTRÉE S'ARRÊTE À TROIS APPAREILS, c'est-à-dire à 10 000
+  // pièces : au-delà, le palier plein. Le point est sur la droite Essential →
+  // Advanced, il n'est pas inventé.
+  if (appareils <= TARIF_ENTREE_APPAREILS) {
+    return Math.round(8900 + (31000 - 8900) * (appareils - 2) / 18)
+  }
+  if (appareils <= 20) return 31000
+  if (appareils <= 100) return 89000
+  // Au-delà du dernier palier, l'abonnement avance de 64 € par dix appareils :
+  // la location suit, majorée comme le reste.
+  return 89000 + 6400 * Math.ceil((appareils - 100) / 10)
 }
 
-/** La moitié du mois : le plafond d'une réservation ponctuelle. */
-export function plafondPonctuel(appareils: number): number {
-  return Math.floor(moisCouvrant(appareils) / 2)
+/**
+ * Ce que coûte une semaine de location, pour ce nombre d'appareils.
+ *
+ * Arrondi à l'euro : un prix public ne se lit pas en centimes.
+ */
+export function prixPonctuel(appareils: number): number {
+  return Math.round(moisCouvrant(appareils) * REGLAGES.partDuMois / 100) * 100
 }
 
 /**
@@ -161,14 +199,19 @@ export type Tranche = {
  * qui permet de ne pas revenir vers lui le soir de l'inventaire.
  */
 export const TRANCHES_ARTICLES: Tranche[] = [
-  { cle: 'a', court: '< 2 000', nom: 'Moins de 2 000 pièces', min: 0, max: 2_000, prixCents: 3_900 },
-  { cle: 'b', court: '2–5 000', nom: '2 000 à 5 000 pièces', min: 2_000, max: 5_000, prixCents: 4_400 },
-  { cle: 'c', court: '5–10 000', nom: '5 000 à 10 000 pièces', min: 5_000, max: 10_000, prixCents: 10_900 },
-  { cle: 'd', court: '10–20 000', nom: '10 000 à 20 000 pièces', min: 10_000, max: 20_000, prixCents: 12_900 },
-  { cle: 'e', court: '20–30 000', nom: '20 000 à 30 000 pièces', min: 20_000, max: 30_000, prixCents: 14_500 },
-  { cle: 'f', court: '30–50 000', nom: '30 000 à 50 000 pièces', min: 30_000, max: 50_000, prixCents: 15_500 },
-  { cle: 'g', court: '50–100 000', nom: '50 000 à 100 000 pièces', min: 50_000, max: 100_000, prixCents: 34_900 },
-  { cle: 'h', court: '100–150 000', nom: '100 000 à 150 000 pièces', min: 100_000, max: 150_000, prixCents: 44_500 },
+  // ⚠️ `prixCents` N'EST PLUS LE PRIX DE LA TRANCHE (version 3, 5 octobre
+  // 2026) : c'est ce que coûte cette tranche AU MINIMUM D'APPAREILS qu'elle
+  // impose. Le prix vient de `prixPonctuel(appareils)`. La colonne reste vraie
+  // au lieu de rester vieille — c'est elle que lit une vitrine qui veut écrire
+  // « à partir de ». Une garde la recalcule depuis la pente.
+  { cle: 'a', court: '< 2 000', nom: 'Moins de 2 000 pièces', min: 0, max: 2_000, prixCents: 9_800 },
+  { cle: 'b', court: '2–5 000', nom: '2 000 à 5 000 pièces', min: 2_000, max: 5_000, prixCents: 9_800 },
+  { cle: 'c', court: '5–10 000', nom: '5 000 à 10 000 pièces', min: 5_000, max: 10_000, prixCents: 11_100 },
+  { cle: 'd', court: '10–20 000', nom: '10 000 à 20 000 pièces', min: 10_000, max: 20_000, prixCents: 34_100 },
+  { cle: 'e', court: '20–30 000', nom: '20 000 à 30 000 pièces', min: 20_000, max: 30_000, prixCents: 34_100 },
+  { cle: 'f', court: '30–50 000', nom: '30 000 à 50 000 pièces', min: 30_000, max: 50_000, prixCents: 34_100 },
+  { cle: 'g', court: '50–100 000', nom: '50 000 à 100 000 pièces', min: 50_000, max: 100_000, prixCents: 97_900 },
+  { cle: 'h', court: '100–150 000', nom: '100 000 à 150 000 pièces', min: 100_000, max: 150_000, prixCents: 97_900 },
 ]
 
 export const TRANCHES_REFERENCES: Tranche[] = [
@@ -232,18 +275,19 @@ export function chaine(
   const heuresPersonne = articlesRetenus / r.productivite
 
   if (logiciel) {
-    // ⚠️⚠️ **LE PRIX VIENT DE LA TRANCHE, PLUS DU COÛT.** Voir la migration
-    // `20260928120001` pour le pourquoi : « coût + marge » faisait BAISSER le
-    // prix à la pièce quand le volume montait, ce qui est l'inverse de ce
-    // qu'il faut. L'ancre est la règle des deux inventaires.
+    // ⚠️⚠️ **LE PRIX VIENT DES APPAREILS — plus de la tranche, plus du coût.**
+    // Version 3 (`20261005200001`) : une semaine vaut le mois d'abonnement qui
+    // couvre ces appareils, majoré de dix pour cent. Avant, il valait la moitié
+    // d'un mois, et louer coûtait 2,4 fois moins que s'abonner au même produit.
+    // Avant encore, « coût + marge » faisait BAISSER le prix à la pièce quand
+    // le volume montait, ce qui est l'inverse de ce qu'il faut.
+    //
+    // ⚠️ `TRANCHES_ARTICLES` garde son rôle : le nom de la tranche, son plafond
+    // d'articles (au-delà, pas de prix) et le minimum d'appareils qu'elle
+    // impose. Ce qu'elle ne fait plus, c'est le montant.
     const minimum = minimumAppareils(articlesRetenus)
     const appareils = Math.max(minimum, appareilsDemandes ?? minimum)
-    const bande = TRANCHES_ARTICLES.find((t) => t.max >= articlesRetenus)
-    const base = bande?.prixCents ?? 0
-    const prixCents = Math.min(
-      base + r.supplementAppareilCents * Math.max(0, appareils - minimum),
-      plafondPonctuel(appareils),
-    )
+    const prixCents = prixPonctuel(appareils)
     const dureeMinutes = Math.ceil(
       (articlesRetenus / (r.productivitePonctuel * appareils)) * 60 / r.arrondiMinutes,
     ) * r.arrondiMinutes

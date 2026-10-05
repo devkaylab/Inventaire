@@ -19,9 +19,10 @@ import { derniereDefinition, dossierMigrations, fichierDe } from './migrations'
 import {
   REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee,
   FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
-  TRANCHES_ARTICLES, minimumAppareils, moisCouvrant, plafondPonctuel,
+  TRANCHES_ARTICLES, TARIF_ENTREE_APPAREILS, minimumAppareils, moisCouvrant, prixPonctuel,
 } from '../lib/prixOnDemand'
 import { prixFerme as prixAffiche } from '../lib/prixOnDemand'
+import { APPAREILS_MAX, OFFRES, SUPPLEMENT } from '../lib/offres'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -111,6 +112,7 @@ type Reglages = {
   margeMinimum: number
   tarifAppareil: number
   fraisFixesLogiciel: number
+  partDuMois: number
 }
 
 /** Les réglages, LUS dans l'`insert` de la migration — jamais recopiés ici. */
@@ -144,6 +146,7 @@ function reglages(): Reglages {
     margeMinimum: val('marge_minimum'),
     tarifAppareil: defautColonne('tarif_appareil_cents'),
     fraisFixesLogiciel: defautColonne('frais_fixes_logiciel_cents'),
+    partDuMois: val('part_du_mois'),
   }
 }
 
@@ -358,6 +361,10 @@ describe('le doublon d’affichage suit celui qui fait foi', () => {
       fraisFixesCents: REGLAGES.fraisFixesCents,
       margeCible: REGLAGES.margeCible,
       margeMinimum: REGLAGES.margeMinimum,
+      // ⚠️ AJOUTÉE LE 5 OCTOBRE 2026, et elle manquait : la part du mois décide
+      // à elle seule du prix de toute location. Sabotée à 1,25 côté base, la
+      // garde passait au vert pendant que le site facturait 1,10.
+      partDuMois: REGLAGES.partDuMois,
     }).toEqual({
       version: r.version,
       tauxInventoristeCents: r.tauxInventoriste,
@@ -367,6 +374,7 @@ describe('le doublon d’affichage suit celui qui fait foi', () => {
       fraisFixesCents: r.fraisFixes,
       margeCible: r.margeCible,
       margeMinimum: r.margeMinimum,
+      partDuMois: r.partDuMois,
     })
   })
 
@@ -490,41 +498,110 @@ describe('la formule logiciel seul', () => {
   })
 
   /**
-   * ⚠️ **LA RÈGLE DES DEUX INVENTAIRES**, sur les huit tranches : deux
-   * réservations restent sous le mois d'abonnement, trois le dépassent. C'est
-   * l'ancre de tout le barème — sans elle, le taux à la pièce n'est qu'un
-   * chiffre qu'on s'est donné, et un ponctuel plus cher que la moitié d'un
-   * mois résiliable n'a aucun acheteur.
+   * ⚠️⚠️ **LA RÈGLE DES DEUX INVENTAIRES EST MORTE** (5 octobre 2026). Elle
+   * disait : deux réservations restent sous le mois d'abonnement, trois le
+   * dépassent — donc le ponctuel valait la MOITIÉ d'un mois.
+   *
+   * Julien l'a reprise en relisant la grille : « 129 € pour 10/20 000 pièces,
+   * 6 appareils, ça semble peu crédible non ? ». Six appareils, c'est Advanced
+   * à 310 € par mois. On vendait une semaine du même produit 2,4 fois moins
+   * cher qu'un seul mois : il fallait VINGT-SIX réservations dans l'année pour
+   * que s'abonner redevienne intéressant. La location mangeait l'abonnement.
+   *
+   * La règle est maintenant : **la semaine vaut le mois + 10 %**, et le mois
+   * s'interpole entre les trois paliers.
    */
-  it('⚠️ deux inventaires restent sous le mois, trois le dépassent', () => {
-    for (const t of TRANCHES_ARTICLES) {
-      const c = chaineAffichee(t.max, 1, 'logiciel_seul')
-      const mois = moisCouvrant(c.appareils)
-      expect(c.prixCents * 2, `${t.nom} — deux`).toBeLessThanOrEqual(mois)
-      expect(c.prixCents * 3, `${t.nom} — trois`).toBeGreaterThan(mois)
+  it('⚠️ la semaine vaut le mois d’abonnement, majoré de la part décidée', () => {
+    for (const n of [1, 2, 3, 6, 10, 20, 21, 50, 100, 140]) {
+      expect(prixPonctuel(n), `${n} appareils`)
+        .toBe(Math.round(moisCouvrant(n) * REGLAGES.partDuMois / 100) * 100)
+      // Un prix public ne se lit pas en centimes.
+      expect(prixPonctuel(n) % 100, `${n} appareils — euros ronds`).toBe(0)
+    }
+    // ⚠️ ET LA PART EST BIEN AU-DESSUS DU MOIS. Une part sous 1 ramènerait le
+    // défaut : louer moins cher que s'abonner.
+    expect(REGLAGES.partDuMois).toBeGreaterThan(1)
+  })
+
+  /**
+   * ⚠️ **LA PENTE PASSE PAR LE HAUT DE CHAQUE PALIER**, et les trois ancres
+   * sont les prix d'abonnement de `offres.ts` — pas des nombres qu'on s'est
+   * donnés. C'est là qu'un client a vraiment la capacité et pourrait s'abonner
+   * à la place : c'est là que la règle doit tomber juste.
+   */
+  it('⚠️ les trois ancres sont les offres, au centime', () => {
+    for (const o of OFFRES) {
+      expect(moisCouvrant(o.max), `${o.nom} — ${o.max} appareils`).toBe(o.mois * 100)
+    }
+    // ⚠️ **LA COURBE NE REDESCEND JAMAIS, ET ELLE NE SAUTE QUE LÀ OÙ
+    // L'ABONNEMENT SAUTE.** Un mur ailleurs qu'à une frontière d'offre serait
+    // arbitraire — et c'est exactement ce qu'on reproche à un prix : un client
+    // qui déclare cent pièces de plus et voit son prix tripler sous-déclare.
+    // Les frontières sont DÉDUITES de `offres.ts` et du tarif d'entrée.
+    const frontieres = new Set<number>([TARIF_ENTREE_APPAREILS, ...OFFRES.map((o) => o.max)])
+    // Et au-delà du dernier palier, l'abonnement avance par paquets de dix :
+    // chacun est une frontière légitime. Déduit de `offres.ts`, pas cité.
+    const auDela = (n: number) => n > APPAREILS_MAX && (n - APPAREILS_MAX) % SUPPLEMENT.par === 0
+    for (let n = 1; n < 140; n += 1) {
+      const saut = prixPonctuel(n + 1) - prixPonctuel(n)
+      expect(saut, `${n} → ${n + 1} appareils — la courbe redescend`).toBeGreaterThanOrEqual(0)
+      if (saut > 4_000) {
+        expect(frontieres.has(n) || auDela(n),
+          `mur de ${saut / 100} € entre ${n} et ${n + 1} appareils`).toBe(true)
+      }
     }
   })
 
   /**
-   * ⚠️ **LE PRIX EST CELUI DE LA TRANCHE**, plus les appareils demandés
-   * au-delà du minimum, plafonné à la moitié d'un mois d'abonnement. Il ne
-   * vient plus d'une licence par appareil majorée de frais — ce modèle faisait
-   * BAISSER le prix à la pièce quand le volume montait.
+   * ⚠️⚠️ **LA COURBE DU SITE EST CELLE DE LA BASE**, seuil par seuil.
+   *
+   * Les réglages étaient comparés un par un, mais pas la COURBE : le `case` du
+   * SQL et `moisCouvrant()` sont deux implémentations indépendantes de la même
+   * décision. Sabotage du 5 octobre 2026 — le tarif d'entrée étendu à six
+   * appareils côté base seulement — : tout passait au vert pendant que le site
+   * affichait 341 € et que la base facturait 152 €. Le navigateur affiche, la
+   * base engage : c'est la base qui gagne, et le client voit l'autre prix.
    */
-  it('le prix est celui de la tranche, plus les appareils en trop', () => {
+  it('⚠️ la courbe du site est celle de la base, seuil par seuil', () => {
+    // ⚠️ Le `case` vit DANS le corps de la fonction : `derniereMigrationAvec`
+    // le retire exprès (`sansCorpsDeFonction`). On passe donc par la
+    // définition elle-même, comme partout ailleurs dans ce fichier.
+    const corps = sansCommentaires(derniereDefinition('prix_mission').corps)
+    const bloc = corps.slice(corps.indexOf('v_mois := case'))
+    expect(bloc, 'le calcul du mois ne se lit plus dans la base').not.toBe('')
+    const paliers = [...bloc.matchAll(/when v_appareils <= (\d+)\s*then\s+(\d+)\s*\n/g)]
+      .map((m) => ({ seuil: Number(m[1]), valeur: Number(m[2]) }))
+    expect(paliers.length, 'les paliers de la base ne se lisent plus')
+      .toBeGreaterThanOrEqual(3)
+    for (const { seuil, valeur } of paliers) {
+      expect(moisCouvrant(seuil), `${seuil} appareils — le site et la base divergent`)
+        .toBe(valeur)
+    }
+    // Le tarif d'entrée : la seule branche calculée, et son seuil doit être
+    // celui du site.
+    const entree = bloc.match(/when v_appareils <= (\d+)\s*then\s+round\(/)
+    expect(entree, 'le tarif d’entrée ne se lit plus dans la base').toBeTruthy()
+    expect(Number(entree![1]), 'le tarif d’entrée du site n’est pas celui de la base')
+      .toBe(TARIF_ENTREE_APPAREILS)
+  })
+
+  /**
+   * ⚠️ **LE PRIX VIENT DES APPAREILS, PLUS DE LA TRANCHE.** `prixCents` d'une
+   * tranche dit seulement ce qu'elle coûte AU MINIMUM d'appareils qu'elle
+   * impose — et la garde le RECALCULE, elle ne le relit pas. C'est ce qui a
+   * attrapé une valeur mal arrondie le jour même (30–50 000 : 274 € écrit,
+   * 273 € calculé).
+   */
+  it('⚠️ chaque tranche affiche le prix de son minimum d’appareils', () => {
     for (const t of TRANCHES_ARTICLES) {
       const minimum = minimumAppareils(t.max)
-      expect(chaineAffichee(t.max, 1, 'logiciel_seul').prixCents).toBe(t.prixCents)
+      expect(t.prixCents, `${t.nom}`).toBe(prixPonctuel(minimum))
+      expect(chaineAffichee(t.max, 1, 'logiciel_seul').prixCents, `${t.nom} — chaîne`)
+        .toBe(prixPonctuel(minimum))
 
-      // Deux appareils de plus que le minimum, tant que le plafond ne mord pas.
+      // Des appareils en plus se paient par la pente, pas par un supplément.
       const deuxDePlus = chaineAffichee(t.max, 1, 'logiciel_seul', minimum + 2)
-      expect(deuxDePlus.prixCents).toBe(Math.min(
-        (t.prixCents ?? 0) + 2 * REGLAGES.supplementAppareilCents,
-        plafondPonctuel(minimum + 2),
-      ))
-
-      // ⚠️ L'arrondi à l'euro ne doit rien changer : un prix affiché aux
-      // centimes ne serait plus le prix payé.
+      expect(deuxDePlus.prixCents).toBe(prixPonctuel(minimum + 2))
       expect(deuxDePlus.prixCents % 100, `${t.nom} — euros ronds`).toBe(0)
     }
   })

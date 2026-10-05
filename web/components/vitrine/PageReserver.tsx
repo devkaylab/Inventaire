@@ -573,7 +573,11 @@ export function PageReserver() {
           « réajusté » se lit comme une pénalité qu'on s'autorise. */}
       {logicielSeul && resultat.ok && (
         <p className="res-clause muted">
-          Prix de la tranche, {minimumChoisi} appareil{minimumChoisi > 1 ? 's' : ''} compris.{' '}
+          {/* ⚠️ « Prix de la tranche » est devenu faux le 5 octobre 2026 : le
+              prix vient des APPAREILS, la tranche n'en impose que le minimum.
+              Une phrase qui décrit un calcul qu'on vient de changer est pire
+              qu'une phrase absente. */}
+          {appareils} appareil{appareils > 1 ? 's' : ''} pendant sept jours.{' '}
           {clauseTolerance}
         </p>
       )}
