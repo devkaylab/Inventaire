@@ -1247,10 +1247,20 @@ describe('⚠️ un inventaire loué travaille par zones', () => {
    * compteurs sans elles, personne ne sait qui compte quoi, et deux personnes
    * recomptent le même rayon.
    */
-  it('le mode se décide sur les appareils, pas sur les inventoristes', () => {
+  it('⚠️ le mode ne dépend d’AUCUN seuil', () => {
+    // Julien, 5 octobre 2026 : « c'est la norme ». La règle a tenu deux formes
+    // fausses — `inventoristes >= 3`, puis `appareils >= 3`, qui corrigeait le
+    // nombre lu et gardait le seuil. Sur une mission, personne n'est là pour
+    // choisir : un seuil livrerait au client un inventaire moins bien rangé
+    // que celui qu'il aurait créé lui-même.
+    //
+    // ⚠️ SANS SES COMMENTAIRES : ceux-ci CITENT les deux seuils écartés pour
+    // expliquer pourquoi ils le sont, et une garde qui interdit un motif
+    // interdirait aussi de l'expliquer. Troisième fois aujourd'hui.
     const corps = derniereDefinition('creer_la_session_de_mission').corps
-    expect(corps).toMatch(/coalesce\(v_m\.appareils, v_m\.inventoristes\) >= 3/)
-    expect(corps, 'le mode se décide encore sur les gens envoyés')
-      .not.toMatch(/\(v_m\.inventoristes >= 3\)/)
+      .replace(/--.*$/gm, ' ')
+    const insert = corps.slice(corps.indexOf('insert into public.inventory_sessions'))
+    expect(insert, 'le mode dépend encore d’un seuil').not.toMatch(/>= 3/)
+    expect(insert).toMatch(/\n\s*true,\n/)
   })
 })

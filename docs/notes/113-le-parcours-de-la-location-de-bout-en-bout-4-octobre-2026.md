@@ -157,6 +157,20 @@ Les zones répartissent le magasin et font suivre l'avancement. À neuf
 compteurs sans elles, personne ne sait qui compte quoi, et deux personnes
 recomptent le même rayon.
 
-La règle lit maintenant `appareils`, avec repli sur `inventoristes` pour les
-missions d'avant la colonne. Vérifié : une réservation à 30 000 pièces rend
-9 appareils et `uses_zones = true`.
+⚠️ **ET MA CORRECTION ÉTAIT ENCORE FAUSSE.** J'ai remplacé `inventoristes` par
+`appareils` — le bon nombre — **en gardant le seuil**. Julien : « l'inventaire
+doit toujours être créé avec des zones de comptage, c'est la norme. »
+
+Le seuil lui-même n'avait pas lieu d'être. Sur le chemin ordinaire de
+Quantinvo OS, le superviseur coche « organisation du comptage » et la case est
+**cochée par défaut** ; sur une mission, personne n'est là pour choisir. Faire
+dépendre le mode d'un seuil, c'était livrer au client un inventaire moins bien
+rangé que celui qu'il aurait créé lui-même.
+
+`uses_zones` vaut **`true`**, sans condition. Vérifié sur la plus petite
+réservation possible : 1 500 pièces, 1 appareil, `uses_zones = true`.
+
+⚠️ Et la garde a mordu sur ses propres commentaires — ceux qui CITENT les deux
+seuils écartés pour expliquer pourquoi ils le sont. Troisième fois dans la même
+journée : **une garde lit le code sans ses commentaires**, sinon interdire un
+motif interdit aussi de l'expliquer.
