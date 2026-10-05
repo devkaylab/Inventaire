@@ -56,8 +56,20 @@ fi
 q() { psql -h "$SOCKET" -p "$PORT" -d "${1}" -v ON_ERROR_STOP=1 -q "${@:2}"; }
 
 q postgres -c "drop database if exists replique with (force);" -c "create database replique;" >/dev/null
+# ⚠️ **L'INSTALLATION DIT QUAND ELLE ÉCHOUE** (5 octobre 2026). Elle écrivait
+# `q replique -f "$f" 2>&1 | grep -vi notice || true` : le `|| true` avalait
+# l'échec, et `grep` n'avait déjà plus de code de retour utile. Le jour où
+# `10-donnees.sql` est mort sur une clé dupliquée à la ligne 29, le contrôle a
+# continué sans inventaire, sans zones et sans comptages — et c'est un SCÉNARIO,
+# trois écrans plus loin, qui l'a trahi par une clé étrangère. Règle du dépôt :
+# ne jamais filtrer la sortie d'un contrôle.
 for f in "$RACINE"/0*.sql "$RACINE"/10-donnees.sql; do
-  q replique -f "$f" 2>&1 | grep -vi notice || true
+  if ! q replique -f "$f" > "$SOCKET/installation.txt" 2>&1; then
+    echo "  ✗ ${f:t} — l'installation de la réplique a échoué :"
+    grep -iE "(ERROR|ERREUR)" "$SOCKET/installation.txt" | head -3
+    exit 1
+  fi
+  grep -vi notice "$SOCKET/installation.txt" || true
 done
 
 echo "── Quantinvo OS, AVANT ───────────────────────────────────────────────"
@@ -107,9 +119,16 @@ if [[ -f "$RACINE/90-retirer.sql" ]]; then
   else
     echo "  ⚠️ IL RESTE QUELQUE CHOSE :"; cat "$SOCKET/diff2.txt"
   fi
-  # On réapplique pour la démonstration qui suit.
+  # On réapplique pour la démonstration qui suit. ⚠️ ET ON DIT SI ÇA RATE : le
+  # `2>&1` vers /dev/null rendait muette une réapplication partielle, donc les
+  # scénarios tournaient sur une base à moitié migrée.
   for m in "${APPLIQUEES[@]}"; do
-    psql -h "$SOCKET" -p "$PORT" -d replique -v ON_ERROR_STOP=1 -q -f "$DEPOT/supabase/migrations/$m" >/dev/null 2>&1
+    if ! psql -h "$SOCKET" -p "$PORT" -d replique -v ON_ERROR_STOP=1 -q \
+         -f "$DEPOT/supabase/migrations/$m" > "$SOCKET/reapplication.txt" 2>&1; then
+      echo "  ✗ réapplication de $m :"
+      grep -iE "(ERROR|ERREUR)" "$SOCKET/reapplication.txt" | head -3
+      exit 1
+    fi
   done
 fi
 

@@ -25,8 +25,14 @@ insert into public.profiles (id, full_name, role, company_id, is_admin, is_compa
   -- ⚠️ L'inventoriste indépendant : `employee`, SANS entreprise.
   ('00000000-0000-0000-0000-0000000000c1', 'Ivan Inventoriste', 'employee', null, false, false, 'Ivan', 'Inventoriste');
 
+-- ⚠️ `on conflict do nothing` DEPUIS LE 5 OCTOBRE 2026, et ce n'est pas une
+-- précaution de style : le socle modélise désormais `sync_company_admin_stores`,
+-- le déclencheur qui affecte tout administrateur d'entreprise à chaque magasin
+-- créé. La ligne était donc déjà posée, et ce fichier mourait ici sur une clé
+-- dupliquée — sans inventaire, sans zones, sans comptages pour la suite.
 insert into public.store_supervisors (store_id, user_id) values
-  ('00000000-0000-0000-0000-00000000c501', '00000000-0000-0000-0000-0000000000a2');
+  ('00000000-0000-0000-0000-00000000c501', '00000000-0000-0000-0000-0000000000a2')
+  on conflict do nothing;
 
 insert into public.inventory_sessions
   (id, inventory_number, security_code_hash, store_name, status, created_by, company_id, name, store_id, uses_zones)

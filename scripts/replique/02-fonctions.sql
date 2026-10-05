@@ -163,3 +163,71 @@ begin
     exit when not exists (select 1 from public.stores where join_code = v_code); end loop;
   return v_code;
 end; $function$;
+
+-- ⚠️ `create_session` ET L'AFFECTATION AUTOMATIQUE (ajoutées le 5 octobre 2026).
+-- Le socle modélise Quantinvo OS, et il lui manquait LE chemin par lequel un
+-- client d'On-Demand crée désormais son inventaire : la réservation n'en crée
+-- plus. Sans elles, `50-sans-abonnement.sql` ne mesurait rien de ce parcours —
+-- « function public.create_session(unknown, uuid, …) does not exist ».
+-- Copies de la base (`pg_get_functiondef`), pas des réécritures.
+CREATE OR REPLACE FUNCTION public.create_session(p_name text, p_store_id uuid, p_security_code text, p_uses_zones boolean DEFAULT false)
+ RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+declare v_number text; v_id uuid; v_company uuid; v_store_name text;
+begin
+  if get_my_role() <> 'supervisor' then
+    return json_build_object('success', false, 'error', 'Accès refusé');
+  end if;
+  v_company := get_my_company();
+  if v_company is null then
+    return json_build_object('success', false, 'error', 'Aucune entreprise associée');
+  end if;
+  select name into v_store_name from public.stores where id = p_store_id and company_id = v_company;
+  if v_store_name is null then
+    return json_build_object('success', false, 'error', 'Magasin invalide');
+  end if;
+  if not public.is_assigned_store(p_store_id) then
+    return json_build_object('success', false, 'error', 'Magasin non affecté');
+  end if;
+  v_number := 'INV-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substring(md5(random()::text) from 1 for 4));
+  insert into public.inventory_sessions
+    (inventory_number, security_code_hash, security_code, store_name, store_id, name, created_by, uses_zones, company_id)
+  values
+    (v_number, encode(sha256(p_security_code::bytea), 'hex'), p_security_code, v_store_name, p_store_id,
+     coalesce(trim(p_name), ''), auth.uid(), coalesce(p_uses_zones, false), v_company)
+  returning id into v_id;
+  insert into public.session_members (session_id, user_id) values (v_id, auth.uid());
+  return json_build_object('success', true, 'session_id', v_id::text, 'inventory_number', v_number,
+    'name', coalesce(trim(p_name), ''), 'store_name', v_store_name, 'security_code', p_security_code,
+    'uses_zones', coalesce(p_uses_zones, false));
+end; $function$;
+
+CREATE OR REPLACE FUNCTION public.sync_company_admin_stores() RETURNS trigger
+ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+begin
+  if tg_table_name = 'stores' then
+    insert into public.store_supervisors (store_id, user_id)
+      select new.id, p.id
+        from public.profiles p
+       where p.company_id = new.company_id and p.is_company_admin
+      on conflict do nothing;
+  else
+    insert into public.store_supervisors (store_id, user_id)
+      select s.id, new.id
+        from public.stores s
+       where s.company_id = new.company_id
+      on conflict do nothing;
+  end if;
+  return null;
+end;
+$function$;
+
+drop trigger if exists stores_sync_company_admins on public.stores;
+create trigger stores_sync_company_admins
+  after insert on public.stores for each row execute function public.sync_company_admin_stores();
+
+drop trigger if exists profiles_sync_company_admin_stores on public.profiles;
+create trigger profiles_sync_company_admin_stores
+  after insert or update of company_id, is_company_admin on public.profiles
+  for each row execute function public.sync_company_admin_stores();

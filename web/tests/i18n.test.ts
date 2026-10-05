@@ -108,6 +108,19 @@ describe('l’espace connecté en anglais', () => {
     for (const f of fichiers(dossier, /\.sql$/)) {
       const sql = readFileSync(f, 'utf8')
       for (const m of sql.matchAll(/'error'\s*,\s*'((?:[^']|'')+)'/g)) refus.add(m[1].replace(/''/g, "'"))
+      // ⚠️ ET LES `raise exception` (5 octobre 2026). Une exception remonte à
+      // l'écran par `errorMessage()`, qui traduit À LA LECTURE comme pour un
+      // `'error'` — mais cette garde ne les lisait pas. Le jour où une règle
+      // refuse par exception plutôt que par retour de fonction, l'anglais
+      // n'avait aucun moyen de se signaler. Les vingt messages littéraux déjà
+      // écrits étaient tous traduits : la garde est passée verte du premier
+      // coup, et c'est la PROCHAINE qu'elle attrape.
+      // Les messages à `%` sont écartés : ce sont des phrases construites, que
+      // `PREFIXES` reconnaît par leur début.
+      for (const m of sql.matchAll(/raise exception\s+'((?:[^']|'')+)'/g)) {
+        const phrase = m[1].replace(/''/g, "'")
+        if (!phrase.includes('%')) refus.add(phrase)
+      }
     }
     expect(refus.size).toBeGreaterThan(100)
     const inconnues = [...refus].filter((r) => !(r in ERREURS_SERVEUR) && !PREFIXES.some(([debut]) => r.startsWith(debut) || debut.startsWith(r)))

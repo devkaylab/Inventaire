@@ -1275,3 +1275,221 @@ describe('⚠️ un inventaire loué travaille par zones', () => {
     expect(insert).toMatch(/\n\s*true,\n/)
   })
 })
+
+describe('⚠️ un inventaire ouvert à la fois, sur un magasin loué', () => {
+  /**
+   * 5 octobre 2026. Julien déroule le parcours à voix haute : « comme j'ai
+   * réservé pour un inventaire sur deux magasins, je peux n'avoir qu'une
+   * session d'inventaire à la fois par magasin ». Il l'énonçait comme acquis.
+   * `create_session` ne vérifie rien de tel : dix inventaires ouverts sur le
+   * même magasin passaient.
+   *
+   * ⚠️ Et la règle ne vaut QUE pour les locations — son choix, posé en
+   * connaissance de la contrepartie. Un abonné paie un abonnement avec des
+   * appareils, pas « un inventaire ».
+   */
+  const regle = () => derniereDefinition('un_seul_inventaire_sur_un_magasin_loue').corps
+
+  it('la règle vit à côté de Quantinvo OS, pas dans create_session', () => {
+    // ⚠️ `create_session` est appelée par l'app ET par le site de tous les
+    // abonnés. Y glisser la règle la ferait valoir pour eux aussi.
+    const fautes = readdirSync(dossierMigrations)
+      .filter((f) => f.endsWith('.sql') && f >= '20261005170001')
+      .filter((f) => sansCommentaires(readFileSync(path.join(dossierMigrations, f), 'utf8'))
+        .match(/create (?:or replace )?function public\.create_session\s*\(/i))
+    expect(fautes, fautes.join('\n')).toEqual([])
+  })
+
+  it('⚠️ elle reconnaît une location à sa FENÊTRE, sans citer un seul état', () => {
+    // Deux fausses pistes écartées : `plafond_appareils() is null` seul (il rend
+    // `null` aussi pour le plan `standard`, absent de sa liste de cas), et une
+    // liste d'états morts (`missions_etat_check` en compte seize). Dès qu'une
+    // mission meurt, `fermer_les_acces_mission` pose une date passée.
+    const corps = sansCommentaires(regle())
+    expect(corps).toMatch(/acces_expirent_le is null or m\.acces_expirent_le > now\(\)/)
+    const etats = [...readFileSync(
+      path.join(dossierMigrations, '20260920130001_on_demand_la_mission.sql'), 'utf8')
+      .matchAll(/'(brouillon|prix_calcule|confirmee|prete|en_cours|terminee|annulee|remboursee|echouee)'/g)]
+      .map((m) => m[1])
+    expect(etats.length, 'les états ne se lisent plus dans la migration de la mission')
+      .toBeGreaterThan(5)
+    const cites = [...new Set(etats)].filter((e) => corps.includes(`'${e}'`))
+    expect(cites, `la règle cite des états : ${cites.join(', ')}`).toEqual([])
+  })
+
+  it('⚠️ un abonné qui n’a jamais loué ne lit jamais la suite', () => {
+    // C'est ce test-là qui tient la règle hors de Quantinvo OS : il sort AVANT
+    // tout le reste. Inverser l'ordre la ferait porter sur tout le monde.
+    const corps = sansCommentaires(regle())
+    const sortie = corps.indexOf('return new;')
+    expect(corps.indexOf('from public.missions')).toBeLessThan(sortie)
+    expect(corps.indexOf('from public.inventory_sessions')).toBeGreaterThan(sortie)
+  })
+
+  it('et elle lâche le client qui s’est abonné depuis', () => {
+    const corps = sansCommentaires(regle())
+    expect(corps).toMatch(/plafond_appareils\(new\.store_id\) is not null/)
+  })
+
+  it('elle REFUSE, elle ne clôture ni ne supprime rien', () => {
+    const corps = sansCommentaires(regle()).toLowerCase()
+    expect(corps).toContain('raise exception')
+    expect(corps, 'la règle écrit au lieu de refuser').not.toContain('update public.')
+    expect(corps, 'la règle efface').not.toContain('delete from')
+  })
+
+  it('son refus a sa traduction anglaise', async () => {
+    const message = regle().match(/raise exception '((?:[^']|'')+)'/)?.[1].replace(/''/g, "'")
+    expect(message).toBeTruthy()
+    const { ERREURS_SERVEUR } = await import('../lib/erreursServeur')
+    expect(Object.keys(ERREURS_SERVEUR), `« ${message} » n’est pas traduit`).toContain(message)
+  })
+
+  it('⚠️ la tâche horaire de la fenêtre sait se retirer, elle aussi', () => {
+    // Manque trouvé le 5 octobre en relisant le retrait : `cloturer_les_…`
+    // ÉCRIT dans `inventory_sessions` toutes les heures. Laissée programmée
+    // après le retrait d'On-Demand, elle échoue chaque heure sur une table
+    // `missions` disparue.
+    const retrait = lire('scripts/replique/90-retirer.sql')
+    expect(retrait).toContain("cron.unschedule('cloturer-hors-fenetre')")
+    expect(retrait).toContain('drop function if exists public.cloturer_les_inventaires_hors_fenetre()')
+  })
+
+  it('⚠️ et la migration qui la programme se rejoue sans pg_cron', () => {
+    // `scripts/replique/verifier.sh` rejoue les VRAIES migrations sur une base
+    // locale, qui n'a pas l'extension — et il s'arrête au premier échec. Une
+    // migration qu'on ne peut pas rejouer est une migration qu'on n'éprouve pas.
+    const fichier = fichierDe('cloturer_les_inventaires_hors_fenetre')
+    expect(fichier).toMatch(/if not exists \(select 1 from pg_namespace where nspname = 'cron'\)/)
+  })
+})
+
+describe('⚠️ celui qui paie devient le client', () => {
+  /**
+   * 5 octobre 2026, cas soumis à Julien : un pro déjà connu de Quantinvo comme
+   * COMPTEUR chez un de ses clients, qui loue à son tour pour son propre
+   * inventaire. Sa réservation partait au nom de l'entreprise qui l'avait
+   * invité, puis `create_session` lui répondait « Accès refusé » — elle exige
+   * le rôle superviseur. Argent pris, inventaire impossible.
+   *
+   * Sa réponse : « c'est le compte client que l'on garde, celui qui a payé, pas
+   * celui qui participe à un inventaire ».
+   */
+  it('un compteur qui réserve est traité comme un nouveau venu', () => {
+    const corps = sansCommentaires(derniereDefinition('reserver_ma_mission').corps)
+    // Le rôle est lu…
+    expect(corps).toMatch(/select p\.company_id, p\.role into v_company, v_role/)
+    // …et il remet l'entreprise à zéro, ce qui rouvre l'embranchement existant.
+    expect(corps).toMatch(/if v_role = '\w+' then\s*v_company := null;/)
+  })
+
+  /**
+   * ⚠️⚠️ **LA GARDE DÉDUIT LE RÔLE, ELLE NE LE CITE PAS** — et c'est la faute
+   * que j'ai faite. Première version de la règle écrite avec `counter` : le
+   * vocabulaire de `session_members.role`, pas celui de `profiles`, dont la
+   * contrainte ne connaît que `supervisor` et `employee`. La règle compilait,
+   * s'appliquait, et ne mordait jamais. Rien dans le code ne le disait ; c'est
+   * la base qui a refusé le `update` de préparation du contrôle.
+   */
+  it('⚠️ et le rôle qu’elle nomme existe dans profiles', () => {
+    const schema = readFileSync(
+      path.join(dossierMigrations, '20260526000001_initial_schema.sql'), 'utf8')
+    const liste = schema.match(/role text NOT NULL DEFAULT '\w+' CHECK \(role IN \(([^)]+)\)\)/)
+    expect(liste, 'la contrainte de rôle ne se lit plus dans le schéma initial').toBeTruthy()
+    const roles = [...liste![1].matchAll(/'(\w+)'/g)].map((m) => m[1])
+    expect(roles).toContain('supervisor')
+    const corps = sansCommentaires(derniereDefinition('reserver_ma_mission').corps)
+    const nomme = corps.match(/if v_role = '(\w+)' then\s*v_company := null;/)?.[1]
+    expect(roles, `« ${nomme} » n’est pas un rôle de profiles`).toContain(nomme)
+    // Et ce n'est pas le superviseur : lui paie pour son entreprise.
+    expect(nomme).not.toBe('supervisor')
+  })
+
+  it('et l’embranchement le fait superviseur et administrateur', () => {
+    const corps = sansCommentaires(derniereDefinition('reserver_ma_mission').corps)
+    const branche = corps.slice(corps.indexOf('if v_company is null then'))
+    expect(branche).toMatch(/role = 'supervisor'/)
+    expect(branche).toMatch(/is_company_admin = true/)
+  })
+})
+
+describe('⚠️ la porte des missions ne s’ouvre pas sur la comptabilité', () => {
+  /**
+   * ⚠️⚠️ 5 octobre 2026, et le défaut était à moi. Pour réparer un
+   * « permission denied for table missions », j'avais écrit la veille
+   * `grant select on public.missions to authenticated` — **sans liste de
+   * colonnes, donc sur les 47**, ce qui supersède le grant nominatif posé le
+   * 20 septembre. Le client lisait `cout_cents`, `calcul` (la rémunération
+   * d'une équipe), `reglages_version` et `stripe_payment_intent_id`.
+   *
+   * Aucun contrôle ne l'a vu : ni la garde de séparation, ni l'analyseur de
+   * Supabase (un grant n'est pas un défaut de RLS). C'est un SCÉNARIO de la
+   * réplique qui a répondu `1900` à « ne voit PAS ce qu'elle nous coûte » —
+   * et il ne posait plus la question depuis un jour, parce qu'il mourait
+   * seize lignes plus haut.
+   *
+   * ⚠️ LA GARDE REJOUE LES GRANTS DANS L'ORDRE DES FICHIERS, elle ne cherche
+   * pas une phrase. C'est le seul moyen de connaître le droit EFFECTIF : trois
+   * migrations parlent de cette table, et c'est la dernière qui gagne.
+   */
+  const droitEffectif = (): { colonnes: Set<string> | 'toutes'; dernier: string } => {
+    let colonnes: Set<string> | 'toutes' = new Set<string>()
+    let dernier = '—'
+    for (const f of readdirSync(dossierMigrations).filter((n) => n.endsWith('.sql')).sort()) {
+      const sql = sansCommentaires(readFileSync(path.join(dossierMigrations, f), 'utf8'))
+      for (const m of sql.matchAll(
+        /(grant|revoke)\s+select\s*(\(([^)]*)\))?\s*(?:on|from)?\s*(?:on\s+)?(?:table\s+)?public\.missions\s+(?:to|from)\s+([^;]+);/gi)) {
+        const [, verbe, , liste, cibles] = m
+        if (!/authenticated/i.test(cibles)) continue
+        dernier = f
+        if (verbe.toLowerCase() === 'revoke') colonnes = new Set<string>()
+        else if (liste) colonnes = new Set(liste.split(',').map((c) => c.trim()).filter(Boolean))
+        else colonnes = 'toutes'
+      }
+    }
+    return { colonnes, dernier }
+  }
+
+  it('⚠️ le droit est nominatif — jamais la table entière', () => {
+    const { colonnes, dernier } = droitEffectif()
+    expect(colonnes, `le dernier grant (${dernier}) porte sur toutes les colonnes`).not.toBe('toutes')
+    expect((colonnes as Set<string>).size).toBeGreaterThan(20)
+  })
+
+  it('et il laisse des colonnes dehors', () => {
+    // Sans cette borne, une liste qui énumérerait les 47 colonnes passerait le
+    // test précédent tout en rouvrant la porte.
+    const { colonnes } = droitEffectif()
+    // Les colonnes de la table : celles du `create table`, plus celles ajoutées
+    // depuis. Déduites des migrations, pas recopiées.
+    const toutes = new Set<string>()
+    for (const f of readdirSync(dossierMigrations).filter((n) => n.endsWith('.sql')).sort()) {
+      const sql = sansCommentaires(readFileSync(path.join(dossierMigrations, f), 'utf8'))
+      const creation = sql.match(/create table (?:if not exists )?public\.missions\s*\(([\s\S]*?)\n\);/i)
+      if (creation) {
+        for (const ligne of creation[1].split('\n')) {
+          const col = ligne.match(/^\s{2,}(\w+)\s+\w/)
+          if (col && !/^(primary|unique|check|constraint|foreign)$/i.test(col[1])) toutes.add(col[1])
+        }
+      }
+      for (const m of sql.matchAll(/alter table (?:if exists )?public\.missions\s+add column (?:if not exists )?(\w+)/gi)) {
+        toutes.add(m[1])
+      }
+    }
+    expect(toutes.size, 'les colonnes de missions ne se lisent plus').toBeGreaterThan(30)
+    const dehors = [...toutes].filter((c) => !(colonnes as Set<string>).has(c))
+    expect(dehors.length, 'plus aucune colonne de missions n’est retenue').toBeGreaterThan(0)
+  })
+
+  it('⚠️ et ce que le client lit à l’écran est bien dans le droit', () => {
+    // L'autre moitié : refermer trop fort casse « Vos inventaires », et le
+    // refus serait un « permission denied » illisible.
+    const { colonnes } = droitEffectif()
+    const src = lire('web/lib/onDemandClient.ts')
+    const bloc = src.slice(src.indexOf('const COLONNES'), src.indexOf('ETATS_PASSES'))
+    const lues = [...bloc.matchAll(/'([a-z_,]+)'/g)].flatMap((m) => m[1].split(',')).filter(Boolean)
+    expect(lues.length, 'les colonnes lues par le client ne se lisent plus').toBeGreaterThan(15)
+    const manquantes = lues.filter((c) => !(colonnes as Set<string>).has(c))
+    expect(manquantes, `le client lit sans droit : ${manquantes.join(', ')}`).toEqual([])
+  })
+})

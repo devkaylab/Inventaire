@@ -91,9 +91,14 @@ const MARQUEUR = 'TOUCHE QUANTINVO OS'
 const EXCEPTION = '20260920200001_on_demand_le_plafond_d_appareils.sql'
 
 /** Ce que Quantinvo OS avait posé AVANT ce chantier — déduit, pas cité. */
-function objetsDeQuantinvoOS(): { fonctions: Set<string>; policies: Set<string> } {
+function objetsDeQuantinvoOS(): { fonctions: Set<string>; policies: Set<string>; tables: Set<string> } {
   const fonctions = new Set<string>()
   const policies = new Set<string>()
+  // ⚠️ LES TABLES AUSSI, ET DÉDUITES (5 octobre 2026). La garde du déclencheur
+  // en citait sept en dur. Sept sur la centaine qu'OS possède : un déclencheur
+  // posé sur `articles`, `counts_audit` ou `store_supervisors` passait sans
+  // rien dire. Une garde qui cite sa liste protège la liste.
+  const tables = new Set<string>()
   const duChantier = new Set(ONDEMAND)
   for (const f of fichiers) {
     // ⚠️ Ce que Quantinvo OS avait posé = tout ce qui N'EST PAS de cette
@@ -106,8 +111,11 @@ function objetsDeQuantinvoOS(): { fonctions: Set<string>; policies: Set<string> 
     for (const m of sql.matchAll(/create policy (\w+) on public\.(\w+)/gi)) {
       policies.add(`${m[2]}.${m[1]}`)
     }
+    for (const m of sql.matchAll(/create table (?:if not exists )?public\.(\w+)/gi)) {
+      tables.add(m[1])
+    }
   }
-  return { fonctions, policies }
+  return { fonctions, policies, tables }
 }
 
 describe('On-Demand ne touche pas à Quantinvo OS', () => {
@@ -118,6 +126,10 @@ describe('On-Demand ne touche pas à Quantinvo OS', () => {
     expect(ONDEMAND.length).toBeGreaterThanOrEqual(8)
     expect(os.fonctions.size).toBeGreaterThan(100)
     expect(os.policies.size).toBeGreaterThan(20)
+    // Sans cette borne, la garde du déclencheur passerait sur un ensemble vide
+    // de tables — donc sur rien.
+    expect(os.tables.size).toBeGreaterThan(20)
+    expect(os.tables.has('inventory_sessions')).toBe(true)
   })
 
   /**
@@ -170,15 +182,38 @@ describe('On-Demand ne touche pas à Quantinvo OS', () => {
    * ⚠️ Un déclencheur sur une table d'OS met du code de ce chantier sur le
    * chemin d'OS — y compris sur la création d'entreprise, qu'emprunte un
    * client qui vient de payer. Un défaut là-dedans casse un encaissement.
+   *
+   * ⚠️⚠️ **LA GARDE DISAIT « JAMAIS », ELLE DIT MAINTENANT « DÉCLARÉ ET
+   * RETIRABLE »** (5 octobre 2026). Julien a tranché que la règle « un
+   * inventaire ouvert à la fois » ne vaut QUE pour les locations — donc hors de
+   * `create_session`, qui est du Quantinvo OS pur appelée par l'app et par le
+   * site de tous les abonnés. Le seul endroit qui reste est un déclencheur sur
+   * `inventory_sessions`.
+   *
+   * Un « jamais » absolu, ici, aurait poussé la règle DANS `create_session` —
+   * c'est-à-dire exactement le contraire de ce que la garde protège. C'est la
+   * leçon déjà écrite deux portes plus haut : ce qui protège n'est pas
+   * l'interdiction, c'est que la migration l'annonce et sache se défaire.
+   *
+   * Reste donc interdit, et c'est l'essentiel : un déclencheur posé en silence.
    */
-  it('aucun déclencheur n’est posé sur une table de Quantinvo OS', () => {
-    const tablesOS = ['companies', 'stores', 'profiles', 'inventory_sessions',
-      'session_members', 'zones', 'counts']
+  it('un déclencheur sur une table de Quantinvo OS se déclare, et sait se retirer', () => {
+    const retrait = readFileSync(
+      path.resolve(__dirname, '../../scripts/replique/90-retirer.sql'), 'utf8')
     const fautes: string[] = []
     for (const f of ONDEMAND) {
       const sql = sansCommentaires(lire(f))
-      for (const m of sql.matchAll(/create trigger \w+\s+[\s\S]{0,60}?on public\.(\w+)/gi)) {
-        if (tablesOS.includes(m[1])) fautes.push(`${f} → sur ${m[1]}`)
+      for (const m of sql.matchAll(/create trigger (\w+)\s+[\s\S]{0,60}?on public\.(\w+)/gi)) {
+        const [, nom, table] = m
+        if (!os.tables.has(table)) continue
+        if (!lire(f).slice(0, 3000).includes(MARQUEUR)) {
+          fautes.push(`${f} → déclencheur ${nom} sur ${table}, sans « ${MARQUEUR} » en tête`)
+        }
+        // ⚠️ Un `drop table ... cascade` des tables du chantier ne l'emporte
+        // pas : sa table reste. Même piège que les policies posées sur OS.
+        if (!retrait.includes(`drop trigger if exists ${nom} on public.${table}`)) {
+          fautes.push(`${f} → déclencheur ${nom} sur ${table}, absent de 90-retirer.sql`)
+        }
       }
     }
     expect(fautes, fautes.join('\n')).toEqual([])

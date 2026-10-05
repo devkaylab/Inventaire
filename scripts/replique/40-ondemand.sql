@@ -40,9 +40,17 @@ begin;
   select 'MISSION EN COURS — a compté            : ' || count(*)::text from public.counts where sku='SKU-OD';
   select 'MISSION EN COURS — place d''appareil    : ' ||
     (public.prendre_place_appareil('00000000-0000-0000-0000-00000000e001'::uuid,'tel-inv')->>'accorde');
+  -- ⚠️ LES DEUX PARTS SE CALCULENT, ELLES NE SE CITENT PAS (5 octobre 2026).
+  -- Ce libellé affirmait « (20 d'abonnement + 7 de mission) » en dur, pendant que
+  -- la mesure juste à côté rendait 20. Vrai le jour où il a été écrit, faux depuis
+  -- que `plafond_mission_en_cours` exige un état avancé ET une fenêtre ouverte.
+  -- Un contrôle qui récite un chiffre au lieu de le lire finit par mentir.
   select 'MISSION EN COURS — plafond du magasin  : ' ||
     (public.prendre_place_appareil('00000000-0000-0000-0000-00000000e001'::uuid,'tel-inv')->>'plafond')
-    || ' (20 d''abonnement + 7 de mission)';
+    || ' (' || coalesce(public.plafond_appareils(
+         '00000000-0000-0000-0000-00000000c501'::uuid)::text, 'aucun')
+    || ' d''abonnement + ' || public.plafond_mission_en_cours(
+         '00000000-0000-0000-0000-00000000c501'::uuid)::text || ' de location)';
   reset role;
 
   update public.missions set etat='controle_qualite' where id='00000000-0000-0000-0000-00000000aa01'::uuid;

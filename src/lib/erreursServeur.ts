@@ -208,6 +208,7 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   'Un compte existe déjà pour cette adresse. Connectez-vous ou utilisez « mot de passe oublié ».': 'An account already exists for this email address. Sign in, or use “forgotten password”.',
   'Un compte existe déjà pour cette adresse.': 'An account already exists for this email address.',
   "Un des magasins n'appartient pas à votre entreprise.": 'One of the stores does not belong to your company.',
+  "Un inventaire est déjà ouvert sur ce magasin. Clôturez-le avant d'en créer un autre.": 'An inventory is already open for this store. Close it before creating another one.',
   'Un magasin porte déjà ce nom dans votre entreprise.': 'A store in your company already has this name.',
   'Un paiement est en cours ou reçu sur cette demande : terminez le parcours avant de la supprimer.': 'A payment is in progress or received on this request. Finish it before deleting.',
   'Un superviseur a toujours au moins un magasin. Affectez-en un à cette personne avant de la promouvoir.': 'A supervisor always has at least one store. Assign one to this person before promoting them.',

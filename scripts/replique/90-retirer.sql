@@ -13,6 +13,14 @@
 -- avoir supprimé `a_un_acces_mission` arrête le comptage pour tout le monde.
 \ir 91-restaurer-quantinvo-os.sql
 
+-- ⚠️ LE DÉCLENCHEUR SUR `inventory_sessions` AUSSI, et pour la même raison que
+-- les policies : il vit sur une table de Quantinvo OS, qui reste. Un
+-- `drop table missions cascade` ne l'emporte pas — il LIT `missions`, il n'en
+-- dépend pas au sens de Postgres. Le laisser, c'est garder la règle
+-- « un inventaire à la fois » dans un produit d'où On-Demand a été retiré,
+-- adossée à une table disparue.
+drop trigger if exists sessions_un_seul_en_location on public.inventory_sessions;
+
 drop policy if exists sessions_acces_mission on public.inventory_sessions;
 drop policy if exists sessions_acces_mission_update on public.inventory_sessions;
 drop policy if exists zones_acces_mission on public.zones;
@@ -50,6 +58,29 @@ drop function if exists public.missions_accorder_les_acces() cascade;
 drop function if exists public.missions_figer_le_prix() cascade;
 drop function if exists public.equipe_de_ma_mission(uuid) cascade;
 drop function if exists public.pointer_mon_arrivee(uuid) cascade;
+drop function if exists public.un_seul_inventaire_sur_un_magasin_loue() cascade;
+-- ⚠️ ET LA TÂCHE HORAIRE, qui manquait (constat du 5 octobre 2026, en relisant
+-- ce fichier pour y ajouter le déclencheur). `cloturer_les_inventaires_hors_fenetre`
+-- ÉCRIT dans `inventory_sessions` toutes les heures : la laisser programmée
+-- après le retrait, c'est une tâche qui échoue chaque heure sur une table
+-- `missions` disparue — exactement ce que ce fichier existe pour empêcher.
+-- ⚠️ **DEUX `if` IMBRIQUÉS, PAS UN `and`.** Première version écrite
+-- `if exists(pg_namespace…) and exists(cron.job…)` : PL/pgSQL prépare
+-- l'expression ENTIÈRE comme une seule requête SQL, donc `cron.job` est résolu
+-- même quand le premier membre est faux. Le contrôle de réplique l'a dit tout
+-- de suite — `ERROR: relation "cron.job" does not exist`. Un court-circuit de
+-- langage ne protège pas d'une analyse de requête.
+do $$
+begin
+  if not exists (select 1 from pg_namespace where nspname = 'cron') then
+    return;
+  end if;
+  if exists (select 1 from cron.job where jobname = 'cloturer-hors-fenetre') then
+    perform cron.unschedule('cloturer-hors-fenetre');
+  end if;
+end
+$$;
+drop function if exists public.cloturer_les_inventaires_hors_fenetre() cascade;
 drop function if exists public.creer_la_session_de_mission(uuid) cascade;
 drop function if exists public.prix_mission(integer, text, timestamptz, text, text, integer) cascade;
 drop function if exists public.prix_mission(integer, text, timestamptz, text, text, integer, text) cascade;

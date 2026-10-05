@@ -67,11 +67,28 @@ grant execute on function public.cloturer_les_inventaires_hors_fenetre() to serv
 --
 -- Le motif est celui des deux tâches existantes : on déprogramme d'abord, pour
 -- que rejouer la migration ne crée pas un doublon silencieux.
-select cron.unschedule('cloturer-hors-fenetre')
- where exists (select 1 from cron.job where jobname = 'cloturer-hors-fenetre');
+--
+-- ⚠️ **ET LE TOUT PASSE PAR UN BLOC QUI VÉRIFIE QUE `pg_cron` EST LÀ** (ajouté
+-- le 5 octobre 2026). `scripts/replique/verifier.sh` rejoue les VRAIES
+-- migrations sur une base locale, qui n'a pas l'extension : écrites en clair,
+-- ces trois lignes faisaient échouer le contrôle, et le contrôle s'arrête au
+-- premier échec. Une migration qu'on ne peut pas rejouer dans la réplique est
+-- une migration qu'on n'éprouve pas.
+do $$
+begin
+  if not exists (select 1 from pg_namespace where nspname = 'cron') then
+    raise notice 'pg_cron absent : la tâche n''est pas programmée (réplique locale).';
+    return;
+  end if;
 
-select cron.schedule(
-  'cloturer-hors-fenetre',
-  '5 * * * *',
-  $$select public.cloturer_les_inventaires_hors_fenetre()$$
-);
+  if exists (select 1 from cron.job where jobname = 'cloturer-hors-fenetre') then
+    perform cron.unschedule('cloturer-hors-fenetre');
+  end if;
+
+  perform cron.schedule(
+    'cloturer-hors-fenetre',
+    '5 * * * *',
+    $sql$select public.cloturer_les_inventaires_hors_fenetre()$sql$
+  );
+end
+$$;
