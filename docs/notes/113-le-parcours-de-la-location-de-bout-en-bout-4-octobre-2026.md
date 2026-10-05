@@ -143,3 +143,20 @@ plus, et elle avait raison. Quatre migrations de la journée étaient dans ce
 cas. Toutes recollées, et une garde refuse désormais la terminaison détachée.
 
 C'est le genre de défaut qui ne casse rien et rend tout approximatif.
+
+
+## ⚠️ Un inventaire loué naissait sans zones — 5 octobre 2026
+
+Vu à l'écran sur une réservation réelle : « Mode : Classique (sans balise) ».
+
+`creer_la_session_de_mission` décidait du mode par `inventoristes >= 3` — les
+gens qu'on envoyait. En location ce nombre vaut **0** par construction : tout
+inventaire loué naissait donc sans zones, **même à neuf téléphones**.
+
+Les zones répartissent le magasin et font suivre l'avancement. À neuf
+compteurs sans elles, personne ne sait qui compte quoi, et deux personnes
+recomptent le même rayon.
+
+La règle lit maintenant `appareils`, avec repli sur `inventoristes` pour les
+missions d'avant la colonne. Vérifié : une réservation à 30 000 pièces rend
+9 appareils et `uses_zones = true`.

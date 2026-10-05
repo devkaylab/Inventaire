@@ -1234,3 +1234,23 @@ describe('⚠️ les liens d’On-Demand mènent quelque part', () => {
       'liens vers une route qui n’existe pas').toEqual([])
   })
 })
+
+describe('⚠️ un inventaire loué travaille par zones', () => {
+  /**
+   * 5 octobre 2026, vu à l'écran sur une réservation réelle : « Mode :
+   * Classique (sans balise) ». `creer_la_session_de_mission` décidait du mode
+   * par `inventoristes >= 3` — les gens qu'on envoyait. En location ce nombre
+   * vaut **0** par construction, donc tout inventaire loué naissait sans
+   * zones, **même à neuf téléphones**.
+   *
+   * Les zones répartissent le magasin et font suivre l'avancement : à neuf
+   * compteurs sans elles, personne ne sait qui compte quoi, et deux personnes
+   * recomptent le même rayon.
+   */
+  it('le mode se décide sur les appareils, pas sur les inventoristes', () => {
+    const corps = derniereDefinition('creer_la_session_de_mission').corps
+    expect(corps).toMatch(/coalesce\(v_m\.appareils, v_m\.inventoristes\) >= 3/)
+    expect(corps, 'le mode se décide encore sur les gens envoyés')
+      .not.toMatch(/\(v_m\.inventoristes >= 3\)/)
+  })
+})
