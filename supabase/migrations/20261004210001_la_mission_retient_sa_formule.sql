@@ -227,8 +227,7 @@ begin
     'duree_minutes', (v_prix ->> 'duree_minutes')::integer,
     'entreprise_creee', v_neuve);
 end;
-$function$
-;
+$function$;
 
 -- `create or replace` rend EXECUTE à PUBLIC : on repose les droits.
 revoke all on function public.reserver_ma_mission(jsonb) from public, anon;

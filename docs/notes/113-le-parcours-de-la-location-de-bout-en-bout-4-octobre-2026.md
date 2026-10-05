@@ -108,3 +108,38 @@ retombe sur son plancher.
 
 Préparer — importer, imprimer les balises, inviter l'équipe — ne consomme
 aucun appareil. Le plancher ne gêne donc pas la préparation.
+
+
+## Un seul inventaire, et il naît avec la réservation
+
+Julien, entre les deux sorties proposées : **B** — « la mission crée
+l'inventaire dès la réservation, et c'est celui-là que le client prépare ».
+
+- `creer_la_session_de_mission` accepte d'être appelée dès `prix_calcule`.
+  Elle exigeait `confirmee`, ce qui n'avait de sens que pour une équipe qui se
+  constitue après la confirmation.
+- `reserver_ma_mission` l'appelle dans la foulée de l'insert.
+- L'écran du client y mène **avant** le jour — « Préparer l'inventaire » — et
+  devient « Votre rapport » ensuite. Le même, du début à la fin.
+
+⚠️ Rien ne peut en créer deux : la fonction rend `{deja: true}` si la mission
+en a déjà une, et `admin_avancer_mission` ne l'appelle que sur un identifiant
+nul.
+
+## ⚠️⚠️ Et un piège de méthode, trouvé par une garde d'un autre sujet
+
+Reprendre une définition de `pg_get_functiondef` est la bonne méthode — elle
+évite de recopier deux cents lignes et d'y glisser une divergence. Mais **sa
+sortie se termine par `$function$` sans point-virgule**, et l'ajouter sur la
+ligne suivante produit `$function$\n;`.
+
+Or `derniereDefinition` — le helper par lequel passent **toutes** les gardes du
+projet — borne un corps en cherchant `$function$;`. Sans cette suite exacte,
+elle lit **jusqu'à la fin du fichier**, donc la fonction suivante.
+
+Dans la migration qui en portait deux, le corps de la première contenait celui
+de la seconde : une garde de l'espace administrateur a signalé un promoteur de
+plus, et elle avait raison. Quatre migrations de la journée étaient dans ce
+cas. Toutes recollées, et une garde refuse désormais la terminaison détachée.
+
+C'est le genre de défaut qui ne casse rien et rend tout approximatif.

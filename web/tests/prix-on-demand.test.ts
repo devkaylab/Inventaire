@@ -1104,3 +1104,75 @@ describe('⚠️ une location est arbitrée comme une location', () => {
     expect(partie).toMatch(/when 'prete'\s*then array\['en_cours'/)
   })
 })
+
+describe('⚠️ un seul inventaire, et il naît avec la réservation', () => {
+  /**
+   * Julien, 4 octobre 2026, entre deux sorties proposées : **B** — « la
+   * mission crée l'inventaire dès la réservation, et c'est celui-là que le
+   * client prépare ».
+   *
+   * Le défaut : louer fait du client un utilisateur ORDINAIRE de Quantinvo OS.
+   * Il atterrit sur son tableau de bord et prépare naturellement un inventaire
+   * à lui — import, balises, équipe. Puis l'ouverture de la mission lui en
+   * créait un SECOND, vide. Deux à l'écran, rien pour dire lequel compte, et
+   * tout son travail dans l'autre.
+   */
+  it('la réservation crée la session dans la foulée', () => {
+    const corps = derniereDefinition('reserver_ma_mission').corps
+    expect(corps).toMatch(/perform public\.creer_la_session_de_mission\(v_id\)/)
+  })
+
+  it('⚠️ et la session accepte de naître dès le prix calculé', () => {
+    // Elle exigeait `confirmee` : une équipe se constituait après la
+    // confirmation. Sans équipe, cette borne ne protège plus rien — elle
+    // empêchait seulement le client de préparer.
+    const corps = derniereDefinition('creer_la_session_de_mission').corps
+    expect(corps).toMatch(/not in \('prix_calcule'/)
+  })
+
+  it('rien ne peut en créer deux', () => {
+    // La fonction rend `{deja: true}` si la mission en a déjà une, et
+    // `admin_avancer_mission` ne l'appelle que sur un identifiant nul.
+    const session = derniereDefinition('creer_la_session_de_mission').corps
+    expect(session).toMatch(/if v_m\.inventory_session_id is not null then/)
+    const avancer = derniereDefinition('admin_avancer_mission').corps
+    expect(avancer).toMatch(/inventory_session_id is null/)
+  })
+
+  it('et l’écran y mène avant le jour, pas seulement après', () => {
+    const ecran = readFileSync(path.resolve(
+      __dirname, '..', 'app/on-demand/mes-inventaires/[id]/page.tsx'), 'utf8')
+      .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ').replace(/\s+/g, ' ')
+    expect(ecran).toMatch(/Préparer l’inventaire/)
+    expect(ecran, 'l’écran ne mène à l’inventaire qu’une fois fini')
+      .toMatch(/aVenir \? 'Votre inventaire' : 'Votre rapport'/)
+  })
+})
+
+describe('⚠️ une migration finit son corps par `$function$;`', () => {
+  /**
+   * Trouvé le 4 octobre 2026, et par une garde d'un AUTRE sujet.
+   *
+   * Reprendre une définition de `pg_get_functiondef` est la bonne méthode —
+   * elle évite de recopier deux cents lignes et d'y glisser une divergence.
+   * Mais sa sortie se termine par `$function$` sans point-virgule, et
+   * l'ajouter sur la ligne suivante produit `$function$\n;`.
+   *
+   * ⚠️ **`derniereDefinition` cherche `$function$;` pour borner un corps.**
+   * Sans cette suite exacte, elle lit jusqu'à la fin du fichier — donc la
+   * fonction SUIVANTE. Dans une migration qui en porte deux, le corps de la
+   * première contenait celui de la seconde, et une garde de l'espace
+   * administrateur a signalé un promoteur de plus. Elle avait raison.
+   *
+   * Toutes les gardes du projet passent par ce helper : une terminaison
+   * détachée les rend toutes approximatives, sans que rien ne tombe.
+   */
+  it('aucune migration ne laisse son point-virgule sur la ligne suivante', () => {
+    const fautives = readdirSync(dossierMigrations)
+      .filter((f) => f.endsWith('.sql'))
+      .filter((f) => readFileSync(path.join(dossierMigrations, f), 'utf8')
+        .includes('$function$\n;'))
+    expect(fautives, `corps non borné, `
+      + `donc lu jusqu’à la fin du fichier : ${fautives.join(', ')}`).toEqual([])
+  })
+})

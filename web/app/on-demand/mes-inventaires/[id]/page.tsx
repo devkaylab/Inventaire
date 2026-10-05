@@ -184,13 +184,24 @@ export default function MonInventairePage() {
         </section>
       )}
 
+      {/* ⚠️ LE MÊME INVENTAIRE, AVANT ET APRÈS (4 octobre 2026). Il n'existait
+          qu'à partir de l'ouverture de la mission, et le client — qui a son
+          tableau de bord Quantinvo OS comme n'importe qui — en créait un autre
+          pour préparer. Il naît maintenant avec la réservation : c'est là qu'il
+          dépose son fichier et imprime ses balises, et c'est le même qui porte
+          son rapport ensuite. Un seul, du début à la fin. */}
       {mission.inventory_session_id && !enCours && (
         <section className="admin-section">
-          <h2>Votre rapport</h2>
-          <p className="muted">Écarts contrôlés, quantités comptées, exports Excel, CSV et PDF.</p>
+          <h2>{aVenir ? 'Votre inventaire' : 'Votre rapport'}</h2>
+          <p className="muted">
+            {aVenir
+              ? 'Déposez votre fichier de stock, imprimez vos balises, invitez votre équipe. C’est ici que vous compterez.'
+              : 'Écarts contrôlés, quantités comptées, exports Excel, CSV et PDF.'}
+          </p>
           <p style={{ marginTop: 18 }}>
-            <Link href={`/inventaire/${mission.inventory_session_id}`} className="btn btn-ghost">
-              Ouvrir le rapport
+            <Link href={`/inventaire/${mission.inventory_session_id}`}
+                  className={aVenir ? 'btn btn-primary' : 'btn btn-ghost'}>
+              {aVenir ? 'Préparer l’inventaire' : 'Ouvrir le rapport'}
             </Link>
           </p>
         </section>

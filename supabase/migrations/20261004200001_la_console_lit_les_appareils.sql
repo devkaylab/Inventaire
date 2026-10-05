@@ -89,8 +89,7 @@ begin
         coalesce((v_m.calcul ->> 'remuneration_responsable_cents')::integer, 0)),
     'equipe', v_equipe);
 end;
-$function$
-;
+$function$;
 
 -- `create or replace` rend EXECUTE à PUBLIC : on repose les droits.
 revoke all on function public.admin_mission(uuid) from public, anon;

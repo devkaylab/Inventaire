@@ -1,85 +1,95 @@
--- ⚠️ UNE LOCATION N'OUVRAIT AUCUN APPAREIL (4 octobre 2026).
+-- ⚠️ UN SEUL INVENTAIRE, ET IL NAÎT AVEC LA RÉSERVATION (4 octobre 2026).
 --
--- Trouvé en regardant l'écran d'une réservation réelle : « Équipe —
--- 0 inventoriste ». Le zéro était juste (on n'envoie personne), mais il
--- cachait un défaut.
+-- Julien a tranché entre deux sorties, et c'est la B : « la mission crée
+-- l'inventaire dès la réservation, et c'est celui-là que le client prépare ».
 --
--- `prix_mission` rend DEUX nombres distincts :
+-- Le défaut : louer fait du client un utilisateur ORDINAIRE de Quantinvo OS —
+-- il atterrit sur son tableau de bord, avec « Nouvel inventaire » et « Mon
+-- équipe ». Il préparait donc naturellement son inventaire à lui : import du
+-- stock, balises imprimées, équipe invitée. Puis, le jour venu, l'ouverture de
+-- la mission lui en créait un SECOND, vide. Deux à l'écran, rien pour dire
+-- lequel compte, et tout son travail dans l'autre.
 --
---   · `inventoristes` — les gens qu'on envoie, et `0` en formule
---     `logiciel_seul` par construction ;
---   · `appareils` — les téléphones que le client utilisera, 9 pour 30 000
---     pièces.
+-- Deux changements, et un seul inventaire :
 --
--- `reserver_ma_mission` ne gardait que le PREMIER. Le nombre d'appareils —
--- celui que le client a choisi, celui qui fait le prix — n'était écrit nulle
--- part.
+--   1. `creer_la_session_de_mission` accepte d'être appelée dès
+--      `prix_calcule` — elle exigeait `confirmee`, ce qui n'avait de sens que
+--      pour une équipe qui se constitue après la confirmation ;
+--   2. `reserver_ma_mission` l'appelle dans la foulée de l'insert.
 --
--- ⚠️⚠️ ET C'EST `plafond_mission_en_cours` QUI LE LISAIT. Cette fonction est
--- la seule pièce d'On-Demand qui touche Quantinvo OS : elle ouvre des
--- appareils supplémentaires pendant la mission. Elle les comptait depuis
--- `inventoristes` — donc **zéro appareil ouvert pour une location**. On vend
--- neuf téléphones pour la semaine, et le neuvième se fait refuser le soir du
--- comptage, avec `forfait_plein`.
+-- ⚠️ `admin_avancer_mission` n'a pas besoin d'être reprise : elle n'appelle la
+-- création que si `inventory_session_id is null`, et la fonction elle-même
+-- rend `{deja: true}` quand la session existe. Rien ne se crée deux fois.
 --
--- La colonne `inventoristes` reste : elle décrit l'équipe envoyée, et vaudra
--- de nouveau quelque chose le jour où cette formule rouvrira.
+-- ⚠️ Les deux définitions sont celles qui tournaient, à une ligne près chacune.
+-- Reprises de `pg_get_functiondef`, pas recopiées.
+CREATE OR REPLACE FUNCTION public.creer_la_session_de_mission(p_mission uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_m record;
+  v_code text;
+  v_number text;
+  v_id uuid;
+begin
+  -- ⚠️ LA GARDE EST LE `GRANT`, PAS UN TEST ICI, et c'est voulu : la seule
+  -- forme qui laisserait passer `service_role` serait « is_admin() OU
+  -- auth.uid() est nul » — une condition qui ouvre à `anon` le jour où
+  -- quelqu'un élargit le grant sans relire la fonction. Même choix que
+  -- `plafond_appareils` : `service_role` uniquement, et la console
+  -- d'administration passera par un `admin_*` qui journalise (règle AGENTS.md).
+  select * into v_m from public.missions where id = p_mission;
+  if not found then
+    return jsonb_build_object('success', false, 'code', 'introuvable');
+  end if;
 
-alter table public.missions add column if not exists appareils integer;
+  -- Déjà créé : on rend le même, on n'en ouvre pas un second. Une mission
+  -- relancée deux fois par le back-office ne doit pas couper l'inventaire en
+  -- deux moitiés dont aucune ne fait un rapport.
+  if v_m.inventory_session_id is not null then
+    return jsonb_build_object('success', true, 'session_id', v_m.inventory_session_id, 'deja', true);
+  end if;
 
-comment on column public.missions.appareils is
-  'Les appareils ouverts au client pendant la mission — ce qu''il a choisi, et '
-  'ce qui fait le prix. Distinct d''`inventoristes`, qui compte les gens envoyés '
-  'et vaut 0 en formule « logiciel seul ».';
+  if v_m.company_id is null or v_m.store_id is null then
+    return jsonb_build_object('success', false, 'code', 'client_efface');
+  end if;
+  if v_m.etat not in ('prix_calcule','paiement_autorise','confirmee','en_constitution','equipe_complete','prete') then
+    return jsonb_build_object('success', false, 'code', 'pas_le_moment');
+  end if;
 
--- ⚠️ Les missions déjà prises gardent leur sens : avant cette colonne, le
--- nombre d'appareils ÉTAIT le nombre d'inventoristes (formule équipe), ou le
--- minimum imposé par la taille (logiciel seul, où il n'était pas écrit).
-update public.missions m
-   set appareils = greatest(
-         1,
-         case when m.inventoristes > 0
-              then m.inventoristes + case when m.responsable then 1 else 0 end
-              else coalesce((public.prix_mission(
-                     m.articles_max, m.secteur, m.debut_prevu, m.code_barres,
-                     m.code_postal, null, 'logiciel_seul', null
-                   ) ->> 'appareils')::integer, 1)
-         end)
- where m.appareils is null;
+  v_code   := lpad((floor(random() * 1000000))::integer::text, 6, '0');
+  v_number := 'INV-' || to_char(now(), 'YYYYMMDD') || '-'
+              || upper(substring(md5(random()::text) from 1 for 4));
 
--- ─── Le plafond compte les APPAREILS ───────────────────────────────────────
---
--- ⚠️ Le repli sur l'ancien calcul reste, et il n'est pas décoratif : une
--- mission créée entre le déploiement de cette migration et celui du site
--- aurait `appareils` nul.
-create or replace function public.plafond_mission_en_cours(p_store_id uuid)
-returns integer
-language sql
-stable
-security definer
-set search_path = public
-as $function$
-  select coalesce(max(coalesce(
-           m.appareils,
-           m.inventoristes + case when m.responsable then 1 else 0 end)), 0)
-    from public.missions m
-   where m.store_id = p_store_id
-     and m.etat in ('prete','en_cours','controle_qualite')
-     and m.acces_ouverts_le is not null
-     and now() >= m.acces_ouverts_le
-     and now() < m.acces_expirent_le;
+  insert into public.inventory_sessions
+    (inventory_number, security_code_hash, security_code, store_name, store_id,
+     name, created_by, uses_zones, company_id)
+  values
+    (v_number, encode(sha256(v_code::bytea), 'hex'), v_code, v_m.magasin_nom, v_m.store_id,
+     v_m.magasin_nom || ' — ' || to_char(v_m.debut_prevu at time zone 'Europe/Paris', 'DD/MM/YYYY'),
+     v_m.reserve_par,
+     -- Une équipe de trois et plus travaille par zones : c'est ce qui permet
+     -- au responsable d'attribuer, et au client de suivre l'avancement.
+     (v_m.inventoristes >= 3),
+     v_m.company_id)
+  returning id into v_id;
+
+  -- Le client qui a réservé est membre de son inventaire, comme tout créateur.
+  if v_m.reserve_par is not null then
+    insert into public.session_members (session_id, user_id)
+      values (v_id, v_m.reserve_par)
+      on conflict do nothing;
+  end if;
+
+  update public.missions set inventory_session_id = v_id where id = p_mission;
+
+  return jsonb_build_object('success', true, 'session_id', v_id, 'inventory_number', v_number);
+end;
 $function$;
 
-revoke all on function public.plafond_mission_en_cours(uuid) from public, anon;
-grant execute on function public.plafond_mission_en_cours(uuid) to authenticated, service_role;
-
--- ─── La réservation écrit les deux nombres ─────────────────────────────────
---
--- ⚠️ CETTE DÉFINITION EST CELLE QUI TOURNAIT, À DEUX LIGNES PRÈS — la colonne
--- `appareils` dans la liste, et `(v_prix ->> 'appareils')` dans les valeurs.
--- Elle a été reprise de `pg_get_functiondef` et patchée, pas recopiée à la
--- main : deux fonctions sœurs divergent à la première correction portée sur
--- une seule des deux.
 CREATE OR REPLACE FUNCTION public.reserver_ma_mission(p_reponses jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -227,7 +237,7 @@ begin
     articles_min, articles_max, references_min, references_max, code_barres,
     engagement_range_le, cgv_version,
     debut_prevu, moment, duree_prevue_minutes, arrivee_prevue,
-    inventoristes, appareils, responsable,
+    formule, inventoristes, appareils, responsable,
     articles_retenus, prix_cents, cout_cents, calcul, reglages_version,
     annulation_gratuite_jusqu_au, etat)
   values (
@@ -246,6 +256,7 @@ begin
     v_debut, p_reponses ->> 'moment',
     (v_prix ->> 'duree_minutes')::integer,
     v_debut - interval '15 minutes',
+    coalesce(v_prix ->> 'formule', 'logiciel_seul'),
     (v_prix ->> 'inventoristes')::integer,
     (v_prix ->> 'appareils')::integer,
     coalesce((v_prix ->> 'responsable')::boolean, false),
@@ -261,6 +272,13 @@ begin
   -- ⚠️ CE QUI SORT D'ICI EST CE QUE LE CLIENT PEUT VOIR, ET RIEN DE PLUS : ni
   -- `cout_cents`, ni la rémunération de l'équipe, ni la marge. La mission les
   -- porte ; le `grant select` colonne par colonne les retient.
+  -- ⚠️ L'INVENTAIRE NAÎT AVEC LA RÉSERVATION (4 octobre 2026). Il naissait à
+  -- l'ouverture de la mission — et le client, qui atterrit sur son tableau de
+  -- bord Quantinvo OS comme n'importe qui, en créait un AUTRE pour préparer.
+  -- Deux inventaires à l'écran, rien pour dire lequel compte. Décision de
+  -- Julien : un seul, et c'est celui de la mission.
+  perform public.creer_la_session_de_mission(v_id);
+
   return jsonb_build_object(
     'success', true,
     'mission_id', v_id,
@@ -274,5 +292,7 @@ end;
 $function$;
 
 -- `create or replace` rend EXECUTE à PUBLIC : on repose les droits.
+revoke all on function public.creer_la_session_de_mission(uuid) from public, anon;
 revoke all on function public.reserver_ma_mission(jsonb) from public, anon;
+grant execute on function public.creer_la_session_de_mission(uuid) to authenticated, service_role;
 grant execute on function public.reserver_ma_mission(jsonb) to authenticated, service_role;
