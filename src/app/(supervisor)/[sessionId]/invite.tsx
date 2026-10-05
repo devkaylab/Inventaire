@@ -141,11 +141,25 @@ export default function InviteToSessionScreen() {
    * « Pas encore d'équipe » se juge sur l'annuaire **entier**, pas sur les
    * suggestions d'une recherche : quelqu'un dont tous les collègues sont déjà
    * dans l'inventaire n'a pas à se voir proposer d'en créer un de plus.
-   * L'annuaire contient toujours au moins le superviseur lui-même — d'où le
-   * filtre sur les compteurs.
+   *
+   * ⚠️⚠️ **ET ON NE RETIRE QUE SOI, PAS TOUS LES SUPERVISEURS** (Julien,
+   * 5 octobre 2026). La règle retirait aussi `role !== 'supervisor'` : l'auteur
+   * voulait s'exclure lui-même — « l'annuaire contient toujours au moins le
+   * superviseur » — et a filtré sur le RÔLE pour ça. Or le test juste avant
+   * l'exclut déjà par son identifiant ; le filtre sur le rôle emportait en plus
+   * **tous les autres superviseurs**.
+   *
+   * Conséquence vue sur la production : une entreprise dont l'équipe n'est faite
+   * que de superviseurs — Julien et Théo sur La Samaritaine — lisait « pas
+   * encore d'équipe », et l'écran CACHAIT la barre de recherche. Impossible
+   * d'ajouter qui que ce soit à un inventaire depuis l'app, jamais.
+   *
+   * L'écran se contredisait d'ailleurs lui-même : il propose un rôle
+   * « Co-superviseur » pour la personne à ajouter. Il sait donc qu'on ajoute
+   * des superviseurs, et il cachait la recherche qui le permet.
    */
   const equipeVide = directory !== undefined
-    && (directory ?? []).filter(d => d.user_id !== profile?.id && d.role !== 'supervisor').length === 0
+    && (directory ?? []).filter(d => d.user_id !== profile?.id).length === 0
 
   const q = query.trim().toLowerCase()
   const suggestions = (!q || selected)

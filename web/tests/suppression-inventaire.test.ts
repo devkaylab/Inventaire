@@ -135,6 +135,27 @@ describe('ajouter quelqu’un à un inventaire : on cherche, on ne saisit pas', 
     expect(ajout).toContain('inviteToSession')
   })
 
+  /**
+   * ⚠️⚠️ **UNE LISTE QUI N'A PAS PU SE CHARGER N'EST PAS UNE LISTE VIDE**
+   * (Julien, 5 octobre 2026). L'échec du chargement était avalé — un `.catch`
+   * qui posait un tableau vide — et l'écran répondait alors « personne de
+   * l'équipe de ce magasin ne correspond ». Une coupure réseau et une équipe
+   * vide se ressemblaient exactement : impossible de faire la différence.
+   */
+  it('⚠️ une liste qui n’a pas pu se charger le dit, au lieu de se taire', () => {
+    const code = ajout.replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter((l) => !l.trim().startsWith('*') && !l.trim().startsWith('//')).join('\n')
+    // Trois états, pas deux : on distingue « pas encore arrivée » de « vide ».
+    expect(code).toMatch(/'chargement' \| 'pret' \| 'echec'/)
+    // Le `catch` ne se contente plus de vider.
+    const attrape = code.match(/\.catch\([^)]*\)[^\n]*/)?.[0] ?? ''
+    expect(attrape, 'l’échec est encore avalé').toContain("setEtat('echec')")
+    // Et « rien trouvé » ne s'affiche que si la liste est vraiment là.
+    expect(code).toMatch(/rienTrouve = etat === 'pret'/)
+    // Avec de quoi réessayer : un message sans issue ne sert à rien.
+    expect(code).toContain('Réessayer')
+  })
+
   it('les personnes déjà présentes ne sont pas proposées', () => {
     // Les reproposer ferait découvrir le doublon au moment de l'envoi.
     expect(ajout).toContain('exclus.has(d.user_id)')
