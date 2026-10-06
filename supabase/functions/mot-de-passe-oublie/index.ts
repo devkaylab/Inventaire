@@ -29,7 +29,7 @@
 // Déployée en `verify_jwt: false` : quelqu'un qui a oublié son mot de passe
 // n'a pas de session.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo, envoyerEmail, SITE_PAR_DEFAUT } from '../_shared/email.ts'
+import { DUREE_LIEN, emailQuantinvo, envoyerEmail, SITE_PAR_DEFAUT } from '../_shared/email.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
   const { html, text } = emailQuantinvo({
     titre: 'Choisir un nouveau mot de passe',
-    apercu: 'Le lien est valable une heure et ne sert qu’une fois.',
+    apercu: `Le lien est valable ${DUREE_LIEN} et ne sert qu’une fois.`,
     salutation: prenom ? `Bonjour ${prenom},` : undefined,
     paragraphes: [
       'Vous avez demandé à changer le mot de passe de votre compte Quantinvo. Le bouton ci-dessous ouvre la page où le choisir.',
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       'Si vous n’avez rien demandé, ignorez ce message : votre mot de passe actuel reste valable, et personne n’a eu accès à votre compte.',
     ],
     bouton: { libelle: 'Choisir un nouveau mot de passe', lien: lien.properties.action_link },
-    note: 'Ce lien est valable une heure et ne fonctionne qu’une seule fois.',
+    note: `Ce lien est valable ${DUREE_LIEN} et ne fonctionne qu’une seule fois.`,
     raison: 'Vous recevez ce message parce qu’une réinitialisation a été demandée pour cette adresse.',
   })
 

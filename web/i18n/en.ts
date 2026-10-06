@@ -1940,4 +1940,5 @@ export const en: Dictionnaire = {
   "Effacer cette notification": "Delete this notification",
   "L’équipe du magasin n’a pas pu être chargée. Ce n’est pas qu’elle est vide : la liste n’est pas arrivée.": "The store team could not be loaded. It is not that it is empty: the list never arrived.",
   'Réessayer': 'Try again',
+  'Vous avez été invité et votre lien a expiré ? Passez par « Mot de passe oublié » : le lien neuf vous servira à choisir votre mot de passe.': 'Invited, and your link has expired? Use “Forgotten password”: the new link will let you choose your password.',
 }

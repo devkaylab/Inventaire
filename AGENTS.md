@@ -142,3 +142,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ L'app dit sur quelle base elle écrit](docs/notes/110-l-app-dit-sur-quelle-base-elle-ecrit-4-octobre-2026.md)
 - [⚠️ L'administrateur d'entreprise retire un membre](docs/notes/114-l-admin-d-entreprise-retire-un-membre-5-octobre-2026.md)
 - [⚠️⚠️ Ajouter quelqu'un à un inventaire : l'app cachait la recherche](docs/notes/119-ajouter-quelqu-un-a-un-inventaire-5-octobre-2026.md)
+- [⚠️ La durée de vie d'un lien : **un seul réglage**, 24 h, et la sortie qui existait déjà](docs/notes/120-la-duree-de-vie-d-un-lien-6-octobre-2026.md)

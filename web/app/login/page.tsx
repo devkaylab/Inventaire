@@ -223,7 +223,17 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {/* ⚠️⚠️ **LE LIEN D'INVITATION EXPIRE, ET LA SORTIE EXISTE DÉJÀ**
+            (6 octobre 2026). Qui a été invité mais n'a jamais choisi son mot de
+            passe croit que « Mot de passe oublié » ne le concerne pas — il n'en
+            a jamais eu. Or son compte existe dans `auth.users` DÈS
+            l'invitation : `demander_reinitialisation` ne vérifie que l'adresse,
+            et lui renvoie un lien neuf. Sans cette phrase, il va chercher son
+            responsable pour un bouton qui est au-dessus. */}
         <div className="center-link">
+          <p className="muted small" style={{ margin: 0 }}>
+            {t('Vous avez été invité et votre lien a expiré ? Passez par « Mot de passe oublié » : le lien neuf vous servira à choisir votre mot de passe.')}
+          </p>
         </div>
         <div className="center-link" style={{ marginTop: 8 }}>
           <InscriptionLink ferme={t('Nous écrire')}>{t('Inscrire mon entreprise')}</InscriptionLink>
