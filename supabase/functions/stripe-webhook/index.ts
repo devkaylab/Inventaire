@@ -27,6 +27,7 @@
 // reçoit « votre magasin est créé ».
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adresseDeContact, emailQuantinvo } from '../_shared/email.ts'
+import { lienDuCourriel } from '../_shared/lienDuCourriel.ts'
 import { lireFacture, verifierWebhook } from '../_shared/stripe.ts'
 
 const json = (body: unknown, status = 200) =>
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
           data: { first_name: inv.first_name, last_name: inv.last_name, full_name: fullName, role: 'company_admin' },
         },
       })
-      const actionLink = link?.properties?.action_link
+      const actionLink = lienDuCourriel(link?.properties, `${appUrl}/bienvenue`)
       if (linkErr || !actionLink) {
         notes.push(`lien d'invitation : ${linkErr?.message ?? 'absent'}`)
       } else if (resendKey) {

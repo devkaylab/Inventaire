@@ -852,4 +852,8 @@ export const en: Dictionnaire = {
   "Vérifiez que chaque colonne du fichier contient la bonne information : un SKU ou un code-barres placé dans la colonne des quantités ou des prix donne ce résultat.": "Check that each column of the file holds the right information: a SKU or barcode placed in the quantity or price column causes this.",
   "Le fichier contient %{count} autre valeur trop grande.": { one: "The file contains %{count} other value that is too large.", other: "The file contains %{count} other values that are too large." },
   "Démarrage…": "Starting…",
+  'Mon invitation ne marche pas': 'My invitation does not work',
+  "Si vous n’avez rien reçu du tout, regardez vos courriers indésirables, puis demandez à la personne qui vous a ajouté de vérifier l’adresse qu’elle a saisie.": 'If you received nothing at all, check your spam folder, then ask the person who added you to check the address they entered.',
+  "Un lien d’invitation ne vit que 24 heures. Touchez « Mot de passe oublié ? » juste au-dessus : vous en recevrez un neuf, et il vous servira à choisir votre mot de passe.": 'An invitation link only lives for 24 hours. Tap “Forgotten password?” just above: you will get a new one, and it will let you choose your password.',
+  'Votre lien a peut-être expiré': 'Your link may have expired',
 }

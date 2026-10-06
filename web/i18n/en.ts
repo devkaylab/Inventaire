@@ -448,6 +448,8 @@ export const en: Dictionnaire = {
   "Consolidation en cours… Sur un magasin qui porte plusieurs gros inventaires, comptez quelques secondes.": "Consolidating… On a store with several large inventories, allow a few seconds.",
   "Contactez l'administrateur de votre entreprise, ou Quantinvo si elle n'en a pas encore.": "Contact your company administrator, or Quantinvo if it has none yet.",
   "Continuer": "Continue",
+  "Continuez pour choisir le nouveau mot de passe de votre compte.": "Continue to choose the new password for your account.",
+  "Continuez pour vérifier vos informations et choisir votre mot de passe.": "Continue to check your details and choose your password.",
   "Continuer sur le web": "Continue on the web",
   "Conversation": "Conversation",
   "Conversations": "Conversations",
@@ -1940,4 +1942,5 @@ export const en: Dictionnaire = {
   "Effacer cette notification": "Delete this notification",
   "L’équipe du magasin n’a pas pu être chargée. Ce n’est pas qu’elle est vide : la liste n’est pas arrivée.": "The store team could not be loaded. It is not that it is empty: the list never arrived.",
   'Réessayer': 'Try again',
+  'Vous avez été invité et votre lien a expiré ? Passez par « Mot de passe oublié » : le lien neuf vous servira à choisir votre mot de passe.': 'Invited, and your link has expired? Use “Forgotten password”: the new link will let you choose your password.',
 }

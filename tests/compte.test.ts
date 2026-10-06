@@ -1143,9 +1143,24 @@ describe('les sorties qui manquaient', () => {
   const login = lire('app/login.tsx')
   const inventaire = lire('app/(supervisor)/[sessionId]/index.tsx')
 
-  it('« Je n’ai pas reçu mon invitation » renvoie au responsable, jamais au support', () => {
-    expect(login).toContain(`t("Je n'ai pas reçu mon invitation")`)
-    expect(login).toContain('Votre invitation vient de votre responsable')
+  /**
+   * ⚠️⚠️ **CETTE GARDE FIGEAIT LE MAUVAIS CONSEIL** (reprise le 6 octobre
+   * 2026). Elle exigeait « Votre invitation vient de votre responsable » : on
+   * envoyait d'abord chercher quelqu'un, alors que le bouton qui règle le cas
+   * le plus fréquent est sur le même écran.
+   *
+   * Un lien d'invitation expire. Mais le compte existe dans `auth.users` dès
+   * l'invitation, donc « Mot de passe oublié » renvoie un lien neuf à qui n'a
+   * jamais eu de mot de passe. Le responsable reste la réponse au seul cas
+   * qu'il est seul à régler : l'invitation jamais partie, ou partie ailleurs.
+   */
+  it('⚠️ l’aide d’invitation renvoie D’ABORD à « Mot de passe oublié »', () => {
+    expect(login).toContain("t('Mon invitation ne marche pas')")
+    const aide = login.slice(login.indexOf('function expliquerInvitation'))
+      .slice(0, login.slice(login.indexOf('function expliquerInvitation')).indexOf('\n  }'))
+    expect(aide, 'l’aide ne nomme plus « Mot de passe oublié »').toContain('Mot de passe oublié')
+    // Et le bouton existe bien sur cet écran, au-dessus.
+    expect(login).toContain("t('Mot de passe oublié ?')")
     // ⚠️ Sur le code seul : le commentaire de l'écran cite « contactez le
     // support » pour dire qu'on ne l'écrit pas. Le lire ferait échouer une
     // garde qui porte sur ce que l'écran affiche.

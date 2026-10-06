@@ -112,6 +112,32 @@ export const POLITIQUE_URL = 'https://www.quantinvo.com/confidentialite'
  * C'est **le cube seul, sur fond transparent** : la tuile de l'icône
  * d'application, posée sur le bandeau encre, faisait vignette rapportée.
  */
+/**
+ * ⚠️⚠️ **COMBIEN DE TEMPS VIT UN LIEN D'AUTHENTIFICATION**, en heures.
+ *
+ * ⚠️ **CE N'EST PAS CE NOMBRE QUI DÉCIDE — IL LE RECOPIE.** La durée réelle est
+ * un réglage du projet Supabase, `Authentication → Providers → Email → Email
+ * OTP Expiration`, et un seul réglage gouverne LES DEUX liens : celui qui
+ * réinitialise un mot de passe et celui qui en crée un (`generateLink`, types
+ * `recovery` et `invite`). Le dépôt ne sait pas lire ce réglage ; cette
+ * constante est donc une promesse faite au destinataire, qu'il faut tenir à la
+ * main.
+ *
+ * **Changer le réglage et oublier cette ligne, c'est écrire un mensonge dans
+ * un e-mail.** Elle existe pour qu'il n'y ait qu'un seul endroit à changer :
+ * une garde (`web/tests/email-template.test.ts`) refuse toute durée écrite en
+ * clair ailleurs.
+ *
+ * 24 heures depuis le 6 octobre 2026 (décision de Julien). Elle valait une
+ * heure : trop court pour une invitation, que la personne n'a pas demandée et
+ * qu'elle peut ouvrir le lendemain. 24 h est le maximum qu'autorise Supabase —
+ * au-delà, il refuse, un lien qui vit longtemps se devine.
+ */
+export const DUREE_LIEN_HEURES = 24
+
+/** « 24 heures », tel qu'on l'écrit dans un e-mail. */
+export const DUREE_LIEN = `${DUREE_LIEN_HEURES} heures`
+
 export const EMPREINTE_LOGO = '5ecb9c9a'
 export const CHEMIN_LOGO = `/email/logo-quantinvo-encre.png?v=${EMPREINTE_LOGO}`
 

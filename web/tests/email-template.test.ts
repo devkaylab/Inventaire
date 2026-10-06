@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
-import { CHEMIN_LOGO, COULEURS, EMPREINTE_LOGO, echapper, emailQuantinvo, lienSur } from '../../supabase/functions/_shared/email'
+import { CHEMIN_LOGO, COULEURS, DUREE_LIEN, DUREE_LIEN_HEURES, EMPREINTE_LOGO, echapper, emailQuantinvo, lienSur } from '../../supabase/functions/_shared/email'
 
 const exemple = {
   titre: 'Votre accès superviseur',
@@ -272,5 +272,71 @@ describe('l’invitation d’un compteur nomme qui invite, et où l’on arrive'
   it('l’identifiant figure dans l’encadré de faits', () => {
     // C'est ce que la personne devra retaper dans l'application.
     expect(src).toContain("{ intitule: 'Votre identifiant', valeur: email }")
+  })
+})
+
+describe('⚠️ la durée de vie d’un lien ne se dit qu’à un seul endroit', () => {
+  /**
+   * ⚠️⚠️ 6 octobre 2026. L'e-mail de réinitialisation annonçait « valable une
+   * heure », deux fois, en clair. Le jour où Julien porte le réglage Supabase à
+   * 24 h, ces deux phrases deviennent un mensonge écrit — et rien ne le dit,
+   * parce qu'une phrase d'e-mail ne casse aucun test.
+   *
+   * La durée réelle est un réglage du projet (`Authentication → Providers →
+   * Email → Email OTP Expiration`), que le dépôt ne sait pas lire : elle est
+   * donc RECOPIÉE ici, et cette garde tient la copie.
+   */
+  const racine = path.resolve(__dirname, '../..')
+  const lireFichier = (p: string) => readFileSync(path.join(racine, p), 'utf8')
+
+  /** Les fichiers où une durée de lien peut être écrite pour un humain. */
+  const surfaces = [
+    'supabase/functions/mot-de-passe-oublie/index.ts',
+    'supabase/functions/invite-teammate/index.ts',
+    'supabase/functions/ca-invite-supervisor/index.ts',
+    'supabase/functions/invite-to-session/index.ts',
+    'src/app/login.tsx',
+    'web/app/login/page.tsx',
+    'web/app/mot-de-passe-oublie/page.tsx',
+    'web/app/reinitialisation/page.tsx',
+    // ⚠️ Ajoutée par la fusion du 6 octobre : la page d'accueil du lien, née
+    // avec la correction du grillage Microsoft 365 (fiche 120). Elle parle du
+    // lien, donc elle peut en annoncer la durée.
+    'web/app/bienvenue/page.tsx',
+  ].filter((f) => existsSync(path.join(racine, f)))
+
+  it('la constante et sa formulation sont d’accord', () => {
+    expect(DUREE_LIEN_HEURES).toBeGreaterThan(0)
+    // ⚠️ Supabase REFUSE au-delà de 86 400 secondes : une constante plus grande
+    // promettrait une durée que le serveur n'appliquera jamais.
+    expect(DUREE_LIEN_HEURES, 'au-delà de 24 h, Supabase refuse').toBeLessThanOrEqual(24)
+    expect(DUREE_LIEN).toContain(String(DUREE_LIEN_HEURES))
+  })
+
+  it('⚠️ aucune autre durée n’est écrite en clair à propos d’un lien', () => {
+    expect(surfaces.length, 'les surfaces ne se lisent plus').toBeGreaterThan(4)
+    const fautes: string[] = []
+    for (const f of surfaces) {
+      // Sans les commentaires : ils RACONTENT le défaut, donc ils citent
+      // « une heure ». Huitième fois que ce piège se présente.
+      const code = lireFichier(f)
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n')
+      for (const m of code.matchAll(/(?:lien|invitation)[^.!?\n]{0,120}?(une heure|\d+\s*(?:heures?|jours?|minutes?))/gi)) {
+        const dit = m[1].toLowerCase()
+        if (dit === `${DUREE_LIEN_HEURES} heures`) continue
+        fautes.push(`${f} → « ${m[0].trim().slice(0, 90)} »`)
+      }
+    }
+    expect(fautes, `durée en désaccord avec DUREE_LIEN_HEURES :\n${fautes.join('\n')}`).toEqual([])
+  })
+
+  it('et l’e-mail de réinitialisation passe bien par la constante', () => {
+    const fn = lireFichier('supabase/functions/mot-de-passe-oublie/index.ts')
+    expect(fn).toContain('DUREE_LIEN')
+    const code = fn.replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+    expect(code, 'une durée est encore écrite en clair dans l’e-mail')
+      .not.toMatch(/valable une heure/)
   })
 })

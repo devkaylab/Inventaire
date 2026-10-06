@@ -29,7 +29,8 @@
 // Déployée en `verify_jwt: false` : quelqu'un qui a oublié son mot de passe
 // n'a pas de session.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { emailQuantinvo, envoyerEmail, SITE_PAR_DEFAUT } from '../_shared/email.ts'
+import { DUREE_LIEN, emailQuantinvo, envoyerEmail, SITE_PAR_DEFAUT } from '../_shared/email.ts'
+import { lienDuCourriel } from '../_shared/lienDuCourriel.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -95,14 +96,17 @@ Deno.serve(async (req) => {
     email,
     options: { redirectTo },
   })
-  if (erreurLien || !lien?.properties?.action_link) {
+  // ⚠️ PAS `action_link` : l'analyse des liens de Microsoft 365 l'ouvrirait
+  // avant la personne et grillerait le jeton (voir `_shared/lienDuCourriel.ts`).
+  const lienDuBouton = erreurLien ? null : lienDuCourriel(lien?.properties, redirectTo)
+  if (!lienDuBouton) {
     console.error('generateLink', erreurLien?.message ?? 'lien absent')
     return recu()
   }
 
   const { html, text } = emailQuantinvo({
     titre: 'Choisir un nouveau mot de passe',
-    apercu: 'Le lien est valable une heure et ne sert qu’une fois.',
+    apercu: `Le lien est valable ${DUREE_LIEN} et ne sert qu’une fois.`,
     salutation: prenom ? `Bonjour ${prenom},` : undefined,
     paragraphes: [
       'Vous avez demandé à changer le mot de passe de votre compte Quantinvo. Le bouton ci-dessous ouvre la page où le choisir.',
@@ -110,8 +114,8 @@ Deno.serve(async (req) => {
       // seule protection de quelqu'un dont l'adresse sert à autre chose.
       'Si vous n’avez rien demandé, ignorez ce message : votre mot de passe actuel reste valable, et personne n’a eu accès à votre compte.',
     ],
-    bouton: { libelle: 'Choisir un nouveau mot de passe', lien: lien.properties.action_link },
-    note: 'Ce lien est valable une heure et ne fonctionne qu’une seule fois.',
+    bouton: { libelle: 'Choisir un nouveau mot de passe', lien: lienDuBouton },
+    note: `Ce lien est valable ${DUREE_LIEN} et ne fonctionne qu’une seule fois.`,
     raison: 'Vous recevez ce message parce qu’une réinitialisation a été demandée pour cette adresse.',
   })
 

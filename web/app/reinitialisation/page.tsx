@@ -11,6 +11,7 @@ import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib
 import { Chargement } from '@/components/Chargement'
 import { LangueToggle } from '@/components/LangueToggle'
 import { useTraduction } from '@/lib/i18n'
+import { lireJetonDuLien, ouvrirLeLien, type JetonDuLien } from '@/lib/jetonDuLien'
 
 /**
  * Choix d'un nouveau mot de passe, à l'arrivée du lien « mot de passe oublié ».
@@ -30,6 +31,8 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [jeton, setJeton] = useState<JetonDuLien | null>(null)
+  const [ouverture, setOuverture] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -39,6 +42,9 @@ export default function ResetPasswordPage() {
       setReady(true)
     }
     ;(async () => {
+      // ⚠️ Un lien neuf porte son jeton : on attend le clic (`lib/jetonDuLien.ts`).
+      const j = lireJetonDuLien()
+      if (j) { if (active) { setJeton(j); setReady(true) } return }
       const { data: { session } } = await supabase.auth.getSession()
       if (session) { apply(true); return }
       const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (s) apply(true) })
@@ -48,6 +54,15 @@ export default function ResetPasswordPage() {
     })()
     return () => { active = false }
   }, [])
+
+  async function continuer() {
+    if (!jeton) return
+    setOuverture(true)
+    const session = await ouvrirLeLien(jeton)
+    setOuverture(false)
+    setJeton(null)
+    setHasSession(!!session)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -79,6 +94,24 @@ export default function ResetPasswordPage() {
 
   if (!ready) {
     return <Chargement />
+  }
+
+  if (jeton) {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="head">
+            <Link href="/"><Logo size={56} /></Link>
+            <h1>{t('Nouveau mot de passe')}</h1>
+            <p className="sub">{t('Continuez pour choisir le nouveau mot de passe de votre compte.')}</p>
+          </div>
+          <button className="btn btn-primary btn-block" disabled={ouverture} onClick={() => void continuer()}>
+            {ouverture ? t('Ouverture…') : t('Continuer')}
+          </button>
+        </div>
+        <LangueToggle />
+      </div>
+    )
   }
 
   if (!hasSession) {

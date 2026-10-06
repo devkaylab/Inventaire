@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/Logo'
@@ -12,6 +13,7 @@ import { friendlyPasswordError, passwordError, MIN_PASSWORD_LENGTH } from '@/lib
 import { Chargement } from '@/components/Chargement'
 import { LangueToggle } from '@/components/LangueToggle'
 import { useTraduction } from '@/lib/i18n'
+import { lireJetonDuLien, ouvrirLeLien, type JetonDuLien } from '@/lib/jetonDuLien'
 
 /**
  * Finalisation de compte, à l'arrivée du lien reçu par e-mail.
@@ -44,45 +46,64 @@ export default function WelcomePage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [jeton, setJeton] = useState<JetonDuLien | null>(null)
+  const [ouverture, setOuverture] = useState(false)
+  const actif = useRef(true)
+
+  // Remplit le formulaire depuis la session ouverte ; sans session, la page
+  // dit « lien expiré ».
+  async function apply(s: Session | null) {
+    if (!actif.current) return
+    if (!s) { setReady(true); return }
+    setHasSession(true)
+    setEmail(s.user.email ?? '')
+    const meta = s.user.user_metadata ?? {}
+    setFirstName(typeof meta.first_name === 'string' ? meta.first_name : '')
+    setLastName(typeof meta.last_name === 'string' ? meta.last_name : '')
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('role, first_name, last_name')
+      .eq('id', s.user.id)
+      .maybeSingle()
+    if (!actif.current) return
+    if (prof) {
+      setRole((prof as { role: string | null }).role)
+      // Le profil fait foi s'il porte déjà un prénom / nom.
+      const p = prof as { first_name: string | null; last_name: string | null }
+      if (p.first_name) setFirstName(p.first_name)
+      if (p.last_name) setLastName(p.last_name)
+    }
+    setReady(true)
+  }
 
   useEffect(() => {
-    let active = true
+    actif.current = true
+    let unsubscribe: (() => void) | undefined
     ;(async () => {
-      // Le client Supabase consomme le jeton présent dans l'URL et ouvre la
-      // session ; `onAuthStateChange` évite la course avec cette lecture.
+      // ⚠️ Un lien neuf porte son jeton : on attend le clic (`lib/jetonDuLien.ts`).
+      const j = lireJetonDuLien()
+      if (j) { if (actif.current) { setJeton(j); setReady(true) } return }
+      // Ancien lien : le client Supabase consomme le jeton présent dans l'URL
+      // et ouvre la session ; `onAuthStateChange` évite la course avec cette
+      // lecture.
       const { data: { session } } = await supabase.auth.getSession()
-      const apply = async (s: typeof session) => {
-        if (!active) return
-        if (!s) { setReady(true); return }
-        setHasSession(true)
-        setEmail(s.user.email ?? '')
-        const meta = s.user.user_metadata ?? {}
-        setFirstName(typeof meta.first_name === 'string' ? meta.first_name : '')
-        setLastName(typeof meta.last_name === 'string' ? meta.last_name : '')
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('role, first_name, last_name')
-          .eq('id', s.user.id)
-          .maybeSingle()
-        if (!active) return
-        if (prof) {
-          setRole((prof as { role: string | null }).role)
-          // Le profil fait foi s'il porte déjà un prénom / nom.
-          const p = prof as { first_name: string | null; last_name: string | null }
-          if (p.first_name) setFirstName(p.first_name)
-          if (p.last_name) setLastName(p.last_name)
-        }
-        setReady(true)
-      }
-
       if (session) { await apply(session); return }
       const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (s) void apply(s) })
+      unsubscribe = () => sub.subscription.unsubscribe()
       // Sans jeton exploitable, on n'attend pas indéfiniment.
-      setTimeout(() => { if (active) setReady(true) }, 2500)
-      return () => sub.subscription.unsubscribe()
+      setTimeout(() => { if (actif.current) setReady(true) }, 2500)
     })()
-    return () => { active = false }
+    return () => { actif.current = false; unsubscribe?.() }
   }, [])
+
+  async function continuer() {
+    if (!jeton) return
+    setOuverture(true)
+    const session = await ouvrirLeLien(jeton)
+    setOuverture(false)
+    setJeton(null)
+    await apply(session)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -130,6 +151,24 @@ export default function WelcomePage() {
 
   if (!ready) {
     return <Chargement />
+  }
+
+  if (jeton) {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="head">
+            <Link href="/"><Logo size={56} /></Link>
+            <h1>{t('Finaliser mon compte')}</h1>
+            <p className="sub">{t('Continuez pour vérifier vos informations et choisir votre mot de passe.')}</p>
+          </div>
+          <button className="btn btn-primary btn-block" disabled={ouverture} onClick={() => void continuer()}>
+            {ouverture ? t('Ouverture…') : t('Continuer')}
+          </button>
+        </div>
+        <LangueToggle />
+      </div>
+    )
   }
 
   if (!hasSession) {

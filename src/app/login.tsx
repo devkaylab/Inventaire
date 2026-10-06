@@ -27,12 +27,27 @@ export default function LoginScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
 
-  /** L'invitation vient du responsable — on dit à qui la redemander. */
+  /**
+   * ⚠️⚠️ **LA SORTIE EST « MOT DE PASSE OUBLIÉ », PAS LE RESPONSABLE**
+   * (6 octobre 2026). Cet écran envoyait d'abord chercher son responsable —
+   * « demandez-lui de vous la renvoyer » — alors que le bouton qui règle le cas
+   * est juste au-dessus.
+   *
+   * Un lien d'invitation expire (24 h, réglage Supabase, le même pour les deux
+   * types de liens). Mais le compte existe dans `auth.users` DÈS l'invitation :
+   * `demander_reinitialisation` ne vérifie que l'adresse, donc « Mot de passe
+   * oublié » renvoie un lien neuf à quelqu'un qui n'a jamais eu de mot de
+   * passe. Personne ne le devine tout seul — il faut le dire.
+   *
+   * Le responsable reste la réponse au seul cas qu'il est seul à pouvoir
+   * régler : l'invitation n'est jamais partie, ou elle est partie à une autre
+   * adresse.
+   */
   function expliquerInvitation() {
     void avertir({
-      titre: t('Votre invitation vient de votre responsable'),
-      texte: t("C'est la personne qui vous a ajouté à son équipe qui envoie l'invitation, à l'adresse qu'elle a saisie. Regardez dans vos courriers indésirables, puis demandez-lui de vous la renvoyer."),
-      note: t("Si vous n'avez jamais été ajouté à une équipe, aucun compte ne peut s'ouvrir depuis cet écran."),
+      titre: t('Votre lien a peut-être expiré'),
+      texte: t('Un lien d’invitation ne vit que 24 heures. Touchez « Mot de passe oublié ? » juste au-dessus : vous en recevrez un neuf, et il vous servira à choisir votre mot de passe.'),
+      note: t('Si vous n’avez rien reçu du tout, regardez vos courriers indésirables, puis demandez à la personne qui vous a ajouté de vérifier l’adresse qu’elle a saisie.'),
     })
   }
   const [email, setEmail] = useState('')
@@ -232,12 +247,14 @@ export default function LoginScreen() {
             <Text style={styles.linkText}>{t('Mot de passe oublié ?')}</Text>
           </Pressable>
 
-          {/* Le premier écran d'aide est le responsable, jamais nous : c'est lui
-              qui sait qui doit être dans quelle équipe, et lui seul peut
-              renvoyer l'invitation. « Contactez le support » ferait attendre
-              pour rien quelqu'un qui a la réponse à côté de lui. */}
+          {/* ⚠️ LE LIBELLÉ COUVRE LES DEUX CAS (6 octobre 2026) : « je n'ai pas
+              reçu mon invitation » ne parlait qu'au premier, et le plus
+              fréquent est l'autre — le lien reçu, ouvert trop tard. Celui qui
+              lit « pas reçu » quand il l'a bien reçu ne touche pas le lien.
+              « Contactez le support » ferait attendre pour rien quelqu'un qui a
+              la réponse à côté de lui. */}
           <Pressable style={styles.link} onPress={expliquerInvitation}>
-            <Text style={styles.linkText}>{t("Je n'ai pas reçu mon invitation")}</Text>
+            <Text style={styles.linkText}>{t('Mon invitation ne marche pas')}</Text>
           </Pressable>
 
           <Pressable style={styles.link} onPress={() => router.push('/signup')}>
