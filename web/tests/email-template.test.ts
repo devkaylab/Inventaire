@@ -299,6 +299,10 @@ describe('⚠️ la durée de vie d’un lien ne se dit qu’à un seul endroit'
     'web/app/login/page.tsx',
     'web/app/mot-de-passe-oublie/page.tsx',
     'web/app/reinitialisation/page.tsx',
+    // ⚠️ Ajoutée par la fusion du 6 octobre : la page d'accueil du lien, née
+    // avec la correction du grillage Microsoft 365 (fiche 120). Elle parle du
+    // lien, donc elle peut en annoncer la durée.
+    'web/app/bienvenue/page.tsx',
   ].filter((f) => existsSync(path.join(racine, f)))
 
   it('la constante et sa formulation sont d’accord', () => {

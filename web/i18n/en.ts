@@ -448,6 +448,8 @@ export const en: Dictionnaire = {
   "Consolidation en cours… Sur un magasin qui porte plusieurs gros inventaires, comptez quelques secondes.": "Consolidating… On a store with several large inventories, allow a few seconds.",
   "Contactez l'administrateur de votre entreprise, ou Quantinvo si elle n'en a pas encore.": "Contact your company administrator, or Quantinvo if it has none yet.",
   "Continuer": "Continue",
+  "Continuez pour choisir le nouveau mot de passe de votre compte.": "Continue to choose the new password for your account.",
+  "Continuez pour vérifier vos informations et choisir votre mot de passe.": "Continue to check your details and choose your password.",
   "Continuer sur le web": "Continue on the web",
   "Conversation": "Conversation",
   "Conversations": "Conversations",

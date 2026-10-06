@@ -76,7 +76,7 @@ réinitialisation l'annonçait en clair, **deux fois** — « valable une heure 
 Porter le réglage à 24 h sans toucher ces lignes, c'était écrire un mensonge
 dans un e-mail, et aucun test ne l'aurait dit.
 
-La garde (`web/tests/email-template.test.ts`) balaie huit surfaces — les
+La garde (`web/tests/email-template.test.ts`) balaie neuf surfaces — les
 fonctions edge qui écrivent du courrier et les écrans de connexion — et refuse
 toute durée en désaccord avec la constante. Elle refuse aussi une constante
 supérieure à 24, qui promettrait ce que le serveur n'appliquera pas.
@@ -92,6 +92,19 @@ Six morsures :
 - le libellé redevient « je n'ai pas reçu mon invitation » → mord
 - (et la garde lit le code **sans ses commentaires** : ils racontent le défaut,
   donc ils citent « une heure ». Huitième fois que ce piège se présente)
+
+## ⚠️ Écrit en parallèle d'une session cloud
+
+Le même jour, une session cloud corrigeait l'autre moitié du problème : l'analyse
+de liens de Microsoft 365 ouvrait le lien avant le destinataire et **grillait le
+jeton** — fiche 120. Les deux travaux se sont croisés sur
+`mot-de-passe-oublie`, et la fusion garde les deux : son lien qui ne se
+consomme plus au survol, ma durée centralisée.
+
+À retenir : le bouton de l'e-mail ne porte plus le lien de Supabase mais une
+page du site (`/bienvenue`, `/reinitialisation`) qui ne présente le jeton qu'au
+clic. **La durée, elle, n'a pas changé de nature** : c'est toujours le réglage
+Supabase qui décide.
 
 ## Ce qui reste à faire
 
