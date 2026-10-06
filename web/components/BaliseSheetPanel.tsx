@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { BALISE_FORMATS, baliseFormat, planBaliseSeries, type BaliseFormat } from '@/lib/baliseSeries'
 import { downloadBaliseSheet } from '@/lib/balisePdf'
+import { PAR_PLANCHE } from '@/lib/baliseDessin'
 import { t, tn } from '@/lib/i18n'
 
 type Props = {
@@ -140,7 +141,14 @@ export function BaliseSheetPanel({ context, onRetour, onAffecter }: Props) {
           <p className="balise-done" role="status">{done}</p>
         ) : preview.ok ? (
           <p className="muted small num" style={{ marginTop: 10 }}>
-            {t('Balises %{de} à %{a}', { de: preview.series.from, a: preview.series.to })} · {tn('%{count} page', '%{count} pages', Math.ceil(preview.series.codes.length / 21))}
+            {/* ⚠️⚠️ **CE NOMBRE SE CALCULE, IL NE SE RECOPIE PAS** (Julien, en
+                imprimant, 6 octobre 2026). Il était écrit `/ 21` — le nombre
+                d'étiquettes par planche de l'ANCIEN format. La balise a
+                rétréci le 24 septembre (fiche 107), la planche est passée à
+                80, et cet écran est resté au chiffre d'avant : 640 balises
+                s'imprimaient sur 8 pages pendant qu'il en annonçait 31.
+                `PAR_PLANCHE` vient de la grille elle-même. */}
+            {t('Balises %{de} à %{a}', { de: preview.series.from, a: preview.series.to })} · {tn('%{count} page', '%{count} pages', Math.ceil(preview.series.codes.length / PAR_PLANCHE))}
           </p>
         ) : (
           <p className="muted small" style={{ marginTop: 10 }}>

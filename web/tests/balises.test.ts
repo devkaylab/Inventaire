@@ -125,4 +125,39 @@ describe('planche PDF', () => {
   it('nomme le fichier par la plage et la date', () => {
     expect(baliseSheetFilename(1000, 1049, new Date('2026-08-21T10:00:00Z'))).toBe('balises_1000-1049_2026-08-21.pdf')
   })
+
+  /**
+   * ⚠️⚠️ **L'ÉCRAN ANNONÇAIT 31 PAGES POUR UN PDF DE 8** (Julien, en imprimant
+   * ses balises, 6 octobre 2026).
+   *
+   * Le panneau divisait par **21** — le nombre d'étiquettes par planche de
+   * l'ANCIEN format. La balise a rétréci le 24 septembre (fiche 107), la
+   * planche est passée à 80, et cette ligne est restée au chiffre d'avant.
+   *
+   * Le PDF, lui, a toujours été juste : une garde comptait déjà ses pages.
+   * Ce qui manquait, c'est le lien entre ce qu'on annonce et ce qu'on produit —
+   * et la même carte affirmait « feuilles A4 de 80 étiquettes » deux lignes
+   * au-dessus de son propre « 31 pages ».
+   */
+  it('⚠️ le nombre de pages ANNONCÉ est celui du PDF produit', async () => {
+    const codes = (n: number) => Array.from({ length: n }, (_, i) => String(1000 + i))
+    // 640 est le cas réel de Julien ; les autres bornent les arrondis.
+    for (const n of [1, PAR_PLANCHE, PAR_PLANCHE + 1, 640]) {
+      const pdf = await PDFDocument.load(await buildBaliseSheet(codes(n)))
+      expect(pdf.getPageCount(), `${n} balises — pages du PDF`)
+        .toBe(Math.ceil(n / PAR_PLANCHE))
+    }
+  }, 60_000)
+
+  it('⚠️ et l’écran le CALCULE, il ne recopie aucun nombre', () => {
+    const panneau = readFileSync(
+      path.resolve(__dirname, '..', 'components/BaliseSheetPanel.tsx'), 'utf8')
+      .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
+    expect(panneau, 'le panneau ne compte plus les pages').toMatch(/'%\{count\} pages'/)
+    expect(panneau).toContain('PAR_PLANCHE')
+    // ⚠️ Un diviseur écrit en clair est exactement le défaut qu'on vient de
+    // corriger : il survit au changement de gabarit sans rien dire.
+    expect(panneau, 'un nombre d’étiquettes par page est écrit en dur')
+      .not.toMatch(/codes\.length\s*\/\s*\d/)
+  })
 })

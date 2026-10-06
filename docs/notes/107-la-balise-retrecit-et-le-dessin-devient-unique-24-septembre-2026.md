@@ -72,3 +72,37 @@ avec un coin arrondi de 1,5 à 2 mm : si l'imprimante décale de quelques
 dixièmes, la bande peut laisser un liseré blanc d'un côté ou déborder de
 l'autre. Rien ne permet de le savoir sans imprimer sur du vrai support —
 à regarder à la première planche achetée, et à rentrer ici.
+
+---
+
+## ⚠️ Une conséquence restée en arrière — 6 octobre 2026
+
+Douze jours plus tard, Julien imprime 640 balises. Le PDF sort sur **8 pages**,
+et l'écran annonce **31 pages**.
+
+`BaliseSheetPanel.tsx` divisait par **21** — le nombre d'étiquettes par planche
+de l'ANCIEN format. La balise a rétréci ici même, la planche est passée à
+**80**, et cette ligne est restée au chiffre d'avant.
+
+Le plus parlant : la même carte affirme, deux lignes au-dessus, « feuilles
+d'étiquettes A4 de **80** étiquettes ». L'écran se contredisait lui-même.
+
+**Le PDF, lui, a toujours été juste** : une garde comptait déjà ses pages
+(`planche PDF`). Ce qui manquait était le lien entre ce qu'on annonce et ce
+qu'on produit — deux chiffres calculés séparément, dont un seul était protégé.
+
+Corrigé : le panneau lit `PAR_PLANCHE`, qui vient de la grille
+(`GABARIT.cols * GABARIT.rows`). Et deux gardes de plus :
+
+- pour 1, 80, 81 et **640** balises, le PDF **réellement produit** a bien
+  `ceil(n / PAR_PLANCHE)` pages ;
+- le panneau n'écrit **aucun diviseur en clair** — un nombre recopié survit au
+  changement de gabarit sans rien dire, ce qui est exactement ce qui vient
+  d'arriver.
+
+Saboté trois fois : remettre 21, écrire 80 en dur, ou changer la grille sans
+toucher l'écran. Les trois mordent.
+
+⚠️ **La leçon dépasse les balises** : quand une mesure change, chercher qui la
+RECOPIE. Ici le dessin, le PDF et l'écran tenaient le même nombre ; deux l'ont
+suivi, le troisième non, et c'est celui que le client lit.
