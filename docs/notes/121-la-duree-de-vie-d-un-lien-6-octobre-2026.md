@@ -106,11 +106,43 @@ page du site (`/bienvenue`, `/reinitialisation`) qui ne présente le jeton qu'au
 clic. **La durée, elle, n'a pas changé de nature** : c'est toujours le réglage
 Supabase qui décide.
 
+## ⚠️⚠️ L'avertissement de Supabase est ASSUMÉ — ne pas le « corriger »
+
+Dès le réglage posé à 24 h, le tableau de bord affiche une alerte de sécurité :
+l'analyseur (`auth_otp_long_expiry`) la lève au-delà d'une heure.
+
+**Sa raison ne s'applique pas ici.** Elle vise le code à **six chiffres** que
+Supabase peut envoyer par courriel : plus il vit, plus on a le temps de le
+deviner. Or Quantinvo n'en vérifie jamais.
+
+Mesuré le 6 octobre 2026 :
+
+- `verifyOtp` n'est appelée qu'à **un seul endroit** (`web/lib/jetonDuLien.ts`,
+  et une garde le vérifie), et elle ne reçoit qu'un `token_hash` — un condensat,
+  pas un nombre qu'on énumère ;
+- le code à six chiffres de l'inscription est **le nôtre** : table
+  `codes_email`, **10 minutes**, compteur d'essais et quota. Le réglage de
+  Supabase n'a aucun effet dessus ;
+- `resetPasswordForEmail` ne subsiste qu'en **repli**, si notre fonction est
+  injoignable — et le message de Supabase porte lui aussi un lien.
+
+**Ce qu'il ne faut donc PAS faire : repasser le réglage à une heure pour faire
+disparaître le voyant.** Ça casserait l'invitation d'un compteur qui ouvre son
+courrier le lendemain, pour fermer un risque que ce produit ne court pas.
+
+⚠️ À savoir quand même : depuis que la sortie est écrite sur les deux écrans
+(« Mot de passe oublié » renvoie un lien neuf), **une heure redeviendrait
+tenable** — le cul-de-sac a disparu. 24 h reste le choix de Julien parce qu'il
+est plus aimable, pas parce que l'autre est impossible.
+
 ## Ce qui reste à faire
 
-1. ⚠️ **Porter le réglage à 24 h** dans le tableau de bord Supabase. Julien
-   seul peut le faire. Avant ça, l'e-mail promet plus que le serveur ne tient.
-2. ⚠️ **Déployer `mot-de-passe-oublie`** : le dépôt ne déploie rien.
-3. L'app est publiée : son texte ne part qu'avec un build.
+1. ✅ **Réglage porté à 24 h** par Julien, le 6 octobre 2026.
+2. ✅ **`mot-de-passe-oublie` déployée** le même jour — version 4, toujours
+   publique (`verify_jwt: false`), et le fichier téléchargé est identique au
+   dépôt, `_shared/email.ts` compris.
+3. ⚠️ **L'app est publiée : son texte ne part qu'avec un build**, et le
+   déclenchement appartient à Julien. D'ici là, l'app continue d'envoyer
+   chercher le responsable.
 
-Le site, lui, part au push.
+Le site est parti au push.
