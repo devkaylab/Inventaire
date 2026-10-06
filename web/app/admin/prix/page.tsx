@@ -12,7 +12,7 @@
  * après chaque changement enregistré.
  *
  * ⚠️ **ET UNE VERSION NE SE MODIFIE PAS — ON EN POSE UNE NEUVE.** Enregistrer
- * crée une version datée et signée ; les missions déjà réservées gardent la
+ * crée une version datée et signée ; les réservations déjà prises gardent la
  * leur. Le bouton dit donc « Poser une nouvelle version », pas « Enregistrer ».
  */
 import { useCallback, useEffect, useState } from 'react'
@@ -56,7 +56,7 @@ const CHAMPS: { cle: keyof Reglages; libelle: string; suffixe: string; euros?: b
   { cle: 'taux_responsable_cents', libelle: 'Responsable, par heure', suffixe: '€', euros: true },
   { cle: 'productivite', libelle: 'Productivité retenue', suffixe: 'art./h' },
   { cle: 'duree_cible_minutes', libelle: 'Durée cible', suffixe: 'min' },
-  { cle: 'frais_fixes_cents', libelle: 'Frais fixes par mission', suffixe: '€', euros: true },
+  { cle: 'frais_fixes_cents', libelle: 'Frais fixes par réservation', suffixe: '€', euros: true },
   { cle: 'responsable_des_n', libelle: 'Un responsable à partir de', suffixe: 'inventoristes' },
 ]
 
@@ -119,7 +119,7 @@ export default function AdminPrixPage() {
           <h1 className="page-title">Les réglages du prix</h1>
           <p className="muted">
             Changer une valeur ici change ce que le prochain client verra. Les
-            missions déjà réservées gardent leur prix.
+            réservations déjà prises gardent leur prix.
           </p>
         </div>
       </div>
@@ -175,7 +175,7 @@ export default function AdminPrixPage() {
             <section className="admin-section">
               <div className="admin-section-head">
                 <div>
-                  <h2>Sur une mission type</h2>
+                  <h2>Sur une réservation type</h2>
                   <p className="muted small">
                     600 m², 20 000 articles, textile, un mardi à 20:00 — calculé
                     par la base, avec la version en vigueur.
@@ -219,7 +219,7 @@ export default function AdminPrixPage() {
             </p>
             <p className="muted small" style={{ marginTop: 10 }}>
               Chaque changement est daté et signé dans le journal des actions.
-              La version actuelle reste lisible : les missions vendues la gardent.
+              La version actuelle reste lisible : les réservations vendues la gardent.
             </p>
           </section>
         </>

@@ -1,7 +1,14 @@
 'use client'
 
 /**
- * Console — une mission, et l'équipe qui la fera (20 septembre 2026).
+ * Console — une réservation (20 septembre 2026).
+ *
+ * ⚠️ **« RÉSERVATION » À L'ÉCRAN, `missions` EN BASE** (Julien, 6 octobre
+ * 2026). Le client ne lit jamais « mission » : il voit « vos inventaires ».
+ * La console parlait une autre langue que le produit, héritée du modèle où
+ * l'on envoyait une équipe en mission — un modèle rangé à part depuis le
+ * 4 octobre. La table ne bouge pas : la renommer ferait trente migrations
+ * pour un mot.
  *
  * Maquette : Admin-Mission et Admin-Matching.
  *
@@ -123,7 +130,7 @@ export default function AdminMissionPage() {
   if (erreur && !detail) return <AppShell profile={guard.profile}><p className="field-err">{erreur}</p></AppShell>
   if (!detail) return <AppShell profile={guard.profile}><p className="muted">Lecture…</p></AppShell>
   if (!detail.success || !detail.mission || !detail.economie) {
-    return <AppShell profile={guard.profile}><p className="field-err">{detail.error ?? 'Mission introuvable.'}</p></AppShell>
+    return <AppShell profile={guard.profile}><p className="field-err">{detail.error ?? 'Réservation introuvable.'}</p></AppShell>
   }
 
   const m = detail.mission
@@ -149,7 +156,7 @@ export default function AdminMissionPage() {
           personnes assignées, leurs niveaux, leur rémunération et les places
           vides à pourvoir (4 octobre 2026). On ne propose plus d'équipe : il
           n'y a ni place à pourvoir ni rémunération à lire. Ce qui reste d'une
-          mission, c'est ce que le client a loué.
+          réservation, c'est ce que le client a loué.
           Le code est conservé sur la branche `on-demand-inventoristes`. */}
       <section className="admin-section">
         <div className="admin-section-head"><div><h2>Ce que le client a loué</h2></div></div>
@@ -173,7 +180,7 @@ export default function AdminMissionPage() {
       <section className="admin-section">
         <div className="admin-section-head">
           <div>
-            <h2>Où en est la mission</h2>
+            <h2>Où en est la réservation</h2>
             <p className="muted small">{LIBELLE_ETAT[m.etat] ?? m.etat}</p>
           </div>
         </div>
@@ -186,7 +193,7 @@ export default function AdminMissionPage() {
           ))}
           <button type="button" className="btn btn-danger" disabled={occupe}
                   onClick={() => avancer('annulee')}>
-            Annuler la mission
+            Annuler la réservation
           </button>
         </div>
       </section>
@@ -195,7 +202,7 @@ export default function AdminMissionPage() {
           quatre lignes — `missions` retient `cout_cents` par un grant nominatif,
           et c'est `admin_mission` qui l'ouvre. */}
       <section className="admin-section">
-        <div className="admin-section-head"><div><h2>Ce que la mission rapporte</h2></div></div>
+        <div className="admin-section-head"><div><h2>Ce que la réservation rapporte</h2></div></div>
         <div className="dash-table-wrap">
           <table className="dash-table">
             <tbody>
@@ -218,7 +225,7 @@ export default function AdminMissionPage() {
 
 
       <p className="muted small">
-        <Link href="/admin/missions">← Toutes les missions</Link>
+        <Link href="/admin/reservations">← Toutes les réservations</Link>
       </p>
     </AppShell>
   )

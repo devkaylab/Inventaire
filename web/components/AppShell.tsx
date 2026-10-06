@@ -46,10 +46,14 @@ export function ongletsPour(profile: Profile): Onglet[] {
     return [
       { href: '/admin', label: 'Tableau de bord' },
       { href: '/admin/entreprises', label: 'Entreprises' },
-      // Les missions On-Demand. Elles viennent APRÈS les entreprises et AVANT
-      // l'usage : c'est une charge d'exploitation quotidienne, pas une
+      // Les réservations On-Demand. Elles viennent APRÈS les entreprises et
+      // AVANT l'usage : c'est une charge d'exploitation quotidienne, pas une
       // consultation.
-      { href: '/admin/missions', label: 'Missions' },
+      //
+      // ⚠️ « Réservations », pas « Missions » (Julien, 6 octobre 2026) : le
+      // client ne lit jamais ce mot, et la console parlait une autre langue
+      // que le produit. La table en base reste `missions`.
+      { href: '/admin/reservations', label: 'Réservations' },
       { href: '/admin/paiements', label: 'Paiements' },
       { href: '/admin/prix', label: 'Prix' },
       // Ce que les clients font du produit, tout le parc d'un coup. Distinct
@@ -184,16 +188,22 @@ function IconeOnglet({ href }: { href: string }) {
         <path d="M7 9l3 3-3 3" />
         <line x1="12" y1="15" x2="16" y2="15" />
       </>)
-    // ⚠️ Une équipe qui vient chez vous : deux personnes, pas un calendrier.
-    // Un calendrier dirait « une date » — or ce qui distingue On-Demand du
-    // reste du produit, c'est qu'on envoie des gens.
-    case '/admin/missions':
+    // ⚠️⚠️ **C'ÉTAIT DEUX PERSONNES, ET LA RAISON A DISPARU** (6 octobre 2026).
+    // Le commentaire d'origine disait : « une équipe qui vient chez vous, pas
+    // un calendrier — un calendrier dirait "une date", or ce qui distingue
+    // On-Demand, c'est qu'on envoie des gens. »
+    //
+    // On n'envoie plus personne depuis le 4 octobre : On-Demand ouvre
+    // Quantinvo le temps d'un inventaire. Ce qui le distingue est devenu
+    // exactement ce que le dessin refusait — **une fenêtre de sept jours**.
+    // D'où le calendrier, avec sa semaine marquée.
+    case '/admin/reservations':
     case '/on-demand/mes-inventaires':
       return d(<>
-        <circle cx="9" cy="8" r="3.2" />
-        <path d="M3.5 19.5c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" />
-        <path d="M16.5 6.2a3.2 3.2 0 0 1 0 5.6" />
-        <path d="M18.5 14.9c1.3.7 2 1.9 2 3.3" />
+        <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+        <path d="M3.5 9.5h17" />
+        <path d="M8 3.5v3M16 3.5v3" />
+        <path d="M7 13.5h7" />
       </>)
     default:
       return d(<circle cx="12" cy="12" r="8" />)

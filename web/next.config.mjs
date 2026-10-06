@@ -117,6 +117,11 @@ const nextConfig = {
     return [
       { source: '/a-la-demande', destination: '/on-demand', permanent: true },
       { source: '/a-la-demande/:chemin*', destination: '/on-demand/:chemin*', permanent: true },
+      // ⚠️ La console a parlé « missions » jusqu'au 6 octobre 2026, et ces
+      // adresses sont dans les signets de ceux qui l'ouvrent tous les jours.
+      // Le mot a changé à l'écran, pas la table.
+      { source: '/admin/missions', destination: '/admin/reservations', permanent: true },
+      { source: '/admin/missions/:chemin*', destination: '/admin/reservations/:chemin*', permanent: true },
     ]
   },
 }

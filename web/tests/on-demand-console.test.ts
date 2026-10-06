@@ -10,7 +10,7 @@
 //     du RGPD, et ça ne se voit pas à l'écran tant qu'un profil n'a pas été
 //     injustement retiré d'une mission.
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
 
@@ -104,7 +104,7 @@ describe('le matching propose, il n’écarte pas', () => {
     // retenu » se trompe dans les deux sens, elle l'a fait ici même.
     const occurrences = (sql.match(/\bretenu\b/g) ?? []).length
     expect(occurrences, 'un filtre sur `retenu` s’est glissé dans la requête').toBe(1)
-    const page = lire('app/admin/missions/[id]/page.tsx')
+    const page = lire('app/admin/reservations/[id]/page.tsx')
     expect(page).toContain('Voir tout le monde')
   })
 
@@ -184,5 +184,97 @@ describe('la console ne fait rien d’anonyme', () => {
     // fait, et c'est lui qui explique une équipe redevenue incomplète.
     expect(sql).toContain("etat = 'retiree'")
     expect(sql).not.toMatch(/delete from public\.mission_assignments/)
+  })
+})
+
+describe('⚠️ la console dit « réservations », la base dit `missions`', () => {
+  /**
+   * ⚠️⚠️ 6 octobre 2026. « Pourquoi tu me parles de mission ? » — relevé par
+   * Julien dès le 5 : le client ne lit jamais ce mot, il voit « vos
+   * inventaires ». La console parlait une autre langue que le produit, héritée
+   * du modèle où l'on envoyait une équipe EN MISSION — modèle rangé à part le
+   * 4 octobre.
+   *
+   * ⚠️ **LA TABLE NE BOUGE PAS.** La renommer ferait trente migrations, une
+   * réécriture de chaque fonction `admin_*` et un risque pour un mot. La
+   * frontière est donc : « réservation » dans ce qui s'affiche et dans
+   * l'adresse, `missions` dans le SQL et les identifiants.
+   */
+  const ecrans = ['app/admin/reservations/page.tsx', 'app/admin/reservations/[id]/page.tsx']
+
+  /** Ce que l'écran AFFICHE : hors commentaires, hors code. */
+  const texteAffiche = (f: string) => {
+    const brut = lire(f)
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+    // Les titres, les phrases et les libellés de boutons — pas les appels.
+    return [
+      ...brut.matchAll(/>([^<>{}]*[a-zà-ÿ]{3,}[^<>{}]*)</g),
+      ...brut.matchAll(/'([^']*[a-zà-ÿ]{3,}[^']*)'/g),
+    ]
+      .map((m) => m[1])
+      // ⚠️ Un chemin d'import n'est pas une phrase : `@/lib/missions` doit
+      // rester tel quel, c'est le nom du module qui parle à la base.
+      .filter((v) => !v.startsWith('@/') && !v.startsWith('./') && !v.startsWith('../'))
+      .join(' | ')
+  }
+
+  it('⚠️ aucun écran de la console n’affiche encore « mission »', () => {
+    const fautes: string[] = []
+    for (const f of ecrans) {
+      for (const m of texteAffiche(f).matchAll(/[^|]*\bmissions?\b[^|]*/gi)) {
+        // `admin_avancer_mission` et consorts sont des noms de fonction, pas
+        // des phrases : ils passent par `rpc('…')` et n'ont pas d'accent.
+        if (/^[a-z_]+$/.test(m[0].trim())) continue
+        fautes.push(`${f} → « ${m[0].trim().slice(0, 70)} »`)
+      }
+    }
+    expect(fautes, fautes.join('\n')).toEqual([])
+  })
+
+  it('l’adresse aussi, et l’ancienne redirige', () => {
+    const nav = lire('components/AppShell.tsx')
+    expect(nav).toContain("{ href: '/admin/reservations', label: 'Réservations' }")
+    expect(nav, 'la navigation pointe encore sur l’ancienne adresse')
+      .not.toContain("'/admin/missions'")
+    // ⚠️ Ces adresses sont dans les signets de qui ouvre la console chaque
+    // jour : les casser sans rien dire est gratuit et désagréable.
+    const config = readFileSync(path.resolve(racine, 'next.config.mjs'), 'utf8')
+    expect(config).toContain("source: '/admin/missions', destination: '/admin/reservations'")
+    expect(config).toContain("source: '/admin/missions/:chemin*'")
+  })
+
+  it('⚠️ mais la base garde `missions` — on n’a pas renommé une table pour un mot', () => {
+    // La console continue d'appeler les fonctions telles qu'elles s'appellent.
+    const detail = lire('app/admin/reservations/[id]/page.tsx')
+    expect(detail).toContain("rpc('admin_mission'")
+    expect(detail).toContain("rpc('admin_avancer_mission'")
+
+    // ⚠️ **ET SURTOUT : AUCUNE MIGRATION NE RENOMME LA TABLE.** C'est le vrai
+    // risque — quelqu'un « finit le travail » six mois plus tard, et trente
+    // fonctions, autant de policies et les réservations figées suivent.
+    const dossier = path.resolve(racine, '..', 'supabase', 'migrations')
+    const fautes: string[] = []
+    for (const f of readdirSync(dossier).filter((n) => n.endsWith('.sql'))) {
+      const sql = readFileSync(path.join(dossier, f), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .split('\n').filter((l) => !l.trim().startsWith('--')).join('\n')
+      if (/alter\s+table\s+(?:if\s+exists\s+)?(?:public\.)?missions\s+rename/i.test(sql)) {
+        fautes.push(f)
+      }
+    }
+    expect(fautes, `une migration renomme la table : ${fautes.join(', ')}`).toEqual([])
+  })
+
+  it('⚠️ et l’icône n’est plus deux personnes', () => {
+    // Elle disait « une équipe qui vient chez vous ». On n'envoie plus
+    // personne depuis le 4 octobre : ce qui distingue On-Demand est une
+    // fenêtre de sept jours.
+    const nav = lire('components/AppShell.tsx')
+    const bloc = nav.slice(nav.indexOf("case '/admin/reservations':"))
+    const icone = bloc.slice(0, bloc.indexOf('</>)'))
+    expect(icone, 'l’icône dessine encore des personnes').not.toContain('cx="9" cy="8"')
+    expect(icone, 'l’icône n’est pas un calendrier').toContain('<rect')
   })
 })

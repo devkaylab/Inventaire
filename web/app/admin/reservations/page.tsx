@@ -1,12 +1,18 @@
 'use client'
 
 /**
- * Console — les missions On-Demand (20 septembre 2026).
+ * Console — les réservations On-Demand (20 septembre 2026).
+ *
+ * ⚠️ **« RÉSERVATIONS » À L'ÉCRAN, `missions` EN BASE** (Julien, 6 octobre
+ * 2026). Le client ne lit jamais le mot « mission » : il voit « vos
+ * inventaires ». La console parlait une autre langue que le produit, héritée
+ * du modèle où l'on envoyait une équipe en mission. La table, elle, ne bouge
+ * pas — renommer `missions` ferait trente migrations pour un mot.
  *
  * Maquette : Admin-Missions.
  *
  * ⚠️ **CE QUI DEMANDE UNE DÉCISION AUJOURD'HUI PASSE AVANT LE TABLEAU.** Une
- * liste triée par date met une mission de la semaine prochaine au même rang
+ * liste triée par date met une réservation de la semaine prochaine au même rang
  * qu'une équipe incomplète à trois heures du départ. Les deux bandeaux du haut
  * sont ce qu'on regarde en arrivant ; le tableau est ce qu'on consulte.
  *
@@ -49,7 +55,7 @@ export default function AdminMissionsPage() {
   return (
     <AppShell profile={guard.profile}>
       <div className="app-head">
-        <h1 className="page-title">Les missions</h1>
+        <h1 className="page-title">Les réservations</h1>
       </div>
 
       {erreur && <p className="field-err">{erreur}</p>}
@@ -57,7 +63,7 @@ export default function AdminMissionsPage() {
 
       {missions !== null && missions.length === 0 && (
         <p className="muted">
-          Aucune mission. La première arrivera par le tunnel de réservation.
+          Aucune réservation. La première arrivera par le tunnel.
         </p>
       )}
 
@@ -68,8 +74,8 @@ export default function AdminMissionsPage() {
               <h2>À décider aujourd’hui</h2>
               <p className="muted small">
                 {aDecider.length === 1
-                  ? 'Une mission demande une décision.'
-                  : `${aDecider.length} missions demandent une décision.`}
+                  ? 'Une réservation demande une décision.'
+                  : `${aDecider.length} réservations demandent une décision.`}
               </p>
             </div>
           </div>
@@ -77,7 +83,7 @@ export default function AdminMissionsPage() {
             {aDecider.map((m) => {
               const u = urgence(m)!
               return (
-                <Link key={m.id} href={`/admin/missions/${m.id}`} className="acc-inv-row">
+                <Link key={m.id} href={`/admin/reservations/${m.id}`} className="acc-inv-row">
                   <div style={{ minWidth: 0 }}>
                     <div className="acc-inv-name">{m.magasin_nom} — {u.titre}</div>
                     <div className="muted small" style={{ marginTop: 2 }}>{u.detail}</div>
@@ -112,7 +118,7 @@ export default function AdminMissionsPage() {
                 {aVenir.map((m) => (
                   <tr key={m.id}>
                     <td>
-                      <Link href={`/admin/missions/${m.id}`}>{m.magasin_nom}</Link>
+                      <Link href={`/admin/reservations/${m.id}`}>{m.magasin_nom}</Link>
                       <div className="muted small">{m.client_nom}</div>
                     </td>
                     <td>{quand(m.debut_prevu)}</td>
@@ -120,7 +126,7 @@ export default function AdminMissionsPage() {
                     <td>{etatLisible(m)}</td>
                     <td className="num">{euros(m.prix_cents / 100)}</td>
                     {/* ⚠️ La marge en pourcentage ET en euros : « 25,0 % » ne dit
-                        pas si la mission vaut la peine d'être servie, « 237 € »
+                        pas si la réservation vaut la peine d'être servie, « 237 € »
                         le dit. */}
                     <td className="num">
                       {(m.marge * 100).toFixed(1).replace('.', ',')} %

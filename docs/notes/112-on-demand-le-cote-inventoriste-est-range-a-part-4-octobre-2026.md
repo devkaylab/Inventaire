@@ -125,3 +125,58 @@ commentaire. `reglages_annulation` n'est pas supprimée pour autant — la formu
 pour facturer. Rien à changer.
 
 **3. Plus aucune référence à une équipe proposée.** Voir le point 2 ci-dessus.
+
+---
+
+## ⚠️ La console parle enfin la même langue — 6 octobre 2026
+
+> « Pourquoi tu me parles de mission ? » (Julien, 5 octobre) — puis, le 6 :
+> « oui pour réservations dans la console ».
+
+Le client ne lit jamais le mot « mission » : il voit « vos inventaires ». La
+console, elle, affichait « Les missions », « Annuler la mission », « Où en est
+la mission » — le vocabulaire du modèle où l'on **envoyait une équipe en
+mission**, rangé à part deux jours plus tôt.
+
+**Ce qui a changé :** les libellés des deux écrans, l'entrée de navigation, et
+l'adresse `/admin/missions` → `/admin/reservations`.
+
+**Ce qui n'a PAS changé :** la table `missions`, les fonctions `admin_mission`,
+`admin_avancer_mission`, `prix_mission`, et toutes les colonnes. Renommer la
+table coûterait trente migrations, autant de policies réécrites, et les
+réservations déjà figées sur une version de grille. Pour un mot.
+
+La frontière est donc nette, et une garde la tient : **« réservation » dans ce
+qui s'affiche et dans l'adresse, `missions` dans le SQL et les identifiants.**
+La garde refuse aussi toute migration qui renommerait la table — c'est le vrai
+risque, six mois plus tard, quand quelqu'un voudra « finir le travail ».
+
+### L'ancienne adresse redirige
+
+`/admin/missions` et `/admin/missions/<id>` redirigent en permanent. Ces
+adresses sont dans les signets de qui ouvre la console tous les jours ; les
+casser sans rien dire est gratuit et désagréable. Vérifié au volet : la
+redirection tombe bien sur la nouvelle page.
+
+### ⚠️ Et l'icône dessinait encore une équipe
+
+Son commentaire disait :
+
+> « Une équipe qui vient chez vous : deux personnes, pas un calendrier. Un
+> calendrier dirait "une date" — or ce qui distingue On-Demand du reste du
+> produit, c'est qu'on envoie des gens. »
+
+On n'envoie plus personne. Ce qui distingue On-Demand est devenu **exactement ce
+que le dessin refusait** : une fenêtre de sept jours. C'est un calendrier
+maintenant.
+
+Le commentaire d'origine avait ceci de précieux qu'il disait *pourquoi* ce
+n'était pas un calendrier. Le jour où la raison tombe, on sait quoi reprendre.
+
+### Une phrase ratée, attrapée par la garde
+
+« Mission introuvable. » — l'écran d'erreur de la fiche, que la relecture à l'œil
+avait laissée passer. La garde extrait ce que l'écran AFFICHE, hors commentaires
+et hors chemins d'import, et elle l'a vue tout de suite.
+
+Sept sabotages, sept morsures.

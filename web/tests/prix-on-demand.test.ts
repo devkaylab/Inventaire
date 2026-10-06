@@ -1055,7 +1055,7 @@ describe('⚠️ la console d’une mission ne parle plus d’équipe', () => {
    * `on-demand-inventoristes`.
    */
   const ecran = readFileSync(
-    path.resolve(__dirname, '..', 'app/admin/missions/[id]/page.tsx'), 'utf8')
+    path.resolve(__dirname, '..', 'app/admin/reservations/[id]/page.tsx'), 'utf8')
     .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
@@ -1098,7 +1098,7 @@ describe('⚠️ rien ne doit bloquer le client et son inventaire', () => {
 
   it('la console sait faire avancer une mission', () => {
     const ecran = readFileSync(
-      path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
+      path.join(racine, 'app/admin/reservations/[id]/page.tsx'), 'utf8')
     expect(ecran, 'plus aucun écran ne fait avancer une mission')
       .toContain("rpc('admin_avancer_mission'")
   })
@@ -1112,7 +1112,7 @@ describe('⚠️ rien ne doit bloquer le client et son inventaire', () => {
     // session d'inventaire. Julien a ramené On-Demand à un accès — le client
     // crée ses inventaires lui-même. Ce qui reste vrai, c'est le déclencheur.
     const ecran = readFileSync(
-      path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
+      path.join(racine, 'app/admin/reservations/[id]/page.tsx'), 'utf8')
     expect(ecran).toMatch(/cle: 'en_cours'/)
     const trigger = derniereDefinition('missions_accorder_les_acces').corps
     expect(trigger).toMatch(/new\.etat = 'en_cours'/)
@@ -1128,7 +1128,7 @@ describe('⚠️ rien ne doit bloquer le client et son inventaire', () => {
     // expliquer qu'on ne la recopie pas. Une garde qui interdit un mot
     // interdit aussi de l'expliquer.
     const ecran = readFileSync(
-      path.join(racine, 'app/admin/missions/[id]/page.tsx'), 'utf8')
+      path.join(racine, 'app/admin/reservations/[id]/page.tsx'), 'utf8')
       .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ')
       .replace(/\/\*[\s\S]*?\*\//g, ' ')
       .split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n')
