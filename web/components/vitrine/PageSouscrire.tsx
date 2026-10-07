@@ -215,11 +215,13 @@ export function PageSouscrire() {
       <main>
         <section className="section souscrire-section">
           <div className="container">
-            {/* ⚠️ FERMÉE TANT QUE LA SOCIÉTÉ N'EST PAS IMMATRICULÉE (Julien,
-                5 septembre 2026). `venteOuverte()` suit `mentionsCompletes()` :
-                remplir `web/lib/legal.ts` rouvre la boutique tout seul. Et la
-                fonction edge refuse aussi — une porte fermée à l'écran
-                seulement s'ouvre avec une adresse. */}
+            {/* ⚠️ FERMÉE TANT QUE STRIPE N'ENCAISSE PAS POUR DE VRAI.
+                `venteOuverte()` exige DEUX conditions depuis le 7 octobre 2026 :
+                les mentions légales (devoir légal, remplies) ET
+                `STRIPE_LIVE_PRET` (décision commerciale, encore faux). Compléter
+                `legal.ts` ne rouvre donc plus la boutique tout seul. Et la
+                fonction edge refuse aussi — une porte fermée à l'écran seulement
+                s'ouvre avec une adresse. */}
             {venteOuverte() ? (
               <Suspense fallback={<div className="card souscrire"><p>{t('Chargement…')}</p></div>}>
                 <Formulaire />

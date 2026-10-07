@@ -51,6 +51,12 @@ export const PAGES_PUBLIQUES: PagePublique[] = [
   { chemin: '/superviseur', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/confidentialite', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/conditions-generales', priorite: 0.3, frequence: 'yearly' },
+  // ⚠️ ENTRÉE LE 7 OCTOBRE 2026, le jour où les mentions sont devenues
+  // complètes. Elle en était absente pour une bonne raison — elle était
+  // `noindex`, et une adresse `noindex` dans un plan de site est l'erreur que
+  // la Search Console reproche vraiment. Ses deux sœurs y étaient déjà ; la
+  // laisser dehors l'aurait rendue trouvable par le seul lien du pied de page.
+  { chemin: '/mentions-legales', priorite: 0.3, frequence: 'yearly' },
   { chemin: '/suppression-compte', priorite: 0.3, frequence: 'yearly' },
   // ⚠️ La vitrine en anglais (11 septembre 2026) : chaque page française a sa
   // jumelle sous `/en`, indexable, liée par `hreflang` (voir `lib/metaVitrine.ts`).

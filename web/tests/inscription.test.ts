@@ -418,13 +418,44 @@ describe('la vente est fermée jusqu’à l’immatriculation', () => {
     expect(edgeSou.indexOf("rpc('deposer_souscription'")).toBeGreaterThan(g2)
   })
 
-  it('⚠️ un seul interrupteur, et c’est l’immatriculation', () => {
-    // Pas de second drapeau : ce serait un endroit de plus où se tromper, et
-    // surtout un endroit qu'on oublierait de rouvrir le jour venu. La LCEN
-    // interdit de vendre sans identification complète de l'éditeur : les deux
-    // ouvrent ensemble par nature.
+  it('⚠️ la vente se ferme dès qu’UNE condition manque', () => {
+    // ⚠️⚠️ **CETTE GARDE A CHANGÉ DE FORME LE 7 OCTOBRE 2026, PAS D'INTENTION.**
+    // Elle citait la ligne mot pour mot : `return mentionsCompletes()`. C'était
+    // le choix du 5 septembre — un seul interrupteur, « pas un endroit de plus
+    // où se tromper ». Mais cet interrupteur portait DEUX choses sans rapport :
+    // un devoir légal (publier qui édite) et une décision commerciale (ouvrir la
+    // boutique). Résultat : les mentions sont restées à trous trois semaines
+    // pour empêcher une vente — l'irrégularité que la LCEN vise, au service
+    // d'une prudence qui avait son propre drapeau à prendre.
+    //
+    // Ce qu'il faut tenir n'a pas bougé : **la vente ne s'ouvre pas toute
+    // seule.** La garde ne cite donc plus la ligne, elle EXERCE la règle —
+    // chaque drapeau de `legal.ts` qui vaut `false` doit suffire à fermer.
     const legal = lireSrc('../lib/legal.ts')
-    expect(legal).toContain('export function venteOuverte(): boolean {\n  return mentionsCompletes()\n}')
+    const corps = /export function venteOuverte\(\): boolean \{([\s\S]*?)\n\}/.exec(legal)?.[1]
+    expect(corps, 'venteOuverte() ne se lit plus').toBeTruthy()
+
+    // ⚠️ `||` OUVRIRAIT SUR UNE SEULE CONDITION. C'est la seule composition
+    // interdite, et c'est elle qui ferait échouer le drapeau « du mauvais côté ».
+    expect(corps, 'une condition suffirait à ouvrir la vente').not.toMatch(/\|\|/)
+
+    // La LCEN reste une condition nécessaire : on ne vend pas sans identifier
+    // l'éditeur, quelle que soit l'envie commerciale.
+    expect(corps, 'la vente ne vérifie plus les mentions légales')
+      .toContain('mentionsCompletes()')
+
+    // ⚠️ ET CHAQUE DRAPEAU FAUX DOIT FERMER, POUR DE VRAI. On ne lit pas le
+    // code : on appelle la fonction. Un drapeau déduit du fichier, pas cité.
+    const drapeaux = [...legal.matchAll(/export const (\w+) = (true|false)\b/g)]
+      .filter((m) => corps!.includes(m[1]))
+    expect(drapeaux.length, 'aucun drapeau de boutique dans venteOuverte()')
+      .toBeGreaterThan(0)
+    for (const [, nom, valeur] of drapeaux) {
+      if (valeur === 'false') {
+        expect(venteOuverte(), `« ${nom} » vaut false et la vente est pourtant ouverte`)
+          .toBe(false)
+      }
+    }
   })
 
   it('les trois écrans lisent ce verdict', () => {
