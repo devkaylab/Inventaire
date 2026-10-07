@@ -112,6 +112,20 @@ export const EDITEUR: Mention[] = [
 // Tant que ce n'est pas fait, un prospect irait jusqu'à une page de paiement
 // qui refuserait sa carte. On garde donc la porte fermée, et la page dit
 // simplement « à compléter ».
+//
+// ⚠️ **ET LE JOUR OÙ ON LES POSE, AJOUTER `/mentions-legales` À
+// `PAGES_PUBLIQUES`** (`lib/site.ts`). Elle n'y est pas aujourd'hui, et c'est
+// juste : `noindex` tant que les mentions manquent, et une adresse `noindex`
+// dans le plan du site est l'erreur que la Search Console signale vraiment.
+// Mais `/confidentialite` et `/conditions-generales` y sont, elles : la
+// troisième page légale doit les rejoindre quand elle devient indexable, sinon
+// elle restera trouvable par le seul lien du pied de page.
+//
+// ⚠️ Relevé le 7 octobre 2026, après un courriel de la Search Console : les
+// vingt-huit adresses du plan répondent 200, se déclarent canoniques
+// d'elles-mêmes, et aucune ne porte `noindex`. Le seul `noindex` que Google
+// rencontre est CETTE page, par le lien du pied de page — donc le signalement
+// est attendu, pas un défaut.
 export const HEBERGEUR: Mention[] = [
   { libelle: 'Hébergeur', valeur: 'Vercel Inc.', requis: true },
   {
