@@ -249,21 +249,59 @@ termine.
   d'AGENTS.md — pas de capability, pas de bundle ID, pas d'appareil — peuvent
   alors être retirées. **À vérifier avant de les retirer** : le portail répond,
   et il répond pour l'équipe DEVKAYLAB.
-- ⚠️⚠️ **L'APP NE CHANGE PAS D'ÉQUIPE TOUTE SEULE, ET C'EST LA VRAIE QUESTION
-  SUIVANTE.** Quantinvo iOS 1.0 vit sous le compte **personnel** de Julien
-  (relevé le 7 octobre : App Store Connect fonctionne, « encore sous le compte
-  personnel »). Accepter l'inscription crée une équipe DEVKAYLAB **à côté**, pas
-  à la place. Deux chemins, et ils ne coûtent pas la même chose :
-  - **App Transfer** d'Apple, du compte personnel vers l'organisation. Il
-    conserve la fiche, les notes, l'historique et les builds. Apple y met des
-    conditions (contrats à jour des deux côtés, certaines capabilities
-    interdites, pas de transfert pendant un examen en cours). À lire avant de
-    s'engager, pas pendant.
-  - **Repartir à zéro** sous l'équipe DEVKAYLAB, avec un nouveau bundle ID.
-    C'est perdre la fiche publiée le 27 septembre et recommencer un examen.
-  Le premier est de loin préférable ; ce qui reste à établir, c'est que
-  Quantinvo remplit les conditions. **Rien ne se décide avant que l'adhésion
-  soit active**, parce que les conditions se lisent sur les deux équipes.
+## ⚠️⚠️ CE QU'ON FAIT ICI EST UNE CONVERSION, PAS UN SECOND COMPTE
+
+**Correction du 7 octobre 2026, et elle compte.** J'avais écrit le matin que
+l'app vivrait sous le compte personnel, que DEVKAYLAB naîtrait « à côté », et
+qu'il faudrait un **App Transfer**. C'est très probablement faux, et la preuve
+était déjà sous les yeux depuis le 2 octobre.
+
+La procédure d'Apple pour passer un compte d'Individual à Organization est
+documentée, et elle se déroule exactement comme ce dossier :
+
+| Ce que la procédure dit | Ce qu'on a vécu |
+|---|---|
+| Passer par **Contact us → Membership and Account → Program Enrollment** | dossier de support **102964327628**, avec un conseiller (Sukkry) |
+| Fournir raison sociale, **D-U-N-S**, titre, autorité légale | fourni le 28 septembre |
+| Un représentant appelle pour vérifier | l'appel a eu lieu |
+| Apple écrit ensuite pour **« accepter de nouveaux contrats »** | le courriel du 7 octobre, 10 h 21 |
+| ⚠️ **« Certificates, Identifiers & Profiles peut être temporairement indisponible pendant la migration »** | **Access Unavailable** depuis le 2 octobre |
+
+C'est la dernière ligne qui tranche : **une inscription SÉPARÉE ne fermerait pas
+le portail du compte existant.** Un portail fermé est le symptôme d'une
+conversion du compte, pas de la création d'un second.
+
+Et « DEVKAYLAB (En attente) » sur la page du compte, avec App Store Connect
+encore au nom personnel, ressemble **autant** à une conversion en cours qu'à un
+second compte. J'ai lu une ambiguïté comme une certitude.
+
+**Si c'est bien une conversion**, alors il n'y a **ni App Transfer, ni nouveau
+bundle ID, ni nouvel examen** : la même équipe change de nom et de type, et
+l'app ne bouge pas. C'est tout l'intérêt d'avoir pris ce chemin plutôt que
+d'ouvrir un compte neuf.
+
+⚠️ **Ce que coûterait un App Transfer, pour mémoire** (relevé dans la
+documentation d'App Store Connect le 7 octobre) : TestFlight doit être ÉTEINT,
+tous les builds et tous les testeurs retirés, les champs « Éléments à tester »
+vidés ; l'historique d'App Analytics est perdu pour l'émetteur ; les codes promo
+meurent. Autrement dit, le chemin qu'on a évité.
+
+## Comment en être sûr, avant de payer
+
+Dix secondes sur `developer.apple.com/account`, après connexion :
+
+- **UNE seule équipe**, dont le nom devient DEVKAYLAB → conversion. Rien à
+  transférer.
+- **DEUX équipes**, la personnelle et DEVKAYLAB → second compte. Et là,
+  l'App Transfer redevient la question.
+
+⚠️ **Et l'écran de paiement dit le montant et la période : les lire.** Si Apple
+réclame 99 € alors que l'adhésion personnelle court encore, c'est le moment de
+le demander — en répondant sur le dossier **102964327628**, avant de payer, pas
+après. Une conversion n'est pas censée faire payer deux fois une même année.
+
+⚠️ **Et ne pas laisser l'adhésion personnelle expirer** tant que ce n'est pas
+clarifié : une adhésion expirée retire l'app de la vente.
 - La **clé live Stripe** et l'ouverture de la vente ne dépendent pas de ceci :
   elles dépendent de la publication sur les deux boutiques (décision de Julien)
   et des mentions légales.
