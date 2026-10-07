@@ -186,3 +186,33 @@ traitement : la fiche ne doit pas bouger sous les yeux de l'examinateur.
 ⚠️ **Rien côté iOS tant que ce n'est pas confirmé** : pas d'archive, pas de
 capability, pas d'appareil enregistré. Relancer par rappel téléphonique si rien
 au 12 octobre 2026.
+
+---
+
+## Suivi — relevé le 7 octobre 2026
+
+Lu dans le compte développeur, cinq jours après le dépôt :
+
+| Où | Ce que ça dit |
+|---|---|
+| developer.apple.com/account | **DEVKAYLAB (En attente)** |
+| Bandeau | « Le traitement de votre inscription est en cours » |
+| **Identifiant d'inscription** | **`9L95Q9R29F`** |
+| Certificates, Identifiers & Profiles | **Access Unavailable** — fermé |
+| App Store Connect | fonctionne, encore sous le compte personnel |
+
+⚠️ **Deux numéros, et ils ne servent pas à la même chose :**
+
+- **`9L95Q9R29F`** — l'identifiant d'**inscription**, affiché sur la page du
+  compte. C'est celui qu'Apple demande quand on appelle au sujet de l'adhésion
+  en cours.
+- **`102964327628`** — le numéro du **dossier de support** ouvert avec Sukkry,
+  celui du fil de courriels ci-dessus.
+
+Rien n'est demandé : aucun document réclamé, aucun message sur la page. Il n'y
+a donc rien à faire, seulement à attendre.
+
+⚠️ Et les consignes d'AGENTS.md tiennent telles quelles, puisque le portail est
+toujours fermé : pas de capability ajoutée, pas de changement de bundle ID, pas
+d'appareil enregistré. Signer et archiver restent possibles (certificat et
+profil en cache jusqu'au 08/09/2027) ; **téléverser n'est toujours pas prouvé**.
