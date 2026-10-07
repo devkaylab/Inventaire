@@ -582,3 +582,321 @@ export async function poserArticleAppareils(
   if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
   return data.id as string
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LA LOCATION ON-DEMAND : prendre l'empreinte, puis facturer la semaine
+// (7 octobre 2026).
+//
+// Trois fonctions, et un modèle différent de tout ce qui précède : on ne vend
+// pas un abonnement et on n'encaisse pas tout de suite. On vérifie une carte
+// AVANT, et on débite APRÈS, hors présence du client.
+//
+// ⚠️ **AUCUN PRICE N'EST CRÉÉ, ET AUCUN MONTANT N'EST FABRIQUÉ ICI.** Le
+// montant arrive en paramètre, recopié de `missions.prix_cents` — figé en base
+// à la réservation par `prix_mission`, à partir des réglages validés. Même
+// exception que le devis mensuel, et pour la même raison : quelqu'un a relu ce
+// prix, c'est l'objet de la grille.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * L'empreinte d'une carte : un Checkout en `mode: setup`.
+ *
+ * ⚠️ **RIEN N'EST DÉBITÉ.** Stripe ouvre un SetupIntent : il vérifie la carte
+ * auprès de la banque (autorisation à zéro, parfois 3-D Secure) et l'attache à
+ * un Customer pour plus tard. C'est ce que Julien appelle « un moyen de
+ * paiement que Quantinvo a vérifié comme valide ».
+ *
+ * ⚠️ `customer_creation: 'always'` SEULEMENT QUAND ON N'A PAS DE CUSTOMER.
+ * Stripe refuse les deux ensemble, et sans Customer il n'y a personne à
+ * facturer au septième jour — la facture a besoin d'un destinataire qui dure.
+ *
+ * ⚠️ **ET LE MONTANT EST ANNONCÉ, PAS PRÉLEVÉ.** Il entre dans la description
+ * du SetupIntent, qui s'affiche sur la page de Stripe : le client doit lire
+ * « 341 € le 19 octobre » avant de donner sa carte, pas découvrir la somme au
+ * relevé. Checkout en mode `setup` n'a pas de ligne de prix — cette phrase est
+ * le seul endroit où le montant se voit.
+ *
+ * `billing_address_collection: 'required'` : l'adresse de facturation sert à la
+ * facture du septième jour, et la redemander alors serait trop tard.
+ */
+export async function creerEmpreinteCheckout(
+  cle: string,
+  p: {
+    missionId: string
+    reference: string
+    customerEmail: string
+    /** Un Customer déjà connu de cette mission ; sinon Checkout en crée un. */
+    customer?: string | null
+    annonce: string
+    successUrl: string
+    cancelUrl: string
+    /** Change quand la session précédente est expirée (24 h chez Stripe). */
+    tentative?: number
+  },
+): Promise<SessionCheckout> {
+  const corps = formulaire({
+    mode: 'setup',
+    currency: 'eur',
+    payment_method_types: ['card'],
+    ...(p.customer ? { customer: p.customer } : {
+      customer_email: p.customerEmail,
+      customer_creation: 'always',
+    }),
+    setup_intent_data: {
+      description: p.annonce,
+      metadata: { mission_id: p.missionId, reference: p.reference },
+    },
+    metadata: { mission_id: p.missionId, reference: p.reference, kind: 'location' },
+    client_reference_id: p.missionId,
+    success_url: p.successUrl,
+    cancel_url: p.cancelUrl,
+    locale: 'fr',
+    billing_address_collection: 'required',
+  })
+  const resp = await fetch(`${API}/checkout/sessions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key': `empreinte-${p.missionId}-${p.tentative ?? 0}`,
+    },
+    body: corps,
+  })
+  const data = await resp.json()
+  if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+  return { id: data.id, url: data.url, customer: data.customer ?? null }
+}
+
+export type EmpreintePrise = {
+  /** `open`, `complete` ou `expired` — l'état de la session Checkout. */
+  statut: string
+  customer: string | null
+  setupIntent: string | null
+  /** La carte réutilisable. `null` tant que le SetupIntent n'a pas réussi. */
+  paymentMethod: string | null
+  url: string | null
+}
+
+/**
+ * Relit une session d'empreinte, carte comprise.
+ *
+ * ⚠️ `expand[]=setup_intent` : sans ça, `setup_intent` n'est qu'un identifiant
+ * et il faudrait un second appel pour savoir quelle carte a été donnée. Le
+ * moyen de paiement ne vit que là — la session Checkout ne le porte pas.
+ *
+ * ⚠️ ET ELLE EXIGE `status === 'succeeded'` SUR LE SETUPINTENT, pas seulement
+ * `complete` sur la session. Une session peut se terminer sur un SetupIntent
+ * qui demande encore une authentification : enregistrer cette carte-là
+ * ouvrirait la semaine sur un moyen de paiement que la banque n'a pas validé,
+ * et c'est exactement ce que la promesse interdit.
+ */
+export async function lireEmpreinteCheckout(
+  cle: string,
+  id: string,
+): Promise<EmpreintePrise | null> {
+  const resp = await fetch(
+    `${API}/checkout/sessions/${encodeURIComponent(id)}?expand[0]=setup_intent`,
+    { headers: { Authorization: `Bearer ${cle}` } },
+  )
+  if (!resp.ok) return null
+  const data = await resp.json()
+  const si = data.setup_intent && typeof data.setup_intent === 'object' ? data.setup_intent : null
+  const reussi = si?.status === 'succeeded'
+  return {
+    statut: String(data.status ?? ''),
+    customer: data.customer ?? si?.customer ?? null,
+    setupIntent: si?.id ?? (typeof data.setup_intent === 'string' ? data.setup_intent : null),
+    paymentMethod: reussi ? (si?.payment_method ?? null) : null,
+    url: data.status === 'open' ? (data.url ?? null) : null,
+  }
+}
+
+export type FactureLocation = {
+  invoiceId: string
+  statut: string
+  paymentIntent: string | null
+  url: string | null
+  numero: string
+}
+
+/**
+ * Lit sur une facture l'identifiant du PaymentIntent qui l'a réglée.
+ *
+ * ⚠️ TROIS FORMES, PARCE QUE STRIPE A DÉPLACÉ LE CHAMP. Les anciennes versions
+ * d'API portent `invoice.payment_intent` ; les récentes rangent les règlements
+ * dans `invoice.payments`. Le compte n'épingle aucune version ici (comme le
+ * reste de ce fichier), donc on lit les deux et on rend `null` si aucune ne
+ * répond — cet identifiant sert à la traçabilité, pas à la décision. Ce qui
+ * fait foi, c'est `invoiceId`, et lui ne bouge pas.
+ */
+function intentionDeLaFacture(data: Record<string, unknown>): string | null {
+  const direct = data.payment_intent
+  if (typeof direct === 'string') return direct
+  if (direct && typeof direct === 'object') {
+    const id = (direct as { id?: unknown }).id
+    if (typeof id === 'string') return id
+  }
+  const paiements = (data.payments as { data?: unknown[] } | undefined)?.data
+  if (Array.isArray(paiements)) {
+    for (const p of paiements) {
+      const pi = (p as { payment?: { payment_intent?: unknown } })?.payment?.payment_intent
+      if (typeof pi === 'string') return pi
+      if (pi && typeof pi === 'object') {
+        const id = (pi as { id?: unknown }).id
+        if (typeof id === 'string') return id
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * La facture du septième jour, créée puis réglée sur la carte enregistrée.
+ *
+ * Quatre appels, et chacun est **repris là où il s'est arrêté** :
+ *
+ *   1. créer la facture (brouillon) ;
+ *   2. y poser LA ligne, si elle n'y est pas déjà ;
+ *   3. la finaliser, si elle est encore brouillon ;
+ *   4. la régler hors présence du client.
+ *
+ * ⚠️ **POURQUOI UNE FACTURE ET PAS UN SIMPLE PAIEMENT.** Un PaymentIntent
+ * débiterait aussi bien, et plus simplement — mais il ne produit ni numéro, ni
+ * PDF, ni page hébergée. Le client est un professionnel : il lui faut une
+ * pièce comptable, et c'est Stripe qui la numérote sans trou (la règle
+ * française l'exige). `facture_url` et `facture_numero` vont droit dans son
+ * écran.
+ *
+ * ⚠️ **ET CHAQUE ÉTAPE SE RELIT AVANT D'AGIR, parce que la troisième tentative
+ * retombe sur la facture des deux premières.** Les clés d'idempotence portent
+ * l'identifiant de la mission, donc Stripe rend la MÊME facture pendant
+ * vingt-quatre heures ; au-delà il en créerait une seconde. Comme on s'arrête
+ * à trois refus espacés de six heures, les trois tiennent dans la fenêtre. Un
+ * `finalize` rejoué sur une facture déjà finalisée échouerait : on regarde son
+ * état plutôt que d'espérer.
+ *
+ * ⚠️ `off_session: true` est le DÉFAUT de Stripe, et il est écrit quand même :
+ * c'est ce qui dit à la banque que personne n'est devant l'écran pour
+ * s'authentifier. Un refus pour authentification requise (`authentication_
+ * required`) est alors un refus normal, pas une anomalie — il remonte tel quel
+ * dans `prelevement_echec`.
+ */
+export async function facturerLaLocation(
+  cle: string,
+  p: {
+    missionId: string
+    reference: string
+    customer: string
+    paymentMethod: string
+    montantCents: number
+    /** Le mémo de la facture : « Location Quantinvo — QI-2610-0004 ». */
+    description: string
+    /** La ligne : « Quantinvo, 7 jours, 6 appareils, 20 000 pièces ». */
+    ligne: string
+    /** La mention légale en pied de facture (franchise en base de TVA). */
+    pied: string
+    /** La semaine louée, affichée sur la facture. */
+    periode?: { debut: Date; fin: Date } | null
+    /** Le taux de TVA (`txr_…`). Absent tant que la franchise en base tient. */
+    taxRateId?: string | null
+    /**
+     * Le numéro de la tentative (le nombre de refus déjà essuyés).
+     *
+     * ⚠️ **IL N'ENTRE QUE DANS LA CLÉ DU RÈGLEMENT, ET C'EST TOUT L'ENJEU.**
+     * Stripe mémorise la réponse d'une clé d'idempotence pendant vingt-quatre
+     * heures — **y compris une réponse d'échec**. Rejouer `payer-<mission>`
+     * après un refus rendrait donc le MÊME refus, sans jamais rien retenter :
+     * les trois tentatives n'en feraient qu'une, et une carte réapprovisionnée
+     * entre-temps ne serait jamais débitée. Les clés de la facture, de la ligne
+     * et de la finalisation restent FIXES — c'est elles qui interdisent la
+     * facture en double.
+     */
+    tentative?: number
+  },
+): Promise<FactureLocation> {
+  if (!Number.isInteger(p.montantCents) || p.montantCents <= 0) {
+    throw new Error('montant de location invalide')
+  }
+
+  const poster = async (chemin: string, corps: string, idem: string) => {
+    const resp = await fetch(`${API}${chemin}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${cle}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Idempotency-Key': idem,
+      },
+      body: corps,
+    })
+    const data = await resp.json()
+    if (!resp.ok) throw new Error(data?.error?.message ?? `Stripe ${resp.status}`)
+    return data as Record<string, unknown>
+  }
+
+  // 1. La facture, en brouillon.
+  let facture = await poster('/invoices', formulaire({
+    customer: p.customer,
+    currency: 'eur',
+    collection_method: 'charge_automatically',
+    default_payment_method: p.paymentMethod,
+    description: p.description,
+    footer: p.pied,
+    auto_advance: false,
+    // ⚠️ `exclude` est le défaut, et il est écrit : `include` ramasserait
+    // n'importe quelle ligne en attente sur ce client — une autre location
+    // facturée la même heure, par exemple.
+    pending_invoice_items_behavior: 'exclude',
+    metadata: { mission_id: p.missionId, reference: p.reference, kind: 'location' },
+  }), `facture-${p.missionId}`)
+
+  const factureId = String(facture.id ?? '')
+  if (!factureId) throw new Error('Stripe n’a pas rendu de facture')
+
+  // 2. La ligne, si elle n'y est pas déjà.
+  const lignes = (facture.lines as { data?: unknown[] } | undefined)?.data
+  if (!Array.isArray(lignes) || lignes.length === 0) {
+    await poster('/invoiceitems', formulaire({
+      invoice: factureId,
+      customer: p.customer,
+      amount: p.montantCents,
+      currency: 'eur',
+      description: p.ligne,
+      ...(p.periode
+        ? {
+          period: {
+            start: Math.floor(p.periode.debut.getTime() / 1000),
+            end: Math.floor(p.periode.fin.getTime() / 1000),
+          },
+        }
+        : {}),
+      ...(p.taxRateId ? { tax_rates: [p.taxRateId] } : {}),
+      metadata: { mission_id: p.missionId, reference: p.reference },
+    }), `ligne-${p.missionId}`)
+  }
+
+  // 3. La finaliser — seulement si elle est encore brouillon.
+  if (facture.status === 'draft') {
+    facture = await poster(
+      `/invoices/${encodeURIComponent(factureId)}/finalize`,
+      formulaire({ auto_advance: false }),
+      `finaliser-${p.missionId}`,
+    )
+  }
+
+  // 4. La régler, hors présence du client.
+  if (facture.status !== 'paid') {
+    facture = await poster(
+      `/invoices/${encodeURIComponent(factureId)}/pay`,
+      formulaire({ off_session: true, payment_method: p.paymentMethod }),
+      `payer-${p.missionId}-${p.tentative ?? 0}`,
+    )
+  }
+
+  return {
+    invoiceId: factureId,
+    statut: String(facture.status ?? ''),
+    paymentIntent: intentionDeLaFacture(facture),
+    url: (facture.hosted_invoice_url as string | null) ?? null,
+    numero: (facture.number as string | null) ?? '',
+  }
+}

@@ -1249,9 +1249,20 @@ describe('⚠️ une réservation ouvre un accès, elle ne crée rien', () => {
   it('une tâche l’exécute, et toutes les heures', () => {
     // Une fenêtre se referme à l'heure près — 20:00 ou 22:00 sept jours plus
     // tard. Une tâche nocturne laisserait l'inventaire ouvert jusqu'au matin.
-    const fichier = fichierDe('cloturer_les_inventaires_hors_fenetre')
-    expect(fichier).toMatch(/cron\.schedule\(\s*'cloturer-hors-fenetre',\s*'5 \* \* \* \*'/)
-    expect(fichier, 'rejouer la migration créerait un doublon')
+    // ⚠️ **ON CHERCHE LA TÂCHE, PAS LE FICHIER QUI DÉFINIT LA FONCTION**
+    // (corrigé le 7 octobre 2026). La garde lisait `fichierDe(…)` : le jour où
+    // une autre migration a redéfini la fonction de clôture, ce helper a rendu
+    // CETTE migration — qui programme une autre tâche — et la garde est tombée
+    // sur du code juste. La programmation vit où elle a été posée ; on la
+    // cherche dans toutes les migrations, et c'est la dernière qui compte.
+    const posees = readdirSync(dossierMigrations)
+      .filter((n) => n.endsWith('.sql')).sort()
+      .map((n) => sansCommentaires(readFileSync(path.join(dossierMigrations, n), 'utf8')))
+      .filter((sql) => /cron\.schedule\(\s*'cloturer-hors-fenetre'/.test(sql))
+    expect(posees.length, 'plus aucune migration ne programme la clôture').toBeGreaterThan(0)
+    const derniere = posees[posees.length - 1]
+    expect(derniere).toMatch(/cron\.schedule\(\s*'cloturer-hors-fenetre',\s*'5 \* \* \* \*'/)
+    expect(derniere, 'rejouer la migration créerait un doublon')
       .toMatch(/cron\.unschedule\('cloturer-hors-fenetre'\)/)
   })
 
@@ -1506,8 +1517,18 @@ describe('⚠️ la porte des missions ne s’ouvre pas sur la comptabilité', (
    * seize lignes plus haut.
    *
    * ⚠️ LA GARDE REJOUE LES GRANTS DANS L'ORDRE DES FICHIERS, elle ne cherche
-   * pas une phrase. C'est le seul moyen de connaître le droit EFFECTIF : trois
-   * migrations parlent de cette table, et c'est la dernière qui gagne.
+   * pas une phrase. C'est le seul moyen de connaître le droit EFFECTIF : quatre
+   * migrations parlent de cette table.
+   *
+   * ⚠️⚠️ **ET UN `grant select (…)` S'AJOUTE, IL NE REMPLACE PAS** (corrigé le
+   * 7 octobre 2026). Cette garde modélisait chaque grant nominatif comme un
+   * remplacement : elle tenait tant qu'une seule migration en posait un. Le
+   * jour où une seconde a ouvert quatre colonnes de facture, la garde a cru
+   * que le client n'en lisait plus que quatre — elle est tombée sur du code
+   * juste, et elle serait tombée du bon côté par hasard. Postgres, lui,
+   * cumule : seul un `revoke` retire. Vérifié dans
+   * `information_schema.column_privileges` sur le projet d'essai — 44 colonnes
+   * lisibles avant, 48 après, et non 4.
    */
   const droitEffectif = (): { colonnes: Set<string> | 'toutes'; dernier: string } => {
     let colonnes: Set<string> | 'toutes' = new Set<string>()
@@ -1519,9 +1540,17 @@ describe('⚠️ la porte des missions ne s’ouvre pas sur la comptabilité', (
         const [, verbe, , liste, cibles] = m
         if (!/authenticated/i.test(cibles)) continue
         dernier = f
-        if (verbe.toLowerCase() === 'revoke') colonnes = new Set<string>()
-        else if (liste) colonnes = new Set(liste.split(',').map((c) => c.trim()).filter(Boolean))
-        else colonnes = 'toutes'
+        const nommees = (liste ?? '').split(',').map((c) => c.trim()).filter(Boolean)
+        if (verbe.toLowerCase() === 'revoke') {
+          // Un `revoke select` sans liste retire TOUT ; avec une liste, il ne
+          // retire que celles-là.
+          if (nommees.length === 0 || colonnes === 'toutes') colonnes = new Set<string>()
+          else for (const c of nommees) (colonnes as Set<string>).delete(c)
+        } else if (nommees.length > 0) {
+          if (colonnes !== 'toutes') {
+            for (const c of nommees) (colonnes as Set<string>).add(c)
+          }
+        } else colonnes = 'toutes'
       }
     }
     return { colonnes, dernier }
@@ -1623,14 +1652,38 @@ describe('⚠️ le tunnel réserve pour de vrai', () => {
   })
 
   it('⚠️ l’écran d’arrivée ne dit « enregistrée » que si elle l’est', () => {
+    // ⚠️ **LA GARDE DÉCOUPE LES BRANCHES, ELLE NE CITE PLUS LEUR CONDITION**
+    // (reprise le 7 octobre 2026). Elle exigeait `etape === 7 && reference` mot
+    // pour mot : le jour où la carte est devenue ce qui ouvre les accès, le
+    // discriminant est passé à l'identifiant de la mission, et la garde est
+    // tombée sur du code juste. Ce qu'elle doit tenir n'a pas changé : une
+    // branche qui annonce une réservation doit être conditionnée par une preuve
+    // venue du SERVEUR, pas par le simple fait d'être arrivé à l'étape 7.
     const src = tunnel()
-    const arrivee = src.slice(src.indexOf('etape === 7'))
-    // La référence rendue par la base est la seule preuve.
-    expect(arrivee).toMatch(/etape === 7 && reference/)
-    expect(arrivee).toMatch(/etape === 7 && !reference/)
-    const sansReference = arrivee.slice(arrivee.indexOf('etape === 7 && !reference'))
-    expect(sansReference.replace(/\s+/g, ' '), 'l’écran sans réservation la dit enregistrée')
-      .not.toMatch(/réservation est enregistrée/)
+    const branches = [...src.matchAll(/\{etape === 7([^(]*)\(([\s\S]*?)\n        \)\}/g)]
+      // ⚠️ SANS LES COMMENTAIRES : la branche du visiteur en porte un qui dit
+      // « la réservation reprend ici ». Une garde qui lit le texte brut se
+      // satisfait du commentaire — ou, ici, se fâche contre lui.
+      .map((m) => ({
+        condition: m[1],
+        contenu: sansCommentaires(m[2]).replace(/\s+/g, ' '),
+      }))
+    expect(branches.length, 'les branches de l’écran d’arrivée ne se lisent plus')
+      .toBeGreaterThan(1)
+
+    // Les preuves possibles : ce que `reserverMaMission` rend, et rien d'autre.
+    const client = lire('web/lib/onDemandClient.ts')
+    const rendu = /return \{\s*\n?\s*ok: true,([\s\S]*?)\n  \}/.exec(
+      client.slice(client.indexOf('export async function reserverMaMission')))
+    const preuves = [...(rendu?.[1] ?? '').matchAll(/^\s*(\w+)[,:]/gm)].map((m) => m[1])
+    expect(preuves.length, 'ce que rend la réservation ne se lit plus').toBeGreaterThan(1)
+
+    for (const b of branches) {
+      if (!/réserv|enregistr/i.test(b.contenu)) continue
+      const adossee = preuves.some((p) => new RegExp(`&&\\s*${p}\\b`).test(b.condition))
+      expect(adossee, `une branche annonce une réservation sans preuve du serveur :`
+        + ` « ${b.condition.trim()} »`).toBe(true)
+    }
   })
 
   it('⚠️ la raison sociale se demande sur refus du serveur, elle ne se devine pas', () => {

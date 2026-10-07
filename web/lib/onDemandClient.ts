@@ -202,7 +202,7 @@ export const REFUS_RESERVATION: Record<string, string> = {
  */
 export async function reserverMaMission(
   r: Reponses,
-): Promise<{ ok: true; reference: string; prixCents: number }
+): Promise<{ ok: true; missionId: string; reference: string; prixCents: number }
          | { ok: false; code: string; message: string }> {
   const { data, error } = await supabase.rpc('reserver_ma_mission', {
     p_reponses: {
@@ -229,13 +229,24 @@ export async function reserverMaMission(
     },
   })
   if (error) return { ok: false, code: '', message: error.message }
-  const rep = data as { success?: boolean; code?: string; reference?: string; prix_cents?: number } | null
-  if (!rep?.success || !rep.reference) {
+  // ⚠️ `mission_id` REMONTE DEPUIS LE 7 OCTOBRE, et il est nécessaire : c'est
+  // lui qui sert à aller chercher la carte (`missionEmpreinte`). La référence
+  // est faite pour l'œil du client, pas pour désigner une ligne.
+  const rep = data as {
+    success?: boolean; code?: string; mission_id?: string
+    reference?: string; prix_cents?: number
+  } | null
+  if (!rep?.success || !rep.reference || !rep.mission_id) {
     const code = rep?.code ?? ''
     return {
       ok: false, code,
       message: REFUS_RESERVATION[code] ?? (code || 'La réservation n’a pas pu être prise.'),
     }
   }
-  return { ok: true, reference: rep.reference, prixCents: rep.prix_cents ?? 0 }
+  return {
+    ok: true,
+    missionId: rep.mission_id,
+    reference: rep.reference,
+    prixCents: rep.prix_cents ?? 0,
+  }
 }

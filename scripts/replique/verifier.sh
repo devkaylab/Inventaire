@@ -39,7 +39,22 @@ DONNEES=/tmp/quantinvo-replique-data
 PORT=55432
 # Les migrations à rejouer. Par défaut, toutes celles d'On-Demand.
 # `--sans-os` s'arrête avant celle qui touche Quantinvo OS.
-MOTIF="2026092[0-9]"
+#
+# ⚠️ **LE DÉFAUT VALAIT `2026092[0-9]` ET NE REJOUAIT PLUS QUE LE PREMIER
+# TIERS** (corrigé le 7 octobre 2026). Le chantier a continué en octobre : un
+# `./verifier.sh` sans argument installait la réplique, appliquait les quatorze
+# migrations de septembre, et déclarait tout vert — sans jamais voir les seize
+# suivantes, celles qui portent la fenêtre d'accès, le prix validé et le
+# paiement. Un banc qui mesure le passé est pire qu'un banc absent.
+#
+# ⚠️ ET TROIS MIGRATIONS D'OCTOBRE RESTENT DEHORS, nommément : le socle de la
+# réplique n'a pas `team_invitations` ni les fils de messages, donc
+# `20261004130001`, `20261004140001` et `20261005120001` échouent à
+# l'application — et le contrôle s'arrête au premier échec. Elles ne touchent
+# pas On-Demand. Les faire entrer demande d'étendre `01-tables.sql` depuis la
+# base réelle (voir le LISEZMOI) ; en attendant, le motif les saute, et le
+# script imprime la liste de ce qu'il a VRAIMENT appliqué.
+MOTIF="2026(0920|0928|100412|10041[5-9]|10042[0-2]|10051[3-9]|100520|1007)"
 SANS_OS=0
 [[ "$1" == "--sans-os" ]] && { SANS_OS=1; shift; }
 [[ -n "$1" ]] && MOTIF="$1"
@@ -132,7 +147,7 @@ if [[ -f "$RACINE/90-retirer.sql" ]]; then
   done
 fi
 
-for scenario in "$RACINE"/4*.sql "$RACINE"/5*.sql "$RACINE"/6*.sql; do
+for scenario in "$RACINE"/4*.sql "$RACINE"/5*.sql "$RACINE"/6*.sql "$RACINE"/7*.sql; do
   [[ -f "$scenario" ]] || continue
   echo
   echo "── ${scenario:t:r} ───────────────────────────────────────────────────"

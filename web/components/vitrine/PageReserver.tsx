@@ -26,6 +26,7 @@ import { useSearchParams } from 'next/navigation'
 import { SiteFooter } from '@/components/SiteChrome'
 import { EnTeteAuDefilement } from '@/components/EnTeteAuDefilement'
 import { venteOuverte } from '@/lib/legal'
+import { confirmerLEmpreinte, ouvrirLEmpreinte } from '@/lib/missionEmpreinte'
 import { supabase } from '@/lib/supabaseClient'
 import { PasswordRules } from '@/components/PasswordRules'
 import { MentionCollecte } from '@/components/MentionCollecte'
@@ -88,7 +89,21 @@ export function PageReserver() {
   // c'est la sortie qui compte, pas la page qu'on ne traduit pas.
   const { lien } = useTraduction()
   const uid = useId()
-  const [etape, setEtape] = useState(1)
+
+  /**
+   * ⚠️ **L'ADRESSE PEUT DÉJÀ DIRE OÙ ON EN EST.** Le retour de Stripe arrive
+   * sur `/reserver?carte=ok&mission=…` : c'est l'écran d'arrivée (7), pas la
+   * première question. Le lire **à l'initialisation** plutôt que dans un effet
+   * évite la cascade de rendus que `react-hooks/purity` signale — et surtout,
+   * la barre d'étapes affiche tout de suite la bonne, au lieu de montrer
+   * « étape 1 » pendant un rendu.
+   */
+  const params = useSearchParams()
+  const retourDeCarte = params.get('carte')
+  const missionDuRetour = params.get('mission')
+  const [etape, setEtape] = useState(
+    () => (retourDeCarte && missionDuRetour ? 7 : 1),
+  )
 
   /**
    * ⚠️ **LA FORMULE ARRIVE PAR L'ADRESSE, PAS PAR UNE QUESTION DE PLUS.** La
@@ -100,7 +115,6 @@ export function PageReserver() {
    * découvre l'écart entre les deux montants doit pouvoir basculer sans
    * refaire le parcours.
    */
-  const params = useSearchParams()
   const [formule, setFormule] = useState<Formule>(formuleParDefaut())
   useEffect(() => {
     setFormule(formuleDemandee(params.get('formule')))
@@ -202,6 +216,27 @@ export function PageReserver() {
    * enregistrée » dans les deux cas — et dans aucun ce n'était vrai.
    */
   const [reference, setReference] = useState<string | null>(null)
+  /**
+   * ⚠️ L'IDENTIFIANT DE LA MISSION, ET PAS SEULEMENT SA RÉFÉRENCE. C'est lui
+   * qui sert à aller chercher la carte : la référence est faite pour l'œil du
+   * client (« QI-2610-0004 »), elle ne désigne rien côté serveur.
+   */
+  const [missionId, setMissionId] = useState<string | null>(() => missionDuRetour)
+  /**
+   * ⚠️⚠️ **LA CARTE EST CE QUI OUVRE LES ACCÈS, PAS LA RÉSERVATION** (7 octobre
+   * 2026). Julien : « je suis facturé au bout de 7 jours sur mon mode de
+   * paiement déjà renseigné avant l'inventaire. Paiement que Quantinvo a
+   * vérifié comme valide. » Tant que `carteEnregistree` est faux, la fenêtre
+   * d'accès n'est pas ouverte en base — l'écran d'arrivée doit donc demander la
+   * carte, pas féliciter.
+   */
+  const [carteEnregistree, setCarteEnregistree] = useState(false)
+  const [carteNote, setCarteNote] = useState<string | null>(
+    () => (retourDeCarte === 'abandon'
+      ? 'Votre carte n’a pas été enregistrée. Votre réservation est gardée :'
+        + ' vous pouvez reprendre quand vous voulez.'
+      : null),
+  )
   /** Le serveur réclame une raison sociale : il n'a pas d'entreprise utilisable. */
   const [entrepriseAFournir, setEntrepriseAFournir] = useState(false)
   const [occupe, setOccupe] = useState(false)
@@ -426,11 +461,53 @@ export function PageReserver() {
       return
     }
     setReference(r.reference)
+    setMissionId(r.missionId)
     // Le parcours est consommé : le garder ferait réapparaître cette
     // réservation la prochaine fois.
     try { window.localStorage.removeItem(REPRISE) } catch { /* indisponible */ }
     setEtape(7)
   }
+
+  /**
+   * Partir donner sa carte.
+   *
+   * ⚠️ RIEN N'EST DÉBITÉ LÀ-BAS, et c'est écrit sur la page de Stripe comme
+   * sur celle-ci : la description du SetupIntent dit « rien n'est débité
+   * aujourd'hui : 341 € seront prélevés le 19 octobre ». Une page de paiement
+   * qui n'annonce ni montant ni date serait une mauvaise surprise au relevé.
+   */
+  const allerDonnerMaCarte = async () => {
+    if (!missionId) return
+    setCarteNote(null); setOccupe(true)
+    const r = await ouvrirLEmpreinte(missionId)
+    if (!r.ok) { setOccupe(false); setCarteNote(r.message); return }
+    // Pas de `setOccupe(false)` : on quitte la page.
+    window.location.href = r.url
+  }
+
+  /**
+   * ⚠️ **LE RETOUR DE STRIPE NE FAIT PAS FOI.** `?carte=ok` s'ouvre à la main ;
+   * ce qui fait foi, c'est la session relue chez Stripe par le serveur. Cet
+   * effet ne fait que la lui demander — et si la carte n'est pas validée, il
+   * repose la question au client au lieu de le féliciter.
+   */
+  useEffect(() => {
+    if (retourDeCarte !== 'ok' || !missionDuRetour) return
+    let vivant = true
+    void (async () => {
+      const r = await confirmerLEmpreinte(missionDuRetour)
+      if (!vivant) return
+      if (!r.ok) { setCarteNote(r.message); return }
+      if (!r.enregistre) {
+        setCarteNote('Votre banque n’a pas encore validé la carte. Reprenez la saisie, '
+          + 'rien ne vous a été débité.')
+        return
+      }
+      setCarteEnregistree(true)
+      setCarteNote(null)
+    })()
+    return () => { vivant = false }
+  }, [retourDeCarte, missionDuRetour])
 
   const seConnecter = async () => {
     setErreur(null); setOccupe(true)
@@ -1381,22 +1458,69 @@ export function PageReserver() {
             prix » à tout le monde — alors que le tunnel n'écrivait rien, nulle
             part. Désormais : une référence quand c'est réservé, et un renvoi
             vers la boîte mail quand le compte reste à ouvrir. */}
-        {etape === 7 && reference && (
+        {/* ⚠️⚠️ **RÉSERVÉ NE VEUT PAS DIRE OUVERT** (7 octobre 2026). Tant que la
+            carte n'est pas enregistrée, la fenêtre d'accès n'existe pas en
+            base : aucun appareil ne s'ouvrira le jour venu. Cet écran demande
+            donc la carte au lieu de féliciter — et il dit les trois choses qui
+            comptent : rien n'est débité, combien, et quand. */}
+        {etape === 7 && missionId && !carteEnregistree && (
           <div className="res-prix-page">
             <div className="res-prix-tete">
               <h1>C’est réservé</h1>
               <p className="muted">
-                Votre inventaire est enregistré sous la référence <strong>{reference}</strong>.
-                Vous le retrouvez dans vos inventaires, avec ce qu’il reste à préparer.
+                {reference
+                  ? <>Votre inventaire est enregistré sous la référence <strong>{reference}</strong>. </>
+                  : null}
+                Il reste une chose : enregistrer votre carte. C’est elle qui
+                ouvre vos accès le jour choisi.
               </p>
             </div>
             <div className="res-prix-carte">
               <ul className="res-compris">
+                <li><strong>Rien n’est débité aujourd’hui.</strong> Nous vérifions
+                    seulement que la carte est valide.</li>
+                <li>Le prélèvement a lieu <strong>à la fin de vos sept jours</strong>,
+                    une seule fois.</li>
                 <li>Annulation gratuite jusqu’à trois jours avant, sans frais.</li>
+              </ul>
+
+              {carteNote && <p className="field-err">{carteNote}</p>}
+
+              <button type="button" className="btn btn-primary btn-block"
+                      disabled={occupe || !venteOuverte()}
+                      onClick={() => void allerDonnerMaCarte()}>
+                {occupe ? 'Un instant…' : 'Enregistrer ma carte'}
+              </button>
+              {!venteOuverte() && (
+                <p className="res-ferme">
+                  Le paiement en ligne n’est pas encore ouvert : nous vous
+                  écrivons dès qu’il l’est, et votre réservation est gardée.
+                </p>
+              )}
+              <Link href="/on-demand/mes-inventaires" className="btn btn-ghost btn-block">
+                Voir mes inventaires
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {etape === 7 && missionId && carteEnregistree && (
+          <div className="res-prix-page">
+            <div className="res-prix-tete">
+              <h1>C’est bon, tout est en place</h1>
+              <p className="muted">
+                {reference
+                  ? <>Votre inventaire est enregistré sous la référence <strong>{reference}</strong>, </>
+                  : <>Votre inventaire est enregistré, </>}
+                votre carte est vérifiée, et vos accès s’ouvriront au jour choisi.
+              </p>
+            </div>
+            <div className="res-prix-carte">
+              <ul className="res-compris">
                 <li>Vous créez votre inventaire depuis votre tableau de bord, quand vous voulez.</li>
-                {/* ⚠️ Le paiement n'est pas branché, et le dire vaut mieux que
-                    de laisser croire qu'une carte a été prise. */}
-                <li>Le paiement n’est pas encore ouvert : nous vous écrivons dès qu’il l’est.</li>
+                <li>Vos appareils supplémentaires sont ouverts pendant les sept jours.</li>
+                <li>Le prélèvement a lieu à la fin de la semaine, et votre facture
+                    arrive dans vos inventaires.</li>
               </ul>
               <Link href="/on-demand/mes-inventaires" className="btn btn-primary btn-block">
                 Voir mes inventaires
@@ -1408,7 +1532,7 @@ export function PageReserver() {
           </div>
         )}
 
-        {etape === 7 && !reference && (
+        {etape === 7 && !missionId && !reference && (
           <div className="res-prix-page">
             <div className="res-prix-tete">
               <h1>Regardez votre boîte mail</h1>
