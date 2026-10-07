@@ -305,3 +305,41 @@ clarifié : une adhésion expirée retire l'app de la vente.
 - La **clé live Stripe** et l'ouverture de la vente ne dépendent pas de ceci :
   elles dépendent de la publication sur les deux boutiques (décision de Julien)
   et des mentions légales.
+
+## ⚠️⚠️ CONFIRMÉ : C'ÉTAIT UNE CONVERSION — 7 octobre 2026, au soir
+
+Julien, après avoir terminé l'étape : « j'ai finalisé l'étape ASC et finalement
+pas besoin de payer un nouvel abonnement. Le mien continue jusqu'en avril
+2027. »
+
+**L'adhésion continue, et elle n'a pas été rachetée.** C'est la preuve qu'il
+s'agissait bien d'une conversion du compte existant, et non d'une seconde
+inscription. Le « complete your membership purchase » du courriel était
+générique — il décrit le cas d'une inscription neuve, pas celui-ci.
+
+Ce qui tombe, du coup :
+
+- **Pas d'App Transfer.** La même équipe change de nom et de type ; Quantinvo
+  iOS ne bouge pas, garde son bundle ID, sa fiche publiée le 27 septembre, ses
+  avis et son historique de builds.
+- **Pas de second examen**, et pas de TestFlight à éteindre.
+- **Pas de 99 € en plus.** Prochaine échéance : **avril 2027**, inchangée.
+
+⚠️ **ET CE QUI RESTE À VÉRIFIER, EN DEUX CLICS :**
+
+1. **Le portail Certificates, Identifiers & Profiles répond-il ?** C'est la
+   seule condition pour retirer les consignes gelées d'AGENTS.md (pas de
+   capability, pas de bundle ID, pas d'appareil). Il était fermé « pendant la
+   migration » ; la migration est finie, il devrait être ouvert. **Non vérifié :
+   une session neuve demande une connexion, et se connecter n'est pas de mon
+   ressort.**
+2. **Le nom du vendeur dans App Store Connect.** C'est le défaut connu des
+   conversions : la fiche peut continuer d'afficher le nom personnel au lieu de
+   DEVKAYLAB (cas signalé sur les forums développeurs d'Apple). Si c'est le cas,
+   ça se règle par le support, pas par un réglage — et il vaut mieux le voir
+   maintenant qu'au moment d'une mise à jour.
+3. **Au prochain build, que Xcode résout toujours le profil.** Le certificat et
+   le profil App Store sont en cache jusqu'au 08/09/2027, et l'équipe n'a pas
+   changé d'identifiant — mais son NOM a changé, et c'est le genre de détail qui
+   se voit à l'archivage, pas à la lecture. ⚠️ Toujours Xcode 26.6, et toujours
+   pas de dépôt en revue sans être passé par TestFlight sur un vrai appareil.
