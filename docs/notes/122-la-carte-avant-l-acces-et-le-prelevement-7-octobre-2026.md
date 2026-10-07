@@ -158,15 +158,42 @@ Et le banc complet : **33 migrations rejouées, les parcours de Quantinvo OS
 identiques avant/après, et le retrait d'On-Demand ramène OS exactement à son
 état d'avant.**
 
-## ⚠️ Deux mesures fausses, dans le banc lui-même
+## Et la même chose sur la vraie base d'essai
+
+Le banc local rejoue des migrations ; il ne dit rien de ce que la base RÉELLE
+contient. La chaîne a donc été jouée sur `lqgusznqcunjhrqslcug`, dans un bloc
+`do` qui se termine par un `raise exception` — ce qui garantit que **rien n'est
+écrit**, pas seulement qu'on a eu l'intention de l'annuler :
+
+| | |
+|---|---|
+| Réservation | 341 €, `prix_calcule`, **aucune fenêtre**, 0 appareil de location |
+| `mon_empreinte_a_prendre` | 341 €, 7 jours, 6 appareils, aucune fuite |
+| `enregistrer_l_empreinte` | `prete`, 12 → 19 octobre, `confirmee_le` posé par la machine, rejeu `deja` |
+| Clôture | `terminee`, `terminee_le` posé |
+| `prete → terminee` | **permise** en `logiciel_seul`, **refusée** côté équipe |
+| À prélever | 1, 341 €, la bonne carte |
+| Prélèvement | `payee`, liste vide, rejeu `deja`, première facture retenue |
+
+## ⚠️⚠️ Trois mesures fausses, dans les bancs eux-mêmes
+
+**Le même piège, trois fois dans la journée** — et la troisième sur la vraie
+base, où il a failli me faire annoncer une divergence qui n'existait pas :
 
 - `select (select etat …) from (select public.enregistrer_le_prelevement(…))`
-  affichait « terminee » alors que la fonction venait de poser « payee » : les
-  deux sous-requêtes lisent le **même instantané**, celui d'avant l'instruction.
-  Un chiffre invraisemblable est d'abord un défaut de mesure — ici la mesure
-  était fausse, le code était juste.
-- Les `select` nus d'un scénario écrivent leur JSON au milieu des lignes qu'on
-  lit. `do $$ begin perform … end $$;` règle les deux.
+  affichait « terminee » alors que la fonction venait de poser « payee » ;
+- `v_out := … || public.cloturer_les_inventaires_hors_fenetre()::text || (select
+  etat from …)` affichait `missions_terminees: 1` **et** `etat=prete` à la même
+  ligne — une contradiction dans la même phrase.
+
+La cause est la même : **une affectation PL/pgSQL est UNE instruction SQL**, et
+tout ce qu'elle lit vient de l'instantané pris à son début, donc d'avant les
+écritures de la fonction qu'elle appelle. Appeler, **puis** relire dans une
+instruction séparée. Une contradiction interne à une mesure est un défaut de la
+mesure avant d'être un défaut du code.
+
+- Et les `select` nus d'un scénario écrivent leur JSON au milieu des lignes
+  qu'on lit : `do $$ begin perform … end $$;`.
 
 ## ⚠️⚠️ Quatre gardes existantes sont tombées sur du code juste
 
