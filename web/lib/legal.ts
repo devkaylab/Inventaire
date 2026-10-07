@@ -25,14 +25,11 @@ export type Mention = {
 // 100 €, 109 680 389 R.C.S. Paris, EUID FR7501.109680389, siège domicilié au
 // 47 rue Vivienne 75002 Paris.
 //
-// ⚠️ LA VENTE RESTE FERMÉE, et ce n'est pas un oubli : DEUX mentions REQUISES
-// manquent encore — l'adresse et le téléphone de l'hébergeur. (Elles étaient
-// trois jusqu'au 14 septembre 2026 : le téléphone de l'éditeur a été posé
-// depuis. Une note qui compte ce qui manque se recompte quand on en remplit
-// une.) Tant qu'elles manquent, `mentionsCompletes()` est faux, donc
-// `venteOuverte()` aussi, et les deux fonctions edge restent d'accord avec le
-// site. Voir AGENTS.md, « La vente est fermée jusqu'à l'immatriculation », pour
-// ce qu'il reste à faire AVANT d'ouvrir — les clés Stripe sont encore en test.
+// ⚠️ **LES MENTIONS SONT COMPLÈTES DEPUIS LE 7 OCTOBRE 2026.** La page est donc
+// publiée, indexable, et son lien s'affiche au pied de page. ⚠️ **LA VENTE RESTE
+// FERMÉE POUR AUTANT**, et par un drapeau distinct : voir `STRIPE_LIVE_PRET` et
+// `venteOuverte()` plus bas. Les deux fonctions edge restent d'accord avec le
+// site, et un test le vérifie.
 export const EDITEUR: Mention[] = [
   { libelle: 'Éditeur', valeur: 'Devkaylab', requis: true },
   {
@@ -83,62 +80,33 @@ export const EDITEUR: Mention[] = [
   },
 ]
 
-// ⚠️ LES DEUX VALEURS MANQUANTES SONT CONNUES DEPUIS LE 15 SEPTEMBRE 2026, ET
-// ELLES NE SONT PAS POSÉES ICI À DESSEIN :
+// ⚠️ **POSÉES LE 7 OCTOBRE 2026, ET RELEVÉES — JAMAIS CITÉES DE MÉMOIRE.** Les
+// deux sources sont publiées par Vercel elle-même : le « Contact Us » de sa
+// notice de confidentialité (vercel.com/legal/privacy-notice) pour l'adresse,
+// et sa fiche du Data Privacy Framework (dataprivacyframework.gov, rubrique
+// « Questions or Complaints ») pour l'adresse ET le téléphone.
 //
-//   Adresse   : 440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis
-//   Téléphone : +1 415 398 5463
+// ⚠️⚠️ **ELLES ÉTAIENT CONNUES DEPUIS LE 15 SEPTEMBRE ET RETENUES EXPRÈS**, et
+// c'était une erreur de câblage, pas de prudence. `venteOuverte()` valait
+// `mentionsCompletes()` : les poser ouvrait la boutique, donc on ne les posait
+// pas. Autrement dit, un devoir légal restait inaccompli pour empêcher une
+// décision commerciale — la page d'identification restait à trous et en
+// `noindex` pendant trois semaines, ce qui est précisément l'irrégularité que
+// la LCEN vise. Julien, le 7 octobre : « pourquoi attendre pour compléter les
+// infos Vercel ? » Il n'y avait pas de raison. Les deux conditions sont
+// désormais séparées (voir `venteOuverte` plus bas).
 //
-// Relevées — jamais citées de mémoire — dans deux sources publiées par Vercel
-// elle-même : le « Contact Us » de sa notice de confidentialité
-// (vercel.com/legal/privacy-notice) pour l'adresse, et sa fiche du Data Privacy
-// Framework (dataprivacyframework.gov, rubrique « Questions or Complaints »)
-// pour l'adresse ET le téléphone.
-//
-// ⚠️ **LES POSER OUVRE LA VENTE EN LIGNE**, par construction : ce sont les deux
-// dernières mentions requises, donc `mentionsCompletes()` — donc
-// `venteOuverte()` — bascule à vrai le jour où on les écrit. Et le jumeau
-// `VENTE_OUVERTE = false` des deux fonctions edge fait alors échouer son test :
-// c'est le garde-fou, pas un défaut. Ce qu'il reste à faire AVANT, au
-// 15 septembre 2026 :
-//
-//   1. le compte Stripe **live** n'est pas activé du tout (l'onboarding en est
-//      à « Verify your business », et il propose encore « Entrepreneur
-//      individuel » alors que Devkaylab est une SASU) ;
-//   2. donc ni clés live, ni les huit Price, ni le taux de TVA ;
-//   3. et la permission Subscriptions de la clé live, oubliée sur la clé de
-//      test jusqu'au 11 septembre (voir AGENTS.md, « Le chemin d'API »).
-//
-// Tant que ce n'est pas fait, un prospect irait jusqu'à une page de paiement
-// qui refuserait sa carte. On garde donc la porte fermée, et la page dit
-// simplement « à compléter ».
-//
-// ⚠️ **ET LE JOUR OÙ ON LES POSE, AJOUTER `/mentions-legales` À
-// `PAGES_PUBLIQUES`** (`lib/site.ts`). Elle n'y est pas aujourd'hui, et c'est
-// juste : `noindex` tant que les mentions manquent, et une adresse `noindex`
-// dans le plan du site est l'erreur que la Search Console signale vraiment.
-// Mais `/confidentialite` et `/conditions-generales` y sont, elles : la
-// troisième page légale doit les rejoindre quand elle devient indexable, sinon
-// elle restera trouvable par le seul lien du pied de page.
-//
-// ⚠️ Relevé le 7 octobre 2026, après un courriel de la Search Console : les
-// vingt-huit adresses du plan répondent 200, se déclarent canoniques
-// d'elles-mêmes, et aucune ne porte `noindex`. Le seul `noindex` que Google
-// rencontre est CETTE page, par le lien du pied de page — donc le signalement
-// est attendu, pas un défaut.
 export const HEBERGEUR: Mention[] = [
   { libelle: 'Hébergeur', valeur: 'Vercel Inc.', requis: true },
   {
     libelle: 'Adresse',
-    valeur: null,
+    valeur: '440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis',
     requis: true,
-    aide: 'À recopier depuis les informations légales publiées par Vercel — ne pas citer de mémoire.',
   },
   {
     libelle: 'Téléphone',
-    valeur: null,
+    valeur: '+1 415 398 5463',
     requis: true,
-    aide: 'Idem : la LCEN exige un moyen de joindre l’hébergeur.',
   },
 ]
 
@@ -180,6 +148,38 @@ export function mentionsCompletes(sections: Mention[][] = [EDITEUR, HEBERGEUR]):
  * `subscribe-online`), qui ne compilent pas avec le site. Une porte fermée à
  * l'écran seulement s'ouvre avec une adresse : un test compare les deux.
  */
+/**
+ * ⚠️⚠️ **LA BOUTIQUE EST PRÊTE À ENCAISSER ?** Faux tant que Stripe est en test.
+ *
+ * Ce drapeau est né le 7 octobre 2026 d'une question de Julien — « pourquoi
+ * attendre pour compléter les infos Vercel ? » — et de la réponse : parce qu'une
+ * seule fonction portait DEUX choses qui n'ont rien à voir.
+ *
+ *   · publier qui édite le site est un **devoir légal**, qu'on accomplit dès
+ *     qu'on connaît les valeurs ;
+ *   · ouvrir la boutique est une **décision commerciale**, qui attend que
+ *     Stripe encaisse pour de vrai.
+ *
+ * Les confondre revenait à retenir le premier pour empêcher la seconde.
+ *
+ * ⚠️ **LE 5 SEPTEMBRE 2026, UN SECOND DRAPEAU AVAIT ÉTÉ ÉCARTÉ** : « ce serait
+ * un endroit de plus où se tromper, et surtout un endroit qu'on oublierait de
+ * rouvrir le jour venu. » L'argument se retourne, et c'est pourquoi la
+ * composition est un `&&` : **oublier ce drapeau garde la vente FERMÉE**, jamais
+ * ouverte. Il échoue du bon côté. Un `||` aurait mérité le reproche.
+ *
+ * Ce qu'il attend, et qui se vérifie (AGENTS.md, « Stripe ») : le compte en
+ * LIVE, les huit Price recréés aux montants de la grille, et la permission
+ * Subscriptions sur la clé. Le lever sans ça enverrait un prospect sur une page
+ * de paiement qui refuserait sa carte.
+ */
+export const STRIPE_LIVE_PRET = false
+
+/**
+ * ⚠️ DEUX CONDITIONS, ET IL LES FAUT TOUTES LES DEUX. La LCEN interdit de
+ * vendre sans identification complète de l'éditeur : `mentionsCompletes()` reste
+ * donc nécessaire. Elle n'est simplement plus suffisante.
+ */
 export function venteOuverte(): boolean {
-  return mentionsCompletes()
+  return mentionsCompletes() && STRIPE_LIVE_PRET
 }
