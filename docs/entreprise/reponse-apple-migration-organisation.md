@@ -333,11 +333,40 @@ Ce qui tombe, du coup :
    migration » ; la migration est finie, il devrait être ouvert. **Non vérifié :
    une session neuve demande une connexion, et se connecter n'est pas de mon
    ressort.**
-2. **Le nom du vendeur dans App Store Connect.** C'est le défaut connu des
-   conversions : la fiche peut continuer d'afficher le nom personnel au lieu de
-   DEVKAYLAB (cas signalé sur les forums développeurs d'Apple). Si c'est le cas,
-   ça se règle par le support, pas par un réglage — et il vaut mieux le voir
-   maintenant qu'au moment d'une mise à jour.
+2. ⚠️⚠️ **LE NOM DU VENDEUR N'A PAS CHANGÉ — constaté par Julien le 7 octobre
+   au soir, et ce n'est PAS à attendre tranquillement.**
+
+   Ce qui devrait se passer : l'Apple ID, le Team ID, les certificats et les
+   apps restent intacts, et **le nom du vendeur est la seule chose qui change**.
+   Pour une organisation, c'est la raison sociale qui s'affiche sur l'App Store,
+   pas le nom d'une personne.
+
+   Ce qui arrive parfois : il ne change pas. Un fil du forum développeurs
+   d'Apple ouvert en **janvier 2026** décrit exactement ce cas — compte converti,
+   D-U-N-S vérifié, entité correcte dans les réglages, et le nom personnel
+   toujours affiché sur l'App Store. En **septembre 2026**, un second développeur
+   y répond « même problème, comment avez-vous fait ? » : **neuf mois, aucune
+   réponse, aucun correctif documenté.** Donc un délai existe peut-être, mais
+   l'attente n'est pas une stratégie.
+
+   **La règle de décision, et elle se joue dans App Store Connect →
+   « Contrats, taxes et opérations bancaires » :**
+
+   - l'entité légale y affiche **DEVKAYLAB** → la conversion est bien enregistrée
+     chez Apple, et seul l'affichage public est en retard. Laisser 24-48 h, puis
+     relancer si rien ne bouge.
+   - l'entité légale y affiche **encore le nom personnel** → la conversion n'est
+     pas allée jusqu'au bout. Relancer **le jour même**.
+
+   ⚠️ **ET DANS LES DEUX CAS, RELANCER SUR LE DOSSIER `102964327628`, PAS PAR UN
+   NOUVEAU DOSSIER.** Il est ouvert, il est chaud, et le conseiller qui l'a
+   traité a tout le contexte. Dans trois semaines ce sera un dossier froid à
+   réexpliquer depuis le début — c'est précisément ce qui a coûté cinq jours au
+   dépôt. Demander l'escalade vers l'équipe de vérification de l'entité légale.
+
+   ⚠️ Et ce n'est pas cosmétique : la fiche publique d'un éditeur qui vend un
+   logiciel professionnel sous un nom de personne physique dit au client qu'il
+   n'achète pas à une société.
 3. **Au prochain build, que Xcode résout toujours le profil.** Le certificat et
    le profil App Store sont en cache jusqu'au 08/09/2027, et l'équipe n'a pas
    changé d'identifiant — mais son NOM a changé, et c'est le genre de détail qui
