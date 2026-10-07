@@ -216,3 +216,54 @@ a donc rien à faire, seulement à attendre.
 toujours fermé : pas de capability ajoutée, pas de changement de bundle ID, pas
 d'appareil enregistré. Signer et archiver restent possibles (certificat et
 profil en cache jusqu'au 08/09/2027) ; **téléverser n'est toujours pas prouvé**.
+
+## ⚠️⚠️ ACCEPTÉE — 7 octobre 2026, 10 h 21
+
+Courriel de l'Apple Developer Relations Team, reçu sur `devkaylab@gmail.com` :
+
+> « Your enrollment request has been accepted. To complete your organization's
+> enrollment in the Apple Developer Program, please sign in to your developer
+> account to review and accept the Apple Developer Program License Agreement,
+> and complete your membership purchase. »
+
+Cinq jours après le dépôt. Aucun document supplémentaire n'a été réclamé : le
+dossier a été accepté tel quel, et l'appel au support du 28 septembre n'aura
+servi qu'à le débloquer.
+
+**Il reste trois gestes, et ils sont tous les trois à Julien** — se connecter,
+accepter un contrat, payer. Aucun ne peut être délégué, et aucun ne doit l'être.
+
+1. Se connecter sur `developer.apple.com/account`.
+2. Lire et accepter l'**Apple Developer Program License Agreement**.
+3. Régler l'adhésion (99 €/an pour une organisation).
+
+⚠️ **LE CHEMIN EST BIEN LE SITE, PAS L'APP.** Le courriel propose les deux, et
+précise que l'app exige *le même appareil* que celui du dépôt. L'inscription
+`9L95Q9R29F` s'affichait sur la page du compte, dans le navigateur, le
+7 octobre au matin : le dépôt est donc passé par le site, et c'est là qu'il se
+termine.
+
+## Ce qui change quand c'est payé, et ce qui ne change pas tout seul
+
+- Le portail **Certificates, Identifiers & Profiles** rouvre. Les consignes
+  d'AGENTS.md — pas de capability, pas de bundle ID, pas d'appareil — peuvent
+  alors être retirées. **À vérifier avant de les retirer** : le portail répond,
+  et il répond pour l'équipe DEVKAYLAB.
+- ⚠️⚠️ **L'APP NE CHANGE PAS D'ÉQUIPE TOUTE SEULE, ET C'EST LA VRAIE QUESTION
+  SUIVANTE.** Quantinvo iOS 1.0 vit sous le compte **personnel** de Julien
+  (relevé le 7 octobre : App Store Connect fonctionne, « encore sous le compte
+  personnel »). Accepter l'inscription crée une équipe DEVKAYLAB **à côté**, pas
+  à la place. Deux chemins, et ils ne coûtent pas la même chose :
+  - **App Transfer** d'Apple, du compte personnel vers l'organisation. Il
+    conserve la fiche, les notes, l'historique et les builds. Apple y met des
+    conditions (contrats à jour des deux côtés, certaines capabilities
+    interdites, pas de transfert pendant un examen en cours). À lire avant de
+    s'engager, pas pendant.
+  - **Repartir à zéro** sous l'équipe DEVKAYLAB, avec un nouveau bundle ID.
+    C'est perdre la fiche publiée le 27 septembre et recommencer un examen.
+  Le premier est de loin préférable ; ce qui reste à établir, c'est que
+  Quantinvo remplit les conditions. **Rien ne se décide avant que l'adhésion
+  soit active**, parce que les conditions se lisent sur les deux équipes.
+- La **clé live Stripe** et l'ouverture de la vente ne dépendent pas de ceci :
+  elles dépendent de la publication sur les deux boutiques (décision de Julien)
+  et des mentions légales.
