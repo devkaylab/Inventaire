@@ -333,40 +333,40 @@ Ce qui tombe, du coup :
    migration » ; la migration est finie, il devrait être ouvert. **Non vérifié :
    une session neuve demande une connexion, et se connecter n'est pas de mon
    ressort.**
-2. ⚠️⚠️ **LE NOM DU VENDEUR N'A PAS CHANGÉ — constaté par Julien le 7 octobre
-   au soir, et ce n'est PAS à attendre tranquillement.**
+2. ⚠️ **LE NOM DU VENDEUR CHANGERA QUAND L'ACCORD SERA TRAITÉ — et il attend
+   des informations de Julien.** Réponse de l'App Store Team, le 7 octobre au
+   soir :
 
-   Ce qui devrait se passer : l'Apple ID, le Team ID, les certificats et les
-   apps restent intacts, et **le nom du vendeur est la seule chose qui change**.
-   Pour une organisation, c'est la raison sociale qui s'affiche sur l'App Store,
-   pas le nom d'une personne.
+   > « Dear DEVKAYLAB, we've received your request to update your developer
+   > information. To complete the process, complete all open tasks for your legal
+   > entity in **Business** by providing the required information associated with
+   > your new entity. Once your agreement has been processed, your developer
+   > information on the App Store will be updated. »
 
-   Ce qui arrive parfois : il ne change pas. Un fil du forum développeurs
-   d'Apple ouvert en **janvier 2026** décrit exactement ce cas — compte converti,
-   D-U-N-S vérifié, entité correcte dans les réglages, et le nom personnel
-   toujours affiché sur l'App Store. En **septembre 2026**, un second développeur
-   y répond « même problème, comment avez-vous fait ? » : **neuf mois, aucune
-   réponse, aucun correctif documenté.** Donc un délai existe peut-être, mais
-   l'attente n'est pas une stratégie.
+   Trois choses s'en déduisent, et elles remplacent la règle de décision que
+   j'avais écrite une heure plus tôt — celle-ci était une déduction, ceci est un
+   fait :
 
-   **La règle de décision, et elle se joue dans App Store Connect →
-   « Contrats, taxes et opérations bancaires » :**
+   - **Ce n'est ni un délai ni un défaut.** Le nom ne bougera pas tant que les
+     tâches ouvertes ne sont pas faites. Attendre n'aurait rien donné, et
+     relancer le support non plus : le courriel EST la réponse.
+   - **Le courriel dit « Dear DEVKAYLAB ».** Apple porte déjà la nouvelle entité
+     de son côté ; ce qui reste en suspens est l'**accord**, pas la conversion.
+   - **Où :** App Store Connect → **Business** (l'ancienne section « Contrats,
+     taxes et opérations bancaires »). Y compléter **toutes** les tâches ouvertes
+     de l'entité légale — informations de l'entité, formulaires fiscaux, et les
+     coordonnées bancaires si elles sont demandées.
 
-   - l'entité légale y affiche **DEVKAYLAB** → la conversion est bien enregistrée
-     chez Apple, et seul l'affichage public est en retard. Laisser 24-48 h, puis
-     relancer si rien ne bouge.
-   - l'entité légale y affiche **encore le nom personnel** → la conversion n'est
-     pas allée jusqu'au bout. Relancer **le jour même**.
+   ⚠️ **Et ces tâches-là n'appartiennent qu'à Julien** : un identifiant fiscal,
+   un formulaire d'impôt et un compte bancaire ne se délèguent pas, et je ne les
+   saisirais pas même si on me les donnait.
 
-   ⚠️ **ET DANS LES DEUX CAS, RELANCER SUR LE DOSSIER `102964327628`, PAS PAR UN
-   NOUVEAU DOSSIER.** Il est ouvert, il est chaud, et le conseiller qui l'a
-   traité a tout le contexte. Dans trois semaines ce sera un dossier froid à
-   réexpliquer depuis le début — c'est précisément ce qui a coûté cinq jours au
-   dépôt. Demander l'escalade vers l'équipe de vérification de l'entité légale.
+   ⚠️ Un point à ne pas forcer : Quantinvo ne vend RIEN par l'App Store — les
+   abonnements passent par Stripe, sur le site. L'accord « Paid Apps » n'a donc
+   peut-être pas lieu d'être, et des coordonnées bancaires pour des versements
+   qui n'arriveront jamais non plus. Si Business en réclame, **le demander sur le
+   dossier `102964327628`** plutôt que d'inventer une réponse.
 
-   ⚠️ Et ce n'est pas cosmétique : la fiche publique d'un éditeur qui vend un
-   logiciel professionnel sous un nom de personne physique dit au client qu'il
-   n'achète pas à une société.
 3. **Au prochain build, que Xcode résout toujours le profil.** Le certificat et
    le profil App Store sont en cache jusqu'au 08/09/2027, et l'équipe n'a pas
    changé d'identifiant — mais son NOM a changé, et c'est le genre de détail qui
