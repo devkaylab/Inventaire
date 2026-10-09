@@ -166,3 +166,58 @@ variables sont bien lues.
 la branche morte. Zéro occurrence de la production dans l'aperçu ne veut donc
 pas dire que le repli a été retiré du code — il est toujours là, pour la
 production.
+
+## ⚠️⚠️ « Une copie de Quantinvo + On-Demand » ? Non : une copie de la PRODUCTION, qui porte déjà On-Demand
+
+Question de Julien, le 9 octobre 2026. La formule paraît juste et elle cache
+l'essentiel : le jumeau n'a pas été fabriqué en empilant On-Demand sur un
+Quantinvo propre. **Il a été fabriqué en copiant la production — et la
+production portait déjà tout le schéma On-Demand**, 196 objets dont les
+migrations ne vivent que sur la branche `on-demand`, appliqués pendant le
+chantier de septembre (mesuré le 4 octobre, `scripts/mesurer-migrations.mjs`).
+
+Donc : `jumeau = production`, et `production = Quantinvo + On-Demand`. Les deux
+bases portent le même schéma ; ce qui les sépare n'est pas le schéma.
+
+⚠️ **ET LE PONT EST VIVANT EN PRODUCTION.**
+`20260920200001_on_demand_le_plafond_d_appareils.sql` — la seule migration qui
+remplace une fonction de Quantinvo OS — **est appliquée en production** :
+`prendre_place_appareil` y appelle `plafond_appareils_effectif`. Conséquence qui
+ne se devine pas : un magasin dont `devices` n'est pas renseigné est **plafonné
+à deux appareils**, là où `null` voulait dire « ne rien refuser ». Voir la
+mémoire du projet ; ça a failli coûter le pilote du Groupe Bon Marché.
+
+## L'état du jumeau au 9 octobre 2026
+
+| | à la copie (4 oct.) | aujourd'hui | écart |
+|---|---|---|---|
+| tables | 44 | **45** | +1 |
+| colonnes | 412 | **436** | +24 |
+| fonctions | 236 | **248** | +12 |
+| policies | 55 | **56** | +1 |
+| index | 93 | **96** | +3 |
+| déclencheurs | 9 | **10** | +1 |
+
+RLS active sur les 45. L'écart, ce sont les migrations d'On-Demand des 4, 5 et
+7 octobre — appliquées **au jumeau seulement** : la fenêtre d'accès, le prix
+validé, un inventaire à la fois, et le chemin du paiement (fiche 122).
+
+## ⚠️ Ce qui N'EST PAS copié, et c'est ce qui rend le jumeau inoffensif
+
+- **Aucune fonction edge.** Vérifié le 9 octobre : `list_edge_functions` rend
+  une liste **vide**. La production en porte vingt et une. Donc sur le jumeau,
+  aucune invitation, aucun courriel, aucun appel à Stripe ne peut partir — même
+  si une fonction en base essayait de les déclencher.
+- **Le coffre est vide.** Zéro secret : ni clé Stripe, ni clé Resend, ni
+  `prelevement_cle`. C'est ce qui rend `declencher_le_prelevement()` inerte, et
+  ce n'est pas une précaution de plus — c'est la MÊME précaution, écrite une
+  fois dans la fonction (« tant que les valeurs sont absentes, rien ne part »).
+- **Les données.** Un compte, une entreprise, un inventaire, deux réservations.
+  Aucune donnée réelle, jamais.
+- **Les tâches planifiées.** Deux sur le jumeau, les deux d'On-Demand
+  (`cloturer-hors-fenetre`, `prelever-les-locations`). La production a les
+  siennes, qui n'existent pas ici.
+
+⚠️ Et dans les deux sens : **le dossier de migrations ne reconstruit NI l'une NI
+l'autre depuis zéro** (voir plus haut). Pour refaire un jumeau, on recopie le
+schéma.
