@@ -18,10 +18,24 @@ import { t } from '@/lib/i18n'
  * inventaire, donc sur un magasin. L'invitation part sans `storeIds`, ce que
  * `handle_new_user` interprète comme « tous les magasins du superviseur ».
  * Pour restreindre, l'écran mobile propose la sélection.
+ *
+ * ⚠️ **CE COMPOSANT NE PORTE PLUS SON PROPRE BOUTON** (9 octobre 2026). Il
+ * tenait les deux états — bouton fermé, formulaire ouvert — et la page le
+ * rendait dans `.app-head`. Or `.app-head` est une rangée `space-between` :
+ * tant qu'il n'était qu'un bouton tout allait bien, mais ouvert, la carte
+ * entière devenait l'élément de droite et se collait au titre, laissant un
+ * grand vide à gauche. Relevé par Julien.
+ *
+ * La page décide donc de l'ouverture, met le bouton dans l'en-tête et rend ce
+ * panneau **sous** l'en-tête — exactement comme `AjouterPersonne` le fait déjà
+ * pour l'administrateur. Un composant qui porte son propre bouton impose sa
+ * place à la page ; celui-ci ne le fait plus.
  */
-export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void }) {
+export function AddCounter({ onAdded, onFermer }: {
+  onAdded: () => Promise<void> | void
+  onFermer: () => void
+}) {
   const toast = useToast()
-  const [open, setOpen] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -62,20 +76,15 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
     } else {
       toast.error(t('%{nom} a été ajouté, mais l’e-mail n’a pas pu partir : %{raison}.', { nom: `${first} ${last}`, raison: data.emailError ?? t('raison inconnue') }))
     }
-    setFirstName(''); setLastName(''); setEmail(''); setOpen(false)
+    setFirstName(''); setLastName(''); setEmail('')
+    onFermer()
     await onAdded()
   }
 
-  if (!open) {
-    return (
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
-        {t('Ajouter un compteur')}
-      </button>
-    )
-  }
-
   return (
-    <form className="panel" onSubmit={submit} style={{ marginTop: 12 }}>
+    <form className="panel" onSubmit={submit}>
+      <h3>{t('Ajouter un compteur')}</h3>
+
       {horsEntreprise && (
         <div className="banner banner-warn" role="status">
           <strong>{t('Cette personne n’est pas de votre entreprise.')}</strong> {horsEntreprise}
@@ -104,7 +113,7 @@ export function AddCounter({ onAdded }: { onAdded: () => Promise<void> | void })
         <button className="btn btn-primary btn-sm" disabled={busy}>
           {busy ? t('Ajout…') : t('Ajouter à l’équipe')}
         </button>
-        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setOpen(false)}>
+        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onFermer}>
           {t('Annuler')}
         </button>
       </div>
