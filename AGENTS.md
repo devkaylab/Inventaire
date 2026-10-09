@@ -146,3 +146,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️⚠️ Ajouter quelqu'un à un inventaire : l'app cachait la recherche](docs/notes/119-ajouter-quelqu-un-a-un-inventaire-5-octobre-2026.md)
 - [⚠️ Le lien d'un e-mail ne se grille plus avant le clic (Microsoft 365)](docs/notes/120-le-lien-d-un-e-mail-ne-se-grille-plus-5-octobre-2026.md)
 - [⚠️ La durée de vie d'un lien : **un seul réglage**, 24 h, et la sortie qui existait déjà](docs/notes/121-la-duree-de-vie-d-un-lien-6-octobre-2026.md)
+- [⚠️ Un en-tête de page ne porte pas de panneau](docs/notes/126-l-entete-ne-porte-pas-de-panneau-9-octobre-2026.md)
