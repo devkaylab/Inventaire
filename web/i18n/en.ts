@@ -1943,4 +1943,14 @@ export const en: Dictionnaire = {
   "L’équipe du magasin n’a pas pu être chargée. Ce n’est pas qu’elle est vide : la liste n’est pas arrivée.": "The store team could not be loaded. It is not that it is empty: the list never arrived.",
   'Réessayer': 'Try again',
   'Vous avez été invité et votre lien a expiré ? Passez par « Mot de passe oublié » : le lien neuf vous servira à choisir votre mot de passe.': 'Invited, and your link has expired? Use “Forgotten password”: the new link will let you choose your password.',
+
+  // Le lien d'invitation ne sert qu'une fois : ce qu'on dit quand il a servi,
+  // et le geste pour en obtenir un autre (9 octobre 2026).
+  "Ce lien ne sert qu'une fois, et il a déjà servi. Vous pouvez en recevoir un nouveau à la même adresse — y compris si vous n'avez jamais choisi de mot de passe.": 'This link works only once, and it has already been used. You can have a new one sent to the same address — even if you have never chosen a password.',
+  'Recevoir un nouveau lien': 'Send me a new link',
+  'J’ai déjà un mot de passe : me connecter': 'I already have a password: sign in',
+  'Renvoyer le lien à %{nom} ?': 'Send %{nom} a new link?',
+  'Un nouveau lien de création de mot de passe part à %{email}.': 'A new password-setup link is on its way to %{email}.',
+  'Renvoyer le lien': 'Resend the link',
+  'Un lien vient de partir à %{email}.': 'A link has just been sent to %{email}.',
 }

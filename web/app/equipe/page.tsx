@@ -156,6 +156,46 @@ export default function EquipePage() {
     return true
   }
 
+  /**
+   * Renvoyer le lien de création de mot de passe.
+   *
+   * ⚠️⚠️ **LE GESTE QUI MANQUAIT, ET CE QU'IL A COÛTÉ.** Face à quelqu'un qui
+   * n'avait jamais fini son inscription, la seule action visible était
+   * « Supprimer le compte » — et c'est ce qui est arrivé le 9 octobre 2026 : un
+   * superviseur supprimé parce que personne ne savait lui renvoyer un lien.
+   *
+   * La machinerie existait depuis le 6 octobre : `mot-de-passe-oublie` renvoie
+   * un lien neuf à une adresse qui n'a **jamais** eu de mot de passe —
+   * `demander_reinitialisation` ne contrôle que l'existence de l'adresse dans
+   * `auth.users`, et une personne invitée y est dès l'invitation (fiche 121).
+   * Il manquait le bouton, pas la fonction.
+   *
+   * ⚠️ On appelle la fonction déjà déployée plutôt que d'en écrire une
+   * deuxième : elle borne l'hôte de retour (pas de redirection ouverte) et
+   * répond toujours la même chose, qu'un compte existe ou non.
+   */
+  async function renvoyerLeLien(email: string | null, nom: string) {
+    // L'adresse vient de la base et y est nullable. Les deux appelants ne
+    // proposent le geste que s'il y en a une ; ceci ferme le type, et dit
+    // qu'un envoi sans adresse n'existe pas.
+    if (!email) return
+    const ok = await confirm({
+      title: t('Renvoyer le lien à %{nom} ?', { nom }),
+      message: t('Un nouveau lien de création de mot de passe part à %{email}.', { email }),
+      confirmLabel: t('Renvoyer le lien'),
+    })
+    if (!ok) return
+    try {
+      await supabase.functions.invoke('mot-de-passe-oublie', {
+        body: { email, redirectTo: `${window.location.origin}/bienvenue` },
+      })
+    } catch {
+      // La fonction ne dit jamais si l'adresse existe ; un échec réseau non
+      // plus. On annonce l'envoi sans promettre la réception.
+    }
+    alert(t('Un lien vient de partir à %{email}.', { email }))
+  }
+
   async function appliquer(fn: string, args: Record<string, unknown>) {
     const { data, error } = await supabase.rpc(fn, args)
     if (error || !data?.success) {
@@ -308,6 +348,13 @@ export default function EquipePage() {
     // ces comptes-là restent chez Quantinvo.
     const intouchable = m.is_company_admin || m.id === guard.profile.id
     const actions: ActionRangee[] = intouchable ? [] : [
+      // ⚠️ En TÊTE, et seulement tant que le mot de passe n'existe pas : c'est
+      // le geste attendu face à une ligne ambre, et il doit se trouver avant
+      // « Supprimer le compte », pas après.
+      ...(!m.is_active && m.email ? [{
+        libelle: t('Renvoyer le lien'),
+        onClick: () => renvoyerLeLien(m.email, m.full_name || t('cette personne')),
+      }] : []),
       {
         libelle: superviseur ? t('Passer compteur') : t('Passer superviseur'),
         onClick: () => changerRole(m, superviseur ? 'employee' : 'supervisor'),
@@ -639,6 +686,12 @@ export default function EquipePage() {
                       </div>
                     </div>
                     <div className="req-actions">
+                      {!c.is_active && c.email && (
+                        <button
+                          className="link-btn"
+                          onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}
+                        >{t('Renvoyer le lien')}</button>
+                      )}
                       {/* Le geste quotidien du superviseur : un saisonnier part,
                           il le retire de SON magasin — pas de partout. */}
                       <button
