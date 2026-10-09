@@ -221,3 +221,71 @@ validé, un inventaire à la fois, et le chemin du paiement (fiche 122).
 ⚠️ Et dans les deux sens : **le dossier de migrations ne reconstruit NI l'une NI
 l'autre depuis zéro** (voir plus haut). Pour refaire un jumeau, on recopie le
 schéma.
+
+## Peut-on continuer sur le jumeau et ne livrer l'app qu'une fois ?
+
+Question de Julien, le 9 octobre 2026 : « savoir si on peut faire d'autres
+modifs sur le projet sans affecter le projet initial Quantinvo. Comme ça une
+fois On-Demand clôturé et les autres modifs faites, on lance une seule mise à
+jour de l'app. »
+
+**Oui. Et pour deux des trois morceaux, c'est déjà le cas.**
+
+| | isolé ? | pourquoi |
+|---|---|---|
+| **La base** | ✅ oui | deux projets Supabase sans lien. Ce qu'on applique au jumeau ne touche rien. |
+| **Le site** | ✅ oui | `main` déploie `www.quantinvo.com` ; `on-demand` n'a qu'une préversion Vercel. |
+| **L'app** | ⚠️ non, par construction | **un seul identifiant** (`com.quantinvo.app`) et l'adresse de la base est **figée dans le bundle** (`EXPO_PUBLIC_SUPABASE_URL`, voir `src/lib/baseConnectee.ts`). L'app publiée parle donc TOUJOURS à la production. |
+
+La conséquence est simple et elle commande tout le reste : **une mise à jour
+unique livre un binaire pointé sur la production, donc ce jour-là la production
+doit déjà porter tout ce dont l'app a besoin.** Le développement sur le jumeau
+n'est pas le risque ; **le rejeu vers la production l'est.**
+
+### Ce que ce rejeu représente, mesuré le 9 octobre 2026
+
+- **31 fichiers** vivent sur `on-demand` et pas sur `main`.
+- **196 objets** sont en production sans migration sur `main` : c'est le
+  chantier de SEPTEMBRE, déjà appliqué. Le retard réel à rejouer, ce sont les
+  **17 migrations d'octobre**, appliquées au jumeau seulement.
+- **Un seul corps divergent sur 236** : `prendre_place_appareil`. La production
+  exécute la version On-Demand ; `main` décrit encore celle d'OS.
+
+### ⚠️ Les deux choses qui peuvent mal tourner
+
+**1. Une migration qui remplace une fonction d'OS frappe l'app PUBLIÉE tout de
+suite, sans attendre aucune mise à jour.** C'est déjà arrivé, et c'est
+exactement ce qu'est `prendre_place_appareil` aujourd'hui : le plafond
+d'appareils d'un magasin sans `devices` est passé d'illimité à deux, en
+production, pour des clients qui n'ont rien installé. Donc une migration de ce
+genre ne part en production que **le jour où on le décide**, répétée d'avance —
+jamais « au passage ».
+
+**2. Plus le tas grossit, plus l'ordre compte.** Note 109 l'a montré : l'ordre
+des NOMS n'est pas l'ordre dans lequel l'histoire s'est écrite, et le rejeu du
+dossier depuis zéro meurt au 5ᵉ fichier. Un rejeu de 17 migrations se répète
+avant de se jouer.
+
+### Ce qu'il manque pour que le plan soit sûr
+
+`scripts/replique/verifier.sh` fait **déjà** la bonne mesure — rejouer les
+migrations, puis vérifier que les parcours de Quantinvo OS se comportent à
+l'identique avant/après, et que le retrait ramène OS exactement à son état.
+33 migrations, vert au 7 octobre.
+
+⚠️ **Mais son socle est un SOUS-ENSEMBLE écrit à la main**, extrait du catalogue
+le 20 septembre (voir l'en-tête du script). La répétition est donc partielle :
+elle ne dit rien d'un objet de production que le socle ne contient pas.
+
+**Pour la rendre vraie, le jour du rejeu** : refaire le `db dump` de la
+production (procédure plus haut, sans mot de passe) dans une base jetable,
+rejouer les 17 migrations dessus, mesurer. C'est la même recette qui a fabriqué
+le jumeau ; elle sert une seconde fois.
+
+**Ordre à tenir le jour J**, et il n'est pas interchangeable :
+
+1. dump de la production → base jetable ;
+2. rejeu des 17 migrations dessus, et mesure avant/après ;
+3. seulement alors, application sur la production ;
+4. déploiement du site, puis des fonctions edge ;
+5. **et en dernier le build de l'app** — qui appartient à Julien.
