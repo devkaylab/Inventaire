@@ -198,8 +198,43 @@ option.
 ## La sortie : Xcode 26.6 à côté de Xcode 27
 
 `/Applications/Xcode-26.6.app` (SDK iOS 26.5), installé **à côté** de Xcode 27,
-pas à la place. Apple n'exige que Xcode 26 au minimum et **aucune date n'est
-annoncée** pour Xcode 27.
+pas à la place.
+
+⚠️⚠️ **CORRIGÉ LE 9 OCTOBRE 2026 : LA DATE EXISTE MAINTENANT.** Cette fiche
+disait « aucune date n'est annoncée pour Xcode 27 ». C'était vrai le
+22 septembre ; Apple a depuis annoncé **avril 2027** — à partir de là, tout
+téléversement vers App Store Connect devra être compilé avec le **SDK iOS 27 ou
+plus**. Le jour exact n'est pas donné, donc avril 2027 est la borne EXTÉRIEURE
+du calendrier, pas une échéance à frôler.
+
+Julien, le 9 octobre : « j'ai du mal à comprendre pourquoi on ne passe pas à 27,
+on y sera bien obligé au bout d'un moment. » Oui — et voici par où.
+
+## Le chemin vers le SDK 27 : Expo, pas Xcode
+
+Le verrou n'a jamais été Xcode. C'est **Expo 56 qui n'adopte pas le cycle de vie
+par scènes**. Le correctif existe et il est publié :
+
+- **Expo 57.0.23+** avec `expo-build-properties` 57.0.20+ et
+  `ios.enableSceneSupport: true` dans la configuration (expo/expo#46664, clos ;
+  l'exécution vient de la PR #50191). L'option est **volontairement un choix**,
+  parce qu'elle change le démarrage natif.
+- **Expo 58 et au-delà : c'est le défaut.** L'option ne doit PAS y être ajoutée.
+
+⚠️ **ET LE PIÈGE CONNU DE CETTE OPTION NE NOUS CONCERNE PAS** — vérifié le
+9 octobre 2026. `enableSceneSupport` exige l'`AppDelegate` Swift standard du SDK
+57 : un plugin de configuration qui le réécrit (Firebase, typiquement) fait
+échouer le prebuild (expo/expo#50210). Nos plugins sont ceux d'Expo plus deux
+qui ne touchent qu'Android (`withAndroidForceDark`, `withAndroidSigning`), et
+`ios/Inventaire/AppDelegate.swift` n'a pas bougé depuis le commit initial. Le
+chemin est donc dégagé.
+
+**Ce que ça veut dire pour le calendrier** : passer à 27 est un **changement de
+SDK Expo**, pas un changement d'Xcode. Ça touche toute la couche native, donc
+c'est un chantier à part, à mener délibérément et bien avant avril 2027 — pas la
+veille d'un dépôt, comme le 22 septembre l'a montré. D'ici là, Xcode 26.6 reste
+le bon outil, et un binaire SDK 26 **passe la revue et tourne sur iOS 27**
+(Apple ne recompile rien).
 
 - Le `.xip` allégé fait 2,2 Go et **n'embarque pas la plateforme iOS** :
   `xcodebuild -downloadPlatform iOS -architectureVariant arm64` (8,5 Go).
