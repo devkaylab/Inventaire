@@ -80,14 +80,26 @@ export default function WelcomePage() {
     actif.current = true
     let unsubscribe: (() => void) | undefined
     ;(async () => {
+      // ⚠️⚠️ **UNE SESSION DÉJÀ OUVERTE PRIME SUR LE JETON.** Relevé par Julien :
+      // sur un téléphone, le navigateur recharge la page tout seul (onglet
+      // repris, mémoire récupérée). Le jeton, lui, a été consommé au premier
+      // « Continuer » et retiré de l'adresse — la page ne trouvait donc plus
+      // rien et annonçait « Lien expiré » à quelqu'un qui était ENCORE
+      // CONNECTÉ, à un clic de finir. C'est ce cul-de-sac qui a fait supprimer
+      // un compte.
+      //
+      // ⚠️ Ça n'affaiblit pas la protection du clic (`lib/jetonDuLien.ts`) :
+      // un analyseur de liens qui ouvre la page n'a pas de session, donc il
+      // retombe sur le bouton et ne consomme toujours rien.
+      const dejaOuverte = (await supabase.auth.getSession()).data.session
+      if (dejaOuverte) { await apply(dejaOuverte); return }
+
       // ⚠️ Un lien neuf porte son jeton : on attend le clic (`lib/jetonDuLien.ts`).
       const j = lireJetonDuLien()
       if (j) { if (actif.current) { setJeton(j); setReady(true) } return }
       // Ancien lien : le client Supabase consomme le jeton présent dans l'URL
       // et ouvre la session ; `onAuthStateChange` évite la course avec cette
       // lecture.
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) { await apply(session); return }
       const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (s) void apply(s) })
       unsubscribe = () => sub.subscription.unsubscribe()
       // Sans jeton exploitable, on n'attend pas indéfiniment.
@@ -99,7 +111,11 @@ export default function WelcomePage() {
   async function continuer() {
     if (!jeton) return
     setOuverture(true)
-    const session = await ouvrirLeLien(jeton)
+    let session = await ouvrirLeLien(jeton)
+    // ⚠️ Le jeton ne sert QU'UNE FOIS. S'il a déjà servi — second clic depuis
+    // l'e-mail, page rouverte — l'échange échoue, mais la session ouverte au
+    // premier clic est peut-être encore là. On regarde avant de conclure.
+    if (!session) session = (await supabase.auth.getSession()).data.session
     setOuverture(false)
     setJeton(null)
     await apply(session)
@@ -179,10 +195,23 @@ export default function WelcomePage() {
             <Link href="/"><Logo size={56} /></Link>
             <h1>{t('Lien expiré')}</h1>
             <p className="sub">
-              {t("Ce lien d'invitation n'est plus valable ou a déjà été utilisé. Si vous avez déjà choisi votre mot de passe, connectez-vous. Sinon, demandez une nouvelle invitation à la personne qui vous a ajouté.")}
+              {t("Ce lien ne sert qu'une fois, et il a déjà servi. Vous pouvez en recevoir un nouveau à la même adresse — y compris si vous n'avez jamais choisi de mot de passe.")}
             </p>
           </div>
-          <Link href="/login" className="btn btn-primary btn-block">{t('Se connecter')}</Link>
+          {/* ⚠️ LA SORTIE EXISTAIT DEPUIS LE 6 OCTOBRE, ET PERSONNE NE LA VOYAIT :
+              « Mot de passe oublié » renvoie un lien neuf à quelqu'un qui n'en a
+              jamais eu (`demander_reinitialisation` ne contrôle que l'existence
+              de l'adresse dans `auth.users`, et une personne invitée y est dès
+              l'invitation). Cet écran envoyait chercher la personne qui avait
+              invité — un détour qui a fini par faire supprimer un compte.
+              On ne recopie pas le formulaire d'envoi : on pointe celui qui
+              existe, éprouvé, et qui ne dit jamais si l'adresse existe. */}
+          <Link href="/mot-de-passe-oublie" className="btn btn-primary btn-block">
+            {t('Recevoir un nouveau lien')}
+          </Link>
+          <Link href="/login" className="btn btn-ghost btn-block" style={{ marginTop: 10 }}>
+            {t('J’ai déjà un mot de passe : me connecter')}
+          </Link>
         </div>
         <LangueToggle />
       </div>
