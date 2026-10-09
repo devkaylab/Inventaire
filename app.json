@@ -68,7 +68,8 @@
       "expo-secure-store",
       "./plugins/withAndroidForceDark",
       "./plugins/withAndroidSigning",
-      "expo-localization"
+      "expo-localization",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
