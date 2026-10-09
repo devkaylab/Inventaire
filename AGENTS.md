@@ -163,3 +163,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️⚠️ Le rôle sur un inventaire ne se choisit plus, il se calcule](docs/notes/123-le-role-sur-un-inventaire-ne-se-choisit-plus-9-octobre-2026.md)
 - [⚠️⚠️ La zone grise ne fait plus mouliner](docs/notes/124-la-zone-grise-ne-fait-plus-mouliner-9-octobre-2026.md)
 - [⚠️ Le premier pas de la montée Expo : 56.0.23](docs/notes/125-le-premier-pas-de-la-montee-expo-9-octobre-2026.md)
+- [⚠️ Un en-tête de page ne porte pas de panneau](docs/notes/126-l-entete-ne-porte-pas-de-panneau-9-octobre-2026.md)
