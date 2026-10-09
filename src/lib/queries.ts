@@ -1,8 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert } from '@/types/database.types'
 import { errorMessage } from '@/lib/errors'
+import { avecDelai, DELAI_INTERACTIF_MS } from '@/lib/reseau'
 import { t } from '@/lib/i18n'
 
+// ⚠️ Les trois appels que quelqu'un ATTEND devant l'écran portent un budget
+// court — résoudre un code, enregistrer un comptage, ouvrir ou clôturer une
+// balise. Voir `@/lib/reseau` pour le pourquoi (la zone grise).
 function throwSupabase(context: string, error: unknown): never {
   console.error(`[queries] ${context}`, error)
   throw new Error(errorMessage(error))
@@ -162,13 +166,15 @@ export async function resolveArticle(sessionId: string, value: string): Promise<
   const norm = trimmed.replace(/^0+/, '')
   const filters = [`sku.eq.${trimmed}`, `ean.eq.${trimmed}`]
   if (norm) filters.push(`ean_norm.eq.${norm}`)
-  const { data, error } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('session_id', sessionId)
-    .or(filters.join(','))
-    .limit(1)
-    .maybeSingle()
+  const { data, error } = await avecDelai(DELAI_INTERACTIF_MS, (signal) =>
+    supabase
+      .from('articles')
+      .select('*')
+      .eq('session_id', sessionId)
+      .or(filters.join(','))
+      .limit(1)
+      .abortSignal(signal)
+      .maybeSingle())
   if (error) throwSupabase('resolveArticle', error)
   return data
 }
@@ -180,7 +186,12 @@ export async function insertArticle(article: TablesInsert<'articles'>): Promise<
 }
 
 export async function insertCount(count: TablesInsert<'counts'>) {
-  const { data, error } = await supabase.from('counts').insert(count).select().single()
+  // ⚠️ **ON ANNULE, ON NE COURSE PAS.** Une écriture abandonnée mais toujours
+  // en vol arriverait APRÈS la mise en file, et ferait deux lignes pour un
+  // scan — le serveur choisit l'identifiant sur ce chemin-ci. `abortSignal`
+  // coupe la requête, donc ce cas n'existe pas.
+  const { data, error } = await avecDelai(DELAI_INTERACTIF_MS, (signal) =>
+    supabase.from('counts').insert(count).select().abortSignal(signal).single())
   if (error) throwSupabase('insertCount', error)
   return data
 }
@@ -1161,13 +1172,14 @@ export async function annulerBalise(
 export async function setBalise(
   sessionId: string, code: string, mode: BaliseMode, open: boolean, allowCreate = false
 ) {
-  const { data, error } = await supabase.rpc('set_balise', {
-    p_session_id: sessionId,
-    p_code: code,
-    p_mode: mode,
-    p_open: open,
-    p_allow_create: allowCreate,
-  })
+  const { data, error } = await avecDelai(DELAI_INTERACTIF_MS, (signal) =>
+    supabase.rpc('set_balise', {
+      p_session_id: sessionId,
+      p_code: code,
+      p_mode: mode,
+      p_open: open,
+      p_allow_create: allowCreate,
+    }).abortSignal(signal))
   if (error) throwSupabase('setBalise', error)
   return data as {
     success: boolean

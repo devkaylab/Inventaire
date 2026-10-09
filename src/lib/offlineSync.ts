@@ -250,26 +250,51 @@ export async function hasOfflineCache(sessionId: string): Promise<boolean> {
 // ─── Opérations de comptage ──────────────────────────────────────────────────
 
 /**
- * Résout un code-barres : cache local si on se sait hors ligne, serveur sinon.
+ * Résout un code-barres : **le cache local d'abord, toujours.**
  *
- * ⚠️ **Le cache sert de repli même EN LIGNE**, quand le serveur ne connaît pas
- * le code. C'est la fenêtre qui sépare un article créé en réserve de sa
- * remontée : la file l'a, la base pas encore. Sans ce repli, la première barre
- * de réseau rouvrait « Article inconnu » sur un code qu'on venait de saisir —
- * et une seconde saisie fabriquait un doublon dans la file. Trouvé par
- * `tests/offlineSync.test.ts`, pas à l'écran.
+ * ⚠️⚠️ **L'ORDRE S'EST INVERSÉ LE 9 OCTOBRE 2026, et c'était la moitié du
+ * moulinage.** Cette fonction demandait au SERVEUR d'abord, et ne retombait
+ * sur le cache qu'en cas d'échec. Or le catalogue est **entier sur le
+ * téléphone** — téléchargé, mis en delta et réconcilié par `primeOfflineCache`
+ * à l'ouverture de l'écran de scan. Chaque code présenté devant la caméra
+ * partait donc sur le réseau pour une réponse déjà présente en mémoire.
  *
- * Le repli ne peut pas ressusciter un article retiré du référentiel : chaque
- * `primeOfflineCache` réécrit le cache à partir du serveur, et n'y ajoute que
- * ce qui attend encore dans la file.
+ * Julien, depuis le terrain : « j'ai l'impression que l'app a besoin du réseau
+ * dès que je scanne, et en cas où ça capte mal c'est frustrant ». C'était exact.
+ *
+ * Ce que ça change :
+ *
+ *   · le cas courant — un code du référentiel — se résout en **zéro appel
+ *     réseau**, par une lecture de `Map` (`resolveArticleOffline` ne touche plus
+ *     le disque une fois l'index chauffé) ;
+ *   · la zone grise ne coûte plus rien du tout sur ce chemin : il n'y a plus
+ *     d'appel à attendre ;
+ *   · le serveur ne voit plus qu'un aller-retour par scan au lieu de deux.
+ *
+ * ⚠️ **LE SERVEUR RESTE INTERROGÉ QUAND LE CACHE RATE**, et c'est ce qui évite
+ * de perdre quelque chose : un article créé par un collègue pendant le comptage
+ * n'est pas dans un cache antérieur. Avec un budget court (voir `@/lib/reseau`),
+ * donc un code inconnu coûte au pire deux secondes et demie — contre les
+ * dizaines de secondes d'avant, et une seule fois puisque l'app bascule ensuite.
+ *
+ * ⚠️ **CE QU'ON ACCEPTE DE PERDRE**, et il faut le savoir : un article MODIFIÉ
+ * pendant le comptage s'affiche dans sa version d'avant. Le comptage porte sur
+ * le SKU, donc la donnée reste juste — c'est l'étiquette qui retarde, jusqu'au
+ * prochain `primeOfflineCache`.
+ *
+ * Le cache ne peut pas ressusciter un article retiré du référentiel : chaque
+ * `primeOfflineCache` le réécrit à partir du serveur, et n'y ajoute que ce qui
+ * attend encore dans la file.
  */
 export async function resolveArticle(sessionId: string, value: string): Promise<Article | null> {
-  if (offline) return off.resolveArticleOffline(sessionId, value)
+  const local = await off.resolveArticleOffline(sessionId, value)
+  if (local) return local
+  if (offline) return null
   try {
-    return (await q.resolveArticle(sessionId, value)) ?? off.resolveArticleOffline(sessionId, value)
+    return (await q.resolveArticle(sessionId, value)) ?? null
   } catch (e) {
     if (!noteNetworkError(e)) throw e
-    return off.resolveArticleOffline(sessionId, value)
+    return null
   }
 }
 

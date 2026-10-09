@@ -38,16 +38,19 @@ const serveur = {
   catalogue: [] as { sku: string; date: string }[],
   /** Combien de lignes le dernier téléchargement a demandées, et combien d'appels. */
   demandes: [] as (string | null)[],
+  /** ⚠️ Les résolutions de code demandées au SERVEUR. C'est ce qu'on mesure. */
+  resolutions: 0,
   reset() {
     this.panne = false; this.articles = []; this.counts = []
     this.totaux = { counted: 0, audited: 0 }
-    this.catalogue = []; this.demandes = []
+    this.catalogue = []; this.demandes = []; this.resolutions = 0
   },
 }
 const coupure = () => { throw { name: 'TypeError', message: 'Network request failed' } }
 
 vi.mock('@/lib/queries', () => ({
   resolveArticle: async (_s: string, v: string) => {
+    serveur.resolutions += 1
     if (serveur.panne) coupure()
     return serveur.articles.find((a) => a.sku === v || a.ean === v) ?? null
   },
@@ -149,6 +152,60 @@ describe('« Article inconnu » pendant une coupure', () => {
     serveur.panne = false
     await primeOfflineCache(S)
     expect((await resolveArticle(S, CODE))?.label).toBe('INCONNU')
+  })
+})
+
+/**
+ * ⚠️⚠️ **LE SCAN NE DEMANDE PLUS RIEN AU RÉSEAU** (9 octobre 2026).
+ *
+ * Julien, depuis le terrain : « j'ai l'impression que l'app a besoin du réseau
+ * dès que je scanne, et en cas où ça capte mal c'est frustrant ». C'était exact :
+ * `resolveArticle` interrogeait le serveur d'abord et ne retombait sur le cache
+ * qu'en cas d'échec — alors que le catalogue est entier sur le téléphone.
+ *
+ * ⚠️ CES DEUX MESURES COMPTENT LES APPELS, elles ne lisent pas le code. C'est la
+ * seule façon de prouver « zéro appel » : une garde textuelle dirait seulement
+ * que les lignes sont dans un certain ordre.
+ */
+describe('le scan ne sollicite pas le réseau', () => {
+  it('⚠️ un code du référentiel se résout en ZÉRO appel', async () => {
+    serveur.catalogue = [{ sku: 'A', date: '2026-09-01T00:00:00Z' }]
+    await primeOfflineCache(S)
+    serveur.resolutions = 0
+
+    const article = await resolveArticle(S, 'A')
+
+    expect(article?.sku).toBe('A')
+    expect(serveur.resolutions, 'le scan est encore parti sur le réseau').toBe(0)
+  })
+
+  it('mais un code que le cache ignore est bien demandé au serveur', async () => {
+    // L'autre moitié de la règle : local d'abord ne veut pas dire local
+    // seulement. Un article créé par un collègue pendant le comptage n'est pas
+    // dans un cache antérieur, et il doit quand même se résoudre.
+    serveur.catalogue = [{ sku: 'A', date: '2026-09-01T00:00:00Z' }]
+    await primeOfflineCache(S)
+    serveur.articles.push({ session_id: S, sku: 'NEUF', ean: 'NEUF', label: 'Arrivé après' })
+    serveur.resolutions = 0
+
+    const article = await resolveArticle(S, 'NEUF')
+
+    expect(article?.sku).toBe('NEUF')
+    expect(serveur.resolutions, 'le serveur n’est plus interrogé quand le cache rate').toBe(1)
+  })
+
+  it('⚠️ et hors ligne, il ne tente même pas', async () => {
+    // Une fois hors ligne, un code inconnu ne doit pas relancer une requête
+    // vouée à expirer à chaque passage devant la caméra.
+    serveur.catalogue = [{ sku: 'A', date: '2026-09-01T00:00:00Z' }]
+    await primeOfflineCache(S)
+    serveur.panne = true
+    await resolveArticle(S, 'INCONNU')   // bascule hors ligne
+    serveur.resolutions = 0
+
+    await resolveArticle(S, 'TOUJOURS-INCONNU')
+
+    expect(serveur.resolutions, 'hors ligne, le scan retente encore').toBe(0)
   })
 })
 

@@ -145,10 +145,17 @@ export function newId(): string {
  * contraire.
  */
 export function isNetworkError(e: unknown): boolean {
-  const err = e as { name?: string; message?: string; status?: number } | null
+  const err = e as { name?: string; message?: string; code?: string; status?: number } | null
   if (!err) return false
   if (err.name === 'AuthRetryableFetchError' || err.name === 'TypeError') return true
-  return /network request failed|failed to fetch|fetch|timeout|timed out|offline/i.test(
+  // ⚠️⚠️ **UNE ANNULATION DE DÉLAI EST UNE PANNE RÉSEAU** (9 octobre 2026), et
+  // sans cette ligne tout le dispositif des délais se retournerait contre
+  // l'app : le budget court couperait la requête, et l'`AbortError` remonterait
+  // à l'écran en « Enregistrement impossible » au lieu de faire basculer le
+  // mode hors ligne. `postgrest-js` relance l'erreur d'origine sans l'envelopper
+  // (vérifié dans `executeWithRetry`), donc son nom arrive jusqu'ici.
+  if (err.name === 'AbortError' || err.code === 'ABORT_ERR') return true
+  return /network request failed|failed to fetch|fetch|timeout|timed out|offline|aborted/i.test(
     err.message ?? '',
   )
 }
