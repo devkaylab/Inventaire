@@ -263,6 +263,32 @@ d'un SDK Expo se fait **un majeur à la fois**.
 3. `57 → 58` plus tard, en montée de routine — et **on retire l'option**, qui
    est le défaut à partir de 58.
 
+⚠️⚠️ **ET L'ÉTAPE 2 NE FAIT PAS PASSER À XCODE 27** (question de Julien,
+9 octobre 2026). C'est le point qui rend ce plan confortable, et il se vérifie
+à la source :
+
+- le changelog d'Expo SDK 57 **ne mentionne aucun Xcode minimum**. Son seul
+  passage sur le sujet s'intitule « **Building with** Xcode 27 and the iOS 27
+  SDK », et il renvoie à un guide « **Staying on** SDK 57 with Xcode 27 ». Les
+  deux formulations disent la même chose : Xcode 27 est une **option**, pas une
+  condition ;
+- `enableSceneSupport` rend l'app **fondée sur les scènes**, ce qui est
+  parfaitement compatible avec le SDK 26 — `UIScene` existe depuis iOS 13. Un
+  binaire scène compilé en SDK 26 démarre partout ;
+- React Native **0.86** (celui d'Expo 57) est annoncé **sans rupture visible**
+  pour l'utilisateur, la deuxième version dans ce cas après 0.83. Le saut
+  56 → 57 est donc doux.
+
+⚠️ Ce que je n'ai PAS pu confirmer à la source : un plancher Xcode côté Expo.
+Un guide tiers avance « iOS 16.4+, Xcode 26.4+ » pour le SDK 57 ; Expo ne
+l'écrit nulle part que j'aie trouvé. Dans les deux cas **26.6 satisfait**, donc
+la question ne nous bloque pas — mais elle reste à vérifier le jour de la montée.
+
+**Conclusion : l'étape 2 se fait entièrement sous Xcode 26.6.** Elle ne change
+pas d'outil, elle **déverrouille** le choix : après elle, passer à 27 devient
+une décision libre, prise quand on veut, et non une dette qui court jusqu'en
+avril 2027.
+
 **Ce que ça veut dire pour le calendrier** : passer à 27 est un **changement de
 SDK Expo**, pas un changement d'Xcode. Ça touche toute la couche native, donc
 c'est un chantier à part, à mener délibérément et bien avant avril 2027 — pas la
