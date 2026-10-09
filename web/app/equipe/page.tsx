@@ -412,18 +412,22 @@ export default function EquipePage() {
           </p>
         </div>
         {/* Une seule porte pour l'administrateur : le rôle se choisit dans le
-            panneau. Un superviseur ordinaire n'ajoute que des compteurs. */}
-        {estAdmin ? (
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => setAjoutOuvert((v) => !v)}
-          >
-            {ajoutOuvert ? t('Fermer') : t('+ Ajouter une personne')}
-          </button>
-        ) : (
-          <AddCounter onAdded={rafraichir} />
-        )}
+            panneau. Un superviseur ordinaire n'ajoute que des compteurs.
+
+            ⚠️ **L'EN-TÊTE NE PORTE QU'UN BOUTON, POUR LES DEUX RÔLES.** Le
+            formulaire du superviseur était rendu ici même : `.app-head` étant
+            une rangée `space-between`, la carte ouverte devenait l'élément de
+            droite et se collait au titre, grand vide à gauche (relevé par
+            Julien, 9 octobre 2026). Un panneau se rend SOUS l'en-tête. */}
+        <button
+          type="button"
+          className={estAdmin ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+          onClick={() => setAjoutOuvert((v) => !v)}
+        >
+          {ajoutOuvert
+            ? t('Fermer')
+            : estAdmin ? t('+ Ajouter une personne') : t('Ajouter un compteur')}
+        </button>
       </div>
 
       {estAdmin && !mfaEnrolled && (
@@ -442,6 +446,10 @@ export default function EquipePage() {
           onSuperviseur={inviterSuperviseur}
           onFermer={() => setAjoutOuvert(false)}
         />
+      )}
+
+      {!estAdmin && ajoutOuvert && (
+        <AddCounter onAdded={rafraichir} onFermer={() => setAjoutOuvert(false)} />
       )}
 
       {/* ⚠️ La bande compte ce que `ca_company_overview` a déjà rendu — aucun
