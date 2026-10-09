@@ -289,3 +289,75 @@ le jumeau ; elle sert une seconde fois.
 3. seulement alors, application sur la production ;
 4. déploiement du site, puis des fonctions edge ;
 5. **et en dernier le build de l'app** — qui appartient à Julien.
+
+## La copie est complète — 9 octobre 2026
+
+Julien : « fait une copie complète alors, nous avons des modifs à faire, sans
+impacter la prod pour le moment. » Le schéma l'était déjà ; les fonctions edge
+manquaient, et sans elles rien de ce qui passe par un courriel, une invitation
+ou Stripe ne pouvait être éprouvé.
+
+**22 fonctions déployées**, `verify_jwt` relevé sur la PRODUCTION avant de
+déployer (jamais deviné depuis le code) :
+
+- **9 sans jeton** (`--no-verify-jwt`) : `quote-pdf`, `accept-quote`,
+  `stripe-webhook`, `submit-company-request`, `decline-quote`,
+  `alerte-anomalies`, `subscribe-online`, `inscription`, `mot-de-passe-oublie`.
+- **11 avec jeton** : `invite-to-session`, `invite-teammate`,
+  `invite-company-admin`, `ca-invite-supervisor`, `ca-request-store`,
+  `admin-fulfil-store-request`, `admin-reject-store-request`,
+  `admin-send-quote`, `admin-metrics`, `message-admin`, `libre-service`.
+- **+ les deux d'On-Demand** : `mission-empreinte` (avec jeton),
+  `mission-prelever` (sans).
+
+Déployées depuis la branche `on-demand`, pas `main` : c'est elle que le schéma
+du jumeau reflète.
+
+**Vérifié, pas supposé** : `verify_jwt` identique à la production pour les vingt
+communes ; `download` + `diff` sur quatre d'entre elles — identiques au dépôt ;
+et trois appelées pour de vrai :
+
+| | réponse |
+|---|---|
+| `inscription` | `503 vente_fermee` — le tunnel est fermé ici aussi |
+| `mission-empreinte` | `401` — jeton exigé |
+| `mission-prelever` | `500 PRELEVEMENT_CLE absente` — la clé partagée garde la porte |
+
+## ⚠️⚠️ Un piège désamorcé au passage : `declencher_alerte` pointait sur la PRODUCTION
+
+Le schéma du jumeau vient d'un dump de la production, et
+`declencher_alerte` (28 août) **code l'adresse de la production en dur**.
+Mesuré le 9 octobre : c'était la seule fonction du jumeau dans ce cas.
+
+Inerte jusqu'ici — pas de secret `alerte_cle`, pas de tâche planifiée pour elle
+— mais « rendre le jumeau complet » veut précisément dire poser ce secret. Le
+jumeau aurait alors réveillé la boîte de Julien **au nom du produit qui
+tourne**, depuis un projet d'essai.
+
+Corrigé **sur le jumeau seulement** : l'adresse vient du coffre
+(`alerte_url`), comme dans `declencher_le_prelevement`, et sans elle la tâche ne
+fait rien. ⚠️ Divergence assumée et écrite ici : le rejeu du jour J va
+production → production, il ne la transporte jamais.
+
+⚠️ **Et la leçon est générale** : un dump de la production transporte les
+adresses de la production. Toute fonction qui appelle `net.http_post` doit lire
+son adresse dans le coffre, jamais la porter en dur. `declencher_le_prelevement`
+le faisait déjà — pour cette raison.
+
+## Ce qu'il reste à poser, et qui n'appartient qu'à Julien
+
+| secret | ce qui s'ouvre | remarque |
+|---|---|---|
+| `RESEND_API_KEY` | courriels, invitations, relances | ⚠️ **de VRAIS e-mails à de VRAIES adresses** |
+| `STRIPE_SECRET_KEY` | paiement, empreinte, prélèvement | ⚠️ clé de **test** uniquement |
+| `STRIPE_WEBHOOK_SECRET` | le webhook | signature des événements |
+| `PRELEVEMENT_CLE` | le prélèvement du 7ᵉ jour | + `prelevement_cle` et `prelevement_url` au coffre |
+| `ALERTE_CLE` | le tour de garde | + `alerte_url` au coffre, sinon inerte |
+| `METRICS_KEY` | `admin-metrics` | |
+| `INVITE_FROM_EMAIL`, `QUOTE_NOTIFY_EMAIL` | l'expéditeur et le destinataire des devis | une décision, pas un secret |
+| les **8** `STRIPE_PRICE_*` | la souscription et le libre-service | Price de test, à créer d'abord |
+
+Déjà posés le 9 octobre, parce qu'ils ne sont pas des secrets :
+`SITE_URL` et `APP_PUBLIC_URL` = l'aperçu Vercel de la branche
+(`quantinvo-git-on-demand-devkaylab.vercel.app`). C'est ce qui fera pointer les
+liens des courriels du jumeau sur la préversion, et non sur le site réel.
