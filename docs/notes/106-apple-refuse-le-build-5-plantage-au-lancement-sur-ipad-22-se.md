@@ -289,6 +289,45 @@ pas d'outil, elle **déverrouille** le choix : après elle, passer à 27 devient
 une décision libre, prise quand on veut, et non une dette qui court jusqu'en
 avril 2027.
 
+## ⚠️⚠️ Le vrai coût de l'étape 2 sur CE projet : `ios/` est versionné
+
+Julien : « il suffit de monter le SDK, c'est bien ça ? » Oui dans le principe.
+Mais `enableSceneSupport` est une propriété d'`expo-build-properties`, donc un
+**plugin de configuration** : il n'agit **qu'au prebuild**. Et ici
+`ios/` n'est pas généré à la volée — **il est versionné, dix-neuf fichiers**.
+Un prebuild les réécrit.
+
+⚠️ **Et l'un d'eux porte un correctif écrit à la main, qui disparaîtrait :**
+le `post_install` d'`ios/Podfile` (vers la ligne 66). Le chemin du projet
+contient un espace (« App inventaire ») ; certaines script phases générées par
+les pods s'exécutent en `bash -l -c "<chemin>"`, et avec `-c` bash coupe au
+premier espace — « bash: /Users/julien/Documents/App: No such file or
+directory ». Le crochet retire le `-c`. Un Podfile régénéré par Expo ne
+l'aurait plus, et **chaque `pod install` suivant casserait la compilation**.
+
+**La liste de courses réelle, dans l'ordre :**
+
+1. `expo@57.0.27` et `expo-build-properties@57.0.20+` ;
+2. `ios.enableSceneSupport: true` dans les plugins d'`app.json` ;
+3. **prebuild** — il réécrit les dix-neuf fichiers d'`ios/` ;
+4. **remettre le crochet du Podfile** (l'espace dans le chemin) ;
+5. **remettre les numéros de build** : ils vivent à trois endroits, dont **deux
+   dans le `project.pbxproj`** que le prebuild réécrit ;
+6. `pod install`, puis le contrôle iPad, puis l'archive — avec 26.6 ou 27, au
+   choix.
+
+⚠️ **Une piste moins coûteuse, à examiner le jour venu et pas avant** : comme
+`ios/` est déjà tenu à la main, l'adoption des scènes pourrait peut-être être
+portée directement dans `AppDelegate.swift` sans prebuild. **Je n'ai pas vérifié
+ce que `enableSceneSupport` change exactement dans les fichiers natifs** — donc
+c'est une hypothèse, pas un plan. Elle échange « un prebuild à rattraper »
+contre « maintenir à la main ce qu'Expo génère », et c'est précisément ce que le
+plugin existe pour éviter.
+
+**Ce qui reste vrai quoi qu'il arrive** : ce n'est pas un drapeau de deux
+lignes. C'est un chantier, avec son banc d'essai — simulateur iPad, TestFlight
+sur un vrai appareil — et il ne se mène pas la veille d'un dépôt.
+
 **Ce que ça veut dire pour le calendrier** : passer à 27 est un **changement de
 SDK Expo**, pas un changement d'Xcode. Ça touche toute la couche native, donc
 c'est un chantier à part, à mener délibérément et bien avant avril 2027 — pas la
