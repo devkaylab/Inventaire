@@ -404,22 +404,35 @@ export async function registerPushToken(token: string, platform: string) {
 /** Invite une personne (par nom + e-mail) à un inventaire précis, avec un rôle.
  *  Passe par l'edge function invite-to-session (ajout membre ou invitation en
  *  attente + e-mail + push). */
+/**
+ * ⚠️ **AUCUN RÔLE N'EST ENVOYÉ** (9 octobre 2026). Il l'était, et le serveur le
+ * recopiait tel quel dans `session_members` : l'appelant choisissait donc si la
+ * personne ajoutée devenait co-superviseur. Julien : « normalement un compteur
+ * ne peut pas être superviseur ». Le rôle dans un inventaire EST le rôle
+ * d'entreprise, il se calcule en base, et il REVIENT dans la réponse — c'est
+ * lui qu'on affiche, jamais un rôle redéduit ici.
+ */
 export async function inviteToSession(input: {
   sessionId: string
   fullName: string
   email: string
-  role: SessionRole
 }) {
   const { data, error } = await supabase.functions.invoke('invite-to-session', {
     body: {
       sessionId: input.sessionId,
       fullName: input.fullName.trim(),
       email: input.email.trim().toLowerCase(),
-      role: input.role,
     },
   })
   if (error) throwSupabase('inviteToSession', error)
-  const result = data as { success: boolean; outcome?: 'added' | 'invited'; emailSent?: boolean; pushSent?: boolean; error?: string }
+  const result = data as {
+    success: boolean
+    outcome?: 'added' | 'invited'
+    role?: SessionRole
+    emailSent?: boolean
+    pushSent?: boolean
+    error?: string
+  }
   if (!result.success) throwSupabase('inviteToSession', new Error(result.error ?? t("Échec de l'invitation")))
   return result
 }

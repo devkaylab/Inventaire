@@ -45,7 +45,6 @@ import {
   inviteTeammate,
   inviteToSession,
   type DirectoryEntry,
-  type SessionRole,
 } from '@/lib/queries'
 import { errorMessage } from '@/lib/errors'
 import { useTheme } from '@/lib/theme'
@@ -118,7 +117,6 @@ export default function InviteToSessionScreen() {
 
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<DirectoryEntry | null>(null)
-  const [role, setRole] = useState<SessionRole>('counter')
   const [loading, setLoading] = useState(false)
 
   // Création d'équipe, quand il n'y a encore personne à chercher.
@@ -187,10 +185,12 @@ export default function InviteToSessionScreen() {
 
     setLoading(true)
     try {
-      const res = await inviteToSession({ sessionId, fullName, email: mail, role })
+      const res = await inviteToSession({ sessionId, fullName, email: mail })
       const added = res.outcome === 'added'
       const who = fullName || mail
-      const roleLabel = role === 'supervisor' ? t('co-superviseur') : t('compteur')
+      // ⚠️ LE RÔLE VIENT DE LA RÉPONSE, pas d'un choix fait ici : c'est la base
+      // qui l'a calculé depuis le rôle d'entreprise.
+      const roleLabel = res.role === 'supervisor' ? t('co-superviseur') : t('compteur')
       await rafraichir()
       // ⚠️ Dans le tunnel, on reste : on ajoute souvent plusieurs personnes à
       // la suite. Hors tunnel, l'écran a été ouvert pour un ajout et se ferme.
@@ -241,7 +241,7 @@ export default function InviteToSessionScreen() {
       await queryClient.invalidateQueries({ queryKey: ['team-invitations'] })
 
       try {
-        await inviteToSession({ sessionId, fullName: who, email: mail, role: 'counter' })
+        await inviteToSession({ sessionId, fullName: who, email: mail })
       } catch (e) {
         await rafraichir()
         setFirstName(''); setLastName(''); setEmail('')
@@ -366,11 +366,29 @@ export default function InviteToSessionScreen() {
                 </Text>
               )}
 
-              <Text style={styles.label}>{t('Rôle sur cet inventaire')}</Text>
-              <View style={styles.roleRow}>
-                <RolePill styles={styles} active={role === 'counter'} title={t('Compteur')} desc={t('Scanne et compte les articles')} onPress={() => setRole('counter')} />
-                <RolePill styles={styles} active={role === 'supervisor'} title={t('Co-superviseur')} desc={t('Mêmes droits que vous')} onPress={() => setRole('supervisor')} />
-              </View>
+              {/* ⚠️⚠️ **LE RÔLE NE SE CHOISIT PLUS** (Julien, 9 octobre 2026) : « un
+                  compteur ne peut pas être superviseur ». Il y avait ici deux
+                  pastilles à presser — et la base enregistrait ce qu'elles
+                  disaient, donc on pouvait faire d'un compteur un
+                  co-superviseur d'inventaire. Le rôle EST le rôle d'entreprise,
+                  calculé en base.
+
+                  Ce qui reste est un CONSTAT, pas un réglage : il n'apparaît
+                  qu'une fois quelqu'un choisi, parce qu'avant il n'y a rien à
+                  constater. Et il lit `selected.role`, l'annuaire — la même
+                  source que la base, jamais une seconde règle. */}
+              {selected && (
+                <View style={styles.constatRole}>
+                  <Text style={styles.constatTitre}>
+                    {selected.role === 'supervisor' ? t('Co-superviseur') : t('Compteur')}
+                  </Text>
+                  <Text style={styles.constatDesc}>
+                    {selected.role === 'supervisor'
+                      ? t('Superviseur dans votre entreprise : mêmes droits que vous sur cet inventaire.')
+                      : t('Compteur dans votre entreprise : il scanne et compte les articles.')}
+                  </Text>
+                </View>
+              )}
 
               <Pressable style={[styles.button, (!canSend || busy) && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSend || busy}>
                 {loading ? (
@@ -481,23 +499,6 @@ export default function InviteToSessionScreen() {
   )
 }
 
-function RolePill({
-  active, title, desc, onPress, styles,
-}: {
-  active: boolean
-  title: string
-  desc: string
-  onPress: () => void
-  styles: ReturnType<typeof makeStyles>
-}) {
-  return (
-    <Pressable style={[styles.pill, active && styles.pillActive]} onPress={onPress}>
-      <Text style={[styles.pillTitle, active && styles.pillTitleActive]}>{title}</Text>
-      <Text style={[styles.pillDesc, active && styles.pillDescActive]}>{desc}</Text>
-    </Pressable>
-  )
-}
-
 function makeStyles(t: Theme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
@@ -532,16 +533,22 @@ function makeStyles(t: Theme) {
     avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: t.accentSoft, alignItems: 'center', justifyContent: 'center' },
     avatarText: { fontSize: 15, fontFamily: Font.bold, color: t.accent },
     noMatch: { fontSize: 13, color: t.textMuted, fontFamily: Font.regular, lineHeight: 18, paddingVertical: Spacing.sm },
-    roleRow: { flexDirection: 'row', gap: Spacing.md, marginTop: 4 },
-    pill: {
-      flex: 1, borderWidth: 1, borderColor: t.hairline, borderRadius: Radius.md,
-      padding: Spacing.md, backgroundColor: t.surface, gap: 3,
+    // ⚠️ LES STYLES DE PASTILLE (`pill*`) SONT PARTIS AVEC ELLES. Un style
+    // orphelin survit à la fonctionnalité qu'il habillait et finit par
+    // ressusciter le composant : « ne jamais réintroduire » commence ici.
+    constatRole: {
+      marginTop: Spacing.md,
+      padding: Spacing.md,
+      borderRadius: Radius.md,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.hairline,
     },
-    pillActive: { borderColor: t.accent, backgroundColor: t.accentSoft },
-    pillTitle: { fontSize: 14, fontFamily: Font.bold, color: t.textPrimary },
-    pillTitleActive: { color: t.accent },
-    pillDesc: { fontSize: 12, fontFamily: Font.regular, color: t.textMuted, lineHeight: 16 },
-    pillDescActive: { color: t.accent },
+    constatTitre: { fontSize: 14, fontFamily: Font.bold, color: t.textPrimary },
+    constatDesc: {
+      fontSize: 12, fontFamily: Font.regular, color: t.textMuted,
+      lineHeight: 16, marginTop: 3,
+    },
 
     creerCard: {
       backgroundColor: t.surface, borderRadius: Radius.lg, padding: Spacing.lg,

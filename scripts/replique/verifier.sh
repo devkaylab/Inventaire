@@ -54,7 +54,7 @@ PORT=55432
 # pas On-Demand. Les faire entrer demande d'étendre `01-tables.sql` depuis la
 # base réelle (voir le LISEZMOI) ; en attendant, le motif les saute, et le
 # script imprime la liste de ce qu'il a VRAIMENT appliqué.
-MOTIF="2026(0920|0928|100412|10041[5-9]|10042[0-2]|10051[3-9]|100520|1007)"
+MOTIF="2026(0920|0928|100412|10041[5-9]|10042[0-2]|10051[3-9]|100520|1007|1009)"
 SANS_OS=0
 [[ "$1" == "--sans-os" ]] && { SANS_OS=1; shift; }
 [[ -n "$1" ]] && MOTIF="$1"

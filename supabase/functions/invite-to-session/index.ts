@@ -25,7 +25,21 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ success: false, error: 'Non authentifié' }, 401)
 
-  let payload: { sessionId?: string; email?: string; fullName?: string; role?: Role }
+  // ⚠️ **`role` N'EST PLUS DANS CE TYPE, ET C'EST LE CŒUR DU CORRECTIF**
+  // (9 octobre 2026). Il y était, et la ligne suivante le lisait :
+  //
+  //     const role: Role = payload.role === 'supervisor' ? 'supervisor' : 'counter'
+  //
+  // Autrement dit **l'appelant choisissait le rôle**, et on l'écrivait dans
+  // `session_members` avec la clé de service, donc hors RLS. Un appel direct à
+  // l'API faisait d'un compteur un co-superviseur d'inventaire. Julien :
+  // « normalement un compteur ne peut pas être superviseur ».
+  //
+  // Le rôle dans un inventaire EST le rôle d'entreprise : il se calcule en base
+  // (`role_de_session`), un déclencheur l'impose sur `session_members`, et plus
+  // personne — ni cette fonction, ni l'app, ni le site — n'a à le porter. Un
+  // `role` encore envoyé par un vieux client est simplement ignoré.
+  let payload: { sessionId?: string; email?: string; fullName?: string }
   try {
     payload = await req.json()
   } catch {
@@ -35,7 +49,6 @@ Deno.serve(async (req) => {
   const sessionId = payload.sessionId?.trim()
   const email = payload.email?.trim().toLowerCase()
   const fullName = (payload.fullName ?? '').trim()
-  const role: Role = payload.role === 'supervisor' ? 'supervisor' : 'counter'
 
   if (!sessionId || !email || !email.includes('@')) {
     return json({ success: false, error: 'Nom ou e-mail manquant.' }, 400)
@@ -102,12 +115,21 @@ Deno.serve(async (req) => {
   }
 
   // Ajout direct comme membre de l'inventaire.
-  const { error: mErr } = await admin
+  //
+  // ⚠️ SANS RÔLE : le déclencheur `session_members_role_calcule` le pose depuis
+  // le profil. En envoyer un ne servirait qu'à laisser croire qu'on le choisit.
+  const { data: pose, error: mErr } = await admin
     .from('session_members')
-    .upsert({ session_id: sessionId, user_id: found.user_id, role }, { onConflict: 'session_id,user_id' })
+    .upsert({ session_id: sessionId, user_id: found.user_id }, { onConflict: 'session_id,user_id' })
+    .select('role')
+    .single()
   if (mErr) return json({ success: false, error: mErr.message }, 500)
   const outcome: 'added' = 'added'
 
+  // ⚠️ ON RELIT CE QUE LA BASE A CALCULÉ, on ne le recalcule pas ici. L'e-mail
+  // et la notification annoncent un rôle : le déduire une seconde fois en
+  // TypeScript ferait deux règles, qui divergeraient à la première correction.
+  const role: Role = pose?.role === 'supervisor' ? 'supervisor' : 'counter'
   const sessionLabel = session.name || session.inventory_number
   const roleLabel = role === 'supervisor' ? 'co-superviseur' : 'compteur'
 
@@ -191,5 +213,8 @@ Deno.serve(async (req) => {
     emailError = 'RESEND_API_KEY absent'
   }
 
-  return json({ success: true, outcome, emailSent, pushSent, emailError })
+  // ⚠️ `role` SORT D'ICI pour que les écrans n'aient pas à le deviner : il
+  // vient de la base, via `pose.role`. C'est ce qui permet au message de
+  // succès de dire « compteur » ou « co-superviseur » sans recopier la règle.
+  return json({ success: true, outcome, role, emailSent, pushSent, emailError })
 })

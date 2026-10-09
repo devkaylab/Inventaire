@@ -1645,7 +1645,11 @@ describe('le tunnel de préparation (23 août 2026)', () => {
 
   it('l’écran crée le compte puis l’ajoute à l’inventaire', () => {
     expect(compteurs).toContain('inviteTeammate(')
-    expect(compteurs).toContain('inviteToSession({ sessionId, fullName: who, email: mail, role: \'counter\' })')
+    // ⚠️ **SANS RÔLE** depuis le 9 octobre 2026 : le rôle dans un inventaire se
+    // calcule en base. Cette garde citait `role: 'counter'` — elle serait
+    // tombée sur du code juste, et elle avait surtout gelé la possibilité d'en
+    // envoyer un.
+    expect(compteurs).toContain('inviteToSession({ sessionId, fullName: who, email: mail })')
   })
 
   // ⚠️ Le compteur créé appartient au magasin de CET inventaire. Une liste
@@ -1685,12 +1689,43 @@ describe('le tunnel de préparation (23 août 2026)', () => {
       .not.toMatch(/role\s*!==\s*'supervisor'/)
   })
 
-  it('⚠️ et l’écran sait pourtant ajouter un superviseur', () => {
-    // C'est ce qui rendait le défaut absurde : le choix du rôle propose
-    // « Co-superviseur » pendant que la recherche était cachée.
+  it('⚠️⚠️ le rôle sur l’inventaire ne se CHOISIT pas, il se CONSTATE', () => {
+    /**
+     * ⚠️⚠️ **CETTE GARDE DISAIT L'INVERSE IL Y A QUATRE JOURS, ET C'EST LA
+     * TROISIÈME FOIS QUE LE PIÈGE SE REFERME SUR MOI.** Elle exigeait
+     * `active={role === 'supervisor'}` — c'est-à-dire qu'elle GELAIT le
+     * sélecteur de rôle, sous prétexte de montrer que l'écran savait ajouter un
+     * superviseur. Julien, le 9 octobre : « normalement un compteur ne peut pas
+     * être superviseur ». Le sélecteur n'aurait jamais dû exister.
+     *
+     * Ce que la garde voulait vraiment tenir, et qui reste vrai : **la
+     * recherche n'est pas cachée aux superviseurs.** C'est l'assertion
+     * `{!equipeVide && (` ci-dessous, et elle n'a pas besoin du sélecteur pour
+     * valoir.
+     *
+     * Ce qu'elle tient en plus maintenant : qu'aucun écran ne rouvre le choix.
+     */
     const code = codeSeulInvite()
-    expect(code).toMatch(/active=\{role === 'supervisor'\}/)
-    // Et la recherche dépend bien de cette règle, et d'elle seule.
+
+    // ⚠️ AUCUN ÉTAT DE RÔLE, donc rien à choisir. C'est la forme la plus
+    // générale : un `useState` de rôle est le seul moyen d'offrir un choix.
+    expect(code, 'l’écran tient de nouveau un rôle en état : le choix est revenu')
+      .not.toMatch(/useState<SessionRole>|setRole\s*\(/)
+
+    // ⚠️ ET IL N'ENVOIE PAS DE RÔLE AU SERVEUR. Même un rôle constant serait
+    // une règle de deuxième endroit.
+    const appels = [...code.matchAll(/inviteToSession\(\{[^}]*\}/g)].map((m) => m[0])
+    expect(appels.length, 'les appels d’ajout ne se lisent plus').toBeGreaterThan(0)
+    for (const appel of appels) {
+      expect(appel, `cet appel porte encore un rôle : ${appel}`).not.toMatch(/\brole\b/)
+    }
+
+    // Ce qui reste est un constat, et il lit l'annuaire — la même source que la
+    // base, jamais une seconde règle.
+    expect(code, 'le rôle n’est plus annoncé à l’écran')
+      .toMatch(/selected\.role === 'supervisor'/)
+
+    // Et la recherche dépend bien de la règle d'équipe, et d'elle seule.
     expect(code).toContain('{!equipeVide && (')
   })
 

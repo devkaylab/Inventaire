@@ -537,6 +537,10 @@ export const en: Dictionnaire = {
   "Mot de passe refusé : il doit comporter au moins 12 caractères, dont une minuscule, une majuscule, un chiffre et un symbole.": "Password rejected: it must have at least 12 characters, including a lowercase letter, an uppercase letter, a digit and a symbol.",
   "Mot de passe à créer": "Password to create",
   "Mêmes droits que vous": "Same rights as you",
+  "Superviseur dans votre entreprise : mêmes droits que vous sur cet inventaire.":
+    "A supervisor in your company: same rights as you on this inventory.",
+  "Compteur dans votre entreprise : il scanne et compte les articles.":
+    "A counter in your company: they scan and count items.",
   "Ne pas ouvrir": "Don’t open",
   "Nom": "Last name",
   "Nom de l'inventaire": "Inventory name",

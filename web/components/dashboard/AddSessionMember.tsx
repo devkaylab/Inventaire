@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   getStoreDirectory, inviteToSession,
-  type DirectoryEntry, type Member, type SessionInvitation, type SessionRole,
+  type DirectoryEntry, type Member, type SessionInvitation,
 } from '@/lib/inventory'
 import { friendlyError } from '@/lib/errors'
 import { useToast } from '@/components/ui/Toast'
@@ -45,7 +45,6 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
   const [essai, setEssai] = useState(0)
   const [query, setQuery] = useState('')
   const [choisi, setChoisi] = useState<DirectoryEntry | null>(null)
-  const [role, setRole] = useState<SessionRole>('counter')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -98,7 +97,6 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
         sessionId,
         fullName: choisi.full_name || '',
         email: choisi.email,
-        role,
       })
       if (!r.success) { toast.error(r.error ?? t('Ajout impossible.')); return }
       const qui = choisi.full_name || choisi.email
@@ -109,7 +107,6 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
       )
       setChoisi(null)
       setQuery('')
-      setRole('counter')
       await onAdded()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -170,14 +167,12 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
           )}
         </div>
 
-        <select
-          value={role}
-          onChange={e => setRole(e.target.value as SessionRole)}
-          aria-label={t('Rôle dans l’inventaire')}
-        >
-          <option value="counter">{t('Compteur')}</option>
-          <option value="supervisor">{t('Co-superviseur')}</option>
-        </select>
+        {/* ⚠️⚠️ **LE CHOIX DU RÔLE EST PARTI** (Julien, 9 octobre 2026) : « un
+            compteur ne peut pas être superviseur ». Il y avait ici un `select`
+            à deux options, et la base enregistrait ce qu'il disait — on pouvait
+            donc faire d'un compteur un co-superviseur d'inventaire. Le rôle EST
+            le rôle d'entreprise, calculé en base. Ce qui le remplace est un
+            constat, plus bas, et seulement une fois quelqu'un choisi. */}
 
         <button type="submit" className="btn btn-primary btn-sm" disabled={!choisi || busy}>
           {busy ? t('Ajout…') : t('Ajouter')}
@@ -188,6 +183,11 @@ export function AddSessionMember({ sessionId, storeId, members, invitations, cur
         <div className="member-chosen">
           <span className="member-chosen-name">{choisi.full_name || choisi.email}</span>
           <span className="member-chosen-mail">{choisi.email}</span>
+          {/* ⚠️ UN CONSTAT, PAS UN RÉGLAGE, et il lit l'annuaire — la même
+              source que la base, jamais une seconde règle. */}
+          <span className="member-chosen-role">
+            {choisi.role === 'supervisor' ? t('Co-superviseur') : t('Compteur')}
+          </span>
           <button type="button" className="link-btn" onClick={() => { setChoisi(null); setQuery('') }}>
             {t('Changer')}
           </button>

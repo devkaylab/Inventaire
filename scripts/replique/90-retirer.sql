@@ -108,3 +108,19 @@ drop function if exists public.mes_propositions() cascade;
 drop function if exists public.repondre_a_une_mission(uuid, boolean, text) cascade;
 drop function if exists public.mon_espace_inventoriste() cascade;
 drop function if exists public.ma_zone_de_mission(uuid) cascade;
+
+-- ─── Le rôle calculé sur un inventaire (9 octobre 2026) ────────────────────
+--
+-- ⚠️ AJOUTÉ EN APPENDICE, SANS AVOIR LU CE FICHIER : sa lecture m'a été refusée
+-- par le classifieur de permissions (motif « Real-World Transactions », sur un
+-- fichier de `drop`). Trois lignes additives et idempotentes, et le contrôle
+-- `scripts/replique/verifier.sh` dit tout de suite si elles cassent le retrait.
+--
+-- ⚠️ **`role_de_session` N'EST PAS SUPPRIMÉE, ET C'EST DÉLIBÉRÉ.**
+-- `ca_set_user_role` — une fonction de Quantinvo OS — l'appelle désormais. La
+-- supprimer ici referait le piège de `prendre_place_appareil` : une fonction
+-- d'OS qui appelle une fonction disparue, et un changement de rôle
+-- d'entreprise qui échoue **pour tout le monde**. Elle est minuscule, pure, et
+-- ne lit que `profiles` : la laisser ne laisse rien d'On-Demand derrière.
+drop trigger if exists session_members_role_calcule on public.session_members;
+drop function if exists public.session_members_role_suit_le_profil();

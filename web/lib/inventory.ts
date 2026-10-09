@@ -742,20 +742,36 @@ export async function getStoreDirectory(storeId: string): Promise<DirectoryEntry
  * crée un compte pour l'entreprise **sans rattacher personne à l'inventaire** :
  * on remplissait le formulaire et l'équipe de l'inventaire ne bougeait pas.
  */
+/**
+ * ⚠️ **AUCUN RÔLE N'EST ENVOYÉ** (9 octobre 2026), jumeau du correctif côté app.
+ * Il l'était, et le serveur le recopiait dans `session_members` : l'écran
+ * choisissait donc si la personne ajoutée devenait co-superviseur. Julien :
+ * « normalement un compteur ne peut pas être superviseur ». Le rôle dans un
+ * inventaire EST le rôle d'entreprise, calculé en base, et il revient dans la
+ * réponse — c'est celui-là qu'on affiche, jamais un rôle redéduit ici.
+ */
 export async function inviteToSession(input: {
   sessionId: string
   fullName: string
   email: string
-  role: SessionRole
-}): Promise<{ success: boolean; outcome?: 'added' | 'invited'; error?: string }> {
+}): Promise<{
+  success: boolean
+  outcome?: 'added' | 'invited'
+  role?: SessionRole
+  error?: string
+}> {
   const { data, error } = await supabase.functions.invoke('invite-to-session', {
     body: {
       sessionId: input.sessionId,
       fullName: input.fullName.trim(),
       email: input.email.trim().toLowerCase(),
-      role: input.role,
     },
   })
   if (error) fail('inviteToSession', error)
-  return data as { success: boolean; outcome?: 'added' | 'invited'; error?: string }
+  return data as {
+    success: boolean
+    outcome?: 'added' | 'invited'
+    role?: SessionRole
+    error?: string
+  }
 }

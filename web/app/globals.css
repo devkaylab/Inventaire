@@ -2220,6 +2220,14 @@ body:has(.site-footer) .theme-toggle { display: none; }
 }
 .member-chosen-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .member-chosen-mail { font-size: 13px; color: var(--text-3); margin-right: auto; }
+/* ⚠️ Le rôle est un CONSTAT depuis le 9 octobre 2026 (il y avait un `select`
+   à cette place) : il se lit, il ne se touche pas. D'où le fond discret et
+   l'absence de tout affordance de bouton. */
+.member-chosen-role {
+  font-size: 12px; font-weight: 600; color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+}
 
 @media (max-width: 620px) {
   .member-search-row { grid-template-columns: 1fr; }
