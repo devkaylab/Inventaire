@@ -63,20 +63,12 @@ target 'Inventaire' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
-    # Le chemin du projet contient un espace ("App inventaire"). Certaines
-    # script phases générées par les pods (ex. EXConstants « Generate
-    # app.config ») s'exécutent en `bash -l -c "<chemin>"` : avec `-c`, bash
-    # interprète le chemin comme une commande et coupe au premier espace
-    # (« bash: /Users/julien/Documents/App: No such file or directory »).
-    # On retire le `-c` pour que le chemin soit passé comme un seul argument.
-    # Patché en mémoire ici → persiste à chaque `pod install`.
-    installer.pods_project.targets.each do |target|
-      target.shell_script_build_phases.each do |phase|
-        if phase.shell_script && phase.shell_script.include?('bash -l -c ')
-          phase.shell_script = phase.shell_script.gsub('bash -l -c ', 'bash -l ')
-        end
-      end
-    end
+    # ⚠️ Il y avait ici un correctif pour l'espace du chemin du projet
+    # (« App inventaire ») : les script phases en `bash -l -c "<chemin>"`
+    # coupaient au premier blanc. Le dossier a été renommé le 9 octobre 2026
+    # (`appinventaire`) et le correctif retiré. `tests/chemin-du-projet.test.ts`
+    # refuse désormais un chemin contenant une espace — ne pas remettre ceci,
+    # déplacer le projet. Fiche `docs/notes/106`.
 
     # ⚠️ **AUCUN POD NE VISE PLUS BAS QUE L'APPLICATION.**
     #

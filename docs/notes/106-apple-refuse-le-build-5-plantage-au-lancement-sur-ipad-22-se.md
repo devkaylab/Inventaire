@@ -297,24 +297,42 @@ Mais `enableSceneSupport` est une propriété d'`expo-build-properties`, donc un
 `ios/` n'est pas généré à la volée — **il est versionné, dix-neuf fichiers**.
 Un prebuild les réécrit.
 
-⚠️ **Et l'un d'eux porte un correctif écrit à la main, qui disparaîtrait :**
-le `post_install` d'`ios/Podfile` (vers la ligne 66). Le chemin du projet
-contient un espace (« App inventaire ») ; certaines script phases générées par
-les pods s'exécutent en `bash -l -c "<chemin>"`, et avec `-c` bash coupe au
-premier espace — « bash: /Users/julien/Documents/App: No such file or
-directory ». Le crochet retire le `-c`. Un Podfile régénéré par Expo ne
-l'aurait plus, et **chaque `pod install` suivant casserait la compilation**.
+⚠️ **Il y avait là un correctif écrit à la main qui disparaissait au prebuild —
+LA CAUSE A ÉTÉ SUPPRIMÉE le 9 octobre 2026.** Le `post_install` d'`ios/Podfile`
+retirait le `-c` des script phases générées en `bash -l -c "<chemin>"` : avec
+`-c`, bash interprète le chemin comme une commande et coupait au premier
+espace — « bash: /Users/julien/Documents/App: No such file or directory ». Le
+dossier s'appelait « App inventaire ». **Il s'appelle `appinventaire`**, et le
+crochet est parti.
+
+Ce qui a remplacé le crochet : `tests/chemin-du-projet.test.ts`, qui refuse un
+chemin contenant une espace. ⚠️ **C'est la garde qui porte le savoir
+maintenant** — sans crochet, remettre le projet dans un chemin à espace ne rate
+plus sur un correctif absent, ça rate sur une compilation iOS dont l'erreur
+désigne un dossier tronqué et jamais le nom du dossier. La garde lit le chemin
+RÉEL (`realpathSync`) : un lien symbolique sans espace devant un dossier qui en
+contient la tromperait, et il en a existé un — celui qui a permis de renommer à
+chaud sans couper la session.
+
+Une seule phase était concernée, mesuré : EXConstants, « Generate app.config
+for prebuilt Constants.manifest ». Après retrait du crochet, elle redevient
+`bash -l -c "$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh"` et
+fonctionne, le chemin n'ayant plus de blanc.
 
 **La liste de courses réelle, dans l'ordre :**
 
 1. `expo@57.0.27` et `expo-build-properties@57.0.20+` ;
 2. `ios.enableSceneSupport: true` dans les plugins d'`app.json` ;
 3. **prebuild** — il réécrit les dix-neuf fichiers d'`ios/` ;
-4. **remettre le crochet du Podfile** (l'espace dans le chemin) ;
-5. **remettre les numéros de build** : ils vivent à trois endroits, dont **deux
+4. **remettre les numéros de build** : ils vivent à trois endroits, dont **deux
    dans le `project.pbxproj`** que le prebuild réécrit ;
-6. `pod install`, puis le contrôle iPad, puis l'archive — avec 26.6 ou 27, au
+5. `pod install`, puis le contrôle iPad, puis l'archive — avec 26.6 ou 27, au
    choix.
+
+⚠️ L'étape « remettre le crochet du Podfile » a disparu de cette liste le
+9 octobre 2026, avec le renommage du dossier. C'est une étape de moins à
+réussir sous pression le jour de la montée — c'était tout l'intérêt de renommer
+AVANT, et pas pendant.
 
 ⚠️ **Une piste moins coûteuse, à examiner le jour venu et pas avant** : comme
 `ios/` est déjà tenu à la main, l'adoption des scènes pourrait peut-être être

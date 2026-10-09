@@ -42,5 +42,8 @@ avant d'y retoucher :
     8 septembre 2026).
   · ⚠️ `versionCode` est dans `app.json` et **doit augmenter à chaque dépôt** ;
     il vaut 1 au 8 septembre 2026.
-- L'espace dans le chemin (`App inventaire`) n'a posé aucun problème à Gradle,
-  au NDK ni à CMake — 642 tâches, aucune reprise à la main.
+- L'espace dans le chemin (le dossier s'appelait alors `App inventaire`) n'a
+  posé aucun problème à Gradle, au NDK ni à CMake — 642 tâches, aucune reprise
+  à la main. **Côté iOS, si** : c'est ce qui a fait renommer le dossier en
+  `appinventaire` le 9 octobre 2026 (fiche 106). Android n'y a jamais été pour
+  rien.
