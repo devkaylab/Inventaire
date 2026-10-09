@@ -229,6 +229,40 @@ qui ne touchent qu'Android (`withAndroidForceDark`, `withAndroidSigning`), et
 `ios/Inventaire/AppDelegate.swift` n'a pas bougé depuis le commit initial. Le
 chemin est donc dégagé.
 
+## ⚠️ L'état réel des versions, relevé le 9 octobre 2026 (et il corrige le plan)
+
+Julien : « je vois que le SDK Expo 58 est en bêta chez React pour le moment. »
+Exact. Relevé sur npm, pas de mémoire :
+
+| étiquette | version |
+|---|---|
+| `latest` | **57.0.27** |
+| `next` | **58.0.6** (préversion) |
+| `sdk-56` | **56.0.23** |
+| **ce projet** | **56.0.11** |
+
+Deux choses en découlent, et la seconde change la recommandation :
+
+1. **On est douze correctifs en retard sur notre propre SDK** (56.0.11 contre
+   56.0.23). C'est gratuit et sans surprise native : même SDK.
+2. **57 est stable et porte déjà le correctif** — il est à 57.0.27, bien au-delà
+   du 57.0.23 qui introduit `enableSceneSupport`. 58, lui, est encore en
+   préversion.
+
+⚠️ **J'avais dit « Expo 58 quand il sera là ». C'était une erreur de plan** :
+cela voulait dire sauter 56 → 58, donc avaler **deux** jeux de ruptures d'un
+coup, et attendre le calendrier de quelqu'un d'autre pour commencer. La montée
+d'un SDK Expo se fait **un majeur à la fois**.
+
+**Le chemin, dans cet ordre :**
+
+1. `56.0.11 → 56.0.23` — hygiène, même SDK, aucun risque natif nouveau ;
+2. `56 → 57` (stable aujourd'hui) **avec `ios.enableSceneSupport: true`** : à ce
+   moment-là le SDK 27 devient compilable, et avril 2027 cesse d'être une
+   échéance ;
+3. `57 → 58` plus tard, en montée de routine — et **on retire l'option**, qui
+   est le défaut à partir de 58.
+
 **Ce que ça veut dire pour le calendrier** : passer à 27 est un **changement de
 SDK Expo**, pas un changement d'Xcode. Ça touche toute la couche native, donc
 c'est un chantier à part, à mener délibérément et bien avant avril 2027 — pas la
