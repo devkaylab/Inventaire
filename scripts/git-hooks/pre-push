@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# ⚠️⚠️ `main` NE DOIT PAS PORTER LE CHANTIER ON-DEMAND (9 octobre 2026).
+#
+# Pourquoi ce garde-fou existe : ce jour-là, une commande destinée à reporter
+# `main` sur `on-demand` a été écrite dans le MAUVAIS SENS —
+# `git merge on-demand` depuis `main`. La fusion a réussi en silence, et `main`
+# a porté pendant quelques minutes les 31 migrations et tout le site d'On-Demand.
+# Rien n'a été poussé, par chance et non par construction : un `git push` de
+# plus aurait déployé sur `www.quantinvo.com` un chantier dont AGENTS.md dit
+# « le projet reste un projet NON PUBLIABLE », et appliqué sa grille tarifaire
+# au site réel.
+#
+# ⚠️ IL NE CITE PAS UNE LISTE DE FICHIERS, il cherche la SIGNATURE du chantier :
+# la migration qui crée la table `missions`. C'est la pièce la plus ancienne et
+# la plus centrale d'On-Demand ; aucune autre raison de la voir sur `main`. Une
+# liste de noms serait périmée à la migration suivante.
+#
+# ⚠️ ET IL S'EFFACE LE JOUR OÙ LA FUSION EST VOULUE : `git push --no-verify`.
+# Ce jour-là, elle sera délibérée, répétée sur une copie jetable, et l'ordre du
+# jour J de `docs/notes/109` aura été suivi.
+#
+# Installé par : git config core.hooksPath scripts/git-hooks
+
+protege="refs/heads/main"
+
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  [ "$remote_ref" = "$protege" ] || continue
+  # Suppression de branche : rien à inspecter.
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+
+  coupable=""
+  for f in $(git ls-tree -r --name-only "$local_sha" -- supabase/migrations 2>/dev/null); do
+    if git show "$local_sha:$f" 2>/dev/null \
+       | grep -Eiq 'create table (if not exists )?public\.missions[[:space:]]*\('; then
+      coupable="$f"
+      break
+    fi
+  done
+
+  if [ -n "$coupable" ]; then
+    echo "" >&2
+    echo "⛔ PUSH REFUSÉ — « main » porte le chantier On-Demand." >&2
+    echo "" >&2
+    echo "   Trouvé : $coupable" >&2
+    echo "   (la migration qui crée la table « missions », signature d'On-Demand)" >&2
+    echo "" >&2
+    echo "   Pousser ceci déploierait On-Demand sur www.quantinvo.com, alors que" >&2
+    echo "   le projet n'est pas publiable. C'est presque arrivé le 9 octobre 2026," >&2
+    echo "   par un « git merge on-demand » écrit dans le mauvais sens." >&2
+    echo "" >&2
+    echo "   Pour remettre main d'aplomb :  git branch -f main origin/main" >&2
+    echo "   Si la fusion est VOULUE      :  git push --no-verify" >&2
+    echo "" >&2
+    exit 1
+  fi
+done
+
+exit 0
