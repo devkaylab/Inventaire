@@ -147,3 +147,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ Le lien d'un e-mail ne se grille plus avant le clic (Microsoft 365)](docs/notes/120-le-lien-d-un-e-mail-ne-se-grille-plus-5-octobre-2026.md)
 - [⚠️ La durée de vie d'un lien : **un seul réglage**, 24 h, et la sortie qui existait déjà](docs/notes/121-la-duree-de-vie-d-un-lien-6-octobre-2026.md)
 - [⚠️ Un en-tête de page ne porte pas de panneau](docs/notes/126-l-entete-ne-porte-pas-de-panneau-9-octobre-2026.md)
+- [⚠️⚠️ Un lien d'invitation ne mène plus à un cul-de-sac](docs/notes/127-un-lien-d-invitation-ne-mene-plus-a-un-cul-de-sac-9-octobre-2026.md)
