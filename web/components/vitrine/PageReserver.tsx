@@ -435,6 +435,47 @@ export function PageReserver() {
    * invité chez quelqu'un d'autre n'en a plus : celui qui paie devient le
    * client, avec la sienne.
    */
+  /**
+   * ⚠️⚠️ **CHANGER D'ÉTAPE VIDE L'ERREUR — UN SEUL `erreur` SERT LES HUIT**
+   * (10 octobre 2026). Julien l'a vu sur l'écran « Regardez votre boîte mail » :
+   * « Le code postal doit comporter cinq chiffres », à propos d'un champ
+   * qu'aucun écran de son parcours n'affichait. Un message posé à l'étape 4
+   * survivait jusqu'à l'étape 7, où plus rien ne permettait de le corriger.
+   *
+   * Toute navigation passe désormais par ici. Un `setEtape` nu qui réapparaît
+   * ramènera le défaut : une garde le refuse.
+   */
+  const allerA = (n: number) => { setErreur(null); setEtape(n) }
+
+  /**
+   * ⚠️ **ET UN REFUS RAMÈNE OÙ IL SE CORRIGE.** Les messages disaient déjà
+   * « Reprenez l'étape 1 », « Reprenez l'étape 3 » — et rien n'y ramenait. Le
+   * client lisait une consigne qu'il devait exécuter à la main, depuis un écran
+   * qui n'avait pas de retour.
+   *
+   * ⚠️ La destination dépend de la FORMULE : « logiciel seul » n'a que deux
+   * étapes (volume, date), la formule équipe en a trois et c'est la première
+   * qui porte l'établissement. Renvoyer à l'étape 3 quelqu'un qui n'en a que
+   * deux l'enverrait sur un écran vide.
+   */
+  const etapeDuRefus = (code: string | undefined): number | null => {
+    if (!code) return null
+    // L'établissement est la première étape de la formule équipe ; pour une
+    // licence, ces refus ne peuvent pas survenir — la base ne les lève plus.
+    const table: Record<string, number> = {
+      adresse: 1,
+      code_postal: 1,
+      magasin: 1,
+      hors_zone: 1,
+      hors_grille: logicielSeul ? 1 : 3,
+      articles: logicielSeul ? 1 : 3,
+      date: 2,
+      trop_tot: 2,
+      engagement: 4,
+    }
+    return table[code] ?? null
+  }
+
   const reserverMaintenant = async () => {
     if (!debut || !resultat.ok) return
     const tranche = TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)
@@ -468,6 +509,11 @@ export function PageReserver() {
         setErreur(r.code === 'siren' ? r.message : null)
         return
       }
+      // ⚠️ L'ÉTAPE D'ABORD, LE MESSAGE ENSUITE : `allerA` vide l'erreur, le
+      // poser avant l'effacerait. L'ordre est le défaut qu'on vient de fermer,
+      // à l'envers.
+      const retour = etapeDuRefus(r.code)
+      if (retour !== null) setEtape(retour)
       setErreur(r.message)
       return
     }
@@ -673,7 +719,7 @@ export function PageReserver() {
                   pendant que `web/lib/legal.ts` est incomplet. */}
               <button type="button" className="btn btn-primary btn-block"
                       disabled={occupe || !venteOuverte()}
-                      onClick={() => { if (connecte) void reserverMaintenant(); else setEtape(5) }}>
+                      onClick={() => { if (connecte) void reserverMaintenant(); else allerA(5) }}>
                 {occupe ? 'Un instant…' : 'Réserver'}
               </button>
               {/* ⚠️ **UN BOUTON MORT DIT POURQUOI.** En formule logiciel, ce
@@ -813,7 +859,7 @@ export function PageReserver() {
                 <Link href={lien('/on-demand')} className="btn btn-ghost">Retour</Link>
                 <button type="button" className="btn btn-primary"
                         disabled={!trancheArticles}
-                        onClick={() => setEtape(2)}>Continuer</button>
+                        onClick={() => allerA(2)}>Continuer</button>
               </div>
             </section>
             {/* ⚠️ **PAS DE VOLET À LA PREMIÈRE QUESTION** (Julien, sur la
@@ -931,7 +977,7 @@ export function PageReserver() {
                   {etape1Prete ? 'Étape 1 sur 3' : 'Étape 1 sur 3 — entrez une adresse pour continuer.'}
                 </span>
                 <button type="button" className="btn btn-primary" disabled={!etape1Prete}
-                        onClick={() => setEtape(2)}>Continuer</button>
+                        onClick={() => allerA(2)}>Continuer</button>
               </div>
             </section>
 
@@ -1091,14 +1137,14 @@ export function PageReserver() {
               )}
 
               <div className="res-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setEtape(1)}>Retour</button>
+                <button type="button" className="btn btn-ghost" onClick={() => allerA(1)}>Retour</button>
                 {/* ⚠️ Pas de « Voir mon prix » pour le logiciel : le prix est
                     DÉJÀ dans le volet, à côté, et le bouton qui engage est
                     juste dessous. Un second bouton pour aller voir ce qu'on a
                     sous les yeux est un pas de plus pour rien. */}
                 {!logicielSeul && (
                 <button type="button" className="btn btn-primary" disabled={!etape2Prete}
-                        onClick={() => setEtape(3)}>
+                        onClick={() => allerA(3)}>
                   Continuer
                 </button>
                 )}
@@ -1183,9 +1229,9 @@ export function PageReserver() {
               </label>
 
               <div className="res-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setEtape(2)}>Retour</button>
+                <button type="button" className="btn btn-ghost" onClick={() => allerA(2)}>Retour</button>
                 <button type="button" className="btn btn-primary" disabled={!etape3Prete}
-                        onClick={() => setEtape(4)}>Voir mon prix</button>
+                        onClick={() => allerA(4)}>Voir mon prix</button>
               </div>
             </section>
             {recap}
@@ -1207,7 +1253,7 @@ export function PageReserver() {
                     : 'Reprenez les questions : l’une d’elles attend encore une réponse.'}
               </p>
               <button type="button" className="btn btn-ghost"
-                      onClick={() => setEtape(resultat.refus === 'trop_tot' ? 2 : 1)}>
+                      onClick={() => allerA(resultat.refus === 'trop_tot' ? 2 : 1)}>
                 Revenir
               </button>
             </div>
@@ -1269,7 +1315,7 @@ export function PageReserver() {
                 <>
                   <button type="button" className="btn btn-primary btn-block"
                           disabled={occupe}
-                          onClick={() => { if (connecte) void reserverMaintenant(); else setEtape(5) }}>
+                          onClick={() => { if (connecte) void reserverMaintenant(); else allerA(5) }}>
                     {occupe ? 'Un instant…' : `Réserver — ${enEuros(resultat.chaine.prixCents)}`}
                   </button>
                   {/* ⚠️ LE REFUS S'AFFICHE SOUS LE BOUTON QUI L'A PROVOQUÉ.
@@ -1293,7 +1339,7 @@ export function PageReserver() {
                     que vous paierez le jour où elle le sera.
                   </p>
                   <button type="button" className="link-btn res-suite"
-                          onClick={() => setEtape(5)}>
+                          onClick={() => allerA(5)}>
                     Voir la suite du parcours
                   </button>
                 </>
@@ -1318,7 +1364,7 @@ export function PageReserver() {
                 </p>
               )}
 
-              <button type="button" className="link-btn" onClick={() => setEtape(1)}>
+              <button type="button" className="link-btn" onClick={() => allerA(1)}>
                 Modifier mes réponses
               </button>
             </div>
@@ -1363,7 +1409,7 @@ export function PageReserver() {
                 et vos factures.
               </p>
               <button type="button" className="link-btn res-bascule"
-                      onClick={() => { setErreur(null); setEtape(6) }}>
+                      onClick={() => allerA(6)}>
                 J’ai déjà un compte
               </button>
 
@@ -1419,7 +1465,7 @@ export function PageReserver() {
               <MentionCollecte finalite="créer votre compte, organiser votre inventaire et vous adresser votre facture" />
 
               <div className="res-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setEtape(4)}>Retour</button>
+                <button type="button" className="btn btn-ghost" onClick={() => allerA(4)}>Retour</button>
                 <button type="button" className="btn btn-primary"
                         disabled={occupe || !compteComplet || !venteOuverte()}
                         onClick={ouvrirMonCompte}>
@@ -1454,7 +1500,7 @@ export function PageReserver() {
               <h1>Se connecter</h1>
               <p className="muted">Le même compte que pour Quantinvo OS, s’il vous en faut un.</p>
               <button type="button" className="link-btn res-bascule"
-                      onClick={() => { setErreur(null); setEtape(5) }}>
+                      onClick={() => allerA(5)}>
                 Créer un compte
               </button>
 
@@ -1483,7 +1529,7 @@ export function PageReserver() {
               </section>
 
               <div className="res-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setEtape(4)}>Retour</button>
+                <button type="button" className="btn btn-ghost" onClick={() => allerA(4)}>Retour</button>
                 <button type="button" className="btn btn-primary"
                         disabled={occupe || !courriel.trim() || !motDePasse}
                         onClick={seConnecter}>
@@ -1585,7 +1631,34 @@ export function PageReserver() {
           </div>
         )}
 
-        {etape === 7 && !missionId && !reference && (
+        {/* ⚠️⚠️ **LE COMPTE EXISTE DÉJÀ : ON NE REDEMANDE PAS DE CODE.**
+            Dernier cul-de-sac du parcours (10 octobre 2026) : le compte venait
+            d'être créé et la connexion réussie, puis la réservation échouait —
+            et l'écran réaffichait « Regardez votre boîte mail » avec un champ
+            de code pour un compte qui existait. Il ne reste alors qu'un geste,
+            et c'est celui-là qu'il faut montrer. */}
+        {etape === 7 && !missionId && !reference && connecte && (
+          <div className="res-prix-page">
+            <div className="res-prix-tete">
+              <h1>Votre compte est prêt</h1>
+              <p className="muted">
+                Il ne manque plus qu’un clic pour poser la date et le volume que
+                vous avez choisis.
+              </p>
+            </div>
+            <div className="res-prix-carte">
+              {erreur && <div className="error" role="alert">{erreur}</div>}
+              <button type="button" className="btn btn-primary btn-block"
+                      disabled={occupe} onClick={() => void reserverMaintenant()}>
+                {occupe ? 'Un instant…' : 'Confirmer et réserver'}
+              </button>
+              <button type="button" className="btn btn-ghost btn-block"
+                      onClick={() => allerA(4)}>Revoir mon prix</button>
+            </div>
+          </div>
+        )}
+
+        {etape === 7 && !missionId && !reference && !connecte && (
           <div className="res-prix-page">
             <div className="res-prix-tete">
               <h1>Regardez votre boîte mail</h1>
@@ -1606,10 +1679,15 @@ export function PageReserver() {
                   avec le code » et n'en offrait aucun. C'est le chemin du
                   prospect qui n'a PAS encore de compte — le seul que cette
                   page ne savait pas servir. */}
+              {/* ⚠️ PLUS DE PLACEHOLDER « 123456 ». Un exemple qui a la forme
+                  exacte de la vraie valeur se lit comme un champ déjà rempli —
+                  c'est le piège corrigé le matin même dans le script des
+                  secrets, et reproduit ici trois heures plus tard. Le libellé
+                  suffit à dire quoi taper. */}
               <div className="field">
                 <label htmlFor={`${uid}-code`}>Le code reçu par e-mail</label>
                 <input id={`${uid}-code`} value={code} inputMode="numeric"
-                       autoComplete="one-time-code" maxLength={8} placeholder="123456"
+                       autoComplete="one-time-code" maxLength={8}
                        onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setErreur(null) }} />
               </div>
               {/* ⚠️ Le mot de passe ne se redemande QUE s'il a disparu : il
@@ -1619,7 +1697,11 @@ export function PageReserver() {
                   haut. */}
               {motDePasse === '' && (
                 <div className="field">
-                  <label htmlFor={`${uid}-mdp2`}>Choisissez votre mot de passe</label>
+                  <label htmlFor={`${uid}-mdp2`}>Votre mot de passe</label>
+                  <p className="field-hint">
+                    Il n’est conservé nulle part : si vous avez rechargé la page,
+                    choisissez-le de nouveau. C’est celui de votre compte.
+                  </p>
                   <input id={`${uid}-mdp2`} type="password" autoComplete="new-password"
                          value={motDePasse}
                          onChange={(e) => { setMotDePasse(e.target.value); setErreur(null) }} />
@@ -1638,7 +1720,7 @@ export function PageReserver() {
                 <li>Annulation gratuite jusqu’à trois jours avant.</li>
               </ul>
               <button type="button" className="btn btn-ghost btn-block"
-                      onClick={() => { setErreur(null); setEtape(6) }}>
+                      onClick={() => allerA(6)}>
                 J’ai déjà un compte — me connecter
               </button>
               <Link href={lien('/')} className="btn btn-ghost btn-block">Revenir à l’accueil</Link>
@@ -1676,7 +1758,7 @@ export function PageReserver() {
               </div>
               {erreur && <p className="field-err">{erreur}</p>}
               <div className="res-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setEtape(4)}>Retour</button>
+                <button type="button" className="btn btn-ghost" onClick={() => allerA(4)}>Retour</button>
                 <button type="button" className="btn btn-primary"
                         disabled={occupe || societe.trim() === '' || !venteOuverte()}
                         onClick={() => void reserverMaintenant()}>

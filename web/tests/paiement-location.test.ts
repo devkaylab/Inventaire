@@ -517,3 +517,53 @@ describe('⚠️⚠️ un tunnel qui demande un code doit savoir le recevoir', (
       .toContain('reserverMaintenant()')
   })
 })
+
+describe('⚠️⚠️ une erreur ne survit pas à son écran', () => {
+  const tunnel = () => sansCommentaires(
+    readFileSync(path.join(racine, 'web/components/vitrine/PageReserver.tsx'), 'utf8'))
+
+  it('toute navigation passe par le chemin qui vide l’erreur', () => {
+    // LE DÉFAUT DU 10 OCTOBRE 2026 : un seul `erreur` sert les huit étapes, et
+    // rien ne le vidait en changeant d'écran. Julien a lu « Le code postal doit
+    // comporter cinq chiffres » sur « Regardez votre boîte mail » — à propos
+    // d'un champ qu'aucun écran de son parcours n'affiche, et depuis un écran
+    // qui n'avait aucune sortie pour le corriger.
+    const src = tunnel()
+    // ⚠️ On ne compte pas les `setEtape` : on vérifie qu'aucun n'est posé sur
+    // un `onClick`, c'est-à-dire sur une navigation. Ceux qui restent sont
+    // dans des gestes qui ont déjà vidé l'erreur, ou qui la posent exprès.
+    const surUnClic = [...src.matchAll(/onClick=\{[^}]*setEtape\(/g)]
+    expect(
+      surUnClic.map((m) => m[0]),
+      'une navigation change d’étape sans vider l’erreur : elle suivra le client',
+    ).toEqual([])
+    expect(src, 'le chemin unique de navigation a disparu')
+      .toMatch(/const allerA = \(n: number\) => \{ setErreur\(null\); setEtape\(n\) \}/)
+  })
+
+  it('⚠️ et un refus ramène là où il se corrige', () => {
+    // Les messages disaient « Reprenez l'étape 1 », « Reprenez l'étape 3 » —
+    // et rien n'y ramenait. Une consigne que le client devait exécuter à la
+    // main, depuis un écran sans retour.
+    const src = tunnel()
+    expect(src, 'la table des refus a disparu').toContain('etapeDuRefus')
+    const table = /const etapeDuRefus[\s\S]*?\n  \}/.exec(src)?.[0] ?? ''
+    for (const code of ['code_postal', 'adresse', 'date', 'engagement']) {
+      expect(table, `le refus « ${code} » ne ramène nulle part`).toContain(code)
+    }
+    // ⚠️ Et la destination dépend de la FORMULE : « logiciel seul » n'a que
+    // deux étapes. Y renvoyer à l'étape 3 ouvrirait un écran vide.
+    expect(table, 'la destination ne tient plus compte de la formule')
+      .toContain('logicielSeul')
+  })
+
+  it('⚠️ et l’écran d’attente du code disparaît dès que le compte existe', () => {
+    // Dernier cul-de-sac : compte créé, connexion réussie, réservation en
+    // échec — et l'écran redemandait un code pour un compte qui existait.
+    const src = tunnel()
+    expect(src, 'l’écran d’attente ne distingue plus le compte déjà créé')
+      .toContain('!missionId && !reference && !connecte')
+    expect(src, 'il n’y a plus d’écran pour le compte créé qui doit réserver')
+      .toContain('!missionId && !reference && connecte')
+  })
+})
