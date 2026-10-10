@@ -376,3 +376,62 @@ du parcours de paiement ne touche à `store_id` — vérifié, pas supposé.
 ⚠️ **Les appels HTTP à Stripe ne sont toujours pas joués.** Ce qui est prouvé
 reste « la base se comporte comme annoncé quand Stripe répond ». Il manque une
 session authentifiée — et elle appartient à Julien.
+
+## 10 octobre 2026 — le volume se tape, et le lieu se dit
+
+**Le compteur d'appareils gardait le plus gros volume déjà choisi.** Julien :
+« si j'ai 43 de base, sélectionner cette tranche appareil reste à 43, si j'en
+ai 15 sélectionner la même tranche garde 15 ». Le setter bornait au minimum du
+rendu EN COURS, c'est-à-dire au minimum de la tranche qu'on quitte : venant de
+150 000 pièces (43 appareils), en annoncer 30 000 demandait 9 et obtenait
+`Math.max(43, 9)`. La règle part dans `appareilsPourPieces(pieces)`, fonction
+du SEUL volume — elle ne peut plus garder de mémoire. Le plancher reste
+appliqué à l'affichage, là où le client a le droit d'en demander plus.
+
+**Huit boutons de tranche → un nombre.** Les huit tranches existent toujours ;
+c'est le haut de la tranche qui engage, porte le prix ferme et la tolérance.
+Mais c'est le nombre qui la désigne, par `trancheDesPieces()` — la recopie de
+la requête de la base (`plafond_articles >= p_articles_max order by asc limit
+1`). ⚠️ Un brouillon écrit AVANT le champ n'a pas de nombre, seulement une
+tranche : sans repli il revenait avec 43 appareils au-dessus d'un champ vide.
+
+**Et l'onboarding de l'abonnement demandait des RÉFÉRENCES.** Changé le même
+jour (sur `main`) : un magasin de 3 000 références porte 50 000 pièces, et
+c'est la seconde qui dit le travail. La réponse change de clé en même temps que
+la question (`volume` → `pieces`) — réutiliser le nom aurait rangé deux
+réponses incomparables sous la même étiquette. Bornes alignées sur la grille à
+la demande, et une garde du chantier compare les deux.
+
+**⚠️⚠️ LE PARCOURS CONNECTÉ NE DEMANDAIT JAMAIS LE LIEU.** Il sautait l'étape
+du compte et réservait depuis l'écran du prix. Invisible tant que la licence se
+passait d'adresse ; depuis que le code postal est exigé (migration
+`20261010250001`), le client qui revient se faisait refuser puis renvoyer à
+l'étape 1 — l'écran du VOLUME, sans champ d'adresse. Le commentaire de
+`etapeDuRefus` affirmait encore « pour une licence, ces refus ne peuvent pas
+survenir » : une note d'état devenue fausse, qui cachait le cul-de-sac.
+L'écran du compte sert désormais les deux profils, et la liste des
+établissements — qui n'existait que dans la formule équipe — est écrite une
+fois et rendue deux.
+
+**Décision de Julien, sur maquette : UN magasin par réservation.** Pas de
+multi-magasin dans le tunnel. Les deux autres lectures avaient été chiffrées
+devant lui : trois boutiques de 12 000 pièces valent 341 € si le prix suit les
+appareils une seule fois (36 000 pièces → 11 appareils), 1 023 € si chaque
+magasin porte sa licence. Il a choisi de ne pas trancher ce prix maintenant et
+de rendre la répétition facile : `?etablissement=<id>` sur chaque bouton
+« Réserver — 341 € », que le tunnel lit et applique.
+
+**⚠️ Le cadre du calendrier, et le piège qu'il cache.** La page passée au
+blanc, le calendrier flottait. Il prend un filet. Mais griser les cases pour
+les voir efface la SEMAINE D'ACCÈS : `--bg` (#f2f3f1) et `--accent-soft`
+(#e7ede9) sont à 25 d'écart par canal, contre 64 depuis le blanc. Essayé, vu,
+repris — la garde pose son seuil entre les deux mesures.
+
+**⚠️ Et une garde aveugle, trouvée en la sabotant.** Son découpage d'étape
+s'arrêtait au premier bloc ; l'étape 4 en a deux (avec prix et sans), et la
+version naïve laissait passer exactement le défaut qu'elle surveille. Le
+sabotage n'est pas une formalité.
+
+**Reste à éprouver** : le parcours connecté de bout en bout (il demande une
+authentification), et le prélèvement du septième jour — toujours le troisième
+des quatre appels Stripe jamais joués.
