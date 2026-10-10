@@ -1666,7 +1666,18 @@ describe('⚠️ le tunnel réserve pour de vrai', () => {
       // satisfait du commentaire — ou, ici, se fâche contre lui.
       .map((m) => ({
         condition: m[1],
-        contenu: sansCommentaires(m[2]).replace(/\s+/g, ' '),
+        // ⚠️ **ET SANS LES LIBELLÉS DE GESTES** (10 octobre 2026). Ce que cette
+        // garde protège est une AFFIRMATION — « votre réservation est
+        // enregistrée » quand elle ne l'est pas. Un bouton, lui, ne dit pas ce
+        // qui EST : il dit ce que le clic fera. Le jour où la branche du
+        // visiteur a reçu son bouton « Confirmer et réserver » — celui qui
+        // manquait, et sans lequel un prospect était en cul-de-sac — la garde
+        // est tombée sur du code juste. Troisième fois qu'elle est reprise, et
+        // toujours pour la même raison : elle lisait des MOTS là où elle doit
+        // lire une STRUCTURE.
+        contenu: sansCommentaires(m[2])
+          .replace(/<(button|Link)\b[\s\S]*?<\/\1>/g, ' ')
+          .replace(/\s+/g, ' '),
       }))
     expect(branches.length, 'les branches de l’écran d’arrivée ne se lisent plus')
       .toBeGreaterThan(1)
