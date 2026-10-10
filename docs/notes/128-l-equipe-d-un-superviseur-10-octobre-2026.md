@@ -131,3 +131,50 @@ découpage. **Troisième fois** que ce piège se présente.
 **L'écran du superviseur n'a pas été exercé avec deux superviseurs** : il
 faudrait un second compte. Ce qui est tenu à sa place : le banc sur le jumeau,
 qui joue exactement ce cas en base.
+
+## ⚠️⚠️ Un bouton rangé dans un menu n'existe pas (10 octobre, le soir)
+
+« Tu n'as pas ajouté de bouton renvoyer le lien sur admin. » Il **y était**,
+depuis la correction du matin — dans le menu « ⋯ » de la rangée, en tête de
+liste. Personne ne l'a trouvé.
+
+Le menu « ⋯ » de `/equipe` n'est pas un rangement, c'est une **distance** :
+il existe pour éloigner « Supprimer le compte » de ce qui est anodin et
+réversible. Y déposer le renvoi du lien faisait exactement l'inverse de ce
+que le menu sert à faire — mettre le seul geste attendu face à une ligne
+ambre au même endroit que le geste définitif, derrière le même clic
+d'ouverture. Le superviseur, lui, l'avait en clair : deux écrans, deux
+réponses au même fait.
+
+Il est désormais rendu **dans la cellule ambre**, sous « Mot de passe à
+créer » : le manque et son remède dans la même cellule, là où le regard est
+déjà. Le menu garde les gestes de gouvernance (changer le rôle, retirer les
+accès, supprimer). `align-self: flex-start` n'est pas du goût : `.membres > *`
+est une colonne flex étirée, sans lui le bouton prend toute la largeur de la
+colonne et se lit comme une barre.
+
+### Et la bande de résumé mentait encore
+
+« Mot de passe à créer » comptait `!m.is_active`. Le badge et le bouton
+avaient été corrigés le matin, **pas le compteur au-dessus d'eux** : la bande
+pouvait annoncer « 0 » au-dessus de lignes ambre. Troisième endroit du même
+contresens sur le même écran — la leçon n'est pas « corriger le badge », c'est
+**chercher tous les lecteurs d'un signal qu'on remplace**.
+
+### ⚠️ Une garde gelait le défaut
+
+`web/tests/admin-entreprise.test.ts` exigeait `toContain('!m.is_active')`
+(21 août 2026). Elle serait tombée au vert sur l'écran faux et au rouge sur
+le juste. Elle exige maintenant `!m.compte_finalise` **et refuse le retour de
+l'ancien**. Deuxième garde de ce genre en deux jours (l'autre :
+`pages-connectees.test.ts`). Une garde écrite avec un signal faux rend ce
+signal obligatoire.
+
+Trois sabotages sur `renvoyer-le-lien.test.ts`, trois morsures — dont celle
+du bouton neutralisé par un `false &&`, qui ne mordait pas avant d'ancrer la
+garde sur la CONDITION et plus seulement sur la présence du bouton.
+
+## ⚠️ Ce qui n'est pas vérifié (suite)
+
+**L'écran de l'administrateur n'a pas été regardé après cette correction** :
+il demande une session d'administrateur, que seul Julien ouvre.
