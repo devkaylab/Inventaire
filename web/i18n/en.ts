@@ -1959,4 +1959,7 @@ export const en: Dictionnaire = {
   'Vous n’avez encore ajouté personne dans ce magasin.': 'You have not added anyone to this store yet.',
   'Les autres compteurs du magasin': 'The store’s other counters',
   'Ajoutés par un autre superviseur. Vous pouvez les mettre sur vos inventaires ; seul leur superviseur ou l’administrateur peut les retirer.': 'Added by another supervisor. You can put them on your inventories; only their supervisor or the administrator can remove them.',
+
+  // L'écran « Lien expiré » envoie lui-même, depuis le 10 octobre 2026.
+  ", un lien vient d'être envoyé. Pensez à vérifier vos indésirables.": ', a link has just been sent. Remember to check your spam folder.',
 }

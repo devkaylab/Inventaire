@@ -14,6 +14,7 @@ import { Chargement } from '@/components/Chargement'
 import { LangueToggle } from '@/components/LangueToggle'
 import { useTraduction } from '@/lib/i18n'
 import { lireJetonDuLien, ouvrirLeLien, type JetonDuLien } from '@/lib/jetonDuLien'
+import { envoyerLienDeConnexion } from '@/lib/envoyerLienDeConnexion'
 
 /**
  * Finalisation de compte, à l'arrivée du lien reçu par e-mail.
@@ -48,6 +49,12 @@ export default function WelcomePage() {
   const [done, setDone] = useState(false)
   const [jeton, setJeton] = useState<JetonDuLien | null>(null)
   const [ouverture, setOuverture] = useState(false)
+  // Le renvoi depuis l'écran « Lien expiré » : on ne connaît plus l'adresse,
+  // puisqu'il n'y a ni jeton ni session. On la demande.
+  const [relanceMail, setRelanceMail] = useState('')
+  const [relanceEnvoi, setRelanceEnvoi] = useState(false)
+  const [relanceFaite, setRelanceFaite] = useState(false)
+  const [relanceErreur, setRelanceErreur] = useState<string | null>(null)
   const actif = useRef(true)
 
   // Remplit le formulaire depuis la session ouverte ; sans session, la page
@@ -107,6 +114,31 @@ export default function WelcomePage() {
     })()
     return () => { actif.current = false; unsubscribe?.() }
   }, [])
+
+  /**
+   * ⚠️ CE BOUTON ENVOIE, IL NE RENVOIE PAS VERS UN FORMULAIRE. Première
+   * version (9 octobre) : un lien vers « Mot de passe oublié ». Julien a
+   * cliqué « Recevoir un nouveau lien » et n'a rien reçu — mesuré ensuite dans
+   * les journaux, ZÉRO appel à la fonction d'envoi. Le bouton disait ce qu'il
+   * ne faisait pas : il remplaçait un cul-de-sac par un détour.
+   */
+  async function renvoyer(e: React.FormEvent) {
+    e.preventDefault()
+    const mail = relanceMail.trim()
+    setRelanceErreur(null)
+    if (!mail.includes('@')) {
+      setRelanceErreur(t('Indiquez votre adresse e-mail.'))
+      return
+    }
+    setRelanceEnvoi(true)
+    const ok = await envoyerLienDeConnexion(mail, `${window.location.origin}/bienvenue`)
+    setRelanceEnvoi(false)
+    if (!ok) {
+      setRelanceErreur(t("L'e-mail n'a pas pu être envoyé pour le moment. Réessayez dans quelques instants."))
+      return
+    }
+    setRelanceFaite(true)
+  }
 
   async function continuer() {
     if (!jeton) return
@@ -204,11 +236,29 @@ export default function WelcomePage() {
               de l'adresse dans `auth.users`, et une personne invitée y est dès
               l'invitation). Cet écran envoyait chercher la personne qui avait
               invité — un détour qui a fini par faire supprimer un compte.
-              On ne recopie pas le formulaire d'envoi : on pointe celui qui
-              existe, éprouvé, et qui ne dit jamais si l'adresse existe. */}
-          <Link href="/mot-de-passe-oublie" className="btn btn-primary btn-block">
-            {t('Recevoir un nouveau lien')}
-          </Link>
+              ⚠️ Et le remplacer par un LIEN vers cette page était un second
+              détour : l'envoi se fait ici. */}
+          {relanceFaite ? (
+            <p className="sub">
+              {t('Si un compte existe pour ')}<strong>{relanceMail.trim()}</strong>
+              {t(", un lien vient d'être envoyé. Pensez à vérifier vos indésirables.")}
+            </p>
+          ) : (
+            <form onSubmit={renvoyer}>
+              <div className="field">
+                <label htmlFor="relance-mail">{t('Adresse e-mail')}</label>
+                <input
+                  id="relance-mail" type="email" autoComplete="email"
+                  value={relanceMail} placeholder="marie.dupont@exemple.fr"
+                  onChange={(e) => { setRelanceMail(e.target.value); setRelanceErreur(null) }}
+                />
+              </div>
+              {relanceErreur && <div className="error" role="alert">{relanceErreur}</div>}
+              <button className="btn btn-primary btn-block" disabled={relanceEnvoi} style={{ marginTop: 12 }}>
+                {relanceEnvoi ? t('Envoi…') : t('Recevoir un nouveau lien')}
+              </button>
+            </form>
+          )}
           <Link href="/login" className="btn btn-ghost btn-block" style={{ marginTop: 10 }}>
             {t('J’ai déjà un mot de passe : me connecter')}
           </Link>
