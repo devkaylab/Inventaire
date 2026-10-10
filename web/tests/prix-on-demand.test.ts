@@ -24,6 +24,7 @@ import {
 } from '../lib/prixOnDemand'
 import { prixFerme as prixAffiche } from '../lib/prixOnDemand'
 import { APPAREILS_MAX, OFFRES, SUPPLEMENT } from '../lib/offres'
+import { PIECES_EN_STOCK } from '../lib/inscription'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -1837,5 +1838,35 @@ describe('⚠️ le volume annoncé désigne la tranche', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
     expect(sansCommentaires, 'le tunnel n’utilise plus appareilsPourPieces')
       .toContain('appareilsPourPieces')
+  })
+})
+
+/**
+ * ⚠️ **LES DEUX PRODUITS POSENT LA MÊME QUESTION.** L'onboarding de
+ * l'abonnement demande le volume de stock, le tunnel de la location aussi
+ * (10 octobre 2026). Si leurs bornes divergent, une réponse ne se transporte
+ * plus de l'un à l'autre sans retraduction — et c'est exactement le genre
+ * d'écart qu'on ne voit qu'en lisant deux fichiers côte à côte.
+ *
+ * La garde vit ICI parce que `prixOnDemand` n'existe pas sur `main` : elle
+ * tombe avec le chantier, et ne peut pas empêcher le site de se déployer.
+ */
+describe('⚠️ l’abonnement et la location comptent le stock pareil', () => {
+  it('les bornes de l’onboarding sont des plafonds de la grille', () => {
+    const plafonds = new Set(TRANCHES_ARTICLES.map((t) => t.max))
+    const bornes = PIECES_EN_STOCK
+      .map((v) => Number(v.valeur))
+      .filter((n) => Number.isFinite(n))
+    expect(bornes.length, 'plus aucune borne chiffrée').toBeGreaterThan(2)
+    const etrangeres = bornes.filter((n) => !plafonds.has(n))
+    expect(etrangeres, `bornes absentes de la grille à la demande : ${etrangeres.join(', ')}`)
+      .toEqual([])
+  })
+
+  it('⚠️ et ni l’une ni l’autre ne reparle de références', () => {
+    const fautives = PIECES_EN_STOCK.filter((v) => /référence/i.test(v.libelle))
+    expect(fautives.map((v) => v.libelle)).toEqual([])
+    const tunnel = TRANCHES_ARTICLES.filter((t) => /référence/i.test(t.nom))
+    expect(tunnel.map((t) => t.nom)).toEqual([])
   })
 })
