@@ -258,3 +258,99 @@ la garde « l'échec est annoncé » cherchait `toast.error` dans tout le corps 
 la fonction, or celui du `catch` suffisait — le refus, qui est le cas qui est
 arrivé, pouvait redevenir muet sans que rien ne tombe. Réancrée sur la
 BRANCHE de refus. Une garde posée sur un corps entier ne garde que le corps.
+
+## ⚠️⚠️ Trois écritures justes, et rien à l'écran
+
+Julien envoie la demande depuis le compte de Marc, puis : « tu dis que la
+demande également dans mes notifs, non ça n'y est pas, puis je ne vois nulle
+part une demande, il faut une section dans équipe, le lien du mail doit y
+emmener ».
+
+Mesuré avant de répondre : la demande **était** en base (`id` 1, état
+« en_attente », motif, demandeur), la notification **était** posée pour
+Camille (type `demande_suppression`, non lue), l'e-mail **était** parti. Le
+parcours d'écriture était bon de bout en bout. **Deux trous à la lecture**, et
+chacun suffisait à tout annuler.
+
+### 1. Une liste blanche ne prévient jamais de ce qu'elle jette
+
+`mes_notifications` filtre les types :
+
+```sql
+and n.type in ('invitation_inventaire', 'compteur_actif',
+               'inventaire_volumineux', 'forfait_trop_juste')
+```
+
+J'avais ajouté les deux nouveaux types à la contrainte de la table, au
+composant qui les affiche, à l'e-mail — **et pas à cette liste**. Son propre
+commentaire disait, mot pour mot : « un type déposé sans être ajouté ICI
+n'apparaît jamais dans la cloche, sans que rien ne le signale ».
+L'avertissement était écrit à l'endroit exact de l'oubli, et je suis passé
+devant.
+
+La leçon n'est pas « lire les commentaires ». C'est qu'**un type de
+notification vit à TROIS endroits** — la contrainte, la liste blanche, le
+composant — et que l'oubli d'un seul est silencieux. La garde compare
+désormais les deux listes : elle extrait les `case '…'` du composant et exige
+que la liste blanche les porte tous. Elle aurait attrapé ce défaut.
+
+⚠️ Conséquence tirée tout de suite : le refus **n'a pas** son propre type. Il
+réutilise `demande_suppression_traitee` avec un drapeau `refusee` dans les
+données — un drapeau ne traverse qu'un seul des trois endroits.
+
+### 2. Aucune page ne montrait les demandes
+
+L'administrateur recevait une notification et un e-mail pour un geste
+qu'**aucun écran ne proposait**. Pour y répondre il devait retenir le nom, le
+retrouver dans la liste des membres, et deviner que « Supprimer le compte »
+était la réponse à la demande.
+
+`ca_list_team` rend maintenant `demandes_suppression` (en attente seulement),
+et `/equipe` leur donne une section **avant les invitations** — elle porte le
+geste le plus lourd de la page. Le motif y est en clair : celui qui tranche
+sur un effacement définitif ne doit pas aller le chercher.
+
+L'ancre `#demandes-suppression` est écrite à trois endroits (l'e-mail, la
+notification, la page) ; une garde tient l'accord. ⚠️ Et elle est amenée **à
+la main** par un effet : la section n'existe pas quand le navigateur cherche
+l'ancre, elle attend `ca_list_team`. Sans ça le lien du courriel ouvre le haut
+de la page.
+
+### 3. Et une demande pouvait ne jamais sortir de la liste
+
+Non demandé, mais la section le rendait inévitable : le seul chemin ouvert
+était la suppression. Un administrateur qui ne veut **pas** supprimer n'avait
+aucun geste — la demande restait « en attente » pour toujours, et le
+superviseur n'apprenait jamais la décision. C'est le cul-de-sac du 9 octobre,
+à l'autre bout du même parcours.
+
+`ca_refuser_suppression` : administrateur seulement, borne sur l'entreprise de
+la **demande**, `for update` (deux administrateurs peuvent répondre en même
+temps — le second doit lire l'état écrit par le premier), refus impossible
+deux fois, et le demandeur prévenu.
+
+⚠️ **Le commentaire du refus est FACULTATIF**, alors que le motif de la
+demande est obligatoire. Ce n'est pas une asymétrie par négligence : celui qui
+demande fait arbitrer quelqu'un d'autre sur un geste définitif, il doit sa
+raison ; celui qui refuse ne détruit rien. Exiger un texte pour ne RIEN faire
+ajouterait une friction à la décision prudente.
+
+### Éprouvé, et les gardes
+
+Banc sur la production en transaction annulée, **9 constats rendus en table**
+(pas en `raise notice` : le CLI les avale) : l'administrateur voit la demande
+avec nom, motif et demandeur ; le superviseur ne lit pas la liste de
+l'entreprise ; il ne peut pas refuser sa propre demande ; l'administrateur
+refuse ; le demandeur reçoit la notification avec `refusee` et le commentaire ;
+**la cloche la laisse passer des deux côtés** ; deux refus sont impossibles ;
+la demande quitte la liste. Banc vérifié mordant (assertion inversée → échec),
+et la demande réelle retrouvée en « en_attente » après le `rollback`.
+
+Quatre sabotages des gardes, quatre morsures.
+
+### ⚠️ Deux gardes de plus qui gelaient un défaut
+
+`admin-entreprise.test.ts` exigeait `!m.is_active` sur l'écran équipe — elle
+serait tombée au vert sur l'écran faux. Et le journal d'entreprise réclame un
+libellé pour toute action écrite en base : `suppression_refusee` l'a signalé
+tout seul. Ces deux-là ont travaillé.

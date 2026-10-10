@@ -23,6 +23,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { errorMessage } from '@/lib/errors'
 import { DemandeSuppression } from '@/components/dashboard/DemandeSuppression'
+import { RefusSuppression } from '@/components/dashboard/RefusSuppression'
 import { getMyCompany, type Company } from '@/lib/account'
 import { Chargement } from '@/components/Chargement'
 import { locale, t, tn, useTraduction } from '@/lib/i18n'
@@ -59,7 +60,25 @@ type Invitation = {
   store_ids: string[]
   created_at: string
 }
-type TeamCA = { stores: Store[]; members: Member[]; invitations: Invitation[] }
+/**
+ * Une demande de suppression en attente, vue par l'administrateur.
+ *
+ * ⚠️ `cible` peut être nul : la colonne est `on delete set null`, donc le
+ * compte a pu disparaître par un autre chemin. `cible_nom` est figé pour
+ * exactement cette raison — sans lui, la demande n'aurait plus de sujet.
+ */
+type DemandeEnAttente = {
+  id: number
+  cible: string | null
+  cible_nom: string
+  motif: string
+  created_at: string
+  par: string
+}
+type TeamCA = {
+  stores: Store[]; members: Member[]; invitations: Invitation[]
+  demandes_suppression: DemandeEnAttente[]
+}
 
 type Counter = {
   id: string; full_name: string | null; email: string | null
@@ -102,6 +121,11 @@ export default function EquipePage() {
   // ⚠️ Un superviseur DEMANDE la suppression, il ne la décide pas : le geste
   // définitif reste à l'administrateur d'entreprise.
   const [aSupprimer, setASupprimer] = useState<{ id: string; nom: string; email: string | null } | null>(null)
+  // ⚠️ ET LE REFUS EXISTE, sinon la section est un cul-de-sac : la seule sortie
+  // serait la suppression, et un administrateur qui ne veut PAS supprimer
+  // laisserait la demande « en attente » pour toujours — le superviseur
+  // n'apprenant jamais la décision.
+  const [aRefuser, setARefuser] = useState<DemandeEnAttente | null>(null)
 
   const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
 
@@ -129,6 +153,19 @@ export default function EquipePage() {
   }, [guard, charger])
 
   async function rafraichir() { await charger(estAdmin) }
+
+  /**
+   * ⚠️ L'ANCRE EST AMENÉE À LA MAIN, et ce n'est pas un raffinement : l'e-mail
+   * et la notification mènent à `/equipe#demandes-suppression`, mais la
+   * section n'existe pas encore au moment où le navigateur cherche l'ancre —
+   * elle attend la réponse de `ca_list_team`. Sans cet effet, le lien du
+   * courriel ouvre le haut de la page et l'administrateur cherche encore.
+   */
+  useEffect(() => {
+    if (!ca || window.location.hash !== '#demandes-suppression') return
+    document.getElementById('demandes-suppression')
+      ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [ca])
 
   async function inviterSuperviseur(firstName: string, lastName: string, email: string, storeIds: string[]) {
     setBusy(true)
@@ -573,6 +610,18 @@ export default function EquipePage() {
         </Modal>
       )}
 
+      {aRefuser && (
+        <Modal title={t('Refuser cette demande')} onClose={() => setARefuser(null)}>
+          {(fermer) => (
+            <RefusSuppression
+              demande={aRefuser}
+              onFermer={() => { fermer(); setARefuser(null) }}
+              onFait={rafraichir}
+            />
+          )}
+        </Modal>
+      )}
+
       {/* ⚠️ La bande compte ce que `ca_list_team` a déjà rendu — aucun appel de
           plus. L'ambre n'y désigne que les mots de passe jamais créés : c'est le
           seul fait de cette page qui appelle un geste.
@@ -606,7 +655,76 @@ export default function EquipePage() {
 
       {estAdmin ? (
         <>
-          {/* ── Invitations en attente, en tête ──
+          {/* ── Demandes de suppression, AVANT TOUT LE RESTE ──
+              ⚠️⚠️ Elles passent devant les invitations parce qu'elles portent le
+              geste le plus lourd de la page : un compte effacé ne revient pas.
+              Et parce qu'elles n'étaient NULLE PART (10 octobre 2026) —
+              l'administrateur recevait une notification et un e-mail pour un
+              geste qu'aucun écran ne proposait : il devait retenir le nom, le
+              retrouver dans la liste des membres, et deviner que « Supprimer le
+              compte » était la réponse à la demande.
+
+              ⚠️ L'identifiant `demandes-suppression` est l'ANCRE du lien de
+              l'e-mail et de la notification : le renommer casse les deux. */}
+          {(ca?.demandes_suppression ?? []).length > 0 && (
+            <section className="admin-section" id="demandes-suppression">
+              <div className="admin-section-head">
+                <div>
+                  <h2>{t('Demandes de suppression')}</h2>
+                  <p className="section-note">
+                    {t('Un superviseur demande, vous décidez. Supprimer est définitif ; refuser conserve le compte.')}
+                  </p>
+                </div>
+                <span className="dash-sub-n">{(ca?.demandes_suppression ?? []).length}</span>
+              </div>
+              <div className="req-list">
+                {(ca?.demandes_suppression ?? []).map((d) => {
+                  // Le membre, pour que la confirmation de suppression reste
+                  // exactement celle de la liste (recopie du nom, e-mail).
+                  const m = membres.find((x) => x.id === d.cible)
+                  return (
+                    <div className="req-row req-row-block req-row-attente" key={d.id}>
+                      <div>
+                        <div className="req-name">
+                          {d.cible_nom || t('Sans nom')}
+                          <span className="pill pill-role">{t('Compteur')}</span>
+                        </div>
+                        <div className="muted small">
+                          {t('Demandé par %{par} le %{date}', { par: d.par || t('un superviseur'), date: jourCourt(d.created_at) })}
+                          {m?.email ? ` · ${m.email}` : ''}
+                        </div>
+                        {/* Le motif en clair : l'administrateur tranche sur un
+                            geste définitif, il ne doit pas aller le chercher. */}
+                        <div className="small" style={{ marginTop: 6 }}>
+                          <strong>{t('Motif')} : </strong>{d.motif}
+                        </div>
+                      </div>
+                      <div className="req-actions">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setARefuser(d)}
+                        >{t('Refuser la demande')}</button>
+                        {/* ⚠️ Sans cible il n'y a plus de compte à supprimer :
+                            il a disparu par un autre chemin. Le refus reste,
+                            lui, pour classer la demande. */}
+                        {m && <span className="action-sep" aria-hidden="true" />}
+                        {m && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => supprimerCompte(m)}
+                          >{t('Supprimer le compte')}</button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* ── Invitations en attente ──
               C'est la seule chose de cette page qui attend un geste : elle passe
               devant, comme « Ventes en cours » sur la console. Quand il n'y en a
               aucune, la section disparaît et la page s'ouvre sur les filtres. */}

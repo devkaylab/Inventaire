@@ -76,6 +76,7 @@ const ACTIONS_ADMIN: Record<string, string> = {
   admin_entreprise_revoque: 'Administrateur d’entreprise révoqué',
   compte_supprime: 'Compte supprimé',
   suppression_demandee: 'Suppression demandée',
+  suppression_refusee: 'Suppression refusée',
   statut_demande_entreprise: 'Statut de demande modifié',
   demande_entreprise_supprimee: 'Demande d’entreprise supprimée',
 }

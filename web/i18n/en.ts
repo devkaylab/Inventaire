@@ -1975,6 +1975,27 @@ export const en: Dictionnaire = {
   '%{nom} a choisi son mot de passe : son compte de compteur est prêt.': '%{nom} has chosen their password: their counter account is ready.',
 
   // Demander la suppression d'un compte : le superviseur demande, l'admin décide.
+  // ⚠️ Et l'administrateur peut REFUSER : sans ça la demande ne quitte jamais
+  // la liste, et le superviseur n'apprend jamais la décision (10 octobre 2026).
+  'Demandes de suppression': 'Deletion requests',
+  'Un superviseur demande, vous décidez. Supprimer est définitif ; refuser conserve le compte.': 'A supervisor requests, you decide. Deleting is permanent; declining keeps the account.',
+  'Demandé par %{par} le %{date}': 'Requested by %{par} on %{date}',
+  'Demandé par %{par} — %{motif}': 'Requested by %{par} — %{motif}',
+  'Refuser la demande': 'Decline the request',
+  'Refuser cette demande': 'Decline this request',
+  'Refus…': 'Declining…',
+  'Refus impossible.': 'Cannot decline.',
+  'Commentaire (facultatif)': 'Comment (optional)',
+  'Elle revient sur l’inventaire de novembre.': 'They are back for the November inventory.',
+  'Le compte est conservé tel quel. %{par} reçoit une notification lui disant que la demande est refusée.': 'The account is kept as is. %{par} receives a notification saying the request was declined.',
+  'Demande refusée. %{par} en est informé.': 'Request declined. %{par} has been notified.',
+  'Demande refusée': 'Request declined',
+  'La suppression du compte de %{nom} est refusée.': 'The deletion of %{nom}’s account was declined.',
+  'La suppression du compte de %{nom} est refusée — %{motif}': 'The deletion of %{nom}’s account was declined — %{motif}',
+  'un superviseur': 'a supervisor',
+  'refusé la suppression du compte de %{c}': 'declined the deletion of %{c}’s account',
+  'Cette demande a déjà été traitée.': 'This request has already been handled.',
+  'Demande introuvable.': 'Request not found.',
   'Demander la suppression du compte': 'Request account deletion',
   'Demander la suppression de ce compte': 'Request this account’s deletion',
   'Demande de suppression': 'Deletion request',

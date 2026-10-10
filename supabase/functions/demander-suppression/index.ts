@@ -86,7 +86,12 @@ Deno.serve(async (req) => {
       { intitule: 'Demandé par', valeur: qui },
       { intitule: 'Motif', valeur: motif },
     ],
-    bouton: { libelle: 'Ouvrir Mon équipe', lien: `${appUrl}/equipe` },
+    // ⚠️ L'ANCRE, PAS LA PAGE : le lien doit tomber SUR la demande. Sans elle
+    // l'administrateur arrive en haut de « Mon équipe » et cherche encore ce
+    // que l'e-mail vient de lui annoncer (Julien, 10 octobre 2026). Le nom de
+    // l'ancre est écrit dans `web/app/equipe/page.tsx` : le renommer d'un côté
+    // casse l'autre, et une garde tient l'accord.
+    bouton: { libelle: 'Voir la demande', lien: `${appUrl}/equipe#demandes-suppression` },
     note: 'La suppression est définitive : le compte et ses accès disparaissent.',
     raison: 'Vous recevez ce message parce que vous administrez cette entreprise sur Quantinvo.',
     siteUrl: appUrl,
