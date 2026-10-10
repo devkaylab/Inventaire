@@ -1687,7 +1687,7 @@ describe('⚠️ le tunnel réserve pour de vrai', () => {
     // Les preuves possibles : ce que `reserverMaMission` rend, et rien d'autre.
     const client = lire('web/lib/onDemandClient.ts')
     const rendu = /return \{\s*\n?\s*ok: true,([\s\S]*?)\n  \}/.exec(
-      client.slice(client.indexOf('export async function reserverMaMission')))
+      client.slice(client.indexOf('export function lireReservation')))
     const preuves = [...(rendu?.[1] ?? '').matchAll(/^\s*(\w+)[,:]/gm)].map((m) => m[1])
     expect(preuves.length, 'ce que rend la réservation ne se lit plus').toBeGreaterThan(1)
 
@@ -1701,7 +1701,20 @@ describe('⚠️ le tunnel réserve pour de vrai', () => {
 
   it('⚠️ la raison sociale se demande sur refus du serveur, elle ne se devine pas', () => {
     const src = sansCommentaires(tunnel())
-    expect(src).toMatch(/r\.code === 'entreprise'/)
+    // ⚠️ Le traitement d'un refus est passé dans `traiterLeRefus` le
+    // 10 octobre 2026, parce que la réservation arrive désormais par DEUX
+    // chemins. La garde lit l'aiguillage là où il est, et vérifie surtout
+    // qu'il n'y en a qu'UN : deux copies enverraient le même refus sur deux
+    // écrans différents selon le chemin emprunté.
+    const aiguillage = /const traiterLeRefus =[\s\S]*?\n  \}/.exec(src)?.[0] ?? ''
+    expect(aiguillage, 'l’aiguillage des refus a disparu').not.toBe('')
+    expect(aiguillage, 'un refus d’entreprise ne mène plus à l’écran qui la demande')
+      .toMatch(/=== 'entreprise'/)
+    expect(aiguillage, 'un refus de SIREN ne mène plus à l’écran qui le demande')
+      .toMatch(/=== 'siren'/)
+    const copies = [...src.matchAll(/setEntrepriseAFournir\(true\)/g)]
+    expect(copies.length, 'l’écran de l’entreprise s’ouvre depuis deux endroits')
+      .toBe(1)
     // Et la page ne rejoue pas la règle de la base en relisant le rôle.
     expect(src, 'l’écran recopie la règle du serveur').not.toMatch(/'employee'|'counter'/)
   })
@@ -1742,10 +1755,14 @@ describe('⚠️ ce que le navigateur envoie, la base le lit', () => {
     const lues = new Set([...corps.matchAll(/p_reponses\s*->>\s*'(\w+)'/g)].map((m) => m[1]))
     expect(lues.size, 'les clés lues par la base ne se lisent plus').toBeGreaterThan(12)
 
+    // ⚠️ L'objet vit dans `corpsReservation` depuis le 10 octobre 2026 : il
+    // part par DEUX chemins — le navigateur d'un client connecté, et la
+    // fonction edge qui ouvre le compte — et c'est précisément pour qu'il
+    // n'en existe qu'un.
     const src = lire('web/lib/onDemandClient.ts')
-    const appel = src.slice(src.indexOf('p_reponses: {'))
-    const envoi = appel.slice(0, appel.indexOf('\n    },'))
-    const envoyees = new Set([...envoi.matchAll(/^\s{6}(\w+):/gm)].map((m) => m[1]))
+    const appel = src.slice(src.indexOf('export function corpsReservation'))
+    const envoi = appel.slice(0, appel.indexOf('\n}'))
+    const envoyees = new Set([...envoi.matchAll(/^\s{4}(\w+):/gm)].map((m) => m[1]))
 
     const oubliees = [...lues].filter((c) => !envoyees.has(c))
     expect(oubliees, `clés lues par la base mais jamais envoyées : ${oubliees.join(', ')}`).toEqual([])
@@ -1757,9 +1774,9 @@ describe('⚠️ ce que le navigateur envoie, la base le lit', () => {
     const corps = derniereDefinition('reserver_ma_mission').corps
     const lues = new Set([...corps.matchAll(/p_reponses\s*->>\s*'(\w+)'/g)].map((m) => m[1]))
     const src = lire('web/lib/onDemandClient.ts')
-    const appel = src.slice(src.indexOf('p_reponses: {'))
-    const envoi = appel.slice(0, appel.indexOf('\n    },'))
-    const envoyees = [...envoi.matchAll(/^\s{6}(\w+):/gm)].map((m) => m[1])
+    const appel = src.slice(src.indexOf('export function corpsReservation'))
+    const envoi = appel.slice(0, appel.indexOf('\n}'))
+    const envoyees = [...envoi.matchAll(/^\s{4}(\w+):/gm)].map((m) => m[1])
     expect(envoyees.length, 'l’appel ne se lit plus').toBeGreaterThan(12)
     const inutiles = envoyees.filter((c) => !lues.has(c))
     expect(inutiles, `envoyées mais jamais lues : ${inutiles.join(', ')}`).toEqual([])

@@ -200,38 +200,54 @@ export const REFUS_RESERVATION: Record<string, string> = {
  * divergeraient le jour où elle change. Il tente, et si le serveur réclame la
  * raison sociale (`entreprise`), il la demande. Le serveur décide.
  */
-export async function reserverMaMission(
-  r: Reponses,
-): Promise<{ ok: true; missionId: string; reference: string; prixCents: number }
-         | { ok: false; code: string; message: string }> {
-  const { data, error } = await supabase.rpc('reserver_ma_mission', {
-    p_reponses: {
-      entreprise: r.entreprise,
-      siren: r.siren,
-      magasin: r.magasin,
-      adresse: r.adresse,
-      code_postal: r.codePostal,
-      ville: r.ville,
-      secteur: r.secteur,
-      surface_vente: r.surfaceVente,
-      surface_reserve: r.surfaceReserve,
-      articles_min: r.articlesMin,
-      articles_max: r.articlesMax,
-      references_min: r.referencesMin,
-      references_max: r.referencesMax,
-      code_barres: r.codeBarres,
-      formule: r.formule,
-      appareils: r.appareils,
-      debut: r.debut.toISOString(),
-      moment: r.moment,
-      engagement: true,
-      cgv_version: VERSION_CONDITIONS,
-    },
-  })
-  if (error) return { ok: false, code: '', message: error.message }
-  // ⚠️ `mission_id` REMONTE DEPUIS LE 7 OCTOBRE, et il est nécessaire : c'est
-  // lui qui sert à aller chercher la carte (`missionEmpreinte`). La référence
-  // est faite pour l'œil du client, pas pour désigner une ligne.
+/**
+ * Ce que la base attend, à partir de ce que l'écran tient.
+ *
+ * ⚠️ **ÉCRIT UNE FOIS, ENVOYÉ PAR DEUX CHEMINS** (10 octobre 2026). La
+ * réservation part soit d'ici, pour un client déjà connecté, soit de la
+ * fonction edge qui ouvre le compte — où elle doit être faite DANS LE MÊME
+ * GESTE que la création, sans quoi un refus laisse un compte mort derrière
+ * lui. Deux copies de cet objet divergeraient au premier champ ajouté, et le
+ * parcours le moins joué des deux porterait l'erreur.
+ */
+export function corpsReservation(r: Reponses): Record<string, unknown> {
+  return {
+    entreprise: r.entreprise,
+    siren: r.siren,
+    magasin: r.magasin,
+    adresse: r.adresse,
+    code_postal: r.codePostal,
+    ville: r.ville,
+    secteur: r.secteur,
+    surface_vente: r.surfaceVente,
+    surface_reserve: r.surfaceReserve,
+    articles_min: r.articlesMin,
+    articles_max: r.articlesMax,
+    references_min: r.referencesMin,
+    references_max: r.referencesMax,
+    code_barres: r.codeBarres,
+    formule: r.formule,
+    appareils: r.appareils,
+    debut: r.debut.toISOString(),
+    moment: r.moment,
+    engagement: true,
+    cgv_version: VERSION_CONDITIONS,
+  }
+}
+
+/** Ce qu'une réponse de `reserver_ma_mission` contient, refus compris. */
+export type RetourReservation =
+  | { ok: true; missionId: string; reference: string; prixCents: number }
+  | { ok: false; code: string; message: string }
+
+/**
+ * Lire la réponse de la base, d'où qu'elle vienne.
+ *
+ * ⚠️ La fonction edge renvoie le MÊME objet quand elle réserve pour un compte
+ * qu'elle vient d'ouvrir : le tunnel traite les deux refus de la même façon,
+ * et renvoie sur le même écran.
+ */
+export function lireReservation(data: unknown): RetourReservation {
   const rep = data as {
     success?: boolean; code?: string; mission_id?: string
     reference?: string; prix_cents?: number
@@ -249,4 +265,24 @@ export async function reserverMaMission(
     reference: rep.reference,
     prixCents: rep.prix_cents ?? 0,
   }
+}
+
+/**
+ * Réserver pour un client DÉJÀ CONNECTÉ.
+ *
+ * ⚠️ Un visiteur sans compte ne passe PAS par ici : son compte et sa
+ * réservation se font dans le même geste, côté serveur, sans quoi un refus
+ * laisserait un compte sans entreprise derrière lui.
+ */
+export async function reserverMaMission(
+  reponses: Record<string, unknown>,
+): Promise<RetourReservation> {
+  const { data, error } = await supabase.rpc('reserver_ma_mission', {
+    p_reponses: reponses,
+  })
+  if (error) return { ok: false, code: '', message: error.message }
+  // ⚠️ `mission_id` REMONTE DEPUIS LE 7 OCTOBRE, et il est nécessaire : c'est
+  // lui qui sert à aller chercher la carte (`missionEmpreinte`). La référence
+  // est faite pour l'œil du client, pas pour désigner une ligne.
+  return lireReservation(data)
 }

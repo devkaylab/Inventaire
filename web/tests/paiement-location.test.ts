@@ -507,15 +507,51 @@ describe('⚠️⚠️ un tunnel qui demande un code doit savoir le recevoir', (
     }
   })
 
-  it('⚠️ et le compte créé enchaîne, il ne laisse pas sur un écran d’attente', () => {
-    // Il est venu réserver, pas ouvrir un compte. La même raison que
-    // `seConnecter()`, qui réserve dans la foulée depuis le 5 octobre.
+  /**
+   * ⚠️⚠️ **LE COMPTE ET LA RÉSERVATION PARTENT ENSEMBLE** (règle de Julien,
+   * 10 octobre 2026 : « ne crée pas de compte tant que c'est pas fait, ça ne
+   * sert à rien et ça nous complique la vie »).
+   *
+   * Cette garde exigeait l'inverse : que la réservation REPARTE après la
+   * création. C'était déjà un progrès sur l'écran d'attente qu'elle a
+   * remplacé — mais ça laissait un intervalle, et dans cet intervalle tout
+   * pouvait arriver : un refus du serveur, un onglet fermé, une coupure. Ce
+   * qui restait alors était un compte sans entreprise, sans magasin, sans
+   * inventaire, et sans aucune sortie. Il n'y a plus d'intervalle.
+   */
+  it('⚠️⚠️ la réservation part AVEC la création, pas après', () => {
     const tunnel = sansCommentaires(
       readFileSync(path.join(racine, 'web/components/vitrine/PageReserver.tsx'), 'utf8'))
     const apresCreation = tunnel.slice(tunnel.indexOf("action: 'creer'"))
+    const appel = apresCreation.slice(0, apresCreation.indexOf('})'))
+    expect(appel, 'la création de compte ne porte pas la réservation')
+      .toContain('reservation:')
+
+    // Et rien ne réserve APRÈS, dans la même fonction : ce serait réouvrir
+    // l'intervalle qu'on vient de fermer.
     const suite = apresCreation.slice(0, apresCreation.indexOf('\n  }'))
-    expect(suite, 'le compte est créé mais la réservation ne repart pas')
-      .toContain('reserverMaintenant()')
+    expect(suite, 'le compte créé réserve ensuite : l’intervalle est rouvert')
+      .not.toContain('reserverMaintenant()')
+  })
+
+  it('⚠️⚠️ et le serveur supprime le compte si la réservation est refusée', () => {
+    // C'est là que la règle se tient vraiment : le navigateur peut disparaître
+    // entre les deux appels, le serveur non.
+    const fn = sansCommentaires(lire('supabase/functions/inscription/index.ts'))
+    const creer = fn.slice(fn.indexOf("action === 'creer'"))
+    // ⚠️ On s'arrête à l'action suivante, pas à un commentaire :
+    // `sansCommentaires` les a déjà retirés.
+    const bloc = creer.slice(0, creer.indexOf("action === 'payer'"))
+    expect(bloc, 'la création de compte ne réserve pas').toContain('reserver_ma_mission')
+    expect(bloc, 'un compte survit à une réservation refusée')
+      .toContain('deleteUser')
+
+    // ⚠️ ET ELLE RÉSERVE AVEC UNE SESSION, PAS AVEC LA CLÉ DE SERVICE :
+    // `reserver_ma_mission` lit `auth.uid()`, qui serait nul, et la mission
+    // n'appartiendrait à personne.
+    const avantRpc = bloc.slice(0, bloc.indexOf('reserver_ma_mission'))
+    expect(avantRpc, 'la réservation part sans session : `auth.uid()` serait nul')
+      .toContain('signInWithPassword')
   })
 })
 

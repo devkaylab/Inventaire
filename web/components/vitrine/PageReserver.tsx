@@ -33,7 +33,10 @@ import { MentionCollecte } from '@/components/MentionCollecte'
 import { passwordError } from '@/lib/password'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
 import { chercherParSiren } from '@/lib/registre'
-import { mesEtablissements, reserverMaMission, type Etablissement } from '@/lib/onDemandClient'
+import {
+  corpsReservation, lireReservation, mesEtablissements, reserverMaMission,
+  type Etablissement,
+} from '@/lib/onDemandClient'
 import { useTraduction } from '@/lib/i18n'
 import { Logo } from '@/components/Logo'
 import { euros } from '@/lib/offres'
@@ -606,12 +609,18 @@ export function PageReserver() {
     return table[code] ?? null
   }
 
-  const reserverMaintenant = async () => {
-    if (!debut || !resultat.ok) return
+  /**
+   * Les réponses, telles que la base les attend.
+   *
+   * ⚠️ Assemblées une fois : la réservation part par DEUX chemins — depuis
+   * le navigateur quand le client est déjà connecté, depuis la fonction edge
+   * quand elle ouvre le compte — et les deux doivent envoyer le même objet.
+   */
+  const mesReponses = (): Record<string, unknown> | null => {
+    if (!debut || !resultat.ok) return null
     const tranche = TRANCHES_ARTICLES.find((t) => t.cle === trancheArticles)
-    if (!tranche) { setErreur('Choisissez un volume de pièces.'); return }
-    setErreur(null); setOccupe(true)
-    const r = await reserverMaMission({
+    if (!tranche) return null
+    return corpsReservation({
       entreprise: societe.trim(),
       siren: siren.trim(),
       magasin: magasin.trim(),
@@ -631,22 +640,33 @@ export function PageReserver() {
       debut,
       moment,
     })
-    setOccupe(false)
-    if (!r.ok) {
-      if (r.code === 'entreprise' || r.code === 'siren') {
-        setEntrepriseAFournir(true)
-        setEtape(8)
-        setErreur(r.code === 'siren' ? r.message : null)
-        return
-      }
-      // ⚠️ L'ÉTAPE D'ABORD, LE MESSAGE ENSUITE : `allerA` vide l'erreur, le
-      // poser avant l'effacerait. L'ordre est le défaut qu'on vient de fermer,
-      // à l'envers.
-      const retour = etapeDuRefus(r.code)
-      if (retour !== null) setEtape(retour)
-      setErreur(r.message)
+  }
+
+  /**
+   * Où un refus se corrige — un seul endroit, quel que soit le chemin.
+   *
+   * ⚠️ L'ÉTAPE D'ABORD, LE MESSAGE ENSUITE : `allerA` vide l'erreur, le
+   * poser avant l'effacerait.
+   */
+  const traiterLeRefus = (code: string, message: string) => {
+    if (code === 'entreprise' || code === 'siren') {
+      setEntrepriseAFournir(true)
+      setEtape(8)
+      setErreur(code === 'siren' ? message : null)
       return
     }
+    const retour = etapeDuRefus(code)
+    if (retour !== null) setEtape(retour)
+    setErreur(message)
+  }
+
+  const reserverMaintenant = async () => {
+    const reponses = mesReponses()
+    if (!reponses) { setErreur('Choisissez un volume de pièces.'); return }
+    setErreur(null); setOccupe(true)
+    const r = await reserverMaMission(reponses)
+    setOccupe(false)
+    if (!r.ok) { traiterLeRefus(r.code, r.message); return }
     setReference(r.reference)
     setMissionId(r.missionId)
     // Le parcours est consommé : le garder ferait réapparaître cette
@@ -733,33 +753,69 @@ export function PageReserver() {
    * redemande alors, et c'est bien une CRÉATION puisque le compte n'existe
    * pas encore.
    */
+  /**
+   * ⚠️⚠️ **LE COMPTE ET LA RÉSERVATION PARTENT ENSEMBLE** (règle de Julien,
+   * 10 octobre 2026 : « ne crée pas de compte tant que c'est pas fait »).
+   *
+   * Le compte se créait ici, et la réservation suivait, depuis le navigateur.
+   * Entre les deux tout pouvait arriver — un refus du serveur, un onglet
+   * fermé, une coupure — et ce qui restait était un compte sans entreprise,
+   * sans magasin, sans inventaire. Il se connecte, il arrive sur « Mon
+   * compte », et il n'y a RIEN à faire. C'est arrivé à Julien, et ça serait
+   * arrivé à tout prospect qui abandonne en route.
+   *
+   * Les deux se font désormais dans le même appel. Si la réservation est
+   * refusée, le serveur SUPPRIME le compte et rend le refus : on revient sur
+   * l'écran qui le corrige, et le prochain envoi redemandera un code. Un code
+   * de plus vaut mieux qu'un compte mort.
+   */
   const confirmerLeCode = async () => {
     setErreur(null)
     const faible = passwordError(motDePasse)
     if (faible) { setErreur(faible); return }
     if (code.trim().length < 4) { setErreur('Entrez le code reçu par e-mail.'); return }
+    const reponses = mesReponses()
+    if (!reponses) { setErreur('Choisissez un volume de pièces.'); return }
     setOccupe(true)
     const r = await edge({
       action: 'creer', email: courriel.trim().toLowerCase(), code: code.trim(),
       password: motDePasse, firstName: prenom.trim(), lastName: nomFamille.trim(),
+      reservation: reponses,
     })
+    setOccupe(false)
     if (!r?.success) {
-      setOccupe(false)
-      setErreur(r?.error ?? 'Création impossible.')
+      // ⚠️ Un refus de la RÉSERVATION se corrige sur un écran précis ; un
+      // refus du CODE se corrige ici. Les distinguer, c'est la différence
+      // entre « reprenez l'étape 1 » et un message qui ne mène nulle part.
+      const code = (r?.code as string) ?? ''
+      const estUnRefusDeReservation = code === 'entreprise' || code === 'siren'
+        || etapeDuRefus(code) !== null
+      if (estUnRefusDeReservation) {
+        const refus = lireReservation({ code })
+        setCode('')
+        traiterLeRefus(code, refus.ok ? '' : refus.message)
+        return
+      }
+      setErreur((r?.error as string) ?? 'Création impossible.')
       return
     }
+
+    // Le compte existe ET la réservation est prise : on ouvre la session pour
+    // la suite (la carte), mais plus rien ne dépend d'elle.
+    const lue = lireReservation(r.reservation)
     const { error } = await supabase.auth.signInWithPassword({
       email: courriel.trim().toLowerCase(), password: motDePasse,
     })
-    if (error) {
-      setOccupe(false)
-      setErreur('Compte créé. Choisissez « J’ai déjà un compte » pour continuer.')
-      return
+    setMotDePasse(''); setCode('')
+    if (!error) {
+      setConnecte(true)
+      setCourrielConnecte(courriel.trim().toLowerCase())
     }
-    setMotDePasse(''); setCode(''); setConnecte(true)
-    setCourrielConnecte(courriel.trim().toLowerCase())
-    setOccupe(false)
-    await reserverMaintenant()
+    if (!lue.ok) { setErreur(lue.message); return }
+    setReference(lue.reference)
+    setMissionId(lue.missionId)
+    try { window.localStorage.removeItem(REPRISE) } catch { /* indisponible */ }
+    setEtape(7)
   }
 
   /**

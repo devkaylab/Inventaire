@@ -246,16 +246,81 @@ Deno.serve(async (req) => {
     // ⚠️ `handle_new_user` accepte cette création parce que le code vient
     // d'être consommé, et pour AUCUNE autre raison. Le profil qui en sort n'a
     // pas d'entreprise et ne voit rien.
-    const { error: err2 } = await client.auth.admin.createUser({
+    const { data: cree, error: err2 } = await client.auth.admin.createUser({
       email,
       password: motDePasse,
       email_confirm: true,
       user_metadata: { first_name: prenom, last_name: nom },
     })
-    if (err2) {
-      return json({ success: false, error: 'La création du compte a échoué.', detail: err2.message }, 400)
+    if (err2 || !cree?.user) {
+      return json({ success: false, error: 'La création du compte a échoué.', detail: err2?.message }, 400)
     }
-    return json({ success: true })
+
+    /**
+     * ⚠️⚠️ **LE COMPTE ET LA RÉSERVATION, OU NI L'UN NI L'AUTRE.**
+     *
+     * Règle de Julien, 10 octobre 2026 : « ne crée pas de compte tant que
+     * c'est pas fait, ça ne sert à rien et ça nous complique la vie ».
+     *
+     * Le compte était créé ICI, et la réservation partait APRÈS, depuis le
+     * navigateur. Entre les deux, tout pouvait arriver — un refus du serveur,
+     * un onglet fermé, une coupure. Ce qui restait alors était un compte
+     * `employee` sans entreprise, sans magasin, sans inventaire : il se
+     * connecte, il arrive sur « Mon compte », et il n'y a RIEN. C'est
+     * exactement ce qui est arrivé à Julien, et à n'importe quel prospect qui
+     * abandonne en route.
+     *
+     * Les deux se font donc ici, dans le même geste. Si la réservation est
+     * refusée, **le compte est supprimé** et le refus remonte tel quel : le
+     * client corrige et redemande un code. Un code de plus à saisir vaut mieux
+     * qu'un compte mort pour toujours.
+     *
+     * ⚠️ **ON OUVRE UNE SESSION POUR RÉSERVER, on n'appelle pas avec la clé de
+     * service.** `reserver_ma_mission` lit `auth.uid()` : avec la clé de
+     * service il serait nul, et la fonction attacherait la mission à
+     * personne. Le mot de passe vient d'être posé, la session est légitime.
+     */
+    const reservation = corps.reservation as Record<string, unknown> | undefined
+    if (!reservation) return json({ success: true })
+
+    const sien = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+    )
+    const annuler = async (code: string, message: string, detail?: string) => {
+      await client.auth.admin.deleteUser(cree.user!.id)
+      return json({ success: false, code, error: message, detail }, 400)
+    }
+
+    const { data: connexion, error: errSession } =
+      await sien.auth.signInWithPassword({ email, password: motDePasse })
+    if (errSession || !connexion?.session) {
+      return annuler('session', 'Le compte n’a pas pu être ouvert.', errSession?.message)
+    }
+
+    const { data: reponse, error: errRpc } =
+      await sien.rpc('reserver_ma_mission', { p_reponses: reservation })
+    if (errRpc) {
+      return annuler('reservation', 'La réservation n’a pas pu être prise.', errRpc.message)
+    }
+    const r = reponse as {
+      success?: boolean; code?: string; mission_id?: string
+      reference?: string; prix_cents?: number
+    } | null
+    if (!r?.success || !r.reference || !r.mission_id) {
+      // Le refus remonte TEL QUEL : c'est le tunnel qui sait sur quel écran
+      // il se corrige, et lui seul.
+      return annuler(r?.code ?? 'reservation', 'La réservation n’a pas pu être prise.')
+    }
+
+    return json({
+      success: true,
+      reservation: {
+        mission_id: r.mission_id,
+        reference: r.reference,
+        prix_cents: r.prix_cents ?? 0,
+      },
+    })
   }
 
   // ─── 3. Le paiement ──────────────────────────────────────────────────────
