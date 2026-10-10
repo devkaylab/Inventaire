@@ -895,3 +895,54 @@ describe('⚠️ le SIREN remplit la raison sociale', () => {
       .not.toMatch(/registre|chercherParSiren|introuvable/)
   })
 })
+
+/**
+ * ⚠️⚠️ **L'ÉCRAN « AU NOM DE QUELLE ENTREPRISE ? » EST UNE SORTIE DE
+ * SECOURS** (10 octobre 2026, en cherchant pourquoi un compte créé la veille
+ * « ne marchait pas »).
+ *
+ * On n'y arrive QUE parce qu'une réservation vient d'échouer : la base a
+ * répondu `entreprise` ou `siren`. C'est donc l'écran où l'on peut le moins
+ * se permettre une boucle — et il laissait passer un SIREN quelconque, que la
+ * base refusait aussitôt, ramenant ici sans que rien n'indique quoi changer.
+ *
+ * ⚠️ La base traite un `employee` comme un nouveau venu : elle annule son
+ * entreprise, puis exige raison sociale ET SIREN valide. Un compteur invité
+ * par quelqu'un d'autre passe donc toujours par ici.
+ */
+describe('⚠️ la sortie de secours ne boucle pas', () => {
+  const src = () => sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+  const ecran8 = (texte: string) => {
+    const d = texte.indexOf('{etape === 8 &&')
+    return d < 0 ? '' : texte.slice(d)
+  }
+
+  it('la base exige un SIREN VALIDE pour fabriquer l’entreprise', () => {
+    // On le relit dans la migration : si elle se relâchait, l'écran pourrait
+    // se relâcher aussi — mais pas avant.
+    const { corps } = derniereDefinition('reserver_ma_mission')
+    expect(corps, 'la création d’entreprise n’exige plus de SIREN valide')
+      .toMatch(/siren_valide\([\s\S]{0,60}?\)\s*then[\s\S]{0,120}?'siren'/)
+    expect(corps, 'un compteur n’est plus traité comme un nouveau venu')
+      .toMatch(/v_role = 'employee'[\s\S]{0,80}?v_company := null/)
+  })
+
+  it('⚠️ et l’écran l’exige aussi, au lieu de laisser la base refuser', () => {
+    const bloc8 = ecran8(src())
+    expect(bloc8, 'l’écran de l’entreprise a disparu').not.toBe('')
+    const bouton = /disabled=\{occupe[\s\S]{0,200}?\}/.exec(bloc8)?.[0] ?? ''
+    expect(bouton, 'le bouton de secours a disparu').not.toBe('')
+    expect(bouton, 'un SIREN quelconque repart vers la base, qui le refusera')
+      .toContain('sirenValide(siren)')
+  })
+
+  it('⚠️ le SIREN y remplit la raison sociale, comme ailleurs', () => {
+    // Deux champs pour un seul fait, sur l'écran de quelqu'un qui vient
+    // d'échouer : c'est là qu'on lui en demande le moins.
+    const bloc8 = ecran8(src())
+    expect(bloc8, 'le SIREN de la sortie de secours ne reprend pas le registre')
+      .toContain('reprendreLaSociete')
+    expect(bloc8, 'un SIREN refusé n’affiche rien sous le champ')
+      .toMatch(/!sirenValide\(siren\) && \(/)
+  })
+})

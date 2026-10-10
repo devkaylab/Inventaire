@@ -2040,14 +2040,31 @@ export function PageReserver() {
                   <label htmlFor={`${uid}-siren2`}>SIREN</label>
                   <input id={`${uid}-siren2`} value={siren} inputMode="numeric"
                          placeholder="123 456 789"
-                         onChange={(e) => setSiren(formaterSiren(e.target.value))} />
+                         onChange={(e) => {
+                           const v = formaterSiren(e.target.value)
+                           setSiren(v)
+                           void reprendreLaSociete(v)
+                         }} />
+                  {siren.trim() !== '' && !sirenValide(siren) && (
+                    <p className="field-hint">
+                      {messageSiren(siren) ?? 'Un SIREN compte neuf chiffres.'}
+                    </p>
+                  )}
                 </div>
               </div>
               {erreur && <p className="field-err">{erreur}</p>}
               <div className="res-actions">
                 <button type="button" className="btn btn-ghost" onClick={() => allerA(4)}>Retour</button>
+                {/* ⚠️⚠️ **CET ÉCRAN EST LA SORTIE D'UN PROSPECT ÉCHOUÉ**, et il
+                    laissait passer un SIREN quelconque — la base le refusait,
+                    on revenait ici, et il recommençait sans savoir quoi
+                    changer. C'est l'écran où l'on peut le moins se permettre une
+                    boucle : on n'y arrive QUE parce qu'une réservation vient
+                    d'échouer. (10 octobre 2026, en cherchant pourquoi un compte
+                    créé la veille « ne marchait pas ».) */}
                 <button type="button" className="btn btn-primary"
-                        disabled={occupe || societe.trim() === '' || !venteOuverte()}
+                        disabled={occupe || societe.trim() === ''
+                          || !sirenValide(siren) || !venteOuverte()}
                         onClick={() => void reserverMaintenant()}>
                   {occupe ? 'Un instant…' : 'Réserver'}
                 </button>
