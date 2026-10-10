@@ -217,3 +217,26 @@ describe('⚠️⚠️ la page a son propre jeton, et les cartes un trait', () =
       .toEqual([])
   })
 })
+
+describe('⚠️ les sections de la vitrine se délimitent', () => {
+  const css = readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8')
+
+  it('une section sans bande reprend le gris que la page portait', () => {
+    // Les sections de la vitrine alternent : bande blanche, bande d'encre, et
+    // entre elles des sections SANS classe de bande, transparentes, qui
+    // montraient le fond gris de la page. La page passée au blanc, elles sont
+    // devenues blanches et l'alternance a disparu — « il faut garder les
+    // délimitations de section d'accueil » (10 octobre 2026).
+    expect(css, 'les sections nues ne reprennent plus de fond : l’alternance disparaît')
+      .toMatch(/\.section:not\(\[class\*="bande-"\]\)\s*\{[^}]*background:\s*var\(--bg\)/)
+  })
+
+  it('⚠️ et l’exclusion porte sur le PRÉFIXE, pas sur une liste de bandes', () => {
+    // Citer `.bande-surface, .bande-encre, .bande-accent` obligerait à revenir
+    // ici à chaque bande neuve — et la bande oubliée perdrait sa couleur sans
+    // que rien ne le dise.
+    const regle = /\.section:not\(\[class\*="([^"]+)"\]\)/.exec(css)?.[1]
+    expect(regle, 'la règle des sections nues ne se lit plus').toBeTruthy()
+    expect(regle, 'l’exclusion cite une bande précise au lieu du préfixe').toBe('bande-')
+  })
+})
