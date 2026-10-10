@@ -39,9 +39,26 @@ export const FREQUENCES: Choix[] = [
   { valeur: 'jamais', libelle: 'Sans rythme fixe' },
 ]
 
-export const VOLUMES: Choix[] = [
-  { valeur: '1000', libelle: 'Moins de 1 000 références' },
-  { valeur: '10000', libelle: '1 000 à 10 000' },
+/**
+ * ⚠️⚠️ **ON DEMANDE DES PIÈCES, PAS DES RÉFÉRENCES** (Julien, 10 octobre
+ * 2026 : « ce n'est pas la bonne question »). La question comptait les
+ * RÉFÉRENCES — les lignes du catalogue. Or ce que le commerçant connaît, et
+ * ce qui dimensionne un inventaire, c'est le nombre de PIÈCES en rayon : un
+ * magasin de 3 000 références peut en porter 50 000. Les deux nombres sont à
+ * un ordre de grandeur l'un de l'autre, et c'est le second qui dit le travail.
+ *
+ * ⚠️ **LA RÉPONSE CHANGE DE CLÉ EN MÊME TEMPS** (`volume` → `pieces`). Les
+ * demandes déjà déposées portent `volume`, qui comptait des références :
+ * garder la clé aurait rendu deux réponses incomparables sous le même nom,
+ * sans que rien ne le dise. Les anciennes gardent leur sens, les neuves aussi.
+ *
+ * ⚠️ Les bornes sont celles de la grille à la demande (2 000, 10 000, 50 000,
+ * 150 000) : les deux produits posent la même question, qu'on loue ou qu'on
+ * s'abonne, et une réponse se transporte de l'un à l'autre.
+ */
+export const PIECES_EN_STOCK: Choix[] = [
+  { valeur: '2000', libelle: 'Moins de 2 000 pièces' },
+  { valeur: '10000', libelle: '2 000 à 10 000' },
   { valeur: '50000', libelle: '10 000 à 50 000' },
   { valeur: '150000', libelle: '50 000 à 150 000' },
   { valeur: '150000+', libelle: 'Plus de 150 000' },

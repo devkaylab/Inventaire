@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { TRANCHES, densite, libelleTranche, totalAnnuel, trancheDe } from '../lib/tarifs'
+import { PIECES_EN_STOCK } from '../lib/inscription'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '../lib/siren'
 
 const racine = join(__dirname, '..', '..')
@@ -169,4 +170,47 @@ describe('une demande d’inscription prévient tout le monde (22 août 2026)', 
     expect(page).not.toContain("rpc('submit_company_request'")
     expect(page).not.toContain("functions.invoke('submit-company-request'")
   })
+})
+
+/**
+ * ⚠️⚠️ **L'ONBOARDING DEMANDE DES PIÈCES, PAS DES RÉFÉRENCES** (Julien,
+ * 10 octobre 2026). Il comptait les références — les lignes du catalogue —
+ * quand ce qui dimensionne un inventaire, et ce que le commerçant sait, c'est
+ * le nombre de pièces en rayon. Les deux sont à un ordre de grandeur l'un de
+ * l'autre : se tromper de question, c'est se tromper d'un facteur dix.
+ */
+describe('⚠️ le stock se compte en pièces', () => {
+  it('aucune tranche ne parle encore de références', () => {
+    const fautives = PIECES_EN_STOCK.filter((v) => /référence/i.test(v.libelle))
+    expect(fautives.map((v) => v.libelle), 'la question est revenue aux références')
+      .toEqual([])
+  })
+
+  it('la question posée à l’écran parle de pièces', () => {
+    const page = readFileSync(
+      join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
+    const label = /\{t\('Combien de ([^']*?) en stock[^']*'\)\}/.exec(page)?.[1]
+    expect(label, 'la question du stock ne se lit plus').toBeTruthy()
+    expect(label, 'la question du stock est redevenue une question de références')
+      .toContain('pièces')
+  })
+
+  /**
+   * ⚠️ **LA RÉPONSE A CHANGÉ DE CLÉ EN MÊME TEMPS QUE LA QUESTION.** Les
+   * demandes déjà déposées portent `volume`, qui comptait des références.
+   * Réutiliser ce nom rangerait deux réponses incomparables sous la même
+   * étiquette, sans que rien ne le dise.
+   */
+  it('⚠️ et elle ne se range plus sous l’ancienne clé', () => {
+    const page = readFileSync(
+      join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
+    const sansCommentaires = page
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+    const envoi = /const reponses = useMemo\(\(\) => \(\{([\s\S]*?)\}\)/.exec(sansCommentaires)?.[1]
+    expect(envoi, 'les réponses envoyées ne se lisent plus').toBeTruthy()
+    expect(envoi, 'la réponse repart sous `volume`, qui comptait des références')
+      .not.toMatch(/\bvolume\b/)
+    expect(envoi, 'la réponse en pièces ne part pas').toMatch(/\bpieces\b/)
+  })
+
 })
