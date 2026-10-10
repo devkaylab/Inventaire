@@ -1500,6 +1500,20 @@ body:has(.site-footer) .theme-toggle { display: none; }
    en vie, « supprimer » l'efface. Le filet les empêche de se lire comme une
    paire de boutons interchangeables. */
 .action-sep { width: 1px; height: 14px; background: var(--hairline); }
+
+/* ⚠️ LES RANGÉES D'UNE ÉQUIPE ALIGNENT LEURS BOUTONS, LES AUTRES NON.
+   Relevé par Julien le 10 octobre 2026, capture à l'appui : deux compteurs
+   l'un sous l'autre, l'un avec le badge « Mot de passe à créer » et trois
+   boutons, l'autre sans badge et deux boutons — leurs rangées d'actions ne
+   finissaient pas au même bord, et ça se voit immédiatement.
+
+   La cause n'est pas un oubli : `.admin-section .req-row` est délibérément en
+   `flex-start` (voir plus haut) parce qu'un `space-between` laissait 868 px de
+   vide entre le texte et les boutons sur les écrans larges. On ne défait pas
+   cette décision — on la borne : ici le contenu est déjà plafonné à 760 px,
+   donc pousser les actions au bord ne rouvre pas ce vide-là, et deux rangées
+   voisines partagent enfin leur bord droit. */
+.req-row-alignee > .req-actions { margin-left: auto; align-items: center; }
 /* Une invitation n'est pas encore quelqu'un : le trait pointillé le dit sans
    un mot, et sans reprendre l'ambre déjà pris par « mot de passe à créer ». */
 .req-row-attente { border-style: dashed; border-color: var(--border-strong); background: transparent; }

@@ -704,7 +704,7 @@ export default function EquipePage() {
           const autres = s.counters.filter((c) => !c.a_moi)
 
           const rang = (c: Counter) => (
-            <div className="req-row" key={c.id}>
+            <div className="req-row req-row-alignee" key={c.id}>
               <div>
                 <div className="req-name">
                   {c.full_name || t('Sans nom')}
