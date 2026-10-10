@@ -145,13 +145,22 @@ Deno.serve(async (req) => {
 
     try {
       if (data?.outcome === 'compte_existant') {
+        // ⚠️ **ON DONNE LE LIEN, ON NE LE DÉCRIT PAS** (Julien, 10 octobre
+        // 2026). Le message renvoyait vers « la page de connexion » pour
+        // réinitialiser un mot de passe sans jamais en donner l'adresse :
+        // quelqu'un qui a oublié son mot de passe doit chercher sa sortie. Le
+        // premier paragraphe tombe au passage — la note du bas dit déjà quoi
+        // faire si ce n'était pas lui.
         const m = emailQuantinvo({
           titre: 'Vous avez déjà un compte Quantinvo',
           paragraphes: [
-            'Quelqu’un vient de demander un code d’inscription avec cette adresse. Vous avez déjà un compte : il n’y a rien à créer.',
-            'Connectez-vous avec votre mot de passe habituel. Si vous l’avez oublié, la page de connexion sait le réinitialiser.',
+            'Connectez-vous avec votre mot de passe habituel. Si vous l’avez oublié, demandez-en un nouveau avec le lien ci-dessous.',
           ],
           bouton: { libelle: 'Me connecter', lien: `${site()}/login` },
+          lienSecondaire: {
+            libelle: 'Choisir un nouveau mot de passe',
+            lien: `${site()}/mot-de-passe-oublie`,
+          },
           note: 'Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message : rien n’a été créé.',
           raison: 'Vous recevez ce message parce que cette adresse a été saisie sur la page d’inscription de Quantinvo.',
           siteUrl: site(),
