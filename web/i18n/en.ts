@@ -127,6 +127,7 @@ export const en: Dictionnaire = {
   ". Son rapport et ses écarts restent consultables ; le détail des scans a été effacé douze mois après la clôture, comme annoncé dans la politique de confidentialité. La feuille « Détail » de l’export est donc vide, et l’inventaire ne se rouvre plus.": ". Its report and variances remain available; the scan detail was erased twelve months after closing, as stated in the privacy policy. The “Detail” sheet of the export is therefore empty, and the inventory can no longer be reopened.",
   ". Une confirmation vous est demandée, puis la demande part.": ". You are asked to confirm, then the request is sent.",
   "2 000 à 10 000": "2,000 to 10,000",
+  "Un SIREN compte neuf chiffres.": "A SIREN is nine digits.",
   "1 outil": "1 tool",
   "1 à 2 appareils": "1 to 2 devices",
   "1. Scannez ce QR code avec votre application d'authentification.": "1. Scan this QR code with your authenticator app.",

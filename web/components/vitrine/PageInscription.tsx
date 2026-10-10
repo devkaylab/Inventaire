@@ -28,7 +28,7 @@ import { AccepterConditions } from '@/components/AccepterConditions'
 import { VERSION_CONDITIONS } from '@/lib/conditions'
 import { PasswordRules } from '@/components/PasswordRules'
 import { passwordError } from '@/lib/password'
-import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
+import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
 
 /**
  * ⚠️ Un exemple qui NE DÉSIGNE PERSONNE. Un numéro valide en placeholder invite
@@ -484,7 +484,25 @@ export function PageInscription() {
                              }
                            }
                          }} />
-                  {siren && messageSiren(siren) && <p className="field-hint">{t(messageSiren(siren) ?? '')}</p>}
+                  {/* ⚠️⚠️ **LE SIREN DU CLIENT EST UNE ADRESSE DE ROUTAGE**, pas
+                      un renseignement (Julien, 10 octobre 2026). C'est une des
+                      quatre nouvelles mentions de la facturation électronique :
+                      absent, faux ou rattaché à une entreprise radiée, la
+                      facture n'est pas LIVRÉE — elle ne part pas et revient
+                      sans dire pourquoi. Un numéro mal tapé ne coûte donc plus
+                      un aller-retour, il coûte un impayé.
+
+                      ⚠️ **ET ON NE BLOQUE QUE SUR LA CLÉ, PAS SUR LE REGISTRE.**
+                      `chercherParSiren` rend `introuvable` AUSSI pour une
+                      société qui a demandé la non-diffusion de ses données :
+                      elle existe, on ne peut rien en dire. Refuser dessus
+                      accuserait un vrai client de ne pas exister. La clé de
+                      Luhn, elle, est certaine et locale. */}
+                  {siren.trim() !== '' && !sirenValide(siren) && (
+                    <p className="field-hint">
+                      {t(messageSiren(siren) ?? 'Un SIREN compte neuf chiffres.')}
+                    </p>
+                  )}
                 </div>
                 <div className="field">
                   <label htmlFor={`${uid}-soc`}>{t('Raison sociale')}</label>
@@ -499,7 +517,12 @@ export function PageInscription() {
                 <p className="field-hint">
                   {t('Nous vous écrirons à %{email}. Le SIREN suffit —', { email })} <b>{t('aucun Kbis à fournir')}</b>.
                 </p>
-                <button type="button" className="btn btn-primary btn-block" disabled={!societe.trim()}
+                {/* ⚠️ Le SIREN gardait ce bouton sans être contrôlé nulle part :
+                    neuf chiffres au hasard, une raison sociale tapée à la
+                    main, et la demande partait. Le registre ne rattrapait
+                    rien — il remplit, il ne refuse pas. */}
+                <button type="button" className="btn btn-primary btn-block"
+                        disabled={!societe.trim() || !sirenValide(siren)}
                         onClick={() => avancer(8)}>{t('Voir mon offre')}</button>
               </>
             )}

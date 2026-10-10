@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import { TRANCHES, densite, libelleTranche, totalAnnuel, trancheDe } from '../lib/tarifs'
 import { PIECES_EN_STOCK } from '../lib/inscription'
+import { messageSiren, sirenValide } from '../lib/siren'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '../lib/siren'
 
 const racine = join(__dirname, '..', '..')
@@ -213,4 +214,58 @@ describe('⚠️ le stock se compte en pièces', () => {
     expect(envoi, 'la réponse en pièces ne part pas').toMatch(/\bpieces\b/)
   })
 
+})
+
+/**
+ * ⚠️⚠️ **LE SIREN DU CLIENT EST UNE ADRESSE DE ROUTAGE** (10 octobre 2026).
+ *
+ * C'est une des quatre nouvelles mentions de la facturation électronique :
+ * absent, faux ou rattaché à une entreprise radiée, la facture n'est pas
+ * LIVRÉE. Un numéro mal tapé ne coûte plus un aller-retour, il coûte un
+ * impayé. Il était demandé ici sans être contrôlé nulle part.
+ */
+describe('⚠️⚠️ l’inscription contrôle le SIREN', () => {
+  const page = () => readFileSync(
+    join(racine, 'web/components/vitrine/PageInscription.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+
+  it('⚠️ `!messageSiren()` ne vaut pas « SIREN valide »', () => {
+    // La garde tient la RAISON : `messageSiren` se tait tant que le numéro est
+    // court, pour ne pas harceler quelqu'un qui tape. S'en servir comme
+    // condition laisse passer un numéro de quatre chiffres.
+    expect(messageSiren('5521'), '`messageSiren` ne se tait plus sur un numéro court')
+      .toBeNull()
+    expect(sirenValide('5521'), '`sirenValide` accepte un numéro court').toBe(false)
+  })
+
+  it('le bouton de l’étape exige un SIREN valide', () => {
+    const src = page()
+    const bouton = /disabled=\{![\s\S]{0,120}?avancer\(8\)/.exec(src)?.[0] ?? ''
+    expect(bouton, 'le bouton de l’étape entreprise a disparu').not.toBe('')
+    expect(bouton, 'un SIREN quelconque passe encore l’étape entreprise')
+      .toContain('sirenValide(siren)')
+  })
+
+  it('⚠️ et un bouton éteint dit pourquoi', () => {
+    expect(page(), 'un SIREN refusé n’affiche plus rien sous le champ')
+      .toMatch(/!sirenValide\(siren\) && \(/)
+  })
+
+  /**
+   * ⚠️ **ON NE BLOQUE PAS SUR LE REGISTRE, ET C'EST DÉLIBÉRÉ.**
+   * `chercherParSiren` rend `introuvable` AUSSI pour une société qui a demandé
+   * la non-diffusion de ses données : elle existe, on ne peut rien en dire.
+   * Refuser dessus accuserait un vrai client de ne pas exister.
+   */
+  it('⚠️ le registre remplit, il ne refuse pas', () => {
+    const src = page()
+    const bouton = /disabled=\{![\s\S]{0,120}?avancer\(8\)/.exec(src)?.[0] ?? ''
+    expect(bouton, 'le registre est devenu une condition : une société non diffusée serait refusée')
+      .not.toMatch(/registre|chercherParSiren|introuvable/)
+
+    // Et le module le dit de lui-même, pour que la règle ne tienne pas qu'ici.
+    const lib = readFileSync(join(racine, 'web/lib/registre.ts'), 'utf8')
+    expect(lib, 'le registre ne distingue plus « introuvable » de « indisponible »')
+      .toContain("etat: 'indisponible'")
+  })
 })
