@@ -10,6 +10,8 @@
 // d'identification à trous ne vaut pas mieux que pas de page — autant ne pas
 // l'annoncer.
 
+import { porteeDuBuild } from '@/lib/apercuSansBase'
+
 export type Mention = {
   /** Intitulé affiché. */
   libelle: string
@@ -181,5 +183,45 @@ export const STRIPE_LIVE_PRET = false
  * donc nécessaire. Elle n'est simplement plus suffisante.
  */
 export function venteOuverte(): boolean {
-  return mentionsCompletes() && STRIPE_LIVE_PRET
+  return (mentionsCompletes() && STRIPE_LIVE_PRET) || bancDApercu()
+}
+
+/**
+ * ⚠️⚠️ **LA PORTE DU BANC — ET LE `||` CI-DESSUS EST ASSUMÉ.**
+ *
+ * Le commentaire de `STRIPE_LIVE_PRET` met en garde, à juste titre, contre un
+ * `||` : il échoue du MAUVAIS côté, un oubli OUVRANT la vente. Celui-ci n'est
+ * admis que parce que le disjoint est lui-même une **conjonction de conditions
+ * qui ne peuvent pas être vraies sur le site en ligne** :
+ *
+ *   1. Vercel annonce « preview » pour ce build — `www.quantinvo.com` annonce
+ *      « production », et c'est le déploiement, pas le code, qui le décide ;
+ *   2. `NEXT_PUBLIC_BANC_STRIPE_TEST` vaut explicitement `true`, et cette
+ *      variable se pose avec la portée **Preview** seulement.
+ *
+ * Chacune échoue vers le FERMÉ : variable absente, portée vide, réglage Vercel
+ * décoché — tout cela garde la vente fermée. C'est la forme des deux portes
+ * posées le même jour dans `inscription` et `mission-empreinte`, où la
+ * condition structurelle est « la clé Stripe est une clé de test ».
+ *
+ * ⚠️ **ET ELLE NE MET RIEN EN LIVE.** Aucune clé ne change : le compte Stripe
+ * reste en mode test, et `STRIPE_LIVE_PRET` — mal nommé pour qui le lit vite —
+ * ne bascule pas. Ce drapeau dit « le compte est prêt pour du réel », il
+ * n'actionne rien chez Stripe.
+ *
+ * Pourquoi elle existe : le 10 octobre 2026, le parcours de réservation
+ * On-Demand ne pouvait pas être éprouvé de bout en bout. Le compte d'essai du
+ * jumeau porte toutes les casquettes à la fois — « est-ce qu'on peut faire un
+ * test de A à Z ? » — alors qu'un vrai prospect ouvre son compte DANS le
+ * parcours. Les deux fonctions edge avaient été ouvertes sur le jumeau ; la
+ * page, elle, désactivait ses boutons dès la première étape.
+ *
+ * ⚠️ Les six sessions Checkout de septembre, elles, étaient passées par
+ * `libre-service` — qui ne porte aucun drapeau, parce qu'elle sert un client
+ * DÉJÀ abonné. Une réservation est un engagement neuf : d'où la différence, et
+ * d'où le fait que cette porte-ci ait dû être ouverte.
+ */
+function bancDApercu(): boolean {
+  if (process.env.NEXT_PUBLIC_BANC_STRIPE_TEST !== 'true') return false
+  return porteeDuBuild === 'preview'
 }

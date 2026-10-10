@@ -455,9 +455,30 @@ describe('la vente est fermée jusqu’à l’immatriculation', () => {
     const corps = /export function venteOuverte\(\): boolean \{([\s\S]*?)\n\}/.exec(legal)?.[1]
     expect(corps, 'venteOuverte() ne se lit plus').toBeTruthy()
 
-    // ⚠️ `||` OUVRIRAIT SUR UNE SEULE CONDITION. C'est la seule composition
-    // interdite, et c'est elle qui ferait échouer le drapeau « du mauvais côté ».
-    expect(corps, 'une condition suffirait à ouvrir la vente').not.toMatch(/\|\|/)
+    // ⚠️⚠️ **UN `||` N'EST ADMIS QU'À UNE CONDITION**, et la garde l'exerce au
+    // lieu de l'interdire (10 octobre 2026). Interdire tout `||` était juste
+    // tant qu'aucun banc n'avait besoin d'ouvrir la page sur l'aperçu ; le
+    // jour où il en a fallu un, l'interdiction se serait levée d'un trait de
+    // sed, et c'est le pire des deux mondes — une règle qu'on contourne plutôt
+    // qu'une règle qui tient.
+    //
+    // La règle qui tient : **tout disjoint doit être une porte NOMMÉE, dont le
+    // corps exige à la fois un drapeau explicite ET la portée « preview »**.
+    // Chacune de ces deux conditions échoue vers le fermé, et la seconde ne
+    // peut pas être vraie sur `www.quantinvo.com` — c'est le déploiement qui
+    // la décide, pas le code.
+    for (const disjoint of corps!.split('||').slice(1).map((d) => d.trim())) {
+      const nom = /(\w+)\(\)/.exec(disjoint)?.[1]
+      expect(nom, `« ${disjoint} » ouvre la vente sans passer par une porte nommée`)
+        .toBeTruthy()
+      const porte = new RegExp(`function ${nom}\\(\\): boolean \\{([\\s\\S]*?)\\n\\}`)
+        .exec(legal)?.[1]
+      expect(porte, `la porte « ${nom} » ne se lit pas dans legal.ts`).toBeTruthy()
+      expect(porte, `la porte « ${nom} » n’exige plus un drapeau explicite`)
+        .toMatch(/process\.env\.NEXT_PUBLIC_\w+ (?:!==|===) 'true'/)
+      expect(porte, `la porte « ${nom} » n’exige plus la portée « preview »`)
+        .toContain("porteeDuBuild === 'preview'")
+    }
 
     // La LCEN reste une condition nécessaire : on ne vend pas sans identifier
     // l'éditeur, quelle que soit l'envie commerciale.
