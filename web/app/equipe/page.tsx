@@ -19,6 +19,7 @@ import { AppShell } from '@/components/AppShell'
 import { AddCounter } from '@/components/dashboard/AddCounter'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
+import { Modal } from '@/components/ui/Modal'
 import { getMyCompany, type Company } from '@/lib/account'
 import { Chargement } from '@/components/Chargement'
 import { locale, t, tn, useTraduction } from '@/lib/i18n'
@@ -490,20 +491,31 @@ export default function EquipePage() {
         </div>
       )}
 
+      {/* ⚠️ LES DEUX FORMULAIRES S'OUVRENT EN FENÊTRE, pas dans le flux de la
+          page (demande de Julien, 10 octobre 2026). Dépliés en pleine page ils
+          poussaient tout vers le bas et se collaient à la carte suivante. La
+          fenêtre porte le titre et la fermeture ; le contenu reçoit `fermer`
+          pour que la sortie passe par le fondu, même après un envoi réussi. */}
       {estAdmin && ajoutOuvert && (
-        <AjouterPersonne
-          stores={ca?.stores ?? []}
-          membres={membres}
-          moi={guard.profile.id}
-          busy={busy}
-          onCompteur={inviterCompteur}
-          onSuperviseur={inviterSuperviseur}
-          onFermer={() => setAjoutOuvert(false)}
-        />
+        <Modal large title={t('Ajouter une personne')} onClose={() => setAjoutOuvert(false)}>
+          {(fermer) => (
+            <AjouterPersonne
+              stores={ca?.stores ?? []}
+              membres={membres}
+              moi={guard.profile.id}
+              busy={busy}
+              onCompteur={inviterCompteur}
+              onSuperviseur={inviterSuperviseur}
+              onFermer={fermer}
+            />
+          )}
+        </Modal>
       )}
 
       {!estAdmin && ajoutOuvert && (
-        <AddCounter onAdded={rafraichir} onFermer={() => setAjoutOuvert(false)} />
+        <Modal title={t('Ajouter un compteur')} onClose={() => setAjoutOuvert(false)}>
+          {(fermer) => <AddCounter onAdded={rafraichir} onFermer={fermer} />}
+        </Modal>
       )}
 
       {/* ⚠️ La bande compte ce que `ca_company_overview` a déjà rendu — aucun
@@ -892,9 +904,9 @@ function AjouterPersonne({
     }
   }
 
+  // ⚠️ Ni carte ni titre : la fenêtre modale les porte (10 octobre 2026).
   return (
-    <form onSubmit={submit} className="panel">
-      <h3>{t('Ajouter une personne')}</h3>
+    <form onSubmit={submit}>
 
       <div className="role-choix" style={{ marginTop: 14 }}>
         <button
