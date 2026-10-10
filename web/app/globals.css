@@ -623,6 +623,15 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .btn-success { background: var(--success); color: #fff; }
 .btn-success:hover:not(:disabled) { filter: brightness(1.08); }
 .btn-block { width: 100%; }
+/* ⚠️ DEUX BOUTONS PLEINE LARGEUR EMPILÉS SE TOUCHAIENT. Relevé par Julien sur
+   « Regardez votre boîte mail » (10 octobre 2026, capture à l'appui) : deux
+   rectangles collés bord à bord se lisent comme un seul bloc coupé, et la
+   frontière entre « me connecter » et « revenir à l'accueil » disparaît au
+   moment précis où il faut choisir.
+   La règle porte sur la SUITE de deux, pas sur `.btn-block` seul : un bouton
+   unique ne doit rien gagner, et aucun autre écran n'en empile deux
+   aujourd'hui — vérifié avant de la poser. */
+.btn-block + .btn-block { margin-top: 8px; }
 
 /* Les deux passes ont chacune leur couleur, et c'est la MÊME que dans l'app :
    compter est en accent, auditer en or. L'or ne dépend pas du thème — c'est
