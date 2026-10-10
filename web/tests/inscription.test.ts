@@ -407,15 +407,35 @@ describe('la vente est fermée jusqu’à l’immatriculation', () => {
   it('⚠️ et il refuse AVANT toute écriture', () => {
     // Ouvrir un compte de prospect qui ne pourra pas payer ne laisserait que
     // des comptes orphelins ; déposer une demande, une ligne morte.
-    const garde = edgeIns.indexOf('if (!VENTE_OUVERTE) return boutiqueFermee()')
+    // ⚠️ SANS LA FIN DE LA LIGNE : la garde peut porter une seconde condition
+    // (la porte de banc, qui exige une clé Stripe de test). Citer la ligne
+    // entière la faisait tomber sur du code juste — quatrième fois que ce
+    // piège se présente (10 octobre 2026).
+    const garde = edgeIns.indexOf('if (!VENTE_OUVERTE')
     expect(garde).toBeGreaterThan(0)
     for (const ecriture of ["rpc('demander_code_email'", 'auth.admin.createUser',
                             "rpc('finaliser_inscription'"]) {
       expect(edgeIns.indexOf(ecriture), `${ecriture} doit venir après la garde`)
         .toBeGreaterThan(garde)
     }
-    const g2 = edgeSou.indexOf('if (!VENTE_OUVERTE) return boutiqueFermee()')
+    const g2 = edgeSou.indexOf('if (!VENTE_OUVERTE')
     expect(edgeSou.indexOf("rpc('deposer_souscription'")).toBeGreaterThan(g2)
+  })
+
+  it('⚠️⚠️ une porte de banc ne peut JAMAIS ouvrir une vraie vente', () => {
+    // Si une fonction se donne une seconde porte pour les bancs d'essai, elle
+    // DOIT exiger une clé Stripe de test. Cette condition est structurelle :
+    // le jour où le compte passe en `live`, la porte se referme toute seule,
+    // quoi qu'il y ait dans les secrets. Sans elle, un secret mal posé
+    // ouvrirait une vraie vente.
+    for (const [nom, src] of [['inscription', edgeIns], ['subscribe-online', edgeSou]] as const) {
+      for (const [, drapeau, definition] of src.matchAll(/const ([A-Z_]*BANC[A-Z_]*) =([^\n]*)/g)) {
+        expect(
+          definition,
+          `« ${nom} » : la porte de banc « ${drapeau} » ne vérifie plus que la clé Stripe est une clé de test`,
+        ).toMatch(/CLE_EST_DE_TEST|sk_test_/)
+      }
+    }
   })
 
   it('⚠️ la vente se ferme dès qu’UNE condition manque', () => {

@@ -60,6 +60,28 @@ const TVA_APPLICABLE = false
  */
 const VENTE_OUVERTE = false
 
+/**
+ * ⚠️⚠️ **LA PORTE DU BANC — ET ELLE NE PEUT PAS OUVRIR UNE VRAIE VENTE.**
+ *
+ * Éprouver le parcours de bout en bout demande qu'un PROSPECT puisse ouvrir son
+ * compte : sur On-Demand, c'est la réservation elle-même qui le crée, par cette
+ * fonction. Un compte d'essai qui porte déjà toutes les casquettes ne joue le
+ * parcours de personne (constat de Julien, 10 octobre 2026).
+ *
+ * La tentation est de basculer `VENTE_OUVERTE` « le temps d'un essai » : c'est
+ * ainsi qu'un drapeau commercial finit en production, et une garde l'interdit
+ * déjà — le serveur doit porter le MÊME verdict que le site.
+ *
+ * D'où une porte SÉPARÉE, et **deux conditions qui ne se réunissent pas par
+ * accident** : `BANC_STRIPE_TEST` posé explicitement dans les secrets du
+ * projet, ET une clé Stripe de TEST. La seconde est structurelle — le jour où
+ * le compte passe en `live`, la porte se referme toute seule, quoi qu'il y ait
+ * dans les secrets. Jumelle de celle de `mission-empreinte`.
+ */
+const cleStripe = Deno.env.get('STRIPE_SECRET_KEY') ?? ''
+const CLE_EST_DE_TEST = cleStripe.startsWith('sk_test_') || cleStripe.startsWith('rk_test_')
+const BANC_STRIPE_TEST = Deno.env.get('BANC_STRIPE_TEST') === 'true' && CLE_EST_DE_TEST
+
 /** Ce qu'on répond tant que la boutique est fermée. */
 const boutiqueFermee = () =>
   json({
@@ -101,7 +123,7 @@ Deno.serve(async (req) => {
 
   // ⚠️ AVANT TOUTE ACTION, y compris l'envoi du code : ouvrir un compte de
   // prospect qui ne pourra pas payer ne laisserait que des comptes orphelins.
-  if (!VENTE_OUVERTE) return boutiqueFermee()
+  if (!VENTE_OUVERTE && !BANC_STRIPE_TEST) return boutiqueFermee()
 
   // ─── 1. Le code ──────────────────────────────────────────────────────────
   if (action === 'code') {
