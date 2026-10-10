@@ -22,6 +22,14 @@
      4 septembre, champ du panneau le 5, en-tête du tableau d'équipe le 5).
      Pour un fond en retrait, c'est `--bg`. */
   --surface-2: #232827;
+  /* ⚠️ **LA PAGE A SON PROPRE JETON** (10 octobre 2026). Elle valait `--bg`,
+     qui sert AUSSI de fond aux champs, aux survols de lignes, aux en-têtes de
+     tableau et aux blocs en retrait — 64 usages, dont UN SEUL est la page.
+     Constat de Julien : « ce fond gris qui fait terne […] on a un fond et des
+     boutons de la même couleur presque ». En clair, le fond de page #f2f3f1 et
+     le bouton secondaire ≈#f2f2f2 étaient à 1 % l'un de l'autre.
+     En sombre rien ne change : la page reste le cran le plus sombre. */
+  --page: #141716;
   --hairline: #262b29;
   --border-strong: #3a413e;
   --header-bg: rgba(20, 23, 22, 0.75);
@@ -103,6 +111,11 @@
      blanche — c'est l'écart entre les deux qui découpe la page. */
   --bg: #f2f3f1;
   --bg-2: #ffffff;
+  /* ⚠️ LA PAGE EST BLANCHE, `--bg` RESTE LE GRIS DES CREUX. Les deux ne sont
+     plus la même chose : un champ, un survol, un en-tête de tableau ont besoin
+     d'un cran en retrait sous la carte blanche — c'est le piège documenté
+     quatre fois plus haut. Seule la page a changé. */
+  --page: #ffffff;
   --surface: #ffffff;
   --surface-2: #ffffff;
   --hairline: #e2e5e1;
@@ -147,7 +160,7 @@
 html { scroll-behavior: smooth; overflow-x: clip; }
 
 body {
-  background: var(--bg);
+  background: var(--page);
   color: var(--text);
   /* ⚠️ La pile de repli ne cite plus Arial : demande de Julien, 6 septembre
      2026. `system-ui` couvre les trois systèmes, et les deux suivantes ne
@@ -761,8 +774,15 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .section-head h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.8px; }
 .section-head p { margin-top: 14px; color: var(--text-2); font-size: 17px; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+/* ⚠️⚠️ **LE TRAIT DES CARTES N'EST PAS DÉCORATIF DEPUIS LE 10 OCTOBRE 2026.**
+   Elles portaient `border: 0` et ne tenaient QUE par l'écart entre leur blanc
+   et le gris de la page — `--shadow-card` vaut `none` dans les deux thèmes,
+   donc aucune ombre ne les séparait. La page passée au blanc, une carte sans
+   trait n'existe plus : c'est le piège « un élément posé sur une surface de
+   même couleur disparaît », cette fois à l'échelle de TOUTES les cartes.
+   Les retirer remettrait l'interface à plat, au sens propre. */
 .card {
-  background: var(--surface); border: 0; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
   padding: 26px; box-shadow: var(--shadow-card);
   transition: background-color .2s ease, transform .2s ease;
 }
@@ -895,7 +915,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 40px 24px; }
 .auth-card {
   width: 100%; max-width: 400px; background: var(--surface);
-  border: 0; border-radius: var(--r); padding: 34px;
+  border: 1px solid var(--hairline); border-radius: var(--r); padding: 34px;
   box-shadow: var(--shadow-card);
 }
 .auth-card .head { text-align: center; margin-bottom: 26px; }
@@ -1107,7 +1127,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .pill-role { color: var(--text-2); background: transparent; border: 1px solid var(--hairline); }
 .pill-vous { color: var(--success-text); background: var(--success-soft); }
 .panel {
-  background: var(--surface); border: 0; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
   padding: 24px; margin-top: 16px; box-shadow: var(--shadow-card);
 }
 /* ⚠️ DEUX CARTES QUI SE SUIVAIENT SE TOUCHAIENT (relevé par Julien, capture à
@@ -1152,7 +1172,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
    c'est la mise en page et la hiérarchie qui changent. */
 .admin-section {
   background: var(--surface);
-  border: 0;
+  border: 1px solid var(--hairline);
   border-radius: var(--r);
   padding: 22px 24px;
   margin-bottom: 16px;
@@ -1210,7 +1230,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
    jamais ce qui s'est passé. */
 .resume-bande {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  background: var(--surface); border: 0;
+  background: var(--surface); border: 1px solid var(--hairline);
   border-radius: var(--r); overflow: hidden; margin-bottom: 24px;
   box-shadow: var(--shadow-card);
 }
@@ -1596,7 +1616,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
    pense magasin par magasin, l'écran est rangé comme sa tête. */
 .mag-liste { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
 .mag {
-  background: var(--surface); border: 0;
+  background: var(--surface); border: 1px solid var(--hairline);
   border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden;
 }
 .mag-tete {
@@ -1724,7 +1744,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .dash-kpis-5 .kpi-note { font-size: 11.5px; margin-top: 5px; }
 /* En dessous, cinq colonnes rendraient les libellés illisibles. */
 @media (max-width: 1040px) { .dash-kpis-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.dash-kpi { background: var(--surface); border: 0; border-radius: var(--r); padding: 20px; box-shadow: var(--shadow-card); }
+.dash-kpi { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow-card); }
 /* Les grands chiffres se lisent en Sora, comme les titres : c'est ce qui
    distingue une donnée d'un paragraphe. */
 .dash-kpi-value {
@@ -1769,7 +1789,7 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .dash-card {
-  display: block; background: var(--surface); border: 0; border-radius: var(--r);
+  display: block; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r);
   padding: 18px; box-shadow: var(--shadow-card);
   transition: border-color .2s ease, transform .2s ease;
 }
