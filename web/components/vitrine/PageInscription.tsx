@@ -45,7 +45,7 @@ import { euros, nomOffre, prixCents } from '@/lib/offres'
 import { nb } from '@/lib/format'
 import { useTraduction } from '@/lib/i18n'
 import {
-  APPAREILS_TRANCHES, FREQUENCES, VOLUMES,
+  APPAREILS_TRANCHES, FREQUENCES, PIECES_EN_STOCK,
   appareilsDe, magasinVide, refusMagasin, type MagasinSaisi,
 } from '@/lib/inscription'
 
@@ -71,7 +71,10 @@ export function PageInscription() {
   // 4 → 7 : les réponses
   const [pratique, setPratique] = useState<'oui' | 'non' | ''>('')
   const [frequence, setFrequence] = useState('')
-  const [volume, setVolume] = useState('')
+  // ⚠️ Des PIÈCES, pas des références — voir `PIECES_EN_STOCK`. La clé de la
+  // réponse a changé avec la question : une demande déjà déposée porte
+  // `volume`, qui comptait autre chose, et on ne la relit pas sous ce nom.
+  const [pieces, setPieces] = useState('')
   const [magasins, setMagasins] = useState<MagasinSaisi[]>([magasinVide()])
   const [societe, setSociete] = useState('')
   const [siren, setSiren] = useState('')
@@ -84,8 +87,8 @@ export function PageInscription() {
   const [accepte, setAccepte] = useState(false)
 
   const reponses = useMemo(() => ({
-    pratique, frequence, volume, magasins, societe, siren, ape, telephone, rythme,
-  }), [pratique, frequence, volume, magasins, societe, siren, ape, telephone, rythme])
+    pratique, frequence, pieces, magasins, societe, siren, ape, telephone, rythme,
+  }), [pratique, frequence, pieces, magasins, societe, siren, ape, telephone, rythme])
 
   // ─── Reprendre où on s'est arrêté ─────────────────────────────────────────
   useEffect(() => {
@@ -103,7 +106,7 @@ export function PageInscription() {
         const r = (data.reponses ?? {}) as Record<string, unknown>
         setPratique((r.pratique as 'oui' | 'non' | '') ?? '')
         setFrequence(String(r.frequence ?? ''))
-        setVolume(String(r.volume ?? ''))
+        setPieces(String(r.pieces ?? ''))
         setMagasins(Array.isArray(r.magasins) && r.magasins.length ? r.magasins as MagasinSaisi[] : [magasinVide()])
         setSociete(String(r.societe ?? ''))
         setSiren(String(r.siren ?? ''))
@@ -388,13 +391,13 @@ export function PageInscription() {
                   </select>
                 </div>
                 <div className="field">
-                  <label htmlFor={`${uid}-vol`}>{t('Combien de références en stock ?')}</label>
-                  <select id={`${uid}-vol`} value={volume} onChange={(e) => setVolume(e.target.value)}>
+                  <label htmlFor={`${uid}-vol`}>{t('Combien de pièces en stock, à peu près ?')}</label>
+                  <select id={`${uid}-vol`} value={pieces} onChange={(e) => setPieces(e.target.value)}>
                     <option value="">{t('Choisir…')}</option>
-                    {VOLUMES.map((v) => <option key={v.valeur} value={v.valeur}>{t(v.libelle)}</option>)}
+                    {PIECES_EN_STOCK.map((v) => <option key={v.valeur} value={v.valeur}>{t(v.libelle)}</option>)}
                   </select>
                 </div>
-                <button type="button" className="btn btn-primary btn-block" disabled={!frequence || !volume}
+                <button type="button" className="btn btn-primary btn-block" disabled={!frequence || !pieces}
                         onClick={() => avancer(6)}>{t('Continuer')}</button>
               </>
             )}
