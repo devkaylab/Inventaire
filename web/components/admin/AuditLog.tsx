@@ -34,6 +34,7 @@ const ACTION_LABEL: Record<string, string> = {
   demande_superviseur_validee: 'Demande superviseur validée',
   demande_superviseur_refusee: 'Demande superviseur refusée',
   compte_supprime: 'Compte supprimé',
+  suppression_demandee: 'Suppression demandée',
   devis_envoye: 'Devis envoyé',
   statut_demande_entreprise: 'Statut de demande modifié',
   demande_entreprise_supprimee: 'Demande d’inscription supprimée',

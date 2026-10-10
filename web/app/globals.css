@@ -1110,6 +1110,11 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .panel + .admin-section,
 .panel + .panel { margin-top: 16px; }
 
+/* Le rappel de qui est visé, en tête d'une fenêtre qui engage : sans lui, on
+   envoie une demande irréversible sans voir sur qui elle porte. */
+.panel-rappel { background: var(--bg); border-radius: var(--r); padding: 10px 12px; }
+.panel-rappel-nom { font-size: 14px; font-weight: 600; color: var(--text); }
+
 .panel h3 { font-size: 16px; font-weight: 700; }
 .panel p { color: var(--text-2); font-size: 15px; margin-top: 6px; }
 

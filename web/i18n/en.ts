@@ -1966,4 +1966,22 @@ export const en: Dictionnaire = {
   // Un compte qui existait déjà dans l'entreprise, remis dans le magasin.
   '%{nom} est de nouveau dans votre équipe.': '%{nom} is back on your team.',
   '%{nom} a choisi son mot de passe : son compte de compteur est prêt.': '%{nom} has chosen their password: their counter account is ready.',
+
+  // Demander la suppression d'un compte : le superviseur demande, l'admin décide.
+  'Demander la suppression du compte': 'Request account deletion',
+  'Demander la suppression de ce compte': 'Request this account’s deletion',
+  'Demande de suppression': 'Deletion request',
+  '%{par} demande la suppression du compte de %{nom} — %{motif}': '%{par} is requesting the deletion of %{nom}’s account — %{motif}',
+  'Un superviseur': 'A supervisor',
+  'un compteur': 'a counter',
+  'Demande traitée': 'Request handled',
+  'Le compte de %{nom} a été supprimé.': '%{nom}’s account has been deleted.',
+  'Indiquez le motif de la demande.': 'Give a reason for the request.',
+  'Demande impossible.': 'The request could not be sent.',
+  'Demande envoyée à l’administrateur de votre entreprise.': 'Request sent to your company administrator.',
+  'Seul l’administrateur de votre entreprise peut supprimer un compte. Votre demande lui est envoyée avec le motif, par notification et par e-mail.': 'Only your company administrator can delete an account. Your request is sent to them with the reason, by notification and by email.',
+  'Motif': 'Reason',
+  'A quitté l’entreprise fin septembre.': 'Left the company at the end of September.',
+  'Envoyer la demande': 'Send the request',
+  'demandé la suppression du compte de %{c}': 'requested the deletion of %{c}’s account',
 }

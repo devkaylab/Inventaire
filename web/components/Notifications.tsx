@@ -21,6 +21,7 @@ import { t, tn, useTraduction } from '@/lib/i18n'
 type Notif = {
   id: string
   type: 'invitation_inventaire' | 'compteur_actif' | 'message' | 'inventaire_volumineux' | 'forfait_trop_juste'
+    | 'demande_suppression' | 'demande_suppression_traitee'
   donnees: Record<string, string | undefined>
   created_at: string
   lu: boolean
@@ -50,6 +51,23 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
           ? t('%{par} vous a ajouté à l’inventaire « %{nom} » — %{magasin}.', { par: d.par, nom: d.nom ?? '', magasin: d.magasin ?? '' })
           : t('Vous avez été ajouté à l’inventaire « %{nom} » — %{magasin}.', { nom: d.nom ?? '', magasin: d.magasin ?? '' }),
         lien: d.session_id ? `/dashboard/${d.session_id}` : null,
+      }
+    // ⚠️ Un superviseur demande, l'administrateur décide. La notification porte
+    // le motif : sans lui, l'administrateur devrait aller le chercher avant de
+    // trancher sur un geste définitif.
+    case 'demande_suppression':
+      return {
+        titre: t('Demande de suppression'),
+        texte: t('%{par} demande la suppression du compte de %{nom} — %{motif}', {
+          par: d.par || t('Un superviseur'), nom: d.nom || t('un compteur'), motif: d.motif || '',
+        }),
+        lien: '/equipe',
+      }
+    case 'demande_suppression_traitee':
+      return {
+        titre: t('Demande traitée'),
+        texte: t('Le compte de %{nom} a été supprimé.', { nom: d.nom || t('cette personne') }),
+        lien: '/equipe',
       }
     case 'compteur_actif':
       return {

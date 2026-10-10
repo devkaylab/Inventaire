@@ -20,6 +20,7 @@ import { AddCounter } from '@/components/dashboard/AddCounter'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
 import { Modal } from '@/components/ui/Modal'
+import { DemandeSuppression } from '@/components/dashboard/DemandeSuppression'
 import { getMyCompany, type Company } from '@/lib/account'
 import { Chargement } from '@/components/Chargement'
 import { locale, t, tn, useTraduction } from '@/lib/i18n'
@@ -95,6 +96,9 @@ export default function EquipePage() {
   const [magasinFiltre, setMagasinFiltre] = useState('')
   const [profilFiltre, setProfilFiltre] = useState('')
   const [ajoutOuvert, setAjoutOuvert] = useState(false)
+  // ⚠️ Un superviseur DEMANDE la suppression, il ne la décide pas : le geste
+  // définitif reste à l'administrateur d'entreprise.
+  const [aSupprimer, setASupprimer] = useState<{ id: string; nom: string; email: string | null } | null>(null)
 
   const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
 
@@ -525,6 +529,14 @@ export default function EquipePage() {
         </Modal>
       )}
 
+      {aSupprimer && (
+        <Modal title={t('Demander la suppression de ce compte')} onClose={() => setASupprimer(null)}>
+          {(fermer) => (
+            <DemandeSuppression personne={aSupprimer} onFermer={fermer} onFait={rafraichir} />
+          )}
+        </Modal>
+      )}
+
       {/* ⚠️ La bande compte ce que `ca_company_overview` a déjà rendu — aucun
           appel de plus. L'ambre n'y désigne que les mots de passe jamais créés :
           c'est le seul fait de cette page qui appelle un geste, et `is_active`
@@ -721,6 +733,12 @@ export default function EquipePage() {
                 {/* Le geste quotidien du superviseur : un saisonnier part, il le
                     retire de SON magasin — pas de partout, et pas celui d'un
                     collègue. */}
+                {c.a_moi && (
+                  <button
+                    className="link-btn danger-link"
+                    onClick={() => setASupprimer({ id: c.id, nom: c.full_name || t('Cette personne'), email: c.email })}
+                  >{t('Demander la suppression du compte')}</button>
+                )}
                 {c.a_moi && (
                   <button
                     className="link-btn"

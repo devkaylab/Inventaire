@@ -54,6 +54,12 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   "Ce devis n'est plus en attente de réponse.": 'This quote is no longer awaiting a reply.',
   'Ce devis n’est plus en attente d’accord.': 'This quote is no longer awaiting approval.',
   "Ce magasin n'est pas le vôtre.": 'This store is not yours.',
+  'Indiquez le motif de la demande.': 'Give a reason for the request.',
+  'Vous ne pouvez pas demander la suppression de votre propre compte.':
+    'You cannot request the deletion of your own account.',
+  "Cette personne n'est dans aucun de vos magasins.": 'This person is not in any of your stores.',
+  'Une demande est déjà en attente pour cette personne.':
+    'A request is already pending for this person.',
   "Cette personne a été ajoutée par quelqu'un d'autre : seul l'administrateur de l'entreprise peut la retirer.":
     'Someone else added this person: only the company administrator can remove them.',
   "Ce magasin n'existe plus.": 'This store no longer exists.',

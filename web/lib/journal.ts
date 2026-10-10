@@ -43,6 +43,7 @@ export const ACTIONS: Record<string, (cible: string) => string> = {
   retrograde_compteur: (c) => t('passé %{c} en compteur', { c }),
   invitation_annulee: (c) => t('annulé l’invitation de %{c}', { c }),
   compte_supprime: (c) => t('supprimé le compte de %{c}', { c }),
+  suppression_demandee: (c) => t('demandé la suppression du compte de %{c}', { c }),
   magasin_demande: (c) => t('demandé l’ajout du magasin « %{c} »', { c }),
   magasin_demande_annulee: (c) => t('annulé la demande du magasin « %{c} »', { c }),
   magasin_suppression_demandee: (c) => t('demandé la suppression du magasin « %{c} »', { c }),
