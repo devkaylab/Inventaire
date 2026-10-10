@@ -31,7 +31,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { PasswordRules } from '@/components/PasswordRules'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { passwordError } from '@/lib/password'
-import { formaterSiren, messageSiren, normaliserSiren } from '@/lib/siren'
+import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
 import { mesEtablissements, reserverMaMission, type Etablissement } from '@/lib/onDemandClient'
 import { useTraduction } from '@/lib/i18n'
 import { Logo } from '@/components/Logo'
@@ -377,6 +377,22 @@ export function PageReserver() {
         // « Réserver le logiciel » veut le logiciel, pas ce qu'il regardait
         // hier. L'effet qui lit `?formule=` tourne après celui-ci.
         if (r.formule) setFormule(r.formule as Formule)
+
+        // ⚠️⚠️ **« REPRENDRE » DOIT REPRENDRE** (Julien, 10 octobre 2026 :
+        // « le lien reprendre me fait tout recommencer »). Le brouillon garde
+        // toutes les réponses mais PAS l'étape : l'e-mail « vous avez déjà un
+        // compte » ramenait sur la première question, volume et date déjà
+        // remplis mais tout le parcours à recliquer. On le repose où il
+        // l'avait laissé : l'écran du compte, celui qui porte « J'ai déjà un
+        // compte » — c'est exactement ce que le message lui dit de faire.
+        //
+        // ⚠️ **SEULEMENT SI LE BROUILLON PORTE DE QUOI RÉSERVER.** Ouvert sur
+        // un autre appareil, il n'y a pas de brouillon : l'envoyer à l'écran
+        // du compte lui ferait signer un prix qu'il n'a pas vu.
+        if (new URLSearchParams(window.location.search).get('reprendre')
+            && r.jour && r.trancheArticles) {
+          setEtape(5)
+        }
       }
     } catch { /* stockage indisponible : on repart d'une page vierge */ }
     setRepris(true)
@@ -749,8 +765,10 @@ export function PageReserver() {
     setErreur(null)
     const faible = passwordError(motDePasse)
     if (faible) { setErreur(faible); return }
-    const mauvaisSiren = siren.trim() ? messageSiren(siren) : null
-    if (mauvaisSiren) { setErreur(mauvaisSiren); return }
+    if (!sirenValide(siren)) {
+      setErreur(messageSiren(siren) ?? 'Un SIREN compte neuf chiffres.')
+      return
+    }
     setOccupe(true)
     const r = await edge({ action: 'code', email: courriel.trim().toLowerCase(), retour: 'reserver' })
     setOccupe(false)
@@ -770,9 +788,19 @@ export function PageReserver() {
    */
   const magasinComplet = !logicielSeul
     || (magasin.trim() !== '' && adresse.trim() !== '' && codePostal.length === 5)
+  /**
+   * ⚠️⚠️ **`!messageSiren()` NE VAUT PAS « SIREN VALIDE »** (trouvé en
+   * déroulant le parcours, 10 octobre 2026). `messageSiren` se TAIT tant que
+   * le numéro est incomplet — c'est voulu, on ne harcèle pas quelqu'un qui
+   * tape. S'en servir comme condition laissait donc passer « 5521 » : le
+   * bouton s'allumait, le code partait par e-mail, le compte se créait, et la
+   * base refusait la réservation sur `siren` — un refus que la table des
+   * étapes ne sait même pas router. Le mur arrivait APRÈS la création du
+   * compte, c'est-à-dire au pire endroit.
+   */
   const compteComplet = prenom.trim() !== '' && nomFamille.trim() !== ''
     && /.+@.+\..+/.test(courriel.trim()) && motDePasse !== '' && societe.trim() !== ''
-    && siren.trim() !== '' && !messageSiren(siren) && magasinComplet
+    && sirenValide(siren) && magasinComplet
 
   /**
    * ⚠️⚠️ **UN CLIENT CONNECTÉ N'A QUE LE MAGASIN À DONNER — mais il DOIT
@@ -860,12 +888,12 @@ export function PageReserver() {
                   du récapitulatif — et tant que rien n'était enregistré, ça ne
                   se voyait pas. Le jour où il réserve pour de vrai, il vendrait
                   pendant que `web/lib/legal.ts` est incomplet. */}
-              {/* ⚠️ **PAS À L'ÉTAPE OÙ IL MÈNE.** Le volet suit le client partout,
-                  y compris sur l'étape du compte — où ce bouton ne faisait plus
-                  rien (il y conduit) tout en gardant l'air d'être l'action
-                  principale, à côté de la vraie. Deux boutons verts, un seul
-                  vivant. */}
-              {etape !== 5 && (
+              {/* ⚠️ **PAS SUR LES ÉCRANS OÙ IL MÈNE.** Le volet suit le client
+                  partout, y compris sur le compte et la connexion — où ce
+                  bouton ne faisait plus rien d'utile (il y conduit) tout en
+                  gardant l'air d'être l'action principale, à côté de la vraie.
+                  Deux boutons verts, un seul vivant. */}
+              {etape < 5 && (
                 <button type="button" className="btn btn-primary btn-block"
                         disabled={occupe || !venteOuverte()}
                         onClick={() => allerA(5)}>
@@ -1582,6 +1610,11 @@ export function PageReserver() {
                 <input id={`${uid}-mail`} type="email" autoComplete="email" value={courriel}
                        placeholder="vous@entreprise.fr"
                        onChange={(e) => setCourriel(e.target.value)} />
+                {/* Même raison : une adresse incomplète éteignait le bouton en
+                    silence. On ne prévient qu'une fois quelque chose est tapé. */}
+                {courriel.trim() !== '' && !/.+@.+\..+/.test(courriel.trim()) && (
+                  <p className="field-hint">Il manque quelque chose à cette adresse.</p>
+                )}
               </div>
               <div className="field">
                 <label htmlFor={`${uid}-tel`}>Téléphone</label>
@@ -1603,6 +1636,18 @@ export function PageReserver() {
                   <input id={`${uid}-siren`} value={siren} inputMode="numeric"
                          placeholder="123 456 789"
                          onChange={(e) => setSiren(formaterSiren(e.target.value))} />
+                  {/* ⚠️⚠️ **UN BOUTON MORT DIT POURQUOI** — la règle est déjà
+                      écrite deux écrans plus haut, elle manquait ici. Un SIREN à
+                      clé fausse éteignait « Continuer vers le paiement » sans un
+                      mot : `ouvrirMonCompte` porte bien le message, mais il
+                      n'est jamais atteint puisque le bouton est désactivé. Le
+                      client relisait ses onze champs. Trouvé en déroulant le
+                      parcours, 10 octobre 2026. */}
+                  {siren.trim() !== '' && !sirenValide(siren) && (
+                    <p className="field-hint">
+                      {messageSiren(siren) ?? 'Un SIREN compte neuf chiffres.'}
+                    </p>
+                  )}
                 </div>
                 <div className="field">
                   <label htmlFor={`${uid}-societe`}>Raison sociale</label>

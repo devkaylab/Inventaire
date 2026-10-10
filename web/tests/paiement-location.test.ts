@@ -22,10 +22,11 @@
 // colonnes du `grant`, les clés d'idempotence du code qui les fabrique. Une
 // garde qui récite ce qu'elle surveille valide sa propre copie.
 import { describe, expect, it } from 'vitest'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { derniereDefinition, fichierDe } from './migrations'
 import { venteOuverte } from '../lib/legal'
+import { messageSiren, sirenValide } from '../lib/siren'
 
 const racine = path.resolve(__dirname, '../..')
 const lire = (p: string) => readFileSync(path.join(racine, p), 'utf8')
@@ -742,5 +743,88 @@ describe('⚠️⚠️ le client connecté dit pour quel magasin il réserve', (
     // Et le tunnel sait lire ce qu'on lui envoie.
     expect(src(), 'le tunnel ignore l’établissement qu’on lui désigne')
       .toMatch(/get\('etablissement'\)/)
+  })
+})
+
+/**
+ * ⚠️⚠️ **« REPRENDRE » DOIT REPRENDRE, ET LA SORTIE DOIT ÊTRE OUVERTE**
+ * (Julien, 10 octobre 2026).
+ *
+ * Le message « vous avez déjà un compte » portait un bouton « Reprendre ma
+ * réservation » qui ramenait sur la PREMIÈRE question : le tunnel garde ses
+ * réponses par navigateur, mais pas son étape. Tout était là, et il fallait
+ * pourtant recliquer tout le parcours. Et il disait « la page de connexion
+ * sait réinitialiser » sans jamais donner l'adresse : on décrivait une sortie
+ * au lieu de l'ouvrir.
+ */
+describe('⚠️⚠️ le message « vous avez déjà un compte »', () => {
+  const fonction = () => sansCommentaires(lire('supabase/functions/inscription/index.ts'))
+
+  it('le bouton ramène où le client en était, et le tunnel sait le lire', () => {
+    const src = fonction()
+    const chemin = /reserver: \{ chemin: '([^']+)'/.exec(src)?.[1]
+    expect(chemin, 'le retour vers la réservation a disparu').toBeTruthy()
+
+    // ⚠️ On ne cite pas le nom du paramètre : on le LIT dans le chemin, et on
+    // exige que le tunnel lise le même. Le renommer d'un seul côté remettrait
+    // le client à la première question, en silence.
+    const cle = /\?([a-z_]+)=/.exec(chemin!)?.[1]
+    expect(cle, `« ${chemin} » ne porte aucun paramètre de reprise`).toBeTruthy()
+
+    const tunnel = sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+    expect(tunnel, `le tunnel ignore « ${cle} » : le bouton rouvrira la première question`)
+      .toContain(`get('${cle}')`)
+  })
+
+  it('⚠️ et il DONNE le lien du mot de passe, au lieu de le décrire', () => {
+    const src = fonction()
+    const bloc = src.slice(src.indexOf("outcome === 'compte_existant'"))
+    const corps = bloc.slice(0, bloc.indexOf('await envoyerEmail'))
+    const lien = /lienSecondaire: \{[\s\S]*?lien: `\$\{site\(\)\}([^`]+)`/.exec(corps)?.[1]
+    expect(lien, 'le message ne donne plus de lien pour le mot de passe').toBeTruthy()
+
+    // Et cette page existe vraiment : un lien d'e-mail vers une page absente
+    // est pire que pas de lien du tout.
+    expect(
+      existsSync(path.join(racine, 'web/app', lien!.replace(/^\//, ''), 'page.tsx')),
+      `le message renvoie vers ${lien}, qui n’existe pas`,
+    ).toBe(true)
+  })
+})
+
+/**
+ * ⚠️⚠️ **`!messageSiren()` NE VAUT PAS « SIREN VALIDE ».**
+ *
+ * `messageSiren` se TAIT tant que le numéro est incomplet — c'est voulu, on ne
+ * harcèle pas quelqu'un qui tape. S'en servir comme condition laissait passer
+ * « 5521 » : bouton allumé, code envoyé, compte créé, puis la base refusait la
+ * réservation sur `siren`. Le mur arrivait APRÈS la création du compte.
+ */
+describe('⚠️ le tunnel exige un SIREN valide, et dit pourquoi', () => {
+  it('les deux fonctions ne disent PAS la même chose', () => {
+    // La garde tient la raison, pas seulement la conséquence : si un jour
+    // `messageSiren` se mettait à parler dès le premier chiffre, ce test
+    // tomberait et la règle ci-dessous serait à relire.
+    expect(messageSiren('5521'), '`messageSiren` ne se tait plus sur un numéro court')
+      .toBeNull()
+    expect(sirenValide('5521'), '`sirenValide` accepte un numéro court').toBe(false)
+  })
+
+  it('⚠️ et c’est `sirenValide` qui garde le bouton', () => {
+    const tunnel = sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+    const complet = /const compteComplet =[\s\S]*?\n\n/.exec(tunnel)?.[0] ?? ''
+    expect(complet, 'la condition du bouton a disparu').not.toBe('')
+    expect(complet, 'le bouton se contente de `messageSiren`, qui se tait sur un numéro court')
+      .toContain('sirenValide(siren)')
+  })
+
+  it('⚠️ et un bouton éteint dit pourquoi', () => {
+    // La règle est écrite deux fois dans le projet (« un bouton mort dit
+    // pourquoi ») : elle manquait sous ce champ-ci.
+    const tunnel = sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+    expect(tunnel, 'un SIREN refusé n’affiche plus rien sous le champ')
+      .toMatch(/!sirenValide\(siren\) && \(/)
+    expect(tunnel, 'une adresse incomplète éteint le bouton sans un mot')
+      .toMatch(/courriel\.trim\(\) !== '' && !\/\.\+@/)
   })
 })

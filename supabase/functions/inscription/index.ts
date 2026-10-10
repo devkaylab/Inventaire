@@ -133,7 +133,13 @@ Deno.serve(async (req) => {
    * Quantinvo. Ce qui n'est pas dans la liste retombe sur la connexion.
    */
   const RETOURS: Record<string, { chemin: string; libelle: string }> = {
-    reserver: { chemin: '/reserver', libelle: 'Reprendre ma réservation' },
+    // ⚠️⚠️ **`?reprendre=1` OU LE BOUTON MENT** (Julien, 10 octobre 2026 :
+    // « le lien reprendre me fait tout recommencer »). Le tunnel de la
+    // location garde ses réponses par navigateur mais PAS son étape : revenir
+    // sur `/reserver` nu rouvrait la première question. Tout était là, et il
+    // fallait pourtant recliquer tout le parcours. L'inscription, elle, tient
+    // son étape en base et repartait déjà au bon endroit.
+    reserver: { chemin: '/reserver?reprendre=1', libelle: 'Reprendre ma réservation' },
     inscription: { chemin: '/inscription', libelle: 'Reprendre mon inscription' },
   }
   const retour = RETOURS[texte('retour')] ?? { chemin: '/login', libelle: 'Me connecter' }
@@ -170,15 +176,24 @@ Deno.serve(async (req) => {
         // Le tunnel conserve le parcours par navigateur (`quantinvo-reserver`) :
         // le bouton ramène donc sur `/reserver`, où « J'ai déjà un compte »
         // enchaîne la connexion ET la réservation.
+        // ⚠️ **DEUX PHRASES, ET LE LIEN QUI MANQUAIT** (texte dicté par
+        // Julien, 10 octobre 2026). Le message renvoyait vers « la page de
+        // connexion » pour réinitialiser un mot de passe, sans jamais donner
+        // l'adresse : on décrivait une sortie au lieu de l'ouvrir. Le premier
+        // paragraphe (« quelqu'un vient de demander un code ») tombe : la note
+        // du bas dit déjà quoi faire si ce n'était pas lui.
         const m = emailQuantinvo({
           titre: 'Vous avez déjà un compte Quantinvo',
           paragraphes: [
-            'Quelqu’un vient de demander un code d’inscription avec cette adresse. Vous avez déjà un compte : il n’y a rien à créer.',
             retour.chemin === '/login'
-              ? 'Connectez-vous avec votre mot de passe habituel. Si vous l’avez oublié, la page de connexion sait le réinitialiser.'
-              : 'Reprenez où vous en étiez et choisissez « J’ai déjà un compte » : votre mot de passe habituel suffit, et vous continuez sans rien retaper. Si vous l’avez oublié, la page de connexion sait le réinitialiser.',
+              ? 'Connectez-vous avec votre mot de passe habituel. Si vous l’avez oublié, demandez-en un nouveau avec le lien ci-dessous.'
+              : 'Reprenez où vous en étiez et choisissez « J’ai déjà un compte ». Si vous avez oublié votre mot de passe, demandez-en un nouveau avec le lien ci-dessous.',
           ],
           bouton: { libelle: retour.libelle, lien: `${site()}${retour.chemin}` },
+          lienSecondaire: {
+            libelle: 'Choisir un nouveau mot de passe',
+            lien: `${site()}/mot-de-passe-oublie`,
+          },
           note: 'Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message : rien n’a été créé.',
           raison: 'Vous recevez ce message parce que cette adresse a été saisie sur la page d’inscription de Quantinvo.',
           siteUrl: site(),
