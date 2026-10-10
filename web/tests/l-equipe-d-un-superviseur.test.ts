@@ -152,3 +152,42 @@ describe('⚠️⚠️ un compte déjà dans l’entreprise se RATTACHE, il ne s
       .toContain("from('store_supervisors')")
   })
 })
+
+describe('⚠️⚠️ la notification attend le mot de passe, pas la connexion', () => {
+  const sql = sqlDuDepot()
+
+  it('elle se déclenche sur le marqueur', () => {
+    // ⚠️ TROISIÈME VISAGE DU MÊME DÉFAUT EN UNE JOURNÉE : le badge, le bouton
+    // « Renvoyer le lien », puis la notification. Tous suivaient « s'est
+    // connecté », parce que c'était le seul fait que la base savait dire. Or
+    // cliquer sur le lien d'invitation EST une connexion.
+    //
+    // Mesuré : la notification pour « Julien Compteur » est partie à
+    // 05:44:42, l'instant du premier clic sur « Continuer ». Trois
+    // superviseurs ont appris qu'un compte était prêt alors que la personne
+    // était bloquée.
+    expect(sql, 'le déclencheur de notification a disparu')
+      .toMatch(/create trigger auth_users_notifier_compte_finalise/)
+    const bloc = sql.split('create trigger auth_users_notifier_compte_finalise').pop() ?? ''
+    expect(bloc.slice(0, 500), 'la notification ne suit plus le marqueur')
+      .toContain('mot_de_passe_cree')
+    expect(bloc.slice(0, 500), 'la notification est revenue à « s’est connecté »')
+      .not.toContain('last_sign_in_at')
+  })
+
+  it('⚠️ et elle ne part qu’au PASSAGE du marqueur', () => {
+    // Sans le `old`, chaque modification ultérieure du compte renverrait la
+    // même notification.
+    const bloc = sql.split('create trigger auth_users_notifier_compte_finalise').pop() ?? ''
+    expect(bloc.slice(0, 500), 'la notification repartira à chaque modification du compte')
+      .toMatch(/old\.raw_user_meta_data/)
+  })
+
+  it('⚠️ et le texte dit ce qui s’est passé', () => {
+    const src = readFileSync(path.resolve(racine, 'components/Notifications.tsx'), 'utf8')
+    const bloc = src.split("case 'compteur_actif':")[1]?.split('case ')[0] ?? ''
+    expect(bloc, 'le bloc de la notification ne se lit plus').not.toBe('')
+    expect(bloc, 'la notification annonce encore une simple connexion')
+      .not.toContain('s’est connecté pour la première fois')
+  })
+})

@@ -1965,4 +1965,5 @@ export const en: Dictionnaire = {
 
   // Un compte qui existait déjà dans l'entreprise, remis dans le magasin.
   '%{nom} est de nouveau dans votre équipe.': '%{nom} is back on your team.',
+  '%{nom} a choisi son mot de passe : son compte de compteur est prêt.': '%{nom} has chosen their password: their counter account is ready.',
 }
