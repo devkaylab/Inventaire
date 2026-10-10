@@ -567,3 +567,36 @@ describe('⚠️⚠️ une erreur ne survit pas à son écran', () => {
       .toContain('!missionId && !reference && connecte')
   })
 })
+
+describe('⚠️⚠️ `coalesce` ne rattrape pas une chaîne vide', () => {
+  /**
+   * LE PIÈGE DE FOND DU 10 OCTOBRE 2026, derrière DEUX murs successifs.
+   *
+   * La formule « logiciel seul » n'a pas d'étape 3 : elle envoie donc
+   * `secteur: ''` et `code_barres: ''`. La fonction écrivait
+   * `coalesce(p_reponses ->> 'code_barres', 'tous')` et croyait se protéger —
+   * mais **`coalesce` ne remplace que NULL**. La chaîne vide passait, et la
+   * contrainte explosait AU VISAGE DU CLIENT : « new row for relation
+   * "missions" violates check constraint ».
+   *
+   * Un défaut non vide dans un `coalesce` sur une réponse du navigateur est
+   * donc toujours un faux ami : ce qui arrive du formulaire est vide, pas nul.
+   */
+  it('aucun défaut non vide ne se cache derrière un coalesce', () => {
+    const { corps } = derniereDefinition('reserver_ma_mission')
+    const nu = corps.replace(/^\s*--.*$/gm, '')
+    const faux = [...nu.matchAll(/coalesce\(p_reponses ->> '(\w+)', '([^']+)'\)/g)]
+    expect(
+      faux.map((m) => `${m[1]} → '${m[2]}'`),
+      'un défaut non vide derrière un coalesce : la chaîne vide du formulaire passera au travers',
+    ).toEqual([])
+  })
+
+  it('⚠️ et la normalisation existe, en un seul endroit', () => {
+    // Recopier `nullif(btrim(coalesce(…)))` à chaque champ, c'est recopier
+    // l'oubli du prochain.
+    const { corps } = derniereDefinition('normaliser_reponse_mission')
+    expect(corps, 'la normalisation partagée a disparu').not.toBe('')
+    expect(corps, 'elle ne traite plus la chaîne vide').toContain('nullif(btrim(')
+  })
+})

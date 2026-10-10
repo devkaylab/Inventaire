@@ -655,6 +655,14 @@ body:has(.site-footer) .theme-toggle { display: none; }
    unique ne doit rien gagner, et aucun autre écran n'en empile deux
    aujourd'hui — vérifié avant de la poser. */
 .btn-block + .btn-block { margin-top: 8px; }
+/* Qui est connecté, dans la barre du tunnel de réservation.
+   ⚠️ Ce n'est PAS un lien : rien ne se passe au clic. Lui donner l'allure d'un
+   lien promettrait un menu de compte qui n'existe pas ici. L'adresse se tronque
+   plutôt que de pousser « Quitter » hors de la barre sur un petit écran. */
+.res-identite {
+  cursor: default; max-width: 34ch; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* Les deux passes ont chacune leur couleur, et c'est la MÊME que dans l'app :
    compter est en accent, auditer en or. L'or ne dépend pas du thème — c'est

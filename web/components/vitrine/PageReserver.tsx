@@ -147,6 +147,17 @@ export function PageReserver() {
   const [etablissements, setEtablissements] = useState<Etablissement[]>([])
   const [etablissementChoisi, setEtablissementChoisi] = useState<string | null>(null)
   const [nouvelEtablissement, setNouvelEtablissement] = useState(false)
+  /**
+   * ⚠️⚠️ **RIEN NE DISAIT QU'ON ÉTAIT CONNECTÉ** (10 octobre 2026). Julien, au
+   * milieu du tunnel, compte créé et session ouverte : « sauf qu'il n'y a rien
+   * qui dit que je suis connecté ! » L'en-tête affichait « Se connecter » en
+   * toutes circonstances — il proposait donc d'ouvrir une session à quelqu'un
+   * qui venait d'en ouvrir une, et ne nommait jamais le compte.
+   *
+   * L'adresse vient de la SESSION, pas du champ du formulaire : quelqu'un qui
+   * s'est connecté ailleurs puis revient ici a une session et un champ vide.
+   */
+  const [courrielConnecte, setCourrielConnecte] = useState('')
 
   useEffect(() => {
     let vivant = true
@@ -154,6 +165,7 @@ export function PageReserver() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!vivant) return
       setConnecte(Boolean(session))
+      setCourrielConnecte(session?.user?.email ?? '')
       if (!session) return
       try {
         const liste = await mesEtablissements()
@@ -575,6 +587,7 @@ export function PageReserver() {
     if (error) { setErreur('Adresse ou mot de passe incorrect.'); return }
     setMotDePasse('')
     setConnecte(true)
+    setCourrielConnecte(courriel.trim().toLowerCase())
     // ⚠️ IL EST VENU RÉSERVER, PAS SE CONNECTER. Le bouton dit « Se connecter
     // et continuer » : l'envoyer sur un écran d'attente serait lui faire
     // recommencer. C'est le chemin du pro qui revient avec une adresse déjà
@@ -620,6 +633,7 @@ export function PageReserver() {
       return
     }
     setMotDePasse(''); setCode(''); setConnecte(true)
+    setCourrielConnecte(courriel.trim().toLowerCase())
     setOccupe(false)
     await reserverMaintenant()
   }
@@ -788,7 +802,11 @@ export function PageReserver() {
             ))}
           </ol>
           <div className="res-barre-actions">
-            <Link href="/login" className="header-lien">Se connecter</Link>
+            {connecte
+              ? <span className="header-lien res-identite" title={courrielConnecte}>
+                  Connecté{courrielConnecte ? ` — ${courrielConnecte}` : ''}
+                </span>
+              : <Link href="/login" className="header-lien">Se connecter</Link>}
             <Link href={lien('/')} className="header-lien">Quitter</Link>
           </div>
         </div>
