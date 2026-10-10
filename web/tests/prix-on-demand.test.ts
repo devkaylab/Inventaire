@@ -1790,7 +1790,7 @@ describe('⚠️ le volume annoncé désigne la tranche', () => {
     // asc limit 1`. La garde la RELIT dans la migration plutôt que de la citer.
     const { corps } = derniereDefinition('prix_mission')
     const requete = corps.match(
-      /from public\.tranches_prix\s+where[^;]*?plafond_articles\s*>=\s*p_articles_max[^;]*?order by\s+plafond_articles\s+asc\s+limit 1/is)
+      /from public\.tranches_prix\s+where[^;]*?plafond_articles\s*>=\s*p_articles_max[^;]*?order by\s+plafond_articles\s+asc\s+limit 1/i)
     expect(requete, 'la base ne cherche plus la première tranche qui couvre').toBeTruthy()
 
     // Un point dans chaque tranche, et les deux bords de chacune.
