@@ -1954,6 +1954,13 @@ export const en: Dictionnaire = {
   'Renvoyer le lien': 'Resend the link',
   'Un lien vient de partir à %{email}.': 'A link has just been sent to %{email}.',
 
+  // ⚠️ Le renvoi d'un responsable DIT ce qui s'est passé (10 octobre 2026).
+  // L'écran annonçait l'envoi sans rien en savoir : la fonction publique répond
+  // toujours la même chose, qu'un compte existe ou non.
+  'Le lien est parti à %{email}. Il est valable 24 heures et ne sert qu’une fois.': 'The link has been sent to %{email}. It is valid for 24 hours and works only once.',
+  'Le lien n’a pas pu partir. Réessayez dans un instant.': 'The link could not be sent. Try again in a moment.',
+  'Le lien n’a pas pu partir : le service est injoignable.': 'The link could not be sent: the service is unreachable.',
+
   // Deux équipes dans un magasin : la sienne, et celles des collègues.
   'Tous les compteurs de ce magasin. Vous ne retirez que ceux que vous avez ajoutés.': 'Every counter in this store. You can only remove the ones you added.',
   'Vous n’avez encore ajouté personne dans ce magasin.': 'You have not added anyone to this store yet.',

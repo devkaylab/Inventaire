@@ -20,6 +20,13 @@
  */
 
 export const ERREURS_SERVEUR: Record<string, string> = {
+  'Ce compte n’a pas d’adresse e-mail.': 'This account has no email address.',
+  'Cette personne a déjà créé son mot de passe.': 'This person has already created their password.',
+  'Cette personne n’appartient pas à votre entreprise.': 'This person does not belong to your company.',
+  'Le lien a bien été produit, mais l’e-mail n’a pas pu partir.': 'The link was produced, but the email could not be sent.',
+  'Le serveur d’authentification n’a pas pu produire de lien pour cette adresse. Rien n’a été envoyé.': 'The authentication server could not produce a link for this address. Nothing was sent.',
+  'Trop de liens demandés pour cette adresse dans la dernière heure.': 'Too many links requested for this address in the past hour.',
+  'Vous n’avez pas accès à cette personne.': 'You do not have access to this person.',
   'Abonnement absent': 'No subscription found',
   'Acces refuse': 'Access denied',
   'Accès refusé': 'Access denied',

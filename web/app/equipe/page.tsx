@@ -20,6 +20,8 @@ import { AddCounter } from '@/components/dashboard/AddCounter'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
 import { Modal } from '@/components/ui/Modal'
+import { useToast } from '@/components/ui/Toast'
+import { errorMessage } from '@/lib/errors'
 import { DemandeSuppression } from '@/components/dashboard/DemandeSuppression'
 import { getMyCompany, type Company } from '@/lib/account'
 import { Chargement } from '@/components/Chargement'
@@ -87,6 +89,7 @@ export default function EquipePage() {
   const guard = useAuthGuard('supervisor')
   useTraduction()
   const confirm = useConfirm()
+  const toast = useToast()
   const [company, setCompany] = useState<Company | null>(null)
   const [ca, setCa] = useState<TeamCA | null>(null)
   const [sup, setSup] = useState<TeamSup | null>(null)
@@ -189,11 +192,22 @@ export default function EquipePage() {
    * `auth.users`, et une personne invitée y est dès l'invitation (fiche 121).
    * Il manquait le bouton, pas la fonction.
    *
-   * ⚠️ On appelle la fonction déjà déployée plutôt que d'en écrire une
-   * deuxième : elle borne l'hôte de retour (pas de redirection ouverte) et
-   * répond toujours la même chose, qu'un compte existe ou non.
+   * ⚠️⚠️ **ET IL PASSE PAR `renvoyer-le-lien`, PLUS PAR `mot-de-passe-oublie`.**
+   * La seconde est PUBLIQUE et répond toujours la même chose, qu'un compte
+   * existe ou non — c'est juste, sinon le formulaire public devient un oracle
+   * d'énumération d'adresses. Mais cet écran-ci annonçait alors « un lien vient
+   * de partir » SANS RIEN EN SAVOIR : le 10 octobre 2026, Julien l'a cliqué
+   * deux fois sur un compte que le serveur d'authentification ne trouvait pas,
+   * a lu deux fois « c'est parti », et n'a rien reçu. Une heure perdue, la
+   * seule trace étant dans les journaux du serveur.
+   *
+   * L'argument du mutisme ne vaut pas ici : l'appelant a la liste de son
+   * entreprise sous les yeux, il n'a aucune adresse à découvrir. La fonction
+   * authentifiée rend donc le détail — et l'écran le DIT, succès comme échec.
+   * ⚠️ La décision reste en base (`renvoyer_le_lien_au_membre`) : cacher le
+   * bouton ne fermerait rien.
    */
-  async function renvoyerLeLien(email: string | null, nom: string) {
+  async function renvoyerLeLien(id: string, email: string | null, nom: string) {
     // L'adresse vient de la base et y est nullable. Les deux appelants ne
     // proposent le geste que s'il y en a une ; ceci ferme le type, et dit
     // qu'un envoi sans adresse n'existe pas.
@@ -205,14 +219,25 @@ export default function EquipePage() {
     })
     if (!ok) return
     try {
-      await supabase.functions.invoke('mot-de-passe-oublie', {
-        body: { email, redirectTo: `${window.location.origin}/bienvenue` },
+      const { data, error } = await supabase.functions.invoke('renvoyer-le-lien', {
+        body: { userId: id },
       })
-    } catch {
-      // La fonction ne dit jamais si l'adresse existe ; un échec réseau non
-      // plus. On annonce l'envoi sans promettre la réception.
+      const res = data as { success?: boolean; error?: string; detail?: string } | null
+      if (error || !res?.success) {
+        // Le motif technique n'a rien à faire dans un avis, mais il ne doit
+        // pas disparaître : il va dans la console, à côté de la phrase.
+        if (res?.detail) console.error('[renvoi]', res.detail)
+        // ⚠️ `errorMessage` et pas la phrase brute : les refus de la base
+        // parlent français, et l'espace connecté existe aussi en anglais.
+        const phrase = res?.error ?? error?.message
+        toast.error(phrase ? errorMessage(phrase) : t('Le lien n’a pas pu partir. Réessayez dans un instant.'))
+        return
+      }
+      toast.success(t('Le lien est parti à %{email}. Il est valable 24 heures et ne sert qu’une fois.', { email }))
+    } catch (e) {
+      console.error('[renvoi]', e)
+      toast.error(t('Le lien n’a pas pu partir : le service est injoignable.'))
     }
-    alert(t('Un lien vient de partir à %{email}.', { email }))
   }
 
   async function appliquer(fn: string, args: Record<string, unknown>) {
@@ -463,7 +488,7 @@ export default function EquipePage() {
             <button
               type="button"
               className="btn btn-ghost btn-sm membres-renvoi"
-              onClick={() => renvoyerLeLien(m.email, m.full_name || t('cette personne'))}
+              onClick={() => renvoyerLeLien(m.id, m.email, m.full_name || t('cette personne'))}
             >{t('Renvoyer le lien')}</button>
           )}
         </div>
@@ -745,7 +770,7 @@ export default function EquipePage() {
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
-                    onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}
+                    onClick={() => renvoyerLeLien(c.id, c.email, c.full_name || t('cette personne'))}
                   >{t('Renvoyer le lien')}</button>
                 )}
                 {/* Le geste quotidien du superviseur : un saisonnier part, il le

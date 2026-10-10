@@ -98,13 +98,50 @@ describe('⚠️⚠️ on ne conclut pas « expiré » sans avoir regardé la se
 describe('⚠️ renvoyer le lien est possible pour les deux rôles', () => {
   const equipe = sansCommentaires(lire('app/equipe/page.tsx'))
 
-  it('le renvoi passe par la fonction déjà déployée', () => {
-    // En écrire une seconde, c'est refaire la borne sur l'hôte de retour et la
-    // réponse qui ne dit jamais si un compte existe.
+  it('⚠️⚠️ le renvoi d’un responsable DIT ce qui s’est passé', () => {
+    // L'écran annonçait « un lien vient de partir » sans rien en savoir :
+    // `mot-de-passe-oublie` est publique et répond toujours la même chose,
+    // qu'un compte existe ou non (sinon c'est un oracle d'énumération
+    // d'adresses). Julien a cliqué deux fois sur un compte introuvable, lu
+    // deux fois « c'est parti », et n'a rien reçu — une heure perdue, la seule
+    // trace étant dans les journaux du serveur (10 octobre 2026).
     const f = corps(equipe, /async function renvoyerLeLien\(/)
     expect(f, 'renvoyerLeLien ne se lit plus').not.toBe('')
-    expect(f, 'le renvoi n’appelle plus la fonction du produit')
-      .toContain("invoke('mot-de-passe-oublie'")
+    expect(f, 'le renvoi est revenu à la fonction publique, qui ne dit jamais rien')
+      .not.toContain("invoke('mot-de-passe-oublie'")
+    expect(f, 'le renvoi ne passe plus par la fonction authentifiée')
+      .toContain("invoke('renvoyer-le-lien'")
+    // ⚠️ Et il REGARDE la réponse. Sans ça on retombe exactement sur le
+    // défaut : un appel lancé, un succès annoncé, rien d'envoyé.
+    expect(f, 'la réponse n’est plus lue').toMatch(/res\?\.success|!res\?\.success|data as/)
+    expect(f, 'le succès n’est plus annoncé').toContain('toast.success')
+    // ⚠️ Et c'est LE REFUS DE LA FONCTION qui doit parler, pas seulement la
+    // panne réseau : le refus est le cas qui est arrivé, et le seul que
+    // l'ancien écran passait sous silence. Un `toast.error` dans le `catch`
+    // suffisait à faire passer une garde posée sur tout le corps.
+    const refus = f.slice(f.indexOf('!res?.success'))
+    const finDuRefus = refus.indexOf('return')
+    expect(finDuRefus, 'la branche de refus ne se lit plus').toBeGreaterThan(-1)
+    expect(refus.slice(0, finDuRefus), 'le refus de la fonction n’est plus annoncé')
+      .toContain('toast.error')
+    // ⚠️ Et plus jamais d'annonce inconditionnelle : c'était la forme du
+    // mensonge — un `alert` posé APRÈS le try/catch, qui parlait dans tous
+    // les cas, échecs compris.
+    expect(f, 'l’écran annonce de nouveau l’envoi sans condition').not.toContain('alert(')
+  })
+
+  it('⚠️ et la décision du renvoi est en base, pas dans l’écran', () => {
+    // Cacher le bouton ne ferme rien : la borne (même entreprise, droit calculé
+    // sur la ligne visée, compte non fini, quota) est posée dans la RPC.
+    const sql = readFileSync(
+      path.join(racine, '..', 'supabase', 'migrations',
+        '20261010200001_renvoyer_le_lien_dit_la_verite.sql'), 'utf8')
+    for (const borne of ['v_company <> v_moi_company', 'store_supervisors', 'rate_limit_ok']) {
+      expect(sql, `la RPC ne tient plus la borne « ${borne} »`).toContain(borne)
+    }
+    expect(sql, 'la RPC ne refuse plus un compte déjà fini').toContain('compte_deja_fini')
+    expect(sql, '`create or replace` a rendu EXECUTE à PUBLIC et personne ne l’a repris')
+      .toMatch(/revoke all on function public\.renvoyer_le_lien_au_membre\(uuid\) from public, anon/)
   })
 
   it('⚠️ et il est proposé des DEUX côtés, pas seulement à l’administrateur', () => {

@@ -178,3 +178,83 @@ garde sur la CONDITION et plus seulement sur la présence du bouton.
 
 **L'écran de l'administrateur n'a pas été regardé après cette correction** :
 il demande une session d'administrateur, que seul Julien ouvre.
+
+## ⚠️⚠️ « Un lien vient de partir » — alors que rien ne partait
+
+Après la correction du bouton, Julien clique. L'écran : « Un lien vient de
+partir à marc@… ». Rien n'arrive. Il réessaie par « Mot de passe oublié ».
+Même phrase, même silence. **Une heure**, et la seule trace était dans les
+journaux du serveur :
+
+```
+09:13:10  generateLink User with this email not found
+09:15:44  generateLink User with this email not found
+```
+
+### La cause immédiate : un compte posé à la main n'est pas un compte
+
+J'avais créé Marc Oberlin par un `insert` dans `auth.users`. La rangée était
+incomplète, et **`instance_id` valait NULL** : le serveur d'authentification
+cherche ses comptes en filtrant sur cette colonne, il ne trouvait donc rien.
+Manquaient aussi `created_at`, `updated_at`, `raw_app_meta_data`, les colonnes
+de jetons (vides, pas NULL) et **la ligne `auth.identities`**.
+
+La leçon n'est pas « il manquait une colonne ». C'est qu'**écrire une rangée
+dans `auth.users` n'est pas créer un compte** : la forme attendue n'est pas
+documentée dans le schéma, elle est dans le code de GoTrue. Réparé en
+comparant colonne par colonne avec un vrai compte invité — c'est la seule
+méthode qui ne devine pas.
+
+### La cause réelle : l'écran promettait ce qu'il ne pouvait pas savoir
+
+`mot-de-passe-oublie` est **publique** et répond toujours
+`{success: true, received: true}`, qu'un compte existe ou non. C'est JUSTE :
+autrement le formulaire devient un oracle d'énumération d'adresses (défaut
+fermé le 28 août 2026), et c'est l'e-mail — qui n'atteint que le propriétaire
+de la boîte — qui dit la vérité.
+
+Mais l'écran de l'équipe appelait cette fonction publique et annonçait
+ensuite **« Un lien vient de partir »** par un `alert` posé APRÈS le
+`try/catch` : il parlait dans tous les cas, échecs compris. C'est la même
+famille que « un bouton qui annonce un envoi doit envoyer » (9 octobre) — un
+cran plus loin : **un écran qui annonce une remise doit pouvoir la constater.**
+
+⚠️ **Et l'argument du mutisme ne tient pas pour un responsable** : il a la
+liste de son entreprise sous les yeux, il n'a aucune adresse à découvrir. Le
+silence ne le protège de rien et lui cache tout.
+
+### Deux publics, deux chemins
+
+`renvoyer-le-lien` (authentifiée, `verify_jwt: true`) est née à côté de
+`mot-de-passe-oublie`, qui n'a pas bougé. **Pas un drapeau sur l'ancienne** :
+un « dis-moi la vérité si je suis administrateur » mettrait les deux publics
+dans le même code, et un jour le mauvais passerait par le bon chemin.
+
+La décision reste en base — `renvoyer_le_lien_au_membre`, quatre bornes :
+même entreprise ; droit calculé **sur la ligne visée** (l'administrateur
+couvre l'entreprise, le superviseur les compteurs de ses magasins) ; compte
+non fini (le droit suit le geste : le bouton n'existe que là) ; et **le même
+seau de quota que le formulaire public**, sinon ce chemin en serait le
+contournement.
+
+⚠️ Le quota vient **après** le contrôle de droit, à l'inverse du formulaire
+public. Là-bas l'ordre protégeait d'une énumération anonyme ; ici l'appelant
+est connu, et un refus de droit ne doit pas consommer le quota de la personne
+visée. L'ordre d'un contrôle se justifie par la menace, pas par l'habitude.
+
+⚠️ Aucun `redirectTo` ne vient du client : il n'y a qu'une destination, donc
+pas de surface de redirection ouverte à défendre. L'ancienne en accepte un et
+le borne ; celle-ci n'en accepte pas.
+
+L'écran dit maintenant les deux côtés, en avis éphémère et plus en `alert` :
+le succès avec la durée de validité, l'échec avec son motif en clair (« le
+serveur d'authentification n'a pas pu produire de lien pour cette adresse,
+rien n'a été envoyé ») et le détail technique dans la console.
+
+### Les gardes
+
+Quatre sabotages, quatre morsures. ⚠️ Et le troisième a d'abord **passé** :
+la garde « l'échec est annoncé » cherchait `toast.error` dans tout le corps de
+la fonction, or celui du `catch` suffisait — le refus, qui est le cas qui est
+arrivé, pouvait redevenir muet sans que rien ne tombe. Réancrée sur la
+BRANCHE de refus. Une garde posée sur un corps entier ne garde que le corps.
