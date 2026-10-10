@@ -726,7 +726,8 @@ export default function EquipePage() {
                     personne qui en avait besoin. */}
                 {!c.compte_finalise && c.email && (
                   <button
-                    className="link-btn"
+                    type="button"
+                    className="btn btn-ghost btn-sm"
                     onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}
                   >{t('Renvoyer le lien')}</button>
                 )}
@@ -735,13 +736,8 @@ export default function EquipePage() {
                     collègue. */}
                 {c.a_moi && (
                   <button
-                    className="link-btn danger-link"
-                    onClick={() => setASupprimer({ id: c.id, nom: c.full_name || t('Cette personne'), email: c.email })}
-                  >{t('Demander la suppression du compte')}</button>
-                )}
-                {c.a_moi && (
-                  <button
-                    className="link-btn"
+                    type="button"
+                    className="btn btn-ghost btn-sm"
                     onClick={async () => {
                       const ok = await confirm({
                         title: t('Retirer du magasin %{nom} ?', { nom: s.name }),
@@ -751,6 +747,21 @@ export default function EquipePage() {
                       if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
                     }}
                   >{t('Retirer du magasin')}</button>
+                )}
+                {/* ⚠️ LE FILET, ET IL N'EST PAS DÉCORATIF. Deux gestes voisins
+                    et sans commune mesure : « retirer » laisse le compte en vie,
+                    la demande de suppression vise à l'effacer. Sans séparation
+                    ils se lisent comme une paire de boutons interchangeables.
+                    Le style existait déjà, orphelin depuis que l'écran de
+                    l'administrateur est passé au menu — c'est ici qu'il
+                    retrouve sa raison d'être. */}
+                {c.a_moi && <span className="action-sep" aria-hidden="true" />}
+                {c.a_moi && (
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => setASupprimer({ id: c.id, nom: c.full_name || t('Cette personne'), email: c.email })}
+                  >{t('Demander la suppression du compte')}</button>
                 )}
               </div>
             </div>
