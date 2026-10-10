@@ -89,3 +89,41 @@ describe('⚠️ les motifs ne se lisent pas depuis un navigateur', () => {
     expect(sql()).toMatch(/revoke all on public\.demandes_suppression_compte from anon, authenticated/)
   })
 })
+
+describe('⚠️ la demande de suppression est la DERNIÈRE action de la ligne', () => {
+  const bloc = (() => {
+    const page = sansCommentaires(lire('app/equipe/page.tsx'))
+    const sup = page.split('(sup?.stores ?? []).map(')[1]?.split('Invitations en cours')[0] ?? ''
+    const i = sup.indexOf('<div className="req-actions">')
+    return i === -1 ? '' : sup.slice(i)
+  })()
+
+  it('elle vient après le retrait, pas avant', () => {
+    // Demande de Julien, 10 octobre 2026 : « mets la suppression tout à
+    // droite ». Dans une rangée, l'ordre du code EST l'ordre à l'écran.
+    expect(bloc, 'la rangée d’actions ne se lit plus').not.toBe('')
+    const iRetrait = bloc.indexOf("t('Retirer du magasin')}</button>")
+    const iSuppr = bloc.indexOf("t('Demander la suppression du compte')}</button>")
+    expect(iRetrait, 'le retrait a disparu de la rangée').toBeGreaterThan(-1)
+    expect(iSuppr, 'la demande de suppression a disparu de la rangée').toBeGreaterThan(-1)
+    expect(iSuppr, 'la demande de suppression est repassée avant le retrait')
+      .toBeGreaterThan(iRetrait)
+  })
+
+  it('⚠️ et un filet la sépare du retrait', () => {
+    // « Retirer » laisse le compte en vie, la demande vise à l'effacer. Sans
+    // séparation ils se lisent comme une paire de boutons interchangeables —
+    // c'est le commentaire que `.action-sep` portait déjà, orphelin.
+    expect(bloc, 'les deux gestes se lisent de nouveau comme une paire')
+      .toContain('action-sep')
+  })
+
+  it('ce sont des boutons, pas des liens', () => {
+    // Demande de Julien : « mets-moi des boutons ». Trois actions côte à côte
+    // en texte nu se lisent comme une phrase, pas comme des gestes.
+    expect(bloc.split('<button').length - 1, 'la rangée ne porte plus trois boutons')
+      .toBeGreaterThanOrEqual(3)
+    expect(bloc, 'les actions sont redevenues de simples liens')
+      .not.toMatch(/className="link-btn/)
+  })
+})
