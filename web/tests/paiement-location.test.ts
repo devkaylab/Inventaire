@@ -1109,10 +1109,51 @@ describe('⚠️⚠️ la réservation sans carte se relance', () => {
     expect(corps, 'le déclencheur porte une adresse de projet en dur')
       .not.toMatch(/https:\/\/[a-z0-9]+\.supabase\.co/)
     expect(corps, 'l’adresse ne vient plus du coffre')
-      .toMatch(/base_fonctions/)
+      .toMatch(/decrypted_secrets[\s\S]{0,80}?_url/)
     // Et sans secret, il ne fait rien : la tâche est inoffensive avant d'être
     // configurée.
     expect(corps, 'le déclencheur part sans vérifier que les secrets sont là')
-      .toMatch(/is null[\s\S]{0,120}?return/)
+      .toMatch(/= ''[\s\S]{0,160}?return/)
+  })
+
+  /**
+   * ⚠️ **LES DEUX TÂCHES DU CHANTIER SUIVENT LA MÊME CONVENTION.** Qui pose
+   * ces secrets en tient quatre ; lui en faire tenir deux FORMES différentes,
+   * c'est préparer l'oubli. La relance a d'abord emprunté `alerte_cle`, la
+   * clé du tour de garde de Quantinvo OS : une clé partagée entre deux
+   * fonctions fait que qui peut réveiller l'une peut réveiller l'autre.
+   */
+  it('⚠️ elle a SA clé, et le script pose les deux côtés', () => {
+    const { corps } = derniereDefinition('declencher_relance_reservation')
+    const noms = [...corps.matchAll(/where name = '(\w+)'/g)].map((m) => m[1])
+    expect(noms.length, 'le déclencheur ne lit plus le coffre').toBe(2)
+    expect(noms, 'la relance emprunte encore une clé qui n’est pas la sienne')
+      .not.toContain('alerte_cle')
+
+    // Ce que la base présente, la fonction doit l'attendre — et le nom de
+    // l'en-tête se LIT dans la fonction base, il ne se cite pas.
+    const entete = /'(x-[\w-]+)'/.exec(corps)?.[1]
+    expect(entete, 'le déclencheur ne présente plus d’en-tête').toBeTruthy()
+    const edge = sansCommentaires(lire('supabase/functions/relance-reservation/index.ts'))
+    expect(edge, `la fonction n’attend pas l’en-tête « ${entete} » que la base présente`)
+      .toContain(`'${entete}'`)
+
+    // ⚠️ Et le script pose les DEUX côtés : posée d'un seul, la clé fait
+    // refuser l'appel EN SILENCE, dans les journaux d'une fonction que
+    // personne ne regarde.
+    const script = lire('scripts/secrets-taches-jumeau.sh')
+    for (const nom of noms) {
+      expect(script, `le script ne pose pas « ${nom} » dans le coffre`).toContain(nom)
+    }
+    // ⚠️ **LE NOM SE DÉDUIT DE LA FONCTION, il ne se cite pas.** Première
+    // version : `toMatch(/RELANCE_CLE=/)` — tombée le jour même, sur un
+    // script juste, parce qu'il construit la ligne à partir d'une variable.
+    // Ce qui compte n'est pas la forme du script, c'est que le nom qu'il pose
+    // soit celui que la fonction attend.
+    const variable = /Deno\.env\.get\('(\w+)'\)/.exec(edge)?.[1]
+    expect(variable, 'la fonction ne lit plus sa clé dans son environnement')
+      .toBeTruthy()
+    expect(script, `le script ne pose pas « ${variable} », que la fonction attend`)
+      .toContain(variable!)
   })
 })

@@ -16,6 +16,10 @@
 // d'où la clé partagée, vérifiée **en temps constant**, sur le modèle du
 // webhook Stripe et du tour de garde.
 //
+// ⚠️ Elle a SA clé (`RELANCE_CLE`) et son adresse (`relance_url`, dans le
+// coffre de la base), exactement comme `mission-prelever`. Les deux secrets
+// se posent par `scripts/secrets-taches-jumeau.sh`.
+//
 // ⚠️ ET L'ORDRE COMPTE : on marque **après** l'envoi. Un e-mail qui ne part
 // pas laisse la relance ouverte, et l'heure suivante réessaie — l'inverse la
 // ferait taire pour de bon sur un incident réseau d'une seconde.
@@ -87,9 +91,12 @@ function message(rang: number): { titre: string; phrase: string } {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ success: false, error: 'Méthode non permise' }, 405)
 
-  const attendue = Deno.env.get('ALERTE_CLE')
-  if (!attendue) return json({ success: false, error: 'ALERTE_CLE absente' }, 500)
-  const fournie = req.headers.get('x-alerte-cle') ?? ''
+  // ⚠️ Sa propre clé, pas celle du tour de garde : une clé partagée entre
+  // deux fonctions fait que qui peut réveiller l'une peut réveiller l'autre.
+  // Même convention que `mission-prelever`, sa voisine de chantier.
+  const attendue = Deno.env.get('RELANCE_CLE')
+  if (!attendue) return json({ success: false, error: 'RELANCE_CLE absente' }, 500)
+  const fournie = req.headers.get('x-relance-cle') ?? ''
   if (!egalConstant(fournie, attendue)) return json({ success: false, error: 'Non autorisé' }, 401)
 
   const admin = createClient(
