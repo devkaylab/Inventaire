@@ -20,7 +20,7 @@
  * dans `CHEMINS_VITRINE`, comme `/devis`. Le jour où une ville anglophone
  * ouvre, la page se traduit — pas avant.
  */
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { SiteFooter } from '@/components/SiteChrome'
@@ -32,6 +32,7 @@ import { PasswordRules } from '@/components/PasswordRules'
 import { MentionCollecte } from '@/components/MentionCollecte'
 import { passwordError } from '@/lib/password'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '@/lib/siren'
+import { chercherParSiren } from '@/lib/registre'
 import { mesEtablissements, reserverMaMission, type Etablissement } from '@/lib/onDemandClient'
 import { useTraduction } from '@/lib/i18n'
 import { Logo } from '@/components/Logo'
@@ -759,6 +760,35 @@ export function PageReserver() {
     setCourrielConnecte(courriel.trim().toLowerCase())
     setOccupe(false)
     await reserverMaintenant()
+  }
+
+  /**
+   * Le SIREN donne la raison sociale.
+   *
+   * ⚠️⚠️ **LE TUNNEL FAISAIT RETAPER CE QUE LE REGISTRE SAIT** (Julien,
+   * 10 octobre 2026 : « remplir le numéro siren donne la désignation sociale
+   * automatiquement »). L'onboarding de l'abonnement reprenait déjà la fiche ;
+   * la réservation demandait les deux à la main, côte à côte. Deux champs pour
+   * un seul fait, et c'est celui qui est TAPÉ qui part sur la facture : un nom
+   * approximatif passe, alors que le registre le donne exact.
+   *
+   * ⚠️ **ON N'INTERROGE QUE SUR UN NUMÉRO VALIDE.** L'onboarding appelle dès
+   * neuf chiffres, clé fausse comprise : autant d'appels pour rien au registre
+   * public. La clé de Luhn se vérifie en local, elle filtre avant.
+   *
+   * ⚠️ **ET LA DERNIÈRE RÉPONSE GAGNE, PAS LA PLUS LENTE.** Corriger un
+   * chiffre lance un second appel ; sans jeton, une réponse tardive du numéro
+   * PRÉCÉDENT écraserait la bonne, et le client partirait avec la raison
+   * sociale d'une autre société.
+   */
+  const dernierSiren = useRef(0)
+  const reprendreLaSociete = async (saisie: string) => {
+    if (!sirenValide(saisie)) return
+    const jeton = ++dernierSiren.current
+    const r = await chercherParSiren(normaliserSiren(saisie))
+    // Injoignable, ou société non diffusée : on laisse le client écrire.
+    if (jeton !== dernierSiren.current || r.etat !== 'trouve') return
+    setSociete(r.fiche.raisonSociale)
   }
 
   const ouvrirMonCompte = async () => {
@@ -1635,7 +1665,11 @@ export function PageReserver() {
                   <label htmlFor={`${uid}-siren`}>SIREN</label>
                   <input id={`${uid}-siren`} value={siren} inputMode="numeric"
                          placeholder="123 456 789"
-                         onChange={(e) => setSiren(formaterSiren(e.target.value))} />
+                         onChange={(e) => {
+                           const v = formaterSiren(e.target.value)
+                           setSiren(v)
+                           void reprendreLaSociete(v)
+                         }} />
                   {/* ⚠️⚠️ **UN BOUTON MORT DIT POURQUOI** — la règle est déjà
                       écrite deux écrans plus haut, elle manquait ici. Un SIREN à
                       clé fausse éteignait « Continuer vers le paiement » sans un

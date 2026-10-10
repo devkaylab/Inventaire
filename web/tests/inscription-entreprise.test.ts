@@ -4,7 +4,6 @@ import { join } from 'node:path'
 
 import { TRANCHES, densite, libelleTranche, totalAnnuel, trancheDe } from '../lib/tarifs'
 import { PIECES_EN_STOCK } from '../lib/inscription'
-import { messageSiren, sirenValide } from '../lib/siren'
 import { formaterSiren, messageSiren, normaliserSiren, sirenValide } from '../lib/siren'
 
 const racine = join(__dirname, '..', '..')

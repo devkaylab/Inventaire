@@ -828,3 +828,70 @@ describe('⚠️ le tunnel exige un SIREN valide, et dit pourquoi', () => {
       .toMatch(/courriel\.trim\(\) !== '' && !\/\.\+@/)
   })
 })
+
+/**
+ * ⚠️⚠️ **LE SIREN DONNE LA RAISON SOCIALE** (Julien, 10 octobre 2026 :
+ * « remplir le numéro siren donne la désignation sociale automatiquement »).
+ *
+ * Le tunnel demandait les deux à la main, côte à côte : deux champs pour un
+ * seul fait, et c'est celui qui est TAPÉ qui part sur la facture. Or le SIREN
+ * est l'adresse de routage de la facture électronique, et le registre donne le
+ * nom exact.
+ */
+describe('⚠️ le SIREN remplit la raison sociale', () => {
+  const src = () => sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+  const corps = (texte: string) => {
+    const d = texte.indexOf('const reprendreLaSociete')
+    return d < 0 ? '' : texte.slice(d, texte.indexOf('\n  }', d))
+  }
+
+  it('le champ SIREN interroge le registre', () => {
+    const texte = src()
+    expect(corps(texte), 'la reprise depuis le registre a disparu')
+      .toContain('chercherParSiren')
+    // Et elle est bien branchée sur la saisie, pas seulement écrite.
+    const champ = /onChange=\{\(e\) => \{[\s\S]{0,240}?formaterSiren[\s\S]{0,240}?\}\}/.exec(texte)?.[0] ?? ''
+    expect(champ, 'le champ SIREN ne déclenche plus la reprise')
+      .toContain('reprendreLaSociete')
+  })
+
+  it('⚠️ elle n’interroge pas le registre pour un numéro invalide', () => {
+    // La clé de Luhn se vérifie en local : filtrer avant, c'est autant
+    // d'appels en moins au registre public — et rien de perdu.
+    const b = corps(src())
+    const avant = b.slice(0, b.indexOf('chercherParSiren'))
+    expect(avant, 'le registre est interrogé avant d’avoir vérifié la clé')
+      .toMatch(/if \(!sirenValide\([\s\S]*?return/)
+  })
+
+  /**
+   * ⚠️ **LA DERNIÈRE RÉPONSE GAGNE, PAS LA PLUS LENTE.** Corriger un chiffre
+   * lance un second appel ; sans jeton, une réponse tardive du numéro
+   * PRÉCÉDENT écraserait la bonne, et le client partirait avec la raison
+   * sociale d'une autre société — sur une facture.
+   */
+  it('⚠️ une réponse en retard n’écrase pas la bonne', () => {
+    const b = corps(src())
+    const jeton = /const (\w+) = \+\+\w+\.current/.exec(b)?.[1]
+    expect(jeton, 'aucun jeton ne protège la reprise : deux appels peuvent se doubler')
+      .toBeTruthy()
+
+    const apres = b.slice(b.indexOf('await chercherParSiren'))
+    expect(apres, 'le jeton n’est pas relu après l’attente : il ne protège rien')
+      .toContain(jeton!)
+    const garde = apres.slice(0, apres.indexOf('setSociete'))
+    expect(garde, 'rien n’abandonne une réponse périmée avant d’écrire')
+      .toMatch(/return/)
+  })
+
+  it('⚠️ et le registre remplit, il ne refuse pas', () => {
+    // Même règle que sur l'inscription : `introuvable` couvre AUSSI une
+    // société qui a demandé la non-diffusion de ses données. La refuser
+    // accuserait un vrai client de ne pas exister.
+    const texte = src()
+    const complet = /const compteComplet =[\s\S]*?\n\n/.exec(texte)?.[0] ?? ''
+    expect(complet, 'la condition du bouton a disparu').not.toBe('')
+    expect(complet, 'le registre est devenu une condition du bouton')
+      .not.toMatch(/registre|chercherParSiren|introuvable/)
+  })
+})
