@@ -5093,7 +5093,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-seule .champ-label { font-size: var(--t-texte); font-weight: 600; color: var(--text); }
 
 .res-cote { display: flex; flex-direction: column; gap: 16px; }
-.res-encadre { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
+.res-encadre { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-grand); padding: 20px; }
 .res-encadre h2 { font-size: var(--t-petit); font-weight: 600; color: var(--text-2); margin-bottom: 12px; }
 .res-encadre ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .res-encadre li { font-size: var(--t-texte); padding-left: 18px; position: relative; }
@@ -5103,7 +5103,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 }
 .res-encadre p { font-size: var(--t-texte); line-height: 1.55; margin-bottom: 14px; }
 
-.res-recap { background: var(--surface); border-radius: var(--r-grand); padding: 20px; }
+.res-recap { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-grand); padding: 20px; }
 /* ── Le tunnel ponctuel, tel que la planche le montre ───────
    ⚠️ LE VOLET EST UNE COLONNE, PAS UNE CARTE qui épouse son contenu : sur la
    planche il court du haut au bas de l'écran. Une carte qui s'arrête au
@@ -5214,7 +5214,7 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   font-family: var(--police-titre), system-ui, sans-serif;
   font-size: var(--t-titre); font-weight: 700; letter-spacing: -0.7px;
 }
-.res-prix-carte { background: var(--surface); border-radius: var(--r-grand); padding: 30px; }
+.res-prix-carte { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-grand); padding: 30px; }
 /* ⚠️ UNE SEULE DÉCLARATION. Le montant en avait trois — 54 px, 38 px, et
    42 px sous 560 px — qui se recouvraient dans l'ordre du fichier ; personne
    ne pouvait dire de mémoire laquelle gagnait. Il tient le même rang que la

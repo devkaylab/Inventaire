@@ -204,10 +204,14 @@ describe('⚠️⚠️ la page a son propre jeton, et les cartes un trait', () =
     // dans les deux thèmes, donc aucune ombre ne les séparait. Page blanche,
     // carte blanche, pas de trait : la carte n'existe plus.
     const cartes = ['.card', '.auth-card', '.panel', '.admin-section',
-                    '.resume-bande', '.dash-card', '.dash-kpi', '.mag']
+                    '.resume-bande', '.dash-card', '.dash-kpi', '.mag',
+                    '.res-encadre', '.res-recap', '.res-prix-carte']
     const nues = cartes.filter((c) => {
       const b = bloc(c)
-      return b.includes('background: var(--surface)') && /border:\s*0\s*;/.test(b)
+      if (!b.includes('background: var(--surface)')) return false
+      // ⚠️ Pas de trait du tout compte autant qu'un `border: 0` explicite :
+      // les cartes du tunnel On-Demand n'en déclaraient aucun.
+      return /border:\s*0\s*;/.test(b) || !/border:\s*1px/.test(b)
     })
     expect(nues, `ces cartes sont redevenues invisibles sur une page blanche : ${nues.join(', ')}`)
       .toEqual([])
