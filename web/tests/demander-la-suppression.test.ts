@@ -127,3 +127,26 @@ describe('⚠️ la demande de suppression est la DERNIÈRE action de la ligne',
       .not.toMatch(/className="link-btn/)
   })
 })
+
+describe('⚠️ deux rangées voisines partagent leur bord droit', () => {
+  it('les rangées de compteurs portent la variante alignée', () => {
+    // Relevé par Julien, capture à l'appui : un compteur avec badge et trois
+    // boutons, un autre sans badge et deux — leurs rangées d'actions ne
+    // finissaient pas au même bord.
+    const page = sansCommentaires(lire('app/equipe/page.tsx'))
+    const sup = page.split('(sup?.stores ?? []).map(')[1]?.split('Invitations en cours')[0] ?? ''
+    expect(sup, 'la rangée d’un compteur n’est plus alignée')
+      .toContain('req-row req-row-alignee')
+  })
+
+  it('⚠️ et la variante pousse les actions sans défaire la règle générale', () => {
+    // `.admin-section .req-row` est en `flex-start` EXPRÈS : un
+    // `space-between` laissait 868 px de vide sur les autres écrans. La
+    // variante ne touche qu'à ces rangées-ci.
+    const css = lire('app/globals.css')
+    expect(css, 'la variante alignée a disparu')
+      .toMatch(/\.req-row-alignee > \.req-actions\s*\{[^}]*margin-left:\s*auto/)
+    expect(css, 'la règle générale a été changée au lieu d’être bornée')
+      .toContain('.admin-section .req-row { justify-content: flex-start;')
+  })
+})
