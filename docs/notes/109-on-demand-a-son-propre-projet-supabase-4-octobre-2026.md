@@ -289,3 +289,64 @@ le jumeau ; elle sert une seconde fois.
 3. seulement alors, application sur la production ;
 4. déploiement du site, puis des fonctions edge ;
 5. **et en dernier le build de l'app** — qui appartient à Julien.
+
+## Les secrets du jumeau — `scripts/secrets-jumeau.sh` (10 octobre 2026)
+
+Le jumeau portait **9 secrets**, tous posés automatiquement par Supabase (plus
+`APP_PUBLIC_URL` et `SITE_URL`). La production en porte **23**. Les 22 fonctions
+edge du jumeau étaient déployées depuis le 9 octobre et ne pouvaient donc rien
+faire : ni e-mail, ni Stripe, ni prélèvement.
+
+Le script les pose, et il existe pour une raison précise : **aucune valeur ne
+doit passer par l'agent ni par le chat**. Saisie à l'aveugle, fichier
+temporaire en 0600, un seul envoi, effacement par `trap` (y compris sur
+Ctrl-C). Rien dans la ligne de commande, donc rien dans `ps` ni dans
+l'historique du shell.
+
+### Ce que la mesure a appris
+
+⚠️ **Il n'y a RIEN à créer dans Stripe, sauf un webhook.** `STRIPE_LIVE_PRET`
+vaut `false` : le compte est encore en mode test, donc les secrets Stripe de la
+PRODUCTION *sont déjà* des valeurs de test. Les huit `STRIPE_PRICE_*` et
+`STRIPE_SECRET_KEY` se recopient tels quels. Croire qu'il fallait créer huit
+Price de test aurait fait fabriquer des doublons et, pire, mélangé deux jeux
+d'identifiants pour les mêmes tarifs.
+
+⚠️ **Sauf `STRIPE_WEBHOOK_SECRET` : une signature appartient à une ADRESSE, pas
+à un compte.** Celle de la production ne validera jamais un appel reçu par le
+jumeau. Il faut un second point d'entrée dans Stripe (mode test) vers
+`https://<jumeau>.supabase.co/functions/v1/stripe-webhook`, avec les quatre
+évènements que la fonction traite : `checkout.session.completed`,
+`invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`.
+
+⚠️ **`ALERTE_CLE`, `METRICS_KEY`, `PRELEVEMENT_CLE` sont tirés au hasard, et
+DIFFÉRENTS de la production.** Ce sont nos propres mots de passe partagés : les
+recopier ferait qu'une fuite d'un côté ouvre l'autre. Personne n'a besoin de
+les lire, donc personne ne les lit.
+
+⚠️ **Et deux valeurs ne sont PAS des secrets de fonction.** La tâche horaire
+`prelever-les-locations` (`15 * * * *`) tourne dans la base : elle ne voit pas
+l'environnement des fonctions edge. `prelevement_url` et `prelevement_cle`
+vivent dans le **coffre** (`vault`), et le coffre du jumeau était vide — c'est
+pour ça que la tâche n'a appelé personne depuis le 7 octobre. Le script écrit
+les deux, avec la même valeur que `PRELEVEMENT_CLE`, dans le même passage :
+séparés, ils dérivent.
+
+### ⚠️ Deux pièges du CLI, payés en direct
+
+**`supabase link` change la cible du dépôt, en silence.** Un `link` vers le
+jumeau laisse `db query --linked` pointer sur le jumeau pour tout ce qui suit.
+Le lien a changé deux fois dans la même journée. Le script écrit donc le
+`project-ref` **en dur** et ne dépend d'aucun état du dépôt.
+
+**`db query --project-ref` seul est refusé** (« only applies when targeting the
+linked project ») et `--linked` seul viserait le projet lié — la production la
+plupart du temps. Il faut **les deux ensemble** : `--linked --project-ref`.
+
+### ⚠️ Ce qui reste à vérifier, et que je ne peux pas lire
+
+`APP_PUBLIC_URL` et `SITE_URL` du jumeau ont été posés le 9 octobre, et les
+valeurs ne sont pas lisibles par le CLI (seules des empreintes sortent). **S'ils
+pointent sur `www.quantinvo.com`**, les e-mails et les retours Stripe du jumeau
+enverraient les gens sur la production. À regarder dans la console avant
+d'éprouver le paiement.
