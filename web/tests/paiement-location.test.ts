@@ -600,3 +600,50 @@ describe('⚠️⚠️ `coalesce` ne rattrape pas une chaîne vide', () => {
     expect(corps, 'elle ne traite plus la chaîne vide').toContain('nullif(btrim(')
   })
 })
+
+describe('⚠️⚠️ l’écran demande tout ce que la base exige', () => {
+  /**
+   * LA LEÇON DES TROIS MURS DU 10 OCTOBRE 2026. Le tunnel de réservation est
+   * une copie RÉDUITE de l'onboarding OS, et **chaque champ retiré est devenu
+   * un mur** : code postal, code-barres, secteur, SIREN, magasin. Trois d'entre
+   * eux ont frappé APRÈS le paiement — le pire moment possible.
+   *
+   * Julien : « il faut les mêmes infos qu'un onboarding OS, c'est juste le
+   * profil de client qui change. »
+   *
+   * ⚠️ LA GARDE DÉDUIT SA LISTE de la fonction qui réserve : tout `code` de
+   * refus qu'elle peut rendre sur une donnée saisie doit correspondre à un
+   * champ que l'écran demande. Citer les champs les figerait.
+   */
+  it('tout refus de saisie a son champ dans le tunnel', () => {
+    const { corps } = derniereDefinition('reserver_ma_mission')
+    const refus = new Set(
+      [...corps.matchAll(/'code', '(\w+)'/g)].map((m) => m[1]))
+    const tunnel = sansCommentaires(
+      readFileSync(path.join(racine, 'web/components/vitrine/PageReserver.tsx'), 'utf8'))
+    // Ce que l'écran sait saisir, déduit de ses `setX(` — pas d'une liste.
+    const saisis = new Set(
+      [...tunnel.matchAll(/set([A-Z]\w+)\(/g)].map((m) => m[1].toLowerCase()))
+    const correspond: Record<string, string> = {
+      code_postal: 'codepostal', adresse: 'adresse', magasin: 'magasin',
+      entreprise: 'societe', siren: 'siren', articles: 'tranchearticles',
+      date: 'jour', engagement: 'engage', formule: 'formule',
+    }
+    const orphelins = [...refus]
+      .filter((r) => r in correspond)
+      .filter((r) => !saisis.has(correspond[r]))
+    expect(orphelins, `la base refuse sur ${orphelins.join(', ')} et l’écran ne le demande jamais`)
+      .toEqual([])
+  })
+
+  it('⚠️ et le bouton du compte exige le SIREN et le magasin', () => {
+    const tunnel = sansCommentaires(
+      readFileSync(path.join(racine, 'web/components/vitrine/PageReserver.tsx'), 'utf8'))
+    const complet = /const compteComplet =[\s\S]*?\n\n/.exec(tunnel)?.[0] ?? ''
+    expect(complet, 'la complétude du compte ne se lit plus').not.toBe('')
+    expect(complet, 'le SIREN est redevenu facultatif alors que la base l’exige')
+      .toContain('siren')
+    expect(complet, 'le magasin n’est plus exigé : le client paiera sans lieu à inventorier')
+      .toContain('magasinComplet')
+  })
+})

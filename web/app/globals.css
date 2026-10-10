@@ -659,6 +659,10 @@ body:has(.site-footer) .theme-toggle { display: none; }
    ⚠️ Ce n'est PAS un lien : rien ne se passe au clic. Lui donner l'allure d'un
    lien promettrait un menu de compte qui n'existe pas ici. L'adresse se tronque
    plutôt que de pousser « Quitter » hors de la barre sur un petit écran. */
+/* Un intertitre dans la colonne de questions : il sépare « votre compte » du
+   « magasin à inventorier », qui vivent sur le même écran depuis que la licence
+   demande son lieu. */
+.res-sous-titre { font-size: 15px; font-weight: 700; margin: 22px 0 10px; }
 .res-identite {
   cursor: default; max-width: 34ch; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;

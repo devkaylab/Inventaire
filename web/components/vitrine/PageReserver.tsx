@@ -654,8 +654,18 @@ export function PageReserver() {
     setEtape(7)
   }
 
+  /**
+   * ⚠️ **LE MAGASIN ET LE SIREN EN FONT PARTIE** (10 octobre 2026). Ils étaient
+   * absents : le SIREN était « facultatif » à l'écran alors que la base
+   * l'exige pour créer l'entreprise, et le magasin n'était jamais demandé dans
+   * le parcours « logiciel seul ». Chaque champ que l'écran ne demande pas et
+   * que la base exige devient un mur APRÈS le paiement.
+   */
+  const magasinComplet = !logicielSeul
+    || (magasin.trim() !== '' && adresse.trim() !== '' && codePostal.length === 5)
   const compteComplet = prenom.trim() !== '' && nomFamille.trim() !== ''
     && /.+@.+\..+/.test(courriel.trim()) && motDePasse !== '' && societe.trim() !== ''
+    && siren.trim() !== '' && !messageSiren(siren) && magasinComplet
 
   const recap = (
     <aside className="res-recap" aria-label="Votre réservation">
@@ -1465,7 +1475,7 @@ export function PageReserver() {
               </div>
               <div className="field-duo">
                 <div className="field">
-                  <label htmlFor={`${uid}-siren`}>SIREN <span className="muted">(facultatif)</span></label>
+                  <label htmlFor={`${uid}-siren`}>SIREN</label>
                   <input id={`${uid}-siren`} value={siren} inputMode="numeric"
                          placeholder="123 456 789"
                          onChange={(e) => setSiren(formaterSiren(e.target.value))} />
@@ -1477,6 +1487,48 @@ export function PageReserver() {
                          onChange={(e) => setSociete(e.target.value)} />
                 </div>
               </div>
+
+              {/* ⚠️⚠️ **LE MAGASIN SE DEMANDE ICI POUR LA LICENCE** (10 octobre
+                  2026). Le parcours « logiciel seul » ne pose ni nom ni
+                  adresse : son étape 1 est le volume. Or un inventaire est
+                  TOUJOURS rattaché à un magasin — le client qui payait sans en
+                  avoir un obtenait ses accès et tombait sur « Aucun magasin ne
+                  vous est affecté ».
+                  Le commentaire de l'étape 1 l'annonçait déjà : « L'adresse
+                  redescend au moment du compte ». Elle n'y était jamais
+                  descendue. Julien : « il faut les mêmes infos qu'un onboarding
+                  OS, c'est juste le profil de client qui change. » */}
+              {logicielSeul && (
+                <>
+                  <h2 className="res-sous-titre">Le magasin à inventorier</h2>
+                  <div className="field">
+                    <label htmlFor={`${uid}-mag2`}>Nom du magasin</label>
+                    <input id={`${uid}-mag2`} value={magasin} maxLength={80}
+                           placeholder="Boutique Rivoli"
+                           onChange={(e) => { setMagasin(e.target.value); setErreur(null) }} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`${uid}-adr2`}>Adresse</label>
+                    <input id={`${uid}-adr2`} value={adresse} maxLength={120}
+                           autoComplete="street-address" placeholder="12 rue de Rivoli"
+                           onChange={(e) => { setAdresse(e.target.value); setErreur(null) }} />
+                  </div>
+                  <div className="field-duo">
+                    <div className="field">
+                      <label htmlFor={`${uid}-cp2`}>Code postal</label>
+                      <input id={`${uid}-cp2`} value={codePostal} inputMode="numeric"
+                             autoComplete="postal-code" maxLength={5} placeholder="75004"
+                             onChange={(e) => { setCodePostal(e.target.value.replace(/\D/g, '')); setErreur(null) }} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`${uid}-vil2`}>Ville</label>
+                      <input id={`${uid}-vil2`} value={ville} maxLength={80}
+                             autoComplete="address-level2" placeholder="Paris"
+                             onChange={(e) => { setVille(e.target.value); setErreur(null) }} />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {erreur && <p className="field-err">{erreur}</p>}
 
@@ -1768,7 +1820,7 @@ export function PageReserver() {
                          onChange={(e) => setSociete(e.target.value)} />
                 </div>
                 <div className="field">
-                  <label htmlFor={`${uid}-siren2`}>SIREN <span className="muted">(facultatif)</span></label>
+                  <label htmlFor={`${uid}-siren2`}>SIREN</label>
                   <input id={`${uid}-siren2`} value={siren} inputMode="numeric"
                          placeholder="123 456 789"
                          onChange={(e) => setSiren(formaterSiren(e.target.value))} />
