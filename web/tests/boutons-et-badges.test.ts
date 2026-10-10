@@ -155,3 +155,24 @@ describe('le code à scanner de la boîte à outils', () => {
     expect(css).toMatch(/\.outils-installer-code\s*\{[^}]*background:\s*#ffffff/i)
   })
 })
+
+describe('⚠️ deux boutons pleine largeur ne se touchent pas', () => {
+  const css = readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8')
+
+  it('une suite de `.btn-block` prend un écart', () => {
+    // Relevé par Julien sur « Regardez votre boîte mail » (10 octobre 2026) :
+    // deux rectangles collés bord à bord se lisent comme un seul bloc coupé,
+    // et la frontière entre les deux gestes disparaît au moment où il faut
+    // choisir.
+    expect(css, 'deux boutons pleine largeur empilés se touchent de nouveau')
+      .toMatch(/\.btn-block \+ \.btn-block\s*\{[^}]*margin-top:\s*[1-9]/)
+  })
+
+  it('⚠️ et un bouton SEUL ne gagne rien', () => {
+    // La règle porte sur la SUITE de deux. Posée sur `.btn-block` tout court,
+    // elle décalerait tous les boutons pleine largeur du site — une correction
+    // d'un écran qui en déplacerait vingt.
+    const regle = /(^|\})\s*\.btn-block\s*\{([^}]*)\}/m.exec(css)?.[2] ?? ''
+    expect(regle, 'la règle générale `.btn-block` s’est mise à écarter').not.toMatch(/margin/)
+  })
+})
