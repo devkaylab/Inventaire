@@ -165,3 +165,4 @@ ou corriger une fiche, et une ligne dans l'index ci-dessous si elle est neuve.
 - [⚠️ Le premier pas de la montée Expo : 56.0.23](docs/notes/125-le-premier-pas-de-la-montee-expo-9-octobre-2026.md)
 - [⚠️ Un en-tête de page ne porte pas de panneau](docs/notes/126-l-entete-ne-porte-pas-de-panneau-9-octobre-2026.md)
 - [⚠️⚠️ Un lien d'invitation ne mène plus à un cul-de-sac](docs/notes/127-un-lien-d-invitation-ne-mene-plus-a-un-cul-de-sac-9-octobre-2026.md)
+- [⚠️⚠️ L'équipe d'un superviseur, et le mot de passe qui manquait](docs/notes/128-l-equipe-d-un-superviseur-10-octobre-2026.md)

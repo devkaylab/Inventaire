@@ -205,11 +205,21 @@ describe('/equipe : une équipe se compare, elle ne se lit pas', () => {
     expect(src).toContain('requireText: nom || p.email')
   })
 
-  it('l’ambre ne dit qu’une chose : cette personne n’est jamais entrée', () => {
-    // ⚠️ `is_active` veut dire « s'est déjà connecté », rien d'autre — le
-    // contresens corrigé le 23 août 2026, à ne pas réintroduire.
-    expect(src).toMatch(/membres-cell\$\{!m\.is_active \? ' attente' : ''\}/)
+  it('⚠️⚠️ l’ambre suit le MOT DE PASSE, pas la connexion', () => {
+    // ⚠️⚠️ CETTE GARDE A PROTÉGÉ UN DÉFAUT PENDANT SEPT SEMAINES. Elle exigeait
+    // que l'ambre suive `is_active` — « s'est déjà connecté » —, au nom du
+    // contresens corrigé le 23 août 2026. Or cliquer sur le lien d'invitation
+    // EST une connexion : `verifyOtp` pose `last_sign_in_at` avant que le mot
+    // de passe existe. L'ambre tombait donc à l'instant précis où la personne
+    // se bloquait, et le bouton « Renvoyer le lien » avec elle. Un superviseur
+    // a été SUPPRIMÉ faute de ce bouton (9 octobre 2026).
+    //
+    // Le signal juste est `a_un_mot_de_passe` : « a fini son inscription ».
+    expect(src).toMatch(/membres-cell\$\{!m\.a_un_mot_de_passe \? ' attente' : ''\}/)
     expect(src).toContain('Mot de passe à créer')
+    // Et le signal trompeur ne revient commander ni l'ambre ni le renvoi.
+    expect(src, 'l’ambre est revenue à « s’est connecté »').not.toMatch(/!m\.is_active \?/)
+    expect(src, 'le renvoi du lien est revenu à « s’est connecté »').not.toMatch(/!m\.is_active &&/)
   })
 
   it('⚠️ le superviseur ordinaire garde son rangement MAGASIN PAR MAGASIN', () => {
