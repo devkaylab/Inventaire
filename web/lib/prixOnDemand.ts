@@ -214,6 +214,50 @@ export const TRANCHES_ARTICLES: Tranche[] = [
   { cle: 'h', court: '100–150 000', nom: '100 000 à 150 000 pièces', min: 100_000, max: 150_000, prixCents: 97_900 },
 ]
 
+/**
+ * La tranche qu'impose un nombre de pièces annoncé.
+ *
+ * ⚠️ **C'EST LA REQUÊTE DE LA BASE, RECOPIÉE.** `prix_mission` cherche
+ * `plafond_articles >= p_articles_max order by plafond_articles asc limit 1` :
+ * la PREMIÈRE tranche dont le plafond couvre le nombre annoncé. Les deux
+ * doivent donner la même, sinon l'écran promet un prix que le moteur refuse —
+ * une garde les compare.
+ *
+ * ⚠️ `null` au-dessus de la dernière tranche, et ce n'est pas un défaut : il
+ * n'existe pas de prix plus gros. Au-delà, c'est un inventaire qui se parle,
+ * pas qui se réserve en deux clics (`hors_grille`, côté base).
+ *
+ * ⚠️ La recherche suppose la liste TRIÉE par plafond croissant. Une garde le
+ * vérifie plutôt que de compter dessus : insérer une tranche au mauvais rang
+ * donnerait un prix trop cher, en silence.
+ */
+export function trancheDesPieces(pieces: number): Tranche | null {
+  if (!Number.isFinite(pieces) || pieces < 1) return null
+  return TRANCHES_ARTICLES.find((t) => t.max >= pieces) ?? null
+}
+
+/**
+ * Le compteur d'appareils qu'impose un volume annoncé.
+ *
+ * ⚠️⚠️ **IL NE DÉPEND QUE DU VOLUME — c'est tout l'intérêt de l'avoir ici.**
+ * Dans l'écran, le compteur était borné par un `Math.max` qui lisait le minimum
+ * de la tranche PRÉCÉDENTE : annoncer 150 000 pièces puis 30 000 laissait 43
+ * appareils au lieu de 9, et plus rien ne redescendait (défaut trouvé par
+ * Julien, 10 octobre 2026). Une fonction du seul volume ne peut pas garder de
+ * mémoire : la garde rejoue la séquence qui mordait.
+ *
+ * Le plancher reste appliqué à l'affichage, là où le client a le droit d'en
+ * demander PLUS que le minimum. Ici, c'est le minimum seul.
+ */
+export function appareilsPourPieces(pieces: number): number {
+  const t = trancheDesPieces(pieces)
+  return t ? minimumAppareils(t.max) : 1
+}
+
+/** Au-delà, on ne réserve plus : on en parle. Déduit de la grille, jamais écrit. */
+export const PLAFOND_PIECES =
+  TRANCHES_ARTICLES.reduce((a, t) => Math.max(a, t.max), 0)
+
 export const TRANCHES_REFERENCES: Tranche[] = [
   { cle: 'a', nom: 'Moins de 500 références', min: 0, max: 500 },
   { cle: 'b', nom: '500 à 1 000 références', min: 500, max: 1_000 },

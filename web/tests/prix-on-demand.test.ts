@@ -20,6 +20,7 @@ import {
   REGLAGES, DEPARTEMENTS_DESSERVIS, chaine as chaineAffichee,
   FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
   TRANCHES_ARTICLES, TARIF_ENTREE_APPAREILS, minimumAppareils, moisCouvrant, prixPonctuel,
+  trancheDesPieces, appareilsPourPieces, PLAFOND_PIECES,
 } from '../lib/prixOnDemand'
 import { prixFerme as prixAffiche } from '../lib/prixOnDemand'
 import { APPAREILS_MAX, OFFRES, SUPPLEMENT } from '../lib/offres'
@@ -1761,5 +1762,80 @@ describe('⚠️ ce que le navigateur envoie, la base le lit', () => {
     expect(envoyees.length, 'l’appel ne se lit plus').toBeGreaterThan(12)
     const inutiles = envoyees.filter((c) => !lues.has(c))
     expect(inutiles, `envoyées mais jamais lues : ${inutiles.join(', ')}`).toEqual([])
+  })
+})
+
+/**
+ * ⚠️⚠️ **LE VOLUME ANNONCÉ DÉSIGNE LA TRANCHE, ET IL EST SEUL À LE FAIRE.**
+ *
+ * Le tunnel offrait huit boutons de tranche ; depuis le 10 octobre 2026 il
+ * demande un NOMBRE, et la tranche s'en déduit — exactement comme en base.
+ * Deux choses doivent tenir, et elles sont indépendantes :
+ *
+ *  1. le site et la base choisissent la MÊME tranche pour un nombre donné ;
+ *  2. le compteur d'appareils ne garde AUCUNE mémoire du volume précédent.
+ */
+describe('⚠️ le volume annoncé désigne la tranche', () => {
+  it('la grille est triée par plafond croissant', () => {
+    // `trancheDesPieces` prend la PREMIÈRE tranche qui couvre : une liste mal
+    // ordonnée lui ferait rendre une tranche trop chère, sans rien casser.
+    const plafonds = TRANCHES_ARTICLES.map((t) => t.max)
+    expect(plafonds, 'la grille n’est plus triée')
+      .toEqual([...plafonds].sort((a, b) => a - b))
+    expect(PLAFOND_PIECES).toBe(plafonds[plafonds.length - 1])
+  })
+
+  it('⚠️ le site choisit la tranche que la base choisirait', () => {
+    // La base : `plafond_articles >= p_articles_max order by plafond_articles
+    // asc limit 1`. La garde la RELIT dans la migration plutôt que de la citer.
+    const { corps } = derniereDefinition('prix_mission')
+    const requete = corps.match(
+      /from public\.tranches_prix\s+where[^;]*?plafond_articles\s*>=\s*p_articles_max[^;]*?order by\s+plafond_articles\s+asc\s+limit 1/is)
+    expect(requete, 'la base ne cherche plus la première tranche qui couvre').toBeTruthy()
+
+    // Un point dans chaque tranche, et les deux bords de chacune.
+    const bords = TRANCHES_ARTICLES.flatMap((t) => [t.min + 1, t.max - 1, t.max])
+    for (const v of bords) {
+      const attendue = TRANCHES_ARTICLES.find((t) => t.max >= v)
+      expect(trancheDesPieces(v)?.cle, `${v} pièces`).toBe(attendue?.cle)
+    }
+  })
+
+  it('rien en dessous de 1 pièce, rien au-dessus du dernier plafond', () => {
+    for (const v of [0, -1, Number.NaN]) expect(trancheDesPieces(v)).toBeNull()
+    expect(trancheDesPieces(PLAFOND_PIECES)).not.toBeNull()
+    expect(trancheDesPieces(PLAFOND_PIECES + 1), 'au-delà, ça se parle').toBeNull()
+    expect(appareilsPourPieces(PLAFOND_PIECES + 1)).toBe(1)
+  })
+
+  /**
+   * ⚠️⚠️ **LA SÉQUENCE QUI MORDAIT** (Julien, 10 octobre 2026) : « si j'ai 43
+   * de base, sélectionner cette tranche appareil reste à 43, si j'en ai 15
+   * sélectionner la même tranche garde 15 ». Le compteur était borné au minimum
+   * de la tranche QUITTÉE. La garde rejoue tous les ordres possibles.
+   */
+  it('⚠️ le compteur ne garde aucune mémoire du volume précédent', () => {
+    const volumes = TRANCHES_ARTICLES.map((t) => t.max)
+    for (const avant of volumes) {
+      for (const apres of volumes) {
+        // On « passe par » `avant`, puis on annonce `apres`.
+        expect(appareilsPourPieces(avant)).toBe(minimumAppareils(avant))
+        expect(appareilsPourPieces(apres), `${avant} pièces puis ${apres}`)
+          .toBe(minimumAppareils(apres))
+      }
+    }
+  })
+
+  /**
+   * L'écran ne refait pas le calcul dans son coin : c'est ce qui empêche le
+   * plancher de se glisser à nouveau entre le volume et le compteur.
+   */
+  it('le tunnel passe par la règle, il ne la recopie pas', () => {
+    const src = readFileSync(
+      path.join(__dirname, '..', 'components', 'vitrine', 'PageReserver.tsx'), 'utf8')
+    const sansCommentaires = src
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+    expect(sansCommentaires, 'le tunnel n’utilise plus appareilsPourPieces')
+      .toContain('appareilsPourPieces')
   })
 })

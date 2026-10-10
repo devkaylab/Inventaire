@@ -5177,8 +5177,16 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 
 /* ── Le calendrier ─────────────────────────────────────────────────────── */
 .res-quand { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
-.res-calendrier { background: var(--surface); border-radius: var(--r-grand); padding: 18px; }
-.res-colonnes:has(.res-jauge) .res-calendrier { background: none; padding: 0; }
+/* ⚠️ **LE CALENDRIER TIENT PAR SON TRAIT** (Julien, 10 octobre 2026 : « je
+   veux un cadre pour le calendrier »). Il tenait par son fond : blanc sur la
+   page grise, ça suffisait à le découper. Page blanche, il flottait — même
+   piège que les huit cartes, même correctif. Dans le tunnel il n'avait même
+   pas de fond : le filet est la SEULE chose qui l'y délimite. */
+.res-calendrier {
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-grand); padding: 18px;
+}
+.res-colonnes:has(.res-jauge) .res-calendrier { background: none; }
 .res-colonnes:has(.res-jauge) .res-mois { justify-content: flex-start; gap: 10px; margin-bottom: 16px; }
 .res-colonnes:has(.res-jauge) .res-jour-nom { text-transform: uppercase; letter-spacing: .07em; font-size: var(--t-petit); }
 .res-mois { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -5186,6 +5194,13 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .res-mois .link-btn { font-size: var(--t-nombre); line-height: 1; padding: 2px 10px; }
 .res-jours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .res-jour-nom { text-align: center; font-size: var(--t-petit); color: var(--text-3); padding-bottom: 6px; }
+/* ⚠️ **UN JOUR GARDE `--surface-2`, ET SURTOUT PAS `--bg`** (mesuré le
+   10 octobre 2026). La case est blanche, donc invisible sur la carte blanche :
+   la tentation est de lui donner le gris des creux. Essayé — et le gris des
+   creux (#f2f3f1) est à un cheveu de l'`--accent-soft` (#e7ede9) qui marque la
+   SEMAINE D'ACCÈS. La bande des sept jours disparaît, c'est-à-dire le seul
+   renseignement que ce calendrier porte. Ce qui délimite le calendrier, c'est
+   son cadre, pas le fond de ses cases. */
 .res-jour {
   aspect-ratio: 1; border: 0; border-radius: var(--r);
   background: var(--surface-2); color: var(--text);

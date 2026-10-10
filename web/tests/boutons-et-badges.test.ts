@@ -240,3 +240,64 @@ describe('⚠️ les sections de la vitrine se délimitent', () => {
     expect(regle, 'l’exclusion cite une bande précise au lieu du préfixe').toBe('bande-')
   })
 })
+
+describe('⚠️ le calendrier de la réservation tient par son cadre', () => {
+  const css = readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8')
+  const regleDe = (selecteur: string) => {
+    const i = css.indexOf(selecteur + ' ')
+    const j = css.indexOf('{', i)
+    return i < 0 ? '' : css.slice(j, css.indexOf('}', j))
+  }
+
+  it('il porte un filet, pas seulement un fond', () => {
+    // « je veux un cadre pour le calendrier » (Julien, 10 octobre 2026). Il
+    // tenait par son fond blanc sur la page grise ; page blanche, il flottait.
+    // Et dans le tunnel il n'a PAS de fond du tout : le filet y est seul.
+    expect(regleDe('.res-calendrier'), 'le calendrier n’a plus de filet')
+      .toMatch(/border:\s*1px\s+solid/)
+  })
+
+  it('⚠️ et le tunnel ne lui reprend pas sa marge', () => {
+    // La variante du tunnel effaçait fond ET marge. Sans marge, le filet colle
+    // aux cases : un cadre qui serre n'est pas un cadre.
+    const tunnel = css.match(/:has\(\.res-jauge\) \.res-calendrier\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(tunnel, 'la variante du tunnel remet la marge à zéro').not.toMatch(/padding:\s*0/)
+  })
+
+  /**
+   * ⚠️⚠️ **LA CASE NE PREND PAS LE GRIS DES CREUX.** La tentation est forte —
+   * une case blanche sur carte blanche ne se voit pas. Mesuré le 10 octobre
+   * 2026 : `--bg` (#f2f3f1) et `--accent-soft` (#e7ede9) sont à un cheveu l'un
+   * de l'autre, et `--accent-soft` marque LA SEMAINE D'ACCÈS. Griser les cases
+   * efface la bande des sept jours, c'est-à-dire le seul renseignement que ce
+   * calendrier porte.
+   */
+  it('⚠️ la case d’un jour reste distincte de la semaine d’accès', () => {
+    const fond = (sel: string) =>
+      regleDe(sel).match(/background:\s*var\((--[\w-]+)\)/)?.[1]
+    const ordinaire = fond('.res-jour')
+    const fenetre = fond('.res-jour.fenetre')
+    expect(ordinaire, 'la case ordinaire n’a plus de fond').toBeTruthy()
+    expect(fenetre, 'la semaine d’accès n’a plus de fond').toBeTruthy()
+
+    // Le thème clair, où les deux se touchent. On lit les jetons DANS le bloc
+    // clair plutôt que de les citer : ils changent, la garde suit.
+    const clair = css.slice(css.indexOf(':root[data-theme="light"] {'))
+    const hex = (jeton: string) => {
+      const m = new RegExp(`\\${jeton}:\\s*#([0-9a-fA-F]{6})`).exec(clair)
+      return m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) : null
+    }
+    const a = hex(ordinaire!); const b = hex(fenetre!)
+    expect(a, `${ordinaire} n’est pas un hex du thème clair`).toBeTruthy()
+    expect(b, `${fenetre} n’est pas un hex du thème clair`).toBeTruthy()
+
+    // ⚠️ **LE SEUIL EST MESURÉ, PAS INVENTÉ** (10 octobre 2026). Somme des
+    // écarts par canal : blanc contre `--accent-soft` = 64, et la bande des
+    // sept jours se lit nettement ; `--bg` (le gris des creux) contre
+    // `--accent-soft` = 25, et elle disparaît — essayé, vu, repris. 40 tombe
+    // entre les deux, loin des deux.
+    const ecart = a!.reduce((t, v, i) => t + Math.abs(v - b![i]), 0)
+    expect(ecart, `${ordinaire} et ${fenetre} se confondent (écart ${ecart})`)
+      .toBeGreaterThanOrEqual(40)
+  })
+})

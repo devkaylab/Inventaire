@@ -39,7 +39,8 @@ import { euros } from '@/lib/offres'
 import { nb } from '@/lib/format'
 import {
   DELAI_HEURES, MOMENTS, OU_NOUS_ALLONS, SECTEURS,
-  TRANCHES_ARTICLES, TRANCHES_REFERENCES,
+  TRANCHES_ARTICLES, TRANCHES_REFERENCES, trancheDesPieces, PLAFOND_PIECES,
+  appareilsPourPieces,
   prixFerme, duree, estDesservi,
   FORMULE_EQUIPE_OUVERTE, formuleParDefaut, formuleDemandee,
   REGLAGES, minimumAppareils,
@@ -207,6 +208,16 @@ export function PageReserver() {
   const [surfaceVente, setSurfaceVente] = useState('')
   const [surfaceReserve, setSurfaceReserve] = useState('')
   const [trancheArticles, setTrancheArticles] = useState('')
+
+  /**
+   * Le nombre de pièces annoncé, tel qu'il a été tapé.
+   *
+   * ⚠️ **LA TRANCHE RESTE CE QUI FAIT FOI**, ce nombre ne sert qu'à la
+   * choisir : c'est le HAUT de la tranche qui part en base, qui porte le prix
+   * ferme et qui fixe la tolérance. Garder les deux évite de redemander son
+   * chiffre à quelqu'un qui revient en arrière, sans rien changer au contrat.
+   */
+  const [pieces, setPieces] = useState('')
   const [trancheReferences, setTrancheReferences] = useState('')
   const [codeBarres, setCodeBarres] = useState<'tous' | 'partiel' | ''>('')
   const [engage, setEngage] = useState(false)
@@ -299,6 +310,16 @@ export function PageReserver() {
         if (r.surfaceVente) setSurfaceVente(r.surfaceVente)
         if (r.surfaceReserve) setSurfaceReserve(r.surfaceReserve)
         if (r.trancheArticles) setTrancheArticles(r.trancheArticles)
+        // ⚠️ **UN BROUILLON D'AVANT LE CHAMP N'A PAS DE NOMBRE**, seulement
+        // une tranche : sans ce repli, il revenait avec un compteur à 43
+        // appareils au-dessus d'un champ vide, et un « Continuer » actif que
+        // rien à l'écran ne justifiait. On lui redonne le haut de SA tranche,
+        // qui est précisément ce qu'il avait annoncé.
+        if (r.pieces) setPieces(r.pieces)
+        else if (r.trancheArticles) {
+          const t = TRANCHES_ARTICLES.find((x) => x.cle === r.trancheArticles)
+          if (t) setPieces(String(t.max))
+        }
         if (r.trancheReferences) setTrancheReferences(r.trancheReferences)
         if (r.codeBarres) setCodeBarres(r.codeBarres as 'tous' | 'partiel')
         // ⚠️ L'adresse gagne sur le stockage : quelqu'un qui revient par
@@ -317,12 +338,12 @@ export function PageReserver() {
         adresse, codePostal, ville, magasin,
         jour: jour ? jour.toISOString() : '', moment, heure,
         secteur, surfaceVente, surfaceReserve,
-        trancheArticles, trancheReferences, codeBarres, formule,
+        trancheArticles, trancheReferences, codeBarres, formule, pieces,
       }))
     } catch { /* idem : ne rien garder vaut mieux que planter */ }
   }, [repris, adresse, codePostal, ville, magasin, jour, moment, heure,
       secteur, surfaceVente, surfaceReserve, trancheArticles, trancheReferences,
-      codeBarres, formule])
+      codeBarres, formule, pieces])
 
   const debut = useMemo(() => {
     if (!jour) return null
@@ -346,6 +367,30 @@ export function PageReserver() {
   const setAppareils = (n: number | ((p: number) => number)) =>
     setAppareilsVoulus((p) => Math.max(minimumChoisi,
       typeof n === 'function' ? n(Math.max(p, minimumChoisi)) : n))
+
+  /** Ce que le nombre tapé désigne : la tranche, ou rien s'il sort de la grille. */
+  const trancheSaisie = trancheDesPieces(Number(pieces))
+  const horsGrille = pieces !== '' && Number(pieces) > PLAFOND_PIECES
+
+  /**
+   * Annoncer un nombre de pièces choisit la tranche ET repose le compteur.
+   *
+   * ⚠️⚠️ **IL NE PASSE PAS PAR `setAppareils`, ET C'EST TOUT LE CORRECTIF**
+   * (défaut trouvé par Julien, 10 octobre 2026, quand l'étape offrait encore
+   * huit boutons). `setAppareils` borne au `minimumChoisi` du rendu en cours,
+   * c'est-à-dire au minimum de la tranche qu'on QUITTE : venant de 150 000
+   * pièces (43 appareils), en annoncer 30 000 demandait 9 et obtenait
+   * `Math.max(43, 9)` — 43. Le compteur restait collé au minimum du plus gros
+   * volume jamais tapé, et redescendre devenait impossible. Le plancher reste
+   * tenu à l'affichage par `appareils`, qui recalcule `Math.max` avec la
+   * NOUVELLE tranche : rien ne s'ouvre ici.
+   */
+  function annoncerPieces(saisie: string) {
+    const net = saisie.replace(/\D/g, '').slice(0, 7)
+    setPieces(net)
+    setTrancheArticles(trancheDesPieces(Number(net))?.cle ?? '')
+    setAppareilsVoulus(appareilsPourPieces(Number(net)))
+  }
 
   const resultat: PrixFerme = useMemo(
     () => prixFerme({ codePostal, secteur, trancheArticles, debut, formule, appareils }),
@@ -842,18 +887,38 @@ export function PageReserver() {
               </div>
               <h1>Combien d’appareils prévoyez-vous d’utiliser&nbsp;?</h1>
 
+              {/* ⚠️⚠️ **UN NOMBRE, PLUS HUIT BOUTONS** (Julien, 10 octobre
+                  2026 : « il y en a trop à afficher »). Les huit tranches
+                  existent toujours — c'est le haut de la tranche qui engage —
+                  mais c'est le NOMBRE qui la désigne, exactement comme en base.
+                  Un mur de huit chiffres à trancher ne demandait pas moins
+                  d'effort qu'un chiffre à taper : il en demandait plus, et il
+                  cachait le seul renseignement utile, les appareils compris.
+                  La tranche retenue s'écrit sous le champ : il ne découvre
+                  rien plus tard. */}
               <div className="field">
-                <span className="champ-label">Pièces à compter</span>
-                <div className="res-choix">
-                  {TRANCHES_ARTICLES.map((t) => (
-                    <button key={t.cle} type="button"
-                            className={`res-option${trancheArticles === t.cle ? ' actif' : ''}`}
-                            onClick={() => {
-                              setTrancheArticles(t.cle)
-                              setAppareils(minimumAppareils(t.max))
-                            }}>{t.court ?? t.nom}</button>
-                  ))}
-                </div>
+                <label htmlFor={`${uid}-pieces`}>Combien de pièces à compter, à peu près&nbsp;?</label>
+                <input id={`${uid}-pieces`} value={pieces} inputMode="numeric"
+                       autoComplete="off" placeholder="12 000"
+                       onChange={(e) => annoncerPieces(e.target.value)} />
+                {/* ⚠️ Le retour se CALCULE, et il dit les deux choses qui
+                    engagent : la tranche retenue et les appareils compris. */}
+                {trancheSaisie ? (
+                  <p className="muted res-aide">
+                    Tranche retenue&nbsp;: {trancheSaisie.nom}.{' '}
+                    {minimumAppareils(trancheSaisie.max)} appareil
+                    {minimumAppareils(trancheSaisie.max) > 1 ? 's' : ''} compris.
+                  </p>
+                ) : horsGrille ? (
+                  <p className="muted res-aide">
+                    Au-delà de {nb(PLAFOND_PIECES)} pièces, un inventaire se parle
+                    avant de se réserver.{' '}
+                    <Link href={lien('/contact')}>Écrivez-nous</Link>, on le
+                    chiffre avec vous.
+                  </p>
+                ) : (
+                  <p className="muted res-aide">Une estimation suffit.</p>
+                )}
               </div>
 
               <div className="field">
