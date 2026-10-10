@@ -50,6 +50,32 @@ const json = (body: unknown, status = 200) =>
  */
 const VENTE_OUVERTE = false
 
+/**
+ * ⚠️⚠️ **LA PORTE DU BANC — ET ELLE NE PEUT PAS OUVRIR UNE VRAIE VENTE.**
+ *
+ * Éprouver le parcours contre Stripe demande que la fonction accepte d'ouvrir
+ * un Checkout. La tentation est de basculer `VENTE_OUVERTE` à `true` « le temps
+ * d'un essai » : c'est exactement ainsi qu'un drapeau commercial finit en
+ * production. Une garde l'interdit d'ailleurs — les trois fonctions edge
+ * doivent porter le MÊME verdict que `venteOuverte()` côté site.
+ *
+ * D'où une porte SÉPARÉE, et **deux conditions qui ne peuvent pas être réunies
+ * par accident** :
+ *   1. `BANC_STRIPE_TEST` vaut explicitement `true` dans les secrets du projet ;
+ *   2. la clé Stripe de ce projet est une clé de TEST.
+ *
+ * La seconde est structurelle : le jour où le compte passe en `live`, cette
+ * porte se referme toute seule, quoi qu'il y ait dans les secrets. Elle ne peut
+ * donc jamais encaisser un euro réel. Posée le 10 octobre 2026 pour le projet
+ * jumeau, et une garde tient l'exigence de la clé de test.
+ *
+ * Le drapeau commercial, lui, n'a pas bougé : il se rouvrira dans le même
+ * commit que les mentions légales, comme les deux autres.
+ */
+const cleStripe = Deno.env.get('STRIPE_SECRET_KEY') ?? ''
+const CLE_EST_DE_TEST = cleStripe.startsWith('sk_test_') || cleStripe.startsWith('rk_test_')
+const BANC_STRIPE_TEST = Deno.env.get('BANC_STRIPE_TEST') === 'true' && CLE_EST_DE_TEST
+
 /** ⚠️ JUMEAU DE `TVA_APPLICABLE` — franchise en base (4 septembre 2026). */
 const TVA_APPLICABLE = false
 
@@ -91,7 +117,7 @@ Deno.serve(async (req) => {
   // ⚠️ LA PORTE SE FERME AVANT TOUTE LECTURE ET TOUTE ÉCRITURE. Envoyer
   // quelqu'un sur une page de paiement qui refuserait sa carte serait pire que
   // de ne rien ouvrir du tout.
-  if (!VENTE_OUVERTE) return boutiqueFermee()
+  if (!VENTE_OUVERTE && !BANC_STRIPE_TEST) return boutiqueFermee()
 
   const jeton = req.headers.get('Authorization') ?? ''
   if (!jeton) return json({ success: false, error: 'Session expirée.' }, 401)

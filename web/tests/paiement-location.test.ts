@@ -407,12 +407,44 @@ describe('⚠️ la vente reste fermée partout en même temps', () => {
     }
   })
 
+  it('⚠️⚠️ une porte de banc ne peut JAMAIS ouvrir une vraie vente', () => {
+    // Éprouver le parcours contre Stripe demande d'ouvrir la porte quelque
+    // part. La tentation est de basculer `VENTE_OUVERTE` « le temps d'un
+    // essai » — c'est ainsi qu'un drapeau commercial finit en production, et
+    // la garde du verdict partagé l'interdit déjà.
+    //
+    // Une porte séparée est donc permise, à UNE condition : qu'elle exige une
+    // clé Stripe de TEST. Cette condition est structurelle — le jour où le
+    // compte passe en `live`, la porte se referme toute seule, quoi qu'il y
+    // ait dans les secrets. Sans elle, un simple secret mal posé encaisserait
+    // de l'argent réel.
+    for (const { nom, src } of fonctionsEdge()) {
+      const nu = sansCommentaires(src)
+      const portes = [...nu.matchAll(/const ([A-Z_]*BANC[A-Z_]*) =([^\n]*)/g)]
+      for (const [, drapeau, definition] of portes) {
+        expect(
+          definition,
+          `« ${nom} » : la porte de banc « ${drapeau} » ne vérifie plus que la clé Stripe est une clé de test`,
+        ).toMatch(/CLE_EST_DE_TEST|sk_test_/)
+      }
+      // ⚠️ Et une porte de banc ne se contente jamais d'un drapeau d'environnement.
+      if (portes.length > 0) {
+        expect(nu, `« ${nom} » : la clé de test ne se déduit plus de la clé Stripe`)
+          .toMatch(/sk_test_/)
+      }
+    }
+  })
+
   it('⚠️ et chacune refuse AVANT de lire ou d’écrire quoi que ce soit', () => {
     // Envoyer quelqu'un sur une page de paiement qui refuserait sa carte est
     // pire que de ne rien ouvrir du tout.
     for (const f of edgesAvecDrapeau()) {
       const src = sansCommentaires(f.src)
-      const garde = src.indexOf('if (!VENTE_OUVERTE)')
+      // ⚠️ SANS LA PARENTHÈSE FERMANTE : la garde peut porter une seconde
+      // condition (la porte de banc, qui exige une clé de test). Citer
+      // `'if (!VENTE_OUVERTE)'` en entier la faisait tomber sur du code juste
+      // — quatrième fois que ce piège se présente (10 octobre 2026).
+      const garde = src.indexOf('if (!VENTE_OUVERTE')
       expect(garde, `« ${f.nom} » ne garde plus rien`).toBeGreaterThan(0)
       for (const t of src.matchAll(/\.rpc\('(\w+)'|functions\.invoke|creer\w*Checkout\(/g)) {
         expect(t.index, `« ${f.nom} » agit avant sa garde (${t[0]})`).toBeGreaterThan(garde)
