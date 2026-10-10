@@ -354,3 +354,39 @@ Quatre sabotages des gardes, quatre morsures.
 serait tombée au vert sur l'écran faux. Et le journal d'entreprise réclame un
 libellé pour toute action écrite en base : `suppression_refusee` l'a signalé
 tout seul. Ces deux-là ont travaillé.
+
+## Le parcours entier, validé par Julien puis remesuré
+
+« je vu la section, je valide, le refus fonctionne, et la suppression aussi,
+les notifications arrivent bien, le mail est bien reçu par l'admin. »
+
+Et la base raconte la même chose, avec les heures :
+
+| demande | cible | état | clos à |
+|---|---|---|---|
+| 1 | Nadia Benali | **refusée** | 09:49 |
+| 2 | Nadia Benali | **traitée** | 09:50 |
+
+Les deux décisions, sur la même personne, dans l'ordre : il a refusé, puis
+redemandé, puis supprimé. Maison Oberlin ne compte plus que Camille et Marc.
+
+⚠️ **Un point restait à prouver, et sa cloche était VIDE.** Marc, le
+demandeur, n'avait aucune notification en base — alors qu'il devait en
+recevoir deux (le refus, puis la suppression). Les identifiants de
+`notifications` montrent des **trous** (41 à 45 manquants, séquence à 47) :
+des lignes ont existé là. Deux explications possibles, et la base ne les
+distingue pas — un banc annulé consomme des identifiants sans laisser de
+ligne, et `effacer_ma_notification` **supprime vraiment** la ligne (vérifié
+sur la base).
+
+Plutôt que de choisir, un banc a rejoué **la boucle entière** sur la
+production en transaction annulée, avec un compteur d'essai créé dans le
+magasin de Marc : la demande part, l'administrateur la voit dans la section,
+il supprime, **le demandeur reçoit sa notification**, sa cloche la montre, et
+la demande quitte la section. **6 assertions tenues.** Le chemin est donc bon ;
+la cloche vide de Marc s'explique par un effacement, pas par un trou.
+
+⚠️ Et le banc a buté sur une serrure que j'avais forcée le matin :
+`handle_new_user` **refuse tout compte sans invitation**. C'est la contrepartie
+exacte de la leçon du jour — fabriquer un compte hors du produit demande de
+connaître tous les gardes du produit, et la liste n'est écrite nulle part.
