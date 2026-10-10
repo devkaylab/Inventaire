@@ -1962,4 +1962,7 @@ export const en: Dictionnaire = {
 
   // L'écran « Lien expiré » envoie lui-même, depuis le 10 octobre 2026.
   ", un lien vient d'être envoyé. Pensez à vérifier vos indésirables.": ', a link has just been sent. Remember to check your spam folder.',
+
+  // Un compte qui existait déjà dans l'entreprise, remis dans le magasin.
+  '%{nom} est de nouveau dans votre équipe.': '%{nom} is back on your team.',
 }

@@ -347,6 +347,9 @@ export async function inviteTeammate(input: {
     success: boolean
     emailSent?: boolean
     alreadyInvited?: boolean
+    /** La personne avait déjà un compte dans l'entreprise : elle a été remise
+     *  dans le magasin, sans e-mail — ce n'est pas un échec d'envoi. */
+    rattachee?: boolean
     emailError?: string
     error?: string
     code?: string

@@ -214,8 +214,8 @@ describe('/equipe : une équipe se compare, elle ne se lit pas', () => {
     // se bloquait, et le bouton « Renvoyer le lien » avec elle. Un superviseur
     // a été SUPPRIMÉ faute de ce bouton (9 octobre 2026).
     //
-    // Le signal juste est `a_un_mot_de_passe` : « a fini son inscription ».
-    expect(src).toMatch(/membres-cell\$\{!m\.a_un_mot_de_passe \? ' attente' : ''\}/)
+    // Le signal juste est `compte_finalise` : « a fini son inscription ».
+    expect(src).toMatch(/membres-cell\$\{!m\.compte_finalise \? ' attente' : ''\}/)
     expect(src).toContain('Mot de passe à créer')
     // Et le signal trompeur ne revient commander ni l'ambre ni le renvoi.
     expect(src, 'l’ambre est revenue à « s’est connecté »').not.toMatch(/!m\.is_active \?/)

@@ -69,7 +69,13 @@ export function AddCounter({ onAdded, onFermer }: {
       toast.error(data?.error ?? error?.message ?? t('Ajout impossible.'))
       return
     }
-    if (data.emailSent) {
+    // ⚠️ `rattachee` : la personne avait déjà un compte dans l'entreprise et a
+    // simplement été remise dans le magasin — aucun e-mail n'a lieu d'être, et
+    // ce n'est surtout pas un échec. Sans cette branche, le succès tombait
+    // dans « l'e-mail n'a pas pu partir », et le message contredisait l'écran.
+    if (data.rattachee) {
+      toast.success(t('%{nom} est de nouveau dans votre équipe.', { nom: `${first} ${last}` }))
+    } else if (data.emailSent) {
       toast.success(t('%{nom} reçoit un e-mail pour vérifier ses informations et choisir son mot de passe.', { nom: `${first} ${last}` }))
     } else if (data.alreadyInvited) {
       toast.success(t('%{nom} avait déjà été invité : le lien reçu précédemment reste valable.', { nom: `${first} ${last}` }))

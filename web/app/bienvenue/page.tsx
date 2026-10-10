@@ -176,7 +176,17 @@ export default function WelcomePage() {
     const fullName = `${firstName.trim()} ${lastName.trim()}`
     const { data: updated, error: authError } = await supabase.auth.updateUser({
       password,
-      data: { first_name: firstName.trim(), last_name: lastName.trim(), full_name: fullName },
+      data: {
+        first_name: firstName.trim(), last_name: lastName.trim(), full_name: fullName,
+      // ⚠️⚠️ LE MARQUEUR QUI DIT « CE COMPTE EST FINI ». Aucune colonne de
+      // Supabase ne le dit : `encrypted_password` est renseigné DÈS
+      // L'INVITATION, avec un mot de passe aléatoire — les neuf comptes de la
+      // production en portaient un, y compris ceux qui n'avaient jamais rien
+      // choisi (mesuré le 10 octobre 2026). Le badge « Mot de passe à créer »
+      // et le bouton « Renvoyer le lien » ont donc besoin d'un fait que NOUS
+      // enregistrons, au moment exact où il se produit.
+      mot_de_passe_cree: true,
+      },
     })
     if (authError || !updated.user) {
       setBusy(false)

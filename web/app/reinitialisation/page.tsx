@@ -78,7 +78,13 @@ export default function ResetPasswordPage() {
       return
     }
     setBusy(true)
-    const { error: authError } = await supabase.auth.updateUser({ password })
+    // Même marqueur qu'à la finalisation : qui réinitialise a, par définition,
+    // un mot de passe à lui. Sans cette ligne, une personne invitée qui passe
+    // par « Mot de passe oublié » resterait marquée « à finir ».
+    const { error: authError } = await supabase.auth.updateUser({
+      password,
+      data: { mot_de_passe_cree: true },
+    })
     setBusy(false)
     if (authError) {
       setError(t(friendlyPasswordError(authError.message)))

@@ -82,13 +82,29 @@ describe('⚠️ la base retient qui a fait entrer qui, et ce qui se passe au d�
 })
 
 describe('⚠️⚠️ le mot de passe, et pas « s’est déjà connecté »', () => {
-  it('les deux fonctions de lecture l’exposent', () => {
+  it('les deux fonctions de lecture lisent le FAIT ENREGISTRÉ', () => {
     for (const fn of ['my_team_by_store', 'ca_list_team']) {
       const { corps } = derniereDefinition(fn)
-      expect(corps, `${fn} n’expose plus l’état du mot de passe`)
-        .toContain('a_un_mot_de_passe')
-      expect(corps, `${fn} ne lit plus le mot de passe mais autre chose`)
-        .toContain('encrypted_password')
+      expect(corps, `${fn} n’expose plus l’état du compte`)
+        .toContain('compte_finalise')
+      expect(corps, `${fn} ne lit plus le marqueur posé à la création du mot de passe`)
+        .toContain('mot_de_passe_cree')
+      // ⚠️⚠️ ET SURTOUT PAS `encrypted_password`. Supabase le remplit DÈS
+      // L'INVITATION, avec un mot de passe aléatoire : il vaut `true` pour
+      // tout le monde. S'y fier a fait disparaître le badge « Mot de passe à
+      // créer » et le bouton « Renvoyer le lien » pendant quelques heures, le
+      // 10 octobre 2026 — pour tout le monde, d'un coup.
+      expect(corps, `${fn} est revenue au signal qui ment (encrypted_password)`)
+        .not.toContain('encrypted_password')
+    }
+  })
+
+  it('⚠️ et le fait s’enregistre là où il se produit', () => {
+    // Un fait consigné quand il arrive ne se devine plus après coup. Les deux
+    // écrans qui posent un mot de passe posent le marqueur.
+    for (const f of ['app/bienvenue/page.tsx', 'app/reinitialisation/page.tsx']) {
+      expect(lire(f), `${f} pose un mot de passe sans le dire`)
+        .toContain('mot_de_passe_cree: true')
     }
   })
 
@@ -97,5 +113,42 @@ describe('⚠️⚠️ le mot de passe, et pas « s’est déjà connecté »', 
     // c'est de lui faire dire « a fini son inscription ».
     const { corps } = derniereDefinition('my_team_by_store')
     expect(corps).toContain('last_sign_in_at')
+  })
+})
+
+describe('⚠️⚠️ un compte déjà dans l’entreprise se RATTACHE, il ne se refuse pas', () => {
+  const edge = sansCommentaires(
+    readFileSync(path.resolve(racine, '../supabase/functions/invite-teammate/index.ts'), 'utf8'),
+  )
+
+  it('le refus sec a disparu', () => {
+    // ⚠️ LE CUL-DE-SAC, relevé par Julien le 10 octobre 2026. « Retirer du
+    // magasin » GARDE le compte : la personne reste dans l'entreprise,
+    // disparaît de l'écran du superviseur — qui ne liste que `store_team` — et
+    // son réajout butait sur « fait déjà partie de votre équipe ». Invisible
+    // ET inajoutable, sans aucun geste pour s'en sortir.
+    const bloc = edge.split('found.company_id === prof.company_id')[1]?.split('other_company')[0] ?? ''
+    expect(bloc, 'la branche « même entreprise » ne se lit plus').not.toBe('')
+    expect(bloc, 'le réajout ne rattache plus à un magasin')
+      .toContain("from('store_team')")
+  })
+
+  it('⚠️ et il pose `ajoute_par` lui-même', () => {
+    // Le déclencheur qui le remplit d'ordinaire lit l'invitation en attente ou
+    // `auth.uid()`. Ici il n'y a pas d'invitation, et l'écriture passe par la
+    // clé de service : `auth.uid()` est nul. Sans cette ligne la personne
+    // reviendrait « sous l'administrateur », et le superviseur qui vient de
+    // l'ajouter ne pourrait pas la retirer.
+    const bloc = edge.split('found.company_id === prof.company_id')[1]?.split('other_company')[0] ?? ''
+    expect(bloc, 'le rattachement ne dit plus qui a fait entrer la personne')
+      .toMatch(/ajoute_par:\s*inviter\.id/)
+  })
+
+  it('⚠️ les magasins visés restent les siens', () => {
+    // Sans cette borne, un appel direct rattacherait quelqu'un à n'importe
+    // quel magasin de n'importe quelle entreprise.
+    const bloc = edge.split('found.company_id === prof.company_id')[1]?.split('other_company')[0] ?? ''
+    expect(bloc, 'le rattachement ne vérifie plus que le magasin est le sien')
+      .toContain("from('store_supervisors')")
   })
 })
