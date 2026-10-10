@@ -176,3 +176,40 @@ describe('⚠️ deux boutons pleine largeur ne se touchent pas', () => {
     expect(regle, 'la règle générale `.btn-block` s’est mise à écarter').not.toMatch(/margin/)
   })
 })
+
+describe('⚠️⚠️ la page a son propre jeton, et les cartes un trait', () => {
+  const css = readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8')
+  const bloc = (sel: string) =>
+    new RegExp(`(^|\\})\\s*${sel.replace(/[.[\]]/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'm').exec(css)?.[2] ?? ''
+
+  it('le fond de page ne se confond plus avec le fond des creux', () => {
+    // Constat de Julien (10 octobre 2026) : « ce fond gris qui fait terne […]
+    // on a un fond et des boutons de la même couleur presque ». La page valait
+    // `--bg`, qui sert AUSSI aux champs, aux survols, aux en-têtes de tableau —
+    // 64 usages, dont UN SEUL était la page.
+    expect(bloc('body'), 'le fond de page est revenu sur le jeton des creux')
+      .toMatch(/background:\s*var\(--page\)/)
+    const clair = /:root\[data-theme="light"\]\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
+    expect(clair, 'le thème clair ne se lit plus').not.toBe('')
+    const page = /--page:\s*([^;]+);/.exec(clair)?.[1]?.trim()
+    const fond = /--bg:\s*([^;]+);/.exec(clair)?.[1]?.trim()
+    expect(page, 'la page n’a plus de jeton en thème clair').toBeTruthy()
+    expect(page, 'la page et les creux ont de nouveau la même couleur').not.toBe(fond)
+  })
+
+  it('⚠️ et aucune carte de page ne repart sans trait', () => {
+    // ⚠️ LA LISTE EST CITÉE, et c'est assumé : ce sont les blocs MESURÉS comme
+    // posés directement sur la page. Elles portaient `border: 0` et ne tenaient
+    // que par l'écart avec le gris de la page ; `--shadow-card` vaut `none`
+    // dans les deux thèmes, donc aucune ombre ne les séparait. Page blanche,
+    // carte blanche, pas de trait : la carte n'existe plus.
+    const cartes = ['.card', '.auth-card', '.panel', '.admin-section',
+                    '.resume-bande', '.dash-card', '.dash-kpi', '.mag']
+    const nues = cartes.filter((c) => {
+      const b = bloc(c)
+      return b.includes('background: var(--surface)') && /border:\s*0\s*;/.test(b)
+    })
+    expect(nues, `ces cartes sont redevenues invisibles sur une page blanche : ${nues.join(', ')}`)
+      .toEqual([])
+  })
+})
