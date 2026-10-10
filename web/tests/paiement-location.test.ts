@@ -982,3 +982,137 @@ describe('⚠️ la sortie de secours ne boucle pas', () => {
       .toMatch(/!sirenValide\(siren\) && \(/)
   })
 })
+
+/**
+ * ⚠️⚠️ **UNE RÉSERVATION SANS CARTE SE RELANCE** (Julien, 10 octobre 2026 :
+ * « on envoie un lien au bout d'un moment pour inviter le client à finaliser
+ * sa réservation »).
+ *
+ * Ce n'est plus le compte qui peut rester en plan — il part avec la
+ * réservation. Le seul abandon encore possible est la CARTE, et il est
+ * silencieux : la réservation existe, le prix est figé, mais la fenêtre
+ * d'accès n'est pas ouverte. Le client croit avoir réservé.
+ */
+describe('⚠️⚠️ la réservation sans carte se relance', () => {
+  it('on ne relance que ce qui précède la carte', () => {
+    // ⚠️ Les états ne sont pas cités de mémoire : ce sont ceux où
+    // `enregistrer_l_empreinte` trouve la mission quand elle fait son travail.
+    // Relancer au-delà écrirait à quelqu'un qui a déjà donné sa carte.
+    const { corps } = derniereDefinition('missions_a_relancer')
+    expect(corps, 'la relance ne regarde plus la fenêtre d’accès')
+      .toMatch(/acces_ouverts_le is null/)
+    expect(corps, 'on relancerait une réservation annulée')
+      .toMatch(/annulee_le is null/)
+    expect(corps, 'on relancerait après la date : ça ne sert plus à rien')
+      .toMatch(/debut_prevu > now\(\)/)
+
+    const empreinte = derniereDefinition('enregistrer_l_empreinte').corps
+    const avantLaCarte = [...corps.matchAll(/'(brouillon|prix_calcule|paiement_autorise|confirmee|prete)'/g)]
+      .map((m) => m[1])
+    expect(avantLaCarte.length, 'la relance ne dit plus quels états elle vise')
+      .toBeGreaterThan(0)
+    for (const etat of avantLaCarte) {
+      expect(
+        empreinte,
+        `« ${etat} » n’est pas un état d’avant la carte : la relance écrirait à qui a déjà payé`,
+      ).toContain(`'${etat}'`)
+    }
+  })
+
+  it('⚠️ trois fois, jamais quatre, et jamais deux dans l’heure', () => {
+    const { corps } = derniereDefinition('missions_a_relancer')
+    expect(corps, 'le compte des relances n’est plus borné')
+      .toMatch(/relances < array_length/)
+    expect(corps, 'deux passages du tour de garde peuvent en envoyer deux')
+      .toMatch(/derniere_relance_le < now\(\) - interval/)
+
+    // Le marquage borne AUSSI : la lecture seule ne suffit pas si l'écriture
+    // peut dépasser.
+    const marque = derniereDefinition('marquer_relance_mission').corps
+    expect(marque, 'le marquage ne borne plus le nombre de relances')
+      .toMatch(/relances < \d/)
+  })
+
+  /**
+   * ⚠️ **ON MARQUE APRÈS L'ENVOI, JAMAIS AVANT.** Un e-mail qui ne part pas
+   * laisse la relance ouverte, et l'heure suivante réessaie. L'ordre inverse
+   * la ferait taire pour de bon sur un incident réseau d'une seconde.
+   */
+  it('⚠️ l’envoi précède le marquage', () => {
+    const fn = sansCommentaires(lire('supabase/functions/relance-reservation/index.ts'))
+    // ⚠️ **DANS LE BLOC QUI ENVOIE, PAS DANS LE FICHIER.** Première version :
+    // `fn.indexOf('envoyerEmail')` — qui tombait sur la LIGNE D'IMPORT, en
+    // tête de fichier, donc toujours avant le marquage. La garde passait au
+    // vert sur un fichier où l'ordre était inversé. Trouvé en la sabotant.
+    const essai = /try \{([\s\S]*?)\} catch/.exec(fn)?.[1] ?? ''
+    expect(essai, 'le bloc d’envoi de la relance ne se lit plus').not.toBe('')
+    const envoi = essai.indexOf('envoyerEmail')
+    const marque = essai.indexOf('marquer_relance_mission')
+    expect(envoi, 'la relance n’envoie plus rien').toBeGreaterThan(-1)
+    expect(marque, 'la relance ne marque plus rien').toBeGreaterThan(-1)
+    expect(marque, 'on marque avant d’envoyer : un incident réseau la ferait taire')
+      .toBeGreaterThan(envoi)
+  })
+
+  it('⚠️ le lien mène à la carte, pas au début du tunnel', () => {
+    const fn = sansCommentaires(lire('supabase/functions/relance-reservation/index.ts'))
+    const lien = /const lien = `\$\{appUrl\}([^`]+)`/.exec(fn)?.[1]
+    expect(lien, 'le lien de la relance a disparu').toBeTruthy()
+    expect(lien, 'la relance renvoie au début du tunnel : il recommencerait tout')
+      .toMatch(/mission=/)
+
+    // Et le tunnel sait ouvrir l'écran de la carte sur cette adresse.
+    const tunnel = sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+    expect(tunnel, 'le tunnel ne lit plus la mission de l’adresse')
+      .toMatch(/params\.get\('mission'\)/)
+    expect(tunnel, 'le tunnel ne lit plus le retour de carte')
+      .toMatch(/params\.get\('carte'\)/)
+  })
+
+  /**
+   * ⚠️⚠️ **REVENIR POUR SA CARTE NE RÉSERVE PAS UNE SECONDE FOIS.** Le lien
+   * de la relance mène à une réservation DÉJÀ prise ; si le client doit
+   * s'identifier en chemin, `seConnecter()` enchaînait sur une réservation.
+   * Deux missions, deux prix, pour un seul inventaire — et le garde-fou de
+   * `reserver_ma_mission` annule la précédente, donc ça ne se verrait même
+   * pas tout de suite.
+   */
+  it('⚠️⚠️ se reconnecter pour la carte ne réserve pas deux fois', () => {
+    const tunnel = sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+    const corps = /const seConnecter = async \(\) => \{[\s\S]*?\n  \}/.exec(tunnel)?.[0] ?? ''
+    expect(corps, 'la connexion du tunnel a disparu').not.toBe('')
+    const avant = corps.slice(0, corps.indexOf('reserverMaintenant'))
+    expect(avant, 'une reconnexion avec une mission en main réserve une seconde fois')
+      .toMatch(/if \(missionId\)/)
+  })
+
+  it('⚠️ et l’écran de la carte sait qu’on peut y arriver sans session', () => {
+    // On y arrive depuis un e-mail. `missionEmpreinte` passe par une fonction
+    // edge qui exige un jeton : sans ce détour, le bouton échouait sur un
+    // message technique, au bout d'un e-mail dont c'était tout le propos.
+    const tunnel = sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+    const ecran = tunnel.slice(tunnel.indexOf('{etape === 7 && missionId && !carteEnregistree'))
+    const bloc = ecran.slice(0, ecran.indexOf('{etape === 7 && missionId && carteEnregistree'))
+    expect(bloc, 'l’écran de la carte a disparu').not.toBe('')
+    expect(bloc, 'l’écran de la carte ignore qu’on peut y arriver sans session')
+      .toMatch(/connecte === false/)
+  })
+
+  /**
+   * ⚠️⚠️ **L'ADRESSE DU PROJET VIT DANS LE COFFRE, PAS DANS LA FONCTION.**
+   * `declencher_alerte` porte celle de la production EN DUR. Ce chantier vit
+   * sur DEUX projets — le jumeau aujourd'hui, la production le jour J — et
+   * une adresse en dur ferait relancer les clients de l'un depuis l'autre.
+   */
+  it('⚠️ le déclencheur ne porte aucune adresse en dur', () => {
+    const { corps } = derniereDefinition('declencher_relance_reservation')
+    expect(corps, 'le déclencheur porte une adresse de projet en dur')
+      .not.toMatch(/https:\/\/[a-z0-9]+\.supabase\.co/)
+    expect(corps, 'l’adresse ne vient plus du coffre')
+      .toMatch(/base_fonctions/)
+    // Et sans secret, il ne fait rien : la tâche est inoffensive avant d'être
+    // configurée.
+    expect(corps, 'le déclencheur part sans vérifier que les secrets sont là')
+      .toMatch(/is null[\s\S]{0,120}?return/)
+  })
+})

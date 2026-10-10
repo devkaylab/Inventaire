@@ -731,7 +731,13 @@ export function PageReserver() {
     // recommencer. C'est le chemin du pro qui revient avec une adresse déjà
     // connue — celui que Julien a demandé le 5 octobre 2026.
     //
-    // ⚠️⚠️ **SAUF S'IL N'A PAS DIT OÙ.** Il vient de s'identifier : ses
+    // ⚠️⚠️ **SAUF S'IL REVIENT POUR SA CARTE.** La relance mène à
+    // `?carte=…&mission=…` : la réservation est DÉJÀ prise, il ne manque que
+    // l'empreinte. Réserver ici en ferait une SECONDE — deux missions, deux
+    // prix, pour un seul inventaire. Le garde-fou de `reserver_ma_mission`
+    // annule la précédente, donc ça ne se verrait même pas tout de suite.
+    if (missionId) { allerA(7); return }
+    // ⚠️⚠️ **ET S'IL N'A PAS DIT OÙ.** Il vient de s'identifier : ses
     // établissements arrivent, et c'est le moment de lui en faire choisir un.
     // Réserver tout de suite le ferait refuser sur le code postal, pour un
     // champ qu'il n'avait pas sous les yeux une seconde plus tôt.
@@ -1928,11 +1934,29 @@ export function PageReserver() {
 
               {carteNote && <p className="field-err">{carteNote}</p>}
 
-              <button type="button" className="btn btn-primary btn-block"
-                      disabled={occupe || !venteOuverte()}
-                      onClick={() => void allerDonnerMaCarte()}>
-                {occupe ? 'Un instant…' : 'Enregistrer ma carte'}
-              </button>
+              {/* ⚠️⚠️ **ON PEUT ARRIVER ICI SANS SESSION**, depuis le lien de
+                  la relance : `missionEmpreinte` passe par une fonction edge
+                  qui exige un jeton. Sans ce détour, le bouton « Enregistrer
+                  ma carte » échouait sur un message technique, au bout d'un
+                  e-mail dont c'était tout le propos. */}
+              {connecte === false ? (
+                <>
+                  <p className="muted">
+                    Connectez-vous pour enregistrer votre carte sur cette
+                    réservation.
+                  </p>
+                  <button type="button" className="btn btn-primary btn-block"
+                          onClick={() => allerA(6)}>
+                    Se connecter
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-primary btn-block"
+                        disabled={occupe || !venteOuverte()}
+                        onClick={() => void allerDonnerMaCarte()}>
+                  {occupe ? 'Un instant…' : 'Enregistrer ma carte'}
+                </button>
+              )}
               {!venteOuverte() && (
                 <p className="res-ferme">
                   Le paiement en ligne n’est pas encore ouvert : nous vous
