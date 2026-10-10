@@ -586,7 +586,12 @@ describe('refonte de « Mon équipe » (23 août 2026)', () => {
     // chaque magasin est une section (au lieu d'un sous-titre de 12 px en
     // capitales), mais il y en a toujours une par magasin, et le retrait vise
     // toujours ce magasin-là.
-    expect(pageEquipe).toMatch(/\(sup\?\.stores \?\? \[\]\)\.map\(\(s\) => \(\s*<section className="admin-section" key=\{s\.id\}>/)
+    // ⚠️ LA GARDE VISAIT LE DÉCOUPAGE, ET CITAIT LA FORME DE LA FLÈCHE.
+    // Elle est tombée le 10 octobre 2026 quand ce bloc a pris un corps, pour
+    // séparer « mon équipe » des compteurs des collègues — sur du code juste.
+    // Ce qu'elle veut dire : une section PAR MAGASIN. Rien de plus.
+    expect(pageEquipe).toContain('(sup?.stores ?? []).map(')
+    expect(pageEquipe).toMatch(/<section className="admin-section" key=\{s\.id\}>/)
     expect(pageEquipe).toContain('<h2>{s.name}</h2>')
     expect(pageEquipe).toContain("appliquer('remove_counter_from_store'")
   })

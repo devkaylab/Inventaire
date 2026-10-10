@@ -615,7 +615,12 @@ describe('les écrans déplacés', () => {
     // ⚠️ Le rangement n'a pas bougé, sa FORME oui : depuis le 5 septembre chaque
     // magasin est une section (au lieu d'un « Compteurs · <magasin> » en
     // capitales de 12 px). La garde vise le découpage, pas la tournure.
-    expect(equipe).toMatch(/\(sup\?\.stores \?\? \[\]\)\.map\(\(s\) => \(\s*<section className="admin-section" key=\{s\.id\}>/)
+    // ⚠️ LA GARDE VISAIT LE DÉCOUPAGE, ET CITAIT LA FORME DE LA FLÈCHE.
+    // Elle est tombée le 10 octobre 2026 quand ce bloc a pris un corps, pour
+    // séparer « mon équipe » des compteurs des collègues — sur du code juste.
+    // Ce qu'elle veut dire : une section PAR MAGASIN. Rien de plus.
+    expect(equipe).toContain('(sup?.stores ?? []).map(')
+    expect(equipe).toMatch(/<section className="admin-section" key=\{s\.id\}>/)
   })
 })
 
@@ -672,7 +677,7 @@ describe('un superviseur gère vraiment son équipe', () => {
   it('le bouton Retirer n’est réservé à personne', () => {
     // Le bloc du superviseur ordinaire : de sa boucle par magasin jusqu'aux
     // invitations en cours.
-    const bloc = equipe.split('(sup?.stores ?? []).map((s) => (')[1]?.split('Invitations en cours')[0] ?? ''
+    const bloc = equipe.split('(sup?.stores ?? []).map(')[1]?.split('Invitations en cours')[0] ?? ''
     expect(bloc).toContain(">{t('Retirer du magasin')}</button>")
     // Amendé le 22 août 2026 : la ligne porte désormais une seconde action,
     // « Supprimer le compte », qui elle est réservée à l'administrateur

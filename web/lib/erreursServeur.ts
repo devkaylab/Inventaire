@@ -54,6 +54,8 @@ export const ERREURS_SERVEUR: Record<string, string> = {
   "Ce devis n'est plus en attente de réponse.": 'This quote is no longer awaiting a reply.',
   'Ce devis n’est plus en attente d’accord.': 'This quote is no longer awaiting approval.',
   "Ce magasin n'est pas le vôtre.": 'This store is not yours.',
+  "Cette personne a été ajoutée par quelqu'un d'autre : seul l'administrateur de l'entreprise peut la retirer.":
+    'Someone else added this person: only the company administrator can remove them.',
   "Ce magasin n'existe plus.": 'This store no longer exists.',
   "Ce nombre d'appareils sort de la grille : écrivez-nous, nous construisons le tarif avec vous.": 'This number of devices is outside our plans. Write to us and we will work out a price with you.',
   'Ce numéro de téléphone est trop long.': 'This phone number is too long.',

@@ -33,6 +33,10 @@ type Member = {
   is_company_admin: boolean
   email: string | null
   is_active: boolean
+  // ⚠️ `is_active` = « s'est déjà connecté ». `a_un_mot_de_passe` = « a fini
+  // son inscription ». Entre les deux vit la personne qu'on a perdue : elle a
+  // cliqué sur son lien (donc connectée) sans jamais choisir son mot de passe.
+  a_un_mot_de_passe: boolean
   store_ids: string[]
   last_count_at: string | null
   sessions_counted: number
@@ -50,7 +54,10 @@ type TeamCA = { stores: Store[]; members: Member[]; invitations: Invitation[] }
 
 type Counter = {
   id: string; full_name: string | null; email: string | null
-  is_active: boolean; sessions_counted: number; last_count_at: string | null
+  is_active: boolean; a_un_mot_de_passe: boolean
+  /** Posé par la base depuis `store_team.ajoute_par` : je l'ai fait entrer. */
+  a_moi: boolean
+  sessions_counted: number; last_count_at: string | null
 }
 type StoreTeam = { id: string; name: string; counters: Counter[] }
 type TeamSup = { stores: StoreTeam[]; invitations: Invitation[] }
@@ -351,7 +358,7 @@ export default function EquipePage() {
       // ⚠️ En TÊTE, et seulement tant que le mot de passe n'existe pas : c'est
       // le geste attendu face à une ligne ambre, et il doit se trouver avant
       // « Supprimer le compte », pas après.
-      ...(!m.is_active && m.email ? [{
+      ...(!m.a_un_mot_de_passe && m.email ? [{
         libelle: t('Renvoyer le lien'),
         onClick: () => renvoyerLeLien(m.email, m.full_name || t('cette personne')),
       }] : []),
@@ -430,8 +437,8 @@ export default function EquipePage() {
         {/* ⚠️ `is_active` veut dire « s'est déjà connecté », rien d'autre — le
             contresens corrigé le 23 août 2026. C'est le seul fait de cette
             colonne qui appelle un geste, donc le seul qui porte l'ambre. */}
-        <div className={`membres-cell${!m.is_active ? ' attente' : ''}`}>
-          {!m.is_active
+        <div className={`membres-cell${!m.a_un_mot_de_passe ? ' attente' : ''}`}>
+          {!m.a_un_mot_de_passe
             ? t('Mot de passe à créer')
             : m.sessions_counted > 0
               ? `${tn('%{count} inventaire', '%{count} inventaires', m.sessions_counted)}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
@@ -655,63 +662,96 @@ export default function EquipePage() {
         // (23 août 2026) : c'est ainsi qu'il travaille, un saisonnier part d'un
         // magasin et pas de tous. Une section par magasin, au lieu d'un
         // sous-titre en capitales plus petit que le texte qu'il coiffait.
-        (sup?.stores ?? []).map((s) => (
-          <section className="admin-section" key={s.id}>
-            <div className="admin-section-head">
+        (sup?.stores ?? []).map((s) => {
+          // ⚠️⚠️ DEUX ÉQUIPES DANS UN MAGASIN, ET C'EST VOULU (10 octobre 2026).
+          // Le superviseur voit TOUT LE MONDE — c'est l'équipe du magasin, et
+          // c'est elle qui lui permet de mettre qui il veut sur ses
+          // inventaires. Mais il ne retire que ceux qu'il a fait entrer.
+          // `a_moi` vient de `store_team.ajoute_par`, et ⚠️ LE REFUS EST POSÉ
+          // EN BASE, pas ici : cacher le bouton ne ferme rien (fiche 123).
+          const mes = s.counters.filter((c) => c.a_moi)
+          const autres = s.counters.filter((c) => !c.a_moi)
+
+          const rang = (c: Counter) => (
+            <div className="req-row" key={c.id}>
               <div>
-                <h2>{s.name}</h2>
-                <p className="section-note">
-                  {t('Les compteurs de ce magasin. Les retirer d’ici ne touche pas aux autres.')}
-                </p>
+                <div className="req-name">
+                  {c.full_name || t('Sans nom')}
+                  {!c.a_un_mot_de_passe && <BadgeEnAttente />}
+                </div>
+                <div className="muted small">
+                  {c.email}
+                  {c.sessions_counted > 0
+                    ? ` · ${tn('a compté %{count} inventaire', 'a compté %{count} inventaires', c.sessions_counted)}`
+                    : ` · ${t('pas encore de comptage')}`}
+                  {c.last_count_at && ` · ${t('dernier le %{date}', { date: jourCourt(c.last_count_at) })}`}
+                </div>
               </div>
-              <span className="dash-sub-n">{s.counters.length}</span>
+              <div className="req-actions">
+                {/* ⚠️ Le renvoi suit « a un mot de passe », PAS « s'est déjà
+                    connecté » : cliquer sur le lien d'invitation EST une
+                    connexion, donc `is_active` tombait avant que le mot de
+                    passe existe — et le bouton disparaissait pour la seule
+                    personne qui en avait besoin. */}
+                {!c.a_un_mot_de_passe && c.email && (
+                  <button
+                    className="link-btn"
+                    onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}
+                  >{t('Renvoyer le lien')}</button>
+                )}
+                {/* Le geste quotidien du superviseur : un saisonnier part, il le
+                    retire de SON magasin — pas de partout, et pas celui d'un
+                    collègue. */}
+                {c.a_moi && (
+                  <button
+                    className="link-btn"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: t('Retirer du magasin %{nom} ?', { nom: s.name }),
+                        message: t('%{nom} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.', { nom: c.full_name || t('Cette personne') }),
+                        confirmLabel: t('Retirer du magasin'),
+                      })
+                      if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
+                    }}
+                  >{t('Retirer du magasin')}</button>
+                )}
+              </div>
             </div>
-            {s.counters.length === 0 ? (
-              <p className="muted small">{t('Aucun compteur sur ce magasin.')}</p>
-            ) : (
-              <div className="req-list">
-                {s.counters.map((c) => (
-                  <div className="req-row" key={c.id}>
-                    <div>
-                      <div className="req-name">
-                        {c.full_name || t('Sans nom')}
-                        {!c.is_active && <BadgeEnAttente />}
-                      </div>
-                      <div className="muted small">
-                        {c.email}
-                        {c.sessions_counted > 0
-                          ? ` · ${tn('a compté %{count} inventaire', 'a compté %{count} inventaires', c.sessions_counted)}`
-                          : ` · ${t('pas encore de comptage')}`}
-                        {c.last_count_at && ` · ${t('dernier le %{date}', { date: jourCourt(c.last_count_at) })}`}
-                      </div>
-                    </div>
-                    <div className="req-actions">
-                      {!c.is_active && c.email && (
-                        <button
-                          className="link-btn"
-                          onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}
-                        >{t('Renvoyer le lien')}</button>
-                      )}
-                      {/* Le geste quotidien du superviseur : un saisonnier part,
-                          il le retire de SON magasin — pas de partout. */}
-                      <button
-                        className="link-btn"
-                        onClick={async () => {
-                          const ok = await confirm({
-                            title: t('Retirer du magasin %{nom} ?', { nom: s.name }),
-                            message: t('%{nom} garde son compte : elle n’aura plus accès aux inventaires de ce magasin.', { nom: c.full_name || t('Cette personne') }),
-                            confirmLabel: t('Retirer du magasin'),
-                          })
-                          if (ok) appliquer('remove_counter_from_store', { p_user: c.id, p_store_id: s.id })
-                        }}
-                      >{t('Retirer du magasin')}</button>
-                    </div>
-                  </div>
-                ))}
+          )
+
+          return (
+            <section className="admin-section" key={s.id}>
+              <div className="admin-section-head">
+                <div>
+                  <h2>{s.name}</h2>
+                  <p className="section-note">
+                    {t('Tous les compteurs de ce magasin. Vous ne retirez que ceux que vous avez ajoutés.')}
+                  </p>
+                </div>
+                <span className="dash-sub-n">{s.counters.length}</span>
               </div>
-            )}
-          </section>
-        ))
+              {s.counters.length === 0 ? (
+                <p className="muted small">{t('Aucun compteur sur ce magasin.')}</p>
+              ) : (
+                <>
+                  <h3 style={{ marginTop: 18 }}>{t('Mon équipe')}</h3>
+                  {mes.length === 0
+                    ? <p className="muted small">{t('Vous n’avez encore ajouté personne dans ce magasin.')}</p>
+                    : <div className="req-list">{mes.map(rang)}</div>}
+                  {autres.length > 0 && (
+                    <>
+                      <h3 style={{ marginTop: 18 }}>{t('Les autres compteurs du magasin')}</h3>
+                      <p className="section-note">
+                        {t('Ajoutés par un autre superviseur. Vous pouvez les mettre sur vos inventaires ; seul leur superviseur ou l’administrateur peut les retirer.')}
+                      </p>
+                      <div className="req-list">{autres.map(rang)}</div>
+                    </>
+                  )}
+                </>
+              )}
+            </section>
+          )
+        })
       )}
 
       {/* ── Invitations en cours ──

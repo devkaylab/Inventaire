@@ -1953,4 +1953,10 @@ export const en: Dictionnaire = {
   'Un nouveau lien de création de mot de passe part à %{email}.': 'A new password-setup link is on its way to %{email}.',
   'Renvoyer le lien': 'Resend the link',
   'Un lien vient de partir à %{email}.': 'A link has just been sent to %{email}.',
+
+  // Deux équipes dans un magasin : la sienne, et celles des collègues.
+  'Tous les compteurs de ce magasin. Vous ne retirez que ceux que vous avez ajoutés.': 'Every counter in this store. You can only remove the ones you added.',
+  'Vous n’avez encore ajouté personne dans ce magasin.': 'You have not added anyone to this store yet.',
+  'Les autres compteurs du magasin': 'The store’s other counters',
+  'Ajoutés par un autre superviseur. Vous pouvez les mettre sur vos inventaires ; seul leur superviseur ou l’administrateur peut les retirer.': 'Added by another supervisor. You can put them on your inventories; only their supervisor or the administrator can remove them.',
 }
