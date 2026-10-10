@@ -54,7 +54,13 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
     case 'compteur_actif':
       return {
         titre: t('Compte activé'),
-        texte: t('%{nom} s’est connecté pour la première fois : son profil de compteur est prêt.', { nom: d.nom || t('Un compteur') }),
+        // ⚠️ Le texte disait « s'est connecté pour la première fois » — et il
+        // partait au premier clic sur le lien d'invitation, donc AVANT que le
+        // mot de passe existe. Trois superviseurs ont appris qu'un compte
+        // était « prêt » alors que la personne était bloquée (10 octobre
+        // 2026). Le déclencheur attend désormais le mot de passe ; la phrase
+        // dit ce qui s'est vraiment passé.
+        texte: t('%{nom} a choisi son mot de passe : son compte de compteur est prêt.', { nom: d.nom || t('Un compteur') }),
         lien: '/equipe',
       }
     // Le rang mène AU FIL : la conversation s'y lit en entier et s'y
