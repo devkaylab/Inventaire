@@ -4313,6 +4313,18 @@ a.tb-rang:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
   --encre-2: #1e2422;
 }
 
+/* ⚠️⚠️ **LES BANDES NUES REPRENNENT LE GRIS QUE LA PAGE PORTAIT** (10 octobre
+   2026). Les sections de la vitrine alternent : une bande blanche
+   (`.bande-surface`), une bande d'encre, et entre elles des sections SANS
+   classe de bande, transparentes, qui montraient le fond gris de la page.
+   La page passée au blanc, ces sections sont devenues blanches elles aussi et
+   **l'alternance a disparu** — Julien : « il faut garder les délimitations de
+   section d'accueil ». Le gris redevient donc explicite là où il n'était
+   qu'hérité ; l'ordre des bandes et leurs couleurs sont exactement ceux
+   d'avant.
+   ⚠️ Le `:not` cite le PRÉFIXE des bandes, pas leur liste : une bande neuve
+   (`.bande-xxx`) garde la sienne sans qu'on ait à revenir ici. */
+.section:not([class*="bande-"]) { background: var(--bg); }
 .bande-surface { background: var(--surface); }
 .bande-encre { background: var(--encre); }
 .bande-encre h2, .bande-encre h3 { color: var(--sur-encre); }

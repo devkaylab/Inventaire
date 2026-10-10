@@ -87,7 +87,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
           </div>
         </section>
 
-        <section className="section" style={{ paddingTop: 8 }}>
+        <section className="section bande-surface">
           <div className="container">
             <div className="card tarifs-licence" data-reveal="0">
               <div>
@@ -124,7 +124,7 @@ export function Tarifs({ langue }: { langue: Langue }) {
           </div>
         </section>
 
-        <section className="section" style={{ paddingTop: 8 }}>
+        <section className="section bande-surface">
           <div className="container">
             <h2 className="tarifs-titre" data-reveal="0">{t('Les questions qu’on nous pose')}</h2>
             <div className="tarifs-faq" data-reveal="1">
