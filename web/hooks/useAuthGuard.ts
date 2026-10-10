@@ -68,7 +68,20 @@ export function useAuthGuard(requirement: Requirement = 'auth'): GuardState {
         .maybeSingle()
       if (!active) return
 
-      if (error || !data) { router.replace('/login'); return }
+      /**
+       * ⚠️⚠️ **ON DÉCONNECTE AVANT DE RENVOYER** (10 octobre 2026). Renvoyer à
+       * `/login` en laissant la session en place faisait repartir `/login`
+       * vers l'espace, qui revenait ici, qui renvoyait à `/login` : la page
+       * clignotait sans fin, et rien dans la console ne le disait.
+       *
+       * Une session dont le profil ne se lit pas n'est pas une session
+       * utilisable — la clore est la seule issue qui ne boucle pas.
+       */
+      if (error || !data) {
+        await signOut().catch(() => { /* déjà hors d'état : on part quand même */ })
+        router.replace('/login')
+        return
+      }
       const profile = data as Profile
 
       if (!satisfies(profile, requirement)) {

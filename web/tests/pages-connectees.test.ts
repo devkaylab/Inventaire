@@ -370,3 +370,40 @@ describe('⚠️ les deux tableaux de bord restent hors du lot', () => {
     })
   }
 })
+
+describe('⚠️⚠️ deux écrans ne se renvoient jamais la balle', () => {
+  /**
+   * LE CLIGNOTEMENT DU 10 OCTOBRE 2026. Julien : « j'ai un glitch, la page
+   * clignote entre login account ». Mesuré en direct : l'onglet passait de
+   * `/account` à `/login` toutes les quelques secondes, **sans une seule
+   * erreur dans la console**.
+   *
+   * Les deux côtés se renvoyaient : `/login` envoyait vers un espace
+   * authentifié dès qu'une session existait, même si le profil ne se lisait
+   * pas (`homePathForRole(null)` rend `/account`) ; et la garde de `/account`
+   * renvoyait à `/login` en LAISSANT la session en place.
+   *
+   * ⚠️ Une boucle a toujours DEUX côtés. N'en fermer qu'un la déplace.
+   */
+  const lire = (p: string) => readFileSync(path.join(__dirname, '..', p), 'utf8')
+  const sansCom = (t: string) =>
+    t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+  it('un profil illisible ne donne pas un espace par défaut', () => {
+    const corps = /export async function getMySpacePath[\s\S]*?\n\}/.exec(sansCom(lire('lib/auth.ts')))?.[0] ?? ''
+    expect(corps, 'getMySpacePath ne se lit plus').not.toBe('')
+    expect(corps, 'un échec de lecture renvoie encore vers un espace authentifié')
+      .toMatch(/if \(error \|\| !data\) return null/)
+  })
+
+  it('⚠️ et une session dont le profil ne se lit pas est CLOSE', () => {
+    const src = sansCom(lire('hooks/useAuthGuard.ts'))
+    const branche = src.slice(src.indexOf('if (error || !data)'))
+    const fin = branche.indexOf('return')
+    expect(fin, 'la branche d’échec ne se lit plus').toBeGreaterThan(-1)
+    expect(
+      branche.slice(0, fin),
+      'on renvoie à /login sans clore la session : /login renverra ici, et ainsi de suite',
+    ).toContain('signOut()')
+  })
+})
