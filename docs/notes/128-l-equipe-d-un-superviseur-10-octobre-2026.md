@@ -131,3 +131,262 @@ découpage. **Troisième fois** que ce piège se présente.
 **L'écran du superviseur n'a pas été exercé avec deux superviseurs** : il
 faudrait un second compte. Ce qui est tenu à sa place : le banc sur le jumeau,
 qui joue exactement ce cas en base.
+
+## ⚠️⚠️ Un bouton rangé dans un menu n'existe pas (10 octobre, le soir)
+
+« Tu n'as pas ajouté de bouton renvoyer le lien sur admin. » Il **y était**,
+depuis la correction du matin — dans le menu « ⋯ » de la rangée, en tête de
+liste. Personne ne l'a trouvé.
+
+Le menu « ⋯ » de `/equipe` n'est pas un rangement, c'est une **distance** :
+il existe pour éloigner « Supprimer le compte » de ce qui est anodin et
+réversible. Y déposer le renvoi du lien faisait exactement l'inverse de ce
+que le menu sert à faire — mettre le seul geste attendu face à une ligne
+ambre au même endroit que le geste définitif, derrière le même clic
+d'ouverture. Le superviseur, lui, l'avait en clair : deux écrans, deux
+réponses au même fait.
+
+Il est désormais rendu **dans la cellule ambre**, sous « Mot de passe à
+créer » : le manque et son remède dans la même cellule, là où le regard est
+déjà. Le menu garde les gestes de gouvernance (changer le rôle, retirer les
+accès, supprimer). `align-self: flex-start` n'est pas du goût : `.membres > *`
+est une colonne flex étirée, sans lui le bouton prend toute la largeur de la
+colonne et se lit comme une barre.
+
+### Et la bande de résumé mentait encore
+
+« Mot de passe à créer » comptait `!m.is_active`. Le badge et le bouton
+avaient été corrigés le matin, **pas le compteur au-dessus d'eux** : la bande
+pouvait annoncer « 0 » au-dessus de lignes ambre. Troisième endroit du même
+contresens sur le même écran — la leçon n'est pas « corriger le badge », c'est
+**chercher tous les lecteurs d'un signal qu'on remplace**.
+
+### ⚠️ Une garde gelait le défaut
+
+`web/tests/admin-entreprise.test.ts` exigeait `toContain('!m.is_active')`
+(21 août 2026). Elle serait tombée au vert sur l'écran faux et au rouge sur
+le juste. Elle exige maintenant `!m.compte_finalise` **et refuse le retour de
+l'ancien**. Deuxième garde de ce genre en deux jours (l'autre :
+`pages-connectees.test.ts`). Une garde écrite avec un signal faux rend ce
+signal obligatoire.
+
+Trois sabotages sur `renvoyer-le-lien.test.ts`, trois morsures — dont celle
+du bouton neutralisé par un `false &&`, qui ne mordait pas avant d'ancrer la
+garde sur la CONDITION et plus seulement sur la présence du bouton.
+
+## ⚠️ Ce qui n'est pas vérifié (suite)
+
+**L'écran de l'administrateur n'a pas été regardé après cette correction** :
+il demande une session d'administrateur, que seul Julien ouvre.
+
+## ⚠️⚠️ « Un lien vient de partir » — alors que rien ne partait
+
+Après la correction du bouton, Julien clique. L'écran : « Un lien vient de
+partir à marc@… ». Rien n'arrive. Il réessaie par « Mot de passe oublié ».
+Même phrase, même silence. **Une heure**, et la seule trace était dans les
+journaux du serveur :
+
+```
+09:13:10  generateLink User with this email not found
+09:15:44  generateLink User with this email not found
+```
+
+### La cause immédiate : un compte posé à la main n'est pas un compte
+
+J'avais créé Marc Oberlin par un `insert` dans `auth.users`. La rangée était
+incomplète, et **`instance_id` valait NULL** : le serveur d'authentification
+cherche ses comptes en filtrant sur cette colonne, il ne trouvait donc rien.
+Manquaient aussi `created_at`, `updated_at`, `raw_app_meta_data`, les colonnes
+de jetons (vides, pas NULL) et **la ligne `auth.identities`**.
+
+La leçon n'est pas « il manquait une colonne ». C'est qu'**écrire une rangée
+dans `auth.users` n'est pas créer un compte** : la forme attendue n'est pas
+documentée dans le schéma, elle est dans le code de GoTrue. Réparé en
+comparant colonne par colonne avec un vrai compte invité — c'est la seule
+méthode qui ne devine pas.
+
+### La cause réelle : l'écran promettait ce qu'il ne pouvait pas savoir
+
+`mot-de-passe-oublie` est **publique** et répond toujours
+`{success: true, received: true}`, qu'un compte existe ou non. C'est JUSTE :
+autrement le formulaire devient un oracle d'énumération d'adresses (défaut
+fermé le 28 août 2026), et c'est l'e-mail — qui n'atteint que le propriétaire
+de la boîte — qui dit la vérité.
+
+Mais l'écran de l'équipe appelait cette fonction publique et annonçait
+ensuite **« Un lien vient de partir »** par un `alert` posé APRÈS le
+`try/catch` : il parlait dans tous les cas, échecs compris. C'est la même
+famille que « un bouton qui annonce un envoi doit envoyer » (9 octobre) — un
+cran plus loin : **un écran qui annonce une remise doit pouvoir la constater.**
+
+⚠️ **Et l'argument du mutisme ne tient pas pour un responsable** : il a la
+liste de son entreprise sous les yeux, il n'a aucune adresse à découvrir. Le
+silence ne le protège de rien et lui cache tout.
+
+### Deux publics, deux chemins
+
+`renvoyer-le-lien` (authentifiée, `verify_jwt: true`) est née à côté de
+`mot-de-passe-oublie`, qui n'a pas bougé. **Pas un drapeau sur l'ancienne** :
+un « dis-moi la vérité si je suis administrateur » mettrait les deux publics
+dans le même code, et un jour le mauvais passerait par le bon chemin.
+
+La décision reste en base — `renvoyer_le_lien_au_membre`, quatre bornes :
+même entreprise ; droit calculé **sur la ligne visée** (l'administrateur
+couvre l'entreprise, le superviseur les compteurs de ses magasins) ; compte
+non fini (le droit suit le geste : le bouton n'existe que là) ; et **le même
+seau de quota que le formulaire public**, sinon ce chemin en serait le
+contournement.
+
+⚠️ Le quota vient **après** le contrôle de droit, à l'inverse du formulaire
+public. Là-bas l'ordre protégeait d'une énumération anonyme ; ici l'appelant
+est connu, et un refus de droit ne doit pas consommer le quota de la personne
+visée. L'ordre d'un contrôle se justifie par la menace, pas par l'habitude.
+
+⚠️ Aucun `redirectTo` ne vient du client : il n'y a qu'une destination, donc
+pas de surface de redirection ouverte à défendre. L'ancienne en accepte un et
+le borne ; celle-ci n'en accepte pas.
+
+L'écran dit maintenant les deux côtés, en avis éphémère et plus en `alert` :
+le succès avec la durée de validité, l'échec avec son motif en clair (« le
+serveur d'authentification n'a pas pu produire de lien pour cette adresse,
+rien n'a été envoyé ») et le détail technique dans la console.
+
+### Les gardes
+
+Quatre sabotages, quatre morsures. ⚠️ Et le troisième a d'abord **passé** :
+la garde « l'échec est annoncé » cherchait `toast.error` dans tout le corps de
+la fonction, or celui du `catch` suffisait — le refus, qui est le cas qui est
+arrivé, pouvait redevenir muet sans que rien ne tombe. Réancrée sur la
+BRANCHE de refus. Une garde posée sur un corps entier ne garde que le corps.
+
+## ⚠️⚠️ Trois écritures justes, et rien à l'écran
+
+Julien envoie la demande depuis le compte de Marc, puis : « tu dis que la
+demande également dans mes notifs, non ça n'y est pas, puis je ne vois nulle
+part une demande, il faut une section dans équipe, le lien du mail doit y
+emmener ».
+
+Mesuré avant de répondre : la demande **était** en base (`id` 1, état
+« en_attente », motif, demandeur), la notification **était** posée pour
+Camille (type `demande_suppression`, non lue), l'e-mail **était** parti. Le
+parcours d'écriture était bon de bout en bout. **Deux trous à la lecture**, et
+chacun suffisait à tout annuler.
+
+### 1. Une liste blanche ne prévient jamais de ce qu'elle jette
+
+`mes_notifications` filtre les types :
+
+```sql
+and n.type in ('invitation_inventaire', 'compteur_actif',
+               'inventaire_volumineux', 'forfait_trop_juste')
+```
+
+J'avais ajouté les deux nouveaux types à la contrainte de la table, au
+composant qui les affiche, à l'e-mail — **et pas à cette liste**. Son propre
+commentaire disait, mot pour mot : « un type déposé sans être ajouté ICI
+n'apparaît jamais dans la cloche, sans que rien ne le signale ».
+L'avertissement était écrit à l'endroit exact de l'oubli, et je suis passé
+devant.
+
+La leçon n'est pas « lire les commentaires ». C'est qu'**un type de
+notification vit à TROIS endroits** — la contrainte, la liste blanche, le
+composant — et que l'oubli d'un seul est silencieux. La garde compare
+désormais les deux listes : elle extrait les `case '…'` du composant et exige
+que la liste blanche les porte tous. Elle aurait attrapé ce défaut.
+
+⚠️ Conséquence tirée tout de suite : le refus **n'a pas** son propre type. Il
+réutilise `demande_suppression_traitee` avec un drapeau `refusee` dans les
+données — un drapeau ne traverse qu'un seul des trois endroits.
+
+### 2. Aucune page ne montrait les demandes
+
+L'administrateur recevait une notification et un e-mail pour un geste
+qu'**aucun écran ne proposait**. Pour y répondre il devait retenir le nom, le
+retrouver dans la liste des membres, et deviner que « Supprimer le compte »
+était la réponse à la demande.
+
+`ca_list_team` rend maintenant `demandes_suppression` (en attente seulement),
+et `/equipe` leur donne une section **avant les invitations** — elle porte le
+geste le plus lourd de la page. Le motif y est en clair : celui qui tranche
+sur un effacement définitif ne doit pas aller le chercher.
+
+L'ancre `#demandes-suppression` est écrite à trois endroits (l'e-mail, la
+notification, la page) ; une garde tient l'accord. ⚠️ Et elle est amenée **à
+la main** par un effet : la section n'existe pas quand le navigateur cherche
+l'ancre, elle attend `ca_list_team`. Sans ça le lien du courriel ouvre le haut
+de la page.
+
+### 3. Et une demande pouvait ne jamais sortir de la liste
+
+Non demandé, mais la section le rendait inévitable : le seul chemin ouvert
+était la suppression. Un administrateur qui ne veut **pas** supprimer n'avait
+aucun geste — la demande restait « en attente » pour toujours, et le
+superviseur n'apprenait jamais la décision. C'est le cul-de-sac du 9 octobre,
+à l'autre bout du même parcours.
+
+`ca_refuser_suppression` : administrateur seulement, borne sur l'entreprise de
+la **demande**, `for update` (deux administrateurs peuvent répondre en même
+temps — le second doit lire l'état écrit par le premier), refus impossible
+deux fois, et le demandeur prévenu.
+
+⚠️ **Le commentaire du refus est FACULTATIF**, alors que le motif de la
+demande est obligatoire. Ce n'est pas une asymétrie par négligence : celui qui
+demande fait arbitrer quelqu'un d'autre sur un geste définitif, il doit sa
+raison ; celui qui refuse ne détruit rien. Exiger un texte pour ne RIEN faire
+ajouterait une friction à la décision prudente.
+
+### Éprouvé, et les gardes
+
+Banc sur la production en transaction annulée, **9 constats rendus en table**
+(pas en `raise notice` : le CLI les avale) : l'administrateur voit la demande
+avec nom, motif et demandeur ; le superviseur ne lit pas la liste de
+l'entreprise ; il ne peut pas refuser sa propre demande ; l'administrateur
+refuse ; le demandeur reçoit la notification avec `refusee` et le commentaire ;
+**la cloche la laisse passer des deux côtés** ; deux refus sont impossibles ;
+la demande quitte la liste. Banc vérifié mordant (assertion inversée → échec),
+et la demande réelle retrouvée en « en_attente » après le `rollback`.
+
+Quatre sabotages des gardes, quatre morsures.
+
+### ⚠️ Deux gardes de plus qui gelaient un défaut
+
+`admin-entreprise.test.ts` exigeait `!m.is_active` sur l'écran équipe — elle
+serait tombée au vert sur l'écran faux. Et le journal d'entreprise réclame un
+libellé pour toute action écrite en base : `suppression_refusee` l'a signalé
+tout seul. Ces deux-là ont travaillé.
+
+## Le parcours entier, validé par Julien puis remesuré
+
+« je vu la section, je valide, le refus fonctionne, et la suppression aussi,
+les notifications arrivent bien, le mail est bien reçu par l'admin. »
+
+Et la base raconte la même chose, avec les heures :
+
+| demande | cible | état | clos à |
+|---|---|---|---|
+| 1 | Nadia Benali | **refusée** | 09:49 |
+| 2 | Nadia Benali | **traitée** | 09:50 |
+
+Les deux décisions, sur la même personne, dans l'ordre : il a refusé, puis
+redemandé, puis supprimé. Maison Oberlin ne compte plus que Camille et Marc.
+
+⚠️ **Un point restait à prouver, et sa cloche était VIDE.** Marc, le
+demandeur, n'avait aucune notification en base — alors qu'il devait en
+recevoir deux (le refus, puis la suppression). Les identifiants de
+`notifications` montrent des **trous** (41 à 45 manquants, séquence à 47) :
+des lignes ont existé là. Deux explications possibles, et la base ne les
+distingue pas — un banc annulé consomme des identifiants sans laisser de
+ligne, et `effacer_ma_notification` **supprime vraiment** la ligne (vérifié
+sur la base).
+
+Plutôt que de choisir, un banc a rejoué **la boucle entière** sur la
+production en transaction annulée, avec un compteur d'essai créé dans le
+magasin de Marc : la demande part, l'administrateur la voit dans la section,
+il supprime, **le demandeur reçoit sa notification**, sa cloche la montre, et
+la demande quitte la section. **6 assertions tenues.** Le chemin est donc bon ;
+la cloche vide de Marc s'explique par un effacement, pas par un trou.
+
+⚠️ Et le banc a buté sur une serrure que j'avais forcée le matin :
+`handle_new_user` **refuse tout compte sans invitation**. C'est la contrepartie
+exacte de la leçon du jour — fabriquer un compte hors du produit demande de
+connaître tous les gardes du produit, et la liste n'est écrite nulle part.

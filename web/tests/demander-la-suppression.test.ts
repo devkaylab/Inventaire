@@ -150,3 +150,76 @@ describe('⚠️ deux rangées voisines partagent leur bord droit', () => {
       .toContain('.admin-section .req-row { justify-content: flex-start;')
   })
 })
+
+describe('⚠️⚠️ une demande écrite doit se VOIR', () => {
+  it('⚠️⚠️ la cloche ne jette aucun type que le composant sait afficher', () => {
+    // LE DÉFAUT DU 10 OCTOBRE 2026, EN UNE ASSERTION. La demande était en
+    // base, la notification posée, l'e-mail parti — et rien à l'écran :
+    // `mes_notifications` porte une LISTE BLANCHE de types, et les deux
+    // derniers n'y avaient pas été ajoutés. Son propre commentaire prévenait :
+    // « un type déposé sans être ajouté ICI n'apparaît jamais dans la cloche,
+    // sans que rien ne le signale ». Eh bien maintenant, si.
+    const { corps } = derniereDefinition('mes_notifications')
+    const composant = sansCommentaires(lire('components/Notifications.tsx'))
+    const affiches = [...composant.matchAll(/case '([a-z_]+)':/g)].map((m) => m[1])
+    expect(affiches.length, 'le composant n’affiche plus aucun type').toBeGreaterThan(4)
+    // ⚠️ `message` est le seul à ne pas venir de la table : il est fabriqué par
+    // la branche `fils` de la fonction, depuis les fils de discussion.
+    const attendus = affiches.filter((type) => type !== 'message')
+    const jetes = attendus.filter((type) => !corps.includes(`'${type}'`))
+    expect(jetes, `la cloche jette ${jetes.join(', ')} : le composant sait les afficher, la liste blanche les écarte`)
+      .toEqual([])
+  })
+
+  it('⚠️ l’administrateur a une section, et l’e-mail y mène', () => {
+    // Il recevait une notification et un e-mail pour un geste qu'aucun écran
+    // ne proposait : retenir le nom, le retrouver dans la liste des membres,
+    // et deviner que « Supprimer le compte » répondait à la demande.
+    const page = sansCommentaires(lire('app/equipe/page.tsx'))
+    expect(page, 'la section des demandes a disparu de l’écran')
+      .toContain('id="demandes-suppression"')
+    expect(page, 'l’écran ne lit plus les demandes rendues par la base')
+      .toContain('demandes_suppression')
+    const { corps } = derniereDefinition('ca_list_team')
+    expect(corps, 'la base ne rend plus les demandes à l’administrateur')
+      .toContain("'demandes_suppression'")
+    expect(corps, 'la liste ne se limite plus aux demandes en attente')
+      .toMatch(/etat\s*=\s*'en_attente'/)
+  })
+
+  it('⚠️ et l’ancre est la MÊME dans l’e-mail, la notification et la page', () => {
+    // Trois endroits pour un seul nom : renommer l'ancre d'un côté casse les
+    // deux autres, en silence — le lien ouvre le haut de la page.
+    const ancre = '/equipe#demandes-suppression'
+    const edge = readFileSync(
+      path.join(racine, '..', 'supabase', 'functions', 'demander-suppression', 'index.ts'), 'utf8')
+    expect(edge.replace(/^\s*\/\/.*$/gm, ''), 'le bouton de l’e-mail ne mène plus à la demande')
+      .toContain('/equipe#demandes-suppression')
+    expect(sansCommentaires(lire('components/Notifications.tsx')), 'la notification ne mène plus à la demande')
+      .toContain(ancre)
+    expect(sansCommentaires(lire('app/equipe/page.tsx')), 'la page n’amène plus à l’ancre')
+      .toContain('demandes-suppression')
+  })
+
+  it('⚠️⚠️ une demande peut être REFUSÉE, sinon elle ne sort jamais de la liste', () => {
+    // Le seul chemin ouvert était la suppression : un administrateur qui ne
+    // veut pas supprimer laissait la demande « en attente » pour toujours, et
+    // le superviseur n'apprenait jamais la décision. C'est le cul-de-sac du
+    // 9 octobre, à l'autre bout du même parcours.
+    const { corps } = derniereDefinition('ca_refuser_suppression')
+    expect(corps, 'le refus n’existe plus').not.toBe('')
+    expect(corps, 'le refus n’est plus réservé à l’administrateur')
+      .toContain('is_company_admin()')
+    // ⚠️ La borne est sur la LIGNE VISÉE : l'entreprise de la demande.
+    expect(corps, 'le refus ne vérifie plus l’entreprise de la demande')
+      .toMatch(/company_id\s*=\s*v_company/)
+    expect(corps, 'une demande déjà traitée peut être refusée une seconde fois')
+      .toMatch(/etat\s*<>\s*'en_attente'/)
+    expect(corps, 'le demandeur n’est plus prévenu du refus')
+      .toContain("'demande_suppression_traitee'")
+    expect(corps, 'la notification de refus ne se distingue plus d’une suppression')
+      .toContain("'refusee'")
+    const page = sansCommentaires(lire('app/equipe/page.tsx'))
+    expect(page, 'l’écran n’offre plus le refus').toContain('setARefuser')
+  })
+})

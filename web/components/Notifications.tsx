@@ -61,14 +61,30 @@ function presenter(n: Notif): { titre: string; texte: string; lien: string | nul
         texte: t('%{par} demande la suppression du compte de %{nom} — %{motif}', {
           par: d.par || t('Un superviseur'), nom: d.nom || t('un compteur'), motif: d.motif || '',
         }),
-        lien: '/equipe',
+        // ⚠️ L'ANCRE, PAS LA PAGE. Sans elle l'administrateur arrive en haut de
+        // « Mon équipe » et cherche encore ce qu'on vient de lui annoncer
+        // (relevé par Julien, 10 octobre 2026). Le même lien est dans l'e-mail.
+        lien: '/equipe#demandes-suppression',
       }
+    // ⚠️ UN SEUL TYPE POUR DEUX DÉCISIONS, et c'est volontaire : chaque type
+    // neuf doit être ajouté à la contrainte de la table, à la liste blanche de
+    // `mes_notifications` ET ici — trois endroits, et l'oubli de l'un ne se
+    // signale pas. C'est exactement ce qui a rendu la demande invisible le
+    // 10 octobre. Un drapeau dans les données ne traverse qu'un seul endroit.
     case 'demande_suppression_traitee':
-      return {
-        titre: t('Demande traitée'),
-        texte: t('Le compte de %{nom} a été supprimé.', { nom: d.nom || t('cette personne') }),
-        lien: '/equipe',
-      }
+      return d.refusee
+        ? {
+            titre: t('Demande refusée'),
+            texte: d.motif
+              ? t('La suppression du compte de %{nom} est refusée — %{motif}', { nom: d.nom || t('cette personne'), motif: d.motif })
+              : t('La suppression du compte de %{nom} est refusée.', { nom: d.nom || t('cette personne') }),
+            lien: '/equipe',
+          }
+        : {
+            titre: t('Demande traitée'),
+            texte: t('Le compte de %{nom} a été supprimé.', { nom: d.nom || t('cette personne') }),
+            lien: '/equipe',
+          }
     case 'compteur_actif':
       return {
         titre: t('Compte activé'),

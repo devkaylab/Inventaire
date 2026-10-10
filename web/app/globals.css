@@ -1378,6 +1378,11 @@ body:has(.site-footer) .theme-toggle { display: none; }
    celle qui se LIT. Même correctif que `.offre-refus` le 5 septembre — et à
    l'endroit précis où l'on cherche qui n'est jamais entré. */
 .membres-cell.attente { color: var(--warning-text); font-weight: 600; }
+/* Le renvoi du lien se tient DANS la cellule ambre, sous le fait qu'il corrige.
+   ⚠️ `align-self: flex-start` n'est pas un réglage de goût : `.membres > *` est
+   une colonne flex étirée, et sans lui le bouton prend toute la largeur de la
+   colonne — il se lit alors comme une barre, pas comme un geste. */
+.membres-renvoi { align-self: flex-start; margin-top: 7px; }
 .membres-fin { align-items: flex-end; }
 /* Une rangée à survoler se distingue : on suit la ligne du regard jusqu'aux
    actions, qui sont à l'autre bout. */

@@ -20,7 +20,10 @@ import { AddCounter } from '@/components/dashboard/AddCounter'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { MenuActions, type ActionRangee } from '@/components/ui/MenuActions'
 import { Modal } from '@/components/ui/Modal'
+import { useToast } from '@/components/ui/Toast'
+import { errorMessage } from '@/lib/errors'
 import { DemandeSuppression } from '@/components/dashboard/DemandeSuppression'
+import { RefusSuppression } from '@/components/dashboard/RefusSuppression'
 import { getMyCompany, type Company } from '@/lib/account'
 import { Chargement } from '@/components/Chargement'
 import { locale, t, tn, useTraduction } from '@/lib/i18n'
@@ -57,7 +60,25 @@ type Invitation = {
   store_ids: string[]
   created_at: string
 }
-type TeamCA = { stores: Store[]; members: Member[]; invitations: Invitation[] }
+/**
+ * Une demande de suppression en attente, vue par l'administrateur.
+ *
+ * ⚠️ `cible` peut être nul : la colonne est `on delete set null`, donc le
+ * compte a pu disparaître par un autre chemin. `cible_nom` est figé pour
+ * exactement cette raison — sans lui, la demande n'aurait plus de sujet.
+ */
+type DemandeEnAttente = {
+  id: number
+  cible: string | null
+  cible_nom: string
+  motif: string
+  created_at: string
+  par: string
+}
+type TeamCA = {
+  stores: Store[]; members: Member[]; invitations: Invitation[]
+  demandes_suppression: DemandeEnAttente[]
+}
 
 type Counter = {
   id: string; full_name: string | null; email: string | null
@@ -87,6 +108,7 @@ export default function EquipePage() {
   const guard = useAuthGuard('supervisor')
   useTraduction()
   const confirm = useConfirm()
+  const toast = useToast()
   const [company, setCompany] = useState<Company | null>(null)
   const [ca, setCa] = useState<TeamCA | null>(null)
   const [sup, setSup] = useState<TeamSup | null>(null)
@@ -99,6 +121,11 @@ export default function EquipePage() {
   // ⚠️ Un superviseur DEMANDE la suppression, il ne la décide pas : le geste
   // définitif reste à l'administrateur d'entreprise.
   const [aSupprimer, setASupprimer] = useState<{ id: string; nom: string; email: string | null } | null>(null)
+  // ⚠️ ET LE REFUS EXISTE, sinon la section est un cul-de-sac : la seule sortie
+  // serait la suppression, et un administrateur qui ne veut PAS supprimer
+  // laisserait la demande « en attente » pour toujours — le superviseur
+  // n'apprenant jamais la décision.
+  const [aRefuser, setARefuser] = useState<DemandeEnAttente | null>(null)
 
   const estAdmin = guard.status === 'ready' && !!guard.profile.is_company_admin
 
@@ -126,6 +153,19 @@ export default function EquipePage() {
   }, [guard, charger])
 
   async function rafraichir() { await charger(estAdmin) }
+
+  /**
+   * ⚠️ L'ANCRE EST AMENÉE À LA MAIN, et ce n'est pas un raffinement : l'e-mail
+   * et la notification mènent à `/equipe#demandes-suppression`, mais la
+   * section n'existe pas encore au moment où le navigateur cherche l'ancre —
+   * elle attend la réponse de `ca_list_team`. Sans cet effet, le lien du
+   * courriel ouvre le haut de la page et l'administrateur cherche encore.
+   */
+  useEffect(() => {
+    if (!ca || window.location.hash !== '#demandes-suppression') return
+    document.getElementById('demandes-suppression')
+      ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [ca])
 
   async function inviterSuperviseur(firstName: string, lastName: string, email: string, storeIds: string[]) {
     setBusy(true)
@@ -189,11 +229,22 @@ export default function EquipePage() {
    * `auth.users`, et une personne invitée y est dès l'invitation (fiche 121).
    * Il manquait le bouton, pas la fonction.
    *
-   * ⚠️ On appelle la fonction déjà déployée plutôt que d'en écrire une
-   * deuxième : elle borne l'hôte de retour (pas de redirection ouverte) et
-   * répond toujours la même chose, qu'un compte existe ou non.
+   * ⚠️⚠️ **ET IL PASSE PAR `renvoyer-le-lien`, PLUS PAR `mot-de-passe-oublie`.**
+   * La seconde est PUBLIQUE et répond toujours la même chose, qu'un compte
+   * existe ou non — c'est juste, sinon le formulaire public devient un oracle
+   * d'énumération d'adresses. Mais cet écran-ci annonçait alors « un lien vient
+   * de partir » SANS RIEN EN SAVOIR : le 10 octobre 2026, Julien l'a cliqué
+   * deux fois sur un compte que le serveur d'authentification ne trouvait pas,
+   * a lu deux fois « c'est parti », et n'a rien reçu. Une heure perdue, la
+   * seule trace étant dans les journaux du serveur.
+   *
+   * L'argument du mutisme ne vaut pas ici : l'appelant a la liste de son
+   * entreprise sous les yeux, il n'a aucune adresse à découvrir. La fonction
+   * authentifiée rend donc le détail — et l'écran le DIT, succès comme échec.
+   * ⚠️ La décision reste en base (`renvoyer_le_lien_au_membre`) : cacher le
+   * bouton ne fermerait rien.
    */
-  async function renvoyerLeLien(email: string | null, nom: string) {
+  async function renvoyerLeLien(id: string, email: string | null, nom: string) {
     // L'adresse vient de la base et y est nullable. Les deux appelants ne
     // proposent le geste que s'il y en a une ; ceci ferme le type, et dit
     // qu'un envoi sans adresse n'existe pas.
@@ -205,14 +256,25 @@ export default function EquipePage() {
     })
     if (!ok) return
     try {
-      await supabase.functions.invoke('mot-de-passe-oublie', {
-        body: { email, redirectTo: `${window.location.origin}/bienvenue` },
+      const { data, error } = await supabase.functions.invoke('renvoyer-le-lien', {
+        body: { userId: id },
       })
-    } catch {
-      // La fonction ne dit jamais si l'adresse existe ; un échec réseau non
-      // plus. On annonce l'envoi sans promettre la réception.
+      const res = data as { success?: boolean; error?: string; detail?: string } | null
+      if (error || !res?.success) {
+        // Le motif technique n'a rien à faire dans un avis, mais il ne doit
+        // pas disparaître : il va dans la console, à côté de la phrase.
+        if (res?.detail) console.error('[renvoi]', res.detail)
+        // ⚠️ `errorMessage` et pas la phrase brute : les refus de la base
+        // parlent français, et l'espace connecté existe aussi en anglais.
+        const phrase = res?.error ?? error?.message
+        toast.error(phrase ? errorMessage(phrase) : t('Le lien n’a pas pu partir. Réessayez dans un instant.'))
+        return
+      }
+      toast.success(t('Le lien est parti à %{email}. Il est valable 24 heures et ne sert qu’une fois.', { email }))
+    } catch (e) {
+      console.error('[renvoi]', e)
+      toast.error(t('Le lien n’a pas pu partir : le service est injoignable.'))
     }
-    alert(t('Un lien vient de partir à %{email}.', { email }))
   }
 
   async function appliquer(fn: string, args: Record<string, unknown>) {
@@ -366,14 +428,14 @@ export default function EquipePage() {
     // Sa propre ligne et celle d'un autre administrateur n'ont aucune action :
     // ces comptes-là restent chez Quantinvo.
     const intouchable = m.is_company_admin || m.id === guard.profile.id
+    // ⚠️ LE RENVOI N'EST PAS DANS CE MENU, et ce n'est pas un oubli. Le menu
+    // « ⋯ » existe pour ÉLOIGNER « Supprimer le compte » de ce qui est anodin ;
+    // y ranger le renvoi du lien cachait le seul geste attendu face à une ligne
+    // ambre derrière trois points, à côté du geste définitif. Julien ne l'a pas
+    // trouvé (10 octobre 2026) : « tu n'as pas ajouté de bouton renvoyer le
+    // lien sur admin ». Il est désormais rendu en clair dans la cellule ambre,
+    // là où le regard est déjà — comme chez le superviseur.
     const actions: ActionRangee[] = intouchable ? [] : [
-      // ⚠️ En TÊTE, et seulement tant que le mot de passe n'existe pas : c'est
-      // le geste attendu face à une ligne ambre, et il doit se trouver avant
-      // « Supprimer le compte », pas après.
-      ...(!m.compte_finalise && m.email ? [{
-        libelle: t('Renvoyer le lien'),
-        onClick: () => renvoyerLeLien(m.email, m.full_name || t('cette personne')),
-      }] : []),
       {
         libelle: superviseur ? t('Passer compteur') : t('Passer superviseur'),
         onClick: () => changerRole(m, superviseur ? 'employee' : 'supervisor'),
@@ -455,6 +517,17 @@ export default function EquipePage() {
             : m.sessions_counted > 0
               ? `${tn('%{count} inventaire', '%{count} inventaires', m.sessions_counted)}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
               : t('Pas encore de comptage')}
+          {/* Le fait et son remède dans la même cellule : l'ambre annonce le
+              manque, le bouton le comble. Il ne s'affiche que tant que le mot
+              de passe n'existe pas, et jamais sur une ligne intouchable — un
+              administrateur ne se renvoie pas de lien à lui-même. */}
+          {!m.compte_finalise && m.email && !intouchable && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm membres-renvoi"
+              onClick={() => renvoyerLeLien(m.id, m.email, m.full_name || t('cette personne'))}
+            >{t('Renvoyer le lien')}</button>
+          )}
         </div>
 
         <div className="membres-fin">
@@ -537,10 +610,28 @@ export default function EquipePage() {
         </Modal>
       )}
 
-      {/* ⚠️ La bande compte ce que `ca_company_overview` a déjà rendu — aucun
-          appel de plus. L'ambre n'y désigne que les mots de passe jamais créés :
-          c'est le seul fait de cette page qui appelle un geste, et `is_active`
-          veut dire « s'est déjà connecté », rien d'autre (23 août 2026). */}
+      {aRefuser && (
+        <Modal title={t('Refuser cette demande')} onClose={() => setARefuser(null)}>
+          {(fermer) => (
+            <RefusSuppression
+              demande={aRefuser}
+              onFermer={() => { fermer(); setARefuser(null) }}
+              onFait={rafraichir}
+            />
+          )}
+        </Modal>
+      )}
+
+      {/* ⚠️ La bande compte ce que `ca_list_team` a déjà rendu — aucun appel de
+          plus. L'ambre n'y désigne que les mots de passe jamais créés : c'est le
+          seul fait de cette page qui appelle un geste.
+
+          ⚠️⚠️ ET ELLE COMPTE `compte_finalise`, PLUS `is_active`. Cliquer sur le
+          lien d'invitation EST une connexion (`verifyOtp` ouvre une session) :
+          `is_active` tombait donc avant que le mot de passe existe, et la bande
+          annonçait « 0 mot de passe à créer » au-dessus de lignes ambre qui
+          disaient le contraire. Même contresens que le badge et que le bouton
+          de renvoi, au même endroit (10 octobre 2026). */}
       {estAdmin && membres.length > 0 && (
         <div className="resume-bande">
           <div>
@@ -555,8 +646,8 @@ export default function EquipePage() {
             <strong className="num">{membres.filter((m) => m.role === 'employee').length}</strong>
             <span>{t('Compteurs')}</span>
           </div>
-          <div className={membres.some((m) => !m.is_active) ? 'attention' : undefined}>
-            <strong className="num">{membres.filter((m) => !m.is_active).length}</strong>
+          <div className={membres.some((m) => !m.compte_finalise) ? 'attention' : undefined}>
+            <strong className="num">{membres.filter((m) => !m.compte_finalise).length}</strong>
             <span>{t('Mot de passe à créer')}</span>
           </div>
         </div>
@@ -564,7 +655,76 @@ export default function EquipePage() {
 
       {estAdmin ? (
         <>
-          {/* ── Invitations en attente, en tête ──
+          {/* ── Demandes de suppression, AVANT TOUT LE RESTE ──
+              ⚠️⚠️ Elles passent devant les invitations parce qu'elles portent le
+              geste le plus lourd de la page : un compte effacé ne revient pas.
+              Et parce qu'elles n'étaient NULLE PART (10 octobre 2026) —
+              l'administrateur recevait une notification et un e-mail pour un
+              geste qu'aucun écran ne proposait : il devait retenir le nom, le
+              retrouver dans la liste des membres, et deviner que « Supprimer le
+              compte » était la réponse à la demande.
+
+              ⚠️ L'identifiant `demandes-suppression` est l'ANCRE du lien de
+              l'e-mail et de la notification : le renommer casse les deux. */}
+          {(ca?.demandes_suppression ?? []).length > 0 && (
+            <section className="admin-section" id="demandes-suppression">
+              <div className="admin-section-head">
+                <div>
+                  <h2>{t('Demandes de suppression')}</h2>
+                  <p className="section-note">
+                    {t('Un superviseur demande, vous décidez. Supprimer est définitif ; refuser conserve le compte.')}
+                  </p>
+                </div>
+                <span className="dash-sub-n">{(ca?.demandes_suppression ?? []).length}</span>
+              </div>
+              <div className="req-list">
+                {(ca?.demandes_suppression ?? []).map((d) => {
+                  // Le membre, pour que la confirmation de suppression reste
+                  // exactement celle de la liste (recopie du nom, e-mail).
+                  const m = membres.find((x) => x.id === d.cible)
+                  return (
+                    <div className="req-row req-row-block req-row-attente" key={d.id}>
+                      <div>
+                        <div className="req-name">
+                          {d.cible_nom || t('Sans nom')}
+                          <span className="pill pill-role">{t('Compteur')}</span>
+                        </div>
+                        <div className="muted small">
+                          {t('Demandé par %{par} le %{date}', { par: d.par || t('un superviseur'), date: jourCourt(d.created_at) })}
+                          {m?.email ? ` · ${m.email}` : ''}
+                        </div>
+                        {/* Le motif en clair : l'administrateur tranche sur un
+                            geste définitif, il ne doit pas aller le chercher. */}
+                        <div className="small" style={{ marginTop: 6 }}>
+                          <strong>{t('Motif')} : </strong>{d.motif}
+                        </div>
+                      </div>
+                      <div className="req-actions">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setARefuser(d)}
+                        >{t('Refuser la demande')}</button>
+                        {/* ⚠️ Sans cible il n'y a plus de compte à supprimer :
+                            il a disparu par un autre chemin. Le refus reste,
+                            lui, pour classer la demande. */}
+                        {m && <span className="action-sep" aria-hidden="true" />}
+                        {m && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => supprimerCompte(m)}
+                          >{t('Supprimer le compte')}</button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* ── Invitations en attente ──
               C'est la seule chose de cette page qui attend un geste : elle passe
               devant, comme « Ventes en cours » sur la console. Quand il n'y en a
               aucune, la section disparaît et la page s'ouvre sur les filtres. */}
@@ -728,7 +888,7 @@ export default function EquipePage() {
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
-                    onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}
+                    onClick={() => renvoyerLeLien(c.id, c.email, c.full_name || t('cette personne'))}
                   >{t('Renvoyer le lien')}</button>
                 )}
                 {/* Le geste quotidien du superviseur : un saisonnier part, il le
