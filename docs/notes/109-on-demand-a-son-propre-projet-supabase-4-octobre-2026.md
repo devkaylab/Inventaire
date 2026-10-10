@@ -350,3 +350,57 @@ valeurs ne sont pas lisibles par le CLI (seules des empreintes sortent). **S'ils
 pointent sur `www.quantinvo.com`**, les e-mails et les retours Stripe du jumeau
 enverraient les gens sur la production. À regarder dans la console avant
 d'éprouver le paiement.
+
+### Ce que la pose a vraiment appris (10 octobre, après-midi)
+
+⚠️⚠️ **J'AI ENVOYÉ JULIEN DANS UNE IMPASSE : Supabase ne redonne JAMAIS la
+valeur d'un secret.** Sa page n'affiche qu'une empreinte SHA-256. Je lui ai
+écrit « révèle la valeur côté production » pour quinze lignes — il n'y a rien à
+révéler. Les valeurs se prennent **à la source** : Stripe pour la clé et les
+tarifs, Resend pour la sienne. Le script le dit maintenant en tête.
+
+⚠️ **Et l'aide ne doit pas ressembler à une valeur déjà saisie.** La ligne
+d'explication de `CONTACT_EMAIL` commençait par `contact@quantinvo.com — …` :
+Julien l'a lue comme un champ pré-rempli et a attendu. « c'est déjà écrit ».
+L'aide se préfixe désormais par `↳`, et ce qu'il faut taper se donne après
+`↳ tape :`.
+
+#### ⚠️⚠️ L'inversion mensuel/annuel a bien eu lieu — et l'empreinte l'a attrapée
+
+`STRIPE_PRICE_ESSENTIAL_YEARLY` a reçu **l'identifiant du tarif MENSUEL**. Une
+page de paiement se serait ouverte, parfaitement valide, à **89 € par an au lieu
+de 950 €**. C'est exactement le piège de la fiche 061 — « c'est le montant qui
+fait foi, pas le fait que la session s'ouvre » — et il s'est reproduit au
+premier recopiage manuel.
+
+**Ce qui l'a vu : la comparaison des empreintes.** La page de chaque projet
+publie le SHA-256 de chaque secret. En les comparant deux à deux on apprend,
+**sans lire une seule valeur**, lesquelles sont identiques à la production,
+lesquelles diffèrent, et — en inversant la table — *quelle autre valeur* a été
+collée par erreur. C'est ce dernier point qui a nommé le défaut : « c'est la
+valeur de `ESSENTIAL_MONTHLY` ».
+
+Le même procédé a servi à retrouver deux valeurs sans les révéler :
+`INVITE_FROM_EMAIL` (lu sur un e-mail envoyé dans Resend, puis confirmé par son
+empreinte) et les deux URL du jumeau, déjà posées le 9 octobre et justes.
+
+**Retenir le procédé, pas l'incident** : une empreinte publiée est un moyen de
+VÉRIFIER une valeur qu'on ne doit pas lire. Candidat → hash → comparaison.
+
+Le script rappelle désormais **le montant à chaque tarif** (« Essential,
+950,00 € par AN ») : c'est le seul garde-fou qui tienne, puisque les deux
+identifiants se ressemblent et que les deux sessions s'ouvrent.
+
+#### État final, mesuré
+
+Les huit tarifs, `CONTACT_EMAIL` et `INVITE_FROM_EMAIL` identiques à la
+production ; `ALERTE_CLE`, `METRICS_KEY`, `PRELEVEMENT_CLE` et
+`STRIPE_WEBHOOK_SECRET` propres au jumeau ; le coffre écrit, `prelevement_url`
+exacte et `prelevement_cle` **dont l'empreinte s'accorde** avec le secret de
+fonction (vérifié par `extensions.digest` côté base contre le digest publié).
+
+⚠️ `STRIPE_SECRET_KEY` et `RESEND_API_KEY` **diffèrent** de la production, et
+c'est attendu : Julien a pris la clé secrète standard du compte Stripe (la
+production porte vraisemblablement une clé restreinte) et une clé Resend à
+lui. Les deux commencent par le bon préfixe. **Le premier appel réel tranchera**
+— c'est la seule vérification qui vaille, et elle n'a pas encore été faite.

@@ -28,12 +28,15 @@ print ""
 print "  Secrets du projet jumeau — Quantinvo On-Demand ($JUMEAU)"
 print "  ────────────────────────────────────────────────────────"
 print ""
-print "  Ouvre dans deux onglets les pages « Edge Functions → Secrets » :"
-print "    production : https://supabase.com/dashboard/project/$PROD/settings/functions"
-print "    jumeau     : https://supabase.com/dashboard/project/$JUMEAU/settings/functions"
+print "  ⚠️ Supabase NE REDONNE JAMAIS la valeur d'un secret : sa page n'affiche"
+print "  qu'une empreinte. Les valeurs se prennent À LA SOURCE :"
 print ""
-print "  Pour chaque ligne : révèle la valeur côté production, copie, colle ici."
-print "  Rien ne s'affiche quand tu colles, c'est normal. Entrée vide = on passe."
+print "    Stripe (clé + tarifs) : https://dashboard.stripe.com/test/apikeys"
+print "                            https://dashboard.stripe.com/test/products"
+print "    Resend (clé d'API)    : https://resend.com/api-keys"
+print ""
+print "  Rien ne s'affiche quand tu colles, c'est normal. Entrée vide = on passe,"
+print "  et une ligne passée se pose après — rien n'est cassé."
 print ""
 
 TMP=$(mktemp -d)
@@ -44,11 +47,17 @@ chmod 600 "$ENVF"
 # Le fichier part, quoi qu'il arrive — y compris si tu interromps par Ctrl-C.
 trap 'rm -rf "$TMP"' EXIT INT TERM
 
-poser() {  # poser NOM "explication"
-  local nom=$1 aide=$2 val
+# ⚠️ **L'AIDE NE DOIT PAS RESSEMBLER À UNE VALEUR DÉJÀ SAISIE.** Première
+# version : l'explication de `CONTACT_EMAIL` commençait par
+# « contact@quantinvo.com — l'adresse de réponse… ». Julien a lu la valeur à
+# l'écran et attendu que le script continue : « c'est déjà écrit ». Une ligne
+# d'aide se préfixe donc, et ce qu'il faut taper se donne après « tape : ».
+poser() {  # poser NOM "explication" [a_taper]
+  local nom=$1 aide=$2 aTaper=$3 val
   print "  $nom"
-  print "    $aide"
-  printf "    valeur : "
+  print "    ↳ $aide"
+  [[ -n "$aTaper" ]] && print "    ↳ tape : $aTaper"
+  printf "    valeur (rien ne s'affiche, puis Entrée) : "
   read -rs val
   print ""
   if [[ -z "$val" ]]; then
@@ -62,16 +71,28 @@ poser() {  # poser NOM "explication"
 
 print "  ── 1. Recopiés de la production, à l'identique ──────────────────"
 print ""
-poser RESEND_API_KEY     "Même clé que la production : les e-mails du jumeau partent du même compte."
-poser CONTACT_EMAIL      "contact@quantinvo.com — l'adresse de réponse des e-mails."
-poser INVITE_FROM_EMAIL  "L'expéditeur, de la forme : Quantinvo <...>"
-poser STRIPE_SECRET_KEY  "La clé secrète Stripe de la production. Elle commence par sk_test_ : c'est normal, le compte est en mode test."
+poser RESEND_API_KEY "La clé d'API Resend (commence par re_). Celle de la production convient, ou crée-en une." ""
+poser CONTACT_EMAIL "L'adresse de réponse des e-mails." "contact@quantinvo.com"
+poser INVITE_FROM_EMAIL "L'expéditeur des e-mails." "Quantinvo <invitations@quantinvo.com>"
+poser STRIPE_SECRET_KEY "La CLÉ SECRÈTE (sk_test_), pas la clé publiable (pk_test_)." ""
 
 print "  ── 2. Les huit Price Stripe, recopiés aussi (price_...) ─────────"
 print ""
-for p in ESSENTIAL_MONTHLY ESSENTIAL_YEARLY ADVANCED_MONTHLY ADVANCED_YEARLY \
-         ENTERPRISE_MONTHLY ENTERPRISE_YEARLY APPAREILS_MONTHLY APPAREILS_YEARLY; do
-  poser "STRIPE_PRICE_$p" "Identique à la production."
+# ⚠️ **LE MONTANT EST RAPPELÉ À CHAQUE LIGNE, et ce n'est pas du confort.**
+# Le 10 octobre 2026, `ESSENTIAL_YEARLY` a reçu l'identifiant du tarif MENSUEL.
+# Une page de paiement se serait ouverte, parfaitement valide, à 89 € par AN au
+# lieu de 950 €. C'est le piège de la fiche 061 : ce qui fait foi est le
+# montant, pas le fait que la session s'ouvre. Le tarif se lit dans le
+# catalogue Stripe, produit par produit.
+for couple in "ESSENTIAL_MONTHLY:Essential, 89,00 € par mois" \
+              "ESSENTIAL_YEARLY:Essential, 950,00 € par AN" \
+              "ADVANCED_MONTHLY:Advanced, 310,00 € par mois" \
+              "ADVANCED_YEARLY:Advanced, 3 300,00 € par AN" \
+              "ENTERPRISE_MONTHLY:Enterprise, 890,00 € par mois" \
+              "ENTERPRISE_YEARLY:Enterprise, 9 450,00 € par AN" \
+              "APPAREILS_MONTHLY:Appareils supplémentaires, 64,00 € par mois" \
+              "APPAREILS_YEARLY:Appareils supplémentaires, 690,00 € par AN"; do
+  poser "STRIPE_PRICE_${couple%%:*}" "${couple#*:}" "l'identifiant price_... de CE tarif"
 done
 
 print "  ── 3. Celui qui doit être NEUF ──────────────────────────────────"
@@ -85,7 +106,7 @@ print "    évènements : checkout.session.completed, invoice.paid,"
 print "                 invoice.payment_failed, customer.subscription.deleted"
 print "  Puis révèle « Clé secrète de signature » (whsec_...) et colle-la ici."
 print ""
-poser STRIPE_WEBHOOK_SECRET "La signature du NOUVEAU point d'entrée, celui du jumeau."
+poser STRIPE_WEBHOOK_SECRET "La signature (whsec_) du NOUVEAU point d'entrée, celui du jumeau." ""
 
 print "  ── 4. Les nôtres : tirés au hasard, et DIFFÉRENTS de la prod ────"
 print ""
