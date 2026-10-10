@@ -116,4 +116,46 @@ describe('⚠️ renvoyer le lien est possible pour les deux rôles', () => {
       'un seul rôle peut renvoyer le lien : l’autre n’aura que « supprimer »',
     ).toBeGreaterThanOrEqual(3) // la définition + un appel par rôle
   })
+
+  it('⚠️⚠️ et côté administrateur il est VISIBLE, pas rangé dans le menu « ⋯ »', () => {
+    // Il y était, et personne ne l'a trouvé : « tu n'as pas ajouté de bouton
+    // renvoyer le lien sur admin » (Julien, 10 octobre 2026). Le menu existe
+    // pour ÉLOIGNER le geste définitif ; y ranger le seul geste attendu face à
+    // une ligne ambre revient à le mettre au même endroit que lui.
+    const debutMenu = equipe.indexOf('ActionRangee[] =')
+    const debutRangee = equipe.indexOf('<Fragment key={m.id}>')
+    expect(debutMenu, 'la liste d’actions de la rangée ne se lit plus').toBeGreaterThan(-1)
+    expect(debutRangee, 'la rangée d’un membre ne se lit plus').toBeGreaterThan(debutMenu)
+    expect(
+      equipe.slice(debutMenu, debutRangee),
+      'le renvoi du lien est reparti se cacher derrière les trois points',
+    ).not.toContain('renvoyerLeLien')
+    // Et il est bien rendu quelque part dans la rangée, sinon il a simplement
+    // disparu de l'écran de l'administrateur.
+    const rangee = equipe.slice(debutRangee, equipe.indexOf('</Fragment>', debutRangee))
+    expect(rangee, 'l’administrateur n’a plus aucun moyen de renvoyer le lien')
+      .toContain('renvoyerLeLien(')
+    expect(rangee, 'le renvoi n’est plus un bouton').toContain('<button')
+    // ⚠️ Et il est gouverné par le MÊME fait que l'ambre. Un garde posé sur
+    // autre chose (ou neutralisé) ferait disparaître le bouton de la seule
+    // ligne qui en a besoin, sans que rien ne le signale.
+    const avantLeBouton = rangee.slice(
+      Math.max(0, rangee.indexOf('renvoyerLeLien(') - 300),
+      rangee.indexOf('renvoyerLeLien('),
+    )
+    expect(avantLeBouton, 'le bouton de renvoi ne suit plus « a créé son mot de passe »')
+      .toContain('!m.compte_finalise')
+  })
+
+  it('⚠️ et la bande de résumé compte le MÊME fait que les lignes', () => {
+    // « 0 mot de passe à créer » au-dessus de lignes ambre : le compteur lisait
+    // `is_active`, qui tombe au clic sur le lien, bien avant le mot de passe.
+    const bande = equipe.slice(
+      equipe.indexOf('resume-bande'),
+      equipe.indexOf('Mot de passe à créer', equipe.indexOf('resume-bande')),
+    )
+    expect(bande, 'la bande de résumé ne se lit plus').not.toBe('')
+    expect(bande, 'la bande recompte « s’est connecté » au lieu de « a un mot de passe »')
+      .not.toContain('is_active')
+  })
 })

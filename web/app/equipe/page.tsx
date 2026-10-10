@@ -366,14 +366,14 @@ export default function EquipePage() {
     // Sa propre ligne et celle d'un autre administrateur n'ont aucune action :
     // ces comptes-là restent chez Quantinvo.
     const intouchable = m.is_company_admin || m.id === guard.profile.id
+    // ⚠️ LE RENVOI N'EST PAS DANS CE MENU, et ce n'est pas un oubli. Le menu
+    // « ⋯ » existe pour ÉLOIGNER « Supprimer le compte » de ce qui est anodin ;
+    // y ranger le renvoi du lien cachait le seul geste attendu face à une ligne
+    // ambre derrière trois points, à côté du geste définitif. Julien ne l'a pas
+    // trouvé (10 octobre 2026) : « tu n'as pas ajouté de bouton renvoyer le
+    // lien sur admin ». Il est désormais rendu en clair dans la cellule ambre,
+    // là où le regard est déjà — comme chez le superviseur.
     const actions: ActionRangee[] = intouchable ? [] : [
-      // ⚠️ En TÊTE, et seulement tant que le mot de passe n'existe pas : c'est
-      // le geste attendu face à une ligne ambre, et il doit se trouver avant
-      // « Supprimer le compte », pas après.
-      ...(!m.compte_finalise && m.email ? [{
-        libelle: t('Renvoyer le lien'),
-        onClick: () => renvoyerLeLien(m.email, m.full_name || t('cette personne')),
-      }] : []),
       {
         libelle: superviseur ? t('Passer compteur') : t('Passer superviseur'),
         onClick: () => changerRole(m, superviseur ? 'employee' : 'supervisor'),
@@ -455,6 +455,17 @@ export default function EquipePage() {
             : m.sessions_counted > 0
               ? `${tn('%{count} inventaire', '%{count} inventaires', m.sessions_counted)}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
               : t('Pas encore de comptage')}
+          {/* Le fait et son remède dans la même cellule : l'ambre annonce le
+              manque, le bouton le comble. Il ne s'affiche que tant que le mot
+              de passe n'existe pas, et jamais sur une ligne intouchable — un
+              administrateur ne se renvoie pas de lien à lui-même. */}
+          {!m.compte_finalise && m.email && !intouchable && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm membres-renvoi"
+              onClick={() => renvoyerLeLien(m.email, m.full_name || t('cette personne'))}
+            >{t('Renvoyer le lien')}</button>
+          )}
         </div>
 
         <div className="membres-fin">
@@ -537,10 +548,16 @@ export default function EquipePage() {
         </Modal>
       )}
 
-      {/* ⚠️ La bande compte ce que `ca_company_overview` a déjà rendu — aucun
-          appel de plus. L'ambre n'y désigne que les mots de passe jamais créés :
-          c'est le seul fait de cette page qui appelle un geste, et `is_active`
-          veut dire « s'est déjà connecté », rien d'autre (23 août 2026). */}
+      {/* ⚠️ La bande compte ce que `ca_list_team` a déjà rendu — aucun appel de
+          plus. L'ambre n'y désigne que les mots de passe jamais créés : c'est le
+          seul fait de cette page qui appelle un geste.
+
+          ⚠️⚠️ ET ELLE COMPTE `compte_finalise`, PLUS `is_active`. Cliquer sur le
+          lien d'invitation EST une connexion (`verifyOtp` ouvre une session) :
+          `is_active` tombait donc avant que le mot de passe existe, et la bande
+          annonçait « 0 mot de passe à créer » au-dessus de lignes ambre qui
+          disaient le contraire. Même contresens que le badge et que le bouton
+          de renvoi, au même endroit (10 octobre 2026). */}
       {estAdmin && membres.length > 0 && (
         <div className="resume-bande">
           <div>
@@ -555,8 +572,8 @@ export default function EquipePage() {
             <strong className="num">{membres.filter((m) => m.role === 'employee').length}</strong>
             <span>{t('Compteurs')}</span>
           </div>
-          <div className={membres.some((m) => !m.is_active) ? 'attention' : undefined}>
-            <strong className="num">{membres.filter((m) => !m.is_active).length}</strong>
+          <div className={membres.some((m) => !m.compte_finalise) ? 'attention' : undefined}>
+            <strong className="num">{membres.filter((m) => !m.compte_finalise).length}</strong>
             <span>{t('Mot de passe à créer')}</span>
           </div>
         </div>

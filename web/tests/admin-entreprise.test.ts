@@ -243,7 +243,16 @@ describe('test terrain — corrections', () => {
 
   it('l’écran équipe affiche « Mot de passe à créer »', () => {
     expect(pageEquipe).toContain('Mot de passe à créer')
-    expect(pageEquipe).toContain('!m.is_active')
+    // ⚠️⚠️ CETTE GARDE A GELÉ LE DÉFAUT QU'ELLE SURVEILLAIT. Elle exigeait
+    // `!m.is_active` — « ne s'est jamais connecté ». Or cliquer sur le lien
+    // d'invitation EST une connexion (`verifyOtp` ouvre une session) : quelqu'un
+    // qui ouvre son lien et s'arrête avant de choisir son mot de passe passait
+    // pour fini. Le fait est désormais ÉCRIT (`mot_de_passe_cree`, rendu par
+    // `compte_finalise`), plus deviné — et la garde l'exige, en refusant le
+    // retour de l'ancien (10 octobre 2026, fiche 128).
+    expect(pageEquipe).toContain('!m.compte_finalise')
+    expect(pageEquipe, 'l’écran est revenu à « s’est connecté » pour dire « a un mot de passe »')
+      .not.toContain('!m.is_active')
   })
 
   it('« Mon compte » nomme correctement l’administrateur d’entreprise', () => {
