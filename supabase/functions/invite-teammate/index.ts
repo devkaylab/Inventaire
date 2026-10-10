@@ -84,10 +84,67 @@ Deno.serve(async (req) => {
   const found = Array.isArray(existing) && existing.length > 0 ? existing[0] : null
   if (found) {
     if (found.company_id === prof.company_id) {
+      // ⚠️⚠️ REFUSER ICI ÉTAIT UN CUL-DE-SAC (relevé par Julien, 10 octobre
+      // 2026). « Retirer du magasin » GARDE LE COMPTE : la personne reste
+      // dans l'entreprise, disparaît de l'écran du superviseur — qui ne liste
+      // que `store_team` — et son réajout butait sur « fait déjà partie de
+      // votre équipe ». Elle était à la fois INVISIBLE et INAJOUTABLE, sans
+      // aucun geste pour s'en sortir.
+      //
+      // Un superviseur qui ajoute quelqu'un de son entreprise à SON magasin
+      // demande un rattachement, pas une invitation. On le fait.
+      if (found.role !== 'employee') {
+        return json({
+          success: false,
+          code: 'already_in_team',
+          error:
+            'Cette personne occupe un autre poste dans votre entreprise : elle ne peut pas ' +
+            'être ajoutée comme compteur.',
+        })
+      }
+
+      // Les magasins doivent être les siens — même borne que plus bas : sans
+      // elle, un appel direct rattacherait quelqu'un à n'importe quel magasin.
+      const { data: sien } = await admin
+        .from('store_supervisors').select('store_id').eq('user_id', inviter.id)
+      const aLui = (sien ?? []).map((s: { store_id: string }) => s.store_id)
+      const vises = storeIds.length > 0 ? storeIds.filter((id) => aLui.includes(id)) : aLui
+      if (vises.length === 0) {
+        return json({ success: false, error: 'Aucun des magasins choisis ne vous est affecté.' }, 403)
+      }
+
+      const { data: dejaLa } = await admin
+        .from('store_team').select('store_id')
+        .eq('user_id', found.user_id).in('store_id', vises)
+      const presents = new Set((dejaLa ?? []).map((r: { store_id: string }) => r.store_id))
+      const aRattacher = vises.filter((id) => !presents.has(id))
+
+      if (aRattacher.length === 0) {
+        // Là, c'est vrai : elle est déjà dans ces magasins-là.
+        return json({
+          success: false,
+          code: 'already_in_team',
+          error: 'Cette personne fait déjà partie de votre équipe.',
+        })
+      }
+
+      // ⚠️ `ajoute_par` EST POSÉ EXPLICITEMENT. Le déclencheur qui le remplit
+      // d'ordinaire lit l'invitation en attente ou `auth.uid()` : ici il n'y a
+      // pas d'invitation, et l'écriture passe par la clé de service, donc
+      // `auth.uid()` est nul. Sans cette ligne la personne reviendrait « sous
+      // l'administrateur », et le superviseur qui vient de l'ajouter ne
+      // pourrait pas la retirer.
+      const { error: rErr } = await admin.from('store_team').insert(
+        aRattacher.map((store_id) => ({ store_id, user_id: found.user_id, ajoute_par: inviter.id })),
+      )
+      if (rErr) return json({ success: false, error: rErr.message }, 500)
+
+      // Pas d'e-mail : son compte existe déjà, elle n'a rien à finaliser.
       return json({
-        success: false,
-        code: 'already_in_team',
-        error: 'Cette personne fait déjà partie de votre équipe.',
+        success: true,
+        emailSent: false,
+        rattachee: true,
+        nom: found.full_name ?? '',
       })
     }
     // Ce n'est pas une faute de saisie, c'est une situation à expliquer : le

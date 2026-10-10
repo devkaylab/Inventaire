@@ -71,7 +71,9 @@ export default function NewMemberScreen() {
       await queryClient.invalidateQueries({ queryKey: ['my-team'] })
       signaler.succes(
           t('Compteur ajouté'),
-          res.emailSent
+          res.rattachee
+            ? t('%{nom} est de nouveau dans votre équipe.', { nom: name })
+            : res.emailSent
             ? t("%{nom} reçoit un e-mail à l'adresse %{mail}. Le lien lui permettra de choisir son mot de passe.", { nom: name, mail })
             : res.alreadyInvited
               ? t('%{nom} avait déjà été invité : le lien reçu précédemment reste valable.', { nom: name })

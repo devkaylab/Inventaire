@@ -34,10 +34,15 @@ type Member = {
   is_company_admin: boolean
   email: string | null
   is_active: boolean
-  // ⚠️ `is_active` = « s'est déjà connecté ». `a_un_mot_de_passe` = « a fini
-  // son inscription ». Entre les deux vit la personne qu'on a perdue : elle a
-  // cliqué sur son lien (donc connectée) sans jamais choisir son mot de passe.
-  a_un_mot_de_passe: boolean
+  // ⚠️⚠️ `is_active` = « s'est déjà connecté ». `compte_finalise` = « a choisi
+  // son mot de passe ». Entre les deux vit la personne qu'on a perdue : elle a
+  // cliqué sur son lien — donc connectée — sans jamais finir.
+  //
+  // ⚠️ Ce fait est ENREGISTRÉ par `/bienvenue`, pas déduit. Aucune colonne de
+  // Supabase ne le dit : `encrypted_password` est rempli dès l'invitation,
+  // avec un mot de passe aléatoire. S'y fier a cassé le badge et le bouton
+  // pendant quelques heures le 10 octobre 2026.
+  compte_finalise: boolean
   store_ids: string[]
   last_count_at: string | null
   sessions_counted: number
@@ -55,7 +60,7 @@ type TeamCA = { stores: Store[]; members: Member[]; invitations: Invitation[] }
 
 type Counter = {
   id: string; full_name: string | null; email: string | null
-  is_active: boolean; a_un_mot_de_passe: boolean
+  is_active: boolean; compte_finalise: boolean
   /** Posé par la base depuis `store_team.ajoute_par` : je l'ai fait entrer. */
   a_moi: boolean
   sessions_counted: number; last_count_at: string | null
@@ -154,7 +159,9 @@ export default function EquipePage() {
       return false
     }
     alert(
-      data.emailSent
+      data.rattachee
+        ? t('%{nom} est de nouveau dans votre équipe.', { nom: `${firstName} ${lastName}` })
+        : data.emailSent
         ? t('Invitation envoyée. %{nom} reçoit un e-mail pour créer son mot de passe.', { nom: `${firstName} ${lastName}` })
         : data.alreadyInvited
           ? t('%{nom} avait déjà été invité : le lien reçu précédemment reste valable.', { nom: `${firstName} ${lastName}` })
@@ -359,7 +366,7 @@ export default function EquipePage() {
       // ⚠️ En TÊTE, et seulement tant que le mot de passe n'existe pas : c'est
       // le geste attendu face à une ligne ambre, et il doit se trouver avant
       // « Supprimer le compte », pas après.
-      ...(!m.a_un_mot_de_passe && m.email ? [{
+      ...(!m.compte_finalise && m.email ? [{
         libelle: t('Renvoyer le lien'),
         onClick: () => renvoyerLeLien(m.email, m.full_name || t('cette personne')),
       }] : []),
@@ -438,8 +445,8 @@ export default function EquipePage() {
         {/* ⚠️ `is_active` veut dire « s'est déjà connecté », rien d'autre — le
             contresens corrigé le 23 août 2026. C'est le seul fait de cette
             colonne qui appelle un geste, donc le seul qui porte l'ambre. */}
-        <div className={`membres-cell${!m.a_un_mot_de_passe ? ' attente' : ''}`}>
-          {!m.a_un_mot_de_passe
+        <div className={`membres-cell${!m.compte_finalise ? ' attente' : ''}`}>
+          {!m.compte_finalise
             ? t('Mot de passe à créer')
             : m.sessions_counted > 0
               ? `${tn('%{count} inventaire', '%{count} inventaires', m.sessions_counted)}${m.last_count_at ? ` · ${jourCourt(m.last_count_at)}` : ''}`
@@ -689,7 +696,7 @@ export default function EquipePage() {
               <div>
                 <div className="req-name">
                   {c.full_name || t('Sans nom')}
-                  {!c.a_un_mot_de_passe && <BadgeEnAttente />}
+                  {!c.compte_finalise && <BadgeEnAttente />}
                 </div>
                 <div className="muted small">
                   {c.email}
@@ -705,7 +712,7 @@ export default function EquipePage() {
                     connexion, donc `is_active` tombait avant que le mot de
                     passe existe — et le bouton disparaissait pour la seule
                     personne qui en avait besoin. */}
-                {!c.a_un_mot_de_passe && c.email && (
+                {!c.compte_finalise && c.email && (
                   <button
                     className="link-btn"
                     onClick={() => renvoyerLeLien(c.email, c.full_name || t('cette personne'))}

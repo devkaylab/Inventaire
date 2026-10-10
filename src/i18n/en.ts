@@ -856,4 +856,5 @@ export const en: Dictionnaire = {
   "Si vous n’avez rien reçu du tout, regardez vos courriers indésirables, puis demandez à la personne qui vous a ajouté de vérifier l’adresse qu’elle a saisie.": 'If you received nothing at all, check your spam folder, then ask the person who added you to check the address they entered.',
   "Un lien d’invitation ne vit que 24 heures. Touchez « Mot de passe oublié ? » juste au-dessus : vous en recevrez un neuf, et il vous servira à choisir votre mot de passe.": 'An invitation link only lives for 24 hours. Tap “Forgotten password?” just above: you will get a new one, and it will let you choose your password.',
   'Votre lien a peut-être expiré': 'Your link may have expired',
+  '%{nom} est de nouveau dans votre équipe.': '%{nom} is back on your team.',
 }
