@@ -64,14 +64,34 @@ describe('⚠️⚠️ on ne conclut pas « expiré » sans avoir regardé la se
     expect(session, 'le jeton est consulté avant la session').toBeLessThan(jeton)
   })
 
-  it('⚠️ l’écran « expiré » mène à un nouveau lien, pas à un conseil', () => {
-    // Avant, il disait « demandez une nouvelle invitation à la personne qui
-    // vous a ajouté » — un détour, alors que la sortie en libre-service
-    // existait depuis le 6 octobre.
+  it('⚠️⚠️ l’écran « expiré » ENVOIE, il ne renvoie pas vers un formulaire', () => {
+    // Deux détours successifs, et le second est le mien. D'abord l'écran
+    // disait « demandez une nouvelle invitation à la personne qui vous a
+    // ajouté ». Puis (9 octobre) il a porté un bouton « Recevoir un nouveau
+    // lien » — qui NE FAISAIT QUE NAVIGUER vers « Mot de passe oublié ».
+    // Julien a cliqué et n'a rien reçu : mesuré dans les journaux, ZÉRO appel
+    // à la fonction d'envoi. Un bouton qui annonce un envoi doit envoyer.
     const bloc = corps(bienvenue, /if \(!hasSession\) \{/)
     expect(bloc, 'l’écran « expiré » ne se lit plus').not.toBe('')
-    expect(bloc, 'l’écran « expiré » ne propose plus d’obtenir un lien')
-      .toContain('/mot-de-passe-oublie')
+    expect(bloc, 'l’écran « expiré » ne demande plus l’adresse').toContain('<form')
+    expect(bienvenue, 'l’écran « expiré » n’envoie plus rien lui-même')
+      .toContain('envoyerLienDeConnexion(')
+    // ⚠️ Et il ne retombe pas dans le détour : un lien vers la page du
+    // formulaire remplacerait l'envoi par un clic de plus.
+    expect(bloc, 'le bouton est redevenu un lien vers un autre écran')
+      .not.toContain('/mot-de-passe-oublie')
+  })
+
+  it('⚠️ et les deux écrans passent par le MÊME envoi', () => {
+    // Recopier l'envoi, c'est recopier le repli — et la prochaine correction
+    // n'en toucherait qu'une des deux copies.
+    for (const f of ['app/bienvenue/page.tsx', 'app/mot-de-passe-oublie/page.tsx']) {
+      const src = sansCommentaires(lire(f))
+      expect(src, `${f} appelle la fonction edge en direct`)
+        .not.toContain("invoke('mot-de-passe-oublie'")
+      expect(src, `${f} ne passe plus par l’envoi partagé`)
+        .toContain('envoyerLienDeConnexion')
+    }
   })
 })
 

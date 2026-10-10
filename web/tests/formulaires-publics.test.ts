@@ -281,7 +281,10 @@ describe('le formulaire d’inscription répond la même chose', () => {
  * de l'existence du compte, et que le quota est bien posé côté base.
  */
 describe('le lien de réinitialisation part de Quantinvo', () => {
-  const page = lire('../app/mot-de-passe-oublie/page.tsx')
+  // ⚠️ L'envoi a quitté la page le 10 octobre 2026 : l'écran « Lien expiré »
+  // de `/bienvenue` en a besoin aussi, et deux copies auraient divergé. La
+  // garde suit donc le MODULE, qui est l'unique chemin.
+  const page = lire('../lib/envoyerLienDeConnexion.ts')
   const edge = lire('../../supabase/functions/mot-de-passe-oublie/index.ts')
   const rpc = sansCommentaires(derniereDefinition('demander_reinitialisation').corps)
 
@@ -289,7 +292,7 @@ describe('le lien de réinitialisation part de Quantinvo', () => {
     const sansComm = sansCommentairesTs(page)
     const appelEdge = sansComm.indexOf("'mot-de-passe-oublie'")
     const repli = sansComm.indexOf('resetPasswordForEmail')
-    expect(appelEdge, 'la page doit appeler la fonction edge').toBeGreaterThan(0)
+    expect(appelEdge, 'le module doit appeler la fonction edge').toBeGreaterThan(0)
     expect(repli, 'le repli doit exister — un compte verrouillé ne peut pas attendre')
       .toBeGreaterThan(0)
     expect(appelEdge, 'la fonction edge doit venir AVANT le repli').toBeLessThan(repli)
