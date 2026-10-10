@@ -298,3 +298,81 @@ je ne modifie pas un fichier sans l'avoir lu. Le contrôle de retrait reste vert
 ces fonctions ne touchent que `missions`, que le script supprime déjà, et les
 parcours d'OS reviennent à l'identique — mais le catalogue garde des fonctions
 orphelines. À reprendre.
+
+## ⚠️⚠️ Le parcours joué de bout en bout — 10 octobre 2026
+
+Julien a déroulé la réservation comme un prospect, et le parcours a cassé
+**quatre fois**. Aucun de ces défauts n'était visible à la relecture, et aucun
+n'aurait été vu avec le compte d'essai : celui-ci est admin Quantinvo, admin
+d'entreprise ET superviseur à la fois — « est-ce qu'on peut faire un test de
+A à Z ? » était la bonne question, et la réponse était non.
+
+### 1. La formule « logiciel seul » était inatteignable. Pour tout le monde.
+
+Mesuré écran par écran sur l'aperçu : ce parcours a **deux étapes**, Volume puis
+Date. Il ne demande **jamais** d'adresse. Et `reserver_ma_mission` en exigeait
+une :
+
+```sql
+if v_cp is null or length(v_cp) <> 5 then
+  return jsonb_build_object('success', false, 'code', 'code_postal');
+```
+
+Un refus portant sur un champ qu'aucun écran de ce parcours n'affiche. Les deux
+missions `logiciel_seul` de la base d'essai avaient été posées par un banc —
+c'est ce qui l'a caché depuis le 4 octobre.
+
+⚠️ **ET LA RÈGLE EXISTAIT DÉJÀ, UN CRAN PLUS LOIN.** `prix_mission` dit en
+toutes lettres : « Hors zone : seulement quand une ÉQUIPE se déplace. Le
+logiciel se livre » partout. La règle était écrite, elle n'avait pas été
+reportée dans la fonction qui réserve. **Une règle posée à un endroit du chemin
+ne se propage pas toute seule aux autres.**
+
+Deux conséquences qu'il fallait voir pour que la correction tienne :
+- **aucun magasin n'est inventé** pour une licence — un établissement sans
+  adresse polluerait « Mes magasins » et porterait un décompte d'appareils ;
+- le garde-fou « une réservation en attente à la fois » comparait
+  `store_id = v_store` : avec un magasin nul, **`= null` n'est jamais vrai**, et
+  les missions fantômes se seraient empilées sur la formule qu'on venait de
+  débloquer. `is not distinct from`.
+
+### 2. Un seul `erreur` pour huit étapes
+
+« Le code postal doit comporter cinq chiffres » s'est affiché sur l'écran
+« Regardez votre boîte mail ». Le message, posé trois écrans plus tôt, n'était
+vidé par aucun changement d'étape — et l'écran où il s'affichait n'avait aucune
+sortie vers le champ fautif. Pire : les messages disaient déjà « Reprenez
+l'étape 1 », **et rien n'y ramenait**.
+
+Toute navigation passe maintenant par `allerA`, et un refus ramène à l'étape où
+il se corrige — en tenant compte de la formule, puisque « logiciel seul » n'a
+pas d'étape 3.
+
+### 3. Le code n'avait nulle part où s'écrire
+
+L'écran annonçait « soit avec le code », l'e-mail portait six chiffres, et la
+page n'avait **ni champ ni variable** : elle n'appelait jamais `action: 'creer'`.
+Un prospect sans compte n'avait qu'une sortie, « j'ai déjà un compte ».
+Le champ est posé, et le compte créé **enchaîne sur la réservation** — il est
+venu réserver, pas ouvrir un compte.
+
+### 4. Et `123456` en placeholder
+
+Un exemple qui a la forme exacte de la vraie valeur se lit comme un champ déjà
+rempli. **C'est le piège corrigé le matin même** dans `scripts/secrets-jumeau.sh`
+(la ligne d'aide qui commençait par `contact@quantinvo.com`), **refait trois
+heures plus tard**. Une leçon apprise sur un outil ne se transporte pas toute
+seule sur un écran.
+
+### Ce qui est prouvé, et ce qui ne l'est pas
+
+Banc sur la base d'essai, en transaction annulée, **8 assertions** : réservation
+sans adresse → `mon_empreinte_a_prendre` autorise → session de Checkout retenue
+→ `enregistrer_l_empreinte` → état **`prete`** → fenêtre d'accès ouverte du 14
+au 21 → moyen de paiement retenu et daté → la mission se présente au
+prélèvement. **Sans magasin ni adresse, de bout en bout.** Aucune des fonctions
+du parcours de paiement ne touche à `store_id` — vérifié, pas supposé.
+
+⚠️ **Les appels HTTP à Stripe ne sont toujours pas joués.** Ce qui est prouvé
+reste « la base se comporte comme annoncé quand Stripe répond ». Il manque une
+session authentifiée — et elle appartient à Julien.
