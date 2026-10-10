@@ -122,7 +122,13 @@ export default function MesInventairesPage() {
             {etablissements.map((e) => {
               const prix = prixIndicatif(e)
               return (
-                <Link key={e.id} href="/reserver" className="acc-inv-row">
+                // ⚠️⚠️ **LE BOUTON PORTE SON MAGASIN** (10 octobre 2026). Les
+                // trois lignes menaient au même `/reserver` nu : le client
+                // désignait un établissement et arrivait sur un tunnel qui ne
+                // le savait pas. Pire, en formule licence le tunnel ne le lui
+                // redemandait jamais — il réservait sans lieu, et la base le
+                // refusait sur le code postal.
+                <Link key={e.id} href={`/reserver?etablissement=${e.id}`} className="acc-inv-row">
                   <div style={{ minWidth: 0 }}>
                     <div className="acc-inv-name">{e.name}</div>
                     <div className="muted small" style={{ marginTop: 2 }}>
@@ -140,6 +146,15 @@ export default function MesInventairesPage() {
               )
             })}
           </div>
+          {/* ⚠️ **ET LA SORTIE POUR UN LIEU QU'ON NE CONNAÎT PAS ENCORE.** La
+              liste ci-dessus ne propose que des établissements déjà vus : sans
+              cette ligne, ouvrir un magasin de plus obligeait à remonter au
+              bouton du haut, qui ne dit pas qu'il sait faire ça. */}
+          <p style={{ marginTop: 14 }}>
+            <Link href="/reserver" className="link-btn">
+              Réserver pour un autre magasin
+            </Link>
+          </p>
         </section>
       )}
 

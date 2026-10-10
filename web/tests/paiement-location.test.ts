@@ -647,3 +647,100 @@ describe('⚠️⚠️ l’écran demande tout ce que la base exige', () => {
       .toContain('magasinComplet')
   })
 })
+
+/**
+ * ⚠️⚠️ **UN INVENTAIRE EST TOUJOURS RATTACHÉ À UN MAGASIN, ET LE CLIENT
+ * CONNECTÉ DOIT POUVOIR DIRE LEQUEL** (Julien, 10 octobre 2026 : « je peux
+ * avoir plusieurs magasins »).
+ *
+ * Le parcours connecté sautait l'étape du compte et réservait directement
+ * depuis l'écran du prix : il n'était JAMAIS interrogé sur le lieu. Tant que
+ * la licence se passait d'adresse, ça ne se voyait pas. Depuis que le code
+ * postal est exigé en base, il se faisait refuser — et renvoyer sur un écran
+ * qui n'a pas de champ d'adresse. Un cul-de-sac complet.
+ */
+describe('⚠️⚠️ le client connecté dit pour quel magasin il réserve', () => {
+  const src = () => sansCommentaires(lire('web/components/vitrine/PageReserver.tsx'))
+
+  /**
+   * Le corps JSX d'une étape.
+   *
+   * ⚠️ **UNE ÉTAPE PEUT AVOIR PLUSIEURS BLOCS**, et les prendre pour un seul
+   * rend la garde aveugle : l'étape 4 en a deux — avec prix et sans —, et une
+   * version qui s'arrêtait au premier laissait passer le défaut qu'elle
+   * surveille. Vu en la sabotant. On les recolle tous.
+   */
+  const ecran = (texte: string, n: number) => {
+    const bornes = [...texte.matchAll(/\{etape === (\d)/g)]
+    let corps = ''
+    for (let i = 0; i < bornes.length; i++) {
+      if (Number(bornes[i][1]) !== n) continue
+      const d = bornes[i].index!
+      const f = i + 1 < bornes.length ? bornes[i + 1].index! : texte.length
+      corps += texte.slice(d, f)
+    }
+    return corps
+  }
+
+  it('aucun chemin ne réserve sans être passé par l’étape du magasin', () => {
+    // ⚠️ On ne cite pas les boutons : on cherche tout appel qui réserve
+    // depuis un `onClick`, et on exige qu'il vienne de l'écran où le lieu se
+    // saisit. Ailleurs, le client réserverait un inventaire sans lieu.
+    const texte = src()
+    const etapeDuMagasin = [1, 2, 3, 4, 5, 6, 7]
+      .filter((n) => ecran(texte, n).includes('setCodePostal'))
+    expect(etapeDuMagasin, 'plus aucun écran ne demande le code postal')
+      .not.toEqual([])
+
+    for (const n of [1, 2, 4]) {
+      expect(
+        ecran(texte, n),
+        `l’étape ${n} réserve directement, sans avoir demandé le magasin`,
+      ).not.toMatch(/onClick=\{[^}]*reserverMaintenant\(\)/)
+    }
+  })
+
+  it('⚠️ et un refus de lieu ramène sur un écran qui porte le champ', () => {
+    // LE DÉFAUT : `code_postal` ramenait à l'étape 1, qui pour une licence est
+    // l'écran du VOLUME. On reprochait au client une adresse qu'aucun champ
+    // visible ne lui permettait de corriger.
+    const texte = src()
+    const table = /const etapeDuRefus[\s\S]*?\n  \}/.exec(texte)?.[0] ?? ''
+    expect(table, 'la table des refus a disparu').not.toBe('')
+
+    for (const code of ['adresse', 'code_postal', 'magasin']) {
+      const ligne = new RegExp(`${code}: logicielSeul \\? (\\d+) :`).exec(table)
+      expect(ligne, `le refus « ${code} » ne distingue plus la formule`).toBeTruthy()
+      const n = Number(ligne![1])
+      expect(
+        ecran(texte, n),
+        `le refus « ${code} » renvoie à l’étape ${n}, qui n’a pas de champ d’adresse`,
+      ).toContain('setCodePostal')
+    }
+  })
+
+  /**
+   * ⚠️ **LA LISTE DES ÉTABLISSEMENTS EST ÉCRITE UNE FOIS.** Deux copies
+   * divergent au premier changement — c'est la règle de la coquille.
+   */
+  it('⚠️ la liste des établissements n’existe qu’en un exemplaire', () => {
+    const copies = [...src().matchAll(/res-etabs-tete/g)]
+    expect(copies.length, 'la liste des établissements a été recopiée')
+      .toBe(1)
+  })
+
+  it('⚠️ un bouton « réserver » par établissement porte son établissement', () => {
+    // Les trois lignes de « Réserver à nouveau » menaient au même
+    // `/reserver` nu : le client désignait un magasin et arrivait sur un
+    // tunnel qui l'ignorait.
+    const page = sansCommentaires(lire('web/app/on-demand/mes-inventaires/page.tsx'))
+    const liste = /etablissements\.map\(\([\s\S]*?\n            \}\)\}/.exec(page)?.[0] ?? ''
+    expect(liste, 'la liste des établissements a disparu de l’espace client').not.toBe('')
+    expect(liste, 'la ligne d’un établissement mène à un tunnel qui ne le connaît pas')
+      .toMatch(/href=\{`\/reserver\?etablissement=/)
+
+    // Et le tunnel sait lire ce qu'on lui envoie.
+    expect(src(), 'le tunnel ignore l’établissement qu’on lui désigne')
+      .toMatch(/get\('etablissement'\)/)
+  })
+})

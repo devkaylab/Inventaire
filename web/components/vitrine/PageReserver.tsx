@@ -160,36 +160,6 @@ export function PageReserver() {
    */
   const [courrielConnecte, setCourrielConnecte] = useState('')
 
-  useEffect(() => {
-    let vivant = true
-    ;(async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!vivant) return
-      setConnecte(Boolean(session))
-      setCourrielConnecte(session?.user?.email ?? '')
-      if (!session) return
-      try {
-        const liste = await mesEtablissements()
-        if (vivant) setEtablissements(liste)
-      } catch { /* la liste reste vide : on retombe sur la saisie d'adresse */ }
-    })()
-    return () => { vivant = false }
-  }, [])
-
-  const choisirEtablissement = (e: Etablissement) => {
-    setEtablissementChoisi(e.id)
-    setNouvelEtablissement(false)
-    setMagasin(e.name)
-    // `stores.address` porte l'adresse complète : on la redécoupe pour que le
-    // code postal — celui qui décide de la zone — reste une valeur à part.
-    const adr = e.address ?? ''
-    const cp = adr.match(/\b(\d{5})\b/)
-    setAdresse(cp ? adr.slice(0, adr.indexOf(cp[1])).replace(/,\s*$/, '').trim() : adr)
-    setCodePostal(cp ? cp[1] : '')
-    setVille(cp ? adr.slice(adr.indexOf(cp[1]) + 5).trim() : '')
-    if (e.sqm) setSurfaceVente(String(e.sqm))
-  }
-
   // Étape 1 — où
   const [adresse, setAdresse] = useState('')
   const [codePostal, setCodePostal] = useState('')
@@ -207,6 +177,87 @@ export function PageReserver() {
   const [secteur, setSecteur] = useState<Secteur | ''>('')
   const [surfaceVente, setSurfaceVente] = useState('')
   const [surfaceReserve, setSurfaceReserve] = useState('')
+
+  const choisirEtablissement = (e: Etablissement) => {
+    setEtablissementChoisi(e.id)
+    setNouvelEtablissement(false)
+    setMagasin(e.name)
+    // `stores.address` porte l'adresse complète : on la redécoupe pour que le
+    // code postal — celui qui décide de la zone — reste une valeur à part.
+    const adr = e.address ?? ''
+    const cp = adr.match(/\b(\d{5})\b/)
+    setAdresse(cp ? adr.slice(0, adr.indexOf(cp[1])).replace(/,\s*$/, '').trim() : adr)
+    setCodePostal(cp ? cp[1] : '')
+    setVille(cp ? adr.slice(adr.indexOf(cp[1]) + 5).trim() : '')
+    if (e.sqm) setSurfaceVente(String(e.sqm))
+  }
+
+  useEffect(() => {
+    let vivant = true
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!vivant) return
+      setConnecte(Boolean(session))
+      setCourrielConnecte(session?.user?.email ?? '')
+      if (!session) return
+      try {
+        const liste = await mesEtablissements()
+        if (!vivant) return
+        setEtablissements(liste)
+        // ⚠️⚠️ **L'ÉTABLISSEMENT PEUT VENIR DE L'ADRESSE.** « Vos
+        // inventaires » affiche un bouton « Réserver — 341 € » PAR
+        // établissement, et les trois menaient au même `/reserver` nu : le
+        // client rechoisissait ce qu'il venait de désigner, ou pire, ne
+        // rechoisissait rien. Le bouton porte désormais son magasin.
+        const vise = new URLSearchParams(window.location.search).get('etablissement')
+        const trouve = vise ? liste.find((e) => e.id === vise) : undefined
+        if (trouve) choisirEtablissement(trouve)
+      } catch { /* la liste reste vide : on retombe sur la saisie d'adresse */ }
+    })()
+    return () => { vivant = false }
+  }, [])
+
+  /**
+   * La liste des établissements déjà connus.
+   *
+   * ⚠️ **ÉCRITE UNE FOIS, RENDUE DEUX.** La formule équipe la pose à son
+   * étape 1, la licence à son étape du magasin : recopier le bloc aurait fait
+   * deux listes qui divergent au premier changement. « La coquille se reprend,
+   * elle ne se recopie pas. »
+   */
+  const blocEtablissements = (
+    <div className="field">
+      <div className="res-etabs-tete">
+        <span className="champ-label">Vos établissements</span>
+        <button type="button" className="link-btn"
+                onClick={() => {
+                  setNouvelEtablissement(true); setEtablissementChoisi(null)
+                  setAdresse(''); setCodePostal(''); setVille(''); setMagasin('')
+                }}>
+          Ajouter un établissement
+        </button>
+      </div>
+      <div className="res-etabs">
+        {etablissements.map((e) => (
+          <button key={e.id} type="button"
+                  className={`res-etab${etablissementChoisi === e.id ? ' actif' : ''}`}
+                  onClick={() => choisirEtablissement(e)}>
+            <span className="res-etab-nom">{e.name}</span>
+            <span className="res-etab-detail">
+              {e.address ?? 'adresse non renseignée'}
+              {e.sqm ? ` — ${e.sqm} m² de vente` : ''}
+            </span>
+            <span className="res-etab-detail">
+              {e.derniere
+                ? `Dernier inventaire : ${new Date(e.derniere.debut_prevu)
+                    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+                : 'Jamais inventorié'}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
   const [trancheArticles, setTrancheArticles] = useState('')
 
   /**
@@ -520,9 +571,14 @@ export function PageReserver() {
     // L'établissement est la première étape de la formule équipe ; pour une
     // licence, ces refus ne peuvent pas survenir — la base ne les lève plus.
     const table: Record<string, number> = {
-      adresse: 1,
-      code_postal: 1,
-      magasin: 1,
+      // ⚠️ **POUR UNE LICENCE, LE LIEU SE DONNE À L'ÉTAPE DU MAGASIN.** Le
+      // commentaire disait « ces refus ne peuvent pas survenir » : c'était vrai
+      // tant que la licence se passait d'adresse, et faux depuis que le code
+      // postal est exigé en base. Renvoyé à l'étape 1, le client tombait sur
+      // l'écran du volume — aucun champ pour corriger ce qu'on lui reproche.
+      adresse: logicielSeul ? 5 : 1,
+      code_postal: logicielSeul ? 5 : 1,
+      magasin: logicielSeul ? 5 : 1,
       hors_zone: 1,
       hors_grille: logicielSeul ? 1 : 3,
       articles: logicielSeul ? 1 : 3,
@@ -637,6 +693,12 @@ export function PageReserver() {
     // et continuer » : l'envoyer sur un écran d'attente serait lui faire
     // recommencer. C'est le chemin du pro qui revient avec une adresse déjà
     // connue — celui que Julien a demandé le 5 octobre 2026.
+    //
+    // ⚠️⚠️ **SAUF S'IL N'A PAS DIT OÙ.** Il vient de s'identifier : ses
+    // établissements arrivent, et c'est le moment de lui en faire choisir un.
+    // Réserver tout de suite le ferait refuser sur le code postal, pour un
+    // champ qu'il n'avait pas sous les yeux une seconde plus tôt.
+    if (!magasinPret) { allerA(5); return }
     await reserverMaintenant()
   }
 
@@ -712,6 +774,18 @@ export function PageReserver() {
     && /.+@.+\..+/.test(courriel.trim()) && motDePasse !== '' && societe.trim() !== ''
     && siren.trim() !== '' && !messageSiren(siren) && magasinComplet
 
+  /**
+   * ⚠️⚠️ **UN CLIENT CONNECTÉ N'A QUE LE MAGASIN À DONNER — mais il DOIT
+   * le donner** (défaut trouvé par Julien, 10 octobre 2026 : « je peux avoir
+   * plusieurs magasins »). Le parcours connecté sautait l'étape du compte et
+   * réservait directement depuis l'écran du prix : il n'était JAMAIS interrogé
+   * sur le lieu. Tant que la licence se passait d'adresse, ça ne se voyait
+   * pas ; depuis que le code postal est exigé en base, il se faisait refuser
+   * et renvoyer à l'étape 1 — l'écran du volume, qui n'a pas de champ
+   * d'adresse. Un cul-de-sac dont il ne pouvait pas sortir.
+   */
+  const magasinPret = !logicielSeul || etablissementChoisi !== null || magasinComplet
+
   const recap = (
     <aside className="res-recap" aria-label="Votre réservation">
       <h2>Votre réservation</h2>
@@ -786,11 +860,18 @@ export function PageReserver() {
                   du récapitulatif — et tant que rien n'était enregistré, ça ne
                   se voyait pas. Le jour où il réserve pour de vrai, il vendrait
                   pendant que `web/lib/legal.ts` est incomplet. */}
-              <button type="button" className="btn btn-primary btn-block"
-                      disabled={occupe || !venteOuverte()}
-                      onClick={() => { if (connecte) void reserverMaintenant(); else allerA(5) }}>
-                {occupe ? 'Un instant…' : 'Réserver'}
-              </button>
+              {/* ⚠️ **PAS À L'ÉTAPE OÙ IL MÈNE.** Le volet suit le client partout,
+                  y compris sur l'étape du compte — où ce bouton ne faisait plus
+                  rien (il y conduit) tout en gardant l'air d'être l'action
+                  principale, à côté de la vraie. Deux boutons verts, un seul
+                  vivant. */}
+              {etape !== 5 && (
+                <button type="button" className="btn btn-primary btn-block"
+                        disabled={occupe || !venteOuverte()}
+                        onClick={() => allerA(5)}>
+                  {occupe ? 'Un instant…' : 'Réserver'}
+                </button>
+              )}
               {/* ⚠️ **UN BOUTON MORT DIT POURQUOI.** En formule logiciel, ce
                   bouton EST l'action principale : le parcours s'arrête à la
                   date, et l'écran du prix — qui porte l'explication de la vente
@@ -972,39 +1053,7 @@ export function PageReserver() {
                   : 'Trois questions et votre prix s’affiche. Vous ne créerez un compte qu’au moment de réserver.'}
               </p>
 
-              {etablissements.length > 0 && (
-                <div className="field">
-                  <div className="res-etabs-tete">
-                    <span className="champ-label">Vos établissements</span>
-                    <button type="button" className="link-btn"
-                            onClick={() => {
-                              setNouvelEtablissement(true); setEtablissementChoisi(null)
-                              setAdresse(''); setCodePostal(''); setVille(''); setMagasin('')
-                            }}>
-                      Ajouter un établissement
-                    </button>
-                  </div>
-                  <div className="res-etabs">
-                    {etablissements.map((e) => (
-                      <button key={e.id} type="button"
-                              className={`res-etab${etablissementChoisi === e.id ? ' actif' : ''}`}
-                              onClick={() => choisirEtablissement(e)}>
-                        <span className="res-etab-nom">{e.name}</span>
-                        <span className="res-etab-detail">
-                          {e.address ?? 'adresse non renseignée'}
-                          {e.sqm ? ` — ${e.sqm} m² de vente` : ''}
-                        </span>
-                        <span className="res-etab-detail">
-                          {e.derniere
-                            ? `Dernier inventaire : ${new Date(e.derniere.debut_prevu)
-                                .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-                            : 'Jamais inventorié'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {etablissements.length > 0 && blocEtablissements}
 
               <div className="field"
                    hidden={etablissements.length > 0 && !nouvelEtablissement}>
@@ -1408,7 +1457,7 @@ export function PageReserver() {
                 <>
                   <button type="button" className="btn btn-primary btn-block"
                           disabled={occupe}
-                          onClick={() => { if (connecte) void reserverMaintenant(); else allerA(5) }}>
+                          onClick={() => allerA(5)}>
                     {occupe ? 'Un instant…' : `Réserver — ${enEuros(resultat.chaine.prixCents)}`}
                   </button>
                   {/* ⚠️ LE REFUS S'AFFICHE SOUS LE BOUTON QUI L'A PROVOQUÉ.
@@ -1496,16 +1545,26 @@ export function PageReserver() {
         {etape === 5 && (
           <div className="res-colonnes">
             <section className="res-questions">
-              <h1>Votre compte</h1>
+              {/* ⚠️ **LE MÊME ÉCRAN SERT LES DEUX**, et c'est voulu : un client
+                  connecté n'a que le magasin à donner, mais il le donne ICI,
+                  dans le même bloc, au lieu d'une page jumelle qui finirait par
+                  diverger. Ce qu'on connaît de lui se masque, rien ne se
+                  recopie. */}
+              <h1>{connecte ? 'Pour quel magasin ?' : 'Votre compte'}</h1>
               <p className="muted">
-                Il sert à suivre l’inventaire en direct, à retrouver vos rapports
-                et vos factures.
+                {connecte
+                  ? 'Un inventaire est toujours rattaché à un magasin. Choisissez-en un, ou ajoutez-en un : la prochaine fois il sera dans la liste.'
+                  : 'Il sert à suivre l’inventaire en direct, à retrouver vos rapports et vos factures.'}
               </p>
-              <button type="button" className="link-btn res-bascule"
-                      onClick={() => allerA(6)}>
-                J’ai déjà un compte
-              </button>
+              {!connecte && (
+                <button type="button" className="link-btn res-bascule"
+                        onClick={() => allerA(6)}>
+                  J’ai déjà un compte
+                </button>
+              )}
 
+              {!connecte && (
+              <>
               <div className="field-duo">
                 <div className="field">
                   <label htmlFor={`${uid}-prenom`}>Prénom</label>
@@ -1553,6 +1612,9 @@ export function PageReserver() {
                 </div>
               </div>
 
+              </>
+              )}
+
               {/* ⚠️⚠️ **LE MAGASIN SE DEMANDE ICI POUR LA LICENCE** (10 octobre
                   2026). Le parcours « logiciel seul » ne pose ni nom ni
                   adresse : son étape 1 est le volume. Or un inventaire est
@@ -1565,20 +1627,27 @@ export function PageReserver() {
                   OS, c'est juste le profil de client qui change. » */}
               {logicielSeul && (
                 <>
-                  <h2 className="res-sous-titre">Le magasin à inventorier</h2>
-                  <div className="field">
+                  {!connecte && <h2 className="res-sous-titre">Le magasin à inventorier</h2>}
+                  {etablissements.length > 0 && blocEtablissements}
+                  {/* ⚠️ Les champs s'effacent dès qu'un établissement est choisi :
+                      les laisser visibles poserait deux sources pour le même
+                      lieu, et la saisie gagnerait sur le choix sans prévenir. */}
+                  <div className="field"
+                       hidden={etablissements.length > 0 && !nouvelEtablissement}>
                     <label htmlFor={`${uid}-mag2`}>Nom du magasin</label>
                     <input id={`${uid}-mag2`} value={magasin} maxLength={80}
                            placeholder="Boutique Rivoli"
                            onChange={(e) => { setMagasin(e.target.value); setErreur(null) }} />
                   </div>
-                  <div className="field">
+                  <div className="field"
+                       hidden={etablissements.length > 0 && !nouvelEtablissement}>
                     <label htmlFor={`${uid}-adr2`}>Adresse</label>
                     <input id={`${uid}-adr2`} value={adresse} maxLength={120}
                            autoComplete="street-address" placeholder="12 rue de Rivoli"
                            onChange={(e) => { setAdresse(e.target.value); setErreur(null) }} />
                   </div>
-                  <div className="field-duo">
+                  <div className="field-duo"
+                       hidden={etablissements.length > 0 && !nouvelEtablissement}>
                     <div className="field">
                       <label htmlFor={`${uid}-cp2`}>Code postal</label>
                       <input id={`${uid}-cp2`} value={codePostal} inputMode="numeric"
@@ -1602,14 +1671,18 @@ export function PageReserver() {
               <div className="res-actions">
                 <button type="button" className="btn btn-ghost" onClick={() => allerA(4)}>Retour</button>
                 <button type="button" className="btn btn-primary"
-                        disabled={occupe || !compteComplet || !venteOuverte()}
-                        onClick={ouvrirMonCompte}>
-                  {occupe ? 'Un instant…' : 'Continuer vers le paiement'}
+                        disabled={occupe || !venteOuverte()
+                          || (connecte ? !magasinPret : !compteComplet)}
+                        onClick={() => { if (connecte) void reserverMaintenant(); else ouvrirMonCompte() }}>
+                  {occupe ? 'Un instant…'
+                    : connecte ? 'Confirmer et réserver' : 'Continuer vers le paiement'}
                 </button>
               </div>
               {!venteOuverte() && (
                 <p className="res-ferme">
-                  La création de compte ouvre en même temps que la réservation.
+                  {connecte
+                    ? 'La réservation n’est pas encore ouverte.'
+                    : 'La création de compte ouvre en même temps que la réservation.'}
                 </p>
               )}
             </section>
