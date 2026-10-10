@@ -81,9 +81,11 @@ export function AddCounter({ onAdded, onFermer }: {
     await onAdded()
   }
 
+  // ⚠️ Ni carte ni titre ici : depuis le 10 octobre ce formulaire vit dans une
+  // fenêtre modale, qui porte les deux. En garder une copie referait deux
+  // titres l'un sous l'autre.
   return (
-    <form className="panel" onSubmit={submit}>
-      <h3>{t('Ajouter un compteur')}</h3>
+    <form onSubmit={submit}>
 
       {horsEntreprise && (
         <div className="banner banner-warn" role="status">

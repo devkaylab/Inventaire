@@ -1101,6 +1101,15 @@ body:has(.site-footer) .theme-toggle { display: none; }
   background: var(--surface); border: 0; border-radius: var(--radius);
   padding: 24px; margin-top: 16px; box-shadow: var(--shadow-card);
 }
+/* ⚠️ DEUX CARTES QUI SE SUIVAIENT SE TOUCHAIENT (relevé par Julien, capture à
+   l'appui, 10 octobre 2026). `.panel` ne porte de marge qu'AU-DESSUS,
+   `.admin-section` qu'EN DESSOUS : entre les deux, zéro — et les deux fonds
+   blancs se fondaient en un seul bloc avec une simple couture. La règle vise
+   la SUCCESSION, pas l'une des deux cartes : leur marge propre reste juste
+   quand elles sont seules. */
+.panel + .admin-section,
+.panel + .panel { margin-top: 16px; }
+
 .panel h3 { font-size: 16px; font-weight: 700; }
 .panel p { color: var(--text-2); font-size: 15px; margin-top: 6px; }
 
@@ -2566,16 +2575,38 @@ body:has(.site-footer) .theme-toggle { display: none; }
 .toast-info { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 
 /* ── Modales ────────────────────────────────────────────── */
+/* ⚠️ LA FENÊTRE ENTRE ET SORT EN FONDU (demande de Julien, 10 octobre 2026).
+   L'entrée existait ; la sortie, non — React démontait d'un coup, et le voile
+   disparaissait net. ⚠️ La durée est écrite ICI et dans `Modal.tsx`
+   (`DUREE_FERMETURE_MS`) : les deux doivent s'accorder, sinon la fenêtre
+   disparaît avant la fin de son fondu, ou laisse un voile mort à l'écran.
+   Une garde tient l'accord. */
+@keyframes voile-entre { from { opacity: 0; } to { opacity: 1; } }
+@keyframes voile-sort  { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modal-sort  { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px); } }
+
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 70;
   background: rgba(5, 7, 13, 0.6); backdrop-filter: blur(3px);
   display: grid; place-items: center; padding: 24px;
+  animation: voile-entre .16s ease-out;
 }
+.modal-backdrop.sortie { animation: voile-sort .16s ease-in forwards; }
+.modal-backdrop.sortie .modal { animation: modal-sort .16s ease-in forwards; }
 .modal {
   width: 100%; max-width: 460px; background: var(--surface);
   border: 1px solid var(--hairline); border-radius: var(--radius);
   padding: 24px; box-shadow: var(--shadow-elev);
   animation: toast-in .16s ease-out;
+  /* Une fenêtre ne grandit pas avec son contenu : elle défile. */
+  max-height: calc(100vh - 48px); overflow-y: auto;
+}
+
+/* ⚠️ Qui a demandé moins d'animation n'en reçoit pas. Le minuteur de
+   fermeture, lui, reste : il est trop court pour se voir. */
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop, .modal,
+  .modal-backdrop.sortie, .modal-backdrop.sortie .modal { animation: none; }
 }
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .modal-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
