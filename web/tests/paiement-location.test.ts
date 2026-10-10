@@ -452,3 +452,68 @@ describe('⚠️ la vente reste fermée partout en même temps', () => {
     }
   })
 })
+
+describe('⚠️⚠️ un tunnel qui demande un code doit savoir le recevoir', () => {
+  /**
+   * LE DÉFAUT DU 10 OCTOBRE 2026, EN UNE RÈGLE.
+   *
+   * `/reserver` envoyait un code à six chiffres, affichait « Regardez votre
+   * boîte mail — soit avec le code », et n'avait **aucun champ pour le code**.
+   * Pas même une variable pour le stocker : la page n'appelait jamais
+   * `action: 'creer'`. Un prospect sans compte n'avait donc qu'une sortie,
+   * « j'ai déjà un compte » — un cul-de-sac.
+   *
+   * Découvert en jouant le parcours de bout en bout, jamais à la relecture, et
+   * invisible au compte d'essai qui porte déjà toutes les casquettes. Julien :
+   * « tu dois penser jusqu'au bout, c'est pas normal de parler de code alors
+   * qu'il y a aucun champ ».
+   *
+   * ⚠️ LA LISTE SE DÉDUIT : toute page qui demande un code par courriel est
+   * tenue de savoir le recevoir. Citer les deux pages d'aujourd'hui laisserait
+   * la troisième retomber dans le trou.
+   */
+  // ⚠️ `racine` est la racine du DÉPÔT dans ce fichier, pas `web/`.
+  const dossiers = ['web/components/vitrine', 'web/app']
+
+  function pagesQuiDemandentUnCode(): { nom: string; src: string }[] {
+    const trouvees: { nom: string; src: string }[] = []
+    const parcourir = (rel: string) => {
+      const abs = path.join(racine, rel)
+      for (const e of readdirSync(abs, { withFileTypes: true })) {
+        const sous = path.join(rel, e.name)
+        if (e.isDirectory()) { parcourir(sous); continue }
+        if (!e.name.endsWith('.tsx')) continue
+        const src = readFileSync(path.join(racine, sous), 'utf8')
+        if (/action: 'code'/.test(sansCommentaires(src))) trouvees.push({ nom: sous, src })
+      }
+    }
+    for (const d of dossiers) parcourir(d)
+    return trouvees
+  }
+
+  it('toute page qui envoie un code sait aussi le recevoir', () => {
+    const pages = pagesQuiDemandentUnCode()
+    expect(pages.length, 'plus aucune page ne demande de code par courriel')
+      .toBeGreaterThan(0)
+    for (const { nom, src } of pages) {
+      const nu = sansCommentaires(src)
+      expect(nu, `« ${nom} » demande un code et n’appelle jamais « creer » : le prospect est en cul-de-sac`)
+        .toContain("action: 'creer'")
+      expect(nu, `« ${nom} » n’a aucun champ pour saisir le code`)
+        .toMatch(/autoComplete="one-time-code"/)
+      expect(nu, `« ${nom} » ne garde pas le code saisi`)
+        .toMatch(/setCode\(/)
+    }
+  })
+
+  it('⚠️ et le compte créé enchaîne, il ne laisse pas sur un écran d’attente', () => {
+    // Il est venu réserver, pas ouvrir un compte. La même raison que
+    // `seConnecter()`, qui réserve dans la foulée depuis le 5 octobre.
+    const tunnel = sansCommentaires(
+      readFileSync(path.join(racine, 'web/components/vitrine/PageReserver.tsx'), 'utf8'))
+    const apresCreation = tunnel.slice(tunnel.indexOf("action: 'creer'"))
+    const suite = apresCreation.slice(0, apresCreation.indexOf('\n  }'))
+    expect(suite, 'le compte est créé mais la réservation ne repart pas')
+      .toContain('reserverMaintenant()')
+  })
+})

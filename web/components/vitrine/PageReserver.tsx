@@ -205,6 +205,17 @@ export function PageReserver() {
   const [courriel, setCourriel] = useState('')
   const [telephone, setTelephone] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
+  /**
+   * ⚠️⚠️ **LE CODE N'AVAIT NULLE PART OÙ S'ÉCRIRE** (10 octobre 2026). L'écran
+   * « Regardez votre boîte mail » annonçait « soit avec le code », l'e-mail
+   * portait six chiffres et un bouton « Reprendre ma réservation » — et cette
+   * page n'appelait jamais `action: 'creer'`. Elle n'avait même pas de variable
+   * pour le code. Un prospect sans compte n'avait donc QUE « j'ai déjà un
+   * compte » : un cul-de-sac, découvert en jouant le parcours de bout en bout,
+   * jamais à la relecture. Julien : « c'est pas normal de parler de code alors
+   * qu'il y a aucun champ ».
+   */
+  const [code, setCode] = useState('')
   const [siren, setSiren] = useState('')
   const [societe, setSociete] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -522,6 +533,48 @@ export function PageReserver() {
     // et continuer » : l'envoyer sur un écran d'attente serait lui faire
     // recommencer. C'est le chemin du pro qui revient avec une adresse déjà
     // connue — celui que Julien a demandé le 5 octobre 2026.
+    await reserverMaintenant()
+  }
+
+  /**
+   * Confirmer le code, créer le compte, et ENCHAÎNER SUR LA RÉSERVATION.
+   *
+   * ⚠️ Même forme que `seConnecter()`, et pour la même raison : il est venu
+   * réserver, pas ouvrir un compte. S'arrêter sur « compte créé » lui ferait
+   * recommencer son tunnel.
+   *
+   * ⚠️ **LE MOT DE PASSE PEUT AVOIR DISPARU, ET C'EST VOULU.** Le parcours est
+   * conservé par navigateur, le mot de passe JAMAIS — on ne le garde nulle
+   * part. Quelqu'un qui revient par le bouton de l'e-mail retrouve donc son
+   * adresse et son établissement, mais pas son mot de passe : l'écran le
+   * redemande alors, et c'est bien une CRÉATION puisque le compte n'existe
+   * pas encore.
+   */
+  const confirmerLeCode = async () => {
+    setErreur(null)
+    const faible = passwordError(motDePasse)
+    if (faible) { setErreur(faible); return }
+    if (code.trim().length < 4) { setErreur('Entrez le code reçu par e-mail.'); return }
+    setOccupe(true)
+    const r = await edge({
+      action: 'creer', email: courriel.trim().toLowerCase(), code: code.trim(),
+      password: motDePasse, firstName: prenom.trim(), lastName: nomFamille.trim(),
+    })
+    if (!r?.success) {
+      setOccupe(false)
+      setErreur(r?.error ?? 'Création impossible.')
+      return
+    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email: courriel.trim().toLowerCase(), password: motDePasse,
+    })
+    if (error) {
+      setOccupe(false)
+      setErreur('Compte créé. Choisissez « J’ai déjà un compte » pour continuer.')
+      return
+    }
+    setMotDePasse(''); setCode(''); setConnecte(true)
+    setOccupe(false)
     await reserverMaintenant()
   }
 
@@ -1549,11 +1602,42 @@ export function PageReserver() {
               </p>
             </div>
             <div className="res-prix-carte">
+              {/* ⚠️ LE CHAMP DU CODE, qui manquait : l'écran promettait « soit
+                  avec le code » et n'en offrait aucun. C'est le chemin du
+                  prospect qui n'a PAS encore de compte — le seul que cette
+                  page ne savait pas servir. */}
+              <div className="field">
+                <label htmlFor={`${uid}-code`}>Le code reçu par e-mail</label>
+                <input id={`${uid}-code`} value={code} inputMode="numeric"
+                       autoComplete="one-time-code" maxLength={8} placeholder="123456"
+                       onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setErreur(null) }} />
+              </div>
+              {/* ⚠️ Le mot de passe ne se redemande QUE s'il a disparu : il
+                  n'est conservé nulle part, et quelqu'un qui revient par le
+                  bouton de l'e-mail arrive sans lui. L'afficher toujours
+                  ferait retaper ce qui vient d'être saisi deux écrans plus
+                  haut. */}
+              {motDePasse === '' && (
+                <div className="field">
+                  <label htmlFor={`${uid}-mdp2`}>Choisissez votre mot de passe</label>
+                  <input id={`${uid}-mdp2`} type="password" autoComplete="new-password"
+                         value={motDePasse}
+                         onChange={(e) => { setMotDePasse(e.target.value); setErreur(null) }} />
+                  <PasswordRules password={motDePasse} />
+                </div>
+              )}
+              {erreur && <div className="error" role="alert">{erreur}</div>}
+              <button type="button" className="btn btn-primary btn-block"
+                      disabled={occupe || code.trim() === '' || motDePasse === ''}
+                      onClick={confirmerLeCode}>
+                {occupe ? 'Un instant…' : 'Confirmer et réserver'}
+              </button>
+
               <ul className="res-compris">
                 <li>Votre parcours est conservé : vous reprenez où vous en êtes.</li>
                 <li>Annulation gratuite jusqu’à trois jours avant.</li>
               </ul>
-              <button type="button" className="btn btn-primary btn-block"
+              <button type="button" className="btn btn-ghost btn-block"
                       onClick={() => { setErreur(null); setEtape(6) }}>
                 J’ai déjà un compte — me connecter
               </button>
